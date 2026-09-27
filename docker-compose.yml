@@ -1,0 +1,78 @@
+services:
+  app:
+    image: jmmart-local
+    build:
+      context: .
+    ports:
+      - "8080:80"
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: pgsql
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_DATABASE: jmmart
+      DB_USERNAME: jmmart
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-jmmart-local-password}
+      CACHE_STORE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  queue:
+    image: jmmart-local
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      DB_CONNECTION: pgsql
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_DATABASE: jmmart
+      DB_USERNAME: jmmart
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-jmmart-local-password}
+      CACHE_STORE: redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    command: php artisan queue:work --tries=3 --sleep=3
+    restart: unless-stopped
+
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: jmmart
+      POSTGRES_USER: jmmart
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jmmart-local-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jmmart -d jmmart"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - jmmart-postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - jmmart-redis:/data
+    restart: unless-stopped
+
+volumes:
+  jmmart-postgres:
+  jmmart-redis:
