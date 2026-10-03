@@ -37,17 +37,14 @@ class CartController extends Controller
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:100']]);
         $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
 
-        DB::transaction(function () use ($product, $data, $cart): void {
-            $product = Product::query()->lockForUpdate()->findOrFail($product->id);
-            if ($product->status !== 'active' || $product->store->status !== 'active' || $product->tenant->status !== 'active' || $product->stock_quantity < $data['quantity']) {
-                throw ValidationException::withMessages(['quantity' => 'This product is not currently available in that quantity.']);
-            }
+        $product = Product::query()->with(['store', 'tenant'])->findOrFail($product->id);
+        if ($product->status !== 'active' || $product->store->status !== 'active' || $product->tenant->status !== 'active' || $product->stock_quantity < $data['quantity']) {
+            throw ValidationException::withMessages(['quantity' => 'This product is not currently available in that quantity.']);
+        }
 
-            $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
-            $item = $cart->items()->firstOrNew(['product_id' => $product->id]);
-            $item->quantity = min($product->stock_quantity, ($item->exists ? $item->quantity : 0) + $data['quantity']);
-            $item->save();
-        });
+        $item = $cart->items()->firstOrNew(['product_id' => $product->id]);
+        $item->quantity = min($product->stock_quantity, ($item->exists ? $item->quantity : 0) + $data['quantity']);
+        $item->save();
 
         return to_route('cart.index')->with('status', 'Added to your cart.');
     }
@@ -110,31 +107,27 @@ class CartController extends Controller
 
         $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
 
-        DB::transaction(function () use ($removedCartItem, $cart): void {
-            $product = Product::query()
-                ->with(['store', 'tenant'])
-                ->lockForUpdate()
-                ->findOrFail($removedCartItem['product_id']);
+        $product = Product::query()
+            ->with(['store', 'tenant'])
+            ->findOrFail($removedCartItem['product_id']);
 
-            if (
-                $product->status !== 'active'
-                || $product->store->status !== 'active'
-                || $product->tenant->status !== 'active'
-                || $product->stock_quantity < $removedCartItem['quantity']
-            ) {
-                throw ValidationException::withMessages(['cart' => 'This item is no longer available in that quantity.']);
-            }
+        if (
+            $product->status !== 'active'
+            || $product->store->status !== 'active'
+            || $product->tenant->status !== 'active'
+            || $product->stock_quantity < $removedCartItem['quantity']
+        ) {
+            throw ValidationException::withMessages(['cart' => 'This item is no longer available in that quantity.']);
+        }
 
-            $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
-            $cartItem = $cart->items()->firstOrNew(['product_id' => $product->id]);
-            $cartItem->quantity = ($cartItem->exists ? $cartItem->quantity : 0) + $removedCartItem['quantity'];
+        $cartItem = $cart->items()->firstOrNew(['product_id' => $product->id]);
+        $cartItem->quantity = ($cartItem->exists ? $cartItem->quantity : 0) + $removedCartItem['quantity'];
 
-            if ($cartItem->quantity > $product->stock_quantity) {
-                throw ValidationException::withMessages(['cart' => 'This item is no longer available in that quantity.']);
-            }
+        if ($cartItem->quantity > $product->stock_quantity) {
+            throw ValidationException::withMessages(['cart' => 'This item is no longer available in that quantity.']);
+        }
 
-            $cartItem->save();
-        });
+        $cartItem->save();
 
         $request->session()->forget('removed_cart_item');
 
