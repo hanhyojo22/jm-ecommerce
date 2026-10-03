@@ -148,6 +148,30 @@ if (!clerkPublishableKey) {
                 ui: { ClerkUI: window.__internal_ClerkUICtor },
             });
 
+            const syncServerSession = () => {
+                const guestActions = document.querySelector('[data-clerk-guest-actions]');
+
+                if (! clerk.user || ! guestActions) {
+                    return;
+                }
+
+                const reloadKey = `clerk-server-session-sync:${window.location.pathname}`;
+
+                if (window.sessionStorage.getItem(reloadKey) === 'complete') {
+                    return;
+                }
+
+                window.sessionStorage.setItem(reloadKey, 'complete');
+                window.location.reload();
+            };
+
+            clerk.addListener(({ user }) => {
+                if (user) {
+                    syncServerSession();
+                }
+            });
+
+            syncServerSession();
             window.dispatchEvent(new Event('clerk:loaded'));
             const signOut = async () => {
                 try {
@@ -172,14 +196,14 @@ if (!clerkPublishableKey) {
 
             document.querySelectorAll('[data-clerk-component="sign-in"]').forEach((element) => {
                 clerk.mountSignIn(element, {
-                    afterSignInUrl: element.dataset.afterAuthUrl,
+                    fallbackRedirectUrl: element.dataset.afterAuthUrl,
                     appearance: clerkComponentAppearance,
                 });
             });
 
             document.querySelectorAll('[data-clerk-component="sign-up"]').forEach((element) => {
                 clerk.mountSignUp(element, {
-                    afterSignUpUrl: element.dataset.afterAuthUrl,
+                    fallbackRedirectUrl: element.dataset.afterAuthUrl,
                     appearance: clerkComponentAppearance,
                 });
             });
