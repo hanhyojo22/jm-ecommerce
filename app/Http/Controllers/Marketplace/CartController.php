@@ -35,13 +35,15 @@ class CartController extends Controller
     public function store(Request $request, Product $product): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:100']]);
+        $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
 
-        DB::transaction(function () use ($request, $product, $data): void {
+        DB::transaction(function () use ($product, $data, $cart): void {
             $product = Product::query()->lockForUpdate()->findOrFail($product->id);
             if ($product->status !== 'active' || $product->store->status !== 'active' || $product->tenant->status !== 'active' || $product->stock_quantity < $data['quantity']) {
                 throw ValidationException::withMessages(['quantity' => 'This product is not currently available in that quantity.']);
             }
-            $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
+
+            $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
             $item = $cart->items()->firstOrNew(['product_id' => $product->id]);
             $item->quantity = min($product->stock_quantity, ($item->exists ? $item->quantity : 0) + $data['quantity']);
             $item->save();
@@ -106,7 +108,9 @@ class CartController extends Controller
             return to_route('cart.index')->with('status', 'There is no removed item to restore.');
         }
 
-        DB::transaction(function () use ($removedCartItem, $request): void {
+        $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
+
+        DB::transaction(function () use ($removedCartItem, $cart): void {
             $product = Product::query()
                 ->with(['store', 'tenant'])
                 ->lockForUpdate()
@@ -121,7 +125,7 @@ class CartController extends Controller
                 throw ValidationException::withMessages(['cart' => 'This item is no longer available in that quantity.']);
             }
 
-            $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
+            $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
             $cartItem = $cart->items()->firstOrNew(['product_id' => $product->id]);
             $cartItem->quantity = ($cartItem->exists ? $cartItem->quantity : 0) + $removedCartItem['quantity'];
 
