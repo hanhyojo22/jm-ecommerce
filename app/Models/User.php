@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -13,9 +12,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'account_type', 'platform_role', 'is_active'])]
-#[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements MustVerifyEmail
+#[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'is_active'])]
+#[Hidden(['password', 'remember_token', 'clerk_user_id'])]
+class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasUlids, Notifiable;
@@ -54,9 +53,29 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Order::class);
     }
 
+    public function productReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class, 'buyer_id');
+    }
+
+    public function sentConversationMessages(): HasMany
+    {
+        return $this->hasMany(ConversationMessage::class, 'sender_id');
+    }
+
     public function isPlatformAdministrator(): bool
     {
         return $this->account_type === 'admin' && in_array($this->platform_role, ['super_admin', 'admin'], true);
+    }
+
+    public function hasVerifiedClerkEmail(): bool
+    {
+        return $this->email_verified_at !== null;
     }
 
     public function isOwner(): bool

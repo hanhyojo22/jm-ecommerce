@@ -38,13 +38,41 @@ return [
             'report' => false,
         ],
 
-        'public' => [
+        'public' => env('NEON_PRODUCT_IMAGES_BUCKET') ? [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_REGION'),
+            'bucket' => env('NEON_PRODUCT_IMAGES_BUCKET'),
+            'url' => rtrim(env('AWS_ENDPOINT_URL_S3'), '/').'/'.env('NEON_PRODUCT_IMAGES_BUCKET'),
+            'endpoint' => env('AWS_ENDPOINT_URL_S3'),
+            'use_path_style_endpoint' => true,
+            'throw' => true,
+        ] : [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
+        ],
+
+        'product_images' => env('NEON_PRODUCT_IMAGES_BUCKET') ? [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_REGION'),
+            'bucket' => env('NEON_PRODUCT_IMAGES_BUCKET'),
+            'url' => rtrim(env('AWS_ENDPOINT_URL_S3'), '/').'/'.env('NEON_PRODUCT_IMAGES_BUCKET'),
+            'endpoint' => env('AWS_ENDPOINT_URL_S3'),
+            'use_path_style_endpoint' => true,
+            'throw' => true,
+        ] : [
+            'driver' => 'local',
+            'root' => storage_path('app/public'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'visibility' => 'public',
+            'throw' => true,
         ],
 
         's3' => [

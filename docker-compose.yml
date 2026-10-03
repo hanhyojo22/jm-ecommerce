@@ -11,7 +11,9 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8080
+      CLERK_AUTHORIZED_PARTIES: http://localhost:8000,http://localhost:8080
       DB_CONNECTION: pgsql
+      DB_URL: ${NEON_DATABASE_URL:-}
       DB_HOST: database
       DB_PORT: 5432
       DB_DATABASE: jmmart
@@ -25,6 +27,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - .:/var/www/html
     restart: unless-stopped
 
   queue:
@@ -35,7 +39,9 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8080
+      CLERK_AUTHORIZED_PARTIES: http://localhost:8000,http://localhost:8080
       DB_CONNECTION: pgsql
+      DB_URL: ${NEON_DATABASE_URL:-}
       DB_HOST: database
       DB_PORT: 5432
       DB_DATABASE: jmmart
@@ -49,6 +55,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    volumes:
+      - .:/var/www/html
     command: php artisan queue:work --tries=3 --sleep=3
     restart: unless-stopped
 

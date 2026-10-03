@@ -27,7 +27,7 @@ class ProductController extends Controller
         ]);
 
         $products = Product::query()
-            ->with(['images', 'store', 'category'])
+            ->with(['images', 'store:id,name', 'category:id,name'])
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 

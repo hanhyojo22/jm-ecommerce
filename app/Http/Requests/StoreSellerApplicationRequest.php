@@ -12,7 +12,7 @@ class StoreSellerApplicationRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->hasVerifiedEmail() ?? false;
+        return $this->user()?->hasVerifiedClerkEmail() ?? false;
     }
 
     /**

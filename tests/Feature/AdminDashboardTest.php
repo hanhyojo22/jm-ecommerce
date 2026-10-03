@@ -94,6 +94,7 @@ class AdminDashboardTest extends TestCase
             ->assertSee('ava@example.com')
             ->assertSee('+639171234567')
             ->assertSee('10 Market Street, Manila')
+            ->assertSee('This store is currently visible to buyers.')
             ->assertSee('Open storefront')
             ->assertSee('Manage store')
             ->assertSee(route('catalog.store', $store->slug), false)
@@ -126,8 +127,8 @@ class AdminDashboardTest extends TestCase
         $administrator = User::factory()->administrator()->create();
 
         $this->actingAs($administrator)->get(route('dashboard', ['selected' => '01k0000000000000000000000']))
-            ->assertRedirect()
-            ->assertSessionHasErrors('selected');
+            ->assertRedirect(route('dashboard'))
+            ->assertSessionHas('error', 'That store is no longer available. Choose another store to continue reviewing the marketplace.');
     }
 
     public function test_non_administrators_cannot_access_dashboard(): void

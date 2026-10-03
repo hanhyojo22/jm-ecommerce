@@ -19,23 +19,29 @@ class DashboardController extends Controller
         }
 
         $store = $tenant->store;
-        $productCounts = $store->products()
-            ->selectRaw('status, count(*) as aggregate')
-            ->groupBy('status')
-            ->pluck('aggregate', 'status');
-        $pendingOrderCount = $store->sellerOrders()->where('status', 'pending')->count();
-        $totalOrders = $store->sellerOrders()->count();
-        $outOfStockCount = $store->products()->where('stock_quantity', 0)->count();
+        $productMetrics = $store->products()
+            ->toBase()
+            ->selectRaw("count(*) as total_products, sum(case when status = 'active' then 1 else 0 end) as active_products, sum(case when status = 'draft' then 1 else 0 end) as draft_products, sum(case when status = 'inactive' then 1 else 0 end) as inactive_products, sum(case when stock_quantity = 0 then 1 else 0 end) as out_of_stock_products")
+            ->first();
+        $orderMetrics = $store->sellerOrders()
+            ->toBase()
+            ->selectRaw("count(*) as total_orders, sum(case when status = 'pending' then 1 else 0 end) as pending_orders")
+            ->first();
+        $productCounts = collect([
+            'active' => (int) $productMetrics->active_products,
+            'draft' => (int) $productMetrics->draft_products,
+            'inactive' => (int) $productMetrics->inactive_products,
+        ]);
         $canManageProducts = $this->hasRole($request, $tenant, ['owner', 'manager']);
         $canManageOrders = $this->hasRole($request, $tenant, ['owner', 'manager']);
 
         return view('seller.dashboard', [
             'store' => $store,
             'productCounts' => $productCounts,
-            'totalProducts' => $store->products()->count(),
-            'pendingOrderCount' => $pendingOrderCount,
-            'totalOrders' => $totalOrders,
-            'outOfStockCount' => $outOfStockCount,
+            'totalProducts' => (int) $productMetrics->total_products,
+            'pendingOrderCount' => (int) $orderMetrics->pending_orders,
+            'totalOrders' => (int) $orderMetrics->total_orders,
+            'outOfStockCount' => (int) $productMetrics->out_of_stock_products,
             'recentOrders' => $store->sellerOrders()
                 ->with('order')
                 ->withCount('items')

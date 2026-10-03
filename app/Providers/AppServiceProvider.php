@@ -2,7 +2,14 @@
 
 namespace App\Providers;
 
+use App\Auth\ClerkBackendSessionVerifier;
+use App\Auth\ClerkSessionVerifier;
+use App\Auth\ClerkUserResolver;
+use App\Models\Category;
+use App\Models\Conversation;
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewInstance;
@@ -14,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(ClerkSessionVerifier::class, ClerkBackendSessionVerifier::class);
     }
 
     /**
@@ -22,12 +29,38 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Auth::viaRequest('clerk', fn ($request) => app(ClerkUserResolver::class)->resolve($request));
+
         Model::preventLazyLoading(! $this->app->isProduction());
 
-        View::composer('layouts.navigation', function (ViewInstance $view): void {
+        View::composer('components.marketplace.header', function (ViewInstance $view): void {
             $user = request()->user();
 
-            $view->with('cartItemCount', $user?->cartItemCount() ?? 0);
+            $publicCategoryIds = Product::query()
+                ->where('status', 'active')
+                ->whereHas('store', fn ($query) => $query->where('status', 'active'))
+                ->whereHas('tenant', fn ($query) => $query->where('status', 'active'))
+                ->whereNotNull('category_id')
+                ->select('category_id');
+
+            $sellerTenant = $user?->account_type === 'seller' ? $user->sellerTenant() : null;
+            $sellerApplication = $user?->account_type === 'seller'
+                ? $user->sellerApplications()->latest()->first()
+                : null;
+
+            $view->with([
+                'cartItemCount' => $user?->cartItemCount() ?? 0,
+                'unreadConversationCount' => $user?->can('viewAny', Conversation::class)
+                    ? Conversation::query()->visibleTo($user)->unreadFor($user)->count()
+                    : 0,
+                'headerCategories' => Category::query()
+                    ->where('is_active', true)
+                    ->whereIn('id', $publicCategoryIds)
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'slug']),
+                'sellerTenant' => $sellerTenant,
+                'sellerApplication' => $sellerApplication,
+            ]);
         });
     }
 }

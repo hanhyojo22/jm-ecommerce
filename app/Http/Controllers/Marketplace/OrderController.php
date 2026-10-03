@@ -15,10 +15,22 @@ class OrderController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:pending,confirmed,processing,shipped,delivered,cancelled'],
         ]);
+        $search = trim($filters['search'] ?? '');
+        $searchTerm = '%'.mb_strtolower($search).'%';
         $orders = $request->user()->orders()
-            ->with(['payment', 'sellerOrders.store', 'sellerOrders.items.product.images'])
-            ->when($filters['search'] ?? null, function ($query, string $search): void {
-                $query->whereRaw('LOWER(number) LIKE ?', ['%'.mb_strtolower($search).'%']);
+            ->with([
+                'payment',
+                'sellerOrders.store',
+                'sellerOrders.items.product:id,store_id,slug',
+                'sellerOrders.items.product.thumbnail',
+                'sellerOrders.items.product.store:id,slug',
+            ])
+            ->when($search !== '', function ($query) use ($searchTerm): void {
+                $query->where(function ($orderQuery) use ($searchTerm): void {
+                    $orderQuery->whereRaw('LOWER(number) LIKE ?', [$searchTerm])
+                        ->orWhereHas('sellerOrders.store', fn ($storeQuery) => $storeQuery->whereRaw('LOWER(name) LIKE ?', [$searchTerm]))
+                        ->orWhereHas('sellerOrders.items', fn ($itemQuery) => $itemQuery->whereRaw('LOWER(product_name) LIKE ?', [$searchTerm]));
+                });
             })
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->latest()
@@ -36,6 +48,6 @@ class OrderController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 403);
 
-        return view('marketplace.orders.show', ['order' => $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'payment')]);
+        return view('marketplace.orders.show', ['order' => $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment')]);
     }
 }

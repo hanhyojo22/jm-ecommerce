@@ -96,7 +96,7 @@ class SellerProductTest extends TestCase
 
     public function test_product_creation_stores_and_renders_an_uploaded_image(): void
     {
-        Storage::fake('public');
+        Storage::fake('product_images');
         [$owner] = $this->seller();
         $image = UploadedFile::fake()->createWithContent(
             'canvas-tote.png',
@@ -115,10 +115,10 @@ class SellerProductTest extends TestCase
         $path = $product->images->firstOrFail()->path;
 
         $response->assertRedirect(route('seller.products.index'));
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('product_images')->assertExists($path);
         $this->actingAs($owner)
             ->get(route('seller.products.index'))
-            ->assertSee(Storage::disk('public')->url($path));
+            ->assertSee(Storage::disk('product_images')->url($path));
     }
 
     public function test_seller_product_list_filters_by_search_status_and_stock(): void

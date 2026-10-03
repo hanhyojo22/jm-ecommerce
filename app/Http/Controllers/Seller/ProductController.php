@@ -28,7 +28,7 @@ class ProductController extends Controller
             'sort' => ['nullable', 'in:newest,name,price,stock'],
         ]);
         $products = $tenant->store->products()
-            ->with(['images', 'category'])
+            ->with(['images', 'category:id,name'])
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 
@@ -81,7 +81,7 @@ class ProductController extends Controller
             'slug' => Str::slug($data['name']).'-'.Str::lower(Str::random(6)),
         ]);
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
+            $path = $request->file('image')->store('products', 'product_images');
             $product->images()->create(['path' => $path]);
         }
 
@@ -103,7 +103,7 @@ class ProductController extends Controller
         $product->update($data);
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
+            $path = $request->file('image')->store('products', 'product_images');
             $product->images()->create(['path' => $path, 'position' => $product->images()->count()]);
         }
 

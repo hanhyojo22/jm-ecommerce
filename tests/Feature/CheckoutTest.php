@@ -93,6 +93,25 @@ class CheckoutTest extends TestCase
         $this->assertSame(5, $product->refresh()->stock_quantity);
     }
 
+    public function test_customer_can_search_purchases_by_product_or_store_name(): void
+    {
+        [, $product] = $this->sellerProduct('20.00', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery());
+
+        $this->actingAs($customer)
+            ->get(route('orders.index', ['search' => $product->name]))
+            ->assertOk()
+            ->assertSee($product->name);
+
+        $this->actingAs($customer)
+            ->get(route('orders.index', ['search' => $product->store->name]))
+            ->assertOk()
+            ->assertSee($product->store->name);
+    }
+
     /**
      * @return array{0: User, 1: Product}
      */

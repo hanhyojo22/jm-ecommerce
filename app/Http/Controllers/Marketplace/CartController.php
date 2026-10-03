@@ -16,7 +16,11 @@ class CartController extends Controller
 {
     public function index(Request $request): View
     {
-        $cart = $request->user()->cart()->with('items.product.store', 'items.product.images')->first();
+        $cart = $request->user()->cart()->with([
+            'items.product:id,store_id,name,slug,price,stock_quantity,status',
+            'items.product.store:id,name,slug',
+            'items.product.thumbnail',
+        ])->first();
 
         $cart?->items->each(function (CartItem $item): void {
             $item->setAttribute('line_total', bcmul((string) $item->product->price, (string) $item->quantity, 2));

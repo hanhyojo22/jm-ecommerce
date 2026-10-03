@@ -54,6 +54,8 @@ class ApproveSellerApplication
                 'reviewed_by' => $administrator->id,
             ]);
 
+            $application->user->update(['account_type' => 'seller']);
+
             AuditLog::query()->create([
                 'actor_user_id' => $administrator->id,
                 'action' => 'seller_application.approved',

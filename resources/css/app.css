@@ -2,8 +2,251 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    html {
+        background: #f8fafc;
+    }
+
+    body {
+        min-width: 320px;
+        background: #f8fafc;
+        color: #111827;
+    }
+
+    input,
+    select,
+    textarea {
+        max-width: 100%;
+    }
+
+    input[type='file'] {
+        overflow: hidden;
+    }
+
+    main :where(p, dd, li) {
+        overflow-wrap: anywhere;
+    }
+
+    :focus-visible {
+        outline: 2px solid #047857;
+        outline-offset: 2px;
+    }
+}
+
+@layer components {
+    .page-shell {
+        @apply bg-slate-50 py-8 sm:py-10;
+    }
+
+    .page-container {
+        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+
+    .content-card {
+        @apply overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm;
+    }
+
+    .section-card {
+        @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6;
+    }
+
+    .field-label {
+        @apply mb-1.5 block text-sm font-semibold text-slate-700;
+    }
+
+    .field-control {
+        @apply block min-h-11 w-full rounded-lg border-slate-300 text-sm text-slate-950 shadow-sm placeholder:text-slate-400 focus:border-emerald-700 focus:ring-emerald-700;
+    }
+
+    .status-badge {
+        @apply inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-4 ring-1 ring-inset;
+    }
+
+    .empty-state {
+        @apply px-6 py-14 text-center sm:py-16;
+    }
+
+    .table-scroll {
+        @apply overflow-x-auto overscroll-x-contain;
+    }
+
+    .table-scroll > table {
+        min-width: max-content;
+    }
+
+    .overflow-x-auto > table.min-w-full {
+        min-width: max-content;
+    }
+}
+
 [x-cloak] {
     display: none !important;
+}
+
+.marketplace-catalog {
+    caret-color: #047857;
+}
+
+.marketplace-catalog ::selection {
+    background: #a7f3d0;
+    color: #0f172a;
+}
+
+.marketplace-catalog ::-webkit-scrollbar {
+    height: 0.5rem;
+    width: 0.5rem;
+}
+
+.marketplace-catalog ::-webkit-scrollbar-thumb {
+    border: 2px solid #f7f7f2;
+    border-radius: 999px;
+    background: #94a3b8;
+}
+
+.jmmart-account-shell .clerk-profile-shell {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    align-self: start;
+}
+
+.jmmart-account-shell .clerk-profile-shell > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    align-self: start;
+}
+
+.jmmart-account-shell {
+    width: 100%;
+    max-width: 72rem;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    align-self: start;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-root, .cl-userProfile-root, .jmmart-clerk-card-box, .cl-cardBox, .jmmart-clerk-card, .cl-card, .jmmart-clerk-page-scroll-box, .cl-pageScrollBox, .cl-profilePage) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    align-self: start !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-card-box, .cl-cardBox) {
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    align-items: start !important;
+    align-content: start !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-card, .cl-card) {
+    overflow: visible !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.875rem !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    align-items: start !important;
+    align-content: start !important;
+    grid-auto-rows: min-content !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-navbar, .cl-navbar) {
+    width: 14rem !important;
+    min-width: 14rem !important;
+    padding: 0.75rem !important;
+    border-right: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-navbar-button, .cl-navbarButton) {
+    position: relative;
+    min-height: 2.75rem !important;
+    border-radius: 0.5rem !important;
+    color: #334155 !important;
+    font-weight: 600 !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-navbar-button, .cl-navbarButton):hover {
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-navbar-button-active, .cl-navbarButton.cl-active, .cl-navbarButton[aria-current='page']) {
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+    font-weight: 700 !important;
+    box-shadow: inset 3px 0 0 #10b981 !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-page-scroll-box, .cl-pageScrollBox) {
+    padding: 1.25rem !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-profile-section, .cl-profileSection) {
+    margin: 0 !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.75rem !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-profile-section, .cl-profileSection) + :is(.jmmart-clerk-profile-section, .cl-profileSection) {
+    margin-top: 0.75rem !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-profile-action, .cl-profileSectionPrimaryButton) {
+    border: 1px solid #a7f3d0 !important;
+    border-radius: 0.5rem !important;
+    background: #ffffff !important;
+    color: #047857 !important;
+    box-shadow: none !important;
+}
+
+.jmmart-account-shell :is(.jmmart-clerk-profile-action, .cl-profileSectionPrimaryButton):hover {
+    background: #ecfdf5 !important;
+    color: #065f46 !important;
+}
+
+@media (max-width: 767px) {
+    .jmmart-account-shell :is(.jmmart-clerk-card, .cl-card) {
+        border: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    .jmmart-account-shell :is(.jmmart-clerk-navbar, .cl-navbar) {
+        display: flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+        border-right: 0 !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        overflow-x: auto;
+    }
+
+    .jmmart-account-shell :is(.jmmart-clerk-navbar-button, .cl-navbarButton) {
+        flex: 1 0 50%;
+        justify-content: center !important;
+        border-radius: 0 !important;
+    }
+
+    .jmmart-account-shell :is(.jmmart-clerk-navbar-button-active, .cl-navbarButton.cl-active, .cl-navbarButton[aria-current='page']) {
+        box-shadow: inset 0 -2px 0 #047857 !important;
+    }
+
+    .jmmart-account-shell :is(.jmmart-clerk-page-scroll-box, .cl-pageScrollBox) {
+        padding: 1rem 0 0 !important;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

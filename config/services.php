@@ -28,6 +28,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'clerk' => [
+        'publishable_key' => env('CLERK_PUBLISHABLE_KEY'),
+        'secret_key' => env('CLERK_SECRET_KEY'),
+        'authorized_parties' => array_values(array_filter(array_map('trim', explode(',', env('CLERK_AUTHORIZED_PARTIES', env('APP_URL', '')))))),
+        'audiences' => array_values(array_filter(array_map('trim', explode(',', env('CLERK_JWT_AUDIENCES', ''))))),
+        'sign_in_url' => env('CLERK_SIGN_IN_URL', '/sign-in'),
+        'sign_up_url' => env('CLERK_SIGN_UP_URL', '/sign-up'),
+        'webhook_signing_secret' => env('CLERK_WEBHOOK_SIGNING_SECRET'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

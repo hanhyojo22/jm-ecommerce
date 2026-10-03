@@ -14,7 +14,7 @@
         $hasUnavailableItems = $cart?->items->contains(fn ($item) => $item->product->status !== 'active' || $item->product->stock_quantity < $item->quantity) ?? false;
     @endphp
 
-    <div class="min-h-screen bg-[#f7f7f2] py-8 sm:py-12">
+    <div class="min-h-screen bg-slate-50 py-8 sm:py-12">
         <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             @if (session('status'))
                 <div class="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-900" role="status">
@@ -61,8 +61,8 @@
                                             @php($isUnavailable = $item->product->status !== 'active' || $item->product->stock_quantity < $item->quantity)
                                             <article class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:p-5">
                                                 <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="aspect-square overflow-hidden rounded-xl bg-[#e8eee8] focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">
-                                                    @if ($item->product->images->first())
-                                                        <img src="{{ Storage::disk('public')->url($item->product->images->first()->path) }}" alt="{{ $item->product->name }}" class="h-full w-full object-cover">
+                                                    @if ($item->product->thumbnail)
+                                                        <img src="{{ Storage::disk('product_images')->url($item->product->thumbnail->path) }}" alt="{{ $item->product->name }}" width="96" height="96" loading="lazy" class="h-full w-full object-cover">
                                                     @else
                                                         <div class="grid h-full place-items-center text-lg font-bold text-emerald-800" aria-hidden="true">{{ Str::upper(Str::substr($store->name, 0, 1)) }}</div>
                                                     @endif

@@ -11,7 +11,7 @@
 
     @php($itemsByStore = $cart?->items->groupBy(fn ($item) => $item->product->store_id) ?? collect())
 
-    <div class="min-h-screen bg-[#f7f7f2] py-8 sm:py-12">
+    <div class="min-h-screen bg-slate-50 py-8 sm:py-12">
         <div class="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:px-8">
             <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" class="rounded-2xl bg-white p-5 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.45)] sm:p-8">
                 @csrf

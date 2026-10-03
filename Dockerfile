@@ -2,6 +2,16 @@ FROM node:22-alpine AS frontend
 
 WORKDIR /app
 
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_PORT
+ARG VITE_REVERB_SCHEME
+
+ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
+ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
+ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
+ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
@@ -21,7 +31,9 @@ WORKDIR /var/www/html
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends libonig-dev libpq-dev libxml2-dev libzip-dev unzip \
-    && docker-php-ext-install bcmath mbstring opcache pdo_pgsql xml zip \
+    && docker-php-ext-install bcmath mbstring pcntl pdo_pgsql xml zip \
+    && pecl install redis \
+    && docker-php-ext-enable opcache redis \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
@@ -31,7 +43,9 @@ COPY --from=frontend /app/public/build ./public/build
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/entrypoint.sh /usr/local/bin/jmmart-entrypoint
 
-RUN php artisan package:discover --ansi \
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
+    && rm -f bootstrap/cache/*.php \
+    && php artisan package:discover --ansi \
     && chmod +x /usr/local/bin/jmmart-entrypoint \
     && chown -R www-data:www-data storage bootstrap/cache
 

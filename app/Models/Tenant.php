@@ -29,4 +29,14 @@ class Tenant extends Model
     {
         return $this->hasMany(SellerOrder::class);
     }
+
+    public function sellerEarnings(): HasMany
+    {
+        return $this->hasMany(SellerEarning::class);
+    }
+
+    public function sellerPayouts(): HasMany
+    {
+        return $this->hasMany(SellerPayout::class);
+    }
 }

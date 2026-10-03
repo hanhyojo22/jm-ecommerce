@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
+        <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
+        <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
@@ -14,14 +17,14 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="bg-[#f7f7f2] font-sans antialiased text-slate-900">
-        <div class="min-h-screen bg-[#f7f7f2]">
+    <body class="bg-slate-50 font-sans antialiased text-slate-900">
+        <div class="min-h-screen bg-slate-50">
             @include('layouts.navigation')
 
             <!-- Page Heading -->
             @isset($header)
-                <header class="border-b border-slate-200 bg-[#f7f7f2]">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                <header class="border-b border-slate-200 bg-white">
+                    <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
                         {{ $header }}
                     </div>
                 </header>
