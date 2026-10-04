@@ -4,7 +4,6 @@ namespace App\Auth;
 
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ClerkUserResolver
@@ -31,44 +30,41 @@ class ClerkUserResolver
             return null;
         }
 
-        return DB::transaction(function () use ($identity): ?User {
-            $linkedUser = User::query()->where('clerk_user_id', $identity->id)->lockForUpdate()->first();
+        $linkedUser = User::query()->where('clerk_user_id', $identity->id)->first();
 
-            if ($linkedUser !== null) {
-                return $linkedUser;
-            }
+        if ($linkedUser !== null) {
+            return $linkedUser;
+        }
 
-            $matchingUsers = User::query()
-                ->where('email', $identity->email)
-                ->lockForUpdate()
-                ->get();
+        $matchingUsers = User::query()
+            ->where('email', $identity->email)
+            ->get();
 
-            if ($matchingUsers->count() === 1) {
-                $user = $matchingUsers->sole();
-                $user->forceFill([
-                    'clerk_user_id' => $identity->id,
-                    'email_verified_at' => now(),
-                ])->save();
-
-                return $user;
-            }
-
-            if ($matchingUsers->isNotEmpty()) {
-                return null;
-            }
-
-            $user = User::query()->create([
+        if ($matchingUsers->count() === 1) {
+            $user = $matchingUsers->sole();
+            $user->forceFill([
                 'clerk_user_id' => $identity->id,
-                'name' => $identity->name ?? Str::before($identity->email, '@'),
-                'email' => $identity->email,
-                'password' => Str::random(64),
-                'account_type' => 'buyer',
-                'is_active' => true,
-            ]);
-
-            $user->forceFill(['email_verified_at' => now()])->save();
+                'email_verified_at' => now(),
+            ])->save();
 
             return $user;
-        });
+        }
+
+        if ($matchingUsers->isNotEmpty()) {
+            return null;
+        }
+
+        $user = User::query()->create([
+            'clerk_user_id' => $identity->id,
+            'name' => $identity->name ?? Str::before($identity->email, '@'),
+            'email' => $identity->email,
+            'password' => Str::random(64),
+            'account_type' => 'buyer',
+            'is_active' => true,
+        ]);
+
+        $user->forceFill(['email_verified_at' => now()])->save();
+
+        return $user;
     }
 }
