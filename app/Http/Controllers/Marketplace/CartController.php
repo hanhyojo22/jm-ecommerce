@@ -8,7 +8,6 @@ use App\Models\CartItem;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -53,30 +52,22 @@ class CartController extends Controller
     {
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:100']]);
 
-        DB::transaction(function () use ($cartItem, $data, $request): void {
-            $lockedCartItem = CartItem::query()
-                ->whereKey($cartItem->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+        abort_unless($cartItem->cart()->where('user_id', $request->user()->id)->exists(), 403);
 
-            abort_unless($lockedCartItem->cart()->where('user_id', $request->user()->id)->exists(), 403);
+        $product = Product::query()
+            ->with(['store', 'tenant'])
+            ->findOrFail($cartItem->product_id);
 
-            $product = Product::query()
-                ->with(['store', 'tenant'])
-                ->lockForUpdate()
-                ->findOrFail($lockedCartItem->product_id);
+        if (
+            $product->status !== 'active'
+            || $product->store->status !== 'active'
+            || $product->tenant->status !== 'active'
+            || $product->stock_quantity < $data['quantity']
+        ) {
+            throw ValidationException::withMessages(['quantity' => 'This product is not currently available in that quantity.']);
+        }
 
-            if (
-                $product->status !== 'active'
-                || $product->store->status !== 'active'
-                || $product->tenant->status !== 'active'
-                || $product->stock_quantity < $data['quantity']
-            ) {
-                throw ValidationException::withMessages(['quantity' => 'This product is not currently available in that quantity.']);
-            }
-
-            $lockedCartItem->update(['quantity' => $data['quantity']]);
-        });
+        $cartItem->update(['quantity' => $data['quantity']]);
 
         return to_route('cart.index')->with('status', 'Cart updated.');
     }
