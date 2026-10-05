@@ -130,6 +130,43 @@
 
 @script
 <script>
+    const messageList = document.getElementById('conversation-messages');
+    let previousMessageScroll = null;
+
+    const scrollToLatestMessage = (behavior = 'smooth') => {
+        if (messageList) {
+            messageList.scrollTo({ top: messageList.scrollHeight, behavior });
+        }
+    };
+
+    messageList?.addEventListener('click', (event) => {
+        if (event.target.closest('button')?.getAttribute('wire:click') === 'loadOlderMessages') {
+            previousMessageScroll = {
+                top: messageList.scrollTop,
+                height: messageList.scrollHeight,
+            };
+        }
+    });
+
+    requestAnimationFrame(() => scrollToLatestMessage('auto'));
+
+    Livewire.hook('morphed', ({ el }) => {
+        if (! messageList || (el !== messageList && ! el.contains(messageList))) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            if (previousMessageScroll) {
+                messageList.scrollTop = previousMessageScroll.top + messageList.scrollHeight - previousMessageScroll.height;
+                previousMessageScroll = null;
+
+                return;
+            }
+
+            scrollToLatestMessage();
+        });
+    });
+
     const listenForMessages = () => {
         if (! window.Echo || window.chatConversationSubscribed) {
             return;
