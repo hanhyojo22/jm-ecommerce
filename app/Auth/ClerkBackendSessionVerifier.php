@@ -42,6 +42,9 @@ class ClerkBackendSessionVerifier implements ClerkSessionVerifier
     public function fetchUser(string $clerkUserId): ClerkIdentity
     {
         $response = Http::baseUrl('https://api.clerk.com/v1')
+            ->connectTimeout(3)
+            ->timeout(5)
+            ->retry([100, 500])
             ->withToken(config('services.clerk.secret_key'))
             ->acceptJson()
             ->get('/users/'.$clerkUserId)

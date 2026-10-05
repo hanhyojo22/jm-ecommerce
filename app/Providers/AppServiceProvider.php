@@ -8,8 +8,11 @@ use App\Auth\ClerkUserResolver;
 use App\Models\Category;
 use App\Models\Conversation;
 use App\Models\Product;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewInstance;
@@ -30,6 +33,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Auth::viaRequest('clerk', fn ($request) => app(ClerkUserResolver::class)->resolve($request));
+
+        RateLimiter::for('cart', fn (Request $request): Limit => Limit::perMinute(30)->by(
+            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+        ));
+
+        RateLimiter::for('checkout', fn (Request $request): Limit => Limit::perHour(10)->by(
+            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+        ));
 
         Model::preventLazyLoading(! $this->app->isProduction());
 

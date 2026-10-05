@@ -12,22 +12,6 @@ use Illuminate\Http\Request;
 
 class ConversationController extends Controller
 {
-    public function beginProductConversation(Request $request, Product $product): RedirectResponse
-    {
-        if ($request->user() === null) {
-            return redirect()->guest(route('login'));
-        }
-
-        abort_unless(
-            $request->user()->is_active
-            && $request->user()->account_type === 'buyer'
-            && $request->user()->hasVerifiedClerkEmail(),
-            403,
-        );
-
-        return $this->startForProduct($request, $product);
-    }
-
     public function startForProduct(Request $request, Product $product): RedirectResponse
     {
         abort_unless(

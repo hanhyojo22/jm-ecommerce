@@ -32,17 +32,16 @@ Route::get('/top-products', [CatalogController::class, 'topProducts'])->name('ca
 Route::get('/stores', [CatalogController::class, 'stores'])->name('catalog.stores');
 Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalog.store');
 Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('catalog.show');
-Route::get('/messages/products/{product}/start', [ConversationController::class, 'beginProductConversation'])->name('messages.products.begin');
 Route::post('/clerk/webhook', ClerkWebhookController::class)->middleware('throttle:60,1')->name('clerk.webhook');
 
 Route::middleware(['auth', 'clerk.verified', 'account:buyer'])->group(function (): void {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-    Route::post('/cart/products/{product}', [CartController::class, 'store'])->name('cart.store');
-    Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])->name('cart.update');
-    Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])->name('cart.destroy');
-    Route::post('/cart/restore', [CartController::class, 'restore'])->name('cart.restore');
+    Route::post('/cart/products/{product}', [CartController::class, 'store'])->middleware('throttle:cart')->name('cart.store');
+    Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])->middleware('throttle:cart')->name('cart.update');
+    Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])->middleware('throttle:cart')->name('cart.destroy');
+    Route::post('/cart/restore', [CartController::class, 'restore'])->middleware('throttle:cart')->name('cart.restore');
     Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');
-    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/order-items/{orderItem}/review', [MarketplaceProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');

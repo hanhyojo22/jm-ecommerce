@@ -15,7 +15,11 @@ class ClerkInvitationService
             throw new RuntimeException('Clerk is not configured.');
         }
 
-        Http::baseUrl('https://api.clerk.com/v1')->withToken($secretKey)->acceptJson()
+        Http::baseUrl('https://api.clerk.com/v1')
+            ->connectTimeout(3)
+            ->timeout(5)
+            ->withToken($secretKey)
+            ->acceptJson()
             ->post('/invitations', ['email_address' => $email, 'redirect_url' => url('/sign-in')])
             ->throw();
     }

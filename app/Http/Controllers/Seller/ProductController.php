@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Tenant;
@@ -85,6 +86,15 @@ class ProductController extends Controller
             $product->images()->create(['path' => $path]);
         }
 
+        AuditLog::query()->create([
+            'actor_user_id' => $request->user()->id,
+            'action' => 'product.created',
+            'entity_type' => Product::class,
+            'entity_id' => $product->id,
+            'new_values' => $product->only(['name', 'sku', 'price', 'stock_quantity', 'status']),
+            'ip_address' => $request->ip(),
+        ]);
+
         return to_route('seller.products.index')->with('status', "{$product->name} was saved.");
     }
 
@@ -98,6 +108,7 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         $product = $this->editableProduct($request, $product);
+        $oldValues = $product->only(['name', 'sku', 'price', 'stock_quantity', 'status']);
         $data = $request->validated();
         unset($data['image']);
         $product->update($data);
@@ -106,6 +117,16 @@ class ProductController extends Controller
             $path = $request->file('image')->store('products', 'product_images');
             $product->images()->create(['path' => $path, 'position' => $product->images()->count()]);
         }
+
+        AuditLog::query()->create([
+            'actor_user_id' => $request->user()->id,
+            'action' => 'product.updated',
+            'entity_type' => Product::class,
+            'entity_id' => $product->id,
+            'old_values' => $oldValues,
+            'new_values' => $product->only(['name', 'sku', 'price', 'stock_quantity', 'status']),
+            'ip_address' => $request->ip(),
+        ]);
 
         return to_route('seller.products.index')->with('status', "{$product->name} was updated.");
     }

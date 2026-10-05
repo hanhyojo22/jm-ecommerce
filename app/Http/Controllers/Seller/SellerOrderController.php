@@ -73,7 +73,7 @@ class SellerOrderController extends Controller
         ]);
 
         $sellerOrder->load('order');
-        $updateStatus->handle($sellerOrder, $data['status']);
+        $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip());
 
         return back()->with('status', "Order {$sellerOrder->order->number} was marked as {$data['status']}.");
     }

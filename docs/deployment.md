@@ -12,7 +12,7 @@ This deployment uses Docker Compose, Caddy-managed TLS, PostgreSQL, Redis, Larav
 
 1. Clone the repository on the VPS and change into its directory.
 2. Copy `.env.production.example` to `.env.production`. This file is ignored by Git and must never be committed.
-3. Set `DOMAIN`, `CADDY_SITE_ADDRESS`, `APP_URL`, `REVERB_ALLOWED_ORIGINS`, and `VITE_REVERB_HOST` to the real domain. Set `ACME_EMAIL` to an address that can receive certificate notices.
+3. Set `DOMAIN`, `CADDY_SITE_ADDRESS`, `APP_URL`, `CLERK_AUTHORIZED_PARTIES`, `REVERB_ALLOWED_ORIGINS`, and `VITE_REVERB_HOST` to the real domain. Set `ACME_EMAIL` to an address that can receive certificate notices. Set the Clerk publishable key, secret key, and webhook signing secret from the production Clerk instance.
 4. Generate unique secrets. Build the image first, then use the command below to generate `APP_KEY` without starting the stack:
 
    ```sh
@@ -70,3 +70,5 @@ The `app-storage` named volume contains uploaded product and review images. Incl
 - View failed jobs: `docker compose --env-file .env.production -f docker-compose.production.yml exec app php artisan queue:failed`
 - Restart workers after a code-only change: `docker compose --env-file .env.production -f docker-compose.production.yml restart queue scheduler reverb`
 - The application health endpoint is `/up`.
+
+The Render manifest runs migrations before Apache starts because Render's free plan does not support a pre-deploy command. For multi-instance or paid Render deployments, move that command to Render's pre-deploy setting so migrations run exactly once per release.

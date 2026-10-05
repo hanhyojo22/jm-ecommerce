@@ -1,4 +1,4 @@
-<div>
+<div data-conversation-thread>
     <header class="border-b border-slate-200 bg-white">
         <div class="mx-auto flex max-w-7xl min-w-0 items-center gap-3 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
             <a href="{{ route('messages.index') }}" class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 sm:hidden" aria-label="Back to messages"><span aria-hidden="true">←</span></a>
@@ -70,11 +70,18 @@
 
 @script
 <script>
-    if (window.Echo) {
+    const listenForMessages = () => {
+        if (! window.Echo) {
+            return;
+        }
+
         window.Echo.private('conversation.{{ $conversation->id }}').listen('.MessageSent', () => {
             $wire.markRead();
             $wire.$refresh();
         });
-    }
+    };
+
+    listenForMessages();
+    window.addEventListener('reverb:ready', listenForMessages, { once: true });
 </script>
 @endscript

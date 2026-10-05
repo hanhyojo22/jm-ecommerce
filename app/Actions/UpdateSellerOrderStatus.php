@@ -2,9 +2,12 @@
 
 namespace App\Actions;
 
+use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SellerOrder;
+use App\Models\User;
+use App\Queries\TopProductQuery;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -17,9 +20,9 @@ class UpdateSellerOrderStatus
         'shipped' => ['delivered'],
     ];
 
-    public function handle(SellerOrder $sellerOrder, string $status): SellerOrder
+    public function handle(SellerOrder $sellerOrder, string $status, User $actor, ?string $ipAddress = null): SellerOrder
     {
-        return DB::transaction(function () use ($sellerOrder, $status): SellerOrder {
+        $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress): SellerOrder {
             $order = Order::query()
                 ->lockForUpdate()
                 ->findOrFail($sellerOrder->order_id);
@@ -37,18 +40,43 @@ class UpdateSellerOrderStatus
                 ]);
             }
 
+            $previousStatus = $sellerOrder->status;
+
             if ($status === 'cancelled') {
                 $this->restoreStock($sellerOrder);
             }
 
             $sellerOrder->update(['status' => $status]);
 
+            $activeSellerOrders = $sellerOrders->reject(
+                fn (SellerOrder $order): bool => $order->status === 'cancelled',
+            );
+            $remainingTotal = $this->sumTotals($activeSellerOrders->pluck('total')->all());
+
             $order->update([
                 'status' => $this->aggregateStatus($sellerOrders->pluck('status')->all()),
+                'subtotal' => $remainingTotal,
+                'shipping_amount' => '0.00',
+                'total' => $remainingTotal,
+            ]);
+            $order->payment()->lockForUpdate()->firstOrFail()->update(['amount' => $remainingTotal]);
+
+            AuditLog::query()->create([
+                'actor_user_id' => $actor->id,
+                'action' => 'seller_order.status_updated',
+                'entity_type' => SellerOrder::class,
+                'entity_id' => $sellerOrder->id,
+                'old_values' => ['status' => $previousStatus],
+                'new_values' => ['status' => $status, 'order_total' => $remainingTotal],
+                'ip_address' => $ipAddress,
             ]);
 
             return $sellerOrder;
         });
+
+        TopProductQuery::forgetCachedRankings();
+
+        return $updatedSellerOrder;
     }
 
     /**
@@ -103,5 +131,17 @@ class UpdateSellerOrderStatus
         }
 
         return 'pending';
+    }
+
+    /**
+     * @param  array<int, string>  $totals
+     */
+    private function sumTotals(array $totals): string
+    {
+        return array_reduce(
+            $totals,
+            fn (string $total, string $lineTotal): string => bcadd($total, $lineTotal, 2),
+            '0.00',
+        );
     }
 }

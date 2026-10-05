@@ -23,6 +23,12 @@ class ApproveSellerApplication
                 throw new LogicException('Only pending seller applications can be approved.');
             }
 
+            $seller = User::query()->lockForUpdate()->findOrFail($application->user_id);
+
+            if ($seller->tenantMemberships()->exists()) {
+                throw new LogicException('This seller already has a store.');
+            }
+
             $tenant = Tenant::query()->create([
                 'name' => $application->store_name,
                 'slug' => $this->uniqueSlug($application->store_name, Tenant::class),
@@ -54,7 +60,7 @@ class ApproveSellerApplication
                 'reviewed_by' => $administrator->id,
             ]);
 
-            $application->user->update(['account_type' => 'seller']);
+            $seller->update(['account_type' => 'seller']);
 
             AuditLog::query()->create([
                 'actor_user_id' => $administrator->id,

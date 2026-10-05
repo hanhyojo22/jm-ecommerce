@@ -27,8 +27,10 @@ class MarkCodPaymentPaid
                 ->lockForUpdate()
                 ->get(['id', 'status']);
 
-            if ($sellerOrders->isEmpty() || $sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status !== 'delivered')) {
-                throw new LogicException('COD payments can only be marked as paid when every seller order has been delivered.');
+            $fulfillableSellerOrders = $sellerOrders->reject(fn ($sellerOrder): bool => $sellerOrder->status === 'cancelled');
+
+            if ($fulfillableSellerOrders->isEmpty() || $fulfillableSellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status !== 'delivered')) {
+                throw new LogicException('COD payments can only be marked as paid when every non-cancelled seller order has been delivered.');
             }
 
             if ($payment->method !== 'cod' || $payment->status !== 'pending') {

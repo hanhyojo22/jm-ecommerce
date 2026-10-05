@@ -47,6 +47,7 @@ return [
             'url' => rtrim(env('AWS_ENDPOINT_URL_S3'), '/').'/'.env('NEON_PRODUCT_IMAGES_BUCKET'),
             'endpoint' => env('AWS_ENDPOINT_URL_S3'),
             'use_path_style_endpoint' => true,
+            'visibility' => 'public',
             'throw' => true,
         ] : [
             'driver' => 'local',
@@ -66,6 +67,7 @@ return [
             'url' => rtrim(env('AWS_ENDPOINT_URL_S3'), '/').'/'.env('NEON_PRODUCT_IMAGES_BUCKET'),
             'endpoint' => env('AWS_ENDPOINT_URL_S3'),
             'use_path_style_endpoint' => true,
+            'visibility' => 'public',
             'throw' => true,
         ] : [
             'driver' => 'local',

@@ -34,6 +34,7 @@ class SellerApplicationTest extends TestCase
             'store_name' => 'Northwind Goods',
             'status' => 'pending',
         ]);
+        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $customer->id, 'action' => 'seller_application.submitted']);
     }
 
     public function test_only_a_platform_administrator_can_approve_an_application(): void
@@ -77,6 +78,32 @@ class SellerApplicationTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $administrator->id, 'action' => 'seller_application.approved']);
         $this->assertSame(1, TenantMember::query()->where('tenant_id', $tenant->id)->count());
         $this->assertSame(1, AuditLog::query()->count());
+    }
+
+    public function test_approved_seller_cannot_submit_or_receive_a_second_store_application(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        $approvedApplication = $seller->sellerApplications()->create([
+            'store_name' => 'First Store',
+            'seller_name' => 'Ava Seller',
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'status' => 'pending',
+            'submitted_at' => now(),
+        ]);
+        app(ApproveSellerApplication::class)->handle($administrator, $approvedApplication);
+
+        $this->actingAs($seller)->post(route('seller-application.store'), [
+            'store_name' => 'Second Store',
+            'seller_name' => 'Ava Seller',
+            'phone' => '+639171234567',
+            'address_line' => '20 Market Street',
+            'city' => 'Manila',
+        ])->assertRedirect(route('seller.dashboard'));
+
+        $this->assertDatabaseCount('seller_applications', 1);
     }
 
     public function test_administrator_sees_pending_first_and_can_filter_application_cards(): void

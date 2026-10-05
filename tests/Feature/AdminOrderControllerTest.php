@@ -57,7 +57,7 @@ class AdminOrderControllerTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 0);
     }
 
-    public function test_administrator_cannot_mark_a_partially_cancelled_marketplace_order_as_cod_paid(): void
+    public function test_administrator_can_mark_a_partially_cancelled_marketplace_order_as_cod_paid_after_the_remaining_delivery(): void
     {
         $administrator = User::factory()->administrator()->create();
         [$deliveredStore] = $this->storeWithOwner('Northwind Goods', 'Ava Seller');
@@ -68,10 +68,10 @@ class AdminOrderControllerTest extends TestCase
 
         $this->actingAs($administrator)
             ->patch(route('admin.orders.payment.mark-paid', $order))
-            ->assertSessionHasErrors(['payment' => 'COD payments can only be marked as paid when every seller order has been delivered.']);
+            ->assertRedirect(route('admin.orders.show', $order));
 
-        $this->assertDatabaseHas('payments', ['id' => $order->payment->id, 'status' => 'pending']);
-        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertDatabaseHas('payments', ['id' => $order->payment->id, 'status' => 'paid']);
+        $this->assertDatabaseCount('audit_logs', 1);
     }
 
     public function test_non_administrators_cannot_mark_a_cod_payment_as_paid(): void

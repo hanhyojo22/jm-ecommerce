@@ -28,6 +28,7 @@ class SellerProductTest extends TestCase
         ])->assertRedirect(route('seller.products.index'));
 
         $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'status' => 'active']);
+        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.created']);
     }
 
     public function test_seller_cannot_view_another_tenants_product_listing(): void
@@ -152,6 +153,7 @@ class SellerProductTest extends TestCase
         ])->assertRedirect(route('seller.products.index'));
 
         $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'stock_quantity' => 7, 'status' => 'active']);
+        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.updated', 'entity_id' => $product->id]);
     }
 
     public function test_owner_can_render_the_edit_product_form(): void

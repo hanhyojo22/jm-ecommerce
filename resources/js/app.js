@@ -1,28 +1,31 @@
 
 
 import Alpine from 'alpinejs';
-import { Clerk } from '@clerk/clerk-js';
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
 
 window.Alpine = Alpine;
-window.Pusher = Pusher;
-
-if (import.meta.env.VITE_REVERB_APP_KEY) {
-    window.Echo = new Echo({
-        broadcaster: 'reverb',
-        key: import.meta.env.VITE_REVERB_APP_KEY,
-        wsHost: window.location.hostname,
-        wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-        wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 443),
-        forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-        enabledTransports: ['ws', 'wss'],
-    });
-}
 
 Alpine.start();
 
+if (document.querySelector('[data-conversation-thread]') && import.meta.env.VITE_REVERB_APP_KEY) {
+    Promise.all([import('laravel-echo'), import('pusher-js')]).then(([{ default: Echo }, { default: Pusher }]) => {
+        window.Pusher = Pusher;
+        window.Echo = new Echo({
+            broadcaster: 'reverb',
+            key: import.meta.env.VITE_REVERB_APP_KEY,
+            wsHost: window.location.hostname,
+            wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+            wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 443),
+            forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+            enabledTransports: ['ws', 'wss'],
+        });
+        window.dispatchEvent(new Event('reverb:ready'));
+    }).catch((error) => console.error(error));
+}
+
 const clerkPublishableKey = document.querySelector('meta[name="clerk-publishable-key"]')?.content;
+const clerkComponents = document.querySelectorAll('[data-clerk-component]');
+const clerkSignOutControls = document.querySelectorAll('[data-clerk-sign-out]');
+const clerkHandoff = document.querySelector('[data-clerk-session-handoff]');
 
 const clerkComponentAppearance = {
     variables: {
@@ -92,6 +95,68 @@ const renderClerkComponentError = (message = 'Authentication could not load. Ple
     });
 };
 
+const renderClerkHandoffError = (message = 'We could not finish signing you in.') => {
+    if (!clerkHandoff) {
+        return;
+    }
+
+    const title = document.createElement('p');
+    const description = document.createElement('p');
+    const signInLink = document.createElement('a');
+
+    title.className = 'font-semibold text-slate-900';
+    title.textContent = message;
+    description.className = 'text-sm text-slate-600';
+    description.textContent = 'Please return to sign in and try again.';
+    signInLink.className = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800';
+    signInLink.href = '/sign-in';
+    signInLink.textContent = 'Return to sign in';
+
+    clerkHandoff.setAttribute('role', 'alert');
+    clerkHandoff.replaceChildren(title, description, signInLink);
+};
+
+const completeClerkHandoff = async (clerk) => {
+    if (!clerkHandoff) {
+        return;
+    }
+
+    if (!clerk.user) {
+        renderClerkHandoffError('Your Clerk sign-in could not be confirmed.');
+        return;
+    }
+
+    const sessionToken = await clerk.session?.getToken();
+
+    if (!sessionToken) {
+        throw new Error('Clerk did not provide a session token for the sign-in handoff.');
+    }
+
+    const response = await fetch(clerkHandoff.dataset.sessionEndpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${sessionToken}`,
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+        body: JSON.stringify({ redirect: clerkHandoff.dataset.redirectUrl }),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Laravel rejected the Clerk sign-in handoff (${response.status}).`);
+    }
+
+    const result = await response.json();
+
+    if (typeof result.redirect !== 'string' || !result.redirect.startsWith('/') || result.redirect.startsWith('//')) {
+        throw new Error('Laravel returned an invalid sign-in destination.');
+    }
+
+    window.location.assign(result.redirect);
+};
+
 const clerkDomainFromPublishableKey = (publishableKey) => {
     const encodedDomain = publishableKey.split('_')[2];
 
@@ -111,8 +176,10 @@ const clerkDomainFromPublishableKey = (publishableKey) => {
     return url.hostname ? url.host : null;
 };
 
+if (clerkComponents.length > 0 || clerkSignOutControls.length > 0 || clerkHandoff) {
 if (!clerkPublishableKey) {
     renderClerkComponentError('Authentication settings are unavailable. Please refresh the page or try again later.');
+    renderClerkHandoffError();
 } else {
     let clerkDomain;
 
@@ -124,6 +191,7 @@ if (!clerkPublishableKey) {
 
     if (!clerkDomain) {
         renderClerkComponentError('Authentication settings are unavailable. Please refresh the page or try again later.');
+        renderClerkHandoffError();
     }
 
     if (clerkDomain) {
@@ -138,6 +206,7 @@ if (!clerkPublishableKey) {
             clerkUiScript.onerror = () => reject(new Error('Unable to load Clerk authentication UI.'));
             document.head.appendChild(clerkUiScript);
         }).then(async () => {
+            const { Clerk } = await import('@clerk/clerk-js');
             const clerk = new Clerk(clerkPublishableKey);
             window.clerk = clerk;
 
@@ -148,30 +217,7 @@ if (!clerkPublishableKey) {
                 ui: { ClerkUI: window.__internal_ClerkUICtor },
             });
 
-            const syncServerSession = () => {
-                const guestActions = document.querySelector('[data-clerk-guest-actions]');
-
-                if (! clerk.user || ! guestActions) {
-                    return;
-                }
-
-                const reloadKey = `clerk-server-session-sync:${window.location.pathname}`;
-
-                if (window.sessionStorage.getItem(reloadKey) === 'complete') {
-                    return;
-                }
-
-                window.sessionStorage.setItem(reloadKey, 'complete');
-                window.location.reload();
-            };
-
-            clerk.addListener(({ user }) => {
-                if (user) {
-                    syncServerSession();
-                }
-            });
-
-            syncServerSession();
+            await completeClerkHandoff(clerk);
             window.dispatchEvent(new Event('clerk:loaded'));
             const signOut = async () => {
                 try {
@@ -196,14 +242,14 @@ if (!clerkPublishableKey) {
 
             document.querySelectorAll('[data-clerk-component="sign-in"]').forEach((element) => {
                 clerk.mountSignIn(element, {
-                    fallbackRedirectUrl: element.dataset.afterAuthUrl,
+                    forceRedirectUrl: element.dataset.afterAuthUrl,
                     appearance: clerkComponentAppearance,
                 });
             });
 
             document.querySelectorAll('[data-clerk-component="sign-up"]').forEach((element) => {
                 clerk.mountSignUp(element, {
-                    fallbackRedirectUrl: element.dataset.afterAuthUrl,
+                    forceRedirectUrl: element.dataset.afterAuthUrl,
                     appearance: clerkComponentAppearance,
                 });
             });
@@ -227,6 +273,8 @@ if (!clerkPublishableKey) {
         }).catch((error) => {
             console.error(error);
             renderClerkComponentError();
+            renderClerkHandoffError();
         });
     }
+}
 }

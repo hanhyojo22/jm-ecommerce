@@ -4,6 +4,7 @@ services:
     runtime: docker
     plan: free
     region: singapore
+    dockerCommand: sh -c 'php artisan migrate --force --no-interaction && apache2-foreground'
     healthCheckPath: /up
     envVars:
       - key: PORT

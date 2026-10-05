@@ -63,7 +63,7 @@ class ConversationTest extends TestCase
         $product = $this->product();
 
         $this->actingAs($buyer)
-            ->get(route('messages.products.begin', $product))
+            ->post(route('messages.products.start', $product))
             ->assertForbidden();
 
         $this->assertDatabaseCount('conversations', 0);

@@ -93,6 +93,35 @@ class CheckoutTest extends TestCase
         $this->assertSame(5, $product->refresh()->stock_quantity);
     }
 
+    public function test_cancelling_one_seller_order_reprices_a_multi_store_order_for_the_remaining_delivery(): void
+    {
+        [$firstSeller, $firstProduct] = $this->sellerProduct('20.00', 5);
+        [$secondSeller, $secondProduct] = $this->sellerProduct('30.00', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $firstProduct->id, 'quantity' => 1]);
+        $cart->items()->create(['product_id' => $secondProduct->id, 'quantity' => 1]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery());
+        $order = Order::query()->sole();
+        $firstSellerOrder = $order->sellerOrders()->where('store_id', $firstProduct->store_id)->sole();
+        $secondSellerOrder = $order->sellerOrders()->where('store_id', $secondProduct->store_id)->sole();
+
+        $this->actingAs($firstSeller)->patch(route('seller.orders.update', $firstSellerOrder), ['status' => 'confirmed']);
+        $this->actingAs($firstSeller)->patch(route('seller.orders.update', $firstSellerOrder), ['status' => 'cancelled']);
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '30.00', 'total' => '30.00']);
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'amount' => '30.00']);
+        $this->assertSame(5, $firstProduct->refresh()->stock_quantity);
+
+        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'confirmed']);
+        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'processing']);
+        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'shipped']);
+        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'delivered']);
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'delivered', 'total' => '30.00']);
+    }
+
     public function test_customer_can_search_purchases_by_product_or_store_name(): void
     {
         [, $product] = $this->sellerProduct('20.00', 5);

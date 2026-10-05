@@ -67,6 +67,7 @@ class ProductReviewTest extends TestCase
         $this->actingAs($otherSeller)->post(route('seller.reviews.respond', $review), ['body' => 'Thank you'])->assertForbidden();
         $this->actingAs($seller)->post(route('seller.reviews.respond', $review), ['body' => 'Thank you'])->assertRedirect();
         $this->assertDatabaseHas('product_review_responses', ['product_review_id' => $review->id, 'user_id' => $seller->id, 'body' => 'Thank you']);
+        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $seller->id, 'action' => 'product_review.response_saved', 'entity_id' => $review->id]);
     }
 
     public function test_admin_moderation_records_an_audit_trail(): void
