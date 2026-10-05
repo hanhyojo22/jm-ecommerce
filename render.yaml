@@ -4,7 +4,7 @@ envVarGroups:
       - key: REVERB_APP_ID
         value: jmmart
       - key: REVERB_APP_KEY
-        generateValue: true
+        value: d4258d9d1bdd4fbd09df58dc182cba0e84359788001b076d
       - key: REVERB_APP_SECRET
         generateValue: true
 
