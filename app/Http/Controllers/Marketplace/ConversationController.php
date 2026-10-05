@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
+use App\Models\BlockedUser;
 use App\Models\Conversation;
+use App\Models\ConversationMessage;
 use App\Models\Product;
 use App\Models\SellerOrder;
-use Illuminate\Database\QueryException;
+use App\Models\TenantMember;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -40,16 +42,43 @@ class ConversationController extends Controller
         return to_route('messages.show', $conversation);
     }
 
+    public function block(Request $request, Conversation $conversation): RedirectResponse
+    {
+        $this->authorize('view', $conversation);
+        $sellerId = TenantMember::query()
+            ->where('tenant_id', $conversation->store->tenant_id)
+            ->where('role', 'owner')
+            ->value('user_id');
+        abort_if($sellerId === null, 409);
+
+        BlockedUser::query()->firstOrCreate([
+            'user_id' => $request->user()->id,
+            'blocked_user_id' => $request->user()->account_type === 'buyer' ? $sellerId : $conversation->buyer_id,
+        ]);
+
+        return to_route('messages.index')->with('status', 'This conversation has been blocked.');
+    }
+
+    public function report(Request $request, Conversation $conversation, ConversationMessage $message): RedirectResponse
+    {
+        $this->authorize('view', $conversation);
+        abort_unless($message->conversation_id === $conversation->id && $message->sender_id !== $request->user()->id, 404);
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:100'],
+            'details' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $message->reports()->firstOrCreate(['reporter_id' => $request->user()->id], $data);
+
+        return back()->with('status', 'Your report has been submitted.');
+    }
+
     /**
      * @param  array<string, string>  $identity
      * @param  array<string, string>  $attributes
      */
     private function findOrCreate(array $identity, array $attributes): Conversation
     {
-        try {
-            return Conversation::create([...$identity, ...$attributes]);
-        } catch (QueryException) {
-            return Conversation::query()->where($identity)->firstOrFail();
-        }
+        return Conversation::query()->createOrFirst($identity, $attributes);
     }
 }

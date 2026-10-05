@@ -70,6 +70,19 @@ class Conversation extends Model
         return $this->hasMany(ConversationReadState::class);
     }
 
+    public function isBlocked(): bool
+    {
+        $sellerIds = TenantMember::query()
+            ->where('tenant_id', $this->store()->value('tenant_id'))
+            ->whereIn('role', ['owner', 'manager', 'staff'])
+            ->select('user_id');
+
+        return BlockedUser::query()->where(function (Builder $query) use ($sellerIds): void {
+            $query->where(fn (Builder $query) => $query->where('user_id', $this->buyer_id)->whereIn('blocked_user_id', $sellerIds))
+                ->orWhere(fn (Builder $query) => $query->where('blocked_user_id', $this->buyer_id)->whereIn('user_id', $sellerIds));
+        })->exists();
+    }
+
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
         if ($user->account_type === 'buyer') {

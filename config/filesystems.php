@@ -77,6 +77,23 @@ return [
             'throw' => true,
         ],
 
+        'chat_attachments' => env('CHAT_ATTACHMENTS_BUCKET') ? [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_REGION'),
+            'bucket' => env('CHAT_ATTACHMENTS_BUCKET'),
+            'endpoint' => env('AWS_ENDPOINT_URL_S3'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'private',
+            'throw' => true,
+        ] : [
+            'driver' => 'local',
+            'root' => storage_path('app/private/chat'),
+            'serve' => false,
+            'throw' => true,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

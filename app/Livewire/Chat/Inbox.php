@@ -37,7 +37,7 @@ class Inbox extends Component
             ->with([
                 'buyer',
                 'store',
-                'product.images',
+                'product',
                 'sellerOrder.order',
                 'messages' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id')->limit(1),
                 'readStates' => fn ($query) => $query->where('user_id', $user->id),
@@ -57,7 +57,7 @@ class Inbox extends Component
             })
             ->orderByDesc('latest_message_at')
             ->orderByDesc('id')
-            ->paginate(20);
+            ->simplePaginate(20);
 
         return view('livewire.chat.inbox', compact('conversations'));
     }

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Conversation;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class ConversationPolicy
 {
@@ -31,9 +32,9 @@ class ConversationPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Conversation $conversation): bool
+    public function view(User $user, Conversation $conversation): bool|Response
     {
-        return $user->is_active && ($conversation->buyer_id === $user->id || $this->isActiveStoreMember($user, $conversation));
+        return $this->canView($user, $conversation) ? true : Response::denyAsNotFound();
     }
 
     /**
@@ -41,7 +42,12 @@ class ConversationPolicy
      */
     public function send(User $user, Conversation $conversation): bool
     {
-        return $this->view($user, $conversation);
+        return $this->canView($user, $conversation) && ! $conversation->isBlocked();
+    }
+
+    private function canView(User $user, Conversation $conversation): bool
+    {
+        return $user->is_active && ($conversation->buyer_id === $user->id || $this->isActiveStoreMember($user, $conversation));
     }
 
     /**

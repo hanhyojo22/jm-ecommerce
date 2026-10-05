@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Actions\SendConversationMessage;
+use App\Events\ConversationReceiptUpdated;
+use App\Events\MessageSent;
 use App\Livewire\Chat\Thread;
 use App\Models\Conversation;
+use App\Models\ConversationReadState;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -11,7 +15,11 @@ use App\Models\TenantMember;
 use App\Models\User;
 use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -38,7 +46,7 @@ class ConversationTest extends TestCase
         $product = $this->product();
         $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
 
-        $this->actingAs($otherBuyer)->get(route('messages.show', $conversation))->assertForbidden();
+        $this->actingAs($otherBuyer)->get(route('messages.show', $conversation))->assertNotFound();
     }
 
     public function test_admin_cannot_access_chat_inbox(): void
@@ -74,6 +82,7 @@ class ConversationTest extends TestCase
         $buyer = User::factory()->create();
         $product = $this->product();
         $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $this->createMessages($conversation, $buyer, 201);
 
         $this->actingAs($buyer);
 
@@ -83,6 +92,180 @@ class ConversationTest extends TestCase
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
             ->assertSet('messageLimit', 200);
+    }
+
+    public function test_chat_history_does_not_offer_older_messages_after_the_limit(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        for ($index = 0; $index < 201; $index++) {
+            $conversation->messages()->create([
+                'sender_id' => $buyer->id,
+                'body' => $index === 0 ? 'oldest-message-marker' : "Message {$index}",
+                'created_at' => now()->addSeconds($index),
+            ]);
+        }
+
+        $this->actingAs($buyer);
+
+        Livewire::test(Thread::class, ['conversation' => $conversation])
+            ->call('loadOlderMessages')
+            ->call('loadOlderMessages')
+            ->call('loadOlderMessages')
+            ->assertSet('messageLimit', 200)
+            ->assertSee('Message 200')
+            ->assertDontSee('oldest-message-marker')
+            ->assertDontSee('Load older messages');
+    }
+
+    public function test_retrying_a_message_with_the_same_client_id_does_not_duplicate_or_rebroadcast_it(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $clientMessageId = (string) str()->uuid();
+        Event::fake([MessageSent::class, ConversationReceiptUpdated::class]);
+
+        $this->actingAs($buyer);
+
+        Livewire::test(Thread::class, ['conversation' => $conversation])
+            ->set('clientMessageId', $clientMessageId)
+            ->set('body', 'Is this available?')
+            ->call('send')
+            ->set('clientMessageId', $clientMessageId)
+            ->set('body', 'Is this available?')
+            ->call('send')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseCount('conversation_messages', 1);
+        Event::assertDispatchedTimes(MessageSent::class, 1);
+    }
+
+    public function test_opening_a_thread_persists_the_buyer_read_receipt(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $message = $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'Your order is ready.']);
+        Event::fake([ConversationReceiptUpdated::class]);
+
+        $this->actingAs($buyer);
+
+        Livewire::test(Thread::class, ['conversation' => $conversation]);
+
+        $this->assertDatabaseHas('conversation_read_states', [
+            'conversation_id' => $conversation->id,
+            'user_id' => $buyer->id,
+            'last_read_message_id' => $message->id,
+            'last_delivered_message_id' => $message->id,
+        ]);
+        Event::assertDispatched(ConversationReceiptUpdated::class, fn (ConversationReceiptUpdated $event): bool => $event->event === 'message.delivered');
+        Event::assertDispatched(ConversationReceiptUpdated::class, fn (ConversationReceiptUpdated $event): bool => $event->event === 'message.read');
+    }
+
+    public function test_mark_read_rechecks_conversation_access(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'New message']);
+        $this->actingAs($buyer);
+        $thread = Livewire::test(Thread::class, ['conversation' => $conversation]);
+        ConversationReadState::query()->where('conversation_id', $conversation->id)->where('user_id', $buyer->id)->delete();
+        $buyer->update(['is_active' => false]);
+
+        $thread->call('markRead')->assertNotFound();
+    }
+
+    public function test_sending_an_older_message_does_not_move_inbox_timestamp_backwards(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $latestMessageAt = now()->setDate(2030, 1, 2);
+        $conversation->forceFill(['latest_message_at' => $latestMessageAt])->saveQuietly();
+        $this->travelTo(now()->setDate(2030, 1, 1));
+
+        app(SendConversationMessage::class)->handle($conversation, $buyer, 'Older timestamp', (string) str()->uuid());
+
+        $this->assertSame($latestMessageAt->toDateTimeString(), $conversation->refresh()->latest_message_at->toDateTimeString());
+    }
+
+    public function test_blocking_a_seller_prevents_new_messages_from_both_participants(): void
+    {
+        $buyer = User::factory()->create();
+        $owner = User::factory()->seller()->create();
+        $product = $this->product();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $owner->id, 'role' => 'owner']);
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($buyer)->post(route('messages.block', $conversation))->assertRedirect(route('messages.index'));
+
+        $this->assertDatabaseHas('blocked_users', ['user_id' => $buyer->id, 'blocked_user_id' => $owner->id]);
+        $this->assertFalse(Gate::forUser($buyer)->allows('send', $conversation));
+        $this->assertFalse(Gate::forUser($owner)->allows('send', $conversation));
+    }
+
+    public function test_buyer_can_report_only_another_participants_message(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $message = $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'Reported message']);
+
+        $this->actingAs($buyer)->post(route('messages.report', [$conversation, $message]), ['reason' => 'Spam', 'details' => 'Repeated links.'])->assertRedirect();
+
+        $this->assertDatabaseHas('message_reports', ['conversation_message_id' => $message->id, 'reporter_id' => $buyer->id, 'reason' => 'Spam', 'status' => 'pending']);
+    }
+
+    public function test_attachment_download_requires_conversation_access(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $message = $conversation->messages()->create(['sender_id' => $buyer->id, 'body' => 'question.pdf', 'type' => 'file']);
+        $path = 'chat/question.pdf';
+        Storage::disk('chat_attachments')->put($path, 'file contents');
+        $attachment = $message->attachments()->create(['uploaded_by' => $buyer->id, 'disk' => 'chat_attachments', 'path' => $path, 'original_name' => 'question.pdf', 'mime_type' => 'application/pdf', 'byte_size' => 13]);
+
+        $this->actingAs($otherBuyer)->get(route('messages.attachments.show', $attachment))->assertNotFound();
+        $this->actingAs($buyer)->get(route('messages.attachments.show', $attachment))->assertOk();
+    }
+
+    public function test_uploading_a_valid_attachment_creates_one_private_file_message_on_retry(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $clientMessageId = (string) str()->uuid();
+        $payload = ['client_message_id' => $clientMessageId, 'attachment' => UploadedFile::fake()->create('receipt.pdf', 20, 'application/pdf')];
+
+        $this->actingAs($buyer)->post(route('messages.attachments.store', $conversation), $payload)->assertRedirect();
+        $this->post(route('messages.attachments.store', $conversation), $payload)->assertRedirect();
+
+        $this->assertDatabaseCount('conversation_messages', 1);
+        $this->assertDatabaseCount('message_attachments', 1);
+        $attachment = $conversation->messages()->first()->attachments()->first();
+        Storage::disk('chat_attachments')->assertExists($attachment->path);
+    }
+
+    public function test_user_broadcast_channel_authorization_compares_ulid_ids_as_strings(): void
+    {
+        config(['broadcasting.default' => 'reverb']);
+        Broadcast::forgetDrivers();
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $payload = ['socket_id' => '123.456', 'channel_name' => 'private-App.Models.User.'.$otherUser->id];
+
+        $this->actingAs($user)->postJson('/broadcasting/auth', $payload)->assertForbidden();
     }
 
     public function test_seller_can_only_view_conversations_for_an_active_store_membership(): void
@@ -117,5 +300,16 @@ class ConversationTest extends TestCase
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => "Store {$suffix}", 'slug' => "store-{$suffix}", 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
 
         return Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => "Product {$suffix}", 'slug' => "product-{$suffix}", 'sku' => "SKU-{$suffix}", 'price' => 199, 'stock_quantity' => 3, 'status' => 'active']);
+    }
+
+    private function createMessages(Conversation $conversation, User $sender, int $count): void
+    {
+        for ($index = 0; $index < $count; $index++) {
+            $conversation->messages()->create([
+                'sender_id' => $sender->id,
+                'body' => "Message {$index}",
+                'created_at' => now()->addSeconds($index),
+            ]);
+        }
     }
 }

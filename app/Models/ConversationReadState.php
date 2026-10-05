@@ -10,11 +10,11 @@ class ConversationReadState extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['conversation_id', 'user_id', 'last_read_message_id', 'last_read_at'];
+    protected $fillable = ['conversation_id', 'user_id', 'last_read_message_id', 'last_read_at', 'last_delivered_message_id', 'last_delivered_at'];
 
     protected function casts(): array
     {
-        return ['last_read_at' => 'datetime'];
+        return ['last_read_at' => 'datetime', 'last_delivered_at' => 'datetime'];
     }
 
     public function conversation(): BelongsTo

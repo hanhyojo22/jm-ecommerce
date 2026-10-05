@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAccountController;
+use App\Http\Controllers\Admin\ChatReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GovernanceController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\ClerkWebhookController;
 use App\Http\Controllers\Marketplace\CartController;
 use App\Http\Controllers\Marketplace\CatalogController;
 use App\Http\Controllers\Marketplace\CheckoutController;
+use App\Http\Controllers\Marketplace\ConversationAttachmentController;
 use App\Http\Controllers\Marketplace\ConversationController;
 use App\Http\Controllers\Marketplace\OrderController;
 use App\Http\Controllers\Marketplace\ProductReviewController as MarketplaceProductReviewController;
@@ -55,6 +57,10 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer'])->group(function (
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/messages', ChatInbox::class)->name('messages.index');
     Route::get('/messages/{conversation}', ChatThread::class)->name('messages.show');
+    Route::post('/messages/{conversation}/block', [ConversationController::class, 'block'])->middleware('throttle:10,1')->name('messages.block');
+    Route::post('/messages/{conversation}/messages/{message}/report', [ConversationController::class, 'report'])->middleware('throttle:10,1')->name('messages.report');
+    Route::post('/messages/{conversation}/attachments', [ConversationAttachmentController::class, 'store'])->middleware('throttle:10,1')->name('messages.attachments.store');
+    Route::get('/messages/attachments/{attachment}', [ConversationAttachmentController::class, 'show'])->name('messages.attachments.show');
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'clerk.verified', 'account:admin'])->name('dashboard');
@@ -83,6 +89,8 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
 });
 
 Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (): void {
+    Route::get('/admin/chat-reports', [ChatReportController::class, 'index'])->name('admin.chat-reports.index');
+    Route::patch('/admin/chat-reports/{report}', [ChatReportController::class, 'update'])->name('admin.chat-reports.update');
     Route::get('/admin/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('admin.seller-applications.index');
     Route::get('/admin/seller-applications/{sellerApplication}', [AdminSellerApplicationController::class, 'show'])->name('admin.seller-applications.show');
     Route::post('/admin/seller-applications/{sellerApplication}/approve', [AdminSellerApplicationController::class, 'approve'])->name('admin.seller-applications.approve');
