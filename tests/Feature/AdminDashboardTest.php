@@ -2,8 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Conversation;
+use App\Models\MessageReport;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\ProductReview;
 use App\Models\Store;
 use App\Models\Tenant;
+use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,13 +19,9 @@ class AdminDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_administrator_sees_store_overview_with_links_and_all_stores_list(): void
+    public function test_administrator_sees_live_moderation_counts_and_each_queue_type(): void
     {
         $administrator = User::factory()->administrator()->create();
-        $active = $this->store('Northwind Goods', 'active');
-        $this->attachOwner($active, 'Ava Seller', 'ava@example.com');
-        $suspended = $this->store('Harbor Market', 'suspended');
-        $this->attachOwner($suspended, 'Ben Seller', 'ben@example.com');
         $seller = User::factory()->seller()->create();
         $seller->sellerApplications()->create([
             'store_name' => 'Pending Shop',
@@ -30,105 +33,123 @@ class AdminDashboardTest extends TestCase
             'submitted_at' => now(),
         ]);
 
+        $suspendedStore = $this->store('Harbor Market', 'suspended');
+        $appealOwner = $this->attachOwner($suspendedStore, 'Ben Seller', 'ben@example.com');
+        $appeal = $suspendedStore->appeals()->create([
+            'seller_id' => $appealOwner->id,
+            'statement' => 'The suspension was caused by an incorrect listing report.',
+            'status' => 'pending',
+        ]);
+
+        $context = $this->productContext();
+        $review = ProductReview::create([
+            'product_id' => $context['product']->id,
+            'order_item_id' => $context['item']->id,
+            'user_id' => $context['buyer']->id,
+            'rating' => 2,
+            'title' => 'Reported review',
+            'body' => 'A review that needs moderation.',
+            'status' => 'published',
+        ]);
+        $reviewReporter = User::factory()->create(['name' => 'Review reporter']);
+        $review->reports()->create(['user_id' => $reviewReporter->id, 'reason' => 'spam']);
+
+        $conversation = Conversation::create([
+            'buyer_id' => $context['buyer']->id,
+            'store_id' => $context['store']->id,
+            'product_id' => $context['product']->id,
+        ]);
+        $message = $conversation->messages()->create([
+            'sender_id' => $context['seller']->id,
+            'type' => 'text',
+            'body' => 'A reported private message.',
+        ]);
+        $chatReport = MessageReport::create([
+            'conversation_message_id' => $message->id,
+            'reporter_id' => $context['buyer']->id,
+            'reason' => 'harassment',
+            'status' => 'pending',
+        ]);
+
         $response = $this->actingAs($administrator)->get(route('dashboard'));
 
         $response->assertOk()
-            ->assertSee('Stores overview')
-            ->assertSee('Total stores')
-            ->assertSee('Pending review')
-            ->assertSee('Browse every seller store')
-            ->assertSee('Northwind Goods')
+            ->assertSee('Moderation')
+            ->assertSee('4 items need attention')
+            ->assertSee('Pending Shop')
             ->assertSee('Harbor Market')
-            ->assertSee('Ava Seller')
-            ->assertSee('View details')
-            ->assertSee('Manage all stores')
-            ->assertDontSee('<table', false)
-            ->assertSee(route('admin.stores.index'), false)
-            ->assertSee(route('admin.stores.index', ['status' => 'active']), false)
-            ->assertSee(route('admin.stores.index', ['status' => 'suspended']), false)
-            ->assertSee(route('admin.seller-applications.index'), false)
-            ->assertSee(route('dashboard', ['selected' => $active->id]), false);
-    }
+            ->assertSee($context['product']->name)
+            ->assertSee('Harassment')
+            ->assertSee('Quick checks')
+            ->assertSee('Suspended stores')
+            ->assertSee('Pending applications')
+            ->assertSee(route('admin.seller-applications.show', $seller->sellerApplications()->first()), false)
+            ->assertSee(route('admin.stores.show', $suspendedStore).'#suspension-appeals', false)
+            ->assertSee(route('admin.reviews.index', ['review' => $review->id]).'#review-'.$review->id, false)
+            ->assertSee(route('admin.chat-reports.index', ['report' => $chatReport->id]).'#chat-report-'.$chatReport->id, false);
 
-    public function test_dashboard_search_status_filter_and_pagination_keep_query(): void
-    {
-        $administrator = User::factory()->administrator()->create();
-        $matching = $this->store('Northwind Goods', 'active');
-        $this->attachOwner($matching, 'Ava Seller', 'ava@example.com');
-        $other = $this->store('Harbor Market', 'active');
-        $this->attachOwner($other, 'Ben Seller', 'ben@example.com');
-
-        $this->actingAs($administrator)->get(route('dashboard', ['search' => 'ava@example.com', 'status' => 'active']))
+        $this->actingAs($administrator)
+            ->get(route('admin.reviews.index', ['review' => $review->id]))
             ->assertOk()
-            ->assertSee('Northwind Goods')
-            ->assertDontSee('Harbor Market');
+            ->assertSee($context['product']->name)
+            ->assertSee('A review that needs moderation.');
 
-        for ($number = 1; $number <= 11; $number++) {
-            $this->store(sprintf('Extra Store %02d', $number), 'active');
-        }
-
-        $this->actingAs($administrator)->get(route('dashboard', ['status' => 'active', 'page' => 2]))
+        $this->actingAs($administrator)
+            ->get(route('admin.chat-reports.index', ['report' => $chatReport->id]))
             ->assertOk()
-            ->assertSee('status=active', false);
+            ->assertSee('harassment')
+            ->assertSee('A reported private message.');
+
+        $this->actingAs($administrator)
+            ->patch(route('admin.chat-reports.update', $chatReport), ['status' => 'reviewed'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('message_reports', ['id' => $chatReport->id, 'status' => 'reviewed']);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $administrator->id,
+            'action' => 'message_report.reviewed',
+            'entity_id' => $chatReport->id,
+        ]);
     }
 
-    public function test_dashboard_shows_empty_state_when_no_stores(): void
+    public function test_dashboard_category_filter_only_shows_matching_moderation_items(): void
     {
         $administrator = User::factory()->administrator()->create();
+        $seller = User::factory()->seller()->create();
+        $seller->sellerApplications()->create([
+            'store_name' => 'Pending Shop',
+            'seller_name' => 'Pia Pending',
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'status' => 'pending',
+            'submitted_at' => now(),
+        ]);
+        $suspendedStore = $this->store('Harbor Market', 'suspended');
+        $owner = $this->attachOwner($suspendedStore, 'Ben Seller', 'ben@example.com');
+        $suspendedStore->appeals()->create([
+            'seller_id' => $owner->id,
+            'statement' => 'Please review this suspension decision.',
+            'status' => 'pending',
+        ]);
 
-        $this->actingAs($administrator)->get(route('dashboard'))
+        $this->actingAs($administrator)
+            ->get(route('dashboard', ['type' => 'appeal']))
             ->assertOk()
-            ->assertSee('No seller stores yet.');
+            ->assertSee('Harbor Market')
+            ->assertSee('Store appeal')
+            ->assertDontSee('Pending Shop');
     }
 
-    public function test_administrator_can_open_a_store_detail_panel_with_links(): void
+    public function test_dashboard_shows_an_empty_state_when_no_items_need_moderation(): void
     {
         $administrator = User::factory()->administrator()->create();
-        $store = $this->store('Northwind Goods', 'active');
-        $this->attachOwner($store, 'Ava Seller', 'ava@example.com');
 
-        $response = $this->actingAs($administrator)->get(route('dashboard', ['selected' => $store->id]));
-
-        $response->assertOk()
-            ->assertSee('A fine store selling useful goods.')
-            ->assertSee('ava@example.com')
-            ->assertSee('+639171234567')
-            ->assertSee('10 Market Street, Manila')
-            ->assertSee('This store is currently visible to buyers.')
-            ->assertSee('Open storefront')
-            ->assertSee('Manage store')
-            ->assertSee(route('catalog.store', $store->slug), false)
-            ->assertSee(route('admin.stores.show', $store), false);
-    }
-
-    public function test_store_detail_preserves_search_and_status_filters(): void
-    {
-        $administrator = User::factory()->administrator()->create();
-        $matching = $this->store('Northwind Goods', 'active');
-        $this->attachOwner($matching, 'Ava Seller', 'ava@example.com');
-        $other = $this->store('Harbor Market', 'active');
-        $this->attachOwner($other, 'Ben Seller', 'ben@example.com');
-
-        $this->actingAs($administrator)->get(route('dashboard', [
-            'search' => 'northwind',
-            'status' => 'active',
-            'selected' => $matching->id,
-        ]))
+        $this->actingAs($administrator)
+            ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Northwind Goods')
-            ->assertSee('A fine store selling useful goods.')
-            ->assertSee('search=northwind', false)
-            ->assertSee('status=active', false)
-            ->assertDontSee('Harbor Market');
-    }
-
-    public function test_dashboard_rejects_an_unknown_selected_store(): void
-    {
-        $administrator = User::factory()->administrator()->create();
-
-        $this->actingAs($administrator)->get(route('dashboard', ['selected' => '01k0000000000000000000000']))
-            ->assertRedirect(route('dashboard'))
-            ->assertSessionHas('error', 'That store is no longer available. Choose another store to continue reviewing the marketplace.');
+            ->assertSee('All caught up')
+            ->assertSee('No items in this queue');
     }
 
     public function test_non_administrators_cannot_access_dashboard(): void
@@ -160,8 +181,57 @@ class AdminDashboardTest extends TestCase
     private function attachOwner(Store $store, string $name, string $email): User
     {
         $owner = User::factory()->seller()->create(['name' => $name, 'email' => $email]);
-        $store->tenant->members()->create(['user_id' => $owner->id, 'role' => 'owner']);
+        TenantMember::create(['tenant_id' => $store->tenant_id, 'user_id' => $owner->id, 'role' => 'owner']);
 
         return $owner;
+    }
+
+    /** @return array{store:Store,seller:User,buyer:User,product:Product,item:OrderItem} */
+    private function productContext(): array
+    {
+        $suffix = str()->lower(str()->random(8));
+        $store = $this->store("Marketplace {$suffix}", 'active');
+        $seller = $this->attachOwner($store, 'Marketplace Seller', "seller-{$suffix}@example.com");
+        $buyer = User::factory()->create(['name' => 'Marketplace Buyer']);
+        $product = Product::create([
+            'tenant_id' => $store->tenant_id,
+            'store_id' => $store->id,
+            'name' => 'Reported table lamp',
+            'slug' => "reported-lamp-{$suffix}",
+            'sku' => "SKU-{$suffix}",
+            'price' => 100,
+            'stock_quantity' => 1,
+            'status' => 'active',
+        ]);
+        $order = Order::create([
+            'user_id' => $buyer->id,
+            'number' => "ORD-{$suffix}",
+            'status' => 'delivered',
+            'recipient_name' => 'Buyer',
+            'phone' => '+639171234567',
+            'address_line' => '1 Market Street',
+            'city' => 'Manila',
+            'subtotal' => 100,
+            'shipping_amount' => 0,
+            'total' => 100,
+        ]);
+        $sellerOrder = $order->sellerOrders()->create([
+            'tenant_id' => $store->tenant_id,
+            'store_id' => $store->id,
+            'status' => 'delivered',
+            'subtotal' => 100,
+            'shipping_amount' => 0,
+            'total' => 100,
+        ]);
+        $item = $sellerOrder->items()->create([
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'sku' => $product->sku,
+            'unit_price' => 100,
+            'quantity' => 1,
+            'line_total' => 100,
+        ]);
+
+        return compact('store', 'seller', 'buyer', 'product', 'item');
     }
 }

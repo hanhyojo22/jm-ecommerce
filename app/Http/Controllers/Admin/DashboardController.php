@@ -3,52 +3,30 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Queries\AdminStoreQuery;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\RedirectResponse;
+use App\Queries\AdminModerationQuery;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View|RedirectResponse
+    public function index(Request $request): View
     {
         abort_unless($request->user()->isPlatformAdministrator(), 403);
 
-        $filters = $request->validate([
-            'search' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', 'in:active,inactive,suspended'],
-            'selected' => ['nullable', 'string', 'max:255'],
-        ]);
+        $filters = $request->validate(['type' => ['nullable', 'in:all,application,appeal,product_report,chat_report']]);
+        $activeType = $filters['type'] ?? 'all';
+        $counts = AdminModerationQuery::counts();
+        $queueItems = AdminModerationQuery::items($activeType)->map(function (array $item): array {
+            [$url, $action] = match ($item['type']) {
+                'application' => [route('admin.seller-applications.show', $item['id']), 'Review'],
+                'appeal' => [route('admin.stores.show', $item['store_id']).'#suspension-appeals', 'Review appeal'],
+                'product_report' => [route('admin.reviews.index', ['review' => $item['id']]).'#review-'.$item['id'], 'Review report'],
+                'chat_report' => [route('admin.chat-reports.index', ['report' => $item['id']]).'#chat-report-'.$item['id'], 'Review report'],
+            };
 
-        $stores = AdminStoreQuery::base()
-            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
-                AdminStoreQuery::applySearch($query, $search);
-            })
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status): Builder => $query->where('status', $status))
-            ->latest();
+            return [...$item, 'url' => $url, 'action' => $action];
+        });
 
-        $statusCounts = AdminStoreQuery::statusCounts();
-
-        $selectedStore = null;
-
-        if (filled($filters['selected'] ?? null)) {
-            $selectedStore = AdminStoreQuery::base()->whereKey($filters['selected'])->first();
-
-            if ($selectedStore === null) {
-                return to_route('dashboard', Arr::except($filters, 'selected'))
-                    ->with('error', 'That store is no longer available. Choose another store to continue reviewing the marketplace.');
-            }
-        }
-
-        return view('dashboard', [
-            'stores' => $stores->paginate(12)->withQueryString(),
-            'filters' => $filters,
-            'totalStores' => AdminStoreQuery::total(),
-            'statusCounts' => $statusCounts,
-            'pendingReviewCount' => AdminStoreQuery::pendingReviewCount(),
-            'selectedStore' => $selectedStore,
-        ]);
+        return view('dashboard', compact('activeType', 'counts', 'queueItems'));
     }
 }

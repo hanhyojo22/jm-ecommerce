@@ -14,10 +14,15 @@ class ProductReviewModerationController extends Controller
     public function index(Request $request): View
     {
         $this->authorizeAdmin($request);
+        $filters = $request->validate(['review' => ['nullable', 'ulid']]);
+        $reviews = ProductReview::query()
+            ->with(['product:id,name', 'user:id,name', 'reports.user:id,name'])
+            ->when($filters['review'] ?? null, fn ($query, string $reviewId) => $query->whereKey($reviewId))
+            ->latest()
+            ->paginate(30)
+            ->withQueryString();
 
-        return view('admin.reviews.index', [
-            'reviews' => ProductReview::query()->with(['product:id,name', 'user:id,name', 'reports.user:id,name'])->latest()->paginate(30),
-        ]);
+        return view('admin.reviews.index', compact('reviews'));
     }
 
     public function moderate(Request $request, ProductReview $review): RedirectResponse

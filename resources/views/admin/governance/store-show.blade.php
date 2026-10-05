@@ -182,7 +182,7 @@
                         @endif
                     </section>
 
-                    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Store suspension appeals">
+                    <section id="suspension-appeals" class="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Store suspension appeals">
                         <h2 class="font-semibold text-slate-950">Suspension appeals</h2>
                         <p class="mt-1 text-sm text-slate-600">Appeals are submitted by the store owner and reviewed here.</p>
                         <div class="mt-4 space-y-4">
