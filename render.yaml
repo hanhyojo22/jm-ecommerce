@@ -62,6 +62,8 @@ services:
         value: public
       - key: NEON_PRODUCT_IMAGES_BUCKET
         value: product-images
+      - key: CHAT_ATTACHMENTS_BUCKET
+        value: uploads
       - key: AWS_ENDPOINT_URL_S3
         sync: false
       - key: AWS_REGION
