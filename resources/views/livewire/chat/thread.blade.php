@@ -11,7 +11,7 @@
                         @else
                             <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-900" aria-hidden="true">{{ Str::upper(Str::substr(auth()->user()->account_type === 'buyer' ? $conversation->store->name : $conversation->buyer->name, 0, 1)) }}</span>
                         @endif
-                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-slate-950 sm:text-base">{{ auth()->user()->account_type === 'buyer' ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" class="flex items-center gap-1.5 truncate text-xs text-slate-500"><span data-presence-dot class="size-1.5 shrink-0 rounded-full bg-slate-400"></span><span data-presence-label>Offline · {{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}</span></p><p id="chat-typing" class="hidden truncate text-xs font-medium text-emerald-800" aria-live="polite">Typing…</p></div>
+                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-slate-950 sm:text-base">{{ auth()->user()->account_type === 'buyer' ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" x-data="{ online: false }" x-on:chat-presence-status.window="if ($event.detail.conversationId === '{{ $conversation->id }}') online = $event.detail.online" class="flex items-center gap-1.5 truncate text-xs"><span data-presence-dot class="size-1.5 shrink-0 rounded-full" x-bind:class="{ 'bg-emerald-500': online, 'bg-slate-400': ! online }"></span><span data-presence-label data-context="{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}" x-text="(online ? 'Online' : 'Offline') + ' · ' + $el.dataset.context">Offline · {{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}</span></p><p id="chat-typing" class="hidden truncate text-xs font-medium text-emerald-800" aria-live="polite">Typing…</p></div>
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
@@ -211,19 +211,9 @@
     };
 
     const setPresenceStatus = (online) => {
-        const presence = document.getElementById('chat-presence');
-        if (presence) {
-            const label = presence.querySelector('[data-presence-label]');
-            const dot = presence.querySelector('[data-presence-dot]');
-
-            if (label) {
-                label.textContent = `${online ? 'Online' : 'Offline'} · {{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}`;
-            }
-
-            dot?.classList.toggle('bg-emerald-500', online);
-            dot?.classList.toggle('bg-slate-400', ! online);
-            presence.classList.toggle('text-emerald-800', online);
-        }
+        window.dispatchEvent(new CustomEvent('chat-presence-status', {
+            detail: { conversationId: '{{ $conversation->id }}', online },
+        }));
     };
 
     listenForMessages();

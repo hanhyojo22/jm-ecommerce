@@ -1,4 +1,4 @@
-<div>
+<div data-conversation-inbox>
     <div class="page-shell min-h-[calc(100dvh-4.5rem)] py-6 sm:py-8">
         <div class="page-container max-w-5xl">
             <header class="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -32,7 +32,7 @@
                         @php($isBuyer = auth()->user()->account_type === 'buyer')
                         @php($name = $isBuyer ? $conversation->store->name : $conversation->buyer->name)
                         @php($context = $conversation->product ? 'Product · '.$conversation->product->name : ($conversation->sellerOrder ? 'Order · #'.$conversation->sellerOrder->order->number : 'Marketplace chat'))
-                        <a wire:key="conversation-{{ $conversation->id }}" href="{{ route('messages.show', $conversation) }}" class="group flex min-w-0 items-center gap-3 px-4 py-4 transition hover:bg-emerald-50/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-emerald-700 sm:gap-4 sm:px-5">
+                        <a wire:key="conversation-{{ $conversation->id }}" data-presence-conversation="{{ $conversation->id }}" href="{{ route('messages.show', $conversation) }}" class="group flex min-w-0 items-center gap-3 px-4 py-4 transition hover:bg-emerald-50/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-emerald-700 sm:gap-4 sm:px-5">
                             <div class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-emerald-100 text-base font-semibold text-emerald-900">
                                 @if ($isBuyer && $conversation->store->logo_path)
                                     <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="size-full object-cover">
@@ -68,3 +68,42 @@
         </div>
     </div>
 </div>
+
+@script
+<script>
+    const inbox = document.querySelector('[data-conversation-inbox]');
+    const joinedConversations = new Set();
+
+    const syncPresenceChannels = () => {
+        if (! inbox || ! window.Echo) {
+            return;
+        }
+
+        const visibleConversations = new Set(
+            [...inbox.querySelectorAll('[data-presence-conversation]')]
+                .map((conversation) => conversation.dataset.presenceConversation),
+        );
+
+        for (const conversationId of joinedConversations) {
+            if (! visibleConversations.has(conversationId)) {
+                window.Echo.leave(`conversation.${conversationId}`);
+                joinedConversations.delete(conversationId);
+            }
+        }
+
+        for (const conversationId of visibleConversations) {
+            if (! joinedConversations.has(conversationId)) {
+                window.Echo.join(`conversation.${conversationId}`);
+                joinedConversations.add(conversationId);
+            }
+        }
+    };
+
+    syncPresenceChannels();
+    window.addEventListener('reverb:ready', syncPresenceChannels, { once: true });
+
+    if (inbox) {
+        new MutationObserver(syncPresenceChannels).observe(inbox, { childList: true, subtree: true });
+    }
+</script>
+@endscript

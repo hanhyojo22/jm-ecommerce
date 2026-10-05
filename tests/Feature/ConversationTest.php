@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\SendConversationMessage;
 use App\Events\ConversationReceiptUpdated;
 use App\Events\MessageSent;
+use App\Livewire\Chat\Inbox;
 use App\Livewire\Chat\Thread;
 use App\Models\Conversation;
 use App\Models\ConversationReadState;
@@ -54,6 +55,20 @@ class ConversationTest extends TestCase
         $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
 
         $this->actingAs($admin)->get(route('messages.index'))->assertForbidden();
+    }
+
+    public function test_buyer_inbox_exposes_presence_channels_only_for_visible_conversations(): void
+    {
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $product = $this->product();
+        $visibleConversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $hiddenConversation = Conversation::create(['buyer_id' => $otherBuyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        Livewire::actingAs($buyer)
+            ->test(Inbox::class)
+            ->assertSeeHtml('data-presence-conversation="'.$visibleConversation->id.'"')
+            ->assertDontSeeHtml('data-presence-conversation="'.$hiddenConversation->id.'"');
     }
 
     public function test_inactive_buyer_cannot_view_a_conversation(): void
@@ -288,11 +303,29 @@ class ConversationTest extends TestCase
     {
         config(['broadcasting.default' => 'reverb']);
         Broadcast::forgetDrivers();
+        require base_path('routes/channels.php');
         $user = User::factory()->create();
         $otherUser = User::factory()->create();
         $payload = ['socket_id' => '123.456', 'channel_name' => 'private-App.Models.User.'.$otherUser->id];
 
         $this->actingAs($user)->postJson('/broadcasting/auth', $payload)->assertForbidden();
+    }
+
+    public function test_conversation_presence_channel_authorizes_participants_only(): void
+    {
+        config(['broadcasting.default' => 'reverb']);
+        Broadcast::forgetDrivers();
+        require base_path('routes/channels.php');
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $otherBuyer = User::factory()->create();
+        $product = $this->product();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'staff']);
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $payload = ['socket_id' => '123.456', 'channel_name' => 'presence-conversation.'.$conversation->id];
+        $this->actingAs($buyer)->postJson('/broadcasting/auth', $payload)->assertOk();
+        $this->actingAs($seller)->postJson('/broadcasting/auth', $payload)->assertOk();
+        $this->actingAs($otherBuyer)->postJson('/broadcasting/auth', $payload)->assertForbidden();
     }
 
     public function test_seller_can_only_view_conversations_for_an_active_store_membership(): void
