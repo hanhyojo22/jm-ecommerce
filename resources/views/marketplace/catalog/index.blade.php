@@ -277,5 +277,6 @@
             @endif
         </main>
     </div>
+@livewireScripts
 </body>
 </html>

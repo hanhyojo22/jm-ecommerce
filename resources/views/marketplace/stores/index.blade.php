@@ -28,5 +28,6 @@
         </section>
         @if($stores->hasPages())<div class="mt-8">{{ $stores->links() }}</div>@endif
     </main>
+@livewireScripts
 </body>
 </html>

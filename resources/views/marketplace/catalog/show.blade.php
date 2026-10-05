@@ -20,5 +20,6 @@
             </div>
         </section>
     </main>
+@livewireScripts
 </body>
 </html>

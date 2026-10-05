@@ -27,6 +27,7 @@ class TopProductsTest extends TestCase
         TopProductQuery::forgetCachedRankings();
 
         $this->get(route('catalog.top-products'))
+            ->assertSee('livewire.js', false)
             ->assertSee('Winner')
             ->assertDontSee('Excluded')
             ->assertSee('last 30 days');
