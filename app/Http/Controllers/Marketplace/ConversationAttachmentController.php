@@ -80,6 +80,17 @@ class ConversationAttachmentController extends Controller
         $this->authorize('view', $attachment->message->conversation);
         abort_unless($attachment->status === 'available', 404);
 
+        if (in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            return Storage::disk($attachment->disk)->response(
+                $attachment->path,
+                $attachment->original_name,
+                [
+                    'Content-Type' => $attachment->mime_type,
+                    'X-Content-Type-Options' => 'nosniff',
+                ],
+            );
+        }
+
         return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
     }
 }

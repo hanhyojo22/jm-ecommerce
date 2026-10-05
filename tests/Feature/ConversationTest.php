@@ -236,7 +236,34 @@ class ConversationTest extends TestCase
         $attachment = $message->attachments()->create(['uploaded_by' => $buyer->id, 'disk' => 'chat_attachments', 'path' => $path, 'original_name' => 'question.pdf', 'mime_type' => 'application/pdf', 'byte_size' => 13]);
 
         $this->actingAs($otherBuyer)->get(route('messages.attachments.show', $attachment))->assertNotFound();
-        $this->actingAs($buyer)->get(route('messages.attachments.show', $attachment))->assertOk();
+        $this->actingAs($buyer)
+            ->get(route('messages.attachments.show', $attachment))
+            ->assertOk()
+            ->assertHeaderContains('Content-Disposition', 'attachment');
+    }
+
+    public function test_image_attachments_render_as_previews_and_are_served_inline(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $message = $conversation->messages()->create(['sender_id' => $buyer->id, 'body' => 'sales.png', 'type' => 'file']);
+        $path = 'chat/sales.png';
+        Storage::disk('chat_attachments')->put($path, 'image contents');
+        $attachment = $message->attachments()->create(['uploaded_by' => $buyer->id, 'disk' => 'chat_attachments', 'path' => $path, 'original_name' => 'sales.png', 'mime_type' => 'image/png', 'byte_size' => 14]);
+        $attachmentUrl = route('messages.attachments.show', $attachment);
+
+        Livewire::actingAs($buyer)
+            ->test(Thread::class, ['conversation' => $conversation])
+            ->assertSeeHtml('<img src="'.$attachmentUrl.'" alt="sales.png"');
+
+        $this->actingAs($buyer)
+            ->get($attachmentUrl)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png')
+            ->assertHeaderContains('Content-Disposition', 'inline')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
     }
 
     public function test_uploading_a_valid_attachment_creates_one_private_file_message_on_retry(): void

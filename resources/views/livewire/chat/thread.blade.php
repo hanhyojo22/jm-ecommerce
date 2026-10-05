@@ -47,7 +47,25 @@
                     <article wire:key="message-{{ $message->id }}" class="mb-2 flex {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
                         <div class="max-w-[85%] sm:max-w-[70%] {{ $message->sender_id === $previousSenderId ? '' : 'mt-2' }}">
                             @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 px-1 text-xs font-medium text-slate-500">{{ $message->sender->name }}</p>@endif
-                            <div class="rounded-2xl px-4 py-2.5 text-sm leading-6 {{ $message->sender_id === auth()->id() ? 'rounded-br-md bg-emerald-700 text-white' : 'rounded-bl-md bg-slate-100 text-slate-800' }}">@if ($message->type === 'file' && $message->attachments->isNotEmpty())<a href="{{ route('messages.attachments.show', $message->attachments->first()) }}" class="underline underline-offset-2">{{ $message->attachments->first()->original_name }}</a>@else<p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>@endif<time datetime="{{ $message->created_at->toIso8601String() }}" class="mt-1 block text-[11px] {{ $message->sender_id === auth()->id() ? 'text-emerald-100' : 'text-slate-500' }}">{{ $message->created_at->format('g:i A') }}</time>@if ($message->id === $lastMessage?->id && $message->sender_id === auth()->id())<span class="mt-0.5 block text-right text-[11px] text-emerald-100">{{ $receipt }}</span>@endif</div>
+                            <div class="rounded-2xl px-4 py-2.5 text-sm leading-6 {{ $message->sender_id === auth()->id() ? 'rounded-br-md bg-emerald-700 text-white' : 'rounded-bl-md bg-slate-100 text-slate-800' }}">
+                                @if ($message->type === 'file' && $message->attachments->isNotEmpty())
+                                    @php($attachment = $message->attachments->first())
+                                    @if (in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
+                                        <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" class="block">
+                                            <img src="{{ route('messages.attachments.show', $attachment) }}" alt="{{ $attachment->original_name }}" loading="lazy" decoding="async" class="max-h-80 max-w-full rounded-lg object-contain">
+                                            <span class="mt-1 block text-xs underline underline-offset-2">{{ $attachment->original_name }}</span>
+                                        </a>
+                                    @else
+                                        <a href="{{ route('messages.attachments.show', $attachment) }}" class="underline underline-offset-2">{{ $attachment->original_name }}</a>
+                                    @endif
+                                @else
+                                    <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
+                                @endif
+                                <time datetime="{{ $message->created_at->toIso8601String() }}" class="mt-1 block text-[11px] {{ $message->sender_id === auth()->id() ? 'text-emerald-100' : 'text-slate-500' }}">{{ $message->created_at->format('g:i A') }}</time>
+                                @if ($message->id === $lastMessage?->id && $message->sender_id === auth()->id())
+                                    <span class="mt-0.5 block text-right text-[11px] text-emerald-100">{{ $receipt }}</span>
+                                @endif
+                            </div>
                             @if ($message->sender_id !== auth()->id())<details class="mt-1 px-1 text-xs"><summary class="cursor-pointer text-slate-500">Report message</summary><form method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="mt-2 space-y-2">@csrf<select name="reason" required class="rounded-lg border-slate-300 text-xs"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-slate-300 text-xs"></textarea><button class="rounded-lg bg-slate-900 px-3 py-2 font-semibold text-white">Submit report</button></form></details>@endif
                         </div>
                     </article>
