@@ -26,7 +26,7 @@ class CatalogTest extends TestCase
 
         $this->get(route('catalog.index'))
             ->assertOk()
-            ->assertSee('livewire.js', false)
+            ->assertSee('data-module-url=', false)
             ->assertSee($visible->name)
             ->assertDontSee($hiddenProduct->name)
             ->assertDontSee($hiddenStore->name)
@@ -72,7 +72,7 @@ class CatalogTest extends TestCase
 
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
-            ->assertSee('livewire.js', false)
+            ->assertSee('data-module-url=', false)
             ->assertSee(Storage::disk('product_images')->url($path));
     }
 
@@ -85,7 +85,7 @@ class CatalogTest extends TestCase
             ->assertSee('Cart')
             ->assertSee('Add to cart')
             ->assertSee('aria-controls="header-account-menu"', false)
-            ->assertSee('livewire.js', false)
+            ->assertSee('data-module-url=', false)
             ->assertSee(route('cart.store', $product))
             ->assertSee(route('profile.edit'));
     }
@@ -103,7 +103,7 @@ class CatalogTest extends TestCase
         $product = $this->product();
 
         $this->get(route('catalog.stores'))
-            ->assertSee('livewire.js', false)
+            ->assertSee('data-module-url=', false)
             ->assertSee($product->store->name)
             ->assertSee(route('catalog.store', $product->store->slug), false);
 
