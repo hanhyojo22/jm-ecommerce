@@ -124,6 +124,8 @@ services:
         value: "false"
       - key: RUN_OPTIMIZATIONS
         value: "false"
+      - key: CACHE_STORE
+        value: file
       - key: BROADCAST_CONNECTION
         value: log
       - key: REVERB_HOST
