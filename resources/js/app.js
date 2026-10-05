@@ -1,11 +1,4 @@
 
-
-import Alpine from 'alpinejs';
-
-window.Alpine = Alpine;
-
-Alpine.start();
-
 if (document.querySelector('[data-conversation-thread]') && import.meta.env.VITE_REVERB_APP_KEY) {
     Promise.all([import('laravel-echo'), import('pusher-js')]).then(([{ default: Echo }, { default: Pusher }]) => {
         window.Pusher = Pusher;
