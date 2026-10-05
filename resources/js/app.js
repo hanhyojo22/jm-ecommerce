@@ -1,14 +1,21 @@
 
-if (document.querySelector('[data-conversation-thread]') && import.meta.env.VITE_REVERB_APP_KEY) {
+const reverbConfig = {
+    key: document.querySelector('meta[name="reverb-app-key"]')?.content,
+    host: document.querySelector('meta[name="reverb-host"]')?.content,
+    port: document.querySelector('meta[name="reverb-port"]')?.content,
+    scheme: document.querySelector('meta[name="reverb-scheme"]')?.content,
+};
+
+if (document.querySelector('[data-conversation-thread]') && reverbConfig.key && reverbConfig.host) {
     Promise.all([import('laravel-echo'), import('pusher-js')]).then(([{ default: Echo }, { default: Pusher }]) => {
         window.Pusher = Pusher;
         window.Echo = new Echo({
             broadcaster: 'reverb',
-            key: import.meta.env.VITE_REVERB_APP_KEY,
-            wsHost: import.meta.env.VITE_REVERB_HOST ?? window.location.hostname,
-            wsPort: Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
-            wssPort: Number(import.meta.env.VITE_REVERB_PORT ?? 443),
-            forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
+            key: reverbConfig.key,
+            wsHost: reverbConfig.host,
+            wsPort: Number(reverbConfig.port ?? 8080),
+            wssPort: Number(reverbConfig.port ?? 443),
+            forceTLS: (reverbConfig.scheme ?? 'https') === 'https',
             enabledTransports: ['ws', 'wss'],
         });
         window.dispatchEvent(new Event('reverb:ready'));

@@ -58,17 +58,6 @@ services:
         value: https
       - key: REVERB_ALLOWED_ORIGINS
         value: jmmart-marketplace.onrender.com
-      - key: VITE_REVERB_APP_KEY
-        fromService:
-          name: jmmart-marketplace
-          type: web
-          envVarKey: REVERB_APP_KEY
-      - key: VITE_REVERB_HOST
-        value: jmmart-chat-reverb.onrender.com
-      - key: VITE_REVERB_PORT
-        value: "443"
-      - key: VITE_REVERB_SCHEME
-        value: https
       - key: FILESYSTEM_DISK
         value: public
       - key: NEON_PRODUCT_IMAGES_BUCKET
