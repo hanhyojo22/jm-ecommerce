@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\SellerApplication;
 use App\Models\SellerOrder;
 use App\Models\Store;
+use App\Models\StoreSuspensionAppeal;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Queries\AdminStoreQuery;
@@ -124,9 +125,20 @@ class GovernanceController extends Controller
                         $applicationQuery->where('entity_type', SellerApplication::class)->where('entity_id', $application->id);
                     });
                 }
+
+                $query->orWhere(function (Builder $appealQuery) use ($store): void {
+                    $appealQuery->where('entity_type', StoreSuspensionAppeal::class)
+                        ->whereIn('entity_id', $store->appeals()->select('id'));
+                });
             })
             ->latest('created_at')
             ->limit(20)
+            ->get();
+
+        $appeals = $store->appeals()
+            ->with(['seller:id,name,email', 'reviewer:id,name'])
+            ->latest()
+            ->limit(10)
             ->get();
 
         return view('admin.governance.store-show', [
@@ -135,6 +147,7 @@ class GovernanceController extends Controller
             'application' => $application,
             'products' => $products,
             'sellerOrders' => $sellerOrders,
+            'appeals' => $appeals,
             'auditLogs' => $auditLogs,
         ]);
     }

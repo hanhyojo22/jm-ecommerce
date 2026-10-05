@@ -182,6 +182,49 @@
                         @endif
                     </section>
 
+                    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" aria-label="Store suspension appeals">
+                        <h2 class="font-semibold text-slate-950">Suspension appeals</h2>
+                        <p class="mt-1 text-sm text-slate-600">Appeals are submitted by the store owner and reviewed here.</p>
+                        <div class="mt-4 space-y-4">
+                            @forelse ($appeals as $appeal)
+                                <article class="rounded-lg border border-slate-200 p-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <p class="text-sm font-semibold text-slate-950">{{ $appeal->seller?->name ?? 'Former seller' }}</p>
+                                        <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ['pending' => 'bg-amber-50 text-amber-800', 'approved' => 'bg-emerald-50 text-emerald-800', 'rejected' => 'bg-rose-50 text-rose-800'][$appeal->status] }}">{{ ucfirst($appeal->status) }}</span>
+                                    </div>
+                                    <p class="mt-1 text-xs text-slate-500">Submitted {{ $appeal->created_at->format('M j, Y · g:i A') }}</p>
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{{ $appeal->statement }}</p>
+                                    @if ($appeal->review_note)
+                                        <p class="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-700"><span class="font-semibold">Review note:</span> {{ $appeal->review_note }}</p>
+                                    @endif
+                                    @if ($appeal->status === 'pending')
+                                        <form method="POST" action="{{ route('admin.stores.appeals.update', [$store, $appeal]) }}" class="mt-4 space-y-3">
+                                            @csrf
+                                            @method('PATCH')
+                                            <label class="block">
+                                                <span class="field-label">Decision</span>
+                                                <select name="decision" required class="field-control">
+                                                    <option value="">Choose a decision</option>
+                                                    <option value="approved" @selected(old('decision') === 'approved')>Approve and reactivate store</option>
+                                                    <option value="rejected" @selected(old('decision') === 'rejected')>Reject and keep suspended</option>
+                                                </select>
+                                            </label>
+                                            <label class="block">
+                                                <span class="field-label">Review note</span>
+                                                <textarea name="review_note" rows="3" minlength="10" maxlength="1000" required class="field-control" placeholder="Explain the decision to the seller.">{{ old('review_note') }}</textarea>
+                                            </label>
+                                            <button class="inline-flex min-h-10 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white">Save appeal decision</button>
+                                        </form>
+                                    @else
+                                        <p class="mt-2 text-xs text-slate-500">Reviewed {{ $appeal->reviewed_at?->format('M j, Y · g:i A') }}{{ $appeal->reviewer ? ' by '.$appeal->reviewer->name : '' }}</p>
+                                    @endif
+                                </article>
+                            @empty
+                                <p class="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">No suspension appeals have been submitted.</p>
+                            @endforelse
+                        </div>
+                    </section>
+
                     <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                         <h2 class="font-semibold text-slate-950">Quick links</h2>
                         <div class="mt-4 grid gap-2">

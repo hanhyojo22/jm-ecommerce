@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\AuditLog;
 use App\Models\Store;
+use App\Models\StoreSuspensionAppeal;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use LogicException;
@@ -24,6 +25,27 @@ class ReactivateStore
 
             $store->update(['status' => 'active']);
             $tenant->update(['status' => 'active']);
+
+            $store->appeals()->where('status', 'pending')->lockForUpdate()->get()->each(
+                function (StoreSuspensionAppeal $appeal) use ($administrator, $store, $ipAddress): void {
+                    $reviewNote = 'This store was reactivated directly by an administrator.';
+                    $appeal->update([
+                        'status' => 'approved',
+                        'review_note' => $reviewNote,
+                        'reviewed_by' => $administrator->id,
+                        'reviewed_at' => now(),
+                    ]);
+
+                    AuditLog::query()->create([
+                        'actor_user_id' => $administrator->id,
+                        'action' => 'store.suspension_appeal.approved',
+                        'entity_type' => StoreSuspensionAppeal::class,
+                        'entity_id' => $appeal->id,
+                        'new_values' => ['store_id' => $store->id, 'status' => 'approved', 'review_note' => $reviewNote],
+                        'ip_address' => $ipAddress,
+                    ]);
+                },
+            );
 
             AuditLog::query()->create([
                 'actor_user_id' => $administrator->id,

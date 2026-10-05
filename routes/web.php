@@ -25,6 +25,7 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\SellerApplicationController;
+use App\Http\Controllers\SellerSuspensionAppealController;
 use App\Livewire\Chat\Inbox as ChatInbox;
 use App\Livewire\Chat\Thread as ChatThread;
 use Illuminate\Support\Facades\Route;
@@ -88,6 +89,10 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
 
 });
 
+Route::post('/seller/suspension-appeals', [SellerSuspensionAppealController::class, 'store'])
+    ->middleware(['auth', 'clerk.verified', 'account:seller', 'throttle:5,1'])
+    ->name('seller.suspension-appeals.store');
+
 Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (): void {
     Route::get('/admin/chat-reports', [ChatReportController::class, 'index'])->name('admin.chat-reports.index');
     Route::patch('/admin/chat-reports/{report}', [ChatReportController::class, 'update'])->name('admin.chat-reports.update');
@@ -106,6 +111,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (
     Route::get('/admin/stores/{store}', [GovernanceController::class, 'showStore'])->name('admin.stores.show');
     Route::patch('/admin/stores/{store}/suspend', [StoreModerationController::class, 'suspend'])->name('admin.stores.suspend');
     Route::patch('/admin/stores/{store}/reactivate', [StoreModerationController::class, 'reactivate'])->name('admin.stores.reactivate');
+    Route::patch('/admin/stores/{store}/appeals/{appeal}', [StoreModerationController::class, 'updateAppeal'])
+        ->scopeBindings()
+        ->name('admin.stores.appeals.update');
     Route::get('/admin/customers', [GovernanceController::class, 'customers'])->name('admin.customers.index');
     Route::get('/admin/customers/{customer}', [GovernanceController::class, 'showCustomer'])->name('admin.customers.show');
     Route::get('/admin/audit-logs', [GovernanceController::class, 'auditLogs'])->name('admin.audit-logs.index');

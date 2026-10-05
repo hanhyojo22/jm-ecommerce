@@ -12,7 +12,45 @@
 
                 @if ($workspaceUnavailable)
                     @if ($workspaceSuspended)
-                        <p class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="status">Your store is currently suspended. You cannot submit another seller application while this is being resolved. Contact JMMart support if you need help.</p>
+                        <div class="space-y-5">
+                            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="status">
+                                <p class="font-semibold">Your store is currently suspended.</p>
+                                <p class="mt-1">You cannot submit another seller application while this is being resolved.</p>
+                                @if ($suspensionReason)
+                                    <p class="mt-3"><span class="font-semibold">Suspension reason:</span> {{ $suspensionReason }}</p>
+                                @endif
+                            </div>
+
+                            @if ($suspensionAppeal?->status === 'pending')
+                                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+                                    <p class="font-semibold">Your appeal is awaiting review.</p>
+                                    <p class="mt-1 whitespace-pre-line">{{ $suspensionAppeal->statement }}</p>
+                                    <p class="mt-2 text-xs">Submitted {{ $suspensionAppeal->created_at->format('M j, Y · g:i A') }}</p>
+                                </div>
+                            @elseif ($suspensionAppeal?->status === 'rejected')
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700" role="status">
+                                    <p class="font-semibold text-slate-900">Your previous appeal was not approved.</p>
+                                    @if ($suspensionAppeal->review_note)
+                                        <p class="mt-1 whitespace-pre-line">{{ $suspensionAppeal->review_note }}</p>
+                                    @endif
+                                    <p class="mt-2 whitespace-pre-line">{{ $suspensionAppeal->statement }}</p>
+                                </div>
+                            @endif
+
+                            @if ($canSubmitSuspensionAppeal)
+                                <form method="POST" action="{{ route('seller.suspension-appeals.store') }}" class="space-y-4">
+                                    @csrf
+                                    <div>
+                                        <x-input-label for="appeal-statement" value="Explain why this suspension should be reviewed" />
+                                        <textarea id="appeal-statement" name="statement" rows="6" minlength="20" maxlength="5000" required class="mt-1.5 block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-emerald-700 focus:ring-emerald-700" placeholder="Share what happened, what you have corrected, and any information that may help us review your appeal.">{{ old('statement') }}</textarea>
+                                        <p class="mt-1 text-xs text-slate-500">20 to 5,000 characters.</p>
+                                        <x-input-error :messages="$errors->get('statement')" class="mt-2" />
+                                        <x-input-error :messages="$errors->get('appeal')" class="mt-2" />
+                                    </div>
+                                    <x-primary-button>Submit an appeal</x-primary-button>
+                                </form>
+                            @endif
+                        </div>
                     @else
                         <p class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">Your existing seller workspace is unavailable, so you cannot submit another seller application. Contact JMMart support if you need help.</p>
                     @endif

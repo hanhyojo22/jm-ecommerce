@@ -33,4 +33,9 @@ class Store extends Model
     {
         return $this->hasMany(Conversation::class);
     }
+
+    public function appeals(): HasMany
+    {
+        return $this->hasMany(StoreSuspensionAppeal::class);
+    }
 }
