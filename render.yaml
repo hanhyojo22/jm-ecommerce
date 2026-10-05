@@ -1,3 +1,13 @@
+envVarGroups:
+  - name: jmmart-reverb-credentials
+    envVars:
+      - key: REVERB_APP_ID
+        value: jmmart
+      - key: REVERB_APP_KEY
+        generateValue: true
+      - key: REVERB_APP_SECRET
+        generateValue: true
+
 services:
   - type: web
     name: jmmart-marketplace
@@ -38,7 +48,27 @@ services:
       - key: QUEUE_CONNECTION
         value: sync
       - key: BROADCAST_CONNECTION
-        value: log
+        value: reverb
+      - fromGroup: jmmart-reverb-credentials
+      - key: REVERB_HOST
+        value: jmmart-chat-reverb.onrender.com
+      - key: REVERB_PORT
+        value: "443"
+      - key: REVERB_SCHEME
+        value: https
+      - key: REVERB_ALLOWED_ORIGINS
+        value: jmmart-marketplace.onrender.com
+      - key: VITE_REVERB_APP_KEY
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: REVERB_APP_KEY
+      - key: VITE_REVERB_HOST
+        value: jmmart-chat-reverb.onrender.com
+      - key: VITE_REVERB_PORT
+        value: "443"
+      - key: VITE_REVERB_SCHEME
+        value: https
       - key: FILESYSTEM_DISK
         value: public
       - key: NEON_PRODUCT_IMAGES_BUCKET
@@ -64,3 +94,50 @@ services:
         value: stderr
       - key: MAIL_MAILER
         value: log
+
+  - type: web
+    name: jmmart-chat-reverb
+    runtime: docker
+    dockerCommand: php artisan reverb:start --host=0.0.0.0 --port=10000
+    plan: free
+    region: singapore
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: APP_NAME
+        value: JMMart
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: APP_KEY
+      - key: APP_URL
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: RUN_MIGRATIONS
+        value: "false"
+      - key: RUN_OPTIMIZATIONS
+        value: "false"
+      - key: BROADCAST_CONNECTION
+        value: log
+      - key: REVERB_HOST
+        value: jmmart-chat-reverb.onrender.com
+      - key: REVERB_PORT
+        value: "443"
+      - key: REVERB_SCHEME
+        value: https
+      - key: REVERB_SERVER_HOST
+        value: 0.0.0.0
+      - key: REVERB_SERVER_PORT
+        value: "10000"
+      - key: REVERB_ALLOWED_ORIGINS
+        value: jmmart-marketplace.onrender.com
+      - fromGroup: jmmart-reverb-credentials
+      - key: LOG_CHANNEL
+        value: stderr
