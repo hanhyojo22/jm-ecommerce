@@ -4,7 +4,6 @@ services:
     runtime: docker
     plan: free
     region: singapore
-    dockerCommand: sh -c 'php artisan migrate --force --no-interaction && apache2-foreground'
     healthCheckPath: /up
     envVars:
       - key: PORT
@@ -33,6 +32,8 @@ services:
       - key: SESSION_DRIVER
         value: database
       - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: RUN_MIGRATIONS
         value: "true"
       - key: QUEUE_CONNECTION
         value: sync

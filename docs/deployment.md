@@ -71,4 +71,4 @@ The `app-storage` named volume contains uploaded product and review images. Incl
 - Restart workers after a code-only change: `docker compose --env-file .env.production -f docker-compose.production.yml restart queue scheduler reverb`
 - The application health endpoint is `/up`.
 
-The Render manifest runs migrations before Apache starts because Render's free plan does not support a pre-deploy command. For multi-instance or paid Render deployments, move that command to Render's pre-deploy setting so migrations run exactly once per release.
+The Render manifest sets `RUN_MIGRATIONS=true`; the container entrypoint runs migrations before starting Apache because Render's free plan does not support a pre-deploy command. For multi-instance deployments, use Render's pre-deploy setting so migrations run exactly once per release, then leave `RUN_MIGRATIONS` unset.

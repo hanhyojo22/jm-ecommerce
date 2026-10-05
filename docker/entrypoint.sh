@@ -14,6 +14,10 @@ if [ ! -e public/storage ]; then
     php artisan storage:link
 fi
 
+if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
+    php artisan migrate --force --no-interaction
+fi
+
 if [ "${RUN_OPTIMIZATIONS:-true}" = "true" ]; then
     php artisan config:cache
     php artisan route:cache
