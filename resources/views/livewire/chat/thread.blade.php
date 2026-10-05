@@ -56,7 +56,13 @@
                                             <span class="mt-1 block text-xs underline underline-offset-2">{{ $attachment->original_name }}</span>
                                         </a>
                                     @else
-                                        <a href="{{ route('messages.attachments.show', $attachment) }}" class="underline underline-offset-2">{{ $attachment->original_name }}</a>
+                                        <a href="{{ route('messages.attachments.show', $attachment) }}" class="flex min-w-56 items-center gap-3 rounded-xl border border-slate-200 bg-white/80 p-3 text-left transition hover:bg-white">
+                                            <span class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $message->sender_id === auth()->id() ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600' }}" aria-hidden="true">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg>
+                                            </span>
+                                            <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold">{{ $attachment->original_name }}</span><span class="mt-0.5 block text-xs opacity-75">PDF document · Download</span></span>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4 shrink-0 opacity-75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.75v11m0 0 4-4m-4 4-4-4M5 16.75v3.5h14v-3.5"/></svg>
+                                        </a>
                                     @endif
                                 @else
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
@@ -85,7 +91,39 @@
                 <div id="message-help" class="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500"><span>Enter to send · Shift + Enter for a new line</span><span>{{ Str::length($body) }}/2000</span></div>
                 @error('body')<p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ $message }}</p>@enderror
             </form>
-            @can('send', $conversation)<form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" class="border-t border-slate-100 px-4 py-3 sm:px-6">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><label class="sr-only" for="chat-attachment">Attach image or PDF</label><div class="flex items-center gap-3"><input id="chat-attachment" name="attachment" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" required class="min-w-0 flex-1 text-xs"><button type="submit" class="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700">Attach</button></div><p class="mt-1 text-xs text-slate-500">JPG, PNG, WebP, or PDF up to 5 MB.</p></form>@endcan
+            @can('send', $conversation)
+                <div class="border-t border-slate-100 px-4 py-3 sm:px-6" aria-label="Add an attachment">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" x-data="{ preview: null, name: '' }" class="relative">
+                            @csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}">
+                            <label for="chat-photo" class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900 focus-within:ring-2 focus-within:ring-emerald-600">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true"><rect x="3.75" y="4.75" width="16.5" height="14.5" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4.5-4 3 2.5 2.5-2 4 3.5"/></svg>
+                                Photo
+                                <input id="chat-photo" name="attachment" type="file" accept="image/jpeg,image/png,image/webp" required class="sr-only" x-on:change="const file = $event.target.files[0]; if (preview) URL.revokeObjectURL(preview); preview = file ? URL.createObjectURL(file) : null; name = file?.name ?? ''">
+                            </label>
+                            <div x-cloak x-show="preview" class="absolute bottom-12 left-0 z-10 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                                <img x-bind:src="preview" x-bind:alt="name" class="max-h-36 w-full rounded-lg object-contain">
+                                <p x-text="name" class="mt-2 truncate text-xs font-medium text-slate-700"></p>
+                                <button type="submit" class="mt-2 w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Send photo</button>
+                            </div>
+                        </form>
+                        <form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" x-data="{ name: '' }" class="relative">
+                            @csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}">
+                            <label for="chat-document" class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-900 focus-within:ring-2 focus-within:ring-emerald-600">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg>
+                                Document
+                                <input id="chat-document" name="attachment" type="file" accept="application/pdf" required class="sr-only" x-on:change="name = $event.target.files[0]?.name ?? ''">
+                            </label>
+                            <div x-cloak x-show="name" class="absolute bottom-12 left-0 z-10 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+                                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">PDF document</p>
+                                <p x-text="name" class="mt-1 truncate text-sm font-semibold text-slate-800"></p>
+                                <button type="submit" class="mt-3 w-full rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800">Send document</button>
+                            </div>
+                        </form>
+                        <span class="text-xs text-slate-500">Photos: JPG, PNG, WebP · Documents: PDF · Up to 5 MB</span>
+                    </div>
+                </div>
+            @endcan
         </section>
     </div>
 </div>
