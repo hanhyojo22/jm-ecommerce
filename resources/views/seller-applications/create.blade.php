@@ -10,7 +10,13 @@
                     <p class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900" role="status">{{ session('status') }}</p>
                 @endif
 
-                @if ($application?->status === 'pending')
+                @if ($workspaceUnavailable)
+                    @if ($workspaceSuspended)
+                        <p class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="status">Your store is currently suspended. You cannot submit another seller application while this is being resolved. Contact JMMart support if you need help.</p>
+                    @else
+                        <p class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">Your existing seller workspace is unavailable, so you cannot submit another seller application. Contact JMMart support if you need help.</p>
+                    @endif
+                @elseif ($application?->status === 'pending')
                     <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">Your application is under review. We will notify you after it is approved.</p>
                 @else
                     @if ($application?->status === 'rejected')

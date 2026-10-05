@@ -12,12 +12,19 @@ class SellerApplicationController extends Controller
 {
     public function create(): View|RedirectResponse
     {
-        if (request()->user()->tenantMemberships()->exists()) {
+        $user = request()->user();
+
+        if ($user->sellerTenant() !== null) {
             return to_route('seller.dashboard');
         }
 
+        $membership = $user->tenantMemberships()->with('tenant.store')->first();
+
         return view('seller-applications.create', [
-            'application' => request()->user()->sellerApplications()->latest()->first(),
+            'application' => $user->sellerApplications()->latest()->first(),
+            'workspaceUnavailable' => $membership !== null,
+            'workspaceSuspended' => $membership?->tenant?->status === 'suspended'
+                || $membership?->tenant?->store?->status === 'suspended',
         ]);
     }
 
@@ -25,8 +32,12 @@ class SellerApplicationController extends Controller
     {
         $user = $request->user();
 
-        if ($user->tenantMemberships()->exists()) {
+        if ($user->sellerTenant() !== null) {
             return to_route('seller.dashboard');
+        }
+
+        if ($user->tenantMemberships()->exists()) {
+            return to_route('seller-application.create');
         }
 
         if ($user->sellerApplications()->where('status', 'pending')->exists()) {

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Actions\ApproveSellerApplication;
+use App\Actions\SuspendStore;
 use App\Models\AuditLog;
 use App\Models\SellerApplication;
 use App\Models\TenantMember;
@@ -104,6 +105,28 @@ class SellerApplicationTest extends TestCase
         ])->assertRedirect(route('seller.dashboard'));
 
         $this->assertDatabaseCount('seller_applications', 1);
+    }
+
+    public function test_suspended_seller_can_open_start_selling_without_a_redirect_loop(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        $application = $seller->sellerApplications()->create([
+            'store_name' => 'Northwind Goods',
+            'seller_name' => 'Ava Seller',
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'status' => 'pending',
+            'submitted_at' => now(),
+        ]);
+        $tenant = app(ApproveSellerApplication::class)->handle($administrator, $application);
+        app(SuspendStore::class)->handle($administrator, $tenant->store, 'Repeated policy violations reported by buyers.');
+
+        $this->actingAs($seller)->get(route('seller-application.create'))
+            ->assertOk()
+            ->assertSee('Your store is currently suspended.')
+            ->assertDontSee('Submit application');
     }
 
     public function test_administrator_sees_pending_first_and_can_filter_application_cards(): void
