@@ -37,9 +37,18 @@
             @endisset
 
             <!-- Page Content -->
-            <main id="main-content" tabindex="-1">
-                {{ $slot }}
-            </main>
+            @if (auth()->user()?->isPlatformAdministrator())
+                <div class="min-h-[calc(100vh-72px)] bg-[#faf8f5] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+                    @include('layouts.admin-sidebar')
+                    <main id="main-content" tabindex="-1" class="min-w-0">
+                        {{ $slot }}
+                    </main>
+                </div>
+            @else
+                <main id="main-content" tabindex="-1">
+                    {{ $slot }}
+                </main>
+            @endif
         </div>
         @livewireScripts
     </body>

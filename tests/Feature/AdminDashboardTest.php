@@ -20,6 +20,25 @@ class AdminDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_navigation_persists_and_tracks_the_active_section(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $this->actingAs($administrator);
+
+        foreach ([
+            'admin.seller-applications.index' => 'Seller applications',
+            'admin.products.index' => 'Products',
+            'admin.audit-logs.index' => 'Audit log',
+        ] as $route => $label) {
+            $this->get(route($route))
+                ->assertOk()
+                ->assertSee('aria-label="Admin workspace navigation"', false)
+                ->assertSee(route($route), false)
+                ->assertSee($label)
+                ->assertSee('aria-current=page', false);
+        }
+    }
+
     public function test_administrator_sees_live_moderation_counts_and_each_queue_type(): void
     {
         $administrator = User::factory()->administrator()->create();
