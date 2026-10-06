@@ -55,28 +55,6 @@ const clerkComponentAppearance = {
     },
 };
 
-const clerkCustomerAccountAppearance = {
-    variables: {
-        colorPrimary: '#047857',
-        colorForeground: '#111827',
-        colorBackground: '#ffffff',
-        colorBorder: '#e5e7eb',
-        borderRadius: '0.75rem',
-        fontFamily: 'Figtree, ui-sans-serif, system-ui, sans-serif',
-    },
-    elements: {
-        rootBox: 'jmmart-clerk-root',
-        cardBox: 'jmmart-clerk-card-box',
-        card: 'jmmart-clerk-card',
-        navbar: 'jmmart-clerk-navbar',
-        navbarButton: 'jmmart-clerk-navbar-button',
-        navbarButton__active: 'jmmart-clerk-navbar-button-active',
-        pageScrollBox: 'jmmart-clerk-page-scroll-box',
-        profileSection: 'jmmart-clerk-profile-section',
-        profileSectionPrimaryButton: 'jmmart-clerk-profile-action',
-    },
-};
-
 const renderClerkComponentError = (message = 'Authentication could not load. Please refresh the page.') => {
     document.querySelectorAll('[data-clerk-component]').forEach((element) => {
         const description = document.createElement('p');
@@ -266,9 +244,7 @@ if (!clerkPublishableKey) {
             document.querySelectorAll('[data-clerk-component="user-profile"]').forEach((element) => {
                 element.replaceChildren();
                 element.setAttribute('aria-busy', 'false');
-                clerk.mountUserProfile(element, {
-                    appearance: element.closest('.jmmart-account-shell') ? clerkCustomerAccountAppearance : clerkComponentAppearance,
-                });
+                clerk.mountUserProfile(element);
             });
         }).catch((error) => {
             console.error(error);
