@@ -27,24 +27,27 @@
         <div class="min-h-screen bg-slate-50">
             @include('layouts.navigation')
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="border-b border-slate-200 bg-white">
-                    <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
-
             <!-- Page Content -->
             @if (auth()->user()?->isPlatformAdministrator())
                 <div class="min-h-[calc(100vh-72px)] bg-[#faf8f5] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
                     @include('layouts.admin-sidebar')
                     <main id="main-content" tabindex="-1" class="min-w-0">
+                        @isset($header)
+                            <header class="px-4 pb-2 pt-6 sm:px-6 lg:px-7 lg:pt-8">
+                                {{ $header }}
+                            </header>
+                        @endisset
                         {{ $slot }}
                     </main>
                 </div>
             @else
+                @isset($header)
+                    <header class="border-b border-slate-200 bg-white">
+                        <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+                            {{ $header }}
+                        </div>
+                    </header>
+                @endisset
                 <main id="main-content" tabindex="-1">
                     {{ $slot }}
                 </main>

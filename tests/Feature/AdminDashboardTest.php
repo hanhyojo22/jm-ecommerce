@@ -33,6 +33,8 @@ class AdminDashboardTest extends TestCase
             $this->get(route($route))
                 ->assertOk()
                 ->assertSee('aria-label="Admin workspace navigation"', false)
+                ->assertSee('aria-label="Breadcrumb"', false)
+                ->assertSeeInOrder(['id="main-content"', $label])
                 ->assertSee(route($route), false)
                 ->assertSee($label)
                 ->assertSee('aria-current=page', false);

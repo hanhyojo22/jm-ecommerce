@@ -11,7 +11,7 @@
     };
 @endphp
 
-@if ($user?->isPlatformAdministrator() && request()->routeIs('dashboard'))
+@if ($user?->isPlatformAdministrator())
     <x-marketplace.admin-header :user="$user" />
 @else
 <header x-data="{
