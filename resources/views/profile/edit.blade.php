@@ -9,7 +9,7 @@
                 </nav>
 
                 <div class="mt-5 min-w-0 sm:mt-6">
-                    <div data-clerk-component="user-profile" class="min-w-0" aria-busy="true" aria-live="polite">
+                    <div data-clerk-component="user-profile" class="flex w-full min-w-0 justify-center" aria-busy="true" aria-live="polite">
                         <p class="py-6 text-sm text-slate-500">Loading account settings…</p>
                     </div>
                 </div>
