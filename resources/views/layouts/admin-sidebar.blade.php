@@ -1,6 +1,7 @@
 @php
     $items = [
-        ['label' => 'Overview', 'href' => route('dashboard'), 'icon' => 'overview', 'active' => request()->routeIs('dashboard')],
+        ['label' => 'Overview', 'href' => route('dashboard'), 'icon' => 'overview', 'active' => request()->routeIs('dashboard') && request()->query('type') === null],
+        ['label' => 'Moderation', 'href' => route('dashboard', ['type' => 'all']), 'icon' => 'moderation', 'active' => request()->routeIs('dashboard') && request()->query('type') !== null],
         ['label' => 'Seller applications', 'href' => route('admin.seller-applications.index'), 'icon' => 'application', 'active' => request()->routeIs('admin.seller-applications.*')],
         ['label' => 'Products', 'href' => route('admin.products.index'), 'icon' => 'box', 'active' => request()->routeIs('admin.products.*')],
         ['label' => 'Orders', 'href' => route('admin.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('admin.orders.*')],
@@ -19,6 +20,7 @@
                 <svg class="size-5 shrink-0 {{ $item['active'] ? 'text-emerald-800' : 'text-slate-500 group-hover:text-slate-700' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     @switch($item['icon'])
                         @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
+                        @case('moderation')<path d="M12 3 4.5 6v5.5c0 4.5 3.2 7.6 7.5 9.5 4.3-1.9 7.5-5 7.5-9.5V6L12 3Z" /><path d="m9 12 2 2 4-4" />@break
                         @case('application')<path d="M8 3h7l4 4v14H5V3z" /><path d="M15 3v5h5M8 12h8M8 16h8" />@break
                         @case('box')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5" />@break
                         @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break

@@ -20,6 +20,20 @@ class AdminDashboardTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_moderation_and_overview_are_consistent_sidebar_tabs(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+
+        $this->actingAs($administrator)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('aria-label="Admin workspace navigation"', false)
+            ->assertSee('href="'.route('dashboard').'"', false)
+            ->assertSee('>Overview</a>', false)
+            ->assertSee('href="'.route('dashboard', ['type' => 'all']).'"', false)
+            ->assertSee('>Moderation</a>', false);
+    }
+
     public function test_admin_navigation_persists_and_tracks_the_active_section(): void
     {
         $administrator = User::factory()->administrator()->create();
