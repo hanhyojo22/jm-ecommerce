@@ -187,7 +187,7 @@
                         <p class="mt-1 text-sm text-slate-600">Appeals are submitted by the store owner and reviewed here.</p>
                         <div class="mt-4 space-y-4">
                             @forelse ($appeals as $appeal)
-                                <article class="rounded-lg border border-slate-200 p-4">
+                                <article id="appeal-{{ $appeal->id }}" class="rounded-lg border border-slate-200 p-4">
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                         <p class="text-sm font-semibold text-slate-950">{{ $appeal->seller?->name ?? 'Former seller' }}</p>
                                         <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ['pending' => 'bg-amber-50 text-amber-800', 'approved' => 'bg-emerald-50 text-emerald-800', 'rejected' => 'bg-rose-50 text-rose-800'][$appeal->status] }}">{{ ucfirst($appeal->status) }}</span>
@@ -217,6 +217,22 @@
                                         </form>
                                     @else
                                         <p class="mt-2 text-xs text-slate-500">Reviewed {{ $appeal->reviewed_at?->format('M j, Y · g:i A') }}{{ $appeal->reviewer ? ' by '.$appeal->reviewer->name : '' }}</p>
+                                        @if (! $hasPendingAppeal && (($appeal->status === 'approved' && $store->status === 'active') || ($appeal->status === 'rejected' && $store->status === 'suspended')))
+                                            @if ($appeal->status === 'approved')
+                                                <p class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">Reopening this approved appeal will suspend the active store until a new review decision.</p>
+                                            @endif
+                                            <form method="POST" action="{{ route('admin.stores.appeals.reopen', [$store, $appeal]) }}" class="mt-4 space-y-3" @if ($appeal->status === 'approved') onsubmit="return confirm('Reopening this appeal will suspend the active store until a new review decision. Continue?')" @endif>
+                                                @csrf
+                                                @method('PATCH')
+                                                <label class="block">
+                                                    <span class="field-label">Why reopen this appeal?</span>
+                                                    <textarea name="reason[{{ $appeal->id }}]" rows="2" minlength="10" maxlength="1000" required class="field-control" placeholder="Record why the previous decision needs another review.">{{ old('reason.'.$appeal->id) }}</textarea>
+                                                </label>
+                                                @error('reason.'.$appeal->id)<p class="text-sm text-rose-700" role="alert">{{ $message }}</p>@enderror
+                                                @error('appeal.'.$appeal->id)<p class="text-sm text-rose-700" role="alert">{{ $message }}</p>@enderror
+                                                <button class="inline-flex min-h-10 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50">Reopen appeal</button>
+                                            </form>
+                                        @endif
                                     @endif
                                 </article>
                             @empty

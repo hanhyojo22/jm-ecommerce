@@ -13,10 +13,14 @@ class DashboardController extends Controller
     {
         abort_unless($request->user()->isPlatformAdministrator(), 403);
 
-        $filters = $request->validate(['type' => ['nullable', 'in:all,application,appeal,product_report,chat_report']]);
+        $filters = $request->validate([
+            'type' => ['nullable', 'in:all,application,appeal,product_report,chat_report'],
+            'sort' => ['nullable', 'in:oldest,newest'],
+        ]);
         $activeType = $filters['type'] ?? 'all';
+        $activeSort = $filters['sort'] ?? 'oldest';
         $counts = AdminModerationQuery::counts();
-        $queueItems = AdminModerationQuery::items($activeType)->map(function (array $item): array {
+        $queueItems = AdminModerationQuery::items($activeType, $activeSort)->map(function (array $item): array {
             [$url, $action] = match ($item['type']) {
                 'application' => [route('admin.seller-applications.show', $item['id']), 'Review'],
                 'appeal' => [route('admin.stores.show', $item['store_id']).'#suspension-appeals', 'Review appeal'],
@@ -26,7 +30,8 @@ class DashboardController extends Controller
 
             return [...$item, 'url' => $url, 'action' => $action];
         });
+        $dataCheckedAt = now();
 
-        return view('dashboard', compact('activeType', 'counts', 'queueItems'));
+        return view('dashboard', compact('activeSort', 'activeType', 'counts', 'dataCheckedAt', 'queueItems'));
     }
 }

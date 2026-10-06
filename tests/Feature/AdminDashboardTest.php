@@ -13,6 +13,7 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class AdminDashboardTest extends TestCase
@@ -79,8 +80,12 @@ class AdminDashboardTest extends TestCase
             ->assertSee('Pending Shop')
             ->assertSee('Harbor Market')
             ->assertSee($context['product']->name)
+            ->assertSee('Subject / context')
+            ->assertSee('Reported reviews')
+            ->assertSee('Review author: '.$context['buyer']->name)
+            ->assertSee('Reported by '.$context['buyer']->name)
             ->assertSee('Harassment')
-            ->assertSee('Quick checks')
+            ->assertSee('Governance shortcuts')
             ->assertSee('Suspended stores')
             ->assertSee('Pending applications')
             ->assertSee(route('admin.seller-applications.show', $seller->sellerApplications()->first()), false)
@@ -141,6 +146,144 @@ class AdminDashboardTest extends TestCase
             ->assertDontSee('Pending Shop');
     }
 
+    public function test_category_queue_links_to_all_items_when_dashboard_limit_is_exceeded(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+
+        foreach (range(1, 13) as $index) {
+            $seller = User::factory()->seller()->create();
+            $seller->sellerApplications()->create([
+                'store_name' => "Pending Shop {$index}",
+                'seller_name' => "Seller {$index}",
+                'phone' => '+639171234567',
+                'address_line' => '10 Market Street',
+                'city' => 'Manila',
+                'status' => 'pending',
+                'submitted_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($administrator)
+            ->get(route('dashboard', ['type' => 'application']))
+            ->assertSee('Showing 12 oldest of 13 items.')
+            ->assertSee(route('admin.seller-applications.index', ['status' => 'pending']), false);
+    }
+
+    public function test_dashboard_sorts_by_received_time_and_rejects_unknown_sort_orders(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $this->createPendingApplication('Older Pending Shop', now()->subDays(2));
+        $this->createPendingApplication('Newer Pending Shop', now());
+
+        $this->actingAs($administrator)
+            ->get(route('dashboard', ['type' => 'application']))
+            ->assertSeeTextInOrder(['Older Pending Shop', 'Newer Pending Shop']);
+
+        $this->actingAs($administrator)
+            ->get(route('dashboard', ['type' => 'application', 'sort' => 'newest']))
+            ->assertSeeTextInOrder(['Newer Pending Shop', 'Older Pending Shop']);
+
+        $this->followingRedirects()
+            ->from(route('dashboard'))
+            ->actingAs($administrator)
+            ->get(route('dashboard', ['sort' => 'priority']))
+            ->assertSee('That queue view is no longer available.')
+            ->assertSee('Reset to all items');
+    }
+
+    public function test_governance_list_filters_match_pending_dashboard_queues(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $pendingStore = $this->store('Pending Appeal Store', 'suspended');
+        $pendingOwner = $this->attachOwner($pendingStore, 'Appeal Owner', 'appeal-owner@example.com');
+        $pendingStore->appeals()->create([
+            'seller_id' => $pendingOwner->id,
+            'statement' => 'Please review this suspension.',
+            'status' => 'pending',
+        ]);
+        $activeAppealStore = $this->store('Active Appeal Store', 'active');
+        $activeAppealOwner = $this->attachOwner($activeAppealStore, 'Active Appeal Owner', 'active-appeal-owner@example.com');
+        $activeAppealStore->appeals()->create([
+            'seller_id' => $activeAppealOwner->id,
+            'statement' => 'This pending appeal should remain in the matching list.',
+            'status' => 'pending',
+        ]);
+        $otherStore = $this->store('No Appeal Store', 'suspended');
+
+        $context = $this->productContext();
+        $reportedReview = ProductReview::create([
+            'product_id' => $context['product']->id,
+            'order_item_id' => $context['item']->id,
+            'user_id' => $context['buyer']->id,
+            'rating' => 2,
+            'title' => 'Reported item',
+            'body' => 'This review has a report.',
+            'status' => 'published',
+        ]);
+        $reportedReview->reports()->create(['user_id' => User::factory()->create()->id, 'reason' => 'spam']);
+        $unreportedItem = $context['item']->replicate();
+        $unreportedItem->save();
+        ProductReview::create([
+            'product_id' => $context['product']->id,
+            'order_item_id' => $unreportedItem->id,
+            'user_id' => $context['buyer']->id,
+            'rating' => 5,
+            'title' => 'Unreported item',
+            'body' => 'This review has no report.',
+            'status' => 'published',
+        ]);
+
+        $conversation = Conversation::create([
+            'buyer_id' => $context['buyer']->id,
+            'store_id' => $context['store']->id,
+            'product_id' => $context['product']->id,
+        ]);
+        $pendingMessage = $conversation->messages()->create([
+            'sender_id' => $context['seller']->id,
+            'type' => 'text',
+            'body' => 'Pending report message.',
+        ]);
+        $reviewedMessage = $conversation->messages()->create([
+            'sender_id' => $context['seller']->id,
+            'type' => 'text',
+            'body' => 'Already reviewed message.',
+        ]);
+        MessageReport::create([
+            'conversation_message_id' => $pendingMessage->id,
+            'reporter_id' => $context['buyer']->id,
+            'reason' => 'spam',
+            'status' => 'pending',
+        ]);
+        MessageReport::create([
+            'conversation_message_id' => $reviewedMessage->id,
+            'reporter_id' => $context['buyer']->id,
+            'reason' => 'spam',
+            'status' => 'reviewed',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('admin.stores.index', ['queue' => 'pending_appeals']))
+            ->assertOk()
+            ->assertSee('Stores with pending appeals')
+            ->assertSee('Pending Appeal Store')
+            ->assertSee('Active Appeal Store')
+            ->assertDontSee('No Appeal Store');
+
+        $this->actingAs($administrator)
+            ->get(route('admin.reviews.index', ['reported' => 1]))
+            ->assertOk()
+            ->assertSee('Reported review moderation')
+            ->assertSee('This review has a report.')
+            ->assertDontSee('This review has no report.');
+
+        $this->actingAs($administrator)
+            ->get(route('admin.chat-reports.index', ['status' => 'pending']))
+            ->assertOk()
+            ->assertSee('Pending chat reports')
+            ->assertSee('Pending report message.')
+            ->assertDontSee('Already reviewed message.');
+    }
+
     public function test_dashboard_shows_an_empty_state_when_no_items_need_moderation(): void
     {
         $administrator = User::factory()->administrator()->create();
@@ -184,6 +327,20 @@ class AdminDashboardTest extends TestCase
         TenantMember::create(['tenant_id' => $store->tenant_id, 'user_id' => $owner->id, 'role' => 'owner']);
 
         return $owner;
+    }
+
+    private function createPendingApplication(string $storeName, Carbon $submittedAt): void
+    {
+        $seller = User::factory()->seller()->create();
+        $seller->sellerApplications()->create([
+            'store_name' => $storeName,
+            'seller_name' => 'Pending Seller',
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'status' => 'pending',
+            'submitted_at' => $submittedAt,
+        ]);
     }
 
     /** @return array{store:Store,seller:User,buyer:User,product:Product,item:OrderItem} */

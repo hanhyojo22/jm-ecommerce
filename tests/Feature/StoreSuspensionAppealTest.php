@@ -148,6 +148,102 @@ class StoreSuspensionAppealTest extends TestCase
             ->sole()->status);
     }
 
+    public function test_administrator_can_reopen_a_rejected_appeal_while_the_store_remains_suspended(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $store = $this->suspendStore('Northwind Goods', $administrator);
+        $seller = $this->attachOwner($store);
+        $appeal = $this->submitAppeal($seller);
+        $this->actingAs($administrator)->patch(route('admin.stores.appeals.update', [$store, $appeal]), [
+            'decision' => 'rejected',
+            'review_note' => 'The submitted documents do not address the outstanding policy violations.',
+        ])->assertRedirect();
+
+        $this->actingAs($administrator)->get(route('admin.stores.show', $store))
+            ->assertOk()
+            ->assertSee('Why reopen this appeal?')
+            ->assertSee('Reopen appeal');
+
+        $this->actingAs($administrator)->patch(route('admin.stores.appeals.reopen', [$store, $appeal]), [
+            'reason' => [$appeal->id => 'The original decision relied on incomplete evidence.'],
+        ])
+            ->assertRedirect(route('admin.stores.show', $store))
+            ->assertSessionHas('status', 'Appeal reopened. The store is suspended until a new review decision.');
+
+        $this->assertDatabaseHas('store_suspension_appeals', [
+            'id' => $appeal->id,
+            'status' => 'pending',
+            'review_note' => null,
+            'reviewed_by' => null,
+            'reviewed_at' => null,
+        ]);
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'status' => 'suspended']);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $administrator->id,
+            'action' => 'store.suspension_appeal.reopened',
+            'entity_type' => StoreSuspensionAppeal::class,
+            'entity_id' => $appeal->id,
+        ]);
+    }
+
+    public function test_reopening_an_approved_appeal_suspends_the_store_again(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $store = $this->suspendStore('Northwind Goods', $administrator);
+        $seller = $this->attachOwner($store);
+        $appeal = $this->submitAppeal($seller);
+        $this->actingAs($administrator)->patch(route('admin.stores.appeals.update', [$store, $appeal]), [
+            'decision' => 'approved',
+            'review_note' => 'The seller corrected the listings and provided valid documentation.',
+        ])->assertRedirect();
+
+        $this->actingAs($administrator)->get(route('admin.stores.show', $store))
+            ->assertOk()
+            ->assertSee('Reopening this approved appeal will suspend the active store');
+
+        $this->actingAs($administrator)->patch(route('admin.stores.appeals.reopen', [$store, $appeal]), [
+            'reason' => [$appeal->id => 'A material part of the submitted evidence was verified as false.'],
+        ])->assertRedirect(route('admin.stores.show', $store));
+
+        $this->assertDatabaseHas('store_suspension_appeals', [
+            'id' => $appeal->id,
+            'status' => 'pending',
+            'review_note' => null,
+        ]);
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'status' => 'suspended']);
+        $this->assertDatabaseHas('tenants', ['id' => $store->tenant_id, 'status' => 'suspended']);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $administrator->id,
+            'action' => 'store.suspended',
+            'entity_type' => Store::class,
+            'entity_id' => $store->id,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $administrator->id,
+            'action' => 'store.suspension_appeal.reopened',
+            'entity_type' => StoreSuspensionAppeal::class,
+            'entity_id' => $appeal->id,
+        ]);
+    }
+
+    public function test_pending_appeals_cannot_be_reopened_and_reopen_reason_is_required(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $store = $this->suspendStore('Northwind Goods', $administrator);
+        $seller = $this->attachOwner($store);
+        $appeal = $this->submitAppeal($seller);
+
+        $this->actingAs($administrator)->patch(route('admin.stores.appeals.reopen', [$store, $appeal]), [])
+            ->assertSessionHasErrors('reason.'.$appeal->id);
+
+        $this->actingAs($administrator)->patch(route('admin.stores.appeals.reopen', [$store, $appeal]), [
+            'reason' => [$appeal->id => 'This reason is long enough to pass validation.'],
+        ])->assertSessionHasErrors('appeal.'.$appeal->id);
+
+        $this->assertDatabaseHas('store_suspension_appeals', ['id' => $appeal->id, 'status' => 'pending']);
+        $this->assertDatabaseMissing('audit_logs', ['action' => 'store.suspension_appeal.reopened', 'entity_id' => $appeal->id]);
+    }
+
     public function test_direct_admin_reactivation_resolves_any_pending_appeal(): void
     {
         $administrator = User::factory()->administrator()->create();

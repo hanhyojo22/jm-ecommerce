@@ -14,14 +14,18 @@ class ChatReportController extends Controller
 {
     public function index(Request $request): View
     {
-        $filters = $request->validate(['report' => ['nullable', 'ulid']]);
+        $filters = $request->validate([
+            'report' => ['nullable', 'ulid'],
+            'status' => ['nullable', 'in:pending,reviewed,dismissed'],
+        ]);
         $reports = MessageReport::query()
             ->with(['message.sender', 'message.conversation.store', 'reporter'])
             ->when($filters['report'] ?? null, fn ($query, string $reportId) => $query->whereKey($reportId))
+            ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
             ->latest()
             ->paginate(30);
 
-        return view('admin.chat-reports.index', compact('reports'));
+        return view('admin.chat-reports.index', compact('filters', 'reports'));
     }
 
     public function update(Request $request, MessageReport $report): RedirectResponse

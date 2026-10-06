@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><p class="text-sm font-semibold uppercase tracking-[.16em] text-emerald-700">Marketplace governance</p><h1 class="mt-1 text-2xl font-semibold text-slate-950">Chat reports</h1></div></x-slot>
+    <x-slot name="header"><div><p class="text-sm font-semibold uppercase tracking-[.16em] text-emerald-700">Marketplace governance</p><h1 class="mt-1 text-2xl font-semibold text-slate-950">{{ ($filters['status'] ?? null) === 'pending' ? 'Pending chat reports' : 'Chat reports' }}</h1></div></x-slot>
     <div class="page-shell"><div class="page-container space-y-4">
         @forelse ($reports as $report)
             <article id="chat-report-{{ $report->id }}" class="section-card scroll-mt-24">

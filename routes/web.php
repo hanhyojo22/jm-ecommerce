@@ -114,6 +114,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (
     Route::patch('/admin/stores/{store}/appeals/{appeal}', [StoreModerationController::class, 'updateAppeal'])
         ->scopeBindings()
         ->name('admin.stores.appeals.update');
+    Route::patch('/admin/stores/{store}/appeals/{appeal}/reopen', [StoreModerationController::class, 'reopenAppeal'])
+        ->scopeBindings()
+        ->name('admin.stores.appeals.reopen');
     Route::get('/admin/customers', [GovernanceController::class, 'customers'])->name('admin.customers.index');
     Route::get('/admin/customers/{customer}', [GovernanceController::class, 'showCustomer'])->name('admin.customers.show');
     Route::get('/admin/audit-logs', [GovernanceController::class, 'auditLogs'])->name('admin.audit-logs.index');

@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-800">Marketplace administration</p>
-                <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950">Stores overview</h1>
+                <h1 class="mt-1 text-2xl font-semibold tracking-tight text-slate-950">{{ ($filters['queue'] ?? null) === 'pending_appeals' ? 'Stores with pending appeals' : 'Stores overview' }}</h1>
             </div>
             <a href="#seller-stores" class="inline-flex min-h-10 items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Manage stores</a>
         </div>

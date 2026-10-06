@@ -20,6 +20,7 @@ class AdminModerationQuery
         'seller_application.approved',
         'seller_application.rejected',
         'store.suspension_appeal.approved',
+        'store.suspension_appeal.reopened',
         'store.suspension_appeal.rejected',
         'product_review.moderated',
         'message_report.reviewed',
@@ -48,27 +49,29 @@ class AdminModerationQuery
     /**
      * @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}>
      */
-    public static function items(string $type = 'all'): Collection
+    public static function items(string $type = 'all', string $sort = 'oldest'): Collection
     {
+        $direction = $sort === 'newest' ? 'desc' : 'asc';
         $items = collect()
-            ->concat(self::applications())
-            ->concat(self::appeals())
-            ->concat(self::productReports())
-            ->concat(self::chatReports());
+            ->concat(self::applications($direction))
+            ->concat(self::appeals($direction))
+            ->concat(self::productReports($direction))
+            ->concat(self::chatReports($direction))
+            ->when($type !== 'all', fn (Collection $items): Collection => $items->where('type', $type));
 
-        return $items
-            ->when($type !== 'all', fn (Collection $items): Collection => $items->where('type', $type))
-            ->sortByDesc(fn (array $item): int => $item['received_at']->getTimestamp())
-            ->take(self::ITEM_LIMIT)
-            ->values();
+        $items = $sort === 'newest'
+            ? $items->sortByDesc(fn (array $item): int => $item['received_at']->getTimestamp())
+            : $items->sortBy(fn (array $item): int => $item['received_at']->getTimestamp());
+
+        return $items->take(self::ITEM_LIMIT)->values();
     }
 
     /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */
-    private static function applications(): Collection
+    private static function applications(string $direction): Collection
     {
         return SellerApplication::query()
             ->where('status', 'pending')
-            ->orderByRaw('COALESCE(submitted_at, created_at) DESC')
+            ->orderByRaw('COALESCE(submitted_at, created_at) '.$direction)
             ->limit(self::ITEM_LIMIT)
             ->get(['id', 'store_name', 'seller_name', 'submitted_at', 'created_at'])
             ->map(fn (SellerApplication $application): array => self::item(
@@ -83,12 +86,12 @@ class AdminModerationQuery
     }
 
     /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */
-    private static function appeals(): Collection
+    private static function appeals(string $direction): Collection
     {
         return StoreSuspensionAppeal::query()
             ->where('status', 'pending')
             ->with('store:id,name')
-            ->latest()
+            ->orderBy('created_at', $direction)
             ->limit(self::ITEM_LIMIT)
             ->get(['id', 'store_id', 'created_at'])
             ->map(fn (StoreSuspensionAppeal $appeal): array => self::item(
@@ -103,7 +106,7 @@ class AdminModerationQuery
     }
 
     /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */
-    private static function productReports(): Collection
+    private static function productReports(string $direction): Collection
     {
         return ProductReview::query()
             ->select(['id', 'product_id', 'user_id', 'created_at', 'status'])
@@ -112,7 +115,7 @@ class AdminModerationQuery
             ->with(['product:id,name', 'user:id,name'])
             ->withCount('reports')
             ->withMax('reports', 'created_at')
-            ->orderByDesc('reports_max_created_at')
+            ->orderBy('reports_max_created_at', $direction)
             ->limit(self::ITEM_LIMIT)
             ->get()
             ->map(fn (ProductReview $review): array => self::item(
@@ -120,14 +123,14 @@ class AdminModerationQuery
                 $review->id,
                 null,
                 $review->product?->name ?? 'Product review',
-                $review->user?->name ?? 'Customer review',
+                'Review author: '.($review->user?->name ?? 'Customer'),
                 $review->reports_count.' '.Str::plural('customer report', $review->reports_count),
                 Carbon::parse($review->reports_max_created_at),
             ));
     }
 
     /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */
-    private static function chatReports(): Collection
+    private static function chatReports(string $direction): Collection
     {
         return MessageReport::query()
             ->where('status', 'pending')
@@ -137,7 +140,7 @@ class AdminModerationQuery
                 'message.conversation:id,store_id',
                 'message.conversation.store:id,name',
             ])
-            ->latest()
+            ->orderBy('created_at', $direction)
             ->limit(self::ITEM_LIMIT)
             ->get(['id', 'conversation_message_id', 'reporter_id', 'reason', 'created_at'])
             ->map(fn (MessageReport $report): array => self::item(
@@ -145,7 +148,7 @@ class AdminModerationQuery
                 $report->id,
                 null,
                 $report->message?->conversation?->store?->name ?? 'Order conversation',
-                $report->reporter?->name ?? 'Marketplace customer',
+                'Reported by '.($report->reporter?->name ?? 'marketplace customer'),
                 Str::headline($report->reason),
                 $report->created_at,
             ));

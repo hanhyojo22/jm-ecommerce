@@ -34,6 +34,7 @@ class GovernanceController extends Controller
             'joined' => ['nullable', 'in:last_30_days,last_90_days,this_year'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'sort' => ['nullable', 'in:name,newest,recently_active'],
+            'queue' => ['nullable', 'in:pending_appeals'],
         ]);
 
         $stores = AdminStoreQuery::base()
@@ -48,7 +49,8 @@ class GovernanceController extends Controller
                     'this_year' => $query->whereBetween('created_at', [now()->startOfYear(), now()->endOfYear()]),
                 };
             })
-            ->when($filters['category_id'] ?? null, fn (Builder $query, string $categoryId): Builder => $query->whereHas('products', fn (Builder $productQuery): Builder => $productQuery->where('category_id', $categoryId)));
+            ->when($filters['category_id'] ?? null, fn (Builder $query, string $categoryId): Builder => $query->whereHas('products', fn (Builder $productQuery): Builder => $productQuery->where('category_id', $categoryId)))
+            ->when(($filters['queue'] ?? null) === 'pending_appeals', fn (Builder $query): Builder => $query->whereHas('appeals', fn (Builder $appealQuery): Builder => $appealQuery->where('status', 'pending')));
 
         match ($filters['sort'] ?? 'newest') {
             'name' => $stores->orderBy('name')->orderBy('id'),
@@ -140,6 +142,7 @@ class GovernanceController extends Controller
             ->latest()
             ->limit(10)
             ->get();
+        $hasPendingAppeal = $store->appeals()->where('status', 'pending')->exists();
 
         return view('admin.governance.store-show', [
             'store' => $store,
@@ -148,6 +151,7 @@ class GovernanceController extends Controller
             'products' => $products,
             'sellerOrders' => $sellerOrders,
             'appeals' => $appeals,
+            'hasPendingAppeal' => $hasPendingAppeal,
             'auditLogs' => $auditLogs,
         ]);
     }
