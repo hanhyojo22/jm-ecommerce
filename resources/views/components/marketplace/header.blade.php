@@ -12,6 +12,7 @@
         default => 'Start selling',
     };
     $isSellerWorkspace = $user?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'messages.*');
+    $isHomepage = request()->routeIs('home') && ! $isSellerWorkspace;
 @endphp
 
 @if ($user?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
@@ -30,14 +31,18 @@
         @keydown.escape.window="if (drawerOpen) closeDrawer(); accountOpen = false"
         class="sticky top-0 z-40 border-b border-line bg-white"
     >
-        <div class="mx-auto grid h-[52px] max-w-[1320px] grid-cols-[1fr_auto] items-center gap-3 px-[18px] min-[641px]:h-[70px] min-[641px]:grid-cols-[auto_minmax(12rem,1fr)_auto] {{ $isSellerWorkspace ? 'min-[641px]:gap-6' : 'min-[641px]:gap-[18px]' }} min-[1021px]:grid-cols-[auto_minmax(15rem,1fr)_auto] min-[1021px]:px-0">
-            <div class="flex min-w-0 items-center gap-2 min-[1021px]:mr-5 min-[1021px]:gap-5">
-                <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="{{ $isSellerWorkspace ? 'lg:hidden' : 'min-[641px]:hidden' }} grid size-11 shrink-0 place-items-center rounded-[10px] text-muted transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Open navigation menu">
+        <div class="mx-auto max-w-[1320px] {{ $isHomepage ? 'flex flex-wrap items-center gap-5 px-[18px] py-[14px] min-[641px]:px-8' : 'grid h-[52px] grid-cols-[1fr_auto] items-center gap-3 px-[18px] min-[641px]:h-[70px] min-[641px]:grid-cols-[auto_minmax(12rem,1fr)_auto] '.($isSellerWorkspace ? 'min-[641px]:gap-6' : 'min-[641px]:gap-[18px]').' min-[1021px]:grid-cols-[auto_minmax(15rem,1fr)_auto] min-[1021px]:px-0' }}">
+            <div class="flex min-w-0 items-center {{ $isHomepage ? 'order-1 gap-2.5 min-[641px]:order-none' : 'gap-2 min-[1021px]:mr-5 min-[1021px]:gap-5' }}">
+                <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="{{ $isHomepage ? 'hidden' : ($isSellerWorkspace ? 'lg:hidden' : 'min-[641px]:hidden').' grid size-11 shrink-0 place-items-center rounded-[10px] text-muted transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand' }}" aria-label="Open navigation menu">
                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
                 </button>
-                <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2" aria-label="JMMart marketplace home">
-                    <x-application-logo class="size-9 fill-current text-brand" />
-                    <span class="text-lg font-bold tracking-[-0.025em] text-ink">JMMart</span>
+                <a href="{{ route('home') }}" class="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 {{ $isHomepage ? 'min-w-[140px]' : '' }}" aria-label="JMMart marketplace home">
+                    @if ($isHomepage)
+                        <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-lg font-bold leading-none text-white" aria-hidden="true">J</span>
+                    @else
+                        <x-application-logo class="size-9 fill-current text-brand" />
+                    @endif
+                    <span class="{{ $isHomepage ? 'text-xl tracking-[-0.02em]' : 'text-lg tracking-[-0.025em]' }} font-bold text-ink">JMMart</span>
                 </a>
 
                 @if ($isSellerWorkspace)
@@ -50,44 +55,51 @@
             </div>
 
             @if (! $isSellerWorkspace)
-                <form method="GET" action="{{ route('catalog.index') }}" x-data="{ query: @js($search), loading: false }" @submit="loading = true" class="hidden min-w-0 min-[641px]:block min-[1021px]:ml-1">
-                    <label for="marketplace-search-desktop" class="flex h-11 items-center gap-3 rounded-[10px] border border-line bg-canvas px-3.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
-                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
-                        <input id="marketplace-search-desktop" name="q" aria-label="Search products, brands, and stores" x-model="query" value="{{ $search }}" autocomplete="off" placeholder="Search products, brands, and stores" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
+                <form method="GET" action="{{ route('catalog.index') }}" x-data="{ query: @js($search), loading: false }" @submit="loading = true" class="{{ $isHomepage ? 'order-3 basis-full min-w-0 min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1' : 'hidden min-w-0 min-[641px]:block min-[1021px]:ml-1' }}">
+                    <label for="marketplace-search-desktop" class="{{ $isHomepage ? 'flex h-[46px] items-center gap-2 rounded-[10px] border border-line bg-canvas pl-3.5 pr-2 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10' : 'flex h-11 items-center gap-3 rounded-[10px] border border-line bg-canvas px-3.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10' }}">
+                        <svg class="{{ $isHomepage ? 'size-[18px]' : 'size-5' }} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+                        <input id="marketplace-search-desktop" name="q" aria-label="Search products, brands, and stores" x-model="query" value="{{ $search }}" autocomplete="off" placeholder="Search products, brands, and stores" class="min-w-0 flex-1 border-0 bg-transparent p-0 {{ $isHomepage ? 'text-[15px]' : 'text-sm' }} text-ink placeholder:text-muted focus:ring-0">
                         <button x-cloak x-show="query.length" type="button" @click="query = ''; $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
-                        <button type="submit" class="rounded-[8px] bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover">Search</button>
+                        <button type="submit" class="{{ $isHomepage ? 'h-[34px] rounded-[8px] px-[18px] py-0 text-[15px]' : 'rounded-[8px] px-4 py-2 text-sm' }} bg-brand font-semibold text-white transition hover:bg-brand-hover">Search</button>
                         <span x-cloak x-show="loading" class="text-xs font-semibold text-brand">Searching…</span>
                     </label>
                 </form>
             @endif
 
-            <div class="flex shrink-0 items-center justify-end gap-1 sm:gap-2 min-[641px]:gap-[18px]">
+            <div class="flex shrink-0 items-center justify-end {{ $isHomepage ? 'order-2 ml-auto gap-1 min-[641px]:order-none min-[641px]:ml-0' : 'gap-1 sm:gap-2 min-[641px]:gap-[18px]' }}">
+                @if ($isHomepage)
+                    <a href="{{ auth()->check() ? route('profile.edit') : route('login', ['redirect' => '/profile']) }}" class="grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Wishlist">
+                        <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 20.5C7 16.5 3.5 13.3 3.5 9.6 3.5 7 5.5 5 8 5c1.6 0 3.1.8 4 2.1C12.9 5.8 14.4 5 16 5c2.5 0 4.5 2 4.5 4.6 0 3.7-3.5 6.9-8.5 10.9z" /></svg>
+                    </a>
+                @endif
+
                 @if ($isSellerWorkspace && $sellerTenant)
                     <a href="{{ route('catalog.store', $sellerTenant->slug) }}" target="_blank" rel="noopener noreferrer" class="hidden min-h-10 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand sm:inline-flex">View storefront</a>
                 @elseif ($canUseMessages && ! request()->routeIs('catalog.index'))
-                    <a href="{{ route('messages.index') }}" class="relative grid size-11 place-items-center rounded-[10px] text-muted transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
-                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linejoin="round" d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z" /></svg>
+                    <a href="{{ route('messages.index') }}" class="{{ $isHomepage ? 'relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand' : 'relative grid size-11 place-items-center rounded-[10px] text-muted transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand' }}" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
+                        <svg class="{{ $isHomepage ? 'size-[22px]' : 'size-5' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
                         @if ($unreadConversationCount > 0)
-                            <span class="absolute right-0 top-0 inline-flex min-w-5 translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full bg-brand px-1 py-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-white">{{ $messageBadge }}</span>
+                            <span class="absolute {{ $isHomepage ? 'right-1 top-1 grid h-[19px] min-w-[19px] place-items-center border-2 border-white px-[5px] text-[11px]' : 'right-0 top-0 inline-flex min-w-5 translate-x-1/4 -translate-y-1/4 px-1 py-0.5 text-[10px] ring-2 ring-white' }} rounded-full bg-brand font-bold leading-none text-white">{{ $messageBadge }}</span>
                         @endif
                     </a>
                 @endif
 
                 @if ($isBuyer)
-                    <a href="{{ route('cart.index') }}" class="relative order-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:order-2" aria-label="Cart: {{ $cartItemCount }} {{ Str::plural('item', $cartItemCount) }}">
-                        <svg class="size-5 min-[641px]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
-                        <span class="hidden min-[641px]:inline">Cart ({{ $cartItemCount }})</span>
+                    <a href="{{ route('cart.index') }}" class="{{ $isHomepage ? 'relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand' : 'relative order-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:order-2' }}" aria-label="Cart: {{ $cartItemCount }} {{ Str::plural('item', $cartItemCount) }}">
+                        <svg class="{{ $isHomepage ? 'size-[22px]' : 'size-5 min-[641px]:hidden' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
+                        @unless ($isHomepage)<span class="hidden min-[641px]:inline">Cart ({{ $cartItemCount }})</span>@endunless
                         @if ($cartItemCount > 0)
-                            <span class="absolute right-0 top-0 inline-flex min-w-5 translate-x-1/4 -translate-y-1/4 items-center justify-center rounded-full bg-brand px-1 py-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-white min-[641px]:hidden">{{ $cartBadge }}</span>
+                            <span class="absolute {{ $isHomepage ? 'right-1 top-1 grid h-[19px] min-w-[19px] place-items-center border-2 border-white px-[5px] text-[11px]' : 'right-0 top-0 inline-flex min-w-5 translate-x-1/4 -translate-y-1/4 px-1 py-0.5 text-[10px] ring-2 ring-white min-[641px]:hidden' }} rounded-full bg-brand font-bold leading-none text-white">{{ $cartBadge }}</span>
                         @endif
                     </a>
                 @endif
 
                 @auth
-                    <div class="relative min-[641px]:order-1" @click.outside="accountOpen = false">
-                        <button type="button" @click="accountOpen = !accountOpen" :aria-expanded="accountOpen.toString()" aria-haspopup="menu" aria-controls="header-account-menu" class="flex min-h-11 max-w-48 items-center gap-2 rounded-[10px] px-3 text-left text-ink transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-brand {{ $isSellerWorkspace ? '' : 'min-[641px]:px-0' }}">
-                            <span class="hidden text-sm font-semibold min-[641px]:inline">Account</span>
-                            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-800 min-[641px]:hidden">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
+                    <div class="relative {{ $isHomepage ? '' : 'min-[641px]:order-1' }}" @click.outside="accountOpen = false">
+                        <button type="button" @click="accountOpen = !accountOpen" :aria-expanded="accountOpen.toString()" aria-haspopup="menu" aria-controls="header-account-menu" class="{{ $isHomepage ? 'flex h-10 max-w-48 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand' : 'flex min-h-11 max-w-48 items-center gap-2 rounded-[10px] px-3 text-left text-ink transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-brand '.($isSellerWorkspace ? '' : 'min-[641px]:px-0') }}">
+                            @if ($isHomepage)<svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>@endif
+                            <span class="{{ $isHomepage ? 'hidden min-[641px]:inline' : 'hidden text-sm font-semibold min-[641px]:inline' }}">{{ $isHomepage ? 'Hi, '.Str::of($user->name)->before(' ') : 'Account' }}</span>
+                            <span class="{{ $isHomepage ? 'hidden' : 'grid size-8 shrink-0 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-800 min-[641px]:hidden' }}">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
                         </button>
                         <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right role="menu" class="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-[14px] border border-line bg-white p-2 shadow-[0_12px_28px_rgba(15,23,42,.10)]">
                             <div class="min-w-0 border-b border-line px-3 py-3"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
@@ -110,16 +122,29 @@
                         </div>
                     </div>
                 @else
-                    <a href="{{ route('login', ['redirect' => '/cart']) }}" class="order-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:order-2" aria-label="Sign in to view cart">
-                        <svg class="size-5 min-[641px]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
-                        <span class="hidden min-[641px]:inline">Cart</span>
+                    <a href="{{ route('login', ['redirect' => '/cart']) }}" class="{{ $isHomepage ? 'relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand' : 'relative order-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:order-2' }}" aria-label="Sign in to view cart">
+                        <svg class="{{ $isHomepage ? 'size-[22px]' : 'size-5 min-[641px]:hidden' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
+                        @unless ($isHomepage)<span class="hidden min-[641px]:inline">Cart</span>@endunless
                     </a>
-                    <a href="{{ route('login', ['redirect' => '/profile']) }}" class="order-1 hidden min-h-11 items-center rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:inline-flex min-[641px]:order-1 min-[641px]:px-0">Account</a>
+                    <a href="{{ route('login', ['redirect' => '/profile']) }}" class="{{ $isHomepage ? 'flex h-10 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand' : 'order-1 hidden min-h-11 items-center rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:inline-flex min-[641px]:order-1 min-[641px]:px-0' }}" aria-label="Sign in to your account">@if ($isHomepage)<svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg><span class="hidden min-[641px]:inline">Account</span>@else<span>Account</span>@endif</a>
                 @endauth
             </div>
         </div>
 
-
+        @if ($isHomepage)
+            <nav class="border-t border-line" aria-label="Marketplace sections">
+                <div class="page-container flex min-h-12 items-center gap-[26px] overflow-x-auto text-sm font-medium text-muted">
+                    <a href="#shop-by-category" class="inline-flex min-h-12 shrink-0 items-center gap-1 border-b-2 border-brand text-ink">Categories ▾</a>
+                    <a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="inline-flex min-h-12 shrink-0 items-center hover:text-ink">New Arrivals</a>
+                    <a href="{{ route('catalog.top-products') }}" class="inline-flex min-h-12 shrink-0 items-center hover:text-ink">Best Sellers</a>
+                    <a href="#flash-deals" class="inline-flex min-h-12 shrink-0 items-center hover:text-ink">Deals</a>
+                    <a href="{{ route('catalog.stores') }}" class="inline-flex min-h-12 shrink-0 items-center hover:text-ink">Stores</a>
+                    @if (! $user?->isPlatformAdministrator())
+                        <a href="{{ $user?->account_type === 'seller' ? route('seller.dashboard') : (auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling'])) }}" class="inline-flex min-h-12 shrink-0 items-center hover:text-ink">Sell on JMMart</a>
+                    @endif
+                </div>
+            </nav>
+        @endif
 
         <div x-cloak x-show="drawerOpen" x-transition.opacity class="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
             <button type="button" @click="closeDrawer" class="h-full w-full" tabindex="-1" aria-label="Close navigation menu"></button>

@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Queries\TopProductQuery;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -38,23 +39,41 @@ class CatalogController extends Controller
             ->take(12)
             ->values();
 
-        $newProducts = $this->publishedProducts()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
-            ->with(['thumbnail', 'category:id,name,slug'])
-            ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
-            ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
-            ->withSum(['orderItems as sold_quantity' => fn (Builder $query) => $query
-                ->whereHas('sellerOrder', fn (Builder $sellerOrder) => $sellerOrder->where('status', '!=', 'cancelled'))], 'quantity')
+        $homeProducts = $this->homeProducts();
+        $newProducts = (clone $homeProducts)
             ->latest()
             ->limit(8)
             ->get();
+        $flashDeals = (clone $homeProducts)
+            ->whereNotNull('compare_at_price')
+            ->whereColumn('compare_at_price', '>', 'price')
+            ->where('stock_quantity', '>', 0)
+            ->orderByDesc('compare_at_price')
+            ->limit(3)
+            ->get();
         $bestSellers = TopProductQuery::featured(8);
-        $featuredProduct = $bestSellers->first() ?? $newProducts->first();
+        $featuredProduct = $flashDeals->first() ?? $bestSellers->first() ?? $newProducts->first();
+
+        $recentProductIds = $request->session()->get('marketplace.recently_viewed', []);
+        $recentlyViewed = $recentProductIds === [] ? collect() : (clone $homeProducts)
+            ->whereKey($recentProductIds)
+            ->get()
+            ->sortBy(fn (Product $product): int => array_search($product->id, $recentProductIds, true))
+            ->values();
+        $recommendedProducts = $recentlyViewed->pluck('category_id')->filter()->unique()->isEmpty()
+            ? $bestSellers->take(4)->values()
+            : (clone $homeProducts)
+                ->whereIn('category_id', $recentlyViewed->pluck('category_id')->filter()->unique())
+                ->whereNotIn('id', $recentProductIds)
+                ->latest()
+                ->limit(4)
+                ->get();
+
         $stores = $this->publicStores()
             ->whereHas('products', fn (Builder $query) => $query->where('status', 'active'))
             ->withCount(['products as public_products_count' => fn (Builder $query) => $query->where('status', 'active')])
             ->orderBy('name')
-            ->limit(6)
+            ->limit(4)
             ->get();
 
         return view('marketplace.home', [
@@ -62,14 +81,35 @@ class CatalogController extends Controller
             'newProducts' => $newProducts,
             'bestSellers' => $bestSellers,
             'featuredProduct' => $featuredProduct,
+            'flashDeals' => $flashDeals,
+            'recommendedProducts' => $recommendedProducts,
+            'recentlyViewed' => $recentlyViewed,
             'stores' => $stores,
             'cartItemCount' => $request->user()?->cartItemCount() ?? 0,
         ]);
     }
 
+    private function homeProducts(): Builder
+    {
+        return $this->publishedProducts()
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
+            ->with(['thumbnail', 'category:id,name,slug'])
+            ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
+            ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
+            ->withSum(['orderItems as sold_quantity' => fn (Builder $query) => $query
+                ->whereHas('sellerOrder', fn (Builder $sellerOrder) => $sellerOrder->where('status', '!=', 'cancelled'))], 'quantity');
+    }
+
     public function index(Request $request): View
     {
         return $this->catalog($request);
+    }
+
+    public function clearRecentlyViewed(Request $request): RedirectResponse
+    {
+        $request->session()->forget('marketplace.recently_viewed');
+
+        return to_route('home');
     }
 
     public function topProducts(Request $request): View
@@ -130,6 +170,8 @@ class CatalogController extends Controller
             ->whereHas('store', fn ($query) => $query->where('slug', $store))
             ->where('slug', $product)
             ->firstOrFail();
+        $recentlyViewed = $request->session()->get('marketplace.recently_viewed', []);
+        $request->session()->put('marketplace.recently_viewed', array_slice(array_values(array_unique([$product->id, ...$recentlyViewed])), 0, 8));
         $reviewFilters = $request->validate([
             'rating' => ['nullable', 'integer', 'between:1,5'],
             'photos' => ['nullable', 'boolean'],

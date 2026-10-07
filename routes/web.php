@@ -32,6 +32,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CatalogController::class, 'home'])->name('home');
 Route::get('/search', [CatalogController::class, 'index'])->name('catalog.index');
+Route::delete('/recently-viewed', [CatalogController::class, 'clearRecentlyViewed'])->name('catalog.recently-viewed.clear');
 Route::get('/top-products', [CatalogController::class, 'topProducts'])->name('catalog.top-products');
 Route::get('/stores', [CatalogController::class, 'stores'])->name('catalog.stores');
 Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalog.store');

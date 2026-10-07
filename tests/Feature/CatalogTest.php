@@ -28,8 +28,46 @@ class CatalogTest extends TestCase
             ->assertOk()
             ->assertSee('Shop by category')
             ->assertSee($category->name)
+            ->assertSee('id="marketplace-search-home-mobile"', false)
+            ->assertSee('Mobile marketplace navigation')
             ->assertSee($visible->name)
             ->assertDontSee($hidden->name);
+    }
+
+    public function test_homepage_shows_live_flash_deals_and_buyer_cart_actions(): void
+    {
+        $buyer = User::factory()->create();
+        $deal = $this->product(['name' => 'Marketplace sale item', 'price' => 149, 'compare_at_price' => 199]);
+
+        $this->actingAs($buyer)->get(route('home'))
+            ->assertOk()
+            ->assertSee('Flash deals')
+            ->assertSee($deal->name)
+            ->assertSee(route('cart.store', $deal), false)
+            ->assertSee('Add to cart');
+    }
+
+    public function test_homepage_tracks_recently_viewed_products_and_recommends_their_category(): void
+    {
+        $category = Category::create(['name' => 'Audio', 'slug' => 'audio', 'is_active' => true]);
+        $viewed = $this->product(['name' => 'Viewed headphones', 'category_id' => $category->id]);
+        $related = $this->product(['name' => 'Related speaker', 'category_id' => $category->id]);
+
+        $this->get(route('catalog.show', [$viewed->store->slug, $viewed->slug]))
+            ->assertOk()
+            ->assertSessionHas('marketplace.recently_viewed', [$viewed->id]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Recommended for you')
+            ->assertSee('Recently viewed')
+            ->assertSee($viewed->name)
+            ->assertSee($related->name)
+            ->assertSee('Clear history');
+
+        $this->delete(route('catalog.recently-viewed.clear'))
+            ->assertRedirect(route('home'))
+            ->assertSessionMissing('marketplace.recently_viewed');
     }
 
     public function test_catalog_only_shows_active_products_from_active_stores_and_tenants(): void
