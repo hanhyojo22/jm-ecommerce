@@ -23,14 +23,16 @@ class CartTest extends TestCase
 
         $this->actingAs($buyer)->get(route('cart.index'))
             ->assertSee('2 items')
-            ->assertSee('aria-label="2 items in cart"', false);
+            ->assertSee('Cart (2)')
+            ->assertSee('aria-label="Cart: 2 items"', false);
 
         $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])
             ->assertRedirect(route('cart.index'));
 
         $this->actingAs($buyer)->get(route('cart.index'))
             ->assertSee('3 items')
-            ->assertSee('aria-label="3 items in cart"', false);
+            ->assertSee('Cart (3)')
+            ->assertSee('aria-label="Cart: 3 items"', false);
     }
 
     public function test_buyer_can_update_a_cart_item_quantity_and_sees_confirmation(): void

@@ -97,7 +97,7 @@ class TopProductQuery
         $orderCases = $productIds->map(fn (string $productId, int $position): string => "WHEN ? THEN {$position}")->implode(' ');
 
         return Product::query()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'stock_quantity', 'status'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
             ->with(['thumbnail', 'store:id,name,slug,status'])
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')

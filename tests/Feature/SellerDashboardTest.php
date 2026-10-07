@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -28,7 +29,7 @@ class SellerDashboardTest extends TestCase
             ->assertSee('Canvas Tote')
             ->assertDontSee('Private Item')
             ->assertSee('No orders yet')
-            ->assertSee('Action required')
+            ->assertSee('Needs your attention')
             ->assertSee(route('seller.products.create'), false)
             ->assertSee(route('catalog.store', $store->slug), false)
             ->assertSee('target="_blank"', false)
@@ -41,6 +42,49 @@ class SellerDashboardTest extends TestCase
 
         $this->actingAs($seller)->get(route('seller.dashboard'))
             ->assertRedirect(route('seller-application.create'));
+    }
+
+    public function test_seller_summary_counts_only_its_own_non_cancelled_sales_and_customers(): void
+    {
+        [$seller, , $store] = $this->seller();
+        [, , $otherStore] = $this->seller();
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+
+        $this->createSellerOrder($store, $buyer, 'OWN-ORDER', 'delivered', 100);
+        $this->createSellerOrder($store, $otherBuyer, 'CANCELLED-ORDER', 'cancelled', 200);
+        $this->createSellerOrder($otherStore, $otherBuyer, 'OTHER-ORDER', 'delivered', 900);
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('₱100.00')
+            ->assertDontSee('₱900.00')
+            ->assertViewHas('customerCount', 1)
+            ->assertViewHas('totalOrders', 2);
+    }
+
+    private function createSellerOrder(Store $store, User $buyer, string $number, string $status, int $total): void
+    {
+        $order = Order::create([
+            'user_id' => $buyer->id,
+            'number' => $number,
+            'recipient_name' => $buyer->name,
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'subtotal' => $total,
+            'shipping_amount' => 0,
+            'total' => $total,
+            'status' => $status,
+        ]);
+        $order->sellerOrders()->create([
+            'tenant_id' => $store->tenant_id,
+            'store_id' => $store->id,
+            'subtotal' => $total,
+            'shipping_amount' => 0,
+            'total' => $total,
+            'status' => $status,
+        ]);
     }
 
     /**

@@ -35,6 +35,6 @@ class CheckoutController extends Controller
         $data = $request->validate(['recipient_name' => ['required', 'string', 'max:150'], 'phone' => ['required', 'string', 'max:30'], 'address_line' => ['required', 'string', 'max:255'], 'city' => ['required', 'string', 'max:100']]);
         $order = $checkout->handle($request->user(), $data);
 
-        return to_route('orders.show', $order);
+        return to_route('orders.show', $order)->with('order_placed', true);
     }
 }

@@ -13,24 +13,49 @@
         <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
         <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>@yield('title', config('app.name', 'Laravel'))</title>
 
         <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="bg-slate-50 font-sans antialiased text-slate-900">
-        <a href="#main-content" class="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2">Skip to content</a>
-        <div class="min-h-screen bg-slate-50">
-            @include('layouts.navigation')
+    <body class="bg-canvas font-sans antialiased text-ink">
+        <a href="#main-content" class="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-ink px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Skip to content</a>
+        <div class="min-h-screen bg-canvas">
+            @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'messages.*'))
+            @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
+            @if (request()->routeIs('home'))
+                <x-marketplace.announce-bar />
+            @endif
+            @if ($isAdminWorkspace)
+                {{-- The admin header belongs to the workspace content column. --}}
+            @elseif ($isSellerWorkspace)
+                <div class="lg:hidden">@include('layouts.navigation')</div>
+            @else
+                @include('layouts.navigation')
+            @endif
 
             <!-- Page Content -->
-            @if (auth()->user()?->isPlatformAdministrator())
-                <div class="min-h-[calc(100vh-72px)] bg-[#faf8f5] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+            @if ($isAdminWorkspace)
+                <div class="min-h-screen bg-canvas lg:grid lg:grid-cols-[258px_minmax(0,1fr)]">
                     @include('layouts.admin-sidebar')
+                    <main id="main-content" tabindex="-1" class="min-w-0">
+                        <x-marketplace.admin-header :user="auth()->user()" />
+                        @isset($header)
+                            <header class="px-4 pb-2 pt-6 sm:px-6 lg:px-7 lg:pt-8">
+                                {{ $header }}
+                            </header>
+                        @endisset
+                        {{ $slot }}
+                    </main>
+                </div>
+            @elseif ($isSellerWorkspace)
+                <div class="min-h-screen bg-canvas lg:grid lg:grid-cols-[258px_minmax(0,1fr)]">
+                    @include('layouts.seller-sidebar', ['sellerTenant' => auth()->user()?->sellerTenant()])
                     <main id="main-content" tabindex="-1" class="min-w-0">
                         @isset($header)
                             <header class="px-4 pb-2 pt-6 sm:px-6 lg:px-7 lg:pt-8">
@@ -42,8 +67,8 @@
                 </div>
             @else
                 @isset($header)
-                    <header class="border-b border-slate-200 bg-white">
-                        <div class="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+                    <header class="border-b border-line bg-white">
+                        <div class="mx-auto max-w-[1320px] px-[18px] py-5 sm:px-8 sm:py-6">
                             {{ $header }}
                         </div>
                     </header>
@@ -51,6 +76,7 @@
                 <main id="main-content" tabindex="-1">
                     {{ $slot }}
                 </main>
+                <x-marketplace.footer />
             @endif
         </div>
         @livewireScripts

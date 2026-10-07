@@ -12,7 +12,24 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
+            },
+            colors: {
+                canvas: '#F8FAFC',
+                surface: '#FFFFFF',
+                ink: '#0F172A',
+                muted: '#64748B',
+                line: '#E2E8F0',
+                brand: {
+                    DEFAULT: '#2563EB',
+                    hover: '#1D4ED8',
+                },
+                success: '#16A34A',
+                warning: {
+                    DEFAULT: '#F59E0B',
+                    text: '#B45309',
+                },
+                danger: '#DC2626',
             },
         },
     },

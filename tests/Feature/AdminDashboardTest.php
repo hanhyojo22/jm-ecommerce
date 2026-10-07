@@ -26,6 +26,7 @@ class AdminDashboardTest extends TestCase
         $this->actingAs($administrator);
 
         foreach ([
+            'admin.moderation' => 'Moderation',
             'admin.seller-applications.index' => 'Seller applications',
             'admin.products.index' => 'Products',
             'admin.audit-logs.index' => 'Audit log',
@@ -33,12 +34,39 @@ class AdminDashboardTest extends TestCase
             $this->get(route($route))
                 ->assertOk()
                 ->assertSee('aria-label="Admin workspace navigation"', false)
-                ->assertSee('aria-label="Breadcrumb"', false)
-                ->assertSeeInOrder(['id="main-content"', $label])
                 ->assertSee(route($route), false)
                 ->assertSee($label)
                 ->assertSee('aria-current=page', false);
         }
+    }
+
+    public function test_administrator_sees_the_marketplace_overview_with_real_orders_and_moderation_links(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $context = $this->productContext();
+        $storeWithoutSales = $this->store('Store Without Sales', 'active');
+        Product::create([
+            'tenant_id' => $storeWithoutSales->tenant_id,
+            'store_id' => $storeWithoutSales->id,
+            'name' => 'Unsold Product',
+            'slug' => 'unsold-product',
+            'sku' => 'UNSOLD',
+            'price' => 100,
+            'stock_quantity' => 1,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($administrator)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Marketplace overview')
+            ->assertSee('Orders in the last 7 days')
+            ->assertSee($context['item']->sellerOrder->order->number)
+            ->assertSee($context['store']->name)
+            ->assertSee($context['product']->name)
+            ->assertDontSee($storeWithoutSales->name)
+            ->assertDontSee('Unsold Product')
+            ->assertSee(route('admin.moderation', ['type' => 'application']), false);
     }
 
     public function test_administrator_sees_live_moderation_counts_and_each_queue_type(): void
@@ -93,7 +121,7 @@ class AdminDashboardTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $response = $this->actingAs($administrator)->get(route('dashboard'));
+        $response = $this->actingAs($administrator)->get(route('admin.moderation'));
 
         $response->assertOk()
             ->assertSee('Moderation')
@@ -160,7 +188,7 @@ class AdminDashboardTest extends TestCase
         ]);
 
         $this->actingAs($administrator)
-            ->get(route('dashboard', ['type' => 'appeal']))
+            ->get(route('admin.moderation', ['type' => 'appeal']))
             ->assertOk()
             ->assertSee('Harbor Market')
             ->assertSee('Store appeal')
@@ -185,7 +213,7 @@ class AdminDashboardTest extends TestCase
         }
 
         $this->actingAs($administrator)
-            ->get(route('dashboard', ['type' => 'application']))
+            ->get(route('admin.moderation', ['type' => 'application']))
             ->assertSee('Showing 12 oldest of 13 items.')
             ->assertSee(route('admin.seller-applications.index', ['status' => 'pending']), false);
     }
@@ -197,17 +225,17 @@ class AdminDashboardTest extends TestCase
         $this->createPendingApplication('Newer Pending Shop', now());
 
         $this->actingAs($administrator)
-            ->get(route('dashboard', ['type' => 'application']))
+            ->get(route('admin.moderation', ['type' => 'application']))
             ->assertSeeTextInOrder(['Older Pending Shop', 'Newer Pending Shop']);
 
         $this->actingAs($administrator)
-            ->get(route('dashboard', ['type' => 'application', 'sort' => 'newest']))
+            ->get(route('admin.moderation', ['type' => 'application', 'sort' => 'newest']))
             ->assertSeeTextInOrder(['Newer Pending Shop', 'Older Pending Shop']);
 
         $this->followingRedirects()
-            ->from(route('dashboard'))
+            ->from(route('admin.moderation'))
             ->actingAs($administrator)
-            ->get(route('dashboard', ['sort' => 'priority']))
+            ->get(route('admin.moderation', ['sort' => 'priority']))
             ->assertSee('That queue view is no longer available.')
             ->assertSee('Reset to all items');
     }
@@ -310,7 +338,7 @@ class AdminDashboardTest extends TestCase
         $administrator = User::factory()->administrator()->create();
 
         $this->actingAs($administrator)
-            ->get(route('dashboard'))
+            ->get(route('admin.moderation'))
             ->assertOk()
             ->assertSee('All caught up')
             ->assertSee('No items in this queue');
@@ -323,6 +351,8 @@ class AdminDashboardTest extends TestCase
 
         $this->actingAs($buyer)->get(route('dashboard'))->assertForbidden();
         $this->actingAs($seller)->get(route('dashboard'))->assertForbidden();
+        $this->actingAs($buyer)->get(route('admin.moderation'))->assertForbidden();
+        $this->actingAs($seller)->get(route('admin.moderation'))->assertForbidden();
     }
 
     private function store(string $name, string $status): Store

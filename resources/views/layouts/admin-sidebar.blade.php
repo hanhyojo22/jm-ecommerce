@@ -1,42 +1,114 @@
 @php
-    $items = [
-        ['label' => 'Overview', 'href' => route('dashboard'), 'icon' => 'overview', 'active' => request()->routeIs('dashboard')],
-        ['label' => 'Seller applications', 'href' => route('admin.seller-applications.index'), 'icon' => 'application', 'active' => request()->routeIs('admin.seller-applications.*')],
-        ['label' => 'Products', 'href' => route('admin.products.index'), 'icon' => 'box', 'active' => request()->routeIs('admin.products.*')],
-        ['label' => 'Orders', 'href' => route('admin.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('admin.orders.*')],
-        ['label' => 'Audit log', 'href' => route('admin.audit-logs.index'), 'icon' => 'audit', 'active' => request()->routeIs('admin.audit-logs.*')],
+    $groups = [
+        [
+            'label' => 'Workspace',
+            'items' => [
+                ['label' => 'Overview', 'href' => route('dashboard'), 'icon' => 'overview', 'active' => request()->routeIs('dashboard')],
+            ],
+        ],
+        [
+            'label' => 'Marketplace',
+            'items' => [
+                ['label' => 'Orders', 'href' => route('admin.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('admin.orders.*')],
+                ['label' => 'Products', 'href' => route('admin.products.index'), 'icon' => 'products', 'active' => request()->routeIs('admin.products.*')],
+                ['label' => 'Stores', 'href' => route('admin.stores.index'), 'icon' => 'stores', 'active' => request()->routeIs('admin.stores.*')],
+            ],
+        ],
+        [
+            'label' => 'People',
+            'items' => [
+                ['label' => 'Seller applications', 'href' => route('admin.seller-applications.index'), 'icon' => 'applications', 'active' => request()->routeIs('admin.seller-applications.*')],
+                ['label' => 'Customers', 'href' => route('admin.customers.index'), 'icon' => 'customers', 'active' => request()->routeIs('admin.customers.*')],
+                ['label' => 'Admin accounts', 'href' => route('admin.accounts.index'), 'icon' => 'accounts', 'active' => request()->routeIs('admin.accounts.*')],
+            ],
+        ],
+        [
+            'label' => 'Moderation',
+            'items' => [
+                ['label' => 'Moderation', 'href' => route('admin.moderation'), 'icon' => 'reports', 'active' => request()->routeIs('admin.moderation')],
+                ['label' => 'Reviews', 'href' => route('admin.reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('admin.reviews.*')],
+                ['label' => 'Chat reports', 'href' => route('admin.chat-reports.index'), 'icon' => 'reports', 'active' => request()->routeIs('admin.chat-reports.*')],
+            ],
+        ],
+        [
+            'label' => 'Operations',
+            'items' => [
+                ['label' => 'Payouts', 'href' => route('admin.payouts.index'), 'icon' => 'payouts', 'active' => request()->routeIs('admin.payouts.*')],
+                ['label' => 'Audit log', 'href' => route('admin.audit-logs.index'), 'icon' => 'audit', 'active' => request()->routeIs('admin.audit-logs.*')],
+            ],
+        ],
     ];
 @endphp
 
-<aside class="sticky top-[72px] hidden h-[calc(100vh-72px)] self-start overflow-y-auto border-r border-slate-200 bg-white lg:block" aria-label="Admin workspace navigation">
-    <nav class="space-y-1 px-3 py-5">
-        @foreach ($items as $item)
-            <a href="{{ $item['href'] }}" @class([
-                'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2',
-                'bg-emerald-50 font-semibold text-emerald-950' => $item['active'],
-                'text-slate-700 hover:bg-slate-50 hover:text-slate-950' => ! $item['active'],
-            ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
-                <svg class="size-5 shrink-0 {{ $item['active'] ? 'text-emerald-800' : 'text-slate-500 group-hover:text-slate-700' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    @switch($item['icon'])
-                        @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
-                        @case('application')<path d="M8 3h7l4 4v14H5V3z" /><path d="M15 3v5h5M8 12h8M8 16h8" />@break
-                        @case('box')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5" />@break
-                        @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break
-                        @case('audit')<circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />@break
-                    @endswitch
-                </svg>
-                <span class="min-w-0 truncate">{{ $item['label'] }}</span>
-            </a>
-        @endforeach
-    </nav>
-</aside>
+<div x-ref="drawer" class="contents" x-data="{
+    open: false,
+    trigger: null,
+    close() {
+        this.open = false;
+        this.$dispatch('admin-navigation-close');
+        this.$nextTick(() => this.trigger?.focus());
+    },
+    trap(event) {
+        const items = [...this.$refs.drawer.querySelectorAll('a, button')].filter(item => !item.disabled && item.offsetParent);
+        const first = items[0], last = items.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    },
+}"
+    x-init="$watch('open', value => document.body.classList.toggle('overflow-hidden', value))"
+    @admin-navigation-toggle.window="trigger = $event.detail.trigger; open = $event.detail.open; if (open) { $nextTick(() => $refs.sidebar.querySelector('a')?.focus()); } else { $nextTick(() => trigger?.focus()); }"
+    @keydown.escape.window="if (open) close()"
+    @keydown.tab="if (open) trap($event)"
+>
+    <button type="button" x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-40 bg-ink/40 lg:hidden" aria-label="Close admin navigation" @click="close()"></button>
 
-<nav class="-mx-4 mb-6 flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-4 py-2.5 sm:-mx-6 sm:px-6 lg:hidden" aria-label="Admin workspace navigation">
-    @foreach ($items as $item)
-        <a href="{{ $item['href'] }}" @class([
-            'min-h-10 shrink-0 rounded-lg px-3 py-2 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-emerald-700',
-            'bg-emerald-50 text-emerald-900' => $item['active'],
-            'text-slate-600 hover:bg-slate-50 hover:text-slate-950' => ! $item['active'],
-        ]) {{ $item['active'] ? 'aria-current=page' : '' }}>{{ $item['label'] }}</a>
-    @endforeach
-</nav>
+    <aside id="admin-workspace-nav" x-ref="sidebar" aria-label="Admin workspace navigation" :role="open ? 'dialog' : 'complementary'" :aria-modal="open ? 'true' : null" :class="open ? 'fixed inset-y-0 left-0 z-50 block w-64 lg:sticky lg:top-0 lg:h-screen lg:w-auto' : 'hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:w-auto'" class="overflow-y-auto border-r border-line bg-surface">
+        <div class="flex min-h-full flex-col px-3 py-5">
+            <div class="mb-5 px-3">
+                <p class="text-sm font-semibold text-ink">Administration</p>
+                <p class="mt-1 text-xs text-muted">Protected workspace</p>
+            </div>
+
+            <nav class="space-y-5" aria-label="Admin sections">
+                @foreach ($groups as $group)
+                    <div>
+                        <h2 class="px-3 pb-2 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">{{ $group['label'] }}</h2>
+                        <div class="space-y-1">
+                            @foreach ($group['items'] as $item)
+                                @if ($item['icon'] !== 'accounts' || auth()->user()?->isOwner())
+                                    <a href="{{ $item['href'] }}" @class([
+                                        'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                                        'bg-brand/10 font-semibold text-brand' => $item['active'],
+                                        'text-muted hover:bg-canvas hover:text-ink' => ! $item['active'],
+                                    ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
+                                        <svg class="size-5 shrink-0 {{ $item['active'] ? 'text-brand' : 'text-muted group-hover:text-ink' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            @switch($item['icon'])
+                                                @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
+                                                @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break
+                                                @case('products')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />@break
+                                                @case('stores')<path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />@break
+                                                @case('applications')<path d="M8 3h7l4 4v14H5V3z" /><path d="M15 3v5h5M8 12h8M8 16h6" />@break
+                                                @case('customers')<circle cx="9" cy="8" r="3" /><path d="M3.5 20v-1a5.5 5.5 0 0 1 11 0v1zM16 5.5a3 3 0 0 1 0 5.8M17 14a5 5 0 0 1 3.5 4.8v1" />@break
+                                                @case('accounts')<path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z" /><circle cx="12" cy="10" r="2" /><path d="M8.5 16a3.5 3.5 0 0 1 7 0" />@break
+                                                @case('reviews')<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />@break
+                                                @case('reports')<path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-9.5A7.5 7.5 0 0 1 10.5 4h2A7.5 7.5 0 0 1 20 11.5Z" />@break
+                                                @case('payouts')<path d="M12 2v20M17 6.5c-.7-1.2-2.1-2-4.2-2-2.4 0-4 1.2-4 3s1.6 2.7 4.2 3.3 4.2 1.4 4.2 3.4-1.8 3.6-4.5 3.6c-2.2 0-3.8-.8-4.8-2.2" />@break
+                                                @case('audit')<circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />@break
+                                            @endswitch
+                                        </svg>
+                                        <span class="min-w-0 truncate">{{ $item['label'] }}</span>
+                                    </a>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </nav>
+
+            <a href="{{ route('home') }}" class="mt-auto inline-flex min-h-11 items-center gap-3 rounded-lg px-3 pt-6 text-sm font-medium text-muted transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
+                <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12" /><path d="M3 4v16" /></svg>
+                View marketplace
+            </a>
+        </div>
+    </aside>
+</div>

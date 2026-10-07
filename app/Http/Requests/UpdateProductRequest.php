@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateProductRequest extends FormRequest
@@ -28,7 +29,10 @@ class UpdateProductRequest extends FormRequest
             'sku' => ['required', 'string', 'max:100'],
             'description' => ['nullable', 'string', 'max:5000'],
             'category_id' => ['nullable', 'exists:categories,id'],
+            'brand' => ['nullable', 'string', 'max:100'],
+            'condition' => ['nullable', Rule::in(['new', 'refurbished'])],
             'price' => ['required', 'numeric', 'min:0.01', 'max:9999999999.99'],
+            'compare_at_price' => ['nullable', 'numeric', 'min:0.01', 'max:9999999999.99', 'gt:price'],
             'stock_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
             'status' => ['required', 'in:draft,active,inactive'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],

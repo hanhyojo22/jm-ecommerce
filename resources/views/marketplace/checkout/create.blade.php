@@ -1,79 +1,187 @@
 <x-app-layout>
-    <x-slot name="header">
-        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4">
-            <div>
-                <h2 class="text-2xl font-semibold tracking-[-0.03em] text-slate-950">Review and place your order</h2>
-                <p class="mt-1 text-sm text-slate-500">Cash on delivery · Free shipping</p>
-            </div>
-            <a href="{{ route('cart.index') }}" class="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Edit cart</a>
-        </div>
-    </x-slot>
-
     @php($itemsByStore = $cart?->items->groupBy(fn ($item) => $item->product->store_id) ?? collect())
 
-    <div class="min-h-screen bg-slate-50 py-8 sm:py-12">
-        <div class="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:px-8">
-            <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" class="rounded-2xl bg-white p-5 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.45)] sm:p-8">
-                @csrf
-                <div class="border-b border-slate-100 pb-6">
-                    <h3 class="text-lg font-semibold text-slate-950">Delivery details</h3>
-                    <p class="mt-1 text-sm leading-6 text-slate-500">Enter the address where your order should be delivered.</p>
+    <div class="page-shell min-h-[calc(100dvh-4.5rem)]">
+        <div class="page-container max-w-[1120px]" x-data="{
+            step: 1,
+            placing: false,
+            errors: {},
+            go(n) {
+                if (n > this.step && !this.validate(this.step)) { return; }
+                this.step = n;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+            validate(n) {
+                this.errors = {};
+                if (n === 1) {
+                    const name = document.getElementById('recipient_name').value.trim();
+                    const phone = document.getElementById('phone').value.trim();
+                    const address = document.getElementById('address_line').value.trim();
+                    const city = document.getElementById('city').value.trim();
+                    if (!name) { this.errors.recipient_name = 'Enter the recipient name.'; }
+                    if (!phone) { this.errors.phone = 'Enter a mobile number.'; }
+                    if (!address) { this.errors.address_line = 'Enter the street address.'; }
+                    if (!city) { this.errors.city = 'Enter the city.'; }
+                    if (Object.keys(this.errors).length) {
+                        const firstKey = Object.keys(this.errors)[0];
+                        const first = document.getElementById(firstKey);
+                        if (first) { first.focus(); }
+                        return false;
+                    }
+                }
+                return true;
+            },
+        }">
+            <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="{{ route('cart.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">← Back to cart</a>
+                    <span class="text-line" aria-hidden="true">/</span>
+                    <h1 class="text-2xl font-bold tracking-[-0.03em] text-ink">Secure checkout</h1>
                 </div>
+                <p class="text-xs font-medium text-muted">Cash on delivery · Free shipping</p>
+            </div>
+            <ol class="grid grid-cols-4 gap-2" aria-label="Checkout steps">
+                <template x-for="s in [1,2,3,4]" :key="s">
+                    <li>
+                        <button type="button" @click="go(s)" :disabled="s > step" :aria-current="step === s ? 'step' : null" :class="s <= step ? 'border-brand text-ink' : 'border-line text-muted'" class="block min-h-11 w-full border-t-[3px] px-1 pt-2 text-center text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed sm:text-[13px]">
+                            <span x-text="s + ' · ' + ['Shipping', 'Delivery', 'Payment', 'Review'][s-1]"></span>
+                        </button>
+                    </li>
+                </template>
+            </ol>
 
-                @if ($errors->has('cart'))
-                    <div class="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
-                @endif
+            <div class="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+                <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="if (step !== 4) { $event.preventDefault(); go(step + 1); } else if (!validate(1)) { $event.preventDefault(); step = 1; window.scrollTo({ top: 0, behavior: 'smooth' }); } else { placing = true; }" class="min-w-0">
+                    @csrf
 
-                <div class="mt-6 grid gap-5 sm:grid-cols-2">
-                    <div class="sm:col-span-2">
-                        <label for="recipient_name" class="text-sm font-semibold text-slate-800">Recipient name</label>
-                        <input id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" autocomplete="name" required aria-describedby="recipient_name-error" class="mt-2 min-h-12 w-full rounded-xl border-slate-300 text-sm text-slate-950 placeholder:text-slate-400 focus:border-emerald-700 focus:ring-emerald-700" />
-                        @error('recipient_name')<p id="recipient_name-error" class="mt-2 text-sm font-medium text-red-700">{{ $message }}</p>@enderror
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label for="phone" class="text-sm font-semibold text-slate-800">Mobile number</label>
-                        <input id="phone" name="phone" value="{{ old('phone') }}" type="tel" inputmode="tel" autocomplete="tel" required aria-describedby="phone-error" class="mt-2 min-h-12 w-full rounded-xl border-slate-300 text-sm text-slate-950 placeholder:text-slate-400 focus:border-emerald-700 focus:ring-emerald-700" />
-                        @error('phone')<p id="phone-error" class="mt-2 text-sm font-medium text-red-700">{{ $message }}</p>@enderror
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label for="address_line" class="text-sm font-semibold text-slate-800">Street address</label>
-                        <input id="address_line" name="address_line" value="{{ old('address_line') }}" autocomplete="street-address" required aria-describedby="address_line-error" class="mt-2 min-h-12 w-full rounded-xl border-slate-300 text-sm text-slate-950 placeholder:text-slate-400 focus:border-emerald-700 focus:ring-emerald-700" />
-                        @error('address_line')<p id="address_line-error" class="mt-2 text-sm font-medium text-red-700">{{ $message }}</p>@enderror
-                    </div>
-                    <div>
-                        <label for="city" class="text-sm font-semibold text-slate-800">City</label>
-                        <input id="city" name="city" value="{{ old('city') }}" autocomplete="address-level2" required aria-describedby="city-error" class="mt-2 min-h-12 w-full rounded-xl border-slate-300 text-sm text-slate-950 placeholder:text-slate-400 focus:border-emerald-700 focus:ring-emerald-700" />
-                        @error('city')<p id="city-error" class="mt-2 text-sm font-medium text-red-700">{{ $message }}</p>@enderror
-                    </div>
-                </div>
+                    @if ($errors->has('cart'))
+                        <div class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
+                    @endif
 
-                <div class="mt-8 hidden lg:block"><button class="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition duration-200 hover:bg-emerald-800 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Place order · ₱{{ number_format($subtotal, 2) }}</button></div>
-            </form>
+                    {{-- Step 1: Shipping --}}
+                    <section x-show="step === 1" class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-shipping" data-od-id="ship">
+                        <h3 id="step-shipping" class="text-lg font-semibold text-ink">1 · Shipping address</h3>
+                        <p class="mt-1 text-sm leading-6 text-muted">Enter the address where your order should be delivered.</p>
+                        <div class="mt-6 grid gap-5 sm:grid-cols-2">
+                            <div class="sm:col-span-2">
+                                <label for="recipient_name" class="text-sm font-semibold text-ink">Recipient name</label>
+                                <input id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" autocomplete="name" required :aria-invalid="errors.recipient_name ? 'true' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p x-show="errors.recipient_name" x-text="errors.recipient_name" class="mt-2 text-sm font-medium text-danger"></p>
+                                @error('recipient_name')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label for="phone" class="text-sm font-semibold text-ink">Mobile number</label>
+                                <input id="phone" name="phone" value="{{ old('phone') }}" type="tel" inputmode="tel" autocomplete="tel" required class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p x-show="errors.phone" x-text="errors.phone" class="mt-2 text-sm font-medium text-danger"></p>
+                                @error('phone')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label for="address_line" class="text-sm font-semibold text-ink">Street address</label>
+                                <input id="address_line" name="address_line" value="{{ old('address_line') }}" autocomplete="street-address" required class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p x-show="errors.address_line" x-text="errors.address_line" class="mt-2 text-sm font-medium text-danger"></p>
+                                @error('address_line')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label for="city" class="text-sm font-semibold text-ink">City</label>
+                                <input id="city" name="city" value="{{ old('city') }}" autocomplete="address-level2" required class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p x-show="errors.city" x-text="errors.city" class="mt-2 text-sm font-medium text-danger"></p>
+                                @error('city')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                            </div>
+                        </div>
+                        <div class="mt-7 flex justify-end">
+                            <button type="button" @click="go(2)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Continue to delivery</button>
+                        </div>
+                    </section>
 
-            <aside class="lg:sticky lg:top-6 lg:self-start">
-                <div class="rounded-2xl bg-white p-5 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.45)] sm:p-6">
-                    <h3 class="text-lg font-semibold text-slate-950">Your order</h3>
-                    <div class="mt-5 space-y-5">
-                        @forelse ($itemsByStore as $storeItems)
-                            @php($store = $storeItems->first()->product->store)
-                            <section aria-labelledby="checkout-store-{{ $store->id }}">
-                                <h4 id="checkout-store-{{ $store->id }}" class="text-xs font-bold uppercase tracking-[0.12em] text-emerald-800">{{ $store->name }}</h4>
-                                <ul class="mt-3 space-y-3">
-                                    @foreach ($storeItems as $item)
-                                        <li class="flex items-start justify-between gap-4 text-sm"><span class="min-w-0 leading-5 text-slate-700"><span class="block break-words font-medium text-slate-950">{{ $item->product->name }}</span>Qty {{ $item->quantity }}</span><span class="shrink-0 font-semibold text-slate-950">₱{{ number_format($item->line_total, 2) }}</span></li>
-                                    @endforeach
-                                </ul>
-                            </section>
-                        @empty
-                            <p class="text-sm leading-6 text-slate-500">Your cart is empty. Add products before checking out.</p>
-                        @endforelse
+                    {{-- Step 2: Delivery (grouped by seller) --}}
+                    <section x-show="step === 2" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-delivery">
+                        <h3 id="step-delivery" class="text-lg font-semibold text-ink">2 · Delivery options</h3>
+                        <p class="mt-1 text-sm leading-6 text-muted">Each seller ships their items separately. Standard delivery is free.</p>
+                        <div class="mt-6 space-y-5">
+                            @foreach ($itemsByStore as $storeItems)
+                                @php($store = $storeItems->first()->product->store)
+                                <fieldset class="rounded-[14px] border border-line p-4">
+                                    <legend class="px-2 text-sm font-semibold text-ink">{{ $store->name }} · {{ $storeItems->sum('quantity') }} {{ Str::plural('item', $storeItems->sum('quantity')) }}</legend>
+                                    <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-[10px] border border-brand bg-blue-50/50 px-4">
+                                        <input type="radio" checked class="size-4 border-line text-brand focus:ring-brand" aria-label="Standard delivery, free">
+                                        <span class="flex-1 text-sm font-medium">Standard delivery <span class="text-muted">· 2–5 days</span></span>
+                                        <span class="text-sm font-semibold text-success">Free</span>
+                                    </label>
+                                </fieldset>
+                            @endforeach
+                        </div>
+                        <div class="mt-7 flex justify-between gap-3">
+                            <button type="button" @click="go(1)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold transition hover:border-brand">Back</button>
+                            <button type="button" @click="go(3)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Continue to payment</button>
+                        </div>
+                    </section>
+
+                    {{-- Step 3: Payment --}}
+                    <section x-show="step === 3" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-payment">
+                        <h3 id="step-payment" class="text-lg font-semibold text-ink">3 · Payment method</h3>
+                        <p class="mt-1 text-sm leading-6 text-muted">Pay the delivery rider when your order arrives.</p>
+                        <div class="mt-6 grid gap-3">
+                            <label class="flex min-h-14 cursor-pointer items-center gap-3 rounded-[10px] border border-brand bg-blue-50/50 px-4 ring-1 ring-inset ring-brand/20">
+                                <input type="radio" checked class="size-4 border-line text-brand focus:ring-brand" aria-label="Cash on delivery">
+                                <span class="flex-1"><span class="block text-sm font-semibold">Cash on delivery</span><span class="block text-xs text-muted">No prepayment needed</span></span>
+                                <span class="rounded-lg bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">Available</span>
+                            </label>
+                        </div>
+                        <div class="mt-7 flex justify-between gap-3">
+                            <button type="button" @click="go(2)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold transition hover:border-brand">Back</button>
+                            <button type="button" @click="go(4)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Review order</button>
+                        </div>
+                    </section>
+
+                    {{-- Step 4: Review --}}
+                    <section x-show="step === 4" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-review">
+                        <h3 id="step-review" class="text-lg font-semibold text-ink">4 · Review &amp; place order</h3>
+                        <p class="mt-1 text-sm leading-6 text-muted">Check your items and delivery details before placing the order.</p>
+                        <div class="mt-6 space-y-5">
+                            @foreach ($itemsByStore as $storeItems)
+                                @php($store = $storeItems->first()->product->store)
+                                <div>
+                                    <h4 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{{ $store->name }}</h4>
+                                    <ul class="mt-3 space-y-3">
+                                        @foreach ($storeItems as $item)
+                                            <li class="flex items-start justify-between gap-4 text-sm"><span class="min-w-0 leading-5 text-muted"><span class="block break-words font-medium text-ink">{{ $item->product->name }}</span>Qty {{ $item->quantity }} · Standard (Free)</span><span class="shrink-0 font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</span></li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="mt-6 flex justify-between gap-3">
+                            <button type="button" @click="go(3)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold transition hover:border-brand">Back</button>
+                            <button type="submit" :disabled="placing" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-wait disabled:bg-slate-300" x-text="placing ? 'Placing order…' : 'Place order · ₱{{ number_format($subtotal, 2) }}'"></button>
+                        </div>
+                    </section>
+                </form>
+
+                <aside class="lg:sticky lg:top-24 lg:self-start">
+                    <div class="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
+                        <h3 class="text-lg font-semibold text-ink">Your order</h3>
+                        <div class="mt-5 space-y-5">
+                            @forelse ($itemsByStore as $storeItems)
+                                @php($store = $storeItems->first()->product->store)
+                                <section aria-labelledby="checkout-store-{{ $store->id }}">
+                                    <h4 id="checkout-store-{{ $store->id }}" class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{{ $store->name }}</h4>
+                                    <ul class="mt-3 space-y-3">
+                                        @foreach ($storeItems as $item)
+                                            <li class="flex items-start justify-between gap-4 text-sm"><span class="min-w-0 leading-5 text-muted"><span class="block break-words font-medium text-ink">{{ $item->product->name }}</span>Qty {{ $item->quantity }}</span><span class="shrink-0 font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</span></li>
+                                        @endforeach
+                                    </ul>
+                                </section>
+                            @empty
+                                <p class="text-sm leading-6 text-muted">Your cart is empty. Add products before checking out.</p>
+                            @endforelse
+                        </div>
+                        <div class="mt-6 space-y-3 border-t border-line pt-5 text-sm"><div class="flex justify-between text-muted"><span>Subtotal</span><span>₱{{ number_format($subtotal, 2) }}</span></div><div class="flex justify-between text-muted"><span>Shipping</span><span class="font-semibold text-success">Free</span></div><div class="flex items-end justify-between pt-2 text-ink"><span class="font-semibold">Total</span><span class="text-2xl font-bold tracking-[-0.04em]">₱{{ number_format($subtotal, 2) }}</span></div></div>
+                        <p class="mt-5 text-xs leading-5 text-muted">You’ll pay the delivery rider when your order arrives. Each seller receives only the items from their store.</p>
                     </div>
-                    <div class="mt-6 space-y-3 border-t border-slate-100 pt-5 text-sm"><div class="flex justify-between text-slate-600"><span>Subtotal</span><span>₱{{ number_format($subtotal, 2) }}</span></div><div class="flex justify-between text-slate-600"><span>Shipping</span><span class="font-semibold text-emerald-700">Free</span></div><div class="flex items-end justify-between pt-2 text-slate-950"><span class="font-semibold">Total</span><span class="text-2xl font-bold tracking-[-0.04em]">₱{{ number_format($subtotal, 2) }}</span></div></div>
-                    <p class="mt-5 text-xs leading-5 text-slate-500">You’ll pay the delivery rider when your order arrives. Each seller receives only the items from their store.</p>
-                </div>
-            </aside>
+                </aside>
+            </div>
         </div>
 
-        <div class="sticky bottom-0 z-20 mt-6 border-t border-slate-200 bg-[#f7f7f2]/95 px-4 py-3 backdrop-blur lg:hidden"><div class="mx-auto flex max-w-6xl items-center gap-3"><span class="min-w-0 flex-1 text-sm font-semibold text-slate-950">Total · ₱{{ number_format($subtotal, 2) }}</span><button form="checkout-form" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-xl bg-emerald-700 px-5 text-sm font-semibold text-white transition duration-200 hover:bg-emerald-800 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Place order</button></div></div>
+        <div class="sticky bottom-0 z-20 mt-6 border-t border-line bg-canvas/95 px-[18px] py-3 backdrop-blur lg:hidden"><div class="mx-auto flex max-w-[1120px] items-center gap-3"><span class="min-w-0 flex-1 text-sm font-semibold text-ink">Total · ₱{{ number_format($subtotal, 2) }}</span><button type="button" x-show="step < 4" @click="go(step + 1)" x-text="['', 'Delivery', 'Payment', 'Review'][step] + ' →'" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Continue</button><button type="submit" form="checkout-form" x-show="step === 4" x-cloak :disabled="placing" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-wait disabled:bg-slate-300">Place order</button></div></div>
     </div>
 </x-app-layout>

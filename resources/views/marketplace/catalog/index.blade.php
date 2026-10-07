@@ -7,50 +7,78 @@
     <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
     <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
     <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
-    <title>{{ $sellerStore ? $sellerStore->name.' storefront' : 'Explore Products' }} · JMMart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>{{ $sellerStore ? $sellerStore->name.' storefront' : 'Marketplace' }} · JMMart</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="marketplace-catalog bg-[#f7f7f2] font-sans text-slate-900 antialiased">
+<body class="marketplace-catalog bg-canvas font-sans text-ink antialiased">
     @php
         $isBuyer = Auth::check() && Auth::user()->account_type === 'buyer' && Auth::user()->hasVerifiedClerkEmail();
-        $catalogQueryParams = array_filter(request()->only(['q', 'category']), fn ($value) => filled($value));
+        $catalogQueryParams = array_filter(request()->only(['q', 'category', 'seller', 'sort', 'min_price', 'max_price', 'price_range', 'in_stock', 'brands', 'conditions', 'free_shipping', 'on_sale', 'min_rating', 'with_photos']), fn ($value) => filled($value) || $value === '0');
         $catalogRouteName = $sellerStore ? 'catalog.store' : 'catalog.index';
         $catalogRouteParameters = $sellerStore ? ['store' => $sellerStore] : [];
         $catalogUrl = route($catalogRouteName, $catalogRouteParameters);
         $clearSearchUrl = route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['q', 'page'])]);
+        $clearAllUrl = $catalogUrl;
+        $isListing = ! $sellerStore;
+        $filterChips = [];
+        if (filled($search)) { $filterChips[] = ['label' => '“'.Str::limit($search, 24).'”', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['q', 'page'])])]; }
+        if (filled(request('category'))) { $categoryName = $categories->firstWhere('slug', request('category'))?->name ?? request('category'); $filterChips[] = ['label' => $categoryName, 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page'])])]; }
+        if (! $sellerStore && filled(request('seller'))) { $storeName = $filterStores->firstWhere('slug', request('seller'))?->name ?? request('seller'); $filterChips[] = ['label' => $storeName, 'url' => route($catalogRouteName, request()->except(['seller', 'page']))]; }
+        if (! empty($activeFilters['min_price']) || ! empty($activeFilters['max_price'])) { $filterChips[] = ['label' => '₱'.($activeFilters['min_price'] ?? '0').' – ₱'.($activeFilters['max_price'] ?? '∞'), 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['min_price', 'max_price', 'page'])])]; }
+        if (! empty($activeFilters['price_range'])) {
+            $priceRangeLabel = ['under_25000' => 'Under ₱25,000', '25000_100000' => '₱25,000–₱100,000', 'over_100000' => 'Over ₱100,000'][$activeFilters['price_range']];
+            $filterChips[] = ['label' => $priceRangeLabel, 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['price_range', 'min_price', 'max_price', 'page'])])];
+        }
+        if (! empty($activeFilters['in_stock'])) { $filterChips[] = ['label' => 'In stock', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['in_stock', 'page'])])]; }
+        foreach ($activeFilters['brands'] ?? [] as $activeBrand) {
+            $remainingBrands = array_values(array_diff($activeFilters['brands'], [$activeBrand]));
+            $queryParameters = request()->except(['brands', 'page']);
+            if ($remainingBrands !== []) { $queryParameters['brands'] = $remainingBrands; }
+            $filterChips[] = ['label' => $activeBrand, 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...$queryParameters])];
+        }
+        foreach ($activeFilters['conditions'] ?? [] as $activeCondition) {
+            $remainingConditions = array_values(array_diff($activeFilters['conditions'], [$activeCondition]));
+            $queryParameters = request()->except(['conditions', 'page']);
+            if ($remainingConditions !== []) { $queryParameters['conditions'] = $remainingConditions; }
+            $filterChips[] = ['label' => ucfirst($activeCondition), 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...$queryParameters])];
+        }
+        if (! empty($activeFilters['free_shipping'])) { $filterChips[] = ['label' => 'Free shipping', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['free_shipping', 'page'])])]; }
+        if (! empty($activeFilters['on_sale'])) { $filterChips[] = ['label' => 'On sale', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['on_sale', 'page'])])]; }
+        if (! empty($activeFilters['min_rating'])) { $filterChips[] = ['label' => $activeFilters['min_rating'].'★ & up', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['min_rating', 'page'])])]; }
+        if (! empty($activeFilters['with_photos'])) { $filterChips[] = ['label' => 'With photos', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['with_photos', 'page'])])]; }
+        $storeBestSellers = $sellerStore ? $products->getCollection()->filter(fn ($p) => (int) ($p->sold_quantity ?? 0) > 0)->sortByDesc(fn ($p) => (int) $p->sold_quantity)->take(4)->values() : collect();
+        $storeFeatured = $sellerStore ? $products->getCollection()->take(4) : collect();
     @endphp
 
     <x-marketplace.header :search="$search" />
 
     <div x-data="{
         loading: false,
-        accountOpen: false,
-        menuOpen: false,
+        viewMode: 'grid',
+        filtersOpen: false,
+        filterTrigger: null,
+        toggleFilters(event) {
+            if (this.filtersOpen) {
+                this.closeFilters();
+                return;
+            }
+            this.filterTrigger = event.currentTarget;
+            this.filtersOpen = true;
+            this.$nextTick(() => {
+                this.$refs.filtersPanel.focus({ preventScroll: true });
+                window.scrollTo({ top: window.scrollY + this.$refs.filtersPanel.getBoundingClientRect().top - 16 });
+            });
+        },
+        closeFilters() {
+            this.filtersOpen = false;
+            this.$nextTick(() => this.filterTrigger?.focus());
+        },
         categoriesOpen: false,
         categoryTrigger: null,
-        categoryCanScrollBackward: false,
-        categoryCanScrollForward: false,
-        updateCategoryControls() {
-            const rail = this.$refs.categoryRail;
-
-            if (!rail) {
-                return;
-            }
-
-            this.categoryCanScrollBackward = rail.scrollLeft > 2;
-            this.categoryCanScrollForward = rail.scrollLeft + rail.clientWidth < rail.scrollWidth - 2;
-        },
-        scrollCategories(direction) {
-            const rail = this.$refs.categoryRail;
-
-            if (!rail) {
-                return;
-            }
-
-            rail.scrollBy({ left: direction * Math.max(rail.clientWidth * 0.75, 280), behavior: 'smooth' });
-            window.setTimeout(() => this.updateCategoryControls(), 350);
-        },
         openCategories(event) {
             this.categoryTrigger = event.currentTarget;
             this.categoriesOpen = true;
@@ -60,222 +88,369 @@
             this.categoriesOpen = false;
             this.$nextTick(() => this.categoryTrigger?.focus());
         },
-    }" x-init="$watch('categoriesOpen', value => document.body.classList.toggle('overflow-hidden', value)); $nextTick(() => updateCategoryControls())" @resize.window.debounce.150ms="updateCategoryControls()" class="min-h-screen">
-        <header class="hidden border-b border-slate-200/80 bg-[#f7f7f2]/95 backdrop-blur">
-            <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:grid lg:grid-cols-[auto_minmax(17rem,22rem)_1fr_auto] lg:gap-7 lg:px-8">
-                <a href="{{ route('catalog.index') }}" class="shrink-0 text-base font-extrabold uppercase tracking-[0.16em] text-slate-950" aria-label="JMMart products">
-                    JMMart
-                </a>
-                <form method="GET" action="{{ request()->routeIs('catalog.store') ? route('catalog.store', $sellerStore) : route('catalog.index') }}" @submit="loading = true" class="hidden lg:block">
-                    <label for="header-product-search" class="flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-slate-500 shadow-sm transition focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-slate-900/15">
-                        <svg class="h-4 w-4 shrink-0 text-slate-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-                        <input id="header-product-search" name="q" value="{{ $search }}" placeholder="Search products, sellers, or categories..." class="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-slate-900 placeholder:text-slate-500 focus:ring-0">
-                    </label>
-                </form>
-                <nav class="hidden items-center justify-end gap-6 text-sm font-medium text-slate-700 xl:flex" aria-label="Marketplace navigation"><a href="#categories" class="transition hover:text-emerald-800">Categories</a><a href="{{ route('catalog.index') }}" class="transition hover:text-emerald-800">Browse</a>@if ($isBuyer)<a href="{{ route('orders.index') }}" class="transition hover:text-emerald-800">Orders</a>@endif</nav>
-                <div class="flex items-center gap-3 text-sm font-medium">
-                    <button type="button" @click="menuOpen = ! menuOpen" :aria-expanded="menuOpen.toString()" aria-controls="marketplace-menu" class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2 lg:hidden" aria-label="Open marketplace menu"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-                    @auth
-                        @if ($isBuyer)
-                            <a href="{{ route('cart.index') }}" class="relative inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-slate-700 shadow-sm transition hover:border-emerald-700 hover:text-emerald-800" aria-label="Cart, {{ $cartItemCount }} items">
-                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
-                                <span class="hidden sm:inline">Cart</span>
-                                @if ($cartItemCount > 0)<span class="absolute -right-2 -top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-emerald-700 px-1.5 py-0.5 text-xs font-bold text-white shadow-sm">{{ $cartItemCount }}</span>@endif
-                            </a>
-                        @endif
-                        <div class="relative" @click.outside="accountOpen = false">
-                            <button type="button" @click="accountOpen = ! accountOpen" :aria-expanded="accountOpen.toString()" aria-controls="account-menu" class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2" aria-label="Open account menu">
-                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="3.25"/><path d="M4.5 20c.8-3.45 3.35-5.25 7.5-5.25s6.7 1.8 7.5 5.25"/></svg>
-                            </button>
-                            <div id="account-menu" x-show="accountOpen" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute right-0 z-30 mt-2 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
-                                <a href="{{ route('profile.edit') }}" class="flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-700">My account</a>
-                                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-700">Log out</button></form>
-                            </div>
-                        </div>
-                    @else
-                        <a href="{{ route('login') }}" class="hidden min-h-11 items-center text-slate-600 hover:text-slate-950 sm:inline-flex">Log in</a>
-                        <a href="{{ route('register') }}" class="inline-flex min-h-11 items-center rounded-xl bg-slate-950 px-4 text-white shadow-sm transition hover:bg-slate-800">Sign up</a>
-                    @endauth
-                </div>
-            </div>
-            <nav id="marketplace-menu" x-show="menuOpen" x-cloak @keydown.escape.window="menuOpen = false" class="border-t border-slate-200 bg-[#f7f7f2] px-4 py-3 lg:hidden" aria-label="Marketplace menu">
-                <div class="mx-auto flex max-w-7xl flex-wrap gap-2"><a href="#categories" @click="menuOpen = false" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-slate-700 hover:bg-white">Categories</a><a href="{{ route('catalog.index') }}" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-slate-700 hover:bg-white">Browse</a>@if ($isBuyer)<a href="{{ route('orders.index') }}" class="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-slate-700 hover:bg-white">Orders</a>@endif</div>
-            </nav>
-        </header>
+        trapCategories(event) {
+            const items = [...this.$refs.categoryDialog.querySelectorAll('a,button')].filter(item => item.offsetParent);
+            if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1)?.focus(); }
+            else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
+        },
+    }" x-init="$watch('categoriesOpen', value => document.body.classList.toggle('overflow-hidden', value))" class="min-h-screen">
 
         @if ($isSellerPreview)
-            <div class="border-b border-emerald-200 bg-emerald-50 px-4 py-2.5">
-                <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-sm text-emerald-950">
+            <div class="border-b border-blue-200 bg-blue-50 px-4 py-2.5">
+                <div class="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 text-sm text-ink">
                     <p class="font-semibold">You’re viewing your public storefront</p>
                     <div class="flex items-center gap-4">
-                        <a href="{{ route('seller.dashboard') }}" class="font-semibold underline decoration-emerald-400 underline-offset-4 focus:outline-none focus:ring-2 focus:ring-emerald-700">Back to Seller Center</a>
-                        <a href="{{ route('seller.products.index') }}" class="font-semibold underline decoration-emerald-400 underline-offset-4 focus:outline-none focus:ring-2 focus:ring-emerald-700">Manage products</a>
+                        <a href="{{ route('seller.dashboard') }}" class="font-semibold underline decoration-blue-400 underline-offset-4 hover:text-brand-hover">Back to Seller Center</a>
+                        <a href="{{ route('seller.products.index') }}" class="font-semibold underline decoration-blue-400 underline-offset-4 hover:text-brand-hover">Manage products</a>
                     </div>
                 </div>
             </div>
         @endif
 
-        <main class="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        <main class="mx-auto max-w-[1320px] px-[18px] pb-16 min-[1021px]:px-8">
             @if ($errors->any())
                 <div role="alert" class="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">
                     {{ $errors->first() }}
+                    <a href="#product-results" class="ml-2 font-semibold underline underline-offset-4">Try again</a>
                 </div>
             @endif
+
             @if ($sellerStore)
-                <section class="py-8 lg:py-12">
-                    <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                        <div class="h-20 bg-[linear-gradient(115deg,_#e6f1e9,_#f9f6ef_58%,_#e7eee9)] sm:h-24"></div>
-                        <div class="px-5 pb-5 sm:px-7 sm:pb-6">
-                            <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                                <div class="min-w-0">
-                                    <div class="-mt-10 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-emerald-800 text-2xl font-bold text-white shadow-sm">
-                                        @if ($sellerStore->logo_path)<img src="{{ Storage::disk('public')->url($sellerStore->logo_path) }}" alt="{{ $sellerStore->name }} logo" class="h-full w-full object-cover">@else{{ Str::upper(Str::substr($sellerStore->name, 0, 1)) }}@endif
-                                    </div>
-                                    <div class="mt-3 flex flex-wrap items-center gap-2"><h1 class="break-words text-3xl font-bold tracking-[-0.03em] text-slate-950 sm:text-4xl">{{ $sellerStore->name }}</h1><span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-900 ring-1 ring-inset ring-emerald-200"><span class="h-1.5 w-1.5 rounded-full bg-emerald-600" aria-hidden="true"></span>Open</span></div>
-                                    @if (filled($sellerStore->description))<p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{{ $sellerStore->description }}</p>@endif
-                                    <div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-600"><span class="font-medium text-slate-800">{{ number_format($sellerStore->public_products_count) }} {{ Str::plural('product', $sellerStore->public_products_count) }}</span>@if (filled($sellerStore->city))<span>{{ $sellerStore->city }}</span>@endif@if ($sellerStore->created_at)<span>Joined {{ $sellerStore->created_at->format('M Y') }}</span>@endif</div>
+                {{-- Storefront (storefront.html): banner + snav + featured + best sellers + about --}}
+                <nav aria-label="Breadcrumb" class="mb-2 mt-5 flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] text-muted">
+                    <a href="{{ route('catalog.index') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Marketplace</a>
+                    <span aria-hidden="true">/</span>
+                    <a href="{{ route('catalog.stores') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Stores</a>
+                    <span aria-hidden="true">/</span>
+                    <span aria-current="page" class="min-w-0 truncate font-semibold text-ink">{{ $sellerStore->name }}</span>
+                </nav>
+
+                <section class="overflow-hidden rounded-[14px] border border-line bg-white" aria-labelledby="store-heading" data-od-id="store-header">
+                    <div class="flex flex-col gap-5 p-6 sm:p-8 lg:flex-row lg:items-center">
+                        <div class="flex min-w-0 flex-1 flex-col items-start gap-4 sm:flex-row sm:items-center">
+                            <span class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-blue-50 text-2xl font-bold text-brand">
+                                @if ($sellerStore->logo_path)<img src="{{ Storage::disk('public')->url($sellerStore->logo_path) }}" alt="{{ $sellerStore->name }} logo" class="h-full w-full object-cover">@else{{ Str::upper(Str::substr($sellerStore->name, 0, 1)) }}@endif
+                            </span>
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h1 id="store-heading" class="break-words text-2xl font-bold tracking-[-0.02em] sm:text-3xl">{{ $sellerStore->name }}</h1>
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-success ring-1 ring-inset ring-green-200"><span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>Open</span>
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-brand-hover ring-1 ring-inset ring-blue-200">✔ Verified</span>
                                 </div>
-                                <div class="flex shrink-0 flex-wrap gap-2"><a href="#product-results" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-emerald-700 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Ask about a product</a><a href="{{ route('catalog.index') }}" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Browse marketplace</a></div>
+                                <p class="mt-2 text-sm text-muted">{{ number_format($sellerStore->public_products_count) }} {{ Str::plural('product', $sellerStore->public_products_count) }}@if (filled($sellerStore->city)) · {{ $sellerStore->city }}@endif @if ($sellerStore->created_at)· Joined {{ $sellerStore->created_at->format('M Y') }} @endif</p>
                             </div>
-                            <form method="GET" action="{{ $catalogUrl }}" @submit="loading = true" class="mt-6 flex w-full gap-2"><label for="store-product-search" class="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-slate-600 transition focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-700/20"><svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="store-product-search" name="q" value="{{ $search }}" placeholder="Search this store" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-slate-950 placeholder:text-slate-500 focus:ring-0"></label>@if ($search)<a href="{{ $clearSearchUrl }}" class="inline-flex min-h-12 items-center rounded-xl px-3 text-sm font-semibold text-slate-600 hover:text-slate-950">Clear</a>@endif<button class="min-h-12 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Search</button></form>
+                        </div>
+                        <div class="flex shrink-0 flex-wrap gap-2">
+                            <a href="#product-results" class="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Browse products</a>
+                            @php($storeFirstProduct = $storeFeatured->first() ?? $storeBestSellers->first() ?? $products->getCollection()->first())
+                            @if ($isBuyer && $storeFirstProduct)
+                                <form method="POST" action="{{ route('messages.products.start', $storeFirstProduct) }}" class="contents">
+                                    @csrf
+                                    <button class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Chat with seller</button>
+                                </form>
+                            @endif
+                            <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Marketplace</a>
                         </div>
                     </div>
                 </section>
-            @endif
 
-            <form method="GET" action="{{ request()->routeIs('catalog.store') ? route('catalog.store', $sellerStore) : route('catalog.index') }}" @submit="loading = true" class="sticky top-0 z-20 hidden -mx-4 border-y border-slate-200 bg-[#f7f7f2]/95 px-4 py-3 backdrop-blur lg:hidden">
-                <div class="flex gap-2 rounded-2xl border border-slate-300 bg-white p-1.5 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.35)]">
-                    <label class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 focus-within:ring-2 focus-within:ring-emerald-700" for="product-search">
-                        <svg class="h-5 w-5 shrink-0 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-                        <input id="product-search" name="q" value="{{ $search }}" placeholder="Search products, sellers, or categories" class="min-w-0 flex-1 border-0 bg-transparent px-0 text-sm text-slate-900 placeholder:text-slate-400 focus:ring-0 sm:text-base">
-                    </label>
-                    <button class="min-h-11 shrink-0 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800">Search</button>
-                </div>
-            </form>
+                <nav class="mt-4 flex gap-6 overflow-x-auto border-b border-line text-sm font-medium" aria-label="Store sections">
+                    <a href="#store-heading" class="inline-flex min-h-11 shrink-0 items-center border-b-2 border-brand font-semibold text-ink" aria-current="page">Home</a>
+                    <a href="#product-results" class="inline-flex min-h-11 shrink-0 items-center border-b-2 border-transparent text-muted transition hover:border-blue-200 hover:text-brand">Products ({{ number_format($sellerStore->public_products_count) }})</a>
+                    <a href="#store-about" class="inline-flex min-h-11 shrink-0 items-center border-b-2 border-transparent text-muted transition hover:border-blue-200 hover:text-brand">About</a>
+                </nav>
 
-            @if (! $sellerStore)
-                <section class="relative left-1/2 mt-5 w-screen -translate-x-1/2 overflow-hidden bg-[#e9e2d5] sm:mt-7" aria-labelledby="marketplace-banner-heading">
-                    <img src="{{ asset('images/banners/marketplace-discovery.png') }}" alt="A collection of marketplace products" class="absolute inset-0 h-full w-full object-cover object-[70%_center] sm:object-center" />
-                    <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,252,246,0.97)_0%,rgba(255,252,246,0.9)_42%,rgba(255,252,246,0.18)_74%,rgba(255,252,246,0)_100%)]"></div>
-                    <div class="relative mx-auto flex min-h-72 max-w-[90rem] items-center px-4 py-10 sm:min-h-80 sm:px-6 lg:min-h-96 lg:px-8">
-                        <div class="max-w-md">
-                            <h1 id="marketplace-banner-heading" class="text-4xl font-bold tracking-[-0.035em] text-slate-950 sm:text-5xl">Find something made for you.</h1>
-                            <p class="mt-4 max-w-sm text-base leading-7 text-slate-700">Explore trusted local shops, fresh finds, and useful essentials in one place.</p>
-                            <a href="#categories" class="mt-6 inline-flex min-h-11 items-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Browse categories</a>
+                @if ($storeFeatured->count() > 1)
+                    <section id="store-featured" class="scroll-mt-24 pt-6" aria-labelledby="store-featured-heading">
+                        <div class="flex flex-wrap items-end justify-between gap-3">
+                            <h2 id="store-featured-heading" class="text-xl font-bold tracking-[-0.02em]">Featured</h2>
+                            <a href="#product-results" class="text-sm font-semibold text-brand hover:text-brand-hover">View all →</a>
                         </div>
-                    </div>
-                </section>
-            @endif
-
-            @if ($categories->count() > 1)
-                <section id="categories" class="relative left-1/2 mt-9 w-screen -translate-x-1/2 bg-white py-8 sm:py-10" aria-labelledby="category-heading">
-                    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex flex-wrap items-end justify-between gap-3">
-                        <div><h2 id="category-heading" class="text-2xl font-bold tracking-[-0.02em] text-slate-950">Shop by category</h2><p class="mt-1 text-sm text-slate-600">Find what you need faster.</p></div>
-                        @if ($categories->count() > 8)<button type="button" @click="openCategories($event)" class="inline-flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 hover:text-emerald-950 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">View all categories</button>@endif
-                    </div>
-                    <div class="relative mt-5">
-                        <div x-ref="categoryRail" @scroll.debounce.50ms="updateCategoryControls()" class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                            @foreach ($categories as $category)
-                                <div class="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-2.25rem)/4)] lg:w-[calc((100%-3.75rem)/6)] xl:w-[calc((100%-5.25rem)/8)]">
-                                    <x-marketplace.category-card :category="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...array_diff_key($catalogQueryParams, ['category' => true]), 'category' => $category->slug])" :selected="request('category') === $category->slug" />
-                                </div>
+                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                            @foreach ($storeFeatured as $product)
+                                <x-marketplace.top-product-card :product="$product" />
                             @endforeach
                         </div>
-                        <button type="button" @click="scrollCategories(-1)" :disabled="!categoryCanScrollBackward" :class="categoryCanScrollBackward ? 'opacity-100' : 'cursor-not-allowed opacity-35'" class="absolute left-0 top-1/2 z-10 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-slate-500 shadow-[0_7px_18px_rgba(15,23,42,0.15)] transition hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2" aria-label="Show previous categories">
-                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
-                        </button>
-                        <button type="button" @click="scrollCategories(1)" :disabled="!categoryCanScrollForward" :class="categoryCanScrollForward ? 'opacity-100' : 'cursor-not-allowed opacity-35'" class="absolute right-0 top-1/2 z-10 inline-flex h-12 w-12 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-slate-500 shadow-[0_7px_18px_rgba(15,23,42,0.15)] transition hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2" aria-label="Show next categories">
-                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path d="m9.5 5 7 7-7 7"/></svg>
-                        </button>
-                    </div>
-                    </div>
-                </section>
+                    </section>
+                @endif
 
+                @if ($storeBestSellers->count() > 1)
+                    <section class="pt-7" aria-labelledby="store-best-heading">
+                        <h2 id="store-best-heading" class="text-xl font-bold tracking-[-0.02em]">Best sellers</h2>
+                        <ol class="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+                            @foreach ($storeBestSellers as $product)
+                                <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-[14px] border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}</span></a></li>
+                            @endforeach
+                        </ol>
+                    </section>
+                @endif
+
+                <section id="store-about" class="mt-10 scroll-mt-24 rounded-[14px] border border-line bg-white p-5 sm:p-6" aria-labelledby="store-about-heading">
+                    <h2 id="store-about-heading" class="text-lg font-semibold">About {{ $sellerStore->name }}</h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-muted">{{ filled($sellerStore->description) ? $sellerStore->description : 'An independent JMMart seller offering quality products with cash on delivery and free shipping.' }}</p>
+                    <dl class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
+                        <div><dt class="sr-only">Products</dt><dd><span class="font-semibold text-ink">{{ number_format($sellerStore->public_products_count) }}</span> {{ Str::plural('product', $sellerStore->public_products_count) }}</dd></div>
+                        @if (filled($sellerStore->city))<div><dt class="sr-only">Location</dt><dd>{{ $sellerStore->city }}</dd></div>@endif
+                        @if ($sellerStore->created_at)<div><dt class="sr-only">Joined</dt><dd>Joined {{ $sellerStore->created_at->format('M Y') }}</dd></div>@endif
+                    </dl>
+                </section>
+            @else
+                {{-- Listing header for search / filtered results (marketplace.html) --}}
+                <nav aria-label="Breadcrumb" class="mb-1 mt-0 flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] text-muted min-[641px]:mb-2 min-[641px]:pt-[18px] min-[641px]:pb-1">
+                    <a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Home</a>
+                    <span aria-hidden="true">/</span>
+                    <span aria-current="page" class="min-w-0 truncate font-semibold text-ink">{{ filled($search) ? 'Search results' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Category') : 'Marketplace') }}</span>
+                </nav>
             @endif
 
-            @if ($topProducts->isNotEmpty())
-                <section class="mt-10" aria-labelledby="top-products-heading">
-                    <div class="flex flex-wrap items-end justify-between gap-4">
-                        <div><h2 id="top-products-heading" class="text-2xl font-bold tracking-[-0.02em] text-slate-950">Top Products</h2><p class="mt-1 text-sm text-slate-600">Popular picks from our stores.</p></div>
-                        <a href="{{ route('catalog.top-products') }}" class="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-50 hover:text-emerald-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">View all</a>
-                    </div>
-                    <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
-                        @foreach ($topProducts as $product)
-                            <x-marketplace.top-product-card :product="$product" />
-                        @endforeach
-                    </div>
-                </section>
-            @endif
-
-            <section class="mt-7" aria-labelledby="product-results">
+            {{-- Catalog results with filters (marketplace.html layout) --}}
+            <section id="product-results" class="scroll-mt-24 {{ $sellerStore || ! $isListing ? 'pt-12' : 'pt-1 min-[641px]:pt-0' }}" aria-labelledby="product-results-heading" data-od-id="results">
+                @if ($sellerStore)
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div class="min-w-0"><h2 id="product-results" class="text-2xl font-bold tracking-[-0.02em] text-slate-950">Products</h2><p class="mt-1 text-sm text-slate-600">{{ number_format($products->total()) }} {{ Str::plural('product', $products->total()) }}@if ($search) matching “{{ Str::limit($search, 32) }}”@endif</p></div>
-                        <form method="GET" action="{{ request()->routeIs('catalog.store') ? route('catalog.store', $sellerStore) : route('catalog.index') }}" @submit="loading = true" class="flex items-center gap-2">
-                            @foreach ($catalogQueryParams as $name => $value) @if (is_scalar($value))<input type="hidden" name="{{ $name }}" value="{{ $value }}">@endif @endforeach
-                            <label for="sort" class="text-sm font-medium text-slate-600">Sort</label><select id="sort" name="sort" onchange="this.form.submit()" class="min-h-11 rounded-xl border-slate-300 bg-white text-sm font-medium focus:border-emerald-700 focus:ring-emerald-700"><option value="relevance" @selected(request('sort', 'relevance') === 'relevance')>Relevance</option><option value="newest" @selected(request('sort') === 'newest')>Newest</option><option value="price_asc" @selected(request('sort') === 'price_asc')>Price: low to high</option><option value="price_desc" @selected(request('sort') === 'price_desc')>Price: high to low</option></select>
-                        </form>
+                        <div class="min-w-0"><h2 id="product-results-heading" class="text-2xl font-bold tracking-[-0.02em]">{{ $sellerStore ? 'All products' : 'Products' }}</h2><p class="mt-1 text-sm text-muted">{{ number_format($products->total()) }} {{ Str::plural('product', $products->total()) }}@if ($search) matching “{{ Str::limit($search, 32) }}”@endif</p></div>
+                        <button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold transition hover:border-brand lg:hidden">
+                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4" /></svg>
+                            Filters
+                            @if (! empty($filterChips))<span class="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{{ count($filterChips) }}</span>@endif
+                        </button>
                     </div>
+                    @if (! empty($filterChips))
+                        <div class="mt-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
+                            @foreach ($filterChips as $chip)
+                                <a href="{{ $chip['url'] }}" class="inline-flex min-h-[34px] items-center gap-[7px] rounded-full border border-line bg-white py-[6px] pl-3 pr-1.5 text-[13px] leading-[20px] font-medium transition hover:border-brand hover:text-brand">{{ $chip['label'] }}<span aria-hidden="true" class="grid size-[22px] shrink-0 place-items-center rounded-full bg-canvas text-muted">×</span><span class="sr-only">Remove filter {{ $chip['label'] }}</span></a>
+                            @endforeach
+                            <a href="{{ $clearAllUrl }}" class="inline-flex min-h-11 items-center rounded-full px-3 text-[13px] font-semibold text-brand hover:bg-blue-50">Clear all</a>
+                        </div>
+                    @endif
+                @endif
 
-                    <div x-show="loading" x-cloak class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6"><template x-for="item in 12"><div class="bg-white"><div class="aspect-square animate-pulse rounded-md bg-slate-200"></div><div class="space-y-2 px-2 pb-3 pt-2"><div class="h-4 animate-pulse rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div><div class="h-3 w-4/5 animate-pulse rounded bg-slate-200"></div></div></div></template></div>
-                    <div x-show="!loading" class="mt-6">
-                        @if ($products->isNotEmpty())
-                            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6">
-                                @foreach ($products as $product)
-                                    <article class="group min-w-0 bg-white">
-                                        <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="block aspect-square overflow-hidden rounded-md bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-inset">
-                                            @if ($product->thumbnail)<img src="{{ Storage::disk('product_images')->url($product->thumbnail->path) }}" alt="{{ $product->name }}" width="320" height="320" loading="lazy" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">@else<div class="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-slate-500"><span class="grid h-10 w-10 place-items-center rounded-full bg-white text-base font-semibold">{{ Str::upper(Str::substr($product->store->name, 0, 1)) }}</span><span class="text-xs font-medium">Product image</span></div>@endif
-                                        </a>
-                                        <div class="px-2 pb-3 pt-2">
-                                            <h3 class="min-h-10 break-words text-sm font-normal leading-5 text-slate-900"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" title="{{ $product->name }}" class="[display:-webkit-box] overflow-hidden transition [-webkit-box-orient:vertical] [-webkit-line-clamp:2] hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">{{ $product->name }}</a></h3>
-                                            <p class="mt-1 whitespace-nowrap text-lg font-semibold leading-5 tabular-nums text-rose-600">₱{{ number_format($product->price, 2) }}</p>
-                                            <div class="mt-2 flex items-center gap-1.5 whitespace-nowrap text-xs leading-4 text-slate-500">
-                                                @if ($product->published_reviews_count)
-                                                    <svg viewBox="0 0 20 20" class="size-3.5 shrink-0 fill-amber-400" aria-hidden="true"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z" /></svg><span>{{ number_format($product->published_reviews_avg_rating, 1) }}</span><span class="text-slate-400">({{ number_format($product->published_reviews_count) }})</span>
-                                                @else
-                                                    <span>No ratings yet</span>
-                                                @endif
-                                                <span class="h-3.5 border-l border-slate-300" aria-hidden="true"></span><span>{{ number_format((int) ($product->sold_quantity ?? 0)) }} Sold</span>
-                                            </div>
-                                        </div>
-                                        @if ($isBuyer)
-                                            <form method="POST" action="{{ route('cart.store', $product) }}" @submit="loading = true" class="px-2 pb-3 pt-1.5">
-                                                @csrf
-                                                <input type="hidden" name="quantity" value="1">
-                                                @if ($product->stock_quantity > 0)
-                                                    <button class="min-h-10 w-full rounded-lg bg-emerald-700 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2">Add to cart</button>
-                                                @else
-                                                    <button disabled class="min-h-10 w-full cursor-not-allowed rounded-lg bg-slate-100 px-3 text-sm font-semibold text-slate-500">Sold out</button>
-                                                @endif
-                                            </form>
-                                        @endif
-                                    </article>
-                                @endforeach
+                @php($showFiltersSidebar = $sellerStore || $isListing)
+                <div class="{{ $isListing && ! $sellerStore ? 'mt-0 gap-7' : 'mt-6 gap-6' }} grid grid-cols-[minmax(min(354px,calc(100vw-36px)),1fr)] items-start {{ $showFiltersSidebar ? ($isListing ? 'min-[1021px]:grid-cols-[272px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]') : '' }}">
+                    {{-- Filters sidebar for marketplace listings and storefronts --}}
+                    @if ($showFiltersSidebar)
+                    <aside id="catalog-filters" x-ref="filtersPanel" tabindex="-1" @if ($sellerStore) x-cloak x-show="filtersOpen" x-on:keydown.escape.stop="closeFilters()" @endif class="scroll-mt-4 rounded-[14px] border border-line bg-white p-5 {{ $isListing ? 'min-[1021px]:mt-[9.5px] min-[1021px]:sticky min-[1021px]:top-[130px]' : 'lg:sticky lg:top-[130px] lg:!block' }}" aria-label="Product filters">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-[15px] font-bold leading-[1.55]">Filters</h3>
+                            <div class="flex items-center gap-3">
+                                <a href="{{ $clearAllUrl }}" class="inline-flex min-h-6 items-center text-[13px] leading-[1.55] font-medium text-brand hover:text-brand-hover">Clear all</a>
+                                @if ($sellerStore)<button type="button" @click="closeFilters()" class="inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-ink lg:hidden" aria-label="Close filters">×</button>@endif
                             </div>
-                            <div class="mt-10">{{ $products->onEachSide(1)->links() }}</div>
-                        @else
-                            <div class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-800"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></div><h3 class="mt-5 text-lg font-semibold text-slate-950">Nothing matched this search.</h3><p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">Try a broader search or choose a different category to explore available products.</p><a href="{{ $catalogUrl }}" class="mt-6 inline-flex min-h-11 items-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">View all products</a></div>
+                        </div>
+                        @if ($categories->count() > 1)
+                            <div class="border-t border-line py-[14px]">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Category</h3>
+                                    @if ($categories->count() > 5)
+                                        <details class="relative text-xs" @if ($categories->skip(5)->contains('slug', request('category'))) open @endif>
+                                            <summary class="cursor-pointer list-none font-medium text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">More</summary>
+                                            <ul class="absolute right-0 top-full z-30 mt-2 max-h-60 w-[230px] overflow-y-auto rounded-xl border border-line bg-white p-2 shadow-lg shadow-ink/10">
+                                                @foreach ($categories->skip(5) as $category)
+                                                    <x-marketplace.filter-option :item="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page']), 'category' => $category->slug])" :clear-href="route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page'])])" :selected="request('category') === $category->slug" />
+                                                @endforeach
+                                            </ul>
+                                        </details>
+                                    @endif
+                                </div>
+                                <ul class="mt-[10px]">
+                                    @foreach ($categories->take(5) as $category)
+                                        <x-marketplace.filter-option :item="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page']), 'category' => $category->slug])" :clear-href="route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page'])])" :selected="request('category') === $category->slug" />
+                                    @endforeach
+                                </ul>
+                            </div>
                         @endif
+                        <form method="GET" action="{{ $catalogUrl }}" @submit="loading = true; if (!$refs.minPrice.value) $refs.minPrice.disabled = true; if (!$refs.maxPrice.value) $refs.maxPrice.disabled = true" class="p-0">
+                            @if (filled($search))<input type="hidden" name="q" value="{{ $search }}">@endif
+                            @if (filled(request('category')))<input type="hidden" name="category" value="{{ request('category') }}">@endif
+                            @if (! $sellerStore && filled(request('seller')))<input type="hidden" name="seller" value="{{ request('seller') }}">@endif
+                            @if (filled(request('sort')))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
+                            <div role="group" aria-labelledby="catalog-price-heading" class="border-t border-line py-[14px]">
+                                <h3 id="catalog-price-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Price</h3>
+                                <div class="space-y-0">
+                                    @foreach (['under_25000' => 'Under ₱25,000', '25000_100000' => '₱25,000–₱100,000', 'over_100000' => 'Over ₱100,000'] as $value => $label)
+                                        <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                            <input type="radio" name="price_range" value="{{ $value }}" @checked(($activeFilters['price_range'] ?? null) === $value) x-on:change="$refs.minPrice.value = ''; $refs.maxPrice.value = ''; $el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                            <span>{{ $label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <div class="mt-[7px] grid grid-cols-2 gap-2">
+                                    <div><label for="minimum-price" class="sr-only">Minimum price in pesos</label><input id="minimum-price" x-ref="minPrice" x-on:input="$el.form.querySelectorAll('input[name=price_range]').forEach((radio) => radio.checked = false)" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="min_price" min="0" step="0.01" value="{{ $activeFilters['min_price'] ?? '' }}" placeholder="Min ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
+                                    <div><label for="maximum-price" class="sr-only">Maximum price in pesos</label><input id="maximum-price" x-ref="maxPrice" x-on:input="$el.form.querySelectorAll('input[name=price_range]').forEach((radio) => radio.checked = false)" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="max_price" min="0" step="0.01" value="{{ $activeFilters['max_price'] ?? '' }}" placeholder="Max ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
+                                </div>
+                            </div>
+
+                            <div role="group" aria-labelledby="catalog-rating-heading" class="border-t border-line py-[14px]">
+                                <h3 id="catalog-rating-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Rating</h3>
+                                <div class="space-y-0">
+                                    @foreach ([4 => '4★ & up'] as $value => $label)
+                                    <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                        <input type="checkbox" name="min_rating" value="{{ $value }}" @checked(($activeFilters['min_rating'] ?? null) == $value) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                        <span>{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                                    <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                        <input type="checkbox" name="with_photos" value="1" @checked(! empty($activeFilters['with_photos'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                        <span>With photos</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            @if ($brands->isNotEmpty())
+                                <div role="group" aria-labelledby="catalog-brand-heading" class="border-t border-line py-[14px]">
+                                    <h3 id="catalog-brand-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Brand</h3>
+                                    <div class="space-y-0">
+                                        @foreach ($brands as $brand)
+                                        <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                            <input type="checkbox" name="brands[]" value="{{ $brand }}" @checked(in_array($brand, $activeFilters['brands'] ?? [], true)) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                            <span>{{ $brand }}</span>
+                                        </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            <div role="group" aria-labelledby="catalog-availability-heading" class="border-t border-line py-[14px]">
+                                <h3 id="catalog-availability-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Availability</h3>
+                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                    <input type="checkbox" name="in_stock" value="1" @checked(! empty($activeFilters['in_stock'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                    <span>In stock only</span>
+                                </label>
+                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                    <input type="checkbox" name="free_shipping" value="1" @checked(! empty($activeFilters['free_shipping'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                    <span>Free shipping</span>
+                                </label>
+                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                    <input type="checkbox" name="on_sale" value="1" @checked(! empty($activeFilters['on_sale'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                    <span>On sale</span>
+                                </label>
+                            </div>
+
+                            <div role="group" aria-labelledby="catalog-condition-heading" class="border-t border-line py-[14px]">
+                                <h3 id="catalog-condition-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Condition</h3>
+                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                    <input type="checkbox" name="conditions[]" value="new" @checked(in_array('new', $activeFilters['conditions'] ?? [], true)) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                    <span>New</span>
+                                </label>
+                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
+                                    <input type="checkbox" name="conditions[]" value="refurbished" @checked(in_array('refurbished', $activeFilters['conditions'] ?? [], true)) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
+                                    <span>Refurbished</span>
+                                </label>
+                            </div>
+
+                            @if (! $sellerStore && $filterStores->isNotEmpty())
+                                <div class="border-t border-line py-[14px]">
+                                    <h3 class="text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Stores</h3>
+                                    <ul class="mt-2 space-y-0.5">
+                                        @foreach ($filterStores->take(5) as $filterStore)
+                                            <x-marketplace.filter-option :item="$filterStore" :href="route('catalog.index', [...request()->except(['seller', 'page']), 'seller' => $filterStore->slug])" :clear-href="route('catalog.index', request()->except(['seller', 'page']))" :selected="request('seller') === $filterStore->slug" />
+                                        @endforeach
+                                    </ul>
+                                    @if ($filterStores->count() > 5)
+                                        <details class="mt-1 text-sm" @if ($filterStores->skip(5)->contains('slug', request('seller'))) open @endif>
+                                            <summary class="cursor-pointer py-1.5 font-medium text-brand hover:text-brand-hover">More sellers</summary>
+                                            <ul class="space-y-0.5 pb-1">
+                                                @foreach ($filterStores->skip(5) as $filterStore)
+                                                    <x-marketplace.filter-option :item="$filterStore" :href="route('catalog.index', [...request()->except(['seller', 'page']), 'seller' => $filterStore->slug])" :clear-href="route('catalog.index', request()->except(['seller', 'page']))" :selected="request('seller') === $filterStore->slug" />
+                                                @endforeach
+                                            </ul>
+                                        </details>
+                                    @endif
+                                </div>
+                            @endif
+
+                        </form>
+
+                    </aside>
+                    @endif
+
+                    {{-- Results --}}
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            @if ($isListing && ! $sellerStore)
+                                <div>
+                                    <h1 id="product-results-heading" class="text-[28px] font-bold leading-[1.55] tracking-[-0.02em]">{{ filled($search) ? 'Results for “'.Str::limit($search, 40).'”' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Marketplace') : 'Marketplace') }}</h1>
+                                    <p class="text-sm leading-[1.55] text-muted">Discover products from trusted sellers · {{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
+                                </div>
+                            @else
+                                <p class="self-center text-sm text-muted" role="status">{{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
+                            @endif
+                            <div class="flex flex-wrap items-center gap-3 sm:ml-auto">
+                                @if ($sellerStore)<button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold lg:hidden">Filters</button>@endif
+                                @if ($sellerStore && $categories->count() > 1)
+                                    <button id="categories" type="button" @click="openCategories($event)" class="inline-flex min-h-11 scroll-mt-40 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold lg:hidden">Categories</button>
+                                @endif
+                                <form method="GET" action="{{ $catalogUrl }}" @submit="loading = true" class="flex items-center gap-2">
+                                    @foreach (request()->except(['sort', 'page']) as $name => $value) @if (is_scalar($value) && filled($value))<input type="hidden" name="{{ $name }}" value="{{ $value }}">@endif @endforeach
+                                    <select id="sort" name="sort" aria-label="Sort products" onchange="this.form.submit()" class="h-[39px] w-[172px] rounded-[10px] border-line bg-white text-sm font-medium focus:border-brand focus:ring-brand">
+                                        <option value="relevance" @selected(request('sort', 'relevance') === 'relevance')>Sort: Most relevant</option>
+                                        <option value="price_asc" @selected(request('sort') === 'price_asc')>Price: low to high</option>
+                                        <option value="price_desc" @selected(request('sort') === 'price_desc')>Price: high to low</option>
+                                        <option value="top_rated" @selected(request('sort') === 'top_rated')>Top rated</option>
+                                        <option value="newest" @selected(request('sort') === 'newest')>Newest</option>
+                                    </select>
+                                </form>
+                                <div class="flex items-center gap-3" role="group" aria-label="Product view">
+                                    <button type="button" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'" aria-label="Grid view" :class="viewMode === 'grid' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-[38px] place-items-center rounded-[9px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+                                    <button type="button" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'" aria-label="List view" :class="viewMode === 'list' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-[38px] place-items-center rounded-[9px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h12M9 12h12M9 19h12"/><path d="M3 5h2M3 12h2M3 19h2"/></svg></button>
+                                </div>
+                            </div>
+                        </div>
+                        @if ($isListing && ! $sellerStore && ! empty($filterChips))
+                            <div class="mt-[14px] flex flex-wrap items-center gap-2" aria-label="Active filters">
+                                @foreach ($filterChips as $chip)
+                                    <a href="{{ $chip['url'] }}" class="inline-flex min-h-[34px] items-center gap-[7px] rounded-full border border-line bg-white py-[6px] pl-3 pr-1.5 text-[13px] leading-[20px] font-medium hover:border-brand hover:text-brand">{{ $chip['label'] }} <span aria-hidden="true" class="grid size-[22px] shrink-0 place-items-center rounded-full bg-canvas text-muted">×</span><span class="sr-only">Remove filter {{ $chip['label'] }}</span></a>
+                                @endforeach
+
+                            </div>
+                        @endif
+                        <div x-show="loading" x-cloak class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-[14px]' }} grid grid-cols-2 gap-[14px] min-[641px]:grid-cols-3 min-[1021px]:grid-cols-4" aria-hidden="true">
+                            @for ($i = 0; $i < 8; $i++)
+                                <div class="overflow-hidden rounded-[14px] border border-line bg-white"><div class="aspect-square animate-pulse bg-slate-200"></div><div class="space-y-2 p-[13px]"><div class="h-4 animate-pulse rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div></div></div>
+                            @endfor
+                        </div>
+                        <p x-show="loading" x-cloak class="mt-3 text-[13px] text-muted" role="status" aria-live="polite">Loading curated results&hellip;</p>
+
+                        <div x-show="!loading" class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-[14px]' }}">
+                            @if ($products->isNotEmpty())
+                                <div id="catalog-products" :data-view="viewMode" class="grid grid-cols-2 gap-[14px] min-[641px]:grid-cols-3 min-[1021px]:grid-cols-4">
+                                    @foreach ($products as $product)
+                                        <x-marketplace.top-product-card :product="$product" />
+                                    @endforeach
+                                </div>
+                                <div class="mt-10">{{ $products->onEachSide(1)->links('components.marketplace.pagination') }}</div>
+                            @else
+                                @php($hasActiveFilters = ! empty($activeFilters) || filled(request('category')) || filled(request('seller')))
+                                <div class="rounded-[14px] border border-dashed border-line bg-white p-12 text-center">
+                                    <h3 class="text-lg font-semibold text-ink">@if (filled($search))No results for &ldquo;{{ Str::limit($search, 60) }}&rdquo;@elseif ($hasActiveFilters)Nothing matched these filters.@else No products yet.@endif</h3>
+                                    <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">@if (filled($search))Try fewer filters, check spelling, or browse trending categories.@elseif ($hasActiveFilters)Try removing a filter or browse available products.@else Products from approved sellers will appear here.@endif</p>
+                                    <a href="{{ $clearAllUrl }}" class="mt-6 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">{{ filled($search) || $hasActiveFilters ? 'Clear filters' : 'Browse marketplace' }}</a>
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                </section>
+                </div>
+            </section>
+
+            {{-- All categories dialog --}}
             @if ($categories->count() > 1)
-                <div x-show="categoriesOpen" x-cloak @keydown.escape.window="closeCategories()" class="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="all-categories-heading">
+                <div x-show="categoriesOpen" x-cloak x-on:keydown.escape.stop="closeCategories()" x-on:keydown.tab="trapCategories($event)" class="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="all-categories-heading">
                     <div @click="closeCategories()" class="absolute inset-0 bg-slate-950/35"></div>
-                    <div x-ref="categoryDialog" class="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl bg-[#f7f7f2] p-5 shadow-[0_-18px_40px_-24px_rgba(15,23,42,0.45)] lg:inset-x-auto lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:max-h-[80vh] lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:p-7">
+                    <div x-ref="categoryDialog" class="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-[16px] bg-canvas p-5 shadow-[0_-18px_40px_-24px_rgba(15,23,42,0.45)] lg:inset-x-auto lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:max-h-[80vh] lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[16px] lg:p-7">
                         <div class="mx-auto mb-5 h-1.5 w-12 rounded-full bg-slate-300 lg:hidden"></div>
-                        <div class="flex items-start justify-between gap-4"><div><h2 id="all-categories-heading" class="text-2xl font-bold tracking-[-0.02em] text-slate-950">All categories</h2><p class="mt-1 text-sm text-slate-600">Browse public marketplace products by category.</p></div><button type="button" data-category-focus @click="closeCategories()" class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 transition hover:border-emerald-500 hover:text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:ring-offset-2" aria-label="Close categories"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+                        <div class="flex items-start justify-between gap-4"><div><h2 id="all-categories-heading" class="text-2xl font-bold tracking-[-0.02em]">All categories</h2><p class="mt-1 text-sm text-muted">Browse products by category.</p></div><button type="button" data-category-focus @click="closeCategories()" class="inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-line bg-white text-muted transition hover:text-ink" aria-label="Close categories"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
                         <div class="mt-7 space-y-7">
                             @foreach ($categoryGroups as $groupName => $groupCategories)
-                                <section aria-labelledby="category-group-{{ Str::slug($groupName) }}"><h3 id="category-group-{{ Str::slug($groupName) }}" class="text-sm font-semibold text-slate-900">{{ $groupName }}</h3><div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">@foreach ($groupCategories as $category)<x-marketplace.category-card :category="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...array_diff_key($catalogQueryParams, ['category' => true]), 'category' => $category->slug])" :selected="request('category') === $category->slug" />@endforeach</div></section>
+                                <section aria-labelledby="category-group-{{ Str::slug($groupName) }}"><h3 id="category-group-{{ Str::slug($groupName) }}" class="text-sm font-semibold">{{ $groupName }}</h3><div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">@foreach ($groupCategories as $category)<x-marketplace.category-card :category="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...array_diff_key($catalogQueryParams, ['category' => true]), 'category' => $category->slug])" :selected="request('category') === $category->slug" />@endforeach</div></section>
                             @endforeach
                             @if ($uncategorizedCategories->isNotEmpty())
-                                <section aria-labelledby="category-group-more"><h3 id="category-group-more" class="text-sm font-semibold text-slate-900">More categories</h3><div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">@foreach ($uncategorizedCategories as $category)<x-marketplace.category-card :category="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...array_diff_key($catalogQueryParams, ['category' => true]), 'category' => $category->slug])" :selected="request('category') === $category->slug" />@endforeach</div></section>
+                                <section aria-labelledby="category-group-more"><h3 id="category-group-more" class="text-sm font-semibold">More categories</h3><div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">@foreach ($uncategorizedCategories as $category)<x-marketplace.category-card :category="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...array_diff_key($catalogQueryParams, ['category' => true]), 'category' => $category->slug])" :selected="request('category') === $category->slug" />@endforeach</div></section>
                             @endif
                         </div>
                     </div>
                 </div>
             @endif
         </main>
+
     </div>
 @livewireScripts
 </body>

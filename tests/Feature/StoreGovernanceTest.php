@@ -83,7 +83,7 @@ class StoreGovernanceTest extends TestCase
             ->assertSee('Active')
             ->assertSee('Inactive')
             ->assertSee('Suspended')
-            ->assertSee('View details')
+            ->assertSee('View store')
             ->assertDontSee('Pending seller shop')
             ->assertDontSee('<table', false)
             ->assertSee(route('admin.seller-applications.index'), false)

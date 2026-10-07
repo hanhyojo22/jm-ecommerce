@@ -91,7 +91,7 @@ class ProductController extends Controller
             'action' => 'product.created',
             'entity_type' => Product::class,
             'entity_id' => $product->id,
-            'new_values' => $product->only(['name', 'sku', 'price', 'stock_quantity', 'status']),
+            'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
             'ip_address' => $request->ip(),
         ]);
 
@@ -108,7 +108,7 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         $product = $this->editableProduct($request, $product);
-        $oldValues = $product->only(['name', 'sku', 'price', 'stock_quantity', 'status']);
+        $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
         $data = $request->validated();
         unset($data['image']);
         $product->update($data);
@@ -124,7 +124,7 @@ class ProductController extends Controller
             'entity_type' => Product::class,
             'entity_id' => $product->id,
             'old_values' => $oldValues,
-            'new_values' => $product->only(['name', 'sku', 'price', 'stock_quantity', 'status']),
+            'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
             'ip_address' => $request->ip(),
         ]);
 

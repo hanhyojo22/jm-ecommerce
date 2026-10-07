@@ -11,16 +11,17 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="min-h-screen bg-[#f7f7f5] font-sans text-slate-900 antialiased">
-        <main class="flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+    <body class="min-h-screen bg-canvas font-sans text-ink antialiased">
+        <main class="flex min-h-screen items-center justify-center px-[18px] py-10 sm:px-6">
             <section class="w-full max-w-md text-center">
-                <a href="{{ route('catalog.index') }}" class="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-950">
-                    <span class="grid size-10 place-items-center rounded-xl bg-slate-950 text-sm font-bold tracking-tight text-white">JM</span>
+                <a href="{{ route('home') }}" class="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
+                    <x-application-logo class="size-10 fill-current text-brand" />
                     JMMart
                 </a>
 
@@ -28,7 +29,7 @@
                     {{ $slot }}
                 </div>
 
-                <a href="{{ route('catalog.index') }}" class="mt-6 inline-block text-sm font-medium text-slate-500 transition hover:text-slate-950">Back to marketplace</a>
+                <a href="{{ route('home') }}" class="mt-6 inline-block text-sm font-medium text-muted transition hover:text-ink">Back to marketplace</a>
             </section>
         </main>
     </body>

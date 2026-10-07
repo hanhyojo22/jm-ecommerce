@@ -30,7 +30,8 @@ use App\Livewire\Chat\Inbox as ChatInbox;
 use App\Livewire\Chat\Thread as ChatThread;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [CatalogController::class, 'index'])->name('catalog.index');
+Route::get('/', [CatalogController::class, 'home'])->name('home');
+Route::get('/search', [CatalogController::class, 'index'])->name('catalog.index');
 Route::get('/top-products', [CatalogController::class, 'topProducts'])->name('catalog.top-products');
 Route::get('/stores', [CatalogController::class, 'stores'])->name('catalog.stores');
 Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalog.store');
@@ -65,6 +66,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'clerk.verified', 'account:admin'])->name('dashboard');
+Route::get('/admin/moderation', [DashboardController::class, 'moderation'])->middleware(['auth', 'clerk.verified', 'account:admin'])->name('admin.moderation');
 
 Route::middleware(['auth', 'account:buyer,seller,admin'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

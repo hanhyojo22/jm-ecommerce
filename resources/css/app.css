@@ -3,14 +3,31 @@
 @tailwind utilities;
 
 @layer base {
+    :root {
+        color-scheme: light;
+        --color-bg: #f8fafc;
+        --color-surface: #ffffff;
+        --color-fg: #0f172a;
+        --color-muted: #64748b;
+        --color-border: #e2e8f0;
+        --color-accent: #2563eb;
+        --color-accent-hover: #1d4ed8;
+        --color-success: #16a34a;
+        --color-warning: #f59e0b;
+        --color-warning-text: #b45309;
+        --color-danger: #dc2626;
+    }
+
     html {
-        background: #f8fafc;
+        background: var(--color-bg);
+        overflow-x: clip;
     }
 
     body {
-        min-width: 320px;
-        background: #f8fafc;
-        color: #111827;
+        background: var(--color-bg);
+        color: var(--color-fg);
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        overflow-x: clip;
     }
 
     input,
@@ -28,34 +45,34 @@
     }
 
     :focus-visible {
-        outline: 2px solid #047857;
+        outline: 2px solid var(--color-accent);
         outline-offset: 2px;
     }
 }
 
 @layer components {
     .page-shell {
-        @apply bg-slate-50 py-8 sm:py-10;
+        @apply bg-canvas py-8 sm:py-10;
     }
 
     .page-container {
-        @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+        @apply mx-auto w-full max-w-[1320px] px-[18px] sm:px-8;
     }
 
     .content-card {
-        @apply overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm;
+        @apply overflow-hidden rounded-[14px] border border-line bg-surface;
     }
 
     .section-card {
-        @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6;
+        @apply rounded-[14px] border border-line bg-surface p-5 sm:p-6;
     }
 
     .field-label {
-        @apply mb-1.5 block text-sm font-semibold text-slate-700;
+        @apply mb-1.5 block text-sm font-semibold text-muted;
     }
 
     .field-control {
-        @apply block min-h-11 w-full rounded-lg border-slate-300 text-sm text-slate-950 shadow-sm placeholder:text-slate-400 focus:border-emerald-700 focus:ring-emerald-700;
+        @apply block min-h-11 w-full rounded-[10px] border-line bg-white text-sm text-ink shadow-none placeholder:text-muted focus:border-brand focus:ring-brand;
     }
 
     .status-badge {
@@ -77,6 +94,10 @@
     .overflow-x-auto > table.min-w-full {
         min-width: max-content;
     }
+
+    .numeric-data {
+        font-variant-numeric: tabular-nums;
+    }
 }
 
 [x-cloak] {
@@ -84,23 +105,45 @@
 }
 
 .marketplace-catalog {
-    caret-color: #047857;
+    caret-color: var(--color-accent);
 }
 
 .marketplace-catalog ::selection {
-    background: #a7f3d0;
-    color: #0f172a;
+    background: #dbeafe;
+    color: var(--color-fg);
 }
 
-.marketplace-catalog ::-webkit-scrollbar {
-    height: 0.5rem;
-    width: 0.5rem;
+#catalog-products[data-view='list'] {
+    grid-template-columns: minmax(0, 1fr);
 }
 
-.marketplace-catalog ::-webkit-scrollbar-thumb {
-    border: 2px solid #f7f7f2;
-    border-radius: 999px;
-    background: #94a3b8;
+#catalog-products[data-view='list'] > article {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr);
+    min-height: 10rem;
+}
+
+#catalog-products[data-view='list'] > article > a:first-child {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 10rem;
+}
+
+#catalog-products[data-view='list'] > article > div > :last-child {
+    align-self: flex-end;
+    width: min(100%, 12rem);
+}
+
+@media (min-width: 640px) {
+    #catalog-products[data-view='list'] > article {
+        display: grid;
+        grid-template-columns: 13rem minmax(0, 1fr);
+        min-height: 13rem;
+    }
+
+    #catalog-products[data-view='list'] > article > a:first-child {
+        min-height: 13rem;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

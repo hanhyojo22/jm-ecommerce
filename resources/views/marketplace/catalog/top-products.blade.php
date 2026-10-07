@@ -1,9 +1,91 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"><meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}"><meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}"><meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}"><title>Top Products · JMMart</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
-<body class="bg-[#f7f7f2] font-sans text-slate-900 antialiased"><x-marketplace.header />
-<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"><div class="flex flex-wrap items-end justify-between gap-4"><div><h1 class="text-3xl font-bold tracking-[-0.03em] text-slate-950 sm:text-4xl">Top Products</h1><p class="mt-2 text-sm leading-6 text-slate-600">Popular picks from our stores, ranked by delivered sales in the last {{ $rankingPeriodDays }} days.</p></div><a href="{{ route('catalog.index') }}" class="text-sm font-semibold text-emerald-800 hover:text-emerald-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700">Back to marketplace</a></div>
-<form method="GET" x-data="{ loading:false }" @submit="loading=true" class="mt-7 flex flex-wrap items-end gap-3 border-y border-slate-200 py-4"><div><label for="category" class="block text-sm font-semibold text-slate-700">Category</label><select id="category" name="category" class="mt-1 min-h-11 rounded-lg border-slate-300 bg-white text-sm focus:border-emerald-700 focus:ring-emerald-700"><option value="">All categories</option>@foreach($categories as $category)<option value="{{ $category->slug }}" @selected($selectedCategory === $category->slug)>{{ $category->name }}</option>@endforeach</select></div><button class="min-h-11 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"><span x-show="!loading">Apply</span><span x-cloak x-show="loading">Loading…</span></button>@if($selectedCategory)<a href="{{ route('catalog.top-products') }}" class="min-h-11 pt-3 text-sm font-semibold text-emerald-800 hover:text-emerald-950">Clear filter</a>@endif</form>
-@if($products->isNotEmpty())<section class="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-6" aria-label="Top products">@foreach($products as $product)<x-marketplace.top-product-card :product="$product" />@endforeach</section><div class="mt-8">{{ $products->links() }}</div>@else<section class="mt-10 py-16 text-center"><p class="font-semibold text-slate-950">No top products yet.</p><p class="mt-2 text-sm text-slate-600">Delivered orders from the last {{ $rankingPeriodDays }} days will appear here.</p>@if($selectedCategory)<a href="{{ route('catalog.top-products') }}" class="mt-4 inline-flex text-sm font-semibold text-emerald-800 hover:text-emerald-950">Clear category filter</a>@endif</section>@endif</main>
-@livewireScripts
-</body></html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
+    <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
+    <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
+    <title>Top products · JMMart</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="marketplace-catalog min-h-dvh bg-canvas font-sans text-ink antialiased">
+    <x-marketplace.header />
+
+    <main class="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1320px] px-[18px] pb-16 sm:px-8">
+        <nav aria-label="Breadcrumb" class="mb-2 mt-5 flex items-center gap-2 text-[13px] text-muted">
+            <a href="{{ route('home') }}" class="font-medium transition hover:text-brand-hover">Home</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page" class="font-semibold text-ink">Top products</span>
+        </nav>
+
+        <div x-data="{ filtersOpen: false, viewMode: 'grid' }" class="grid items-start gap-7 pt-2 lg:grid-cols-[272px_minmax(0,1fr)]">
+            <aside id="top-product-filters" x-cloak x-show="filtersOpen" class="rounded-[14px] border border-line bg-white lg:sticky lg:top-24 lg:!block lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto" aria-label="Product filters">
+                <div class="mx-5 flex items-center justify-between border-b border-line py-4">
+                    <h2 class="font-semibold">Filters</h2>
+                    <a href="{{ route('catalog.top-products') }}" class="inline-flex min-h-11 items-center text-[13px] font-medium text-brand hover:text-brand-hover">Clear all</a>
+                </div>
+                <div class="px-5 pb-5 pt-4">
+                    <h3 class="text-xs font-semibold uppercase tracking-[0.06em] text-muted">Category</h3>
+                    <ul class="mt-2 space-y-0.5">
+                        @foreach ($categories->take(5) as $category)
+                            <x-marketplace.filter-option :item="$category" :href="route('catalog.top-products', ['category' => $category->slug])" :clear-href="route('catalog.top-products')" :selected="$selectedCategory === $category->slug" />
+                        @endforeach
+                    </ul>
+                    @if ($categories->count() > 5)
+                        <details class="mt-1 text-sm" @if ($categories->skip(5)->contains('slug', $selectedCategory)) open @endif>
+                            <summary class="cursor-pointer py-2 font-medium text-brand hover:text-brand-hover">More categories</summary>
+                            <ul class="space-y-0.5 pb-1">
+                                @foreach ($categories->skip(5) as $category)
+                                    <x-marketplace.filter-option :item="$category" :href="route('catalog.top-products', ['category' => $category->slug])" :clear-href="route('catalog.top-products')" :selected="$selectedCategory === $category->slug" />
+                                @endforeach
+                            </ul>
+                        </details>
+                    @endif
+                </div>
+            </aside>
+            <section class="min-w-0" aria-labelledby="top-products-heading">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h1 id="top-products-heading" class="text-[28px] font-bold leading-[1.55] tracking-[-0.02em]">Top products</h1>
+                        <p class="mt-1 text-sm text-muted">{{ number_format($products->total()) }} {{ Str::plural('product', $products->total()) }} ranked by delivered sales in the last {{ $rankingPeriodDays }} days</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
+                        <button type="button" @click="filtersOpen = ! filtersOpen" :aria-expanded="filtersOpen.toString()" aria-controls="top-product-filters" class="inline-flex min-h-11 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold lg:hidden">Filters</button>
+                        <span class="inline-flex min-h-10 items-center rounded-[10px] border border-line bg-white px-3 text-[13px] font-medium text-muted">Last {{ $rankingPeriodDays }} days</span>
+                        <div class="hidden items-center gap-1 rounded-[10px] border border-line bg-white p-1 sm:flex" role="group" aria-label="View layout">
+                            <button type="button" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'" aria-label="Grid view" :class="viewMode === 'grid' ? 'bg-ink text-white' : 'text-muted hover:text-ink'" class="grid size-10 place-items-center rounded-lg transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+                            <button type="button" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'" aria-label="List view" :class="viewMode === 'list' ? 'bg-ink text-white' : 'text-muted hover:text-ink'" class="grid size-10 place-items-center rounded-lg transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h12M9 12h12M9 19h12"/><path d="M3 5h2M3 12h2M3 19h2"/></svg></button>
+                        </div>
+                    </div>
+                </div>
+
+                @if ($selectedCategory)
+                    <div class="mt-4 flex flex-wrap items-center gap-2" aria-label="Active filters">
+                        <a href="{{ route('catalog.top-products') }}" class="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[13px] font-medium hover:border-brand hover:text-brand">{{ $categories->firstWhere('slug', $selectedCategory)?->name ?? $selectedCategory }} <span aria-hidden="true">×</span><span class="sr-only">Remove category filter</span></a>
+                    </div>
+                @endif
+
+                @if ($products->isNotEmpty())
+                    <div id="catalog-products" :data-view="viewMode" class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4" aria-label="Top products">
+                        @foreach ($products as $product)
+                            <x-marketplace.top-product-card :product="$product" />
+                        @endforeach
+                    </div>
+                    <div class="mt-10">{{ $products->links('components.marketplace.pagination') }}</div>
+                @else
+                    <div class="mt-5 rounded-[14px] border border-dashed border-line bg-white px-6 py-16 text-center">
+                        <h2 class="text-lg font-semibold">No top products yet</h2>
+                        <p class="mt-2 text-sm text-muted">Delivered orders from the last {{ $rankingPeriodDays }} days will appear here.</p>
+                        @if ($selectedCategory)<a href="{{ route('catalog.top-products') }}" class="mt-4 inline-flex min-h-11 items-center rounded-[10px] px-3 text-sm font-semibold text-brand hover:bg-blue-50 hover:text-brand-hover">Clear category filter</a>@endif
+                    </div>
+                @endif
+            </section>
+        </div>
+    </main>
+
+    <x-marketplace.footer />
+    @livewireScripts
+</body>
+</html>

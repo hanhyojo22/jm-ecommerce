@@ -24,10 +24,10 @@ class SellerProductTest extends TestCase
 
         $this->actingAs($owner)->post(route('seller.products.store'), [
             'name' => 'Canvas Tote', 'sku' => 'TOTE-001', 'description' => 'A durable tote.',
-            'price' => '299.00', 'stock_quantity' => 12, 'status' => 'active',
+            'brand' => 'Aurora', 'condition' => 'refurbished', 'price' => '299.00', 'compare_at_price' => '399.00', 'stock_quantity' => 12, 'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'brand' => 'Aurora', 'condition' => 'refurbished', 'compare_at_price' => '399.00', 'status' => 'active']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.created']);
     }
 
@@ -147,12 +147,15 @@ class SellerProductTest extends TestCase
         $this->actingAs($owner)->patch(route('seller.products.update', $product), [
             'name' => 'Canvas Tote Deluxe',
             'sku' => 'TOTE-001',
+            'brand' => 'Field & Co.',
+            'condition' => 'new',
             'price' => '349.00',
+            'compare_at_price' => '449.00',
             'stock_quantity' => 7,
             'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'stock_quantity' => 7, 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 7, 'status' => 'active']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.updated', 'entity_id' => $product->id]);
     }
 
@@ -166,6 +169,20 @@ class SellerProductTest extends TestCase
             ->assertSee('Edit product')
             ->assertSee('Canvas Tote')
             ->assertSee('Save changes');
+    }
+
+    public function test_product_creation_rejects_a_regular_price_at_or_below_the_sale_price(): void
+    {
+        [$owner] = $this->seller();
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Sale product',
+            'sku' => 'SALE-001',
+            'price' => '299.00',
+            'compare_at_price' => '299.00',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ])->assertSessionHasErrors('compare_at_price');
     }
 
     public function test_seller_cannot_update_another_tenants_product(): void

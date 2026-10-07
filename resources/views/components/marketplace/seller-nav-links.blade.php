@@ -1,0 +1,89 @@
+@props(['mode' => 'desktop'])
+
+@php
+    $storefrontTenant = auth()->user()?->sellerTenant();
+    $groups = [
+        [
+            'label' => null,
+            'items' => [
+                ['label' => 'Overview', 'href' => route('seller.dashboard'), 'icon' => 'overview', 'active' => request()->routeIs('seller.dashboard')],
+            ],
+        ],
+        [
+            'label' => 'Orders',
+            'items' => [
+                ['label' => 'Orders', 'href' => route('seller.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('seller.orders.*')],
+            ],
+        ],
+        [
+            'label' => 'Catalog',
+            'items' => [
+                ['label' => 'Products', 'href' => route('seller.products.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.products.*')],
+            ],
+        ],
+        [
+            'label' => 'Customers',
+            'items' => [
+                ['label' => 'Messages', 'href' => route('messages.index'), 'icon' => 'messages', 'active' => request()->routeIs('messages.*')],
+                ['label' => 'Reviews', 'href' => route('seller.reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('seller.reviews.*')],
+            ],
+        ],
+        [
+            'label' => 'Insights',
+            'items' => [
+                ['label' => 'Earnings', 'href' => route('seller.earnings.index'), 'icon' => 'earnings', 'active' => request()->routeIs('seller.earnings.*')],
+            ],
+        ],
+    ];
+    if ($storefrontTenant) {
+        $groups[] = [
+            'label' => 'Store',
+            'items' => [
+                ['label' => 'Storefront', 'href' => route('catalog.store', $storefrontTenant->slug), 'icon' => 'storefront', 'active' => false],
+            ],
+        ];
+    }
+@endphp
+
+<nav @class([
+    'flex-1 space-y-5' => $mode === 'desktop',
+    'flex-1 space-y-4 overflow-y-auto' => $mode === 'mobile',
+    'px-3 py-5' => $mode === 'desktop',
+    'p-4' => $mode === 'mobile',
+]) aria-label="Seller workspace navigation">
+    @foreach ($groups as $group)
+        <div class="space-y-1">
+            @if ($group['label'])
+                <p @class(['px-3 pb-1 text-[10px] font-semibold uppercase tracking-[.14em]', 'text-slate-500' => $mode === 'desktop', 'text-muted' => $mode === 'mobile'])>{{ $group['label'] }}</p>
+            @endif
+            @foreach ($group['items'] as $item)
+                <a href="{{ $item['href'] }}" @class([
+                    'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                    'bg-white/10 font-semibold text-white' => $mode === 'desktop' && $item['active'],
+                    'font-medium text-slate-400 hover:bg-white/10 hover:text-white' => $mode === 'desktop' && ! $item['active'],
+                    'bg-brand/10 font-semibold text-brand' => $mode === 'mobile' && $item['active'],
+                    'font-medium text-muted hover:bg-canvas hover:text-ink' => $mode === 'mobile' && ! $item['active'],
+                ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
+                    <svg @class([
+                        'size-[18px] shrink-0',
+                        'text-white' => $mode === 'desktop' && $item['active'],
+                        'text-slate-400 group-hover:text-white' => $mode === 'desktop' && ! $item['active'],
+                        'text-brand' => $mode === 'mobile' && $item['active'],
+                        'text-muted group-hover:text-ink' => $mode === 'mobile' && ! $item['active'],
+                    ]) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        @switch($item['icon'])
+                            @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
+                            @case('products')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />@break
+                            @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break
+                            @case('messages')<path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z" />@break
+                            @case('reviews')<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />@break
+                            @case('earnings')<rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h3" />@break
+                            @case('storefront')<path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />@break
+                        @endswitch
+                    </svg>
+                    <span class="min-w-0 truncate">{{ $item['label'] }}</span>
+                </a>
+            @endforeach
+        </div>
+    @endforeach
+</nav>

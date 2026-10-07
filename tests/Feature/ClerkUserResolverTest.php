@@ -30,7 +30,7 @@ class ClerkUserResolverTest extends TestCase
         $this->get('/profile')
             ->assertSee('data-clerk-component="user-profile"', false)
             ->assertSee('aria-label="Breadcrumb"', false)
-            ->assertSee('jmmart-account-shell', false)
+            ->assertSee('aria-busy="true"', false)
             ->assertDontSee('id="account-heading"', false)
             ->assertDontSee('Sign-in and security')
             ->assertDontSee('Account details');

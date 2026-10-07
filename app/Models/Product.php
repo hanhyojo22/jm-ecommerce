@@ -14,12 +14,12 @@ class Product extends Model
     use HasUlids, SoftDeletes;
 
     protected $fillable = [
-        'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'stock_quantity', 'status',
+        'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status',
     ];
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2'];
+        return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean'];
     }
 
     public function tenant(): BelongsTo

@@ -29,12 +29,12 @@ const clerkHandoff = document.querySelector('[data-clerk-session-handoff]');
 
 const clerkComponentAppearance = {
     variables: {
-        colorPrimary: '#0f172a',
+        colorPrimary: '#2563eb',
         colorForeground: '#0f172a',
         colorBackground: '#ffffff',
         colorBorder: '#e2e8f0',
         borderRadius: '0.75rem',
-        fontFamily: 'Figtree, ui-sans-serif, system-ui, sans-serif',
+        fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
     },
     elements: {
         rootBox: {
@@ -86,7 +86,7 @@ const renderClerkHandoffError = (message = 'We could not finish signing you in.'
     title.textContent = message;
     description.className = 'text-sm text-slate-600';
     description.textContent = 'Please return to sign in and try again.';
-    signInLink.className = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800';
+    signInLink.className = 'inline-flex min-h-11 items-center justify-center rounded-[10px] bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700';
     signInLink.href = '/sign-in';
     signInLink.textContent = 'Return to sign in';
 

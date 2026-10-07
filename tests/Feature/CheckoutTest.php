@@ -27,6 +27,21 @@ class CheckoutTest extends TestCase
             ->assertSessionHas('status', 'Your cart is empty. Add a product before checking out.');
     }
 
+    public function test_checkout_mobile_action_advances_through_steps_before_submitting(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+
+        $this->actingAs($customer)->get(route('checkout.create'))
+            ->assertOk()
+            ->assertSee('if (step !== 4)', false)
+            ->assertSee('x-show="step < 4"', false)
+            ->assertSee('x-show="step === 4"', false)
+            ->assertSee('type="button" x-show="step < 4"', false);
+    }
+
     public function test_checkout_uses_exact_totals_and_creates_order_snapshots(): void
     {
         [$seller, $product] = $this->sellerProduct('19.99', 5);
