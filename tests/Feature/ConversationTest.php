@@ -120,7 +120,8 @@ class ConversationTest extends TestCase
         $this->actingAs($seller)
             ->get(route('messages.show', $conversation))
             ->assertOk()
-            ->assertSee('data-conversation-thread');
+            ->assertSee('data-conversation-thread')
+            ->assertSee('Write a message');
     }
 
     public function test_buyer_inbox_exposes_presence_channels_only_for_visible_conversations(): void
