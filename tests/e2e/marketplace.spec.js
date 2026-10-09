@@ -141,7 +141,7 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
         await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() - 1000)));
 
         const refresh = seller.page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
-        await seller.page.getByRole('button', { name: 'Send message' }).click();
+        await seller.page.getByRole('textbox', { name: 'Write a message' }).press('Enter');
 
         await expect((await refresh).ok()).toBeTruthy();
         await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
@@ -235,6 +235,23 @@ for (const attachment of [
                 mimeType: attachment.mimeType,
                 buffer: typeof attachment.contents === 'string' ? Buffer.from(attachment.contents, 'base64') : attachment.contents,
             });
+            await expect(seller.page.getByRole('status').filter({ hasText: attachment.filename })).toBeVisible();
+            await expect(seller.page.getByRole('button', { name: 'Send message' })).toHaveCount(0);
+            if (attachment.label === 'photo') {
+                await seller.page.setViewportSize({ width: 390, height: 844 });
+                const composerRow = await seller.page.evaluate(() => {
+                    const selectors = ['label[for="chat-photo"]', 'label[for="chat-document"]', '#message-body', 'button[aria-label="Send photo"]'];
+                    return selectors.map((selector) => document.querySelector(selector).getBoundingClientRect().bottom);
+                });
+                expect(Math.max(...composerRow) - Math.min(...composerRow)).toBeLessThan(3);
+                await seller.page.getByRole('button', { name: 'Remove attachment' }).click();
+                await expect(seller.page.getByRole('button', { name: 'Send message' })).toBeVisible();
+                await seller.page.getByLabel('Photo').setInputFiles({
+                    name: attachment.filename,
+                    mimeType: attachment.mimeType,
+                    buffer: Buffer.from(attachment.contents, 'base64'),
+                });
+            }
             await seller.context.clearCookies({ name: '__session' });
             await seller.context.setExtraHTTPHeaders({});
             await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() - 1000)));
@@ -245,6 +262,8 @@ for (const attachment of [
             await expect((await refresh).ok()).toBeTruthy();
             await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
             await expect(seller.page.locator('#conversation-messages').getByText(attachment.filename, { exact: true })).toBeVisible();
+            await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue('Draft before uploading');
+            await expect(seller.page.locator('#conversation-messages').getByText('Draft before uploading', { exact: true })).toHaveCount(0);
         } finally {
             await seller.context.close();
         }
