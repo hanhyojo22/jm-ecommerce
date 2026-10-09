@@ -5,9 +5,10 @@ const identities = {
     admin: 'qa-admin-identity',
 };
 
-export async function openAsRole(browser, role) {
+export async function openAsRole(browser, role, contextOptions = {}) {
     const identity = identities[role];
     const context = await browser.newContext({
+        ...contextOptions,
         extraHTTPHeaders: {
             'X-Playwright-Auth-Key': process.env.PLAYWRIGHT_AUTH_KEY,
             'X-Playwright-Identity': identity,

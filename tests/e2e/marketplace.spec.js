@@ -165,6 +165,48 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
     }
 });
 
+test('chat message time follows the viewer local timezone', async ({ browser }) => {
+    const timezoneId = new Date().getUTCHours() < 11 ? 'Etc/GMT+12' : 'Pacific/Kiritimati';
+    const customer = await openAsRole(browser, 'customer', { timezoneId });
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await customer.page.reload();
+        const typing = customer.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Local time check');
+        await typing;
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+
+        const messageTime = customer.page.locator('#conversation-messages article').filter({ hasText: 'Local time check' }).locator('time');
+        await expect(messageTime).toBeVisible();
+        const expectedTime = await messageTime.evaluate((element) => new Intl.DateTimeFormat('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+        }).format(new Date(element.dateTime)));
+        await expect(messageTime).toHaveText(expectedTime);
+
+        const dateSeparator = customer.page.locator('#conversation-messages [data-chat-date-separator]:visible').last();
+        const expectedDate = await messageTime.evaluate((element) => {
+            const sentAt = new Date(element.dateTime);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
+            if (sentAt.toDateString() === today.toDateString()) return 'Today';
+            if (sentAt.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+            return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(sentAt);
+        });
+        await expect(dateSeparator).toBeVisible();
+        await expect(dateSeparator.locator('[data-chat-date-label]')).toHaveText(expectedDate);
+    } finally {
+        await customer.context.close();
+    }
+});
+
 for (const attachment of [
     { label: 'photo', filename: 'chat-photo.png', mimeType: 'image/png', contents: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/B9sAAAAASUVORK5CYII=' },
     { label: 'document', filename: 'chat-document.pdf', mimeType: 'application/pdf', contents: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF') },

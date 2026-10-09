@@ -40,7 +40,7 @@
                 @php($previousDate = null)
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
-                    @if ($previousDate?->toDateString() !== $message->created_at->toDateString())<div class="my-5 flex items-center gap-3 text-xs font-medium text-muted"><span class="h-px flex-1 bg-slate-100"></span><span>{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-slate-100"></span></div>@endif
+                    <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-5 flex items-center gap-3 text-xs font-medium text-muted"><span class="h-px flex-1 bg-slate-100"></span><span data-chat-date-label>{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-slate-100"></span></div>
                     <article wire:key="message-{{ $message->id }}" class="mb-1 flex items-end gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
                         @if ($message->sender_id !== auth()->id())
                             <span class="grid size-7 shrink-0 place-items-center rounded-full bg-blue-50 text-[11px] font-bold text-brand-hover {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">{{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}</span>
@@ -66,7 +66,7 @@
                                 @else
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
                                 @endif
-                                <time datetime="{{ $message->created_at->toIso8601String() }}" class="mt-1 block text-[11px] {{ $message->sender_id === auth()->id() ? 'text-blue-50' : 'text-muted' }}">{{ $message->created_at->format('g:i A') }}</time>
+                                <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time class="mt-1 block text-[11px] {{ $message->sender_id === auth()->id() ? 'text-blue-50' : 'text-muted' }}">{{ $message->created_at->format('g:i A') }}</time>
                                 @if ($message->id === $lastMessage?->id && $message->sender_id === auth()->id())
                                     <span class="mt-0.5 block text-right text-[11px] text-blue-50">{{ $receipt }}</span>
                                 @endif

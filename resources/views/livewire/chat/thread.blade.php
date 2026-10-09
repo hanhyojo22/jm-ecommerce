@@ -14,6 +14,29 @@
     const messageList = document.getElementById('conversation-messages');
     let previousMessageScroll = null;
 
+    const localTimeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const localDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const localizeMessageTimes = () => {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        let previousLocalDate = null;
+
+        messageList?.querySelectorAll('[data-chat-date-separator]').forEach((separator) => {
+            const date = new Date(separator.dataset.chatDate);
+            const localDate = date.toDateString();
+            separator.classList.toggle('hidden', localDate === previousLocalDate);
+            separator.querySelector('[data-chat-date-label]').textContent = localDate === today.toDateString()
+                ? 'Today'
+                : localDate === yesterday.toDateString() ? 'Yesterday' : localDateFormatter.format(date);
+            previousLocalDate = localDate;
+        });
+
+        messageList?.querySelectorAll('time[data-chat-local-time]').forEach((time) => {
+            time.textContent = localTimeFormatter.format(new Date(time.dateTime));
+        });
+    };
+
     const scrollToLatestMessage = (behavior = 'smooth') => {
         if (messageList) {
             messageList.scrollTo({ top: messageList.scrollHeight, behavior });
@@ -29,7 +52,10 @@
         }
     });
 
-    requestAnimationFrame(() => scrollToLatestMessage('auto'));
+    requestAnimationFrame(() => {
+        localizeMessageTimes();
+        scrollToLatestMessage('auto');
+    });
 
     Livewire.hook('morphed', ({ el }) => {
         if (! messageList || (el !== messageList && ! el.contains(messageList))) {
@@ -37,6 +63,7 @@
         }
 
         requestAnimationFrame(() => {
+            localizeMessageTimes();
             if (previousMessageScroll) {
                 messageList.scrollTop = previousMessageScroll.top + messageList.scrollHeight - previousMessageScroll.height;
                 previousMessageScroll = null;
