@@ -72,12 +72,6 @@
             </form>
 
             <div class="flex shrink-0 items-center justify-end {{ $usesHomepageHeaderLayout ? 'order-2 ml-auto gap-1 min-[641px]:order-none min-[641px]:ml-0' : 'gap-1 sm:gap-2 min-[641px]:gap-[18px]' }}">
-                @if ($isHomepage)
-                    <a href="{{ auth()->check() ? route('profile.edit') : route('login') }}" class="grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Wishlist">
-                        <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 20.5C7 16.5 3.5 13.3 3.5 9.6 3.5 7 5.5 5 8 5c1.6 0 3.1.8 4 2.1C12.9 5.8 14.4 5 16 5c2.5 0 4.5 2 4.5 4.6 0 3.7-3.5 6.9-8.5 10.9z" /></svg>
-                    </a>
-                @endif
-
                 @if ($isSellerWorkspace && $sellerTenant)
                     <a href="{{ route('catalog.store', $sellerTenant->slug) }}" target="_blank" rel="noopener noreferrer" class="hidden min-h-10 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand sm:inline-flex">View storefront</a>
                 @elseif ($canUseMessages && ! request()->routeIs('catalog.index'))
