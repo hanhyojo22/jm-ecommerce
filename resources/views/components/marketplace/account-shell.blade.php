@@ -1,4 +1,4 @@
-@props(['active' => 'overview', 'title' => 'My account', 'subtitle' => null])
+@props(['active' => 'settings', 'title' => 'My account', 'subtitle' => null])
 
 @php
     $user = auth()->user();
@@ -21,10 +21,6 @@
         <div class="mt-5 grid items-start gap-6 lg:grid-cols-[264px_minmax(0,1fr)]">
             <nav class="rounded-[14px] border border-line bg-surface p-3 lg:sticky lg:top-24" aria-label="Account" data-od-id="account-nav" data-role-navigation="customer">
                 <div class="grid gap-1">
-                    <a href="{{ route('profile.edit') }}" @class([$navItem, 'bg-blue-50 font-semibold text-brand' => $active === 'overview', 'font-medium text-ink hover:bg-canvas' => $active !== 'overview']) @if ($active === 'overview') aria-current="page" @endif>
-                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" /></svg>
-                        Overview
-                    </a>
                     @if ($isBuyer)
                         <a href="{{ route('orders.index') }}" @class([$navItem, 'bg-blue-50 font-semibold text-brand' => $active === 'orders', 'font-medium text-ink hover:bg-canvas' => $active !== 'orders']) @if ($active === 'orders') aria-current="page" @endif>
                             <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
@@ -37,7 +33,7 @@
                             Messages
                         </a>
                     @endif
-                    <a href="{{ route('profile.edit') }}#settings" @class([$navItem, 'bg-blue-50 font-semibold text-brand' => $active === 'settings', 'font-medium text-ink hover:bg-canvas' => $active !== 'settings'])>
+                    <a href="{{ route('profile.edit') }}" @class([$navItem, 'bg-blue-50 font-semibold text-brand' => $active === 'settings', 'font-medium text-ink hover:bg-canvas' => $active !== 'settings']) @if ($active === 'settings') aria-current="page" @endif>
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2Z" /></svg>
                         Settings
                     </a>
