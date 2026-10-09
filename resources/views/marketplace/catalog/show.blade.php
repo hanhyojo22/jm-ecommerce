@@ -74,7 +74,7 @@
                 @if (! Auth::check() || Auth::user()->account_type === 'buyer')
                 <div id="purchase" class="sticky bottom-0 z-20 -mx-[18px] mt-6 scroll-mt-24 border-t border-line bg-canvas/95 px-[18px] py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
                     @if (Auth::check() && Auth::user()->account_type === 'buyer' && Auth::user()->hasVerifiedClerkEmail())
-                        <form method="POST" action="{{ route('cart.store', $product) }}" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="space-y-4">
+                        <form method="POST" action="{{ route('cart.store', $product) }}" data-add-to-cart data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="space-y-4">
                             @csrf
                             <input name="quantity" type="hidden" x-model="quantity">
                             <div>

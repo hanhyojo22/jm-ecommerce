@@ -17,6 +17,10 @@ test('customer can place a COD order from the product page through checkout', as
     try {
         await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
+        await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
+        await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
+        await expect(page.getByRole('link', { name: 'Cart: 2 items' })).toBeVisible();
+        await page.getByRole('link', { name: 'Cart: 2 items' }).click();
         await expect(page).toHaveURL(/\/cart$/);
         await page.getByRole('link', { name: 'Continue to checkout' }).click();
         await page.getByLabel('Recipient name').fill('Ava QA Customer');
@@ -56,8 +60,8 @@ test('customer refreshes the Clerk session before adding an item to the cart', a
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
         await expect((await refresh).ok()).toBeTruthy();
 
-        await expect(page).toHaveURL(/\/cart$/);
-        await expect(page.getByText('QA Canvas Tote')).toBeVisible();
+        await expect(page).toHaveURL(/\/stores\/qa-northwind-store\/products\/qa-canvas-tote$/);
+        await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
     } finally {
         await context.close();
     }

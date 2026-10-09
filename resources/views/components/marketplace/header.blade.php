@@ -84,12 +84,10 @@
                 @endif
 
                 @if ($isBuyer)
-                    <a href="{{ route('cart.index') }}" class="{{ $isHomepage ? 'relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand' : 'relative order-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:order-2' }}" aria-label="Cart: {{ $cartItemCount }} {{ Str::plural('item', $cartItemCount) }}">
+                    <a href="{{ route('cart.index') }}" data-cart-link class="{{ $isHomepage ? 'relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand' : 'relative order-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand min-[641px]:order-2' }}" aria-label="Cart: {{ $cartItemCount }} {{ Str::plural('item', $cartItemCount) }}">
                         <svg class="{{ $isHomepage ? 'size-[22px]' : 'size-5 min-[641px]:hidden' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
-                        @unless ($isHomepage)<span class="hidden min-[641px]:inline">Cart ({{ $cartItemCount }})</span>@endunless
-                        @if ($cartItemCount > 0)
-                            <span class="absolute {{ $isHomepage ? 'right-1 top-1 grid h-[19px] min-w-[19px] place-items-center border-2 border-white px-[5px] text-[11px]' : 'right-0 top-0 inline-flex min-w-5 translate-x-1/4 -translate-y-1/4 px-1 py-0.5 text-[10px] ring-2 ring-white min-[641px]:hidden' }} rounded-full bg-brand font-bold leading-none text-white">{{ $cartBadge }}</span>
-                        @endif
+                        @unless ($isHomepage)<span data-cart-count-text class="hidden min-[641px]:inline">Cart ({{ $cartItemCount }})</span>@endunless
+                        <span data-cart-badge class="absolute {{ $isHomepage ? 'right-1 top-1 grid h-[19px] min-w-[19px] place-items-center border-2 border-white px-[5px] text-[11px]' : 'right-0 top-0 inline-flex min-w-5 translate-x-1/4 -translate-y-1/4 px-1 py-0.5 text-[10px] ring-2 ring-white min-[641px]:hidden' }} rounded-full bg-brand font-bold leading-none text-white" @if ($cartItemCount === 0) style="display: none" @endif>{{ $cartBadge }}</span>
                     </a>
                 @endif
 

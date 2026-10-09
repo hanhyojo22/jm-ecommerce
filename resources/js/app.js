@@ -488,6 +488,83 @@ clerkSessionRefreshForms.forEach((form) => {
     });
 });
 
+document.querySelectorAll('form[data-add-to-cart]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+        if (event.defaultPrevented) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (form.dataset.cartSubmitting === 'true') {
+            return;
+        }
+
+        form.dataset.cartSubmitting = 'true';
+        const button = event.submitter;
+        if (button) {
+            button.disabled = true;
+        }
+
+        const feedback = form.querySelector('[data-cart-feedback]') ?? document.createElement('p');
+        feedback.dataset.cartFeedback = '';
+        feedback.className = 'mt-2 text-sm font-semibold';
+        form.append(feedback);
+
+        try {
+            const submit = () => fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { Accept: 'application/json' },
+                body: new FormData(form),
+            });
+
+            let response = await submit();
+            if (response.status === 401 && form.dataset.clerkSessionRefresh) {
+                await refreshClerkSession(form.dataset.clerkSessionRefresh);
+                response = await submit();
+            }
+
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(result.errors?.quantity?.[0] ?? result.message ?? 'Could not add this item.');
+            }
+
+            const count = result.cart_count;
+            const cartLink = document.querySelector('[data-cart-link]');
+            if (!Number.isInteger(count)) {
+                throw new Error('Could not update your cart. Please refresh the page.');
+            }
+
+            if (cartLink) {
+                cartLink.setAttribute('aria-label', `Cart: ${count} ${count === 1 ? 'item' : 'items'}`);
+                const badge = cartLink.querySelector('[data-cart-badge]');
+                if (badge) {
+                    badge.textContent = count > 99 ? '99+' : String(count);
+                    badge.style.display = count > 0 ? '' : 'none';
+                }
+                const countText = cartLink.querySelector('[data-cart-count-text]');
+                if (countText) {
+                    countText.textContent = `Cart (${count})`;
+                }
+            }
+
+            feedback.setAttribute('role', 'status');
+            feedback.classList.add('text-success');
+            feedback.textContent = 'Added to cart.';
+        } catch (error) {
+            feedback.setAttribute('role', 'alert');
+            feedback.classList.add('text-danger');
+            feedback.textContent = error.message || 'Could not add this item. Please try again.';
+        } finally {
+            delete form.dataset.cartSubmitting;
+            if (button) {
+                button.disabled = false;
+            }
+        }
+    });
+});
+
 const signOut = async () => {
     try {
         const clerk = await loadClerk();

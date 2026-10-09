@@ -26,8 +26,9 @@ class CartTest extends TestCase
             ->assertSee('Cart (2)')
             ->assertSee('aria-label="Cart: 2 items"', false);
 
-        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])
-            ->assertRedirect(route('cart.index'));
+        $this->actingAs($buyer)->postJson(route('cart.store', $product), ['quantity' => 1])
+            ->assertOk()
+            ->assertJson(['cart_count' => 3]);
 
         $this->actingAs($buyer)->get(route('cart.index'))
             ->assertSee('3 items')

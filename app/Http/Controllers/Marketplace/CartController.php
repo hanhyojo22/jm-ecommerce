@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -32,11 +33,15 @@ class CartController extends Controller
         ]);
     }
 
-    public function store(Request $request, AddProductToCart $addProductToCart, Product $product): RedirectResponse
+    public function store(Request $request, AddProductToCart $addProductToCart, Product $product): RedirectResponse|JsonResponse
     {
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:100']]);
 
         $addProductToCart->handle($request->user(), $product, $data['quantity']);
+
+        if ($request->expectsJson()) {
+            return response()->json(['cart_count' => $request->user()->cartItemCount()]);
+        }
 
         return to_route('cart.index')->with('status', 'Added to your cart.');
     }
