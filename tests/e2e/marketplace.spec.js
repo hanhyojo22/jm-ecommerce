@@ -84,6 +84,40 @@ test('signed-in customer refreshes the Clerk token before opening messages', asy
     }
 });
 
+test('seller quick reply fills the message draft without a server request', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+    } finally {
+        await customer.context.close();
+    }
+
+    const seller = await openAsRole(browser, 'seller');
+
+    try {
+        await seller.page.goto('/messages');
+        await seller.page.getByRole('link', { name: /QA Customer/ }).click();
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+
+        let updateRequests = 0;
+        await seller.page.route(/\/livewire-[^/]+\/update$/, (route) => {
+            updateRequests++;
+            return route.abort();
+        });
+        for (const reply of ['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?']) {
+            await seller.page.getByRole('button', { name: reply }).click();
+            await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue(reply);
+            await expect(seller.page.locator('#message-help')).toContainText(`${Array.from(reply).length}/2000`);
+        }
+        expect(updateRequests).toBe(0);
+    } finally {
+        await seller.context.close();
+    }
+});
+
 test('public product page has no automated WCAG A or AA violations', async ({ page }) => {
     await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
 

@@ -122,7 +122,8 @@ class ConversationTest extends TestCase
             ->assertOk()
             ->assertSee('data-conversation-thread')
             ->assertSee('Write a message')
-            ->assertSee('wire:click="useQuickReply(\'Your order is being prepared.\')"', false);
+            ->assertSee('x-on:click="$wire.body = \'Your order is being prepared.\'"', false)
+            ->assertDontSee('wire:click="useQuickReply(', false);
     }
 
     public function test_buyer_inbox_exposes_presence_channels_only_for_visible_conversations(): void

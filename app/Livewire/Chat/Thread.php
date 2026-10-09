@@ -90,12 +90,6 @@ class Thread extends Component
         $this->markRead();
     }
 
-    public function useQuickReply(string $reply): void
-    {
-        Gate::authorize('send', $this->conversation);
-        $this->body = $reply;
-    }
-
     public function startTyping(): void
     {
         Gate::authorize('send', $this->conversation);
