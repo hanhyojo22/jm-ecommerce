@@ -394,6 +394,39 @@ const refreshClerkSession = async (endpoint) => {
     rememberClerkSessionDeadline(sessionToken);
 };
 
+// Livewire sends its own fetch requests, including chat typing and Send, without submitting a form.
+if (clerkSessionRefreshEndpoint) {
+    const browserFetch = window.fetch.bind(window);
+    let pendingClerkSessionRefresh;
+
+    window.fetch = async (input, options) => {
+        if (options?.headers?.['X-Livewire'] === '1' && clerkSessionNeedsRefresh()) {
+            pendingClerkSessionRefresh ??= refreshClerkSession(clerkSessionRefreshEndpoint)
+                .finally(() => { pendingClerkSessionRefresh = null; });
+
+            try {
+                await pendingClerkSessionRefresh;
+                document.querySelector('[data-clerk-refresh-error]')?.remove();
+            } catch (error) {
+                const form = document.querySelector('[data-conversation-thread] form[wire\\:submit="send"]');
+
+                if (form && !form.querySelector('[data-clerk-refresh-error]')) {
+                    const message = document.createElement('p');
+                    message.dataset.clerkRefreshError = '';
+                    message.className = 'text-sm font-medium text-red-700';
+                    message.setAttribute('role', 'alert');
+                    message.textContent = 'Your session could not be refreshed. Please try again.';
+                    form.prepend(message);
+                }
+
+                throw error;
+            }
+        }
+
+        return browserFetch(input, options);
+    };
+}
+
 /*
  * Navigation renews the session before it opens a page, rather than each link opting in and
  * remembering to. A session that is still fresh costs no extra request at all, so only the

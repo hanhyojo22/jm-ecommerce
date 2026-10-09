@@ -118,6 +118,53 @@ test('seller quick reply fills the message draft without a server request', asyn
     }
 });
 
+test('seller can send a drafted message after the Clerk cookie expires', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+    } finally {
+        await customer.context.close();
+    }
+
+    const seller = await openAsRole(browser, 'seller');
+
+    try {
+        await seller.page.goto('/messages');
+        await seller.page.getByRole('link', { name: /QA Customer/ }).click();
+        const firstTyping = seller.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
+        await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Your order is being prepared.');
+        await firstTyping;
+        await seller.context.clearCookies({ name: '__session' });
+        await seller.context.setExtraHTTPHeaders({});
+        await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() - 1000)));
+
+        const refresh = seller.page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
+        await seller.page.getByRole('button', { name: 'Send message' }).click();
+
+        await expect((await refresh).ok()).toBeTruthy();
+        await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await expect(seller.page.locator('#conversation-messages').getByText('Your order is being prepared.', { exact: true })).toBeVisible();
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeEmpty();
+
+        const secondTyping = seller.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
+        await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Please check your order details.');
+        await secondTyping;
+        await seller.context.clearCookies({ name: '__session' });
+        await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() - 1000)));
+        await seller.page.route('**/auth/session', (route) => route.fulfill({ status: 401, body: '{}' }));
+        await seller.page.getByRole('button', { name: 'Send message' }).click();
+
+        await expect(seller.page.getByRole('alert')).toContainText('session could not be refreshed');
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue('Please check your order details.');
+        await expect(seller.page.locator('#conversation-messages').getByText('Please check your order details.', { exact: true })).toHaveCount(0);
+        await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+    } finally {
+        await seller.context.close();
+    }
+});
+
 test('public product page has no automated WCAG A or AA violations', async ({ page }) => {
     await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
 
