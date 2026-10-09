@@ -8,7 +8,7 @@
         <div class="page-container">
             <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 class="text-3xl font-bold tracking-[-0.03em] text-ink">Shopping cart</h1>
+                    <h1 class="customer-page-title text-3xl font-bold tracking-[-0.03em] text-ink">Shopping cart</h1>
                     <p class="mt-1 text-sm text-muted">{{ $cart?->items->sum('quantity') ?? 0 }} {{ Str::plural('item', $cart?->items->sum('quantity') ?? 0) }} · Grouped by seller</p>
                 </div>
                 <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Continue shopping</a>
@@ -50,7 +50,7 @@
                                         @foreach ($storeItems as $item)
                                             @php($isUnavailable = $item->product->status !== 'active' || $item->product->stock_quantity < $item->quantity)
                                             <article class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:p-5">
-                                                <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="aspect-square overflow-hidden rounded-xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
+                                                <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
                                                     @if ($item->product->thumbnail)
                                                         <img src="{{ Storage::disk('product_images')->url($item->product->thumbnail->path) }}" alt="{{ $item->product->name }}" width="96" height="96" loading="lazy" class="h-full w-full object-cover">
                                                     @else
@@ -68,7 +68,7 @@
                                                     @endif
 
                                                     <div class="mt-4 flex items-center justify-between gap-3 sm:hidden">
-                                                        <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-xl border border-line bg-surface">
+                                                        <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-[10px] border border-line bg-surface">
                                                             @csrf
                                                             @method('PATCH')
                                                             <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
@@ -81,7 +81,7 @@
 
                                                 <div class="hidden min-w-36 items-end justify-between gap-4 sm:flex sm:flex-col">
                                                     <p class="text-right text-base font-bold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
-                                                    <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-xl border border-line bg-surface">
+                                                    <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-[10px] border border-line bg-surface">
                                                         @csrf
                                                         @method('PATCH')
                                                         <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
@@ -123,7 +123,7 @@
                             <div class="mt-5 flex items-end justify-between"><span class="font-semibold text-ink">Total</span><span class="text-2xl font-bold tracking-[-0.04em] text-ink">₱{{ number_format($subtotal, 2) }}</span></div>
 
                             @if ($hasUnavailableItems)
-                                <p class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm leading-5 text-amber-950">Update or remove unavailable items before checkout.</p>
+                                <p class="mt-5 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-3 text-sm leading-5 text-amber-950">Update or remove unavailable items before checkout.</p>
                             @else
                                 <a href="{{ route('checkout.create') }}" class="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition duration-200 hover:bg-brand-hover active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Continue to checkout</a>
                             @endif

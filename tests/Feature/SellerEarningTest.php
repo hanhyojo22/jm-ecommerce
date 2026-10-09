@@ -74,6 +74,22 @@ class SellerEarningTest extends TestCase
         $this->assertDatabaseHas('seller_earnings', ['id' => $secondEarning->id, 'status' => 'available']);
     }
 
+    public function test_administrator_cannot_record_a_payout_larger_than_the_storage_limit(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        [$store] = $this->storeWithSeller('Northwind Goods');
+        $firstEarning = $this->earningFor($store, 'JM-PAYOUT-LIMIT-001', '6000000000.00');
+        $secondEarning = $this->earningFor($store, 'JM-PAYOUT-LIMIT-002', '6000000000.00');
+
+        $this->actingAs($administrator)
+            ->post(route('admin.payouts.store'), ['earning_ids' => [$firstEarning->id, $secondEarning->id]])
+            ->assertSessionHasErrors(['payout' => 'The payout amount exceeds the maximum supported amount.']);
+
+        $this->assertDatabaseCount('seller_payouts', 0);
+        $this->assertDatabaseHas('seller_earnings', ['id' => $firstEarning->id, 'status' => 'available']);
+        $this->assertDatabaseHas('seller_earnings', ['id' => $secondEarning->id, 'status' => 'available']);
+    }
+
     public function test_seller_order_store_must_belong_to_its_tenant(): void
     {
         [$firstStore] = $this->storeWithSeller('Northwind Goods');

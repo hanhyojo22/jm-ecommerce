@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewInstance;
+use Tests\Support\PlaywrightClerkSessionVerifier;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $playwrightAuthKey = config('services.playwright.auth_key');
+
+        if ($this->app->environment('testing') && is_string($playwrightAuthKey) && $playwrightAuthKey !== '') {
+            $this->app->bind(
+                ClerkSessionVerifier::class,
+                fn (): PlaywrightClerkSessionVerifier => new PlaywrightClerkSessionVerifier($playwrightAuthKey),
+            );
+
+            return;
+        }
+
         $this->app->bind(ClerkSessionVerifier::class, ClerkBackendSessionVerifier::class);
     }
 
@@ -39,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         RateLimiter::for('checkout', fn (Request $request): Limit => Limit::perHour(10)->by(
+            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+        ));
+
+        RateLimiter::for('admin-mutations', fn (Request $request): Limit => Limit::perMinute(20)->by(
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));
 

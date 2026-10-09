@@ -71,6 +71,10 @@ class AdminOrderControllerTest extends TestCase
             ->assertRedirect(route('admin.orders.show', $order));
 
         $this->assertDatabaseHas('payments', ['id' => $order->payment->id, 'status' => 'paid']);
+        $deliveredSellerOrder = $order->sellerOrders()->where('store_id', $deliveredStore->id)->firstOrFail();
+        $cancelledSellerOrder = $order->sellerOrders()->where('store_id', $cancelledStore->id)->firstOrFail();
+        $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $deliveredSellerOrder->id, 'net_amount' => '500.00']);
+        $this->assertDatabaseMissing('seller_earnings', ['seller_order_id' => $cancelledSellerOrder->id]);
         $this->assertDatabaseCount('audit_logs', 1);
     }
 

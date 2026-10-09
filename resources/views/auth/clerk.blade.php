@@ -34,7 +34,7 @@
 
             <div class="mt-8 rounded-[16px] border border-line bg-white p-5 sm:p-6">
                 <h2 class="font-semibold">{{ request('redirect') ? 'Sign in to continue' : 'Your account unlocks more' }}</h2>
-                <p class="mt-1 text-sm leading-6 text-muted">{{ request('redirect') ? 'After signing in, you’ll return to the page you were viewing.' : 'Keep a cart, check out, track orders, and contact sellers in one place.' }}</p>
+                <p class="mt-1 text-sm leading-6 text-muted">{{ request('add_to_cart') ? 'After signing in, this item will be added to your cart.' : (request('redirect') ? 'After signing in, you’ll return to the page you were viewing.' : 'Keep a cart, check out, track orders, and contact sellers in one place.') }}</p>
                 <div class="mt-4 flex flex-wrap gap-2">
                     <a href="{{ route('login', array_filter(['redirect' => request('redirect')])) }}" class="inline-flex min-h-11 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover">Sign in</a>
                     <a href="{{ route('register', array_filter(['redirect' => request('redirect')])) }}" class="inline-flex min-h-11 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold transition hover:border-brand">Create account</a>

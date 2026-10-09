@@ -3,6 +3,7 @@
         data-clerk-session-handoff
         data-session-endpoint="{{ route('clerk.handoff.complete') }}"
         data-redirect-url="{{ $afterAuthUrl }}"
+        data-sign-in-url="{{ $signInUrl ?? route('login') }}"
         role="status"
         aria-live="polite"
         class="space-y-3 rounded-[14px] border border-line bg-surface p-6 text-center"

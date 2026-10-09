@@ -7,6 +7,11 @@
     <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
     <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
     <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
+    @auth('clerk')
+        {{-- Only signed-in visitors get one of these: it is what lets navigation renew a lapsed
+             session cookie before it opens a protected page, and it keeps guests untouched. --}}
+        <meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">
+    @endauth
     <title>Top products · JMMart</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

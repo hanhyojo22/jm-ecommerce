@@ -21,17 +21,17 @@
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
             @if (session('status'))
-                <div class="mb-5 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-5 rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
             @endif
 
             @if ($errors->any())
-                <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert"><span>{{ $errors->first() }}</span><a href="{{ route('admin.orders.index', request()->query()) }}" class="font-semibold underline underline-offset-4">Retry</a></div>
+                <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert"><span>{{ $errors->first() }}</span><a href="{{ route('admin.orders.index', request()->query()) }}" class="font-semibold underline underline-offset-4">Retry</a></div>
             @endif
 
             <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" aria-label="Marketplace order summaries">
                 @foreach ($summaryCards as $summary)
                     @php($selected = ($filters['status'] ?? null) === $summary['status'])
-                    <a href="{{ route('admin.orders.index', [...request()->except('status', 'page'), ...($summary['status'] ? ['status' => $summary['status']] : [])]) }}" aria-current="{{ $selected ? 'page' : 'false' }}" class="rounded-xl border bg-surface px-5 py-4 transition hover:border-brand/30 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $selected ? 'border-brand ring-1 ring-brand' : 'border-line' }}">
+                    <a href="{{ route('admin.orders.index', [...request()->except('status', 'page'), ...($summary['status'] ? ['status' => $summary['status']] : [])]) }}" aria-current="{{ $selected ? 'page' : 'false' }}" class="rounded-[14px] border bg-surface px-5 py-4 transition hover:border-brand/30 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $selected ? 'border-brand ring-1 ring-brand' : 'border-line' }}">
                         <p class="text-2xl font-semibold tabular-nums tracking-tight {{ $summary['valueClass'] }}">{{ number_format($summary['count']) }}</p>
                         <p class="mt-1 text-sm font-medium text-muted">{{ $summary['label'] }}</p>
                     </a>
@@ -47,7 +47,7 @@
                     @if ($hasFilters)<a href="{{ route('admin.orders.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-muted transition hover:bg-surface hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Clear filters</a>@endif
                 </div>
 
-                <form method="GET" action="{{ route('admin.orders.index') }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-5 grid gap-3 rounded-xl border border-line bg-surface p-4 lg:grid-cols-12" role="search" aria-label="Filter marketplace orders">
+                <form method="GET" action="{{ route('admin.orders.index') }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-5 grid gap-3 rounded-[14px] border border-line bg-surface p-4 lg:grid-cols-12" role="search" aria-label="Filter marketplace orders">
                     <div class="lg:col-span-2">
                         <label for="search" class="sr-only">Search orders</label>
                         <input id="search" name="search" value="{{ $filters['search'] ?? '' }}" type="search" placeholder="Order, name, or store" class="block h-11 w-full rounded-lg border-line text-sm placeholder:text-muted focus:border-brand focus:ring-brand">
@@ -81,7 +81,7 @@
                     <div class="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted"><span class="font-medium">Active filters:</span>@if (filled($filters['search'] ?? null))<span class="rounded-full bg-surface px-3 py-1 ring-1 ring-line">Search: {{ $filters['search'] }}</span>@endif@if (filled($filters['status'] ?? null))<span class="rounded-full bg-surface px-3 py-1 ring-1 ring-line">Status: {{ ucfirst($filters['status']) }}</span>@endif@if (filled($filters['payment_status'] ?? null))<span class="rounded-full bg-surface px-3 py-1 ring-1 ring-line">Payment: {{ ucfirst($filters['payment_status']) }}</span>@endif@if (filled($filters['from'] ?? null) || filled($filters['to'] ?? null))<span class="rounded-full bg-surface px-3 py-1 ring-1 ring-line">Date range selected</span>@endif</div>
                 @endif
 
-                <section class="mt-6 overflow-hidden rounded-xl border border-line bg-surface " aria-label="Marketplace orders">
+                <section class="mt-6 overflow-hidden rounded-[14px] border border-line bg-surface " aria-label="Marketplace orders">
                     <div class="table-scroll hidden 2xl:block">
                         <table class="w-full table-fixed divide-y divide-line">
                             <thead class="bg-canvas text-left text-xs font-semibold uppercase tracking-[0.1em] text-muted"><tr><th scope="col" class="w-[15%] px-2 py-3.5">Order</th><th scope="col" class="w-[12%] px-2 py-3.5">Customer</th><th scope="col" class="w-[13%] px-2 py-3.5">Store / seller</th><th scope="col" class="w-[11%] px-2 py-3.5">Placed</th><th scope="col" class="w-[5%] px-2 py-3.5 text-right">Items</th><th scope="col" class="w-[10%] px-2 py-3.5 text-right">Total</th><th scope="col" class="w-[11%] px-2 py-3.5">Payment</th><th scope="col" class="w-[12%] px-2 py-3.5">Fulfilment</th><th scope="col" class="w-[11%] px-2 py-3.5">Actions</th></tr></thead>

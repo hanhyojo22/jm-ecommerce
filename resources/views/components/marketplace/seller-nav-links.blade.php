@@ -2,6 +2,10 @@
 
 @php
     $storefrontTenant = auth()->user()?->sellerTenant();
+    $canManageStore = $storefrontTenant && auth()->user()->tenantMemberships()
+        ->where('tenant_id', $storefrontTenant->id)
+        ->whereIn('role', ['owner', 'manager'])
+        ->exists();
     $groups = [
         [
             'label' => null,
@@ -36,11 +40,17 @@
         ],
     ];
     if ($storefrontTenant) {
+        $storeItems = [
+            ['label' => 'Storefront', 'href' => route('catalog.store', $storefrontTenant->slug), 'icon' => 'storefront', 'active' => false],
+        ];
+
+        if ($canManageStore) {
+            $storeItems[] = ['label' => 'Store settings', 'href' => route('seller.store-settings.edit'), 'icon' => 'settings', 'active' => request()->routeIs('seller.store-settings.*')];
+        }
+
         $groups[] = [
             'label' => 'Store',
-            'items' => [
-                ['label' => 'Storefront', 'href' => route('catalog.store', $storefrontTenant->slug), 'icon' => 'storefront', 'active' => false],
-            ],
+            'items' => $storeItems,
         ];
     }
 @endphp
@@ -54,20 +64,20 @@
     @foreach ($groups as $group)
         <div class="space-y-1">
             @if ($group['label'])
-                <p @class(['px-3 pb-1 text-[10px] font-semibold uppercase tracking-[.14em]', 'text-slate-500' => $mode === 'desktop', 'text-muted' => $mode === 'mobile'])>{{ $group['label'] }}</p>
+                <p @class(['px-3 pb-1 text-xs font-semibold uppercase tracking-[.14em]', 'text-slate-500' => $mode === 'desktop', 'text-muted' => $mode === 'mobile'])>{{ $group['label'] }}</p>
             @endif
             @foreach ($group['items'] as $item)
-                <a href="{{ $item['href'] }}" @class([
+                <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @endif @class([
                     'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-                    'bg-white/10 font-semibold text-white' => $mode === 'desktop' && $item['active'],
-                    'font-medium text-slate-400 hover:bg-white/10 hover:text-white' => $mode === 'desktop' && ! $item['active'],
+                'bg-brand/10 font-semibold text-brand' => $mode === 'desktop' && $item['active'],
+                'font-medium text-muted hover:bg-blue-50 hover:text-brand' => $mode === 'desktop' && ! $item['active'],
                     'bg-brand/10 font-semibold text-brand' => $mode === 'mobile' && $item['active'],
                     'font-medium text-muted hover:bg-canvas hover:text-ink' => $mode === 'mobile' && ! $item['active'],
                 ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
                     <svg @class([
                         'size-[18px] shrink-0',
-                        'text-white' => $mode === 'desktop' && $item['active'],
-                        'text-slate-400 group-hover:text-white' => $mode === 'desktop' && ! $item['active'],
+                        'text-brand' => $mode === 'desktop' && $item['active'],
+                        'text-muted group-hover:text-brand' => $mode === 'desktop' && ! $item['active'],
                         'text-brand' => $mode === 'mobile' && $item['active'],
                         'text-muted group-hover:text-ink' => $mode === 'mobile' && ! $item['active'],
                     ]) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -79,6 +89,7 @@
                             @case('reviews')<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />@break
                             @case('earnings')<rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h3" />@break
                             @case('storefront')<path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />@break
+                            @case('settings')<circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a7.8 7.8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a7.8 7.8 0 0 1-1.7-1l-1.7.6-1.4-2.4 1.4-1.1a7.4 7.4 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.6a7.8 7.8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a7.8 7.8 0 0 1 1.7 1l1.7-.6 1.4 2.4-1.4 1.1a7.4 7.4 0 0 1 0 2Z" />@break
                         @endswitch
                     </svg>
                     <span class="min-w-0 truncate">{{ $item['label'] }}</span>

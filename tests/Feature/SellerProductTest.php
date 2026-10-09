@@ -27,7 +27,7 @@ class SellerProductTest extends TestCase
             'brand' => 'Aurora', 'condition' => 'refurbished', 'price' => '299.00', 'compare_at_price' => '399.00', 'stock_quantity' => 12, 'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'brand' => 'Aurora', 'condition' => 'refurbished', 'compare_at_price' => '399.00', 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'brand' => 'Aurora', 'condition' => 'refurbished', 'compare_at_price' => '399.00', 'status' => 'draft']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.created']);
     }
 
@@ -122,6 +122,126 @@ class SellerProductTest extends TestCase
             ->assertSee(Storage::disk('product_images')->url($path));
     }
 
+    public function test_product_creation_does_not_persist_when_image_storage_fails(): void
+    {
+        [$owner] = $this->seller();
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('product_images')
+            ->andThrow(new \RuntimeException('Image storage is unavailable.'));
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Canvas Tote',
+            'sku' => 'TOTE-001',
+            'price' => '299.00',
+            'stock_quantity' => 1,
+            'status' => 'active',
+            'image' => UploadedFile::fake()->createWithContent(
+                'canvas-tote.png',
+                base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL6TAAAAABJRU5ErkJggg=='),
+            ),
+        ])->assertServerError();
+
+        $this->assertDatabaseCount('products', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+    }
+
+    public function test_product_update_does_not_persist_when_image_storage_fails(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Canvas Tote',
+            'slug' => 'canvas-tote',
+            'sku' => 'TOTE-001',
+            'price' => '299.00',
+            'stock_quantity' => 1,
+            'status' => 'active',
+        ]);
+        Storage::shouldReceive('disk')
+            ->once()
+            ->with('product_images')
+            ->andThrow(new \RuntimeException('Image storage is unavailable.'));
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Canvas Tote Deluxe',
+            'sku' => 'TOTE-001',
+            'price' => '349.00',
+            'stock_quantity' => 2,
+            'status' => 'active',
+            'image' => UploadedFile::fake()->createWithContent(
+                'canvas-tote.png',
+                base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL6TAAAAABJRU5ErkJggg=='),
+            ),
+        ])->assertServerError();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'name' => 'Canvas Tote',
+            'price' => '299.00',
+            'stock_quantity' => 1,
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseCount('product_images', 0);
+        $this->assertDatabaseCount('audit_logs', 0);
+    }
+
+    public function test_product_creation_is_rate_limited_per_seller(): void
+    {
+        [$owner] = $this->seller();
+        $payload = [
+            'name' => 'Canvas Tote',
+            'price' => '299.00',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ];
+
+        for ($index = 1; $index <= 10; $index++) {
+            $this->actingAs($owner)->post(route('seller.products.store'), [
+                ...$payload,
+                'sku' => "TOTE-{$index}",
+            ])->assertRedirect(route('seller.products.index'));
+        }
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            ...$payload,
+            'sku' => 'TOTE-11',
+        ])->assertTooManyRequests();
+
+        $this->assertDatabaseCount('products', 10);
+    }
+
+    public function test_product_updates_are_rate_limited_per_seller(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Canvas Tote',
+            'slug' => 'canvas-tote',
+            'sku' => 'TOTE-001',
+            'price' => '299.00',
+            'stock_quantity' => 1,
+            'status' => 'active',
+        ]);
+        $payload = [
+            'name' => 'Canvas Tote',
+            'sku' => 'TOTE-001',
+            'price' => '299.00',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ];
+
+        for ($index = 0; $index < 10; $index++) {
+            $this->actingAs($owner)->patch(route('seller.products.update', $product), $payload)
+                ->assertRedirect(route('seller.products.index'));
+        }
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), $payload)
+            ->assertTooManyRequests();
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote']);
+    }
+
     public function test_seller_product_list_filters_by_search_status_and_stock(): void
     {
         [$owner, $tenant, $store] = $this->seller();
@@ -142,7 +262,7 @@ class SellerProductTest extends TestCase
     public function test_owner_can_update_their_own_product(): void
     {
         [$owner, $tenant, $store] = $this->seller();
-        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 2, 'status' => 'draft']);
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 2, 'status' => 'active']);
 
         $this->actingAs($owner)->patch(route('seller.products.update', $product), [
             'name' => 'Canvas Tote Deluxe',
@@ -157,6 +277,22 @@ class SellerProductTest extends TestCase
 
         $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 7, 'status' => 'active']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.updated', 'entity_id' => $product->id]);
+    }
+
+    public function test_seller_cannot_activate_a_draft_product(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 2, 'status' => 'draft']);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Canvas Tote',
+            'sku' => 'TOTE-001',
+            'price' => '299.00',
+            'stock_quantity' => 2,
+            'status' => 'active',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'draft']);
     }
 
     public function test_owner_can_render_the_edit_product_form(): void
@@ -185,6 +321,52 @@ class SellerProductTest extends TestCase
         ])->assertSessionHasErrors('compare_at_price');
     }
 
+    public function test_product_creation_rejects_prices_with_more_than_two_decimal_places(): void
+    {
+        [$owner] = $this->seller();
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Precision product',
+            'sku' => 'PRECISION-001',
+            'price' => '299.009',
+            'compare_at_price' => '399.009',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ])->assertSessionHasErrors(['price', 'compare_at_price']);
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
+    public function test_product_update_rejects_prices_with_more_than_two_decimal_places(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Precision product',
+            'slug' => 'precision-product',
+            'sku' => 'PRECISION-001',
+            'price' => '299.00',
+            'compare_at_price' => '399.00',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Precision product',
+            'sku' => 'PRECISION-001',
+            'price' => '349.009',
+            'compare_at_price' => '449.009',
+            'stock_quantity' => 1,
+            'status' => 'draft',
+        ])->assertSessionHasErrors(['price', 'compare_at_price']);
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'price' => '299.00',
+            'compare_at_price' => '399.00',
+        ]);
+    }
+
     public function test_seller_cannot_update_another_tenants_product(): void
     {
         [$owner] = $this->seller();
@@ -196,6 +378,67 @@ class SellerProductTest extends TestCase
         ])->assertForbidden();
 
         $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Private Item']);
+    }
+
+    public function test_owner_can_deactivate_selected_active_products_from_their_store(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $products = collect(['Canvas Tote', 'Leather Wallet'])->map(fn (string $name): Product => $store->products()->create([
+            'tenant_id' => $tenant->id,
+            'name' => $name,
+            'slug' => str()->slug($name),
+            'sku' => str()->upper(str()->slug($name)),
+            'price' => '299.00',
+            'stock_quantity' => 5,
+            'status' => 'active',
+        ]));
+
+        $this->actingAs($owner)->get(route('seller.products.index'))
+            ->assertSee('Deactivate active listings')
+            ->assertSee('name="product_ids[]"', false);
+
+        $this->actingAs($owner)->post(route('seller.products.bulk-deactivate'), [
+            'product_ids' => [...$products->pluck('id')->all(), ...$products->pluck('id')->all()],
+        ])->assertRedirect(route('seller.products.index'))
+            ->assertSessionHas('status', '2 listings were deactivated.');
+
+        $this->assertDatabaseMissing('products', ['id' => $products[0]->id, 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['id' => $products[0]->id, 'status' => 'inactive']);
+        $this->assertDatabaseHas('products', ['id' => $products[1]->id, 'status' => 'inactive']);
+        $this->assertDatabaseCount('audit_logs', 2);
+    }
+
+    public function test_bulk_product_deactivation_rejects_foreign_or_non_active_products_atomically(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $ownedProduct = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 5, 'status' => 'active']);
+        $draftProduct = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Draft Wallet', 'slug' => 'draft-wallet', 'sku' => 'DRAFT-001', 'price' => '199.00', 'stock_quantity' => 5, 'status' => 'draft']);
+        [, $otherTenant, $otherStore] = $this->seller();
+        $foreignProduct = $otherStore->products()->create(['tenant_id' => $otherTenant->id, 'name' => 'Private Item', 'slug' => 'private-item', 'sku' => 'PRIVATE-001', 'price' => '199.00', 'stock_quantity' => 5, 'status' => 'active']);
+
+        $this->actingAs($owner)->post(route('seller.products.bulk-deactivate'), [
+            'product_ids' => [$ownedProduct->id, $foreignProduct->id],
+        ])->assertSessionHasErrors('product_ids');
+
+        $this->actingAs($owner)->post(route('seller.products.bulk-deactivate'), [
+            'product_ids' => [$ownedProduct->id, $draftProduct->id],
+        ])->assertSessionHasErrors('product_ids');
+
+        $this->assertDatabaseHas('products', ['id' => $ownedProduct->id, 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['id' => $draftProduct->id, 'status' => 'draft']);
+        $this->assertDatabaseHas('products', ['id' => $foreignProduct->id, 'status' => 'active']);
+        $this->assertDatabaseCount('audit_logs', 0);
+    }
+
+    public function test_staff_cannot_deactivate_listings_in_bulk(): void
+    {
+        [, $tenant] = $this->seller();
+        $staff = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $staff->id, 'role' => 'staff']);
+
+        $this->actingAs($staff)->post(route('seller.products.bulk-deactivate'), [
+            'product_ids' => ['01J00000000000000000000000'],
+        ])->assertForbidden();
     }
 
     private function seller(): array

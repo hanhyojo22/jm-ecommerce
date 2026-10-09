@@ -6,8 +6,10 @@ use App\Http\Requests\StoreSellerApplicationRequest;
 use App\Models\AuditLog;
 use App\Models\SellerApplication;
 use App\Models\Store;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 
 class SellerApplicationController extends Controller
 {
@@ -49,39 +51,41 @@ class SellerApplicationController extends Controller
 
     public function store(StoreSellerApplicationRequest $request): RedirectResponse
     {
-        $user = $request->user();
+        return DB::transaction(function () use ($request): RedirectResponse {
+            $user = User::query()->lockForUpdate()->findOrFail($request->user()->id);
 
-        if ($user->sellerTenant() !== null) {
-            return to_route('seller.dashboard');
-        }
+            if ($user->sellerTenant() !== null) {
+                return to_route('seller.dashboard');
+            }
 
-        if ($user->tenantMemberships()->exists()) {
-            return to_route('seller-application.create');
-        }
+            if ($user->tenantMemberships()->exists()) {
+                return to_route('seller-application.create');
+            }
 
-        if ($user->sellerApplications()->where('status', 'pending')->exists()) {
-            return back()->withErrors(['application' => 'Your seller application is still under review.']);
-        }
+            if ($user->sellerApplications()->where('status', 'pending')->exists()) {
+                return back()->withErrors(['application' => 'Your seller application is still under review.']);
+            }
 
-        $application = $user->sellerApplications()
-            ->whereIn('status', ['draft', 'rejected'])
-            ->latest()
-            ->first() ?? new SellerApplication;
+            $application = $user->sellerApplications()
+                ->whereIn('status', ['draft', 'rejected'])
+                ->latest()
+                ->first() ?? new SellerApplication;
 
-        $application->fill($request->validated());
-        $application->status = 'pending';
-        $application->submitted_at = now();
-        $user->sellerApplications()->save($application);
+            $application->fill($request->validated());
+            $application->status = 'pending';
+            $application->submitted_at = now();
+            $user->sellerApplications()->save($application);
 
-        AuditLog::query()->create([
-            'actor_user_id' => $user->id,
-            'action' => 'seller_application.submitted',
-            'entity_type' => SellerApplication::class,
-            'entity_id' => $application->id,
-            'new_values' => ['status' => 'pending'],
-            'ip_address' => $request->ip(),
-        ]);
+            AuditLog::query()->create([
+                'actor_user_id' => $user->id,
+                'action' => 'seller_application.submitted',
+                'entity_type' => SellerApplication::class,
+                'entity_id' => $application->id,
+                'new_values' => ['status' => 'pending'],
+                'ip_address' => $request->ip(),
+            ]);
 
-        return redirect()->route('seller-application.create')->with('status', 'Seller application submitted for review.');
+            return redirect()->route('seller-application.create')->with('status', 'Seller application submitted for review.');
+        });
     }
 }

@@ -4,15 +4,19 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "test:qa": "composer test && npm run test:e2e",
+        "qa:e2e:server": "node tests/e2e/server.js"
     },
     "devDependencies": {
-        "@clerk/clerk-js": "6.16.1",
+        "@axe-core/playwright": "^4.13.0",
+        "@clerk/clerk-js": "^6.38.1",
+        "@playwright/test": "^1.64.0",
         "@tailwindcss/forms": "^0.5.2",
-        "@tailwindcss/vite": "^4.0.0",
         "alpinejs": "^3.4.2",
         "autoprefixer": "^10.4.2",
-        "concurrently": "^10.0.3",
         "laravel-echo": "^2.5.0",
         "laravel-vite-plugin": "^3.1",
         "postcss": "^8.4.31",

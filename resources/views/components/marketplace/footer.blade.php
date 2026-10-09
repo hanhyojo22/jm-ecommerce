@@ -71,6 +71,6 @@
         @if (! auth()->check() || auth()->user()->account_type === 'buyer')
             <a href="{{ auth()->check() ? route('cart.index') : route('login', ['redirect' => '/cart']) }}" class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] text-muted"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Cart</a>
         @endif
-        <a href="{{ auth()->check() ? route('profile.edit') : route('login', ['redirect' => '/profile']) }}" class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] text-muted"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Account</a>
+        <a href="{{ auth()->check() ? route('profile.edit') : route('login') }}" class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] text-muted"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Account</a>
     </nav>
 @endif

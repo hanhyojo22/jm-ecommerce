@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\SendConversationMessage;
 use App\Events\ConversationReceiptUpdated;
 use App\Events\MessageSent;
+use App\Events\TypingStatusChanged;
 use App\Livewire\Chat\Inbox;
 use App\Livewire\Chat\Thread;
 use App\Models\Conversation;
@@ -40,6 +41,24 @@ class ConversationTest extends TestCase
         $this->assertDatabaseHas('conversations', ['buyer_id' => $buyer->id, 'product_id' => $product->id, 'store_id' => $product->store_id]);
     }
 
+    public function test_product_conversation_start_is_rate_limited(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $product = $this->product();
+
+        for ($index = 0; $index < 10; $index++) {
+            $this->actingAs($buyer)
+                ->post(route('messages.products.start', $product))
+                ->assertRedirect();
+        }
+
+        $this->actingAs($buyer)
+            ->post(route('messages.products.start', $product))
+            ->assertTooManyRequests();
+
+        $this->assertDatabaseCount('conversations', 1);
+    }
+
     public function test_buyer_cannot_view_another_buyers_conversation(): void
     {
         $buyer = User::factory()->create(['email_verified_at' => now()]);
@@ -55,6 +74,53 @@ class ConversationTest extends TestCase
         $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
 
         $this->actingAs($admin)->get(route('messages.index'))->assertForbidden();
+    }
+
+    public function test_verified_buyer_can_open_the_messages_inbox_page(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($buyer)
+            ->get(route('messages.index'))
+            ->assertSee('Contact stores about products and orders.');
+    }
+
+    public function test_seller_can_open_the_messages_inbox_page(): void
+    {
+        $product = $this->product();
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'staff']);
+
+        $this->actingAs($seller)
+            ->get(route('messages.index'))
+            ->assertSee('Respond to customers about your products and orders.');
+    }
+
+    public function test_buyer_can_open_a_conversation_page(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($buyer)
+            ->get(route('messages.show', $conversation))
+            ->assertOk()
+            ->assertSee('data-conversation-thread')
+            ->assertSee('wire:input.debounce.500ms="startTyping"', false);
+    }
+
+    public function test_seller_can_open_a_conversation_page(): void
+    {
+        $product = $this->product();
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'staff']);
+        $buyer = User::factory()->create();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($seller)
+            ->get(route('messages.show', $conversation))
+            ->assertOk()
+            ->assertSee('data-conversation-thread');
     }
 
     public function test_buyer_inbox_exposes_presence_channels_only_for_visible_conversations(): void
@@ -179,6 +245,22 @@ class ConversationTest extends TestCase
         ]);
         Event::assertDispatched(ConversationReceiptUpdated::class, fn (ConversationReceiptUpdated $event): bool => $event->event === 'message.delivered');
         Event::assertDispatched(ConversationReceiptUpdated::class, fn (ConversationReceiptUpdated $event): bool => $event->event === 'message.read');
+    }
+
+    public function test_a_conversation_participant_can_broadcast_a_typing_start(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        Event::fake([TypingStatusChanged::class]);
+
+        Livewire::actingAs($buyer)
+            ->test(Thread::class, ['conversation' => $conversation])
+            ->call('startTyping')
+            ->assertHasNoErrors();
+
+        Event::assertDispatched(TypingStatusChanged::class, fn (TypingStatusChanged $event): bool => $event->conversationId === $conversation->id && $event->userId === $buyer->id && $event->typing,
+        );
     }
 
     public function test_mark_read_rechecks_conversation_access(): void

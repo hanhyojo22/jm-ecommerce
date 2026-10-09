@@ -6,10 +6,17 @@
             step: 1,
             placing: false,
             errors: {},
+            scrollBehavior() {
+                return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+            },
             go(n) {
                 if (n > this.step && !this.validate(this.step)) { return; }
                 this.step = n;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                this.$nextTick(() => {
+                    const heading = document.getElementById(`step-${n}-heading`);
+                    heading?.focus();
+                    heading?.scrollIntoView({ behavior: this.scrollBehavior(), block: 'start' });
+                });
             },
             validate(n) {
                 this.errors = {};
@@ -25,7 +32,7 @@
                     if (Object.keys(this.errors).length) {
                         const firstKey = Object.keys(this.errors)[0];
                         const first = document.getElementById(firstKey);
-                        if (first) { first.focus(); }
+                        if (first && this.step === n) { first.focus(); }
                         return false;
                     }
                 }
@@ -36,7 +43,7 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <a href="{{ route('cart.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">← Back to cart</a>
                     <span class="text-line" aria-hidden="true">/</span>
-                    <h1 class="text-2xl font-bold tracking-[-0.03em] text-ink">Secure checkout</h1>
+                    <h1 class="customer-page-title text-2xl font-bold tracking-[-0.03em] text-ink">Secure checkout</h1>
                 </div>
                 <p class="text-xs font-medium text-muted">Cash on delivery · Free shipping</p>
             </div>
@@ -51,16 +58,16 @@
             </ol>
 
             <div class="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-                <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="if (step !== 4) { $event.preventDefault(); go(step + 1); } else if (!validate(1)) { $event.preventDefault(); step = 1; window.scrollTo({ top: 0, behavior: 'smooth' }); } else { placing = true; }" class="min-w-0">
+                <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="if (step !== 4) { $event.preventDefault(); go(step + 1); } else if (!validate(1)) { $event.preventDefault(); step = 1; $nextTick(() => { const first = document.getElementById(Object.keys(errors)[0]); first?.focus(); first?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' }); }); } else { placing = true; }" class="min-w-0">
                     @csrf
 
                     @if ($errors->has('cart'))
-                        <div class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
+                        <div class="mb-5 rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
                     @endif
 
                     {{-- Step 1: Shipping --}}
-                    <section x-show="step === 1" class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-shipping" data-od-id="ship">
-                        <h3 id="step-shipping" class="text-lg font-semibold text-ink">1 · Shipping address</h3>
+                    <section x-show="step === 1" class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-1-heading" data-od-id="ship">
+                        <h3 id="step-1-heading" tabindex="-1" class="text-lg font-semibold text-ink">1 · Shipping address</h3>
                         <p class="mt-1 text-sm leading-6 text-muted">Enter the address where your order should be delivered.</p>
                         <div class="mt-6 grid gap-5 sm:grid-cols-2">
                             <div class="sm:col-span-2">
@@ -94,8 +101,8 @@
                     </section>
 
                     {{-- Step 2: Delivery (grouped by seller) --}}
-                    <section x-show="step === 2" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-delivery">
-                        <h3 id="step-delivery" class="text-lg font-semibold text-ink">2 · Delivery options</h3>
+                    <section x-show="step === 2" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-2-heading">
+                        <h3 id="step-2-heading" tabindex="-1" class="text-lg font-semibold text-ink">2 · Delivery options</h3>
                         <p class="mt-1 text-sm leading-6 text-muted">Each seller ships their items separately. Standard delivery is free.</p>
                         <div class="mt-6 space-y-5">
                             @foreach ($itemsByStore as $storeItems)
@@ -117,8 +124,8 @@
                     </section>
 
                     {{-- Step 3: Payment --}}
-                    <section x-show="step === 3" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-payment">
-                        <h3 id="step-payment" class="text-lg font-semibold text-ink">3 · Payment method</h3>
+                    <section x-show="step === 3" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-3-heading">
+                        <h3 id="step-3-heading" tabindex="-1" class="text-lg font-semibold text-ink">3 · Payment method</h3>
                         <p class="mt-1 text-sm leading-6 text-muted">Pay the delivery rider when your order arrives.</p>
                         <div class="mt-6 grid gap-3">
                             <label class="flex min-h-14 cursor-pointer items-center gap-3 rounded-[10px] border border-brand bg-blue-50/50 px-4 ring-1 ring-inset ring-brand/20">
@@ -134,8 +141,8 @@
                     </section>
 
                     {{-- Step 4: Review --}}
-                    <section x-show="step === 4" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-review">
-                        <h3 id="step-review" class="text-lg font-semibold text-ink">4 · Review &amp; place order</h3>
+                    <section x-show="step === 4" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-4-heading">
+                        <h3 id="step-4-heading" tabindex="-1" class="text-lg font-semibold text-ink">4 · Review &amp; place order</h3>
                         <p class="mt-1 text-sm leading-6 text-muted">Check your items and delivery details before placing the order.</p>
                         <div class="mt-6 space-y-5">
                             @foreach ($itemsByStore as $storeItems)

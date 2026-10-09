@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Throwable;
 
+#[Title('Conversation · JMMart')]
 class Thread extends Component
 {
     private const INITIAL_MESSAGE_LIMIT = 50;
@@ -94,24 +96,20 @@ class Thread extends Component
         $this->body = $reply;
     }
 
-    public function updateTypingStatus(bool $typing): void
+    public function startTyping(): void
     {
         Gate::authorize('send', $this->conversation);
         $user = auth()->user();
         $key = 'chat:typing:'.$this->conversation->id.':'.$user->id;
 
         try {
-            if ($typing) {
-                Cache::store('redis')->put($key, true, now()->addSeconds(5));
-            } else {
-                Cache::store('redis')->forget($key);
-            }
+            Cache::store('redis')->put($key, true, now()->addSeconds(5));
         } catch (Throwable $exception) {
             Log::warning('Chat typing state is unavailable.', ['conversation_id' => $this->conversation->id, 'user_id' => $user->id, 'exception' => $exception::class]);
         }
 
         $eventKey = 'conversation-typing:'.$this->conversation->id.':'.$user->id;
-        if (RateLimiter::attempt($eventKey, 1, fn () => TypingStatusChanged::dispatch($this->conversation->id, $user->id, $typing), 2)) {
+        if (RateLimiter::attempt($eventKey, 1, fn () => TypingStatusChanged::dispatch($this->conversation->id, $user->id, true), 2)) {
             return;
         }
     }

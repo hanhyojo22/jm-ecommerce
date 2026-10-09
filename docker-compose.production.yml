@@ -50,6 +50,7 @@ services:
 
   queue:
     image: ${APP_IMAGE:-jmmart:latest}
+    user: www-data
     env_file: ${ENV_FILE:-.env.production}
     command: php artisan queue:work redis --tries=3 --max-time=3600 --sleep=3
     volumes:
@@ -64,6 +65,7 @@ services:
 
   scheduler:
     image: ${APP_IMAGE:-jmmart:latest}
+    user: www-data
     env_file: ${ENV_FILE:-.env.production}
     command: php artisan schedule:work
     volumes:
@@ -77,6 +79,7 @@ services:
 
   reverb:
     image: ${APP_IMAGE:-jmmart:latest}
+    user: www-data
     env_file: ${ENV_FILE:-.env.production}
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
     volumes:

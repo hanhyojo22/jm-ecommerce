@@ -25,6 +25,10 @@ class ApproveSellerApplication
 
             $seller = User::query()->lockForUpdate()->findOrFail($application->user_id);
 
+            if (! $seller->is_active || ! $seller->hasVerifiedClerkEmail()) {
+                throw new LogicException('Only active sellers with a verified Clerk email can be approved.');
+            }
+
             if ($seller->tenantMemberships()->exists()) {
                 throw new LogicException('This seller already has a store.');
             }

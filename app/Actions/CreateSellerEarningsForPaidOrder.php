@@ -11,6 +11,7 @@ class CreateSellerEarningsForPaidOrder
     public function handle(Order $order): void
     {
         $order->sellerOrders()
+            ->where('status', 'delivered')
             ->orderBy('id')
             ->lockForUpdate()
             ->get()

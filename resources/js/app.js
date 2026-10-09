@@ -26,6 +26,81 @@ const clerkPublishableKey = document.querySelector('meta[name="clerk-publishable
 const clerkComponents = document.querySelectorAll('[data-clerk-component]');
 const clerkSignOutControls = document.querySelectorAll('[data-clerk-sign-out]');
 const clerkHandoff = document.querySelector('[data-clerk-session-handoff]');
+const clerkSessionRefreshEndpoint = document.querySelector('meta[name="clerk-session-refresh-endpoint"]')?.content;
+const clerkSessionRefreshForms = document.querySelectorAll('form[data-clerk-session-refresh]');
+
+const sellerDashboard = document.querySelector('[data-seller-dashboard]');
+
+if (sellerDashboard) {
+    const dashboardKey = `seller-dashboard:${sellerDashboard.dataset.dashboardKey}`;
+    const dashboardSections = [...sellerDashboard.querySelectorAll('[data-dashboard-section]')];
+    const dashboardToggles = [...sellerDashboard.querySelectorAll('[data-dashboard-toggle]')];
+    let dashboardPreferences = {};
+
+    try {
+        const savedPreferences = JSON.parse(window.localStorage.getItem(dashboardKey) || '{}');
+        dashboardPreferences = savedPreferences && typeof savedPreferences === 'object' && !Array.isArray(savedPreferences)
+            ? savedPreferences
+            : {};
+    } catch {
+        dashboardPreferences = {};
+    }
+
+    const showDashboardSection = (name, visible) => {
+        const section = dashboardSections.find((item) => item.dataset.dashboardSection === name);
+        const toggle = dashboardToggles.find((item) => item.dataset.dashboardToggle === name);
+
+        if (section) {
+            section.hidden = !visible;
+        }
+
+        if (toggle) {
+            toggle.checked = visible;
+        }
+    };
+
+    dashboardToggles.forEach((toggle) => {
+        const savedVisibility = dashboardPreferences[toggle.dataset.dashboardToggle];
+        showDashboardSection(toggle.dataset.dashboardToggle, typeof savedVisibility === 'boolean' ? savedVisibility : true);
+
+        toggle.addEventListener('change', () => {
+            dashboardPreferences[toggle.dataset.dashboardToggle] = toggle.checked;
+            showDashboardSection(toggle.dataset.dashboardToggle, toggle.checked);
+
+            try {
+                window.localStorage.setItem(dashboardKey, JSON.stringify(dashboardPreferences));
+            } catch {
+                // Keep the current page's preference when browser storage is unavailable.
+            }
+        });
+    });
+
+    sellerDashboard.querySelector('[data-dashboard-reset]')?.addEventListener('click', () => {
+        dashboardPreferences = {};
+        dashboardToggles.forEach((toggle) => showDashboardSection(toggle.dataset.dashboardToggle, true));
+
+        try {
+            window.localStorage.removeItem(dashboardKey);
+        } catch {
+            // Defaults are restored for this page even when browser storage is unavailable.
+        }
+    });
+}
+
+document.querySelectorAll('form[data-confirm-message]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        if (![...form.elements].some((element) => element.type === 'checkbox' && element.checked)) {
+            event.preventDefault();
+            window.alert('Select at least one item first.');
+
+            return;
+        }
+
+        if (!window.confirm(form.dataset.confirmMessage)) {
+            event.preventDefault();
+        }
+    });
+});
 
 const clerkComponentAppearance = {
     variables: {
@@ -33,8 +108,11 @@ const clerkComponentAppearance = {
         colorForeground: '#0f172a',
         colorBackground: '#ffffff',
         colorBorder: '#e2e8f0',
-        borderRadius: '0.75rem',
+        borderRadius: '10px',
         fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+    },
+    options: {
+        elevation: 'flush',
     },
     elements: {
         rootBox: {
@@ -52,6 +130,14 @@ const clerkComponentAppearance = {
             maxWidth: '100%',
             minWidth: '0',
         },
+    },
+};
+
+const clerkAuthAppearance = {
+    ...clerkComponentAppearance,
+    elements: {
+        ...clerkComponentAppearance.elements,
+        header: { display: 'none' },
     },
 };
 
@@ -87,7 +173,7 @@ const renderClerkHandoffError = (message = 'We could not finish signing you in.'
     description.className = 'text-sm text-slate-600';
     description.textContent = 'Please return to sign in and try again.';
     signInLink.className = 'inline-flex min-h-11 items-center justify-center rounded-[10px] bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700';
-    signInLink.href = '/sign-in';
+    signInLink.href = clerkHandoff.dataset.signInUrl || '/sign-in';
     signInLink.textContent = 'Return to sign in';
 
     clerkHandoff.setAttribute('role', 'alert');
@@ -109,6 +195,8 @@ const completeClerkHandoff = async (clerk) => {
     if (!sessionToken) {
         throw new Error('Clerk did not provide a session token for the sign-in handoff.');
     }
+
+    rememberClerkSessionDeadline(sessionToken);
 
     const response = await fetch(clerkHandoff.dataset.sessionEndpoint, {
         method: 'POST',
@@ -154,81 +242,387 @@ const clerkDomainFromPublishableKey = (publishableKey) => {
     return url.hostname ? url.host : null;
 };
 
-if (clerkComponents.length > 0 || clerkSignOutControls.length > 0 || clerkHandoff) {
-if (!clerkPublishableKey) {
-    renderClerkComponentError('Authentication settings are unavailable. Please refresh the page or try again later.');
-    renderClerkHandoffError();
-} else {
+let clerkLoadPromise;
+
+const loadClerk = () => {
+    if (window.clerk) {
+        return Promise.resolve(window.clerk);
+    }
+
+    if (clerkLoadPromise) {
+        return clerkLoadPromise;
+    }
+
+    if (!clerkPublishableKey) {
+        return Promise.reject(new Error('Clerk authentication settings are unavailable.'));
+    }
+
     let clerkDomain;
 
     try {
         clerkDomain = clerkDomainFromPublishableKey(clerkPublishableKey);
     } catch (error) {
-        console.error(error);
+        return Promise.reject(error);
     }
 
     if (!clerkDomain) {
-        renderClerkComponentError('Authentication settings are unavailable. Please refresh the page or try again later.');
-        renderClerkHandoffError();
+        return Promise.reject(new Error('Clerk authentication settings are unavailable.'));
     }
 
-    if (clerkDomain) {
-        const clerkUiScript = document.createElement('script');
+    const clerkUiScript = document.createElement('script');
+    clerkUiScript.src = `https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`;
+    clerkUiScript.async = true;
+    clerkUiScript.crossOrigin = 'anonymous';
 
-        clerkUiScript.src = `https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`;
-        clerkUiScript.async = true;
-        clerkUiScript.crossOrigin = 'anonymous';
+    clerkLoadPromise = new Promise((resolve, reject) => {
+        clerkUiScript.onload = resolve;
+        clerkUiScript.onerror = () => reject(new Error('Unable to load Clerk authentication UI.'));
+        document.head.appendChild(clerkUiScript);
+    }).then(async () => {
+        const { Clerk } = await import('@clerk/clerk-js');
+        const clerk = new Clerk(clerkPublishableKey);
 
-        new Promise((resolve, reject) => {
-            clerkUiScript.onload = resolve;
-            clerkUiScript.onerror = () => reject(new Error('Unable to load Clerk authentication UI.'));
-            document.head.appendChild(clerkUiScript);
-        }).then(async () => {
-            const { Clerk } = await import('@clerk/clerk-js');
-            const clerk = new Clerk(clerkPublishableKey);
-            window.clerk = clerk;
+        await clerk.load({
+            afterSignOutUrl: '/',
+            signInUrl: document.querySelector('meta[name="clerk-sign-in-url"]')?.content,
+            signUpUrl: document.querySelector('meta[name="clerk-sign-up-url"]')?.content,
+            ui: { ClerkUI: window.__internal_ClerkUICtor },
+        });
 
-            await clerk.load({
-                afterSignOutUrl: '/',
-                signInUrl: document.querySelector('meta[name="clerk-sign-in-url"]')?.content,
-                signUpUrl: document.querySelector('meta[name="clerk-sign-up-url"]')?.content,
-                ui: { ClerkUI: window.__internal_ClerkUICtor },
-            });
+        window.clerk = clerk;
 
+        return clerk;
+    });
+
+    return clerkLoadPromise;
+};
+
+/*
+ * Clerk session tokens are valid for about 60 seconds and the backend cookie is minted to
+ * match, so a protected page opened after that window carries no verifiable credential and
+ * Laravel refuses it. The deadline below only decides *when to ask Clerk for another token*;
+ * it is never proof of identity. The server verifies every request on its own.
+ */
+const clerkSessionDeadlineKey = 'clerk_session_expires_at';
+const clerkSessionRefreshLeeway = 15_000;
+
+const clerkSessionExpiryFromToken = (token) => {
+    const payload = token.split('.')[1];
+
+    if (!payload) {
+        return null;
+    }
+
+    try {
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
+        const exp = JSON.parse(atob(base64)).exp;
+
+        return typeof exp === 'number' ? exp * 1000 : null;
+    } catch {
+        return null;
+    }
+};
+
+const readClerkSessionToken = () => document.cookie
+    .split('; ')
+    .find((entry) => entry.startsWith('__session='))
+    ?.slice('__session='.length) || null;
+
+/*
+ * The browser deletes the cookie the moment it lapses, so the cookie on its own cannot tell a
+ * fresh session from one that has already gone. The remembered deadline is what still answers
+ * that question once the cookie is gone.
+ */
+const clerkSessionDeadline = () => {
+    const remembered = Number(window.localStorage.getItem(clerkSessionDeadlineKey));
+    const fromCookie = clerkSessionExpiryFromToken(readClerkSessionToken() ?? '');
+
+    return Math.max(Number.isFinite(remembered) ? remembered : 0, fromCookie ?? 0) || null;
+};
+
+const rememberClerkSessionDeadline = (token) => {
+    const expiresAt = clerkSessionExpiryFromToken(token);
+
+    if (!expiresAt) {
+        return;
+    }
+
+    try {
+        window.localStorage.setItem(clerkSessionDeadlineKey, String(expiresAt));
+    } catch {
+        // Without storage the cookie's own expiry is still read on the next page.
+    }
+};
+
+const forgetClerkSessionDeadline = () => {
+    try {
+        window.localStorage.removeItem(clerkSessionDeadlineKey);
+    } catch {
+        // There is nothing to forget when storage is unavailable.
+    }
+};
+
+const clerkSessionNeedsRefresh = () => {
+    const deadline = clerkSessionDeadline();
+
+    // A signed-in visitor whose deadline cannot be measured refreshes rather than guess.
+    return deadline === null || deadline - Date.now() <= clerkSessionRefreshLeeway;
+};
+
+const refreshClerkSession = async (endpoint) => {
+    const clerk = await loadClerk();
+    const sessionToken = await clerk.session?.getToken();
+
+    if (!sessionToken) {
+        throw new Error('Clerk did not provide a session token for the navigation request.');
+    }
+
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${sessionToken}`,
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Laravel rejected the Clerk session refresh (${response.status}).`);
+    }
+
+    rememberClerkSessionDeadline(sessionToken);
+};
+
+/*
+ * Navigation renews the session before it opens a page, rather than each link opting in and
+ * remembering to. A session that is still fresh costs no extra request at all, so only the
+ * links that would actually be refused pay for a refresh.
+ */
+document.addEventListener('click', (event) => {
+    if (!clerkSessionRefreshEndpoint || !clerkSessionNeedsRefresh()) {
+        return;
+    }
+
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+
+    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+    }
+
+    if (link.hasAttribute('download') || (link.target && link.target !== '_self')) {
+        return;
+    }
+
+    const href = link.getAttribute('href');
+
+    if (!href || href.startsWith('#') || /^(?:mailto|tel|sms):/i.test(href)) {
+        return;
+    }
+
+    let destination;
+
+    try {
+        destination = new URL(link.href, window.location.href);
+    } catch {
+        return;
+    }
+
+    if (destination.origin !== window.location.origin) {
+        return;
+    }
+
+    event.preventDefault();
+    link.setAttribute('aria-busy', 'true');
+
+    refreshClerkSession(clerkSessionRefreshEndpoint)
+        .then(() => {
+            window.location.assign(destination.href);
+        })
+        .catch((error) => {
+            console.error(error);
+            forgetClerkSessionDeadline();
+            window.location.assign(`/sign-in?redirect=${encodeURIComponent(destination.pathname + destination.search)}`);
+        });
+});
+
+clerkSessionRefreshForms.forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+        if (form.dataset.clerkSessionRefreshed === 'true') {
+            delete form.dataset.clerkSessionRefreshed;
+
+            return;
+        }
+
+        if (!form.dataset.clerkSessionRefresh || !clerkSessionNeedsRefresh()) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (form.dataset.clerkSessionRefreshing === 'true') {
+            return;
+        }
+
+        form.dataset.clerkSessionRefreshing = 'true';
+
+        try {
+            await refreshClerkSession(form.dataset.clerkSessionRefresh);
+            form.dataset.clerkSessionRefreshed = 'true';
+            delete form.dataset.clerkSessionRefreshing;
+            if (event.submitter) {
+                form.requestSubmit(event.submitter);
+            } else {
+                form.requestSubmit();
+            }
+        } catch (error) {
+            delete form.dataset.clerkSessionRefreshing;
+            console.error(error);
+
+            const message = document.createElement('p');
+            message.className = 'mt-3 text-sm font-semibold text-danger';
+            message.setAttribute('role', 'alert');
+            message.textContent = 'Your session could not be refreshed. Please refresh the page and try again.';
+            form.prepend(message);
+        }
+    });
+});
+
+const signOut = async () => {
+    try {
+        const clerk = await loadClerk();
+        await clerk.signOut();
+        forgetClerkSessionDeadline();
+        window.location.assign('/');
+    } catch (error) {
+        console.error(error);
+        window.alert('Unable to sign out. Please try again.');
+    }
+};
+
+clerkSignOutControls.forEach((button) => {
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        signOut();
+    });
+});
+
+document.querySelectorAll('form[action$="/sign-out"]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        signOut();
+    });
+});
+
+const sellerHelpSearch = document.querySelector('[data-seller-help-search]');
+const storeLogoInput = document.querySelector('input[name="logo"]');
+const removeStoreLogoInput = document.querySelector('input[name="remove_logo"]');
+
+storeLogoInput?.addEventListener('change', () => {
+    if (storeLogoInput.files.length > 0 && removeStoreLogoInput) {
+        removeStoreLogoInput.checked = false;
+    }
+});
+
+removeStoreLogoInput?.addEventListener('change', () => {
+    if (removeStoreLogoInput.checked && storeLogoInput) {
+        storeLogoInput.value = '';
+    }
+});
+
+if (sellerHelpSearch) {
+    const sellerHelpItems = [...document.querySelectorAll('[data-seller-help-item]')];
+    const sellerHelpEmpty = document.querySelector('[data-seller-help-empty]');
+
+    sellerHelpSearch.addEventListener('input', () => {
+        const query = sellerHelpSearch.value.trim().toLocaleLowerCase();
+        let visibleItems = 0;
+
+        sellerHelpItems.forEach((item) => {
+            const matches = item.textContent.toLocaleLowerCase().includes(query);
+            item.hidden = !matches;
+            visibleItems += Number(matches);
+        });
+
+        sellerHelpEmpty?.classList.toggle('hidden', visibleItems > 0);
+    });
+}
+
+if (document.querySelector('[data-seller-shortcut="search"]')) {
+    document.addEventListener('keydown', (event) => {
+        const target = event.target;
+
+        if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey
+            || target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea, select, [role="textbox"]'))
+            || document.querySelector('dialog[open]')) {
+            return;
+        }
+
+        if (event.key === '?') {
+            const guide = document.querySelector('[data-seller-guide]');
+            const helpSearch = document.querySelector('[data-seller-help-search]');
+
+            if (guide && helpSearch) {
+                event.preventDefault();
+                if (guide.hidden) {
+                    guide.hidden = false;
+                    const helpToggle = sellerDashboard?.querySelector('[data-dashboard-toggle="help"]');
+                    if (helpToggle) {
+                        helpToggle.checked = true;
+                        helpToggle.dispatchEvent(new Event('change'));
+                    }
+                }
+                guide.open = true;
+                helpSearch.focus();
+            }
+
+            return;
+        }
+
+        const shortcuts = { s: 'search', n: 'new-product', o: 'orders' };
+        const shortcut = shortcuts[event.key.toLocaleLowerCase()];
+
+        if (!shortcut) {
+            return;
+        }
+
+        const element = [...document.querySelectorAll(`[data-seller-shortcut="${shortcut}"]`)]
+            .find((candidate) => candidate.getClientRects().length > 0);
+
+        if (!element) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (shortcut === 'search') {
+            element.focus();
+        } else {
+            element.click();
+        }
+    });
+}
+
+if (clerkComponents.length > 0 || clerkHandoff) {
+    if (!clerkPublishableKey) {
+        renderClerkComponentError('Authentication settings are unavailable. Please refresh the page or try again later.');
+        renderClerkHandoffError();
+    } else {
+        loadClerk().then(async (clerk) => {
             await completeClerkHandoff(clerk);
             window.dispatchEvent(new Event('clerk:loaded'));
-            const signOut = async () => {
-                try {
-                    await clerk.signOut();
-                    window.location.assign('/');
-                } catch (error) {
-                    console.error(error);
-                    window.alert('Unable to sign out. Please try again.');
-                }
-            };
-
-            document.querySelectorAll('[data-clerk-sign-out]').forEach((button) => {
-                button.addEventListener('click', signOut);
-            });
-
-            document.querySelectorAll('form[action$="/sign-out"]').forEach((form) => {
-                form.addEventListener('submit', (event) => {
-                    event.preventDefault();
-                    signOut();
-                });
-            });
 
             document.querySelectorAll('[data-clerk-component="sign-in"]').forEach((element) => {
                 clerk.mountSignIn(element, {
                     forceRedirectUrl: element.dataset.afterAuthUrl,
-                    appearance: clerkComponentAppearance,
+                    appearance: clerkAuthAppearance,
                 });
             });
 
             document.querySelectorAll('[data-clerk-component="sign-up"]').forEach((element) => {
                 clerk.mountSignUp(element, {
                     forceRedirectUrl: element.dataset.afterAuthUrl,
-                    appearance: clerkComponentAppearance,
+                    appearance: clerkAuthAppearance,
                 });
             });
 
@@ -252,5 +646,4 @@ if (!clerkPublishableKey) {
             renderClerkHandoffError();
         });
     }
-}
 }

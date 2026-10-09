@@ -37,6 +37,10 @@ class RecordSellerPayout
                 '0.00',
             );
 
+            if (bccomp($amount, '9999999999.99', 2) > 0) {
+                throw new LogicException('The payout amount exceeds the maximum supported amount.');
+            }
+
             $payout = SellerPayout::query()->create([
                 'tenant_id' => $earnings->first()->tenant_id,
                 'store_id' => $earnings->first()->store_id,

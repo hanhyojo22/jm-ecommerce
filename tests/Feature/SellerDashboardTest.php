@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class SellerDashboardTest extends TestCase
@@ -30,7 +31,19 @@ class SellerDashboardTest extends TestCase
             ->assertDontSee('Private Item')
             ->assertSee('No orders yet')
             ->assertSee('Needs your attention')
-            ->assertSee(route('seller.products.create'), false)
+            ->assertSee('Finish store setup')
+            ->assertSee('Search your products by name or SKU')
+            ->assertSee('Search seller help')
+            ->assertSee('data-seller-help-search', false)
+            ->assertSee('Reply to buyer messages')
+            ->assertSee('Update store details')
+            ->assertSee('All time · seller order totals; cancelled orders excluded')
+            ->assertSee('Unique buyers')
+            ->assertSee('Shortcuts: S products · N add product · O orders · ? help')
+            ->assertSee('aria-keyshortcuts="S"', false)
+            ->assertSee('aria-keyshortcuts="N"', false)
+            ->assertSee('aria-keyshortcuts="O"', false)
+            ->assertSee('group-open:rotate-180', false)
             ->assertSee(route('catalog.store', $store->slug), false)
             ->assertSee('target="_blank"', false)
             ->assertSee('View Northwind Goods storefront in a new tab');
@@ -42,6 +55,24 @@ class SellerDashboardTest extends TestCase
 
         $this->actingAs($seller)->get(route('seller.dashboard'))
             ->assertRedirect(route('seller-application.create'));
+    }
+
+    public function test_dashboard_query_failure_offers_a_safe_retry(): void
+    {
+        [$seller] = $this->seller();
+        Schema::drop('seller_orders');
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertServiceUnavailable()
+            ->assertSee('We couldn’t load your overview')
+            ->assertSee('Your listings and orders haven’t been changed.')
+            ->assertSee('Open products')
+            ->assertSee(route('seller.products.index'), false)
+            ->assertSee(route('seller.dashboard'), false)
+            ->assertSee('Try again');
+
+        $this->actingAs($seller)->get(route('seller.products.index'))
+            ->assertOk();
     }
 
     public function test_seller_summary_counts_only_its_own_non_cancelled_sales_and_customers(): void

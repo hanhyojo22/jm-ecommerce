@@ -4,10 +4,12 @@ namespace App\Livewire\Chat;
 
 use App\Models\Conversation;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Title('Messages · JMMart')]
 class Inbox extends Component
 {
     use WithPagination;

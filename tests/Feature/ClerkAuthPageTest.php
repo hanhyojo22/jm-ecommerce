@@ -20,6 +20,19 @@ class ClerkAuthPageTest extends TestCase
         $this->get(route('seller.register'))->assertRedirect('/sign-up?redirect=/start-selling');
     }
 
+    public function test_sign_up_rejects_protocol_relative_redirects(): void
+    {
+        $this->get(route('register', ['redirect' => '//evil.example']))
+            ->assertStatus(422);
+    }
+
+    public function test_sign_in_ignores_malformed_product_add_intents(): void
+    {
+        $this->get(route('login', ['add_to_cart' => ['unexpected']]))
+            ->assertOk()
+            ->assertSessionMissing('pending_cart_addition');
+    }
+
     public function test_legacy_breeze_authentication_pages_are_not_available(): void
     {
         $this->get('/forgot-password')->assertNotFound();

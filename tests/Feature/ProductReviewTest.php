@@ -6,11 +6,15 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Models\ProductReviewPhoto;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class ProductReviewTest extends TestCase
@@ -36,6 +40,57 @@ class ProductReviewTest extends TestCase
         $this->actingAs($otherBuyer)->post(route('reviews.store', $item), ['rating' => 5])->assertForbidden();
 
         $this->assertDatabaseMissing('product_reviews', ['order_item_id' => $item->id]);
+    }
+
+    public function test_review_photo_files_are_removed_when_photo_record_creation_fails(): void
+    {
+        Storage::fake('public');
+        [$buyer, $item] = $this->deliveredOrderItem();
+        ProductReviewPhoto::creating(static function (): void {
+            throw new RuntimeException('Photo record could not be created.');
+        });
+
+        try {
+            $this->withoutExceptionHandling()
+                ->actingAs($buyer)
+                ->post(route('reviews.store', $item), [
+                    'rating' => 5,
+                    'photos' => [UploadedFile::fake()->image('review.jpg')],
+                ]);
+            $this->fail('Expected the photo record failure to be rethrown.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('Photo record could not be created.', $exception->getMessage());
+        } finally {
+            ProductReviewPhoto::flushEventListeners();
+        }
+
+        $this->assertDatabaseMissing('product_reviews', ['order_item_id' => $item->id]);
+        $this->assertSame([], Storage::disk('public')->allFiles('product-reviews'));
+    }
+
+    public function test_review_update_appends_uploaded_photos_in_contiguous_order(): void
+    {
+        Storage::fake('public');
+        [$buyer, $item] = $this->deliveredOrderItem();
+        $review = ProductReview::create([
+            'product_id' => $item->product_id,
+            'order_item_id' => $item->id,
+            'user_id' => $buyer->id,
+            'rating' => 4,
+        ]);
+        $review->photos()->create(['path' => 'product-reviews/original.jpg', 'position' => 0]);
+        Storage::disk('public')->put('product-reviews/original.jpg', 'original');
+
+        $this->actingAs($buyer)->patch(route('reviews.update', $review), [
+            'rating' => 5,
+            'photos' => [
+                UploadedFile::fake()->image('first.jpg'),
+                UploadedFile::fake()->image('second.jpg'),
+            ],
+        ])->assertRedirect();
+
+        $this->assertSame([0, 1, 2], $review->photos()->orderBy('position')->pluck('position')->all());
+        $this->assertCount(3, Storage::disk('public')->allFiles('product-reviews'));
     }
 
     public function test_undelivered_order_item_cannot_be_reviewed(): void

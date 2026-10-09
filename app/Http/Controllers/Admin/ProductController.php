@@ -8,7 +8,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -83,6 +85,33 @@ class ProductController extends Controller
                 ->latest('created_at')
                 ->get(),
         ]);
+    }
+
+    public function moderate(Request $request, Product $product): RedirectResponse
+    {
+        $this->authorizeAdmin($request);
+        $data = $request->validate([
+            'status' => ['required', 'in:active,inactive'],
+            'reason' => ['required', 'string', 'min:10', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use ($request, $product, $data): void {
+            $product = Product::query()->lockForUpdate()->findOrFail($product->id);
+            $oldStatus = $product->status;
+            $product->update(['status' => $data['status']]);
+
+            AuditLog::query()->create([
+                'actor_user_id' => $request->user()->id,
+                'action' => 'product.moderated',
+                'entity_type' => Product::class,
+                'entity_id' => $product->id,
+                'old_values' => ['status' => $oldStatus],
+                'new_values' => ['status' => $data['status'], 'reason' => $data['reason']],
+                'ip_address' => $request->ip(),
+            ]);
+        });
+
+        return to_route('admin.products.show', $product)->with('status', 'Listing moderation decision recorded.');
     }
 
     private function authorizeAdmin(Request $request): void

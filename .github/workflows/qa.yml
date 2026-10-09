@@ -1,0 +1,104 @@
+name: QA Gate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend / PHPUnit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_sqlite, sqlite3
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run PHPUnit with coverage and JUnit reports
+        run: |
+          mkdir -p artifacts
+          vendor/bin/phpunit --coverage-text --coverage-clover=artifacts/phpunit-coverage.xml --log-junit=artifacts/phpunit-junit.xml
+
+      - name: Upload backend QA reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-qa-reports
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+  browser:
+    name: Browser / Playwright
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_AUTH_KEY: local-playwright-key-is-test-only
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: pdo_sqlite, sqlite3
+          tools: composer:v2
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser, accessibility, responsive, and performance checks
+        run: npm run test:e2e
+
+      - name: Upload Playwright reports, screenshots, and traces
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-qa-reports
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+  required-check:
+    name: required-check
+    if: always()
+    needs: [backend, browser]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add QA results to the workflow summary
+        run: |
+          echo "## QA gate" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Suite | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PHPUnit backend | ${{ needs.backend.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Playwright browser | ${{ needs.browser.result }} |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail the required check when a critical suite fails
+        if: needs.backend.result != 'success' || needs.browser.result != 'success'
+        run: exit 1

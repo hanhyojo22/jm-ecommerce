@@ -19,8 +19,8 @@
         </nav>
 
         <div class="mt-5 grid items-start gap-6 lg:grid-cols-[264px_minmax(0,1fr)]">
-            <nav class="rounded-[14px] border border-line bg-surface p-3 lg:sticky lg:top-24" aria-label="Account" data-od-id="account-nav">
-                <div class="grid grid-cols-2 gap-1 lg:grid-cols-1">
+            <nav class="rounded-[14px] border border-line bg-surface p-3 lg:sticky lg:top-24" aria-label="Account" data-od-id="account-nav" data-role-navigation="customer">
+                <div class="grid gap-1">
                     <a href="{{ route('profile.edit') }}" @class([$navItem, 'bg-blue-50 font-semibold text-brand' => $active === 'overview', 'font-medium text-ink hover:bg-canvas' => $active !== 'overview']) @if ($active === 'overview') aria-current="page" @endif>
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" /></svg>
                         Overview
@@ -57,7 +57,7 @@
                 </div>
             </nav>
 
-            <div class="min-w-0">
+            <div class="account-shell-content min-w-0">
                 {{ $slot }}
             </div>
         </div>

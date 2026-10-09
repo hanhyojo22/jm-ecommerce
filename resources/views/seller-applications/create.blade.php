@@ -7,7 +7,7 @@
             </a>
             <span aria-hidden="true" class="text-line">|</span>
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight text-ink">Become a seller</h1>
+                <h1 class="customer-page-title text-2xl font-semibold tracking-tight text-ink">Become a seller</h1>
                 <p class="mt-0.5 text-sm text-muted">No new login — this upgrades your customer account.</p>
             </div>
         </div>

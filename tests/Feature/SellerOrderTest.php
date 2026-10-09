@@ -34,6 +34,16 @@ class SellerOrderTest extends TestCase
             ->assertSee('Payment: Pending');
     }
 
+    public function test_buyer_account_with_a_tenant_membership_cannot_open_seller_orders(): void
+    {
+        [$user] = $this->seller();
+        $user->update(['account_type' => 'buyer']);
+
+        $this->actingAs($user)
+            ->get(route('seller.orders.index'))
+            ->assertForbidden();
+    }
+
     public function test_seller_cannot_view_another_tenants_order_details(): void
     {
         [$seller] = $this->seller();
@@ -43,6 +53,22 @@ class SellerOrderTest extends TestCase
         $this->actingAs($seller)
             ->get(route('seller.orders.show', $otherSellerOrder))
             ->assertNotFound();
+    }
+
+    public function test_seller_cannot_update_another_tenants_order(): void
+    {
+        [$seller] = $this->seller();
+        [, $otherTenant, $otherStore] = $this->seller();
+        $otherSellerOrder = $this->sellerOrder($otherTenant, $otherStore, 'OTHER-1001');
+
+        $this->actingAs($seller)
+            ->patch(route('seller.orders.update', $otherSellerOrder), ['status' => 'confirmed'])
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('seller_orders', [
+            'id' => $otherSellerOrder->id,
+            'status' => 'pending',
+        ]);
     }
 
     public function test_owner_can_process_only_the_next_valid_seller_order_status(): void
@@ -62,6 +88,67 @@ class SellerOrderTest extends TestCase
             ->assertSessionHasErrors(['status']);
 
         $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'confirmed']);
+    }
+
+    public function test_owner_can_confirm_selected_pending_orders_from_their_store(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $orders = collect([
+            $this->sellerOrder($tenant, $store, 'SELLER-1001'),
+            $this->sellerOrder($tenant, $store, 'SELLER-1002'),
+        ]);
+
+        $this->actingAs($seller)->get(route('seller.orders.index'))
+            ->assertSee('Confirm pending orders')
+            ->assertSee('name="seller_order_ids[]"', false);
+
+        $this->actingAs($seller)->post(route('seller.orders.bulk-confirm'), [
+            'seller_order_ids' => [...$orders->pluck('id')->all(), ...$orders->pluck('id')->all()],
+        ])->assertRedirect(route('seller.orders.index'))
+            ->assertSessionHas('status', '2 pending orders were confirmed.');
+
+        foreach ($orders as $sellerOrder) {
+            $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'confirmed']);
+            $this->assertDatabaseHas('orders', ['id' => $sellerOrder->order_id, 'status' => 'confirmed']);
+        }
+
+        $this->assertDatabaseCount('audit_logs', 2);
+    }
+
+    public function test_bulk_order_confirmation_rejects_foreign_or_non_pending_orders_without_partial_updates(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $pendingOrder = $this->sellerOrder($tenant, $store, 'SELLER-1001');
+        $processingOrder = $this->sellerOrder($tenant, $store, 'SELLER-1002', 'processing');
+        [, $otherTenant, $otherStore] = $this->seller();
+        $foreignOrder = $this->sellerOrder($otherTenant, $otherStore, 'OTHER-1001');
+
+        $this->actingAs($seller)->post(route('seller.orders.bulk-confirm'), [
+            'seller_order_ids' => [$pendingOrder->id, $foreignOrder->id],
+        ])->assertSessionHasErrors('seller_order_ids');
+
+        $this->actingAs($seller)->post(route('seller.orders.bulk-confirm'), [
+            'seller_order_ids' => [$pendingOrder->id, $processingOrder->id],
+        ])->assertSessionHasErrors('seller_order_ids');
+
+        $this->assertDatabaseHas('seller_orders', ['id' => $pendingOrder->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('seller_orders', ['id' => $processingOrder->id, 'status' => 'processing']);
+        $this->assertDatabaseHas('seller_orders', ['id' => $foreignOrder->id, 'status' => 'pending']);
+        $this->assertDatabaseCount('audit_logs', 0);
+    }
+
+    public function test_staff_cannot_confirm_orders_in_bulk(): void
+    {
+        [, $tenant, $store] = $this->seller();
+        $staff = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $staff->id, 'role' => 'staff']);
+        $sellerOrder = $this->sellerOrder($tenant, $store, 'SELLER-1001');
+
+        $this->actingAs($staff)->post(route('seller.orders.bulk-confirm'), [
+            'seller_order_ids' => [$sellerOrder->id],
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'pending']);
     }
 
     /**

@@ -34,6 +34,7 @@ COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/entrypoint.sh /usr/local/bin/jmmart-entrypoint
 
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
+    && ln -s ../storage/app/public public/storage \
     && rm -f bootstrap/cache/*.php \
     && php artisan package:discover --ansi \
     && chmod +x /usr/local/bin/jmmart-entrypoint \

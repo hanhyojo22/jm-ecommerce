@@ -8,12 +8,17 @@
         <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
         <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
         <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
+        @auth('clerk')
+            {{-- Only signed-in visitors get one of these: it is what lets navigation renew a lapsed
+                 session cookie before it opens a protected page, and it keeps guests untouched. --}}
+            <meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">
+        @endauth
         <meta name="reverb-app-key" content="{{ config('broadcasting.connections.reverb.key') }}">
         <meta name="reverb-host" content="{{ config('broadcasting.connections.reverb.options.host') }}">
         <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
         <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
 
-        <title>@yield('title', config('app.name', 'Laravel'))</title>
+        <title>@yield('title', isset($title) ? $title : (isset($pageTitle) ? $pageTitle.' · '.config('app.name', 'Laravel') : config('app.name', 'Laravel')))</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,16 +31,14 @@
     <body class="bg-canvas font-sans antialiased text-ink">
         <a href="#main-content" class="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-ink px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Skip to content</a>
         <div class="min-h-screen bg-canvas">
-            @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'messages.*'))
+            @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*', 'messages.*'))
             @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
             @if (request()->routeIs('home'))
                 <x-marketplace.announce-bar />
             @endif
             @if ($isAdminWorkspace)
                 {{-- The admin header belongs to the workspace content column. --}}
-            @elseif ($isSellerWorkspace)
-                <div class="lg:hidden">@include('layouts.navigation')</div>
-            @else
+            @elseif (! $isSellerWorkspace)
                 @include('layouts.navigation')
             @endif
 
@@ -43,7 +46,7 @@
             @if ($isAdminWorkspace)
                 <div class="min-h-screen bg-canvas lg:grid lg:grid-cols-[258px_minmax(0,1fr)]">
                     @include('layouts.admin-sidebar')
-                    <main id="main-content" tabindex="-1" class="min-w-0">
+                    <main id="main-content" tabindex="-1" class="workspace-main min-w-0">
                         <x-marketplace.admin-header :user="auth()->user()" />
                         @isset($header)
                             <header class="px-4 pb-2 pt-6 sm:px-6 lg:px-7 lg:pt-8">
@@ -56,7 +59,8 @@
             @elseif ($isSellerWorkspace)
                 <div class="min-h-screen bg-canvas lg:grid lg:grid-cols-[258px_minmax(0,1fr)]">
                     @include('layouts.seller-sidebar', ['sellerTenant' => auth()->user()?->sellerTenant()])
-                    <main id="main-content" tabindex="-1" class="min-w-0">
+                    <main id="main-content" tabindex="-1" class="workspace-main min-w-0">
+                        @include('layouts.navigation')
                         @isset($header)
                             <header class="px-4 pb-2 pt-6 sm:px-6 lg:px-7 lg:pt-8">
                                 {{ $header }}

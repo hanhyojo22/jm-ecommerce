@@ -41,16 +41,43 @@ class ClerkWebhookTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_a_signed_unverified_email_update_clears_the_local_verification_state(): void
+    {
+        config()->set('services.clerk.webhook_signing_secret', 'whsec_'.base64_encode('test-secret'));
+        $user = User::factory()->create(['clerk_user_id' => 'user_123', 'email_verified_at' => now()]);
+        $payload = json_encode([
+            'type' => 'user.updated',
+            'data' => [
+                'id' => 'user_123',
+                'primary_email_address_id' => 'email_123',
+                'email_addresses' => [[
+                    'id' => 'email_123',
+                    'email_address' => 'new@example.com',
+                    'verification' => ['status' => 'unverified'],
+                ]],
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->postWebhook($payload)->assertOk();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => $user->email,
+            'email_verified_at' => null,
+        ]);
+    }
+
     public function test_a_signed_deletion_deactivates_without_deleting_the_local_user(): void
     {
         config()->set('services.clerk.webhook_signing_secret', 'whsec_'.base64_encode('test-secret'));
-        $user = User::factory()->create(['clerk_user_id' => 'user_123']);
+        $user = User::factory()->create(['clerk_user_id' => 'user_123', 'email_verified_at' => now()]);
         $payload = json_encode(['type' => 'user.deleted', 'data' => ['id' => 'user_123']], JSON_THROW_ON_ERROR);
 
         $this->postWebhook($payload)->assertOk();
 
         $this->assertNotNull($user->fresh());
         $this->assertFalse($user->fresh()->is_active);
+        $this->assertNull($user->fresh()->email_verified_at);
     }
 
     private function postWebhook(string $payload)

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Actions\AddProductToCart;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -31,19 +32,11 @@ class CartController extends Controller
         ]);
     }
 
-    public function store(Request $request, Product $product): RedirectResponse
+    public function store(Request $request, AddProductToCart $addProductToCart, Product $product): RedirectResponse
     {
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:100']]);
-        $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
 
-        $product = Product::query()->with(['store', 'tenant'])->findOrFail($product->id);
-        if ($product->status !== 'active' || $product->store->status !== 'active' || $product->tenant->status !== 'active' || $product->stock_quantity < $data['quantity']) {
-            throw ValidationException::withMessages(['quantity' => 'This product is not currently available in that quantity.']);
-        }
-
-        $item = $cart->items()->firstOrNew(['product_id' => $product->id]);
-        $item->quantity = min($product->stock_quantity, ($item->exists ? $item->quantity : 0) + $data['quantity']);
-        $item->save();
+        $addProductToCart->handle($request->user(), $product, $data['quantity']);
 
         return to_route('cart.index')->with('status', 'Added to your cart.');
     }

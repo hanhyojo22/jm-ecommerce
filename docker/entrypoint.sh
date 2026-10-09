@@ -8,7 +8,9 @@ if [ -z "${APP_KEY:-}" ]; then
 fi
 
 mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs
-chown -R www-data:www-data storage bootstrap/cache
+if [ "$(id -u)" -eq 0 ]; then
+    chown -R www-data:www-data storage bootstrap/cache
+fi
 
 if [ ! -e public/storage ]; then
     php artisan storage:link

@@ -14,17 +14,17 @@
 
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
-            @if (session('status'))<div class="mb-5 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
-            @if ($errors->has('payment'))<div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert"><span>{{ $errors->first('payment') }}</span><a href="{{ route('admin.orders.show', $order) }}" class="font-semibold underline underline-offset-4">Retry</a></div>@endif
+            @if (session('status'))<div class="mb-5 rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
+            @if ($errors->has('payment'))<div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert"><span>{{ $errors->first('payment') }}</span><a href="{{ route('admin.orders.show', $order) }}" class="font-semibold underline underline-offset-4">Retry</a></div>@endif
 
             <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
                 <div class="space-y-6">
-                    <section class="rounded-xl border border-line bg-surface p-5 sm:p-6">
+                    <section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
                         <div class="flex flex-wrap items-start justify-between gap-4"><div><h2 class="font-semibold text-ink">Order summary</h2><p class="mt-1 text-sm text-muted">Marketplace order totals captured at checkout.</p></div><span class="rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$order->payment->status] }}">Payment: {{ ucfirst($order->payment->status) }}</span></div>
                         <dl class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Order date</dt><dd class="mt-1 font-medium text-ink">{{ $order->created_at->format('M j, Y · g:i A') }}</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Payment method</dt><dd class="mt-1 font-medium text-ink">{{ $order->payment->method === 'cod' ? 'Cash on delivery' : ucfirst($order->payment->method) }}</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Payment status</dt><dd class="mt-1 font-medium text-ink">{{ ucfirst($order->payment->status) }}</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Subtotal</dt><dd class="mt-1 font-semibold tabular-nums text-ink">₱{{ number_format($order->subtotal, 2) }}</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Shipping fee</dt><dd class="mt-1 font-semibold tabular-nums text-ink">₱{{ number_format($order->shipping_amount, 2) }}</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Final total</dt><dd class="mt-1 text-lg font-semibold tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</dd></div></dl>
                     </section>
 
-                    <section class="rounded-xl border border-line bg-surface p-5 sm:p-6">
+                    <section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
                         <h2 class="font-semibold text-ink">Customer information</h2>
                         <div class="mt-5 grid gap-5 sm:grid-cols-2"><div><p class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Customer</p><p class="mt-1 font-medium text-ink">{{ $order->user->name }}</p><p class="mt-1 text-sm text-muted">{{ $order->user->email }}</p><p class="mt-1 text-sm text-muted">{{ $order->phone }}</p></div><div><p class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Delivery address</p><p class="mt-1 text-sm leading-6 text-ink">{{ $order->recipient_name }}<br>{{ $order->address_line }}<br>{{ $order->city }}</p></div></div>
                     </section>
@@ -33,7 +33,7 @@
                         <div><h2 id="seller-orders-heading" class="font-semibold text-ink">Seller sub-orders</h2><p class="mt-1 text-sm text-muted">Each store fulfils its own portion of this marketplace order.</p></div>
                         @foreach ($order->sellerOrders as $sellerOrder)
                             @php($seller = $sellerOrder->store->tenant->members->firstWhere('role', 'owner')?->user ?? $sellerOrder->store->tenant->members->first()?->user)
-                            <section class="overflow-hidden rounded-xl border border-line bg-surface ">
+                            <section class="overflow-hidden rounded-[14px] border border-line bg-surface ">
                                 <div class="flex flex-col gap-4 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6"><div class="min-w-0"><p class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Seller order</p><h3 class="mt-1 truncate font-semibold text-ink">{{ $sellerOrder->store->name }}</h3><p class="mt-1 text-sm text-muted">{{ $seller?->name ?? 'Seller unavailable' }}</p></div><span class="inline-flex h-fit w-fit rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$sellerOrder->status] }}">{{ ucfirst($sellerOrder->status) }}</span></div>
                                 <div class="divide-y divide-line">@foreach ($sellerOrder->items as $item)<div class="flex gap-4 px-5 py-4 sm:px-6">@if ($item->product?->images->first())<img src="{{ Storage::disk('product_images')->url($item->product->images->first()->path) }}" alt="" class="h-14 w-14 shrink-0 rounded-lg border border-line object-cover">@else<div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-canvas text-sm font-semibold text-muted" aria-hidden="true">{{ Str::upper(Str::substr($item->product_name, 0, 1)) }}</div>@endif<div class="min-w-0 flex-1"><p class="truncate font-medium text-ink">{{ $item->product_name }}</p><p class="mt-1 text-xs text-muted">SKU {{ $item->sku }} · ₱{{ number_format($item->unit_price, 2) }} each</p></div><div class="shrink-0 text-right text-sm"><p class="font-semibold tabular-nums text-ink">₱{{ number_format($item->line_total, 2) }}</p><p class="mt-1 text-muted">Qty {{ $item->quantity }}</p></div></div>@endforeach</div>
                                 <div class="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-canvas px-5 py-3 text-sm sm:px-6"><div class="flex gap-4"><a href="{{ route('admin.stores.show', $sellerOrder->store) }}" class="font-semibold text-brand underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-brand">Admin store details</a><a href="{{ route('catalog.store', $sellerOrder->store) }}" class="font-semibold text-brand underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-brand">Public storefront</a></div><p class="font-semibold tabular-nums text-ink">Store total ₱{{ number_format($sellerOrder->total, 2) }}</p></div>
@@ -41,20 +41,20 @@
                         @endforeach
                     </section>
 
-                    <section class="rounded-xl border border-line bg-surface p-5 sm:p-6">
+                    <section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
                         <h2 class="font-semibold text-ink">Recorded history</h2><p class="mt-1 text-sm text-muted">Only existing marketplace audit records are shown.</p>
                         <div class="mt-5 space-y-4">@forelse ($auditLogs as $log)<div class="relative border-l border-line pl-4"><span class="absolute -left-1.5 top-1.5 h-3 w-3 rounded-full bg-brand"></span><p class="font-medium text-ink">{{ str($log->action)->replace('.', ' ')->headline() }}</p><p class="mt-1 text-sm text-muted">{{ $log->actor?->name ?? 'System' }} · {{ $log->created_at->format('M j, Y · g:i A') }}</p></div>@empty<p class="text-sm text-muted">No marketplace audit events have been recorded for this order.</p>@endforelse</div>
                     </section>
                 </div>
 
                 <aside class="space-y-6">
-                    <section class="rounded-xl border border-line bg-surface p-5 ">
+                    <section class="rounded-[14px] border border-line bg-surface p-5 ">
                         <h2 class="font-semibold text-ink">Payment</h2><p class="mt-1 text-sm text-muted">Cash on delivery is confirmed only after delivery.</p>
                         <dl class="mt-5 space-y-4 text-sm"><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Method</dt><dd class="mt-1 font-medium text-ink">Cash on delivery</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Status</dt><dd class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$order->payment->status] }}">{{ ucfirst($order->payment->status) }}</dd></div></dl>
                         @if ($order->status === 'delivered' && $order->sellerOrders->isNotEmpty() && $order->sellerOrders->every(fn ($sellerOrder): bool => $sellerOrder->status === 'delivered') && $order->payment->method === 'cod' && $order->payment->status === 'pending')<form method="POST" action="{{ route('admin.orders.payment.mark-paid', $order) }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-6 border-t border-line pt-5">@csrf @method('PATCH')<button type="submit" :disabled="submitting" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"><span x-show="!submitting">Mark COD as paid</span><span x-cloak x-show="submitting">Recording payment…</span></button></form>@endif
                     </section>
 
-                    <section class="rounded-xl border border-line bg-surface p-5 ">
+                    <section class="rounded-[14px] border border-line bg-surface p-5 ">
                         <h2 class="font-semibold text-ink">Marketplace record</h2><dl class="mt-5 space-y-4 text-sm"><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Overall status</dt><dd class="mt-1 font-medium text-ink">{{ ucfirst($order->status) }}</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Stores involved</dt><dd class="mt-1 font-medium text-ink">{{ $order->sellerOrders->count() }}</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Order reference</dt><dd class="mt-1 break-all font-medium text-ink">{{ $order->number }}</dd></div></dl></section>
                 </aside>
             </div>

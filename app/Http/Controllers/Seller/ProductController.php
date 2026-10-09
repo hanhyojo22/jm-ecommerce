@@ -11,8 +11,12 @@ use App\Models\Product;
 use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class ProductController extends Controller
 {
@@ -75,25 +79,36 @@ class ProductController extends Controller
         $store = $tenant->store;
         $data = $request->validated();
         unset($data['image']);
+        $imagePath = $request->file('image')?->store('products', 'product_images');
 
-        $product = $store->products()->create([
-            ...$data,
-            'tenant_id' => $tenant->id,
-            'slug' => Str::slug($data['name']).'-'.Str::lower(Str::random(6)),
-        ]);
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'product_images');
-            $product->images()->create(['path' => $path]);
+        try {
+            $product = DB::transaction(function () use ($request, $store, $tenant, $data, $imagePath): Product {
+                $product = $store->products()->create([
+                    ...$data,
+                    'tenant_id' => $tenant->id,
+                    'slug' => Str::slug($data['name']).'-'.Str::lower(Str::random(6)),
+                    'status' => 'draft',
+                ]);
+                if ($imagePath !== null) {
+                    $product->images()->create(['path' => $imagePath]);
+                }
+
+                AuditLog::query()->create([
+                    'actor_user_id' => $request->user()->id,
+                    'action' => 'product.created',
+                    'entity_type' => Product::class,
+                    'entity_id' => $product->id,
+                    'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
+                    'ip_address' => $request->ip(),
+                ]);
+
+                return $product;
+            });
+        } catch (Throwable $exception) {
+            $this->deleteUploadedImage($imagePath);
+
+            throw $exception;
         }
-
-        AuditLog::query()->create([
-            'actor_user_id' => $request->user()->id,
-            'action' => 'product.created',
-            'entity_type' => Product::class,
-            'entity_id' => $product->id,
-            'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
-            'ip_address' => $request->ip(),
-        ]);
 
         return to_route('seller.products.index')->with('status', "{$product->name} was saved.");
     }
@@ -108,27 +123,93 @@ class ProductController extends Controller
     public function update(UpdateProductRequest $request, Product $product): RedirectResponse
     {
         $product = $this->editableProduct($request, $product);
-        $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
         $data = $request->validated();
         unset($data['image']);
-        $product->update($data);
+        $imagePath = $request->file('image')?->store('products', 'product_images');
 
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'product_images');
-            $product->images()->create(['path' => $path, 'position' => $product->images()->count()]);
+        try {
+            DB::transaction(function () use ($request, $product, $data, $imagePath): void {
+                $product = Product::query()->lockForUpdate()->findOrFail($product->id);
+
+                if ($product->status !== 'active' && $data['status'] === 'active') {
+                    abort(403, 'Only an administrator can activate a listing.');
+                }
+
+                $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
+                $product->update($data);
+
+                if ($imagePath !== null) {
+                    $product->images()->create(['path' => $imagePath, 'position' => $product->images()->count()]);
+                }
+
+                AuditLog::query()->create([
+                    'actor_user_id' => $request->user()->id,
+                    'action' => 'product.updated',
+                    'entity_type' => Product::class,
+                    'entity_id' => $product->id,
+                    'old_values' => $oldValues,
+                    'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
+                    'ip_address' => $request->ip(),
+                ]);
+            });
+        } catch (Throwable $exception) {
+            $this->deleteUploadedImage($imagePath);
+
+            throw $exception;
         }
 
-        AuditLog::query()->create([
-            'actor_user_id' => $request->user()->id,
-            'action' => 'product.updated',
-            'entity_type' => Product::class,
-            'entity_id' => $product->id,
-            'old_values' => $oldValues,
-            'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
-            'ip_address' => $request->ip(),
-        ]);
-
         return to_route('seller.products.index')->with('status', "{$product->name} was updated.");
+    }
+
+    public function bulkDeactivate(Request $request): RedirectResponse
+    {
+        $tenant = $this->activeTenant($request);
+        abort_unless($this->canManageProducts($request, $tenant), 403);
+
+        $data = $request->validate([
+            'product_ids' => ['required', 'array', 'min:1', 'max:40'],
+            'product_ids.*' => ['required', 'ulid'],
+        ]);
+        $productIds = collect($data['product_ids'])->unique()->values();
+
+        if ($productIds->count() > 20) {
+            throw ValidationException::withMessages([
+                'product_ids' => 'Select no more than 20 listings at a time.',
+            ]);
+        }
+
+        $products = DB::transaction(function () use ($request, $tenant, $productIds) {
+            $products = $tenant->store->products()
+                ->whereKey($productIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            if ($products->count() !== $productIds->count() || $products->contains(fn (Product $product): bool => $product->status !== 'active')) {
+                throw ValidationException::withMessages([
+                    'product_ids' => 'Some selected listings changed or are no longer active in your store. Refresh and try again.',
+                ]);
+            }
+
+            foreach ($products as $product) {
+                $oldStatus = $product->status;
+                $product->update(['status' => 'inactive']);
+
+                AuditLog::query()->create([
+                    'actor_user_id' => $request->user()->id,
+                    'action' => 'product.updated',
+                    'entity_type' => Product::class,
+                    'entity_id' => $product->id,
+                    'old_values' => ['status' => $oldStatus],
+                    'new_values' => ['status' => 'inactive'],
+                    'ip_address' => $request->ip(),
+                ]);
+            }
+
+            return $products;
+        });
+
+        return to_route('seller.products.index')->with('status', count($products).' '.Str::plural('listing', count($products)).' '.(count($products) === 1 ? 'was' : 'were').' deactivated.');
     }
 
     private function editableProduct(Request $request, Product $product): Product
@@ -143,6 +224,19 @@ class ProductController extends Controller
     private function canManageProducts(Request $request, Tenant $tenant): bool
     {
         return $request->user()->tenantMemberships()->where('tenant_id', $tenant->id)->whereIn('role', ['owner', 'manager'])->exists();
+    }
+
+    private function deleteUploadedImage(?string $path): void
+    {
+        if ($path === null) {
+            return;
+        }
+
+        try {
+            Storage::disk('product_images')->delete($path);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
     }
 
     private function activeTenant(Request $request): Tenant

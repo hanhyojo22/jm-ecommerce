@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -64,6 +65,13 @@ class AccountTypeAccessTest extends TestCase
             'platform_role' => 'admin',
             'is_active' => true,
         ]);
+        $invitedAdmin = User::query()->where('email', 'operations@example.com')->firstOrFail();
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $owner->id,
+            'action' => 'admin_account.invited',
+            'entity_type' => User::class,
+            'entity_id' => $invitedAdmin->id,
+        ]);
         $this->actingAs($owner)->get(route('admin.accounts.index'))
             ->assertDontSee('name="password"', false)
             ->assertSee('Send Clerk invitation');
@@ -76,6 +84,12 @@ class AccountTypeAccessTest extends TestCase
             ->assertRedirect(route('admin.accounts.index'));
 
         $this->assertDatabaseHas('users', ['id' => $administrator->id, 'is_active' => false]);
+        $deactivationLog = AuditLog::query()
+            ->where('action', 'admin_account.deactivated')
+            ->where('entity_id', $administrator->id)
+            ->firstOrFail();
+        $this->assertSame(['is_active' => true], $deactivationLog->old_values);
+        $this->assertSame(['is_active' => false], $deactivationLog->new_values);
         $this->actingAs($owner)->patch(route('admin.accounts.deactivate', $owner))->assertForbidden();
     }
 }

@@ -1,10 +1,14 @@
+@php($isBuyerMessages = auth()->user()->account_type === 'buyer')
 <div data-conversation-thread>
-    <div class="page-shell py-0 sm:py-4">
-        <div class="mx-auto h-[calc(100dvh-5rem)] min-h-[28rem] w-full max-w-6xl sm:h-[min(78vh,58rem)] sm:min-h-[34rem] sm:px-6 lg:px-8">
+@if ($isBuyerMessages)
+    <x-marketplace.account-shell active="messages" title="Conversation">
+@endif
+    <div class="{{ $isBuyerMessages ? 'min-w-0 py-0 sm:py-4' : 'page-shell py-0 sm:py-4' }}">
+        <div class="mx-auto {{ $isBuyerMessages ? 'h-[min(78vh,58rem)]' : 'h-[calc(100dvh-5rem)] sm:h-[min(78vh,58rem)]' }} min-h-[28rem] w-full max-w-6xl sm:min-h-[34rem] sm:px-6 lg:px-8">
             <section class="flex h-full min-h-0 flex-col overflow-hidden bg-surface sm:rounded-[14px] sm:border sm:border-line">
                 <header class="flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-3 sm:gap-4 sm:px-5">
                 <div class="flex min-w-0 items-center gap-2.5 sm:gap-3">
-                    <a href="{{ route('messages.index') }}" class="grid size-10 shrink-0 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Back to messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6M9 12h11"/></svg></a>
+                    <a href="{{ route('messages.index') }}" class="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Back to messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6M9 12h11"/></svg></a>
                     <div class="flex min-w-0 items-center gap-3">
                         @if (auth()->user()->account_type === 'buyer' && $conversation->store->logo_path)
                             <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="size-11 shrink-0 rounded-full object-cover">
@@ -16,28 +20,28 @@
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
                     @if (auth()->user()->account_type === 'buyer')
-                        <a href="{{ route('catalog.store', $conversation->store->slug) }}" aria-label="Open store" class="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-xs font-semibold text-brand-hover transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.25h16.5l-1.5 10h-13.5l-1.5-10ZM5 9.25l2-5h10l2 5M9 19.25v-6h6v6"/></svg><span class="hidden sm:inline">Store</span></a>
+                        <a href="{{ route('catalog.store', $conversation->store->slug) }}" aria-label="Open store" class="inline-flex min-h-10 items-center gap-2 rounded-[10px] px-3 text-xs font-semibold text-brand-hover transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.25h16.5l-1.5 10h-13.5l-1.5-10ZM5 9.25l2-5h10l2 5M9 19.25v-6h6v6"/></svg><span class="hidden sm:inline">Store</span></a>
                     @endif
-                    <form method="POST" action="{{ route('messages.block', $conversation) }}">@csrf<button type="submit" class="inline-flex min-h-10 items-center rounded-full px-3 text-xs font-medium text-muted transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 sm:text-sm" onclick="return confirm('Block this conversation?')">Block</button></form>
+                    <form method="POST" action="{{ route('messages.block', $conversation) }}">@csrf<button type="submit" class="inline-flex min-h-10 items-center rounded-[10px] px-3 text-xs font-medium text-muted transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 sm:text-sm" onclick="return confirm('Block this conversation?')">Block</button></form>
                 </div>
             </header>
             @if ($conversation->product)
-                <div class="mx-3 mt-2 flex min-w-0 shrink-0 items-center gap-3 rounded-xl bg-canvas p-2.5 sm:mx-5">
+                <div class="mx-3 mt-2 flex min-w-0 shrink-0 items-center gap-3 rounded-[14px] bg-canvas p-2.5 sm:mx-5">
                     @if ($conversation->product->images->first())<img src="{{ Storage::disk('product_images')->url($conversation->product->images->first()->path) }}" alt="" class="size-12 shrink-0 rounded-lg object-cover">@else<div class="grid size-12 shrink-0 place-items-center rounded-lg bg-slate-100 text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9ZM4.5 7.75 12 12l7.5-4.25M12 12v8.5"/></svg></div>@endif
                     <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-ink">{{ $conversation->product->name }}</p><p class="mt-0.5 truncate text-xs text-muted">₱{{ number_format($conversation->product->price, 2) }} · {{ $conversation->product->stock_quantity > 0 ? 'In stock' : 'Currently unavailable' }}</p></div>
-                    <a href="{{ route('catalog.show', [$conversation->store->slug, $conversation->product->slug]) }}" class="shrink-0 rounded-full px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View item</a>
+                    <a href="{{ route('catalog.show', [$conversation->store->slug, $conversation->product->slug]) }}" class="shrink-0 rounded-[10px] px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View item</a>
                 </div>
             @elseif ($conversation->sellerOrder)
-                <div class="mx-3 mt-2 flex min-w-0 shrink-0 items-center gap-3 rounded-xl bg-amber-50/70 p-2.5 sm:mx-5">
+                <div class="mx-3 mt-2 flex min-w-0 shrink-0 items-center gap-3 rounded-[14px] bg-amber-50/70 p-2.5 sm:mx-5">
                     <span class="grid size-12 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-800" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7.5h14l1 13H4l1-13ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
                     <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-ink">Order {{ $conversation->sellerOrder->order->number }}</p><p class="mt-0.5 truncate text-xs text-muted">{{ $conversation->sellerOrder->created_at->format('M j, Y') }} · ₱{{ number_format($conversation->sellerOrder->total, 2) }} · {{ Str::headline($conversation->sellerOrder->status) }}</p></div>
-                    @if (auth()->user()->account_type === 'buyer')<a href="{{ route('orders.show', $conversation->sellerOrder->order) }}" class="shrink-0 rounded-full px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View order</a>@else<a href="{{ route('seller.orders.show', $conversation->sellerOrder) }}" class="shrink-0 rounded-full px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View order</a>@endif
+                    @if (auth()->user()->account_type === 'buyer')<a href="{{ route('orders.show', $conversation->sellerOrder->order) }}" class="shrink-0 rounded-[10px] px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View order</a>@else<a href="{{ route('seller.orders.show', $conversation->sellerOrder) }}" class="shrink-0 rounded-[10px] px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View order</a>@endif
                 </div>
             @endif
 
             <div wire:offline class="mx-3 mt-2 shrink-0 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-5" role="status">You’re offline. Messages will send when your connection returns.</div>
             <div id="conversation-messages" class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6" role="log" aria-live="polite" aria-label="Conversation messages" tabindex="0">
-                @if ($hasMoreMessages)<div class="mb-5 text-center"><button wire:click="loadOlderMessages" wire:loading.attr="disabled" type="button" class="rounded-full bg-canvas px-4 py-2 text-sm font-semibold text-ink transition hover:bg-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60">Load earlier messages</button></div>@endif
+                @if ($hasMoreMessages)<div class="mb-5 text-center"><button wire:click="loadOlderMessages" wire:loading.attr="disabled" type="button" class="inline-flex min-h-11 items-center rounded-[10px] bg-canvas px-4 text-sm font-semibold text-ink transition hover:bg-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60">Load earlier messages</button></div>@endif
                 @php($previousDate = null)
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
@@ -56,7 +60,7 @@
                                             <span class="mt-1 block text-xs underline underline-offset-2">{{ $attachment->original_name }}</span>
                                         </a>
                                     @else
-                                        <a href="{{ route('messages.attachments.show', $attachment) }}" class="flex w-56 max-w-full min-w-0 items-center gap-3 rounded-xl border border-line bg-white/80 p-3 text-left transition hover:bg-white">
+                                        <a href="{{ route('messages.attachments.show', $attachment) }}" class="flex w-56 max-w-full min-w-0 items-center gap-3 rounded-[14px] border border-line bg-white/80 p-3 text-left transition hover:bg-white">
                                             <span class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $message->sender_id === auth()->id() ? 'bg-brand text-white' : 'bg-slate-100 text-muted' }}" aria-hidden="true">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg>
                                             </span>
@@ -72,7 +76,7 @@
                                     <span class="mt-0.5 block text-right text-[11px] text-blue-50">{{ $receipt }}</span>
                                 @endif
                             </div>
-                            @if ($message->sender_id !== auth()->id())<details class="mt-1 px-1 text-xs"><summary class="cursor-pointer text-muted">Report message</summary><form method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="mt-2 space-y-2">@csrf<select name="reason" required class="rounded-lg border-line text-xs"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-line text-xs"></textarea><button class="rounded-lg bg-brand px-3 py-2 font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Submit report</button></form></details>@endif
+                            @if ($message->sender_id !== auth()->id())<details class="mt-1 px-1 text-xs"><summary class="cursor-pointer text-muted">Report message</summary><form method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="mt-2 space-y-2">@csrf<select name="reason" required class="rounded-lg border-line text-xs"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-line text-xs"></textarea><button class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3 font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Submit report</button></form></details>@endif
                         </div>
                     </article>
                     @php($previousDate = $message->created_at)
@@ -85,10 +89,10 @@
             <form wire:submit="send" class="space-y-3">
                 @cannot('send', $conversation)<p class="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">Messaging is unavailable for this conversation.</p>@endcannot
                 @if (auth()->user()->account_type !== 'buyer')
-                    <div class="mb-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Quick replies">@foreach (['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?'] as $reply)<button wire:click='useQuickReply(@js($reply))' type="button" class="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $reply }}</button>@endforeach</div>
+                    <div class="mb-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Quick replies">@foreach (['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?'] as $reply)<button wire:click='useQuickReply(@js($reply))' type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-[10px] border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $reply }}</button>@endforeach</div>
                 @endif
                 <label for="message-body" class="sr-only">Write a message</label>
-                <div class="flex items-end gap-2 sm:gap-3"><textarea wire:model="body" x-on:input.debounce.500ms="$wire.updateTypingStatus(true); clearTimeout(window.chatTypingTimeout); window.chatTypingTimeout = setTimeout(() => $wire.updateTypingStatus(false), 3000)" x-on:blur="$wire.updateTypingStatus(false)" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $wire.send(); }" id="message-body" rows="2" maxlength="2000" class="min-h-12 w-full resize-y rounded-2xl border-transparent bg-slate-100 text-sm text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Write a message…" aria-describedby="message-help" @disabled(! auth()->user()->can('send', $conversation))></textarea><button type="submit" aria-label="Send message" class="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" wire:loading.attr="disabled" wire:target="send" @disabled(! auth()->user()->can('send', $conversation))><svg wire:loading.remove wire:target="send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg><span wire:loading wire:target="send" class="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span></button></div>
+                <div class="flex items-end gap-2 sm:gap-3"><textarea wire:model="body" wire:input.debounce.500ms="startTyping" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $wire.send(); }" id="message-body" rows="2" maxlength="2000" class="min-h-12 w-full resize-y rounded-[10px] border-transparent bg-canvas text-sm text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Write a message…" aria-describedby="message-help" @disabled(! auth()->user()->can('send', $conversation))></textarea><button type="submit" aria-label="Send message" class="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" wire:loading.attr="disabled" wire:target="send" @disabled(! auth()->user()->can('send', $conversation))><svg wire:loading.remove wire:target="send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg><span wire:loading wire:target="send" class="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span></button></div>
                 <div id="message-help" class="flex items-center justify-between gap-3 text-xs text-muted"><span class="hidden sm:inline">Enter to send · Shift + Enter for a new line</span><span class="ml-auto tabular-nums">{{ Str::length($body) }}/2000</span></div>
                 @error('body')<p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ $message }}</p>@enderror
             </form>
@@ -102,10 +106,10 @@
                                 Photo
                                 <input id="chat-photo" name="attachment" type="file" accept="image/jpeg,image/png,image/webp" required class="sr-only" x-on:change="const file = $event.target.files[0]; if (preview) URL.revokeObjectURL(preview); preview = file ? URL.createObjectURL(file) : null; name = file?.name ?? ''">
                             </label>
-                            <div x-cloak x-show="preview" class="absolute bottom-12 left-0 z-10 w-56 rounded-xl border border-line bg-white p-2 shadow-lg">
+                            <div x-cloak x-show="preview" class="absolute bottom-12 left-0 z-10 w-56 rounded-[14px] border border-line bg-white p-2 shadow-lg">
                                 <img x-bind:src="preview" x-bind:alt="name" class="max-h-36 w-full rounded-lg object-contain">
                                 <p x-text="name" class="mt-2 truncate text-xs font-medium text-muted"></p>
-                                <button type="submit" class="mt-2 w-full rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-hover">Send photo</button>
+                                <button type="submit" class="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-hover">Send photo</button>
                             </div>
                         </form>
                         <form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" x-data="{ name: '' }" class="relative">
@@ -115,10 +119,10 @@
                                 Document
                                 <input id="chat-document" name="attachment" type="file" accept="application/pdf" required class="sr-only" x-on:change="name = $event.target.files[0]?.name ?? ''">
                             </label>
-                            <div x-cloak x-show="name" class="absolute bottom-12 left-0 z-10 w-64 rounded-xl border border-line bg-white p-3 shadow-lg">
+                            <div x-cloak x-show="name" class="absolute bottom-12 left-0 z-10 w-64 rounded-[14px] border border-line bg-white p-3 shadow-lg">
                                 <p class="text-xs font-medium uppercase tracking-wide text-muted">PDF document</p>
                                 <p x-text="name" class="mt-1 truncate text-sm font-semibold text-ink"></p>
-                                <button type="submit" class="mt-3 w-full rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-hover">Send document</button>
+                                <button type="submit" class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-hover">Send document</button>
                             </div>
                         </form>
                         <span class="text-xs text-muted">Photos: JPG, PNG, WebP · Documents: PDF · Up to 5 MB</span>
@@ -129,6 +133,9 @@
         </section>
         </div>
     </div>
+@if ($isBuyerMessages)
+    </x-marketplace.account-shell>
+@endif
 </div>
 
 @script

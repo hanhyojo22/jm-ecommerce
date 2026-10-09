@@ -21,10 +21,10 @@ export default {
                 muted: '#64748B',
                 line: '#E2E8F0',
                 brand: {
-                    DEFAULT: '#2563EB',
-                    hover: '#1D4ED8',
+                    DEFAULT: '#1D4ED8',
+                    hover: '#1E40AF',
                 },
-                success: '#16A34A',
+                success: '#166534',
                 warning: {
                     DEFAULT: '#F59E0B',
                     text: '#B45309',

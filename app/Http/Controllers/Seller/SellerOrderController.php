@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class SellerOrderController extends Controller
@@ -66,7 +68,8 @@ class SellerOrderController extends Controller
 
     public function update(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
-        abort_unless($this->activeTenant($request, ['owner', 'manager'])->id === $sellerOrder->tenant_id, 403);
+        $tenant = $this->activeTenant($request, ['owner', 'manager']);
+        $sellerOrder = $tenant->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
 
         $data = $request->validate([
             'status' => ['required', 'in:confirmed,processing,shipped,delivered,cancelled'],
@@ -76,6 +79,34 @@ class SellerOrderController extends Controller
         $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip());
 
         return back()->with('status', "Order {$sellerOrder->order->number} was marked as {$data['status']}.");
+    }
+
+    public function bulkConfirm(Request $request, UpdateSellerOrderStatus $updateStatus): RedirectResponse
+    {
+        $tenant = $this->activeTenant($request, ['owner', 'manager']);
+        $data = $request->validate([
+            'seller_order_ids' => ['required', 'array', 'min:1', 'max:40'],
+            'seller_order_ids.*' => ['required', 'string', 'ulid'],
+        ]);
+        $ids = array_values(array_unique($data['seller_order_ids']));
+
+        if (count($ids) > 20) {
+            throw ValidationException::withMessages(['seller_order_ids' => 'Select no more than 20 orders.']);
+        }
+
+        DB::transaction(function () use ($tenant, $ids, $request, $updateStatus): void {
+            $sellerOrders = $tenant->sellerOrders()->whereIn('id', $ids)->get()->keyBy('id');
+
+            if ($sellerOrders->count() !== count($ids) || $sellerOrders->contains(fn (SellerOrder $order): bool => $order->status !== 'pending')) {
+                throw ValidationException::withMessages(['seller_order_ids' => 'Only your pending orders can be confirmed. Refresh the list and try again.']);
+            }
+
+            foreach ($sellerOrders->sortBy('order_id') as $sellerOrder) {
+                $updateStatus->handle($sellerOrder, 'confirmed', $request->user(), $request->ip());
+            }
+        });
+
+        return to_route('seller.orders.index')->with('status', count($ids).' pending '.(count($ids) === 1 ? 'order was' : 'orders were').' confirmed.');
     }
 
     /**

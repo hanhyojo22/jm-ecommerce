@@ -1,28 +1,17 @@
 @props(['user'])
 
-<header class="sticky top-0 z-40 border-b border-line bg-surface">
-    <div class="mx-auto flex h-[72px] max-w-[1320px] items-center gap-3 px-[18px] sm:gap-4 sm:px-8">
-        <button type="button" x-data="{ open: false }" @click="open = !open; $dispatch('admin-navigation-toggle', { open, trigger: $event.currentTarget })" @admin-navigation-close.window="open = false" :aria-expanded="open.toString()" aria-controls="admin-workspace-nav" :aria-label="open ? 'Close admin navigation' : 'Open admin navigation'" class="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:hidden">
-            <svg x-show="!open" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
-            <svg x-cloak x-show="open" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+<header data-header-design="bold-modular" data-header-role="admin" class="sticky top-0 z-40 border-b border-line bg-surface">
+    <div class="mx-auto flex min-h-[72px] max-w-[1320px] flex-wrap items-center gap-3 px-[18px] py-3 sm:h-[72px] sm:flex-nowrap sm:gap-4 sm:px-8 sm:py-0">
+        <button type="button" x-data="{ visible: window.innerWidth >= 1024 }" @click="visible = !visible; $dispatch('admin-navigation-toggle', { visible, trigger: $event.currentTarget })" @admin-navigation-close.window="visible = false" @resize.window="visible = window.innerWidth >= 1024" :aria-expanded="visible.toString()" aria-controls="admin-workspace-nav" :aria-label="visible ? 'Hide admin navigation' : 'Show admin navigation'" class="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:hidden">
+            <svg x-show="!visible" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <svg x-cloak x-show="visible" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
 
-        <a href="{{ route('dashboard') }}" class="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2" aria-label="JMMart admin overview">
-            <x-application-logo class="size-9 fill-current text-brand" />
-            <span class="text-lg font-bold tracking-[-0.03em] text-ink">JMMart</span>
-        </a>
-
-        <span class="hidden h-8 w-px bg-line sm:block" aria-hidden="true"></span>
-        <div class="hidden min-w-0 sm:block">
-            <p class="truncate text-sm font-semibold text-ink">Administration</p>
-            <p class="text-xs text-muted">Protected workspace</p>
-        </div>
-
-        <form method="GET" action="{{ route('admin.orders.index') }}" x-data="{ scope: 'orders', query: '' }" @submit="if (!query.trim()) { $event.preventDefault(); }" :action="{ orders: @js(route('admin.orders.index')), products: @js(route('admin.products.index')), stores: @js(route('admin.stores.index')), customers: @js(route('admin.customers.index')) }[scope]" class="ml-auto hidden min-w-0 flex-1 max-w-md items-center gap-2 md:flex" role="search" aria-label="Global admin search">
+        <form method="GET" action="{{ route('admin.orders.index') }}" x-data="{ scope: 'orders', query: '' }" @submit="if (!query.trim()) { $event.preventDefault(); }" :action="{ orders: @js(route('admin.orders.index')), products: @js(route('admin.products.index')), stores: @js(route('admin.stores.index')), customers: @js(route('admin.customers.index')) }[scope]" class="order-3 flex min-w-0 basis-full items-center gap-2 sm:order-none sm:basis-auto sm:max-w-md sm:flex-1" role="search" aria-label="Global admin search">
             <label class="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-canvas px-3 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
                 <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
                 <span class="sr-only">Search admin records</span>
-                <input name="search" x-model="query" type="search" placeholder="Search orders, products, stores…" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
+                <input name="search" x-model="query" type="search" placeholder="Search records" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
                 <select x-model="scope" aria-label="Search scope" class="shrink-0 border-0 bg-transparent py-0 pl-1 pr-6 text-xs font-semibold text-muted focus:ring-0">
                     <option value="orders">Orders</option>
                     <option value="products">Products</option>
@@ -32,8 +21,8 @@
             </label>
         </form>
 
-        <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3 md:ml-0">
-            <a href="{{ route('home') }}" class="hidden min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition-colors hover:bg-brand/5 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:inline-flex">View marketplace</a>
+        <div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-none sm:ml-2 sm:gap-3 lg:ml-auto">
+            <a data-header-marketplace-link href="{{ route('home') }}" class="hidden min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition-colors hover:bg-brand/5 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:inline-flex">View marketplace</a>
 
             <details class="group relative">
                 <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-semibold text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">

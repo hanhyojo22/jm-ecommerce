@@ -68,6 +68,12 @@ class CheckoutCart
 
             $total = $this->sumTotals($lines->pluck('total')->all());
 
+            if (bccomp($total, '9999999999.99', 2) > 0) {
+                throw ValidationException::withMessages([
+                    'cart' => 'Your cart total exceeds the maximum order amount.',
+                ]);
+            }
+
             $order = Order::query()->create([
                 ...$delivery,
                 'user_id' => $user->id,

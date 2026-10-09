@@ -38,6 +38,27 @@ class SellerApplicationTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $customer->id, 'action' => 'seller_application.submitted']);
     }
 
+    public function test_a_second_pending_application_is_rejected_without_creating_another_record(): void
+    {
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $application = [
+            'store_name' => 'Northwind Goods',
+            'seller_name' => 'Ava Seller',
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+        ];
+
+        $this->actingAs($customer)->post(route('seller-application.store'), $application)
+            ->assertRedirect(route('seller-application.create'));
+
+        $this->actingAs($customer)->post(route('seller-application.store'), $application)
+            ->assertSessionHasErrors(['application' => 'Your seller application is still under review.']);
+
+        $this->assertDatabaseCount('seller_applications', 1);
+        $this->assertDatabaseCount('audit_logs', 1);
+    }
+
     public function test_only_a_platform_administrator_can_approve_an_application(): void
     {
         $customer = User::factory()->seller()->create(['email_verified_at' => now()]);
@@ -193,6 +214,20 @@ class SellerApplicationTest extends TestCase
         $this->assertSame('approved', $application->status);
         $this->assertDatabaseHas('stores', ['tenant_id' => $application->tenant_id, 'name' => 'Ava Seller Shop', 'status' => 'active']);
         $this->assertSame(1, SellerApplication::query()->where('id', $application->id)->where('status', 'approved')->count());
+    }
+
+    public function test_administrator_cannot_approve_an_application_for_an_inactive_seller(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $application = $this->application('Inactive Seller', 'pending');
+        $application->user()->update(['is_active' => false]);
+
+        $this->actingAs($administrator)
+            ->post(route('admin.seller-applications.approve', $application))
+            ->assertSessionHasErrors('application');
+
+        $this->assertDatabaseHas('seller_applications', ['id' => $application->id, 'status' => 'pending']);
+        $this->assertDatabaseMissing('tenants', ['name' => 'Inactive Seller Shop']);
     }
 
     private function application(string $name, string $status): SellerApplication

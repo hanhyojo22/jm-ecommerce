@@ -25,7 +25,10 @@ class ClerkWebhookController extends Controller
         }
 
         if ($type === 'user.deleted') {
-            User::query()->where('clerk_user_id', $data['id'])->update(['is_active' => false]);
+            User::query()->where('clerk_user_id', $data['id'])->update([
+                'is_active' => false,
+                'email_verified_at' => null,
+            ]);
 
             return response()->json(['status' => 'ok']);
         }
@@ -48,11 +51,10 @@ class ClerkWebhookController extends Controller
 
         $email = $this->verifiedPrimaryEmail($data);
         $name = trim(implode(' ', array_filter([$data['first_name'] ?? null, $data['last_name'] ?? null])));
-        $updates = [];
+        $updates = ['email_verified_at' => $email !== null ? now() : null];
 
         if ($email !== null && ! User::query()->where('email', $email)->where('id', '!=', $user->getKey())->exists()) {
             $updates['email'] = $email;
-            $updates['email_verified_at'] = now();
         }
 
         if ($name !== '') {

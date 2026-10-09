@@ -23,10 +23,9 @@ class StoreProductRequest extends FormRequest
             'category_id' => ['nullable', 'exists:categories,id'],
             'brand' => ['nullable', 'string', 'max:100'],
             'condition' => ['nullable', Rule::in(['new', 'refurbished'])],
-            'price' => ['required', 'numeric', 'min:0.01', 'max:9999999999.99'],
-            'compare_at_price' => ['nullable', 'numeric', 'min:0.01', 'max:9999999999.99', 'gt:price'],
+            'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
+            'compare_at_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99', 'gt:price'],
             'stock_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
-            'status' => ['required', 'in:draft,active,inactive'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }

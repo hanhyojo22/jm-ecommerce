@@ -36,6 +36,19 @@ return [
         'sign_in_url' => env('CLERK_SIGN_IN_URL', '/sign-in'),
         'sign_up_url' => env('CLERK_SIGN_UP_URL', '/sign-up'),
         'webhook_signing_secret' => env('CLERK_WEBHOOK_SIGNING_SECRET'),
+
+        /*
+         * Clerk session tokens expire 60 seconds after they are minted, so the backend
+         * cookie that carries one may never outlive the token it holds. This value is a
+         * browser-side cleanup hint only: authenticity is always decided by verifying the
+         * token's signature, `exp` claim and `session_token` type against the Clerk secret
+         * key on every request, so it cannot extend a session on its own.
+         */
+        'session_cookie_lifetime_minutes' => (int) env('CLERK_SESSION_COOKIE_LIFETIME', 1),
+    ],
+
+    'playwright' => [
+        'auth_key' => env('PLAYWRIGHT_AUTH_KEY'),
     ],
 
     'slack' => [

@@ -27,6 +27,84 @@ class CheckoutTest extends TestCase
             ->assertSessionHas('status', 'Your cart is empty. Add a product before checking out.');
     }
 
+    public function test_guest_product_addition_is_applied_after_clerk_sign_in(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $productPath = route('catalog.show', [$product->store->slug, $product->slug]);
+        $loginUrl = route('login', ['redirect' => parse_url($productPath, PHP_URL_PATH), 'add_to_cart' => $product->id]);
+
+        $this->get($productPath)
+            ->assertSee('Sign in to add to cart')
+            ->assertSee($loginUrl);
+
+        $this->get(route('home'))
+            ->assertSee(route('login', ['redirect' => '/', 'add_to_cart' => $product->id]));
+
+        $this->get($loginUrl)
+            ->assertSee('After signing in, this item will be added to your cart.');
+
+        $buyer = User::factory()->create();
+        $this->actingAs($buyer)
+            ->postJson(route('clerk.handoff.complete'), ['redirect' => parse_url($productPath, PHP_URL_PATH)])
+            ->assertOk()
+            ->assertJsonPath('redirect', '/cart');
+
+        $this->assertDatabaseHas('cart_items', [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        $this->get(route('cart.index'))->assertSee('Added to your cart.');
+    }
+
+    public function test_admin_sign_in_does_not_apply_a_pending_product_addition(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $productPath = route('catalog.show', [$product->store->slug, $product->slug]);
+        $loginUrl = route('login', ['redirect' => parse_url($productPath, PHP_URL_PATH), 'add_to_cart' => $product->id]);
+
+        $this->get($loginUrl)->assertOk();
+
+        $administrator = User::factory()->administrator()->create();
+        $this->actingAs($administrator)
+            ->postJson(route('clerk.handoff.complete'), ['redirect' => parse_url($productPath, PHP_URL_PATH)])
+            ->assertOk();
+
+        $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
+    }
+
+    public function test_sign_in_finishes_without_adding_an_item_that_sold_out_during_authentication(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 1);
+        $productPath = route('catalog.show', [$product->store->slug, $product->slug]);
+        $loginUrl = route('login', ['redirect' => parse_url($productPath, PHP_URL_PATH), 'add_to_cart' => $product->id]);
+
+        $this->get($loginUrl)->assertOk();
+        $product->update(['stock_quantity' => 0]);
+
+        $buyer = User::factory()->create();
+        $this->actingAs($buyer)
+            ->postJson(route('clerk.handoff.complete'), ['redirect' => parse_url($productPath, PHP_URL_PATH)])
+            ->assertOk()
+            ->assertJsonPath('redirect', parse_url($productPath, PHP_URL_PATH));
+
+        $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
+    }
+
+    public function test_guest_cart_and_checkout_requests_return_to_the_requested_page_after_sign_in(): void
+    {
+        $this->get(route('cart.index'))
+            ->assertRedirect(route('clerk.refresh', ['redirect' => '/cart']));
+
+        $this->get(route('checkout.create'))
+            ->assertRedirect(route('clerk.refresh', ['redirect' => '/checkout']));
+
+        $this->get(route('clerk.refresh', ['redirect' => '/checkout']))
+            ->assertOk()
+            ->assertSee('data-redirect-url="/checkout"', false)
+            ->assertSee('data-sign-in-url="'.route('login', ['redirect' => '/checkout']).'"', false);
+    }
+
     public function test_checkout_mobile_action_advances_through_steps_before_submitting(): void
     {
         [, $product] = $this->sellerProduct('19.99', 5);
@@ -63,6 +141,22 @@ class CheckoutTest extends TestCase
         ]);
         $this->assertSame(2, $product->refresh()->stock_quantity);
         $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
+    }
+
+    public function test_checkout_rejects_totals_that_exceed_order_storage_precision(): void
+    {
+        [, $product] = $this->sellerProduct('9000000000.00', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 2]);
+
+        $this->actingAs($customer)
+            ->post(route('checkout.store'), $this->delivery())
+            ->assertSessionHasErrors(['cart' => 'Your cart total exceeds the maximum order amount.']);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseHas('cart_items', ['cart_id' => $cart->id, 'product_id' => $product->id, 'quantity' => 2]);
+        $this->assertSame(5, $product->refresh()->stock_quantity);
     }
 
     public function test_cancelling_a_confirmed_seller_order_restores_stock_and_updates_parent_order(): void
@@ -102,7 +196,7 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($seller)
             ->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'pending']);
         $this->assertSame(5, $product->refresh()->stock_quantity);

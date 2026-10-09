@@ -47,7 +47,42 @@ class AdminProductControllerTest extends TestCase
             ->assertSee('Canvas Tote')
             ->assertSee('A durable market tote.')
             ->assertSee('Northwind Goods')
+            ->assertSee('Moderate listing')
             ->assertSee('Product Reviewed');
+    }
+
+    public function test_administrator_can_moderate_a_product_and_record_the_reason(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'draft');
+
+        $this->actingAs($administrator)->patch(route('admin.products.moderate', $product), [
+            'status' => 'active',
+            'reason' => 'Listing passed the product review.',
+        ])->assertRedirect(route('admin.products.show', $product));
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'active']);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $administrator->id,
+            'action' => 'product.moderated',
+            'entity_type' => Product::class,
+            'entity_id' => $product->id,
+            'old_values->status' => 'draft',
+            'new_values->status' => 'active',
+            'new_values->reason' => 'Listing passed the product review.',
+        ]);
+    }
+
+    public function test_non_administrators_cannot_moderate_a_product(): void
+    {
+        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'draft');
+
+        $this->actingAs(User::factory()->seller()->create())->patch(route('admin.products.moderate', $product), [
+            'status' => 'active',
+            'reason' => 'This should not be allowed.',
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'draft']);
     }
 
     public function test_product_pagination_keeps_selected_filters(): void

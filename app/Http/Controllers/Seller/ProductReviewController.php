@@ -8,6 +8,7 @@ use App\Models\ProductReview;
 use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class ProductReviewController extends Controller
@@ -29,16 +30,21 @@ class ProductReviewController extends Controller
         $tenant = $this->tenant($request);
         abort_unless($review->product()->where('tenant_id', $tenant->id)->exists(), 404);
         $data = $request->validate(['body' => ['required', 'string', 'max:2000']]);
-        $review->response()->updateOrCreate(['product_review_id' => $review->id], ['user_id' => $request->user()->id, 'body' => $data['body']]);
+        DB::transaction(function () use ($request, $review, $data): void {
+            $review->response()->updateOrCreate(
+                ['product_review_id' => $review->id],
+                ['user_id' => $request->user()->id, 'body' => $data['body']],
+            );
 
-        AuditLog::query()->create([
-            'actor_user_id' => $request->user()->id,
-            'action' => 'product_review.response_saved',
-            'entity_type' => ProductReview::class,
-            'entity_id' => $review->id,
-            'new_values' => ['body' => $data['body']],
-            'ip_address' => $request->ip(),
-        ]);
+            AuditLog::query()->create([
+                'actor_user_id' => $request->user()->id,
+                'action' => 'product_review.response_saved',
+                'entity_type' => ProductReview::class,
+                'entity_id' => $review->id,
+                'new_values' => ['body' => $data['body']],
+                'ip_address' => $request->ip(),
+            ]);
+        });
 
         return back()->with('status', 'Your seller response was saved.');
     }

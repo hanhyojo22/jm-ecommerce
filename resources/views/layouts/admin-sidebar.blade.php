@@ -40,29 +40,29 @@
     ];
 @endphp
 
-<div x-ref="drawer" class="contents" x-data="{
-    open: false,
+<div class="contents" x-data="{
+    visible: window.innerWidth >= 1024,
     trigger: null,
+    toggle(event) {
+        this.trigger = event.detail.trigger;
+        this.visible = event.detail.visible;
+        if (this.visible) {
+            this.$nextTick(() => this.$refs.sidebar.querySelector('a')?.focus());
+        } else {
+            this.$nextTick(() => this.trigger?.focus());
+        }
+    },
     close() {
-        this.open = false;
+        this.visible = false;
         this.$dispatch('admin-navigation-close');
         this.$nextTick(() => this.trigger?.focus());
     },
-    trap(event) {
-        const items = [...this.$refs.drawer.querySelectorAll('a, button')].filter(item => !item.disabled && item.offsetParent);
-        const first = items[0], last = items.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-    },
 }"
-    x-init="$watch('open', value => document.body.classList.toggle('overflow-hidden', value))"
-    @admin-navigation-toggle.window="trigger = $event.detail.trigger; open = $event.detail.open; if (open) { $nextTick(() => $refs.sidebar.querySelector('a')?.focus()); } else { $nextTick(() => trigger?.focus()); }"
-    @keydown.escape.window="if (open) close()"
-    @keydown.tab="if (open) trap($event)"
+    @admin-navigation-toggle.window="toggle($event)"
+    @resize.window="visible = window.innerWidth >= 1024"
+    @keydown.escape.window="if (visible && window.innerWidth < 1024) close()"
 >
-    <button type="button" x-cloak x-show="open" x-transition.opacity class="fixed inset-0 z-40 bg-ink/40 lg:hidden" aria-label="Close admin navigation" @click="close()"></button>
-
-    <aside id="admin-workspace-nav" x-ref="sidebar" aria-label="Admin workspace navigation" :role="open ? 'dialog' : 'complementary'" :aria-modal="open ? 'true' : null" :class="open ? 'fixed inset-y-0 left-0 z-50 block w-64 lg:sticky lg:top-0 lg:h-screen lg:w-auto' : 'hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:w-auto'" class="overflow-y-auto border-r border-line bg-surface">
+    <aside id="admin-workspace-nav" data-workspace-header="admin" x-ref="sidebar" aria-label="Admin workspace navigation" :class="visible ? 'block lg:sticky lg:top-0 lg:h-screen lg:w-auto' : 'hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:w-auto'" class="overflow-y-auto border-r border-line bg-surface">
         <div class="flex min-h-full flex-col px-3 py-5">
             <div class="mb-5 px-3">
                 <p class="text-sm font-semibold text-ink">Administration</p>
