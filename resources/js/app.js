@@ -27,7 +27,6 @@ const clerkComponents = document.querySelectorAll('[data-clerk-component]');
 const clerkSignOutControls = document.querySelectorAll('[data-clerk-sign-out]');
 const clerkHandoff = document.querySelector('[data-clerk-session-handoff]');
 const clerkSessionRefreshEndpoint = document.querySelector('meta[name="clerk-session-refresh-endpoint"]')?.content;
-const clerkSessionRefreshForms = document.querySelectorAll('form[data-clerk-session-refresh]');
 
 const sellerDashboard = document.querySelector('[data-seller-dashboard]');
 
@@ -479,47 +478,52 @@ document.addEventListener('click', (event) => {
         });
 });
 
-clerkSessionRefreshForms.forEach((form) => {
-    form.addEventListener('submit', async (event) => {
-        if (form.dataset.clerkSessionRefreshed === 'true') {
-            delete form.dataset.clerkSessionRefreshed;
+document.addEventListener('submit', async (event) => {
+    const form = event.target;
 
-            return;
+    if (!(form instanceof HTMLFormElement) || !form.dataset.clerkSessionRefresh) {
+        return;
+    }
+
+    if (form.dataset.clerkSessionRefreshed === 'true') {
+        delete form.dataset.clerkSessionRefreshed;
+
+        return;
+    }
+
+    if (!clerkSessionNeedsRefresh()) {
+        return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    if (form.dataset.clerkSessionRefreshing === 'true') {
+        return;
+    }
+
+    form.dataset.clerkSessionRefreshing = 'true';
+
+    try {
+        await refreshClerkSession(form.dataset.clerkSessionRefresh);
+        form.dataset.clerkSessionRefreshed = 'true';
+        delete form.dataset.clerkSessionRefreshing;
+        if (event.submitter) {
+            form.requestSubmit(event.submitter);
+        } else {
+            form.requestSubmit();
         }
+    } catch (error) {
+        delete form.dataset.clerkSessionRefreshing;
+        console.error(error);
 
-        if (!form.dataset.clerkSessionRefresh || !clerkSessionNeedsRefresh()) {
-            return;
-        }
-
-        event.preventDefault();
-
-        if (form.dataset.clerkSessionRefreshing === 'true') {
-            return;
-        }
-
-        form.dataset.clerkSessionRefreshing = 'true';
-
-        try {
-            await refreshClerkSession(form.dataset.clerkSessionRefresh);
-            form.dataset.clerkSessionRefreshed = 'true';
-            delete form.dataset.clerkSessionRefreshing;
-            if (event.submitter) {
-                form.requestSubmit(event.submitter);
-            } else {
-                form.requestSubmit();
-            }
-        } catch (error) {
-            delete form.dataset.clerkSessionRefreshing;
-            console.error(error);
-
-            const message = document.createElement('p');
-            message.className = 'mt-3 text-sm font-semibold text-danger';
-            message.setAttribute('role', 'alert');
-            message.textContent = 'Your session could not be refreshed. Please refresh the page and try again.';
-            form.prepend(message);
-        }
-    });
-});
+        const message = document.createElement('p');
+        message.className = 'mt-3 text-sm font-semibold text-danger';
+        message.setAttribute('role', 'alert');
+        message.textContent = 'Your session could not be refreshed. Please refresh the page and try again.';
+        form.prepend(message);
+    }
+}, true);
 
 document.querySelectorAll('form[data-add-to-cart]').forEach((form) => {
     form.addEventListener('submit', async (event) => {

@@ -94,7 +94,7 @@
             @can('send', $conversation)
                 <div class="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="Add an attachment">
                     <div class="flex flex-wrap items-center gap-2">
-                        <form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" x-data="{ preview: null, name: '' }" class="relative">
+                        <form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" x-data="{ preview: null, name: '' }" class="relative">
                             @csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}">
                             <label for="chat-photo" class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-blue-300 hover:bg-blue-50 hover:text-brand-hover focus-within:ring-2 focus-within:ring-brand">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true"><rect x="3.75" y="4.75" width="16.5" height="14.5" rx="2.5"/><circle cx="9" cy="10" r="1.5"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 4.5-4 3 2.5 2.5-2 4 3.5"/></svg>
@@ -107,7 +107,7 @@
                                 <button type="submit" class="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-hover">Send photo</button>
                             </div>
                         </form>
-                        <form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" x-data="{ name: '' }" class="relative">
+                        <form method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" x-data="{ name: '' }" class="relative">
                             @csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}">
                             <label for="chat-document" class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-blue-300 hover:bg-blue-50 hover:text-brand-hover focus-within:ring-2 focus-within:ring-brand">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg>
