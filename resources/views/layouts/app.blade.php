@@ -33,9 +33,6 @@
         <div class="min-h-screen bg-canvas">
             @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*', 'messages.*'))
             @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
-            @if (request()->routeIs('home'))
-                <x-marketplace.announce-bar />
-            @endif
             @if ($isAdminWorkspace)
                 {{-- The admin header belongs to the workspace content column. --}}
             @elseif (! $isSellerWorkspace)

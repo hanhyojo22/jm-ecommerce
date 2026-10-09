@@ -28,7 +28,7 @@ class CatalogTest extends TestCase
             ->assertOk()
             ->assertSee('Shop by category')
             ->assertSee($category->name)
-            ->assertSee('id="marketplace-search-home-mobile"', false)
+            ->assertSee('id="marketplace-search"', false)
             ->assertSee('Mobile marketplace navigation')
             ->assertSee($visible->name)
             ->assertDontSee($hidden->name);
@@ -105,6 +105,20 @@ class CatalogTest extends TestCase
             route('catalog.show', [$product->store->slug, $product->slug]),
         ] as $url) {
             $this->get($url)->assertSee('name="clerk-publishable-key"', false);
+        }
+    }
+
+    public function test_customer_account_pages_keep_the_marketplace_header(): void
+    {
+        $buyer = User::factory()->create();
+
+        foreach ([route('profile.edit'), route('orders.index'), route('cart.index')] as $url) {
+            $this->actingAs($buyer)->get($url)
+                ->assertOk()
+                ->assertSee('id="marketplace-search"', false)
+                ->assertSee('aria-label="Marketplace sections"', false)
+                ->assertSee('data-header-promo', false)
+                ->assertSee('aria-label="Account menu"', false);
         }
     }
 
