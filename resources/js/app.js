@@ -517,6 +517,11 @@ document.addEventListener('submit', async (event) => {
         delete form.dataset.clerkSessionRefreshing;
         console.error(error);
 
+        if (form.hasAttribute('data-chat-upload')) {
+            form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Your session could not be refreshed. Press Send to retry.' } }));
+            return;
+        }
+
         const message = document.createElement('p');
         message.className = 'mt-3 text-sm font-semibold text-danger';
         message.setAttribute('role', 'alert');
@@ -524,6 +529,47 @@ document.addEventListener('submit', async (event) => {
         form.prepend(message);
     }
 }, true);
+
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-chat-upload') || event.defaultPrevented) {
+        return;
+    }
+
+    event.preventDefault();
+    if (form.dataset.uploading === 'true') {
+        return;
+    }
+
+    form.dataset.uploading = 'true';
+    const request = new XMLHttpRequest();
+    request.open('POST', form.action);
+    request.responseType = 'json';
+    request.setRequestHeader('Accept', 'application/json');
+    request.upload.addEventListener('progress', (progress) => {
+        if (progress.lengthComputable) {
+            form.dispatchEvent(new CustomEvent('chat-upload-progress', { bubbles: true, detail: { progress: Math.round(progress.loaded / progress.total * 100) } }));
+        }
+    });
+    request.addEventListener('load', () => {
+        delete form.dataset.uploading;
+        if (request.status >= 200 && request.status < 300 && request.response?.message === 'Attachment sent.') {
+            sessionStorage.removeItem(form.dataset.chatDraftKey);
+            window.location.reload();
+            return;
+        }
+
+        const errors = request.response?.errors;
+        const message = errors ? Object.values(errors).flat()[0] : request.response?.message;
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: message || 'Upload failed. Press Send to retry.' } }));
+    });
+    request.addEventListener('error', () => {
+        delete form.dataset.uploading;
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Upload failed. Check your connection and press Send to retry.' } }));
+    });
+    request.send(new FormData(form));
+});
 
 document.querySelectorAll('form[data-add-to-cart]').forEach((form) => {
     form.addEventListener('submit', async (event) => {

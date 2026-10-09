@@ -9,17 +9,17 @@
     $navItem = 'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
 @endphp
 
-<div class="page-shell min-h-[calc(100dvh-4.5rem)]">
+<div class="page-shell min-h-[calc(100dvh-4.5rem)] {{ $active === 'messages' ? 'py-3 sm:py-5 lg:py-10' : '' }}">
     <div class="page-container max-w-[1320px]">
-        <nav aria-label="Breadcrumb" class="flex min-w-0 items-center gap-2 text-sm text-muted">
+        <nav aria-label="Breadcrumb" class="min-w-0 items-center gap-2 text-sm text-muted {{ $active === 'messages' ? 'hidden lg:flex' : 'flex' }}">
             <a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Home</a>
             <span aria-hidden="true">/</span>
             <span aria-current="page" class="min-w-0 truncate font-semibold text-ink">{{ $title }}</span>
             @if ($isBuyer)<span class="ml-1 hidden shrink-0 rounded-full bg-canvas px-2.5 py-1 text-xs font-medium text-muted ring-1 ring-inset ring-line sm:inline">Customer context · Shopping</span>@endif
         </nav>
 
-        <div class="mt-5 grid items-start gap-6 lg:grid-cols-[264px_minmax(0,1fr)]">
-            <nav class="rounded-[14px] border border-line bg-surface p-3 lg:sticky lg:top-24" aria-label="Account" data-od-id="account-nav" data-role-navigation="customer">
+        <div class="grid items-start lg:grid-cols-[264px_minmax(0,1fr)] {{ $active === 'messages' ? 'gap-0 lg:mt-5 lg:gap-6' : 'mt-5 gap-6' }}">
+            <nav class="rounded-[14px] border border-line bg-surface p-3 lg:sticky lg:top-24 {{ $active === 'messages' ? 'hidden lg:block' : '' }}" aria-label="Account" data-od-id="account-nav" data-role-navigation="customer">
                 <div class="grid gap-1">
                     @if ($isBuyer)
                         <a href="{{ route('orders.index') }}" @class([$navItem, 'bg-blue-50 font-semibold text-brand' => $active === 'orders', 'font-medium text-ink hover:bg-canvas' => $active !== 'orders']) @if ($active === 'orders') aria-current="page" @endif>

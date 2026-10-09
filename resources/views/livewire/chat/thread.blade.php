@@ -2,10 +2,16 @@
 <div data-conversation-thread>
 @if ($isBuyerMessages)
     <x-marketplace.account-shell active="messages" title="Conversation">
-        @include('livewire.chat.thread-content')
+        <div class="grid h-[calc(100dvh-7rem)] min-h-0 min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface lg:h-[calc(100dvh-12rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
+            <div class="hidden min-h-0 border-r border-line lg:block"><livewire:chat.inbox :embedded="true" :active-conversation-id="$conversation->id" /></div>
+            @include('livewire.chat.thread-content')
+        </div>
     </x-marketplace.account-shell>
 @else
-    @include('livewire.chat.thread-content')
+    <div class="page-shell py-4 sm:py-6"><div class="page-container grid h-[calc(100dvh-10rem)] min-h-0 max-w-6xl min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface lg:h-[calc(100dvh-8rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
+        <div class="hidden min-h-0 border-r border-line lg:block"><livewire:chat.inbox :embedded="true" :active-conversation-id="$conversation->id" /></div>
+        @include('livewire.chat.thread-content')
+    </div></div>
 @endif
 </div>
 
@@ -13,6 +19,7 @@
 <script>
     const messageList = document.getElementById('conversation-messages');
     let previousMessageScroll = null;
+    let followLatestMessage = true;
 
     const localTimeFormatter = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     const localDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -51,6 +58,9 @@
             };
         }
     });
+    messageList?.addEventListener('scroll', () => {
+        followLatestMessage = messageList.scrollHeight - messageList.clientHeight - messageList.scrollTop < 120;
+    });
 
     requestAnimationFrame(() => {
         localizeMessageTimes();
@@ -71,7 +81,9 @@
                 return;
             }
 
-            scrollToLatestMessage();
+            if (followLatestMessage) {
+                scrollToLatestMessage();
+            }
         });
     });
 

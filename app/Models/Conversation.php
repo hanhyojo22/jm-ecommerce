@@ -100,13 +100,8 @@ class Conversation extends Model
 
     public function scopeUnreadFor(Builder $query, User $user): Builder
     {
-        return $query->where(function (Builder $query) use ($user): void {
-            $query->where(function (Builder $query) use ($user): void {
-                $query->whereDoesntHave('readStates', fn (Builder $readStates) => $readStates->where('user_id', $user->id))
-                    ->whereHas('messages', fn (Builder $messages) => $messages->where('sender_id', '!=', $user->id));
-            })->orWhereHas('readStates', fn (Builder $readStates) => $readStates
-                ->where('user_id', $user->id)
-                ->whereColumn('last_read_at', '<', 'conversations.latest_message_at'));
-        });
+        return $query->whereHas('messages', fn (Builder $messages) => $messages
+            ->where('sender_id', '!=', $user->id)
+            ->whereRaw("conversation_messages.id > COALESCE((SELECT last_read_message_id FROM conversation_read_states WHERE conversation_id = conversations.id AND user_id = ? LIMIT 1), '')", [$user->id]));
     }
 }

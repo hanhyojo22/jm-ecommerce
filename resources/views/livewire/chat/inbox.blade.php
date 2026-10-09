@@ -1,11 +1,19 @@
 <div data-conversation-inbox>
     @php($isBuyerMessages = auth()->user()->account_type === 'buyer')
-    @if ($isBuyerMessages)
+    @if ($embedded)
+        @include('livewire.chat.inbox-content')
+    @elseif ($isBuyerMessages)
         <x-marketplace.account-shell active="messages" title="Messages">
-            @include('livewire.chat.inbox-content')
+            <div class="grid h-[calc(100dvh-7rem)] min-h-0 min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface lg:h-[calc(100dvh-12rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
+                @include('livewire.chat.inbox-content')
+                <div class="hidden min-w-0 flex-col items-center justify-center border-l border-line bg-canvas px-8 text-center lg:flex"><span class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" d="M8 11.5h8M8 14.5h5"/></svg></span><h2 class="mt-4 text-base font-semibold text-ink">Select a conversation</h2><p class="mt-1 max-w-xs text-sm text-muted">Choose a customer or store to view your messages.</p></div>
+            </div>
         </x-marketplace.account-shell>
     @else
-        @include('livewire.chat.inbox-content')
+        <div class="page-shell py-4 sm:py-6"><div class="page-container grid h-[calc(100dvh-10rem)] min-h-0 max-w-6xl min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface lg:h-[calc(100dvh-8rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
+            @include('livewire.chat.inbox-content')
+            <div class="hidden min-w-0 flex-col items-center justify-center border-l border-line bg-canvas px-8 text-center lg:flex"><span class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" d="M8 11.5h8M8 14.5h5"/></svg></span><h2 class="mt-4 text-base font-semibold text-ink">Select a conversation</h2><p class="mt-1 max-w-xs text-sm text-muted">Choose a customer or store to view your messages.</p></div>
+        </div></div>
     @endif
 </div>
 
@@ -14,7 +22,7 @@
     const inbox = document.querySelector('[data-conversation-inbox]');
     const joinedConversations = new Set();
 
-    const syncPresenceChannels = () => {
+    const syncConversationChannels = () => {
         if (! inbox || ! window.Echo) {
             return;
         }
@@ -34,16 +42,19 @@
         for (const conversationId of visibleConversations) {
             if (! joinedConversations.has(conversationId)) {
                 window.Echo.join(`conversation.${conversationId}`);
+                window.Echo.private(`conversation.${conversationId}`)
+                    .listen('.message.created', () => $wire.$refresh())
+                    .listen('.message.read', () => $wire.$refresh());
                 joinedConversations.add(conversationId);
             }
         }
     };
 
-    syncPresenceChannels();
-    window.addEventListener('reverb:ready', syncPresenceChannels, { once: true });
+    syncConversationChannels();
+    window.addEventListener('reverb:ready', syncConversationChannels, { once: true });
 
     if (inbox) {
-        new MutationObserver(syncPresenceChannels).observe(inbox, { childList: true, subtree: true });
+        new MutationObserver(syncConversationChannels).observe(inbox, { childList: true, subtree: true });
     }
 </script>
 @endscript

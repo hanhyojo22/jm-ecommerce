@@ -106,7 +106,7 @@ class ConversationTest extends TestCase
             ->get(route('messages.show', $conversation))
             ->assertOk()
             ->assertSee('data-conversation-thread')
-            ->assertSee('wire:input.debounce.500ms="startTyping"', false);
+            ->assertSee('x-on:input.debounce.500ms="$wire.startTyping()"', false);
     }
 
     public function test_seller_can_open_a_conversation_page(): void
@@ -138,6 +138,40 @@ class ConversationTest extends TestCase
             ->test(Inbox::class)
             ->assertSeeHtml('data-presence-conversation="'.$visibleConversation->id.'"')
             ->assertDontSeeHtml('data-presence-conversation="'.$hiddenConversation->id.'"');
+    }
+
+    public function test_inbox_counts_only_unread_messages_from_the_other_participant(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'First question']);
+        $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'Second question']);
+        $conversation->messages()->create(['sender_id' => $buyer->id, 'body' => 'My response']);
+
+        Livewire::actingAs($buyer)->test(Inbox::class)->assertSee('2 unread messages');
+        Livewire::actingAs($buyer)->test(Inbox::class)->set('filter', 'unread')->assertSee('2 unread messages');
+
+        Livewire::actingAs($buyer)->test(Thread::class, ['conversation' => $conversation]);
+
+        Livewire::actingAs($buyer)->test(Inbox::class)->assertDontSee('2 unread messages');
+        Livewire::actingAs($buyer)->test(Inbox::class)->set('filter', 'unread')->assertSee('No matching conversations');
+    }
+
+    public function test_new_message_after_read_is_unread_even_within_the_same_second(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'Read message']);
+
+        Livewire::actingAs($buyer)->test(Thread::class, ['conversation' => $conversation]);
+        $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'New message']);
+
+        Livewire::actingAs($buyer)->test(Inbox::class)->assertSee('1 unread messages');
+        Livewire::actingAs($buyer)->test(Inbox::class)->set('filter', 'unread')->assertSee('New message');
     }
 
     public function test_inactive_buyer_cannot_view_a_conversation(): void
@@ -340,6 +374,10 @@ class ConversationTest extends TestCase
             ->get(route('messages.attachments.show', $attachment))
             ->assertOk()
             ->assertHeaderContains('Content-Disposition', 'attachment');
+        $this->get(route('messages.attachments.show', $attachment).'?preview=1')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeaderContains('Content-Disposition', 'inline');
     }
 
     public function test_image_attachments_render_as_previews_and_are_served_inline(): void
@@ -373,7 +411,7 @@ class ConversationTest extends TestCase
         $product = $this->product();
         $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
         $clientMessageId = (string) str()->uuid();
-        $payload = ['client_message_id' => $clientMessageId, 'attachment' => UploadedFile::fake()->create('receipt.pdf', 20, 'application/pdf')];
+        $payload = ['client_message_id' => $clientMessageId, 'attachment' => UploadedFile::fake()->createWithContent('receipt.pdf', "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF")];
 
         $this->actingAs($buyer)->post(route('messages.attachments.store', $conversation), $payload)->assertRedirect();
         $this->post(route('messages.attachments.store', $conversation), $payload)->assertRedirect();
@@ -395,7 +433,7 @@ class ConversationTest extends TestCase
         $this->actingAs($buyer)->post(route('messages.attachments.store', $conversation), [
             'client_message_id' => (string) str()->uuid(),
             'body' => 'Please check this receipt.',
-            'attachment' => UploadedFile::fake()->create('receipt.pdf', 20, 'application/pdf'),
+            'attachment' => UploadedFile::fake()->createWithContent('receipt.pdf', "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF"),
         ])->assertRedirect();
 
         $this->assertDatabaseCount('conversation_messages', 1);
@@ -404,6 +442,23 @@ class ConversationTest extends TestCase
         $this->assertSame('file', $message->type);
         $this->assertSame('receipt.pdf', $message->attachments()->first()->original_name);
         Livewire::actingAs($buyer)->test(Thread::class, ['conversation' => $conversation])->assertSee('Please check this receipt.');
+    }
+
+    public function test_buyer_cannot_upload_to_another_buyers_conversation(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($otherBuyer)->post(route('messages.attachments.store', $conversation), [
+            'client_message_id' => (string) str()->uuid(),
+            'attachment' => UploadedFile::fake()->createWithContent('receipt.pdf', "%PDF-1.4\n%%EOF"),
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('conversation_messages', 0);
+        $this->assertDatabaseCount('message_attachments', 0);
     }
 
     public function test_attachment_text_must_fit_the_message_limit(): void
@@ -420,6 +475,40 @@ class ConversationTest extends TestCase
         ])->assertSessionHasErrors('body');
 
         $this->assertDatabaseCount('conversation_messages', 0);
+        $this->assertDatabaseCount('message_attachments', 0);
+    }
+
+    public function test_attachment_upload_rejects_unsupported_or_disguised_files(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        foreach (['notes.docx', 'table.xlsx', 'notes.txt', 'disguised.png', 'broken.pdf'] as $name) {
+            $content = $name === 'broken.pdf' ? 'This is not a PDF' : "%PDF-1.4\n%%EOF";
+            $this->actingAs($buyer)->post(route('messages.attachments.store', $conversation), [
+                'client_message_id' => (string) str()->uuid(),
+                'attachment' => UploadedFile::fake()->createWithContent($name, $content),
+            ])->assertSessionHasErrors('attachment');
+        }
+
+        $this->assertDatabaseCount('conversation_messages', 0);
+        $this->assertDatabaseCount('message_attachments', 0);
+    }
+
+    public function test_attachment_upload_rejects_files_over_five_megabytes(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($buyer)->post(route('messages.attachments.store', $conversation), [
+            'client_message_id' => (string) str()->uuid(),
+            'attachment' => UploadedFile::fake()->create('large.pdf', 5121, 'application/pdf'),
+        ])->assertSessionHasErrors('attachment');
+
         $this->assertDatabaseCount('message_attachments', 0);
     }
 

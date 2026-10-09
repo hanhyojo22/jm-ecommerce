@@ -84,6 +84,115 @@ test('signed-in customer refreshes the Clerk token before opening messages', asy
     }
 });
 
+test('messaging workspace adapts from split desktop panels to a mobile chat view', async ({ browser }, testInfo) => {
+    const customer = await openAsRole(browser, 'customer');
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await customer.page.setViewportSize({ width: 390, height: 844 });
+        await customer.page.screenshot({ path: testInfo.outputPath('chat-buyer-mobile.png') });
+        await expect(customer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        const composer = await customer.page.getByRole('button', { name: 'Send message' }).boundingBox();
+        expect(composer.y + composer.height).toBeLessThanOrEqual(844);
+    } finally {
+        await customer.context.close();
+    }
+
+    const seller = await openAsRole(browser, 'seller');
+    try {
+        for (const [device, width] of [['desktop', 1440], ['tablet', 820], ['mobile', 390]]) {
+            await seller.page.setViewportSize({ width, height: 844 });
+            await seller.page.goto('/messages');
+            await expect(seller.page.locator('[data-conversation-list]')).toBeVisible();
+            if (width >= 1024) {
+                await expect(seller.page.getByRole('heading', { name: 'Select a conversation' })).toBeVisible();
+            } else {
+                await expect(seller.page.getByRole('heading', { name: 'Select a conversation' })).toBeHidden();
+            }
+            await seller.page.getByRole('link', { name: /QA Customer/ }).first().click();
+            await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+            if (width >= 1024) {
+                await expect(seller.page.locator('[data-conversation-list]')).toBeVisible();
+                await expect(seller.page.locator('[data-conversation-list] a[aria-current="page"]')).toBeVisible();
+            } else {
+                await expect(seller.page.locator('[data-conversation-list]')).toBeHidden();
+                await expect(seller.page.getByRole('link', { name: 'Back to messages' })).toBeVisible();
+            }
+            const sizes = await seller.page.evaluate(() => ({ viewport: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }));
+            expect(sizes.page).toBeLessThanOrEqual(sizes.viewport);
+            await seller.page.screenshot({ path: testInfo.outputPath(`chat-${device}.png`) });
+        }
+    } finally {
+        await seller.context.close();
+    }
+});
+
+test('conversation search and unread filter update the seller inbox', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Unread filter check');
+        await expect(customer.page.locator('#message-help')).toContainText('19/2000');
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(customer.page.locator('#conversation-messages').getByText('Unread filter check', { exact: true })).toBeVisible();
+    } finally {
+        await customer.context.close();
+    }
+
+    const seller = await openAsRole(browser, 'seller');
+    try {
+        await seller.page.goto('/messages');
+        await seller.page.getByRole('button', { name: 'Unread' }).click();
+        await expect(seller.page.getByRole('link', { name: /QA Customer/ }).first()).toBeVisible();
+        await seller.page.getByPlaceholder('Search conversations').fill('no matching customer');
+        await expect(seller.page.getByRole('heading', { name: 'No matching conversations' })).toBeVisible();
+        await seller.page.getByPlaceholder('Search conversations').fill('QA Customer');
+        await expect(seller.page.getByRole('link', { name: /QA Customer/ }).first()).toBeVisible();
+    } finally {
+        await seller.context.close();
+    }
+});
+
+test('incoming message event refreshes the inbox preview and unread badge without navigation', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+    const seller = await openAsRole(browser, 'seller');
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await seller.page.goto('/messages');
+        await seller.page.getByRole('link', { name: /QA Customer/ }).first().click();
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        await seller.page.goto('/messages');
+        const conversationId = new URL(await seller.page.getByRole('link', { name: /QA Customer/ }).first().getAttribute('href')).pathname.split('/').pop();
+        await expect.poll(() => seller.page.evaluate((id) => Boolean(window.Echo?.private(`conversation.${id}`).subscription), conversationId)).toBe(true);
+        await seller.page.evaluate(() => { window.__chatPageMarker = true; });
+
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Live inbox preview');
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(customer.page.locator('#conversation-messages').getByText('Live inbox preview', { exact: true })).toBeVisible();
+
+        await seller.page.evaluate((id) => window.Echo.private(`conversation.${id}`).subscription.emit('message.created', {}), conversationId);
+        await expect(seller.page.getByRole('link', { name: /QA Customer/ }).first()).toContainText('Live inbox preview');
+        await expect(seller.page.getByRole('link', { name: /QA Customer/ }).first().getByLabel('1 unread messages')).toBeVisible();
+        expect(await seller.page.evaluate(() => window.__chatPageMarker)).toBe(true);
+
+        await seller.page.getByRole('link', { name: /QA Customer/ }).first().click();
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        await seller.page.evaluate(() => { window.__chatPageMarker = true; });
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Live thread update');
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(customer.page.locator('#conversation-messages').getByText('Live thread update', { exact: true })).toBeVisible();
+        await seller.page.evaluate((id) => window.Echo.private(`conversation.${id}`).subscription.emit('message.created', {}), conversationId);
+        await expect(seller.page.locator('#conversation-messages').getByText('Live thread update', { exact: true })).toBeVisible();
+        expect(await seller.page.evaluate(() => window.__chatPageMarker)).toBe(true);
+    } finally {
+        await customer.context.close();
+        await seller.context.close();
+    }
+});
+
 test('seller quick reply fills the message draft without a server request', async ({ browser }) => {
     const customer = await openAsRole(browser, 'customer');
 
@@ -230,7 +339,8 @@ for (const attachment of [
             await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Draft before uploading');
             await rerender;
 
-            await seller.page.getByLabel(attachment.label === 'photo' ? 'Photo' : 'Document').setInputFiles({
+            await seller.page.getByRole('button', { name: 'Add attachment' }).click();
+            await seller.page.getByLabel(attachment.label === 'photo' ? 'Image' : 'PDF document').setInputFiles({
                 name: attachment.filename,
                 mimeType: attachment.mimeType,
                 buffer: typeof attachment.contents === 'string' ? Buffer.from(attachment.contents, 'base64') : attachment.contents,
@@ -240,13 +350,14 @@ for (const attachment of [
             if (attachment.label === 'photo') {
                 await seller.page.setViewportSize({ width: 390, height: 844 });
                 const composerRow = await seller.page.evaluate(() => {
-                    const selectors = ['label[for="chat-photo"]', 'label[for="chat-document"]', '#message-body', 'button[aria-label="Send photo"]'];
+                    const selectors = ['button[aria-label="Add attachment"]', '#message-body', 'button[aria-label="Send photo"]'];
                     return selectors.map((selector) => document.querySelector(selector).getBoundingClientRect().bottom);
                 });
                 expect(Math.max(...composerRow) - Math.min(...composerRow)).toBeLessThan(3);
                 await seller.page.getByRole('button', { name: 'Remove attachment' }).click();
                 await expect(seller.page.getByRole('button', { name: 'Send message' })).toBeVisible();
-                await seller.page.getByLabel('Photo').setInputFiles({
+                await seller.page.getByRole('button', { name: 'Add attachment' }).click();
+                await seller.page.getByLabel('Image').setInputFiles({
                     name: attachment.filename,
                     mimeType: attachment.mimeType,
                     buffer: Buffer.from(attachment.contents, 'base64'),
@@ -271,6 +382,48 @@ for (const attachment of [
     });
 }
 
+test('an invalid chat file shows an error and can be replaced and retried', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+    } finally {
+        await customer.context.close();
+    }
+
+    const seller = await openAsRole(browser, 'seller');
+    try {
+        await seller.page.goto('/messages');
+        await seller.page.getByRole('link', { name: /QA Customer/ }).first().click();
+        await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Here is the receipt.');
+        await seller.page.getByRole('button', { name: 'Add attachment' }).click();
+        await seller.page.getByLabel('PDF document').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a PDF') });
+
+        await seller.page.route(/\/messages\/[^/]+\/attachments$/, async (route) => {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            await route.continue();
+        }, { times: 1 });
+        const rejected = seller.page.waitForResponse((response) => response.url().includes('/attachments') && response.request().method() === 'POST');
+        await seller.page.getByRole('button', { name: 'Send document' }).click();
+        await expect(seller.page.getByRole('progressbar', { name: 'Attachment upload progress' })).toBeVisible();
+        expect((await rejected).status()).toBe(422);
+        await expect(seller.page.getByRole('alert')).toContainText('attachment');
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue('Here is the receipt.');
+        await expect(seller.page.getByRole('button', { name: 'Send document' })).toBeEnabled();
+
+        await seller.page.getByRole('button', { name: 'Add attachment' }).click();
+        await seller.page.getByLabel('PDF document').setInputFiles({ name: 'receipt.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF') });
+        await expect(seller.page.getByRole('status').filter({ hasText: 'receipt.pdf' })).toContainText('B');
+        await seller.page.getByRole('button', { name: 'Send document' }).click();
+        const message = seller.page.locator('#conversation-messages article').filter({ hasText: 'receipt.pdf' }).last();
+        await expect(message.getByText('Here is the receipt.', { exact: true })).toBeVisible();
+        await expect(message.getByRole('link', { name: 'Open' })).toBeVisible();
+        await expect(message.getByRole('link', { name: 'Download' })).toBeVisible();
+    } finally {
+        await seller.context.close();
+    }
+});
+
 test('public product page has no automated WCAG A or AA violations', async ({ page }) => {
     await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
 
@@ -279,6 +432,26 @@ test('public product page has no automated WCAG A or AA violations', async ({ pa
         .analyze();
 
     expect(results.violations).toEqual([]);
+});
+
+test('messaging workspace has no browser exceptions or automated WCAG A or AA violations', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+    const exceptions = [];
+    customer.page.on('pageerror', (error) => exceptions.push(error.message));
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await expect(customer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        const results = await new AxeBuilder({ page: customer.page })
+            .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+            .analyze();
+
+        expect(results.violations).toEqual([]);
+        expect(exceptions).toEqual([]);
+    } finally {
+        await customer.context.close();
+    }
 });
 
 test('marketplace document responds within the local performance budget', async ({ page }) => {

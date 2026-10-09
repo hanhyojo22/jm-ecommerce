@@ -20,6 +20,10 @@ class Inbox extends Component
     #[Url]
     public string $search = '';
 
+    public bool $embedded = false;
+
+    public ?string $activeConversationId = null;
+
     public function updatedFilter(): void
     {
         $this->resetPage();
@@ -44,6 +48,9 @@ class Inbox extends Component
                 'messages' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id')->limit(1),
                 'readStates' => fn ($query) => $query->where('user_id', $user->id),
             ])
+            ->withCount(['messages as unread_messages_count' => fn ($query) => $query
+                ->where('sender_id', '!=', $user->id)
+                ->whereRaw("conversation_messages.id > COALESCE((SELECT last_read_message_id FROM conversation_read_states WHERE conversation_id = conversations.id AND user_id = ? LIMIT 1), '')", [$user->id])])
             ->visibleTo($user)
             ->when($this->filter === 'product', fn ($query) => $query->whereNotNull('product_id'))
             ->when($this->filter === 'order', fn ($query) => $query->whereNotNull('seller_order_id'))
