@@ -380,8 +380,47 @@ class ConversationTest extends TestCase
 
         $this->assertDatabaseCount('conversation_messages', 1);
         $this->assertDatabaseCount('message_attachments', 1);
+        $this->assertSame('receipt.pdf', $conversation->messages()->first()->body);
         $attachment = $conversation->messages()->first()->attachments()->first();
         Storage::disk('chat_attachments')->assertExists($attachment->path);
+    }
+
+    public function test_sending_an_attachment_with_text_creates_one_message_with_a_caption(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($buyer)->post(route('messages.attachments.store', $conversation), [
+            'client_message_id' => (string) str()->uuid(),
+            'body' => 'Please check this receipt.',
+            'attachment' => UploadedFile::fake()->create('receipt.pdf', 20, 'application/pdf'),
+        ])->assertRedirect();
+
+        $this->assertDatabaseCount('conversation_messages', 1);
+        $message = $conversation->messages()->first();
+        $this->assertSame('Please check this receipt.', $message->body);
+        $this->assertSame('file', $message->type);
+        $this->assertSame('receipt.pdf', $message->attachments()->first()->original_name);
+        Livewire::actingAs($buyer)->test(Thread::class, ['conversation' => $conversation])->assertSee('Please check this receipt.');
+    }
+
+    public function test_attachment_text_must_fit_the_message_limit(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($buyer)->post(route('messages.attachments.store', $conversation), [
+            'client_message_id' => (string) str()->uuid(),
+            'body' => str_repeat('a', 2001),
+            'attachment' => UploadedFile::fake()->create('receipt.pdf', 20, 'application/pdf'),
+        ])->assertSessionHasErrors('body');
+
+        $this->assertDatabaseCount('conversation_messages', 0);
+        $this->assertDatabaseCount('message_attachments', 0);
     }
 
     public function test_user_broadcast_channel_authorization_compares_ulid_ids_as_strings(): void

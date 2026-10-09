@@ -23,6 +23,7 @@ class ConversationAttachmentController extends Controller
         $data = $request->validate([
             'attachment' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'extensions:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'client_message_id' => ['required', 'uuid'],
+            'body' => ['nullable', 'string', 'max:2000'],
         ]);
         $existingMessage = $conversation->messages()
             ->where('sender_id', $request->user()->id)
@@ -44,7 +45,8 @@ class ConversationAttachmentController extends Controller
 
         try {
             DB::transaction(function () use ($request, $conversation, $sendMessage, $data, $file, $disk, $path, &$stored, &$attachment): void {
-                $message = $sendMessage->handle($conversation, $request->user(), $file->getClientOriginalName(), $data['client_message_id'], 'file');
+                $body = trim($data['body'] ?? '');
+                $message = $sendMessage->handle($conversation, $request->user(), $body !== '' ? $body : $file->getClientOriginalName(), $data['client_message_id'], 'file');
                 if (! $message->wasRecentlyCreated) {
                     return;
                 }

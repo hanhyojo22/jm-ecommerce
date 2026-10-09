@@ -261,9 +261,10 @@ for (const attachment of [
 
             await expect((await refresh).ok()).toBeTruthy();
             await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
-            await expect(seller.page.locator('#conversation-messages').getByText(attachment.filename, { exact: true })).toBeVisible();
-            await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue('Draft before uploading');
-            await expect(seller.page.locator('#conversation-messages').getByText('Draft before uploading', { exact: true })).toHaveCount(0);
+            const sentMessage = seller.page.locator('#conversation-messages article').filter({ hasText: attachment.filename }).last();
+            await expect(sentMessage.getByText(attachment.filename, { exact: true })).toBeVisible();
+            await expect(sentMessage.getByText('Draft before uploading', { exact: true })).toBeVisible();
+            await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeEmpty();
         } finally {
             await seller.context.close();
         }

@@ -63,6 +63,9 @@
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4 shrink-0 opacity-75" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3.75v11m0 0 4-4m-4 4-4-4M5 16.75v3.5h14v-3.5"/></svg>
                                         </a>
                                     @endif
+                                    @if ($message->body !== $attachment->original_name)
+                                        <p class="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
+                                    @endif
                                 @else
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
                                 @endif
@@ -100,7 +103,7 @@
                     this.fileName = '';
                     this.previewUrl = null;
                 }
-            }" x-init="const draft = sessionStorage.getItem('chat-draft-{{ auth()->id() }}-{{ $conversation->id }}'); if (draft !== null) { $wire.body = draft; sessionStorage.removeItem('chat-draft-{{ auth()->id() }}-{{ $conversation->id }}'); }">
+            }" x-init="const key = 'chat-draft-{{ auth()->id() }}-{{ $conversation->id }}'; const draft = sessionStorage.getItem(key); if (draft !== null && ! @js(session('status') === 'Attachment sent.')) { $wire.body = draft; } sessionStorage.removeItem(key);">
                 @cannot('send', $conversation)<p class="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">Messaging is unavailable for this conversation.</p>@endcannot
                 @if (auth()->user()->account_type !== 'buyer' && auth()->user()->can('send', $conversation))
                     <div class="mb-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Quick replies">@foreach (['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?'] as $reply)<button x-on:click="$wire.body = @js($reply)" type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-[10px] border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $reply }}</button>@endforeach</div>
@@ -136,8 +139,8 @@
                 </form>
                 @can('send', $conversation)
                     <p class="mt-1 text-xs text-muted">Photos: JPG, PNG, WebP · Documents: PDF · Up to 5 MB</p>
-                    <form id="chat-photo-form" x-ref="photoForm" method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"></form>
-                    <form id="chat-document-form" x-ref="documentForm" method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"></form>
+                    <form id="chat-photo-form" x-ref="photoForm" method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" x-bind:value="$wire.body"></form>
+                    <form id="chat-document-form" x-ref="documentForm" method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" x-bind:value="$wire.body"></form>
                 @endcan
             </div>
         </section>
