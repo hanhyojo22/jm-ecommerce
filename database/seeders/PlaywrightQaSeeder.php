@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -20,7 +21,7 @@ class PlaywrightQaSeeder extends Seeder
 
         $this->call(CategorySeeder::class);
 
-        User::factory()->create([
+        $customer = User::factory()->create([
             'name' => 'QA Customer',
             'email' => 'qa-customer@example.test',
             'clerk_user_id' => 'qa-customer-identity',
@@ -45,8 +46,14 @@ class PlaywrightQaSeeder extends Seeder
         [$tenant, $store] = $this->storeFor($seller, 'qa-northwind', 'QA Northwind');
         [$otherTenant, $otherStore] = $this->storeFor($otherSeller, 'qa-southwind', 'QA Southwind');
 
-        $this->product($tenant, $store, $category, 'QA Canvas Tote', 'qa-canvas-tote', 'QA-TOTE-001', '19.99', 25);
+        $product = $this->product($tenant, $store, $category, 'QA Canvas Tote', 'qa-canvas-tote', 'QA-TOTE-001', '19.99', 25);
         $this->product($otherTenant, $otherStore, $category, 'Other Seller QA Product', 'other-qa-product', 'QA-OTHER-001', '39.99', 10);
+
+        $order = Order::query()->create(['user_id' => $customer->id, 'number' => 'QA-REVIEW-001', 'status' => 'delivered', 'recipient_name' => $customer->name, 'phone' => '+639171234567', 'address_line' => '10 QA Street', 'city' => 'Manila', 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
+        $order->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '19.99']);
+        $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
+        $item = $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => '19.99', 'quantity' => 1, 'line_total' => '19.99']);
+        $item->review()->create(['product_id' => $product->id, 'user_id' => $customer->id, 'rating' => 5, 'body' => 'Great tote.', 'status' => 'published']);
     }
 
     /**

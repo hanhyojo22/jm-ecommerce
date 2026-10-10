@@ -179,7 +179,7 @@ class CatalogController extends Controller
             'sort_reviews' => ['nullable', Rule::in(['recent', 'highest', 'lowest'])],
         ]);
         $reviews = $product->reviews()->published()
-            ->with(['user:id,name', 'photos', 'response.user:id,name', 'orderItem.sellerOrder:id,order_id'])
+            ->with(['user:id,name', 'photos', 'responses.user:id,name', 'orderItem.sellerOrder:id,order_id'])
             ->when($reviewFilters['rating'] ?? null, fn (Builder $query, int $rating) => $query->where('rating', $rating))
             ->when(($reviewFilters['photos'] ?? false), fn (Builder $query) => $query->has('photos'));
         match ($reviewFilters['sort_reviews'] ?? 'recent') {

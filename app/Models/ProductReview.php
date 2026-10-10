@@ -47,7 +47,12 @@ class ProductReview extends Model
 
     public function response(): HasOne
     {
-        return $this->hasOne(ProductReviewResponse::class);
+        return $this->hasOne(ProductReviewResponse::class)->whereNull('parent_response_id')->where('author_type', 'seller');
+    }
+
+    public function responses(): HasMany
+    {
+        return $this->hasMany(ProductReviewResponse::class)->orderBy('created_at')->orderBy('id');
     }
 
     public function reports(): HasMany

@@ -465,13 +465,13 @@ class CatalogTest extends TestCase
 
         $this->actingAs($seller)->get(route('catalog.store', $product->store->slug))
             ->assertOk()
-            ->assertSee('You’re viewing your public storefront')
+            ->assertSee('Storefront preview')
             ->assertSee(route('seller.dashboard'), false)
             ->assertSee(route('seller.products.index'), false);
 
         $this->actingAs($otherSeller)->get(route('catalog.store', $product->store->slug))
             ->assertOk()
-            ->assertDontSee('You’re viewing your public storefront')
+            ->assertDontSee('Storefront preview')
             ->assertDontSee($otherStore->phone);
     }
 

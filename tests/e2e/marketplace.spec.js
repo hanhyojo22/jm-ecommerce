@@ -8,6 +8,7 @@ test('guest can browse a product and is prompted to sign in before adding it to 
 
     await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
     await expect(page.getByRole('heading', { name: 'QA Canvas Tote', exact: true })).toBeVisible();
+    await expect(page.locator('#discussions')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Sign in to add to cart' })).toHaveAttribute('href', /sign-in/);
 });
 
@@ -62,6 +63,156 @@ test('customer refreshes the Clerk session before adding an item to the cart', a
 
         await expect(page).toHaveURL(/\/stores\/qa-northwind-store\/products\/qa-canvas-tote$/);
         await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
+    } finally {
+        await context.close();
+    }
+});
+
+test('seller refreshes an expired session before posting a review response', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+
+    try {
+        await page.goto('/seller/reviews');
+        await page.getByLabel('Seller response').fill('Thank you for your feedback.');
+        const refresh = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
+        await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
+
+        await expect((await refresh).ok()).toBeTruthy();
+        await expect(page).toHaveURL(/\/seller\/reviews$/);
+        await expect(page.locator('article').getByText('Thank you for your feedback.')).toBeVisible();
+        await expect(page.locator('article').getByText('QA Northwind Store', { exact: true })).toBeVisible();
+        await expect(page.getByLabel('Seller response')).toHaveValue('Thank you for your feedback.');
+    } finally {
+        await context.close();
+    }
+});
+
+test('buyer and seller continue a review thread without reloading and keep it compact on mobile', async ({ browser }, testInfo) => {
+    const seller = await openAsRole(browser, 'seller');
+    const buyer = await openAsRole(browser, 'customer');
+    const pageErrors = [];
+    for (const page of [seller.page, buyer.page]) page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    try {
+        await seller.page.goto('/seller/reviews');
+        await seller.page.getByLabel('Seller response').fill('Thanks for reviewing the tote.');
+        await seller.page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
+        await expect(seller.page.locator('article')).toContainText('Thanks for reviewing the tote.');
+
+        await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#reviews');
+        const thread = buyer.page.locator('#reviews article');
+        await expect(thread).toContainText('QA Northwind Store');
+        await expect(thread).not.toContainText('QA Seller');
+        const storeResponse = thread.locator('[wire\\:key^="reply-"]').first();
+        await expect(storeResponse.getByLabel('Write a reply')).toBeVisible();
+        await storeResponse.getByLabel('Write a reply').fill('Does it come in blue?');
+        let finishSubmission;
+        const pendingSubmission = new Promise((resolve) => { finishSubmission = resolve; });
+        await buyer.page.route(/\/livewire[^/]*\/update$/, async (route) => {
+            await pendingSubmission;
+            await route.continue();
+        });
+        const sendReply = storeResponse.getByRole('button', { name: 'Send' });
+        await sendReply.click();
+        await expect(sendReply).toBeDisabled();
+        finishSubmission();
+        await expect(thread).toContainText('Does it come in blue?');
+        await buyer.page.unroute(/\/livewire[^/]*\/update$/);
+        await expect(buyer.page).toHaveURL(/\/stores\/qa-northwind-store\/products\/qa-canvas-tote/);
+        await thread.getByRole('button', { name: 'Hide replies' }).click();
+        await expect(thread).not.toContainText('Does it come in blue?');
+        await thread.getByRole('button', { name: /View replies/ }).click();
+        await expect(thread).toContainText('Does it come in blue?');
+
+        await seller.page.reload();
+        await seller.page.locator('article').getByRole('button', { name: 'Reply' }).click();
+        await seller.page.getByLabel('Write a reply').fill('Yes, blue is available.');
+        await seller.page.getByRole('button', { name: 'Post reply' }).click();
+        await expect(seller.page.locator('article')).toContainText('Yes, blue is available.');
+
+        await buyer.page.reload();
+        await expect(thread.getByPlaceholder('Write a reply...')).toHaveCount(2);
+        const sellerFollowup = thread.locator('[wire\\:key^="reply-"]').filter({ hasText: 'Yes, blue is available.' });
+        await sellerFollowup.getByLabel('Write a reply').fill('Perfect, thank you.');
+        await sellerFollowup.getByRole('button', { name: 'Send' }).click();
+        await expect(thread).toContainText('Perfect, thank you.');
+
+        for (const width of [1440, 820, 390]) {
+            await buyer.page.setViewportSize({ width, height: 844 });
+            await buyer.page.reload();
+            await expect(thread).toContainText('Perfect, thank you.');
+            const sizes = await buyer.page.evaluate(() => ({ viewport: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }));
+            expect(sizes.page, `${width}px review page`).toBeLessThanOrEqual(sizes.viewport);
+            if (width === 390) {
+                await storeResponse.getByLabel('Write a reply').scrollIntoViewIfNeeded();
+                await buyer.page.screenshot({ path: testInfo.outputPath('review-thread-mobile.png') });
+            }
+        }
+        expect(pageErrors).toEqual([]);
+    } finally {
+        await seller.context.close();
+        await buyer.context.close();
+    }
+});
+
+test('seller response stays on the form when session renewal fails', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+
+    try {
+        await page.goto('/seller/reviews');
+        await page.route('**/auth/session', (route) => route.fulfill({ status: 401, body: 'Session expired' }));
+        await page.getByLabel('Seller response').fill('Please keep this draft.');
+        await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
+
+        await expect(page.getByRole('alert')).toContainText('session could not be refreshed');
+        await expect(page).toHaveURL(/\/seller\/reviews$/);
+        await expect(page.getByLabel('Seller response')).toHaveValue('Please keep this draft.');
+    } finally {
+        await context.close();
+    }
+});
+
+test('admin refreshes an expired session before moderating a review', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'admin');
+
+    try {
+        await page.route('**/admin/reviews/*', async (route) => {
+            const headers = { ...route.request().headers() };
+            delete headers['x-playwright-auth-key'];
+            delete headers['x-playwright-identity'];
+            await route.continue({ headers });
+        });
+        await page.goto('/admin/reviews');
+        const form = page.locator('form[action*="/admin/reviews/"]').first();
+        await form.locator('input[name="reason"]').fill('Reviewed by QA');
+        const refresh = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
+        await form.getByRole('button', { name: 'Save' }).click();
+
+        await expect((await refresh).ok()).toBeTruthy();
+        await expect(page).toHaveURL(/\/admin\/reviews$/);
+        await expect(page.locator('form[action*="/admin/reviews/"]').first().locator('input[name="reason"]')).toHaveValue('Reviewed by QA');
+    } finally {
+        await context.close();
+    }
+});
+
+test('buyer refreshes an expired session before messaging a seller', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer');
+
+    try {
+        await page.route('**/messages/products/*', async (route) => {
+            const headers = { ...route.request().headers() };
+            delete headers['x-playwright-auth-key'];
+            delete headers['x-playwright-identity'];
+            await route.continue({ headers });
+        });
+        await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        const refresh = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
+        await page.getByRole('button', { name: 'Message seller' }).click();
+
+        await expect((await refresh).ok()).toBeTruthy();
+        await expect(page).toHaveURL(/\/messages\/[^/]+$/);
+        await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
     } finally {
         await context.close();
     }
