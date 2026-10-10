@@ -138,14 +138,14 @@
 
         @unless ($isSellerWorkspace)
             <nav data-header-category-nav class="border-t border-line" aria-label="Marketplace sections">
-                <div class="page-container flex min-h-12 items-center gap-2 overflow-x-auto py-2 text-sm font-semibold text-muted">
-                    <a href="{{ $isHomepage ? '#shop-by-category' : route('home').'#shop-by-category' }}" class="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-xl bg-brand px-3 text-white">Categories ▾</a>
-                    <a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 transition hover:bg-blue-50 hover:text-brand">New Arrivals</a>
-                    <a href="{{ route('catalog.top-products') }}" class="inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 transition hover:bg-blue-50 hover:text-brand">Best Sellers</a>
-                    <a href="{{ $isHomepage ? '#flash-deals' : route('home').'#flash-deals' }}" class="inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 transition hover:bg-blue-50 hover:text-brand">Deals</a>
-                    <a href="{{ route('catalog.stores') }}" class="inline-flex min-h-11 shrink-0 items-center rounded-xl px-3 transition hover:bg-blue-50 hover:text-brand">Stores</a>
+                <div class="page-container flex min-h-12 items-center gap-7 overflow-x-auto text-sm font-medium text-muted">
+                    <a href="{{ $isHomepage ? '#shop-by-category' : route('home').'#shop-by-category' }}" class="inline-flex min-h-12 shrink-0 items-center gap-1 border-b-2 border-brand text-ink transition hover:text-brand">Categories ▾</a>
+                    <a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">New Arrivals</a>
+                    <a href="{{ route('catalog.top-products') }}" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Best Sellers</a>
+                    <a href="{{ $isHomepage ? '#flash-deals' : route('home').'#flash-deals' }}" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Deals</a>
+                    <a href="{{ route('catalog.stores') }}" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Stores</a>
                     @if (! $user?->isPlatformAdministrator())
-                        <a href="{{ $user?->account_type === 'seller' ? route('seller.dashboard') : (auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling'])) }}" class="inline-flex min-h-11 shrink-0 items-center rounded-xl bg-orange-50 px-3 font-bold text-orange-800 transition hover:bg-orange-100">Sell on JMMart</a>
+                        <a href="{{ $user?->account_type === 'seller' ? route('seller.dashboard') : (auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling'])) }}" class="inline-flex min-h-12 shrink-0 items-center text-brand transition hover:text-brand-hover">Sell on JMMart</a>
                     @endif
                 </div>
             </nav>

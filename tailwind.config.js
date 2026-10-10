@@ -21,8 +21,8 @@ export default {
                 muted: '#64748B',
                 line: '#E2E8F0',
                 brand: {
-                    DEFAULT: '#1D4ED8',
-                    hover: '#1E40AF',
+                    DEFAULT: '#2563EB',
+                    hover: '#1D4ED8',
                 },
                 success: '#166534',
                 warning: {

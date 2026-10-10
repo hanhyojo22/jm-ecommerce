@@ -56,9 +56,9 @@
                     <svg class="h-[120px] w-full" viewBox="0 25 700 160" preserveAspectRatio="none" role="img" aria-label="Sales trend for the last 30 days">
                         <path d="M12 34H688M12 81H688M12 128H688M12 176H688" stroke="#e9eef5" stroke-width="1"/>
                         <path d="M12 34V176M181 34V176M350 34V176M519 34V176M688 34V176" stroke="#eff3f8" stroke-width="1"/>
-                        <polyline points="{{ $chartPoints }}" fill="none" stroke="#1559f6" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+                        <polyline points="{{ $chartPoints }}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
                         @foreach ($salesHistory as $index => $day)
-                            @if ($index % 5 === 0 || $index === 29)<circle cx="{{ round(12 + $index * 676 / 29, 1) }}" cy="{{ round(176 - (float) $day['amount'] / $chartPeak * 142, 1) }}" r="2.5" fill="#1559f6"/>@endif
+                            @if ($index % 5 === 0 || $index === 29)<circle cx="{{ round(12 + $index * 676 / 29, 1) }}" cy="{{ round(176 - (float) $day['amount'] / $chartPeak * 142, 1) }}" r="2.5" fill="#2563eb"/>@endif
                         @endforeach
                     </svg>
                     <div class="flex justify-between px-1 text-[11px] text-muted"><span>{{ \Carbon\Carbon::parse($salesHistory->first()['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory[10]['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory[20]['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory->last()['date'])->format('M j') }}</span></div>
