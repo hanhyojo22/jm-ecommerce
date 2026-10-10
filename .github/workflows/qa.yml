@@ -30,6 +30,14 @@ jobs:
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build frontend assets for view tests
+        run: npm ci && npm run build
+
       - name: Run PHPUnit with coverage and JUnit reports
         run: |
           mkdir -p artifacts
