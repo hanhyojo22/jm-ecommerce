@@ -17,6 +17,8 @@ const e2eEnvironment = {
     QUEUE_CONNECTION: 'sync',
     MAIL_MAILER: 'array',
     BROADCAST_CONNECTION: 'null',
+    REVERB_APP_KEY: 'local-playwright-key-is-test-only',
+    REVERB_HOST: '127.0.0.1',
 CLERK_PUBLISHABLE_KEY: '',
 CLERK_SECRET_KEY: '',
     PLAYWRIGHT_AUTH_KEY: playwrightAuthKey,
