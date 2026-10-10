@@ -8,9 +8,12 @@
         </div>
     </x-marketplace.account-shell>
 @else
-    <div class="page-shell py-4 sm:py-6"><div class="page-container grid h-[calc(100dvh-10rem)] min-h-0 max-w-6xl min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface lg:h-[calc(100dvh-8rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
-        <div class="hidden min-h-0 border-r border-line lg:block"><livewire:chat.inbox :embedded="true" :active-conversation-id="$conversation->id" /></div>
-        @include('livewire.chat.thread-content')
+    <div class="page-shell"><div class="page-container max-w-6xl">
+        <div class="mb-5"><h1 class="text-[28px] font-bold tracking-tight text-ink">Messages</h1><p class="mt-1 text-sm text-muted">Respond to customers about your products and orders.</p></div>
+        <div class="grid h-[calc(100dvh-16rem)] min-h-[28rem] min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm lg:h-[calc(100dvh-14rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
+            <div class="hidden min-h-0 border-r border-line lg:block"><livewire:chat.inbox :embedded="true" :active-conversation-id="$conversation->id" /></div>
+            @include('livewire.chat.thread-content')
+        </div>
     </div></div>
 @endif
 </div>

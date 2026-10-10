@@ -205,7 +205,7 @@ test('seller remains signed in when Seller Center and Account are opened after t
         });
 
         await page.goto('/');
-        await page.getByRole('button', { name: /Hi,/ }).click();
+        await page.getByRole('button', { name: 'Account menu' }).click();
 
         const sellerCenterLink = page.locator('#header-account-menu')
             .getByRole('link', { name: 'Seller Center', exact: true });

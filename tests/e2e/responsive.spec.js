@@ -1,6 +1,56 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
+test('seller workspace pages render without horizontal overflow', async ({ browser }, testInfo) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+    const pages = [
+        ['overview', '/seller'],
+        ['orders', '/seller/orders'],
+        ['products', '/seller/products'],
+        ['add-product', '/seller/products/create'],
+        ['messages', '/messages'],
+        ['reviews', '/seller/reviews'],
+        ['earnings', '/seller/earnings'],
+        ['storefront', '/stores/qa-northwind-store'],
+        ['store-settings', '/seller/store-settings'],
+    ];
+    const overflows = [];
+
+    try {
+        for (const [name, path] of pages) {
+            const response = await page.goto(path);
+            expect(response.ok(), path).toBeTruthy();
+            await expect(page.locator('main').first()).toBeVisible();
+            if (name !== 'storefront') {
+                await expect(page.locator('header[data-header-role="seller"]')).toBeVisible();
+            }
+            await page.screenshot({ path: testInfo.outputPath(`${name}.png`) });
+
+            const width = await page.evaluate(() => ({
+                viewport: document.documentElement.clientWidth,
+                document: document.documentElement.scrollWidth,
+            }));
+            if (width.document > width.viewport) {
+                overflows.push(`${name}: ${width.document}px > ${width.viewport}px`);
+            }
+        }
+
+        expect(overflows).toEqual([]);
+
+        if (testInfo.project.name !== 'desktop-chromium') {
+            await page.goto('/seller');
+            await page.getByRole('button', { name: 'Open navigation menu' }).click();
+            const drawer = page.getByRole('dialog', { name: 'Seller Center navigation' });
+            await expect(drawer).toBeVisible();
+            await drawer.getByRole('link', { name: 'Reviews' }).click();
+            await expect(page).toHaveURL(/\/seller\/reviews$/);
+            await expect(page.getByRole('heading', { name: 'Reviews', exact: true })).toBeVisible();
+        }
+    } finally {
+        await context.close();
+    }
+});
+
 test('homepage remains usable without page-level horizontal overflow', async ({ page }) => {
     await page.goto('/');
 

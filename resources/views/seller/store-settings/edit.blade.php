@@ -1,8 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <a href="{{ route('seller.dashboard') }}" class="text-sm font-semibold text-brand underline decoration-blue-300 underline-offset-4">Seller dashboard</a>
-            <h1 class="mt-2 text-[28px] font-bold leading-[1.35] tracking-[-0.02em] text-ink">Store settings</h1>
+            <h1 class="text-[28px] font-bold leading-[1.35] tracking-[-0.02em] text-ink">Store settings</h1>
             <p class="mt-2 text-sm text-muted">Update the details customers see on your {{ $store->name }} storefront.</p>
         </div>
     </x-slot>

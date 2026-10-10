@@ -101,12 +101,12 @@
     }" x-init="$watch('categoriesOpen', value => document.body.classList.toggle('overflow-hidden', value))" class="min-h-screen">
 
         @if ($isSellerPreview)
-            <div class="border-b border-blue-200 bg-blue-50 px-4 py-2.5">
-                <div class="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 text-sm text-ink">
-                    <p class="font-semibold">You’re viewing your public storefront</p>
-                    <div class="flex items-center gap-4">
-                        <a href="{{ route('seller.dashboard') }}" class="font-semibold underline decoration-blue-400 underline-offset-4 hover:text-brand-hover">Back to Seller Center</a>
-                        <a href="{{ route('seller.products.index') }}" class="font-semibold underline decoration-blue-400 underline-offset-4 hover:text-brand-hover">Manage products</a>
+            <div class="bg-[#111c32] px-4 py-3 text-white">
+                <div class="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 text-sm">
+                    <p class="font-semibold">Storefront preview <span class="ml-2 font-normal text-slate-300">This is what customers see.</span></p>
+                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <a href="{{ route('seller.dashboard') }}" class="font-semibold text-white underline decoration-blue-300 underline-offset-4 hover:text-blue-200">Back to Seller Center</a>
+                        <a href="{{ route('seller.products.index') }}" class="font-semibold text-white underline decoration-blue-300 underline-offset-4 hover:text-blue-200">Manage products</a>
                     </div>
                 </div>
             </div>

@@ -13,6 +13,16 @@
     };
     $isSellerWorkspace = $user?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*', 'messages.*');
     $isHomepage = request()->routeIs('home') && ! $isSellerWorkspace;
+    $sellerPageTitle = match (true) {
+        request()->routeIs('seller.dashboard') => 'Overview',
+        request()->routeIs('seller.orders.*') => 'Orders',
+        request()->routeIs('seller.products.*') => 'Products',
+        request()->routeIs('messages.*') => 'Messages',
+        request()->routeIs('seller.reviews.*') => 'Reviews',
+        request()->routeIs('seller.earnings.*') => 'Earnings',
+        request()->routeIs('seller.store-settings.*') => 'Store settings',
+        default => 'Seller Center',
+    };
 @endphp
 
 @if ($user?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
@@ -44,17 +54,21 @@
                 <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="{{ $isSellerWorkspace ? 'lg:hidden' : 'min-[641px]:hidden' }} grid size-11 shrink-0 place-items-center rounded-[10px] text-muted transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Open navigation menu">
                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
                 </button>
-                <a href="{{ route('home') }}" class="flex min-w-[140px] shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2" aria-label="JMMart marketplace home">
-                    <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-lg font-bold leading-none text-white" aria-hidden="true">J</span>
-                    <span class="text-xl font-bold tracking-[-0.02em] text-ink">JMMart</span><span class="inline-block size-1.5 rounded-full bg-warning" aria-hidden="true"></span>
-                </a>
-
                 @if ($isSellerWorkspace)
-                    <span class="hidden h-8 w-px bg-line sm:block" aria-hidden="true"></span>
-                    <div class="hidden min-w-0 flex-col gap-0.5 sm:flex">
-                        <span class="text-[10px] font-semibold uppercase tracking-[.12em] text-muted">Seller Center</span>
-                        <strong class="max-w-64 truncate text-sm font-semibold text-ink">{{ $sellerTenant?->name ?? 'Your store' }}</strong>
+                    <a href="{{ route('seller.dashboard') }}" class="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
+                        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>
+                        <span class="text-sm font-bold text-ink sm:text-base">Seller Center</span>
+                    </a>
+                    <div class="hidden min-w-0 items-center gap-2 text-sm lg:flex">
+                        <span class="font-medium text-muted">Seller Center</span>
+                        <span class="text-slate-300" aria-hidden="true">/</span>
+                        <strong class="truncate font-semibold text-ink">{{ $sellerPageTitle }}</strong>
                     </div>
+                @else
+                    <a href="{{ route('home') }}" class="flex min-w-[140px] shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2" aria-label="JMMart marketplace home">
+                        <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-lg font-bold leading-none text-white" aria-hidden="true">J</span>
+                        <span class="text-xl font-bold tracking-[-0.02em] text-ink">JMMart</span><span class="inline-block size-1.5 rounded-full bg-warning" aria-hidden="true"></span>
+                    </a>
                 @endif
             </div>
 
@@ -69,9 +83,7 @@
             </form>
 
             <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 min-[641px]:order-none min-[641px]:ml-0">
-                @if ($isSellerWorkspace && $sellerTenant)
-                    <a href="{{ route('catalog.store', $sellerTenant->slug) }}" target="_blank" rel="noopener noreferrer" class="hidden min-h-10 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand sm:inline-flex">View storefront</a>
-                @elseif ($canUseMessages)
+                @if ($canUseMessages)
                     <a href="{{ route('messages.index') }}" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
                         @if ($unreadConversationCount > 0)
@@ -92,7 +104,7 @@
                     <div class="relative" @click.outside="accountOpen = false">
                         <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" class="flex min-h-11 max-w-48 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand">
                             <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
-                            <span class="hidden min-[641px]:inline">Hi, {{ Str::of($user->name)->before(' ') }}</span>
+                            <span class="hidden {{ $isSellerWorkspace ? 'lg:inline' : 'min-[641px]:inline' }}">Hi, {{ Str::of($user->name)->before(' ') }}</span>
                         </button>
                         <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-[14px] border border-line bg-white p-2 shadow-[0_12px_28px_rgba(15,23,42,.10)]">
                             <div class="min-w-0 border-b border-line px-3 py-3"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
@@ -141,13 +153,13 @@
         <div x-cloak x-show="drawerOpen" x-transition.opacity class="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
             <button type="button" @click="closeDrawer" class="h-full w-full" tabindex="-1" aria-label="Close navigation menu"></button>
         </div>
-        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col bg-white text-ink shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden" role="dialog" aria-modal="true" aria-label="{{ $isSellerWorkspace ? 'Seller Center navigation' : 'Marketplace navigation' }}">
-            <div class="flex h-[52px] items-center justify-between border-b border-line px-5">
-                <a href="{{ route('home') }}" data-drawer-focus @click="closeDrawer" class="flex items-center gap-2 font-semibold">
-                    <x-application-logo class="size-8 fill-current text-brand" />
-                    <span>JMMart</span>
+        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden {{ $isSellerWorkspace ? 'bg-[#111c32] text-white' : 'bg-white text-ink' }}" role="dialog" aria-modal="true" aria-label="{{ $isSellerWorkspace ? 'Seller Center navigation' : 'Marketplace navigation' }}">
+            <div class="flex h-[56px] items-center justify-between border-b px-5 {{ $isSellerWorkspace ? 'border-white/10' : 'border-line' }}">
+                <a href="{{ $isSellerWorkspace ? route('seller.dashboard') : route('home') }}" data-drawer-focus @click="closeDrawer" class="flex items-center gap-2 font-semibold">
+                    @if ($isSellerWorkspace)<span class="grid size-8 place-items-center rounded-lg bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>@else<x-application-logo class="size-8 fill-current text-brand" />@endif
+                    <span>{{ $isSellerWorkspace ? 'Seller Center' : 'JMMart' }}</span>
                 </a>
-                <button type="button" @click="closeDrawer" class="grid size-11 place-items-center rounded-[10px] text-muted transition hover:bg-canvas hover:text-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+                <button type="button" @click="closeDrawer" class="grid size-11 place-items-center rounded-[10px] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand {{ $isSellerWorkspace ? 'text-slate-300 hover:text-white' : 'text-muted hover:text-ink' }}" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
             </div>
 
             @if (! $isSellerWorkspace)
@@ -161,15 +173,15 @@
             @endif
 
             @if ($isSellerWorkspace)
-                <div class="border-b border-line px-4 py-4"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-muted">Seller Center</p><p class="mt-1 truncate text-sm font-semibold text-ink">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
+                <div class="border-b border-white/10 px-5 py-4"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Your store</p><p class="mt-1 truncate text-sm font-semibold text-white">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
                 <x-marketplace.seller-nav-links mode="mobile" />
-                <div class="space-y-1 border-t border-line p-4">
-                    <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-ink transition hover:bg-canvas">Shopping</a>
+                <div class="space-y-1 border-t border-white/10 p-4">
+                    <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">Shopping</a>
                     @if ($sellerTenant)
-                        <a href="{{ route('catalog.store', $sellerTenant->slug) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted transition hover:bg-canvas hover:text-ink">View storefront</a>
+                        <a href="{{ route('catalog.store', $sellerTenant->slug) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">View storefront</a>
                     @endif
-                    <a href="{{ route('profile.edit') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted transition hover:bg-canvas hover:text-ink">Account</a>
-                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition hover:bg-canvas hover:text-ink">Sign out</button>
+                    <a href="{{ route('profile.edit') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">Account</a>
+                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">Sign out</button>
                 </div>
             @else
                 <nav class="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Mobile marketplace navigation">

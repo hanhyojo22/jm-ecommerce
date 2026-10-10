@@ -14,26 +14,21 @@
             ],
         ],
         [
-            'label' => 'Orders',
+            'label' => 'Manage',
             'items' => [
                 ['label' => 'Orders', 'href' => route('seller.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('seller.orders.*')],
-            ],
-        ],
-        [
-            'label' => 'Catalog',
-            'items' => [
                 ['label' => 'Products', 'href' => route('seller.products.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.products.*')],
             ],
         ],
         [
-            'label' => 'Customers',
+            'label' => 'Engage',
             'items' => [
                 ['label' => 'Messages', 'href' => route('messages.index'), 'icon' => 'messages', 'active' => request()->routeIs('messages.*')],
                 ['label' => 'Reviews', 'href' => route('seller.reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('seller.reviews.*')],
             ],
         ],
         [
-            'label' => 'Insights',
+            'label' => 'Business',
             'items' => [
                 ['label' => 'Earnings', 'href' => route('seller.earnings.index'), 'icon' => 'earnings', 'active' => request()->routeIs('seller.earnings.*')],
             ],
@@ -48,38 +43,35 @@
             $storeItems[] = ['label' => 'Store settings', 'href' => route('seller.store-settings.edit'), 'icon' => 'settings', 'active' => request()->routeIs('seller.store-settings.*')];
         }
 
-        $groups[] = [
-            'label' => 'Store',
-            'items' => $storeItems,
-        ];
+        array_push($groups[array_key_last($groups)]['items'], ...$storeItems);
     }
 @endphp
 
 <nav @class([
-    'flex-1 space-y-5' => $mode === 'desktop',
+    'flex-1 space-y-4' => $mode === 'desktop',
     'flex-1 space-y-4 overflow-y-auto' => $mode === 'mobile',
-    'px-3 py-5' => $mode === 'desktop',
+    'px-3 py-4' => $mode === 'desktop',
     'p-4' => $mode === 'mobile',
 ]) aria-label="Seller workspace navigation">
     @foreach ($groups as $group)
         <div class="space-y-1">
             @if ($group['label'])
-                <p @class(['px-3 pb-1 text-xs font-semibold uppercase tracking-[.14em]', 'text-slate-500' => $mode === 'desktop', 'text-muted' => $mode === 'mobile'])>{{ $group['label'] }}</p>
+                <p class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[.16em] text-slate-400">{{ $group['label'] }}</p>
             @endif
             @foreach ($group['items'] as $item)
                 <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @endif @class([
                     'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-                'bg-brand/10 font-semibold text-brand' => $mode === 'desktop' && $item['active'],
-                'font-medium text-muted hover:bg-blue-50 hover:text-brand' => $mode === 'desktop' && ! $item['active'],
-                    'bg-brand/10 font-semibold text-brand' => $mode === 'mobile' && $item['active'],
-                    'font-medium text-muted hover:bg-canvas hover:text-ink' => $mode === 'mobile' && ! $item['active'],
+                    'bg-white/10 font-semibold text-white' => $mode === 'desktop' && $item['active'],
+                    'font-medium text-slate-300 hover:bg-white/5 hover:text-white' => $mode === 'desktop' && ! $item['active'],
+                    'bg-white/10 font-semibold text-white' => $mode === 'mobile' && $item['active'],
+                    'font-medium text-slate-300 hover:bg-white/5 hover:text-white' => $mode === 'mobile' && ! $item['active'],
                 ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
                     <svg @class([
                         'size-[18px] shrink-0',
-                        'text-brand' => $mode === 'desktop' && $item['active'],
-                        'text-muted group-hover:text-brand' => $mode === 'desktop' && ! $item['active'],
-                        'text-brand' => $mode === 'mobile' && $item['active'],
-                        'text-muted group-hover:text-ink' => $mode === 'mobile' && ! $item['active'],
+                        'text-[#8db6ff]' => $mode === 'desktop' && $item['active'],
+                        'text-slate-400 group-hover:text-white' => $mode === 'desktop' && ! $item['active'],
+                        'text-[#8db6ff]' => $mode === 'mobile' && $item['active'],
+                        'text-slate-400 group-hover:text-white' => $mode === 'mobile' && ! $item['active'],
                     ]) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         @switch($item['icon'])
                             @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
