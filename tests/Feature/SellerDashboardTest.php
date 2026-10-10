@@ -43,7 +43,9 @@ class SellerDashboardTest extends TestCase
             ->assertSee('aria-keyshortcuts="S"', false)
             ->assertSee('aria-keyshortcuts="N"', false)
             ->assertSee('aria-keyshortcuts="O"', false)
-            ->assertSee('group-open:rotate-180', false)
+            ->assertSee('Sales overview')
+            ->assertSee('Sales trend for the last 30 days')
+            ->assertSee('Quick actions')
             ->assertSee(route('catalog.store', $store->slug), false)
             ->assertSee('target="_blank"', false)
             ->assertSee('View Northwind Goods storefront in a new tab');
@@ -91,7 +93,8 @@ class SellerDashboardTest extends TestCase
             ->assertSee('₱100.00')
             ->assertDontSee('₱900.00')
             ->assertViewHas('customerCount', 1)
-            ->assertViewHas('totalOrders', 2);
+            ->assertViewHas('totalOrders', 2)
+            ->assertViewHas('salesHistory', fn ($history): bool => $history->count() === 30 && (float) $history->last()['amount'] === 100.0);
     }
 
     private function createSellerOrder(Store $store, User $buyer, string $number, string $status, int $total): void

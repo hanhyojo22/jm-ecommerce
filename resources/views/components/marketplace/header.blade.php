@@ -55,6 +55,7 @@
                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
                 </button>
                 @if ($isSellerWorkspace)
+                    <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-lg border border-line text-ink shadow-sm transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle Seller Center sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
                     <a href="{{ route('seller.dashboard') }}" class="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
                         <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>
                         <span class="text-sm font-bold text-ink sm:text-base">Seller Center</span>

@@ -31,6 +31,11 @@ const clerkSessionRefreshEndpoint = document.querySelector('meta[name="clerk-ses
 const sellerDashboard = document.querySelector('[data-seller-dashboard]');
 
 if (sellerDashboard) {
+    if (window.matchMedia('(max-width: 639px)').matches) {
+        sellerDashboard.querySelector('[data-seller-guide]')?.removeAttribute('open');
+        sellerDashboard.querySelector('[data-seller-responsive-panel]')?.removeAttribute('open');
+    }
+
     const dashboardKey = `seller-dashboard:${sellerDashboard.dataset.dashboardKey}`;
     const dashboardSections = [...sellerDashboard.querySelectorAll('[data-dashboard-section]')];
     const dashboardToggles = [...sellerDashboard.querySelectorAll('[data-dashboard-toggle]')];

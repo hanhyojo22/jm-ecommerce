@@ -37,6 +37,19 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
 
         expect(overflows).toEqual([]);
 
+        if (testInfo.project.name === 'desktop-chromium') {
+            await page.setViewportSize({ width: 1536, height: 1024 });
+            await page.goto('/seller');
+            await expect(page.getByRole('heading', { name: 'Sales overview' })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Quick actions' })).toBeVisible();
+            await page.screenshot({ path: testInfo.outputPath('overview-reference-size.png') });
+            const sidebar = page.getByRole('complementary', { name: 'Seller Center sidebar' });
+            await page.getByRole('button', { name: 'Toggle Seller Center sidebar' }).click();
+            await expect(sidebar).toBeHidden();
+            await page.getByRole('button', { name: 'Toggle Seller Center sidebar' }).click();
+            await expect(sidebar).toBeVisible();
+        }
+
         if (testInfo.project.name !== 'desktop-chromium') {
             await page.goto('/seller');
             await page.getByRole('button', { name: 'Open navigation menu' }).click();

@@ -54,7 +54,7 @@
                     </main>
                 </div>
             @elseif ($isSellerWorkspace)
-                <div data-workspace="seller" class="seller-workspace min-h-screen bg-canvas lg:grid lg:grid-cols-[252px_minmax(0,1fr)]">
+                <div data-workspace="seller" x-data="{ sellerSidebarOpen: true }" @seller-sidebar-toggle.window="sellerSidebarOpen = !sellerSidebarOpen" :class="{ 'seller-sidebar-collapsed': !sellerSidebarOpen }" class="seller-workspace min-h-screen bg-canvas lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
                     @include('layouts.seller-sidebar', ['sellerTenant' => auth()->user()?->sellerTenant()])
                     <main id="main-content" tabindex="-1" class="workspace-main min-w-0">
                         @include('layouts.navigation')

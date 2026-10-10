@@ -23,7 +23,7 @@
                         </form>
                     </article>
                 @empty
-                    <div class="content-card px-6 py-14 text-center sm:py-20">
+                    <div class="content-card px-6 py-10 text-center sm:py-12">
                         <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500" aria-hidden="true">
                             <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8m-8 4h5m-9 6 3.1-2.3A8 8 0 1 0 4 14.4V20Z" /></svg>
                         </div>

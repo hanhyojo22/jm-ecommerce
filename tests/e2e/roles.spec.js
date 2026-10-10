@@ -34,11 +34,11 @@ test('seller can search dashboard help and use keyboard shortcuts', async ({ bro
         await expect(page.getByRole('link', { name: 'View reviews' })).toBeHidden();
         await expect(page.getByText('No help topics match that search.')).toBeHidden();
 
-        await page.getByRole('heading', { name: 'Overview' }).click();
+        await page.getByRole('heading', { name: 'Overview', exact: true }).click();
         await page.keyboard.press('s');
         await expect(page.getByRole('textbox', { name: 'Search your products by name or SKU' })).toBeFocused();
 
-        await page.getByRole('heading', { name: 'Overview' }).click();
+        await page.getByRole('heading', { name: 'Overview', exact: true }).click();
         await page.keyboard.press('n');
         await expect(page).toHaveURL(/\/seller\/products\/create$/);
 
@@ -57,7 +57,7 @@ test('seller dashboard stays compact and usable on a narrow screen', async ({ br
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto('/seller');
 
-        await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
         await expect(page.locator('[data-seller-guide]')).toHaveJSProperty('open', false);
         const recentOrders = page.locator('details').filter({ has: page.getByRole('heading', { name: 'Recent orders' }) });
         await expect(recentOrders.locator('summary')).toBeVisible();
@@ -217,7 +217,7 @@ test('seller remains signed in when Seller Center and Account are opened after t
         await expect((await sellerHandoff).ok()).toBeTruthy();
 
         await expect(page).toHaveURL(/\/seller$/);
-        await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
         await expect(page).not.toHaveURL(/\/sign-in|\/auth\//);
 
         await context.clearCookies({ name: '__session' });

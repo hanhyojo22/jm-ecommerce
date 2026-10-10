@@ -23,7 +23,7 @@ class DashboardController extends Controller
             $store = $tenant->store;
             $productMetrics = $store->products()
                 ->toBase()
-                ->selectRaw('count(*) as total_products, sum(case when stock_quantity = 0 then 1 else 0 end) as out_of_stock_products')
+                ->selectRaw("count(*) as total_products, sum(case when stock_quantity = 0 then 1 else 0 end) as out_of_stock_products, sum(case when status = 'active' then 1 else 0 end) as active_products")
                 ->first();
             $orderMetrics = $store->sellerOrders()
                 ->toBase()
@@ -34,6 +34,18 @@ class DashboardController extends Controller
                 ->where('seller_orders.status', '!=', 'cancelled')
                 ->distinct()
                 ->count('orders.user_id');
+            $salesByDay = $store->sellerOrders()
+                ->where('status', '!=', 'cancelled')
+                ->where('created_at', '>=', now()->subDays(29)->startOfDay())
+                ->toBase()
+                ->selectRaw('date(created_at) as day, sum(total) as amount')
+                ->groupByRaw('date(created_at)')
+                ->pluck('amount', 'day');
+            $salesHistory = collect(range(29, 0))
+                ->map(fn (int $daysAgo): array => [
+                    'date' => now()->subDays($daysAgo)->toDateString(),
+                    'amount' => $salesByDay->get(now()->subDays($daysAgo)->toDateString(), 0),
+                ]);
             $canManageProducts = $this->hasRole($request, $tenant, ['owner', 'manager']);
             $canManageOrders = $this->hasRole($request, $tenant, ['owner', 'manager']);
             $storeSettingsUrl = $canManageProducts ? route('seller.store-settings.edit') : null;
@@ -41,9 +53,11 @@ class DashboardController extends Controller
             return response()->view('seller.dashboard', [
                 'store' => $store,
                 'totalProducts' => (int) $productMetrics->total_products,
+                'activeProducts' => (int) $productMetrics->active_products,
                 'pendingOrderCount' => (int) $orderMetrics->pending_orders,
                 'totalOrders' => (int) $orderMetrics->total_orders,
                 'salesTotal' => $orderMetrics->sales_total ?? 0,
+                'salesHistory' => $salesHistory,
                 'customerCount' => $customerCount,
                 'outOfStockCount' => (int) $productMetrics->out_of_stock_products,
                 'recentOrders' => $store->sellerOrders()
