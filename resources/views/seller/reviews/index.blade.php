@@ -10,18 +10,9 @@
         <div class="page-container">
             <div class="space-y-4">
                 @forelse($reviews as $review)
-                    <article class="section-card">
-                        <p class="font-semibold text-ink">{{ $review->product->name }}</p>
-                        <p class="mt-1 text-amber-500" aria-label="{{ $review->rating }} out of 5 stars">{{ str_repeat('★', $review->rating) }}</p>
-                        <p class="mt-2 text-sm text-muted">{{ $review->user->name }} · {{ $review->created_at->format('M j, Y') }}</p>
-                        <p class="mt-3 whitespace-pre-line text-sm text-ink">{{ $review->body }}</p>
-                        <form method="POST" action="{{ route('seller.reviews.respond', $review) }}" class="mt-5 border-t border-line pt-5">
-                            @csrf
-                            <label for="response-{{ $review->id }}" class="field-label">Seller response</label>
-                            <textarea id="response-{{ $review->id }}" name="body" rows="3" maxlength="2000" class="field-control" required>{{ $review->response?->body }}</textarea>
-                            <button class="mt-3 min-h-11 rounded-[10px] bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $review->response ? 'Update response' : 'Post response' }}</button>
-                        </form>
-                    </article>
+                    <div class="rounded-xl border border-line bg-white p-4 sm:p-5">
+                        <livewire:reviews.thread :review="$review" :seller-view="true" :key="'seller-review-'.$review->id" />
+                    </div>
                 @empty
                     <div class="content-card px-6 py-10 text-center sm:py-12">
                         <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500" aria-hidden="true">

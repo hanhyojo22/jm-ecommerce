@@ -412,7 +412,8 @@ if (clerkSessionRefreshEndpoint) {
                 await pendingClerkSessionRefresh;
                 document.querySelector('[data-clerk-refresh-error]')?.remove();
             } catch (error) {
-                const form = document.querySelector('[data-conversation-thread] form[wire\\:submit="send"]');
+                const form = document.activeElement?.closest('form[wire\\:submit]')
+                    ?? document.querySelector('form[wire\\:submit="submit"], [data-conversation-thread] form[wire\\:submit="send"]');
 
                 if (form && !form.querySelector('[data-clerk-refresh-error]')) {
                     const message = document.createElement('p');
@@ -486,7 +487,19 @@ document.addEventListener('click', (event) => {
 document.addEventListener('submit', async (event) => {
     const form = event.target;
 
-    if (!(form instanceof HTMLFormElement) || !form.dataset.clerkSessionRefresh) {
+    if (!(form instanceof HTMLFormElement)) {
+        return;
+    }
+
+    const action = new URL(form.action);
+
+    if (form.method.toUpperCase() === 'GET' || action.origin !== window.location.origin || action.pathname === '/sign-out' || form.hasAttribute('wire:submit')) {
+        return;
+    }
+
+    const refreshEndpoint = form.dataset.clerkSessionRefresh || clerkSessionRefreshEndpoint;
+
+    if (!refreshEndpoint) {
         return;
     }
 
@@ -510,7 +523,7 @@ document.addEventListener('submit', async (event) => {
     form.dataset.clerkSessionRefreshing = 'true';
 
     try {
-        await refreshClerkSession(form.dataset.clerkSessionRefresh);
+        await refreshClerkSession(refreshEndpoint);
         form.dataset.clerkSessionRefreshed = 'true';
         delete form.dataset.clerkSessionRefreshing;
         if (event.submitter) {

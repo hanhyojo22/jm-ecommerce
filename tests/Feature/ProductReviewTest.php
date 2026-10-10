@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Reviews\Thread;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -14,6 +15,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -110,19 +112,52 @@ class ProductReviewTest extends TestCase
 
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertSee('5.0')
-            ->assertSee('1 review');
+            ->assertSee('1 review')
+            ->assertDontSee('Product questions');
     }
 
     public function test_only_the_products_seller_can_respond_to_a_review(): void
     {
         [$buyer, $item, $seller] = $this->deliveredOrderItem();
-        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 5]);
+        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 5, 'body' => 'Great delivery.']);
         $otherSeller = User::factory()->seller()->create();
 
         $this->actingAs($otherSeller)->post(route('seller.reviews.respond', $review), ['body' => 'Thank you'])->assertForbidden();
         $this->actingAs($seller)->post(route('seller.reviews.respond', $review), ['body' => 'Thank you'])->assertRedirect();
         $this->assertDatabaseHas('product_review_responses', ['product_review_id' => $review->id, 'user_id' => $seller->id, 'body' => 'Thank you']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $seller->id, 'action' => 'product_review.response_saved', 'entity_id' => $review->id]);
+        $this->actingAs($seller)->get(route('seller.reviews.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['Great delivery.', 'Thank you']);
+    }
+
+    public function test_seller_reviews_page_renders_multiple_threads_without_lazy_loading(): void
+    {
+        [$buyer, $item, $seller] = $this->deliveredOrderItem();
+        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 5, 'body' => 'First review.']);
+        $review->responses()->create(['user_id' => $seller->id, 'author_type' => 'seller', 'body' => 'Store response.']);
+        $secondItem = $item->sellerOrder->items()->create(['product_id' => $item->product_id, 'product_name' => $item->product_name, 'sku' => $item->sku, 'unit_price' => 100, 'quantity' => 1, 'line_total' => 100]);
+        ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $secondItem->id, 'user_id' => $buyer->id, 'rating' => 4, 'body' => 'Second review.']);
+
+        $this->actingAs($seller)->get(route('seller.reviews.index'))
+            ->assertOk()
+            ->assertSee('Store response.')
+            ->assertSee('Second review.');
+    }
+
+    public function test_review_report_control_is_hidden_while_moderation_endpoint_remains_available(): void
+    {
+        [$buyer, $item] = $this->deliveredOrderItem();
+        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 4, 'status' => 'published']);
+        $otherBuyer = User::factory()->create();
+
+        $this->actingAs($otherBuyer)->get(route('catalog.show', [$item->product->store->slug, $item->product->slug]))
+            ->assertOk()
+            ->assertDontSee('Report reason')
+            ->assertDontSee(route('reviews.report', $review));
+
+        $this->post(route('reviews.report', $review), ['reason' => 'Inappropriate content'])->assertRedirect();
+        $this->assertDatabaseHas('product_review_reports', ['product_review_id' => $review->id, 'user_id' => $otherBuyer->id]);
     }
 
     public function test_admin_moderation_records_an_audit_trail(): void
@@ -135,6 +170,102 @@ class ProductReviewTest extends TestCase
 
         $this->assertDatabaseHas('product_reviews', ['id' => $review->id, 'status' => 'hidden', 'moderated_by' => $admin->id]);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $admin->id, 'action' => 'product_review.moderated', 'entity_id' => $review->id]);
+    }
+
+    public function test_buyer_and_seller_can_continue_a_review_thread_under_the_store_identity(): void
+    {
+        [$buyer, $item, $seller] = $this->deliveredOrderItem();
+        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 5, 'body' => 'Great delivery.', 'status' => 'published']);
+        $store = $item->product->store;
+        $store->update(['name' => 'Official Tote Shop', 'logo_path' => 'stores/tote-logo.png']);
+
+        $this->actingAs($seller);
+        Livewire::test(Thread::class, ['review' => $review, 'sellerView' => true])
+            ->set('body', 'Thank you for your feedback.')
+            ->call('submit')
+            ->assertSee('Official Tote Shop')
+            ->assertSee('Thank you for your feedback.');
+        $root = $review->response()->firstOrFail();
+        $this->assertSame('seller', $root->author_type);
+
+        $this->actingAs($buyer);
+        Livewire::test(Thread::class, ['review' => $review])
+            ->assertSeeInOrder(['Thank you for your feedback.', 'Write a reply...'])
+            ->set('replyBodies.'.$root->id, 'Can you help with the size?')
+            ->call('submitCustomerReply', $root->id)
+            ->assertSee('Can you help with the size?');
+        $buyerReply = $review->responses()->where('author_type', 'buyer')->firstOrFail();
+        $this->assertSame($root->id, $buyerReply->parent_response_id);
+
+        $this->actingAs($seller);
+        Livewire::test(Thread::class, ['review' => $review, 'sellerView' => true])
+            ->call('replyTo', $buyerReply->id)
+            ->set('body', 'Yes, we can help.')
+            ->call('submit')
+            ->assertSet('body', 'Thank you for your feedback.')
+            ->assertSeeInOrder(['Thank you for your feedback.', 'Can you help with the size?', 'Yes, we can help.'])
+            ->assertDontSee($seller->name);
+
+        $this->assertDatabaseHas('product_review_responses', ['product_review_id' => $review->id, 'parent_response_id' => $buyerReply->id, 'author_type' => 'seller', 'body' => 'Yes, we can help.']);
+        $followup = $review->responses()->where('parent_response_id', $buyerReply->id)->firstOrFail();
+        $this->actingAs($buyer);
+        $customerThread = Livewire::test(Thread::class, ['review' => $review]);
+        $this->assertSame(2, substr_count($customerThread->html(), 'placeholder="Write a reply..."'));
+        $customerThread->set('replyBodies.'.$root->id, 'Draft for the first response')
+            ->set('replyBodies.'.$followup->id, 'That answers my question.')
+            ->call('submitCustomerReply', $followup->id)
+            ->assertSet('replyBodies.'.$root->id, 'Draft for the first response')
+            ->assertSet('replyBodies.'.$followup->id, '')
+            ->assertSee('Reply sent.')
+            ->assertSee('That answers my question.');
+        $this->assertDatabaseHas('product_review_responses', ['product_review_id' => $review->id, 'parent_response_id' => $followup->id, 'author_type' => 'buyer', 'body' => 'That answers my question.']);
+        $this->actingAs($seller);
+        Livewire::test(Thread::class, ['review' => $review, 'sellerView' => true])
+            ->set('body', 'Thanks again for your feedback.')
+            ->call('submit')
+            ->assertSee('Can you help with the size?');
+        $this->assertSame(4, $review->responses()->count());
+        $this->assertSame('Thanks again for your feedback.', $root->fresh()->body);
+        $this->get(route('catalog.show', [$store->slug, $item->product->slug]))
+            ->assertOk()
+            ->assertSee('Official Tote Shop')
+            ->assertSee('stores/tote-logo.png');
+    }
+
+    public function test_thread_rejects_impersonation_cross_review_parent_and_hidden_reviews(): void
+    {
+        [$buyer, $item, $seller] = $this->deliveredOrderItem();
+        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 5]);
+        $root = $review->responses()->create(['user_id' => $seller->id, 'author_type' => 'seller', 'body' => 'Thanks']);
+        [$otherBuyer, $otherItem, $otherSeller] = $this->deliveredOrderItem();
+        $otherReview = ProductReview::create(['product_id' => $otherItem->product_id, 'order_item_id' => $otherItem->id, 'user_id' => $otherBuyer->id, 'rating' => 4]);
+        $otherRoot = $otherReview->responses()->create(['user_id' => $otherSeller->id, 'author_type' => 'seller', 'body' => 'Other store']);
+
+        $this->actingAs($otherBuyer);
+        Livewire::test(Thread::class, ['review' => $review])->set('replyBodies.'.$root->id, 'Impersonation')->call('submitCustomerReply', $root->id)->assertForbidden();
+        $this->actingAs($otherSeller);
+        Livewire::test(Thread::class, ['review' => $review, 'sellerView' => true])->set('replyBodies.'.$root->id, 'Other store')->call('submitCustomerReply', $root->id)->assertForbidden();
+        $this->actingAs($buyer);
+        Livewire::test(Thread::class, ['review' => $review])->set('replyBodies.'.$otherRoot->id, 'Wrong thread')->call('submitCustomerReply', $otherRoot->id)->assertNotFound();
+        Livewire::test(Thread::class, ['review' => $review])->set('replyBodies.'.$root->id, ' ')->call('submitCustomerReply', $root->id)->assertHasErrors('replyBodies.'.$root->id);
+        $this->actingAs(User::factory()->unverified()->create());
+        Livewire::test(Thread::class, ['review' => $review])->set('replyBodies.'.$root->id, 'Unverified')->call('submitCustomerReply', $root->id)->assertForbidden();
+        $review->update(['status' => 'hidden']);
+        $this->actingAs($buyer);
+        Livewire::test(Thread::class, ['review' => $review])->set('replyBodies.'.$root->id, 'Hidden')->call('submitCustomerReply', $root->id)->assertForbidden();
+        $this->actingAs($seller)->post(route('seller.reviews.respond', $review), ['body' => 'Private response'])->assertRedirect();
+        $this->assertSame('Private response', $root->fresh()->body);
+        $this->assertSame(1, $review->responses()->count());
+    }
+
+    public function test_guest_cannot_post_a_review_reply(): void
+    {
+        [$buyer, $item, $seller] = $this->deliveredOrderItem();
+        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 5]);
+        $root = $review->responses()->create(['user_id' => $seller->id, 'author_type' => 'seller', 'body' => 'Thanks']);
+
+        Livewire::test(Thread::class, ['review' => $review])->set('replyBodies.'.$root->id, 'Guest')->call('submitCustomerReply', $root->id)->assertForbidden();
+        $this->assertSame(1, $review->responses()->count());
     }
 
     /** @return array{0: User, 1: OrderItem, 2: User} */

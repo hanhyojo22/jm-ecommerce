@@ -10,7 +10,7 @@ class ProductReviewResponse extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['user_id', 'body'];
+    protected $fillable = ['user_id', 'body', 'author_type', 'parent_response_id'];
 
     public function review(): BelongsTo
     {
@@ -20,5 +20,10 @@ class ProductReviewResponse extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_response_id');
     }
 }
