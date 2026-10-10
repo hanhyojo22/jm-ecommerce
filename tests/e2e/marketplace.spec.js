@@ -36,7 +36,7 @@ test('customer can place a COD order from the product page through checkout', as
         await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
         await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
         await expect(page.getByText('QA Canvas Tote')).toBeVisible();
-        await expect(page.getByText(/Cash on delivery/i)).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Order summary' }).locator('..').getByText('COD', { exact: true })).toBeVisible();
     } finally {
         await context.close();
     }

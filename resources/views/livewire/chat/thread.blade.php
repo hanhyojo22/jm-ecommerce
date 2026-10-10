@@ -2,7 +2,7 @@
 <div data-conversation-thread>
 @if ($isBuyerMessages)
     <x-marketplace.account-shell active="messages" title="Conversation">
-        <div class="grid h-[calc(100dvh-7rem)] min-h-0 min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface lg:h-[calc(100dvh-12rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
+        <div class="grid h-[calc(100dvh-16rem)] min-h-0 min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface sm:h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-12rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
             <div class="hidden min-h-0 border-r border-line lg:block"><livewire:chat.inbox :embedded="true" :active-conversation-id="$conversation->id" /></div>
             @include('livewire.chat.thread-content')
         </div>

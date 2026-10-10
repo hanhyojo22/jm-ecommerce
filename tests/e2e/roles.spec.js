@@ -83,7 +83,7 @@ test('seller dashboard stays compact and usable on a narrow screen', async ({ br
         // The fixture database is shared across the run, so this seller may already hold an
         // order from the checkout test. Accept either the empty state or an order card.
         await expect(
-            recentOrders.getByText('No orders yet').or(recentOrders.locator('article'))
+            recentOrders.getByText('No orders yet').or(recentOrders.locator('article').first())
         ).toBeVisible();
     } finally {
         await context.close();

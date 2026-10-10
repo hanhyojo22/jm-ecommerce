@@ -51,6 +51,59 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
     }
 });
 
+test('seller order detail and product editor remain usable at each viewport', async ({ browser }, testInfo) => {
+    test.setTimeout(60_000);
+    const customer = await openAsRole(browser, 'customer');
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
+        await customer.page.getByRole('link', { name: 'Cart: 1 item' }).click();
+        await customer.page.getByRole('link', { name: 'Continue to checkout' }).click();
+        await customer.page.getByLabel('Recipient name').fill('Ava QA Customer');
+        await customer.page.getByLabel('Mobile number').fill('+639171234567');
+        await customer.page.getByLabel('Street address').fill('10 QA Street');
+        await customer.page.getByLabel('City').fill('Manila');
+        await customer.page.getByRole('button', { name: 'Continue to delivery' }).click();
+        await customer.page.getByRole('button', { name: 'Continue to payment' }).click();
+        await customer.page.getByRole('button', { name: 'Review order' }).click();
+        await customer.page.getByRole('button', { name: /Place order/ }).click();
+        await expect(customer.page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
+    } finally {
+        await customer.context.close();
+    }
+
+    const seller = await openAsRole(browser, 'seller');
+
+    try {
+        for (const [name, path, action] of [
+            ['order-detail', '/seller/orders', 'View order'],
+            ['edit-product', '/seller/products', 'Edit'],
+        ]) {
+            await seller.page.goto(path);
+            if (name === 'order-detail') {
+                const listWidth = await seller.page.evaluate(() => ({
+                    viewport: document.documentElement.clientWidth,
+                    document: document.documentElement.scrollWidth,
+                }));
+                expect(listWidth.document, 'populated orders list').toBeLessThanOrEqual(listWidth.viewport);
+            }
+            await seller.page.getByRole('link', { name: action, exact: true }).first().click();
+            await expect(seller.page).toHaveURL(name === 'order-detail' ? /\/seller\/orders\/[^/]+$/ : /\/seller\/products\/[^/]+\/edit$/);
+            await expect(seller.page.locator('header[data-header-role="seller"]')).toBeVisible();
+            await expect(seller.page.locator('main h1')).toBeVisible();
+            const width = await seller.page.evaluate(() => ({
+                viewport: document.documentElement.clientWidth,
+                document: document.documentElement.scrollWidth,
+            }));
+            expect(width.document, name).toBeLessThanOrEqual(width.viewport);
+            await seller.page.screenshot({ path: testInfo.outputPath(`${name}.png`) });
+        }
+    } finally {
+        await seller.context.close();
+    }
+});
+
 test('homepage remains usable without page-level horizontal overflow', async ({ page }) => {
     await page.goto('/');
 

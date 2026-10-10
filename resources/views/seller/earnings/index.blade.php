@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Earnings</h1>
+            <h1 class="text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.3]">Earnings</h1>
             <p class="mt-2 text-sm text-muted">Delivered, paid orders become available for marketplace payout.</p>
         </div>
     </x-slot>
