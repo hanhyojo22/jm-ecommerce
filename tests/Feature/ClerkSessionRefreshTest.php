@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -32,7 +33,28 @@ class ClerkSessionRefreshTest extends TestCase
             'cart' => ['/cart'],
             'checkout' => ['/checkout'],
             'orders' => ['/orders'],
+            'messages' => ['/messages'],
             'profile' => ['/profile'],
+            'start selling' => ['/start-selling'],
+            'seller dashboard' => ['/seller'],
+            'seller store settings' => ['/seller/store-settings'],
+            'seller products' => ['/seller/products'],
+            'seller product creation' => ['/seller/products/create'],
+            'seller orders' => ['/seller/orders'],
+            'seller earnings' => ['/seller/earnings'],
+            'seller reviews' => ['/seller/reviews'],
+            'admin dashboard' => ['/dashboard'],
+            'admin moderation' => ['/admin/moderation'],
+            'admin chat reports' => ['/admin/chat-reports'],
+            'admin seller applications' => ['/admin/seller-applications'],
+            'admin orders' => ['/admin/orders'],
+            'admin payouts' => ['/admin/payouts'],
+            'admin products' => ['/admin/products'],
+            'admin stores' => ['/admin/stores'],
+            'admin customers' => ['/admin/customers'],
+            'admin audit logs' => ['/admin/audit-logs'],
+            'admin accounts' => ['/admin/accounts'],
+            'admin reviews' => ['/admin/reviews'],
         ];
     }
 
@@ -103,6 +125,31 @@ class ClerkSessionRefreshTest extends TestCase
 
         $this->post(route('cart.store', $product), ['quantity' => 1])
             ->assertRedirect(route('login'));
+
+        $this->post('/seller/reviews/01J00000000000000000000000/response', ['body' => 'Thank you'])
+            ->assertRedirect(route('login'));
+
+        $this->patch('/admin/reviews/01J00000000000000000000000', ['status' => 'hidden', 'reason' => 'Report'])
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_every_protected_route_refuses_an_expired_session_without_replaying_writes(): void
+    {
+        foreach (Route::getRoutes() as $route) {
+            if (! in_array('auth', $route->gatherMiddleware(), true)) {
+                continue;
+            }
+
+            $path = '/'.preg_replace('/\{[^}]+\}/', '01J00000000000000000000000', $route->uri());
+
+            foreach (array_intersect($route->methods(), ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) as $method) {
+                $redirect = $method === 'GET'
+                    ? route('clerk.refresh', ['redirect' => $path])
+                    : route('login');
+
+                $this->call($method, $path)->assertRedirect($redirect);
+            }
+        }
     }
 
     public function test_json_clients_receive_unauthorized_instead_of_a_bridge_redirect(): void
