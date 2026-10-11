@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Actions\StorePublicImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
@@ -73,24 +74,35 @@ class ProductController extends Controller
         return view('seller.products.create', ['store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
     }
 
-    public function store(StoreProductRequest $request): RedirectResponse
+    public function store(StoreProductRequest $request, StorePublicImage $storePublicImage): RedirectResponse
     {
         $tenant = $this->activeTenant($request);
         $store = $tenant->store;
         $data = $request->validated();
-        unset($data['image']);
-        $imagePath = $request->file('image')?->store('products', 'product_images');
+        $variants = $data['variants'] ?? [];
+        unset($data['image'], $data['images'], $data['variants']);
+        if ($variants !== []) {
+            $data['stock_quantity'] = array_sum(array_column($variants, 'stock_quantity'));
+        }
+        $imagePaths = [];
 
         try {
-            $product = DB::transaction(function () use ($request, $store, $tenant, $data, $imagePath): Product {
+            foreach (array_filter([$request->file('image'), ...($request->file('images') ?? [])]) as $image) {
+                $imagePaths[] = $storePublicImage->handle($image, 'products', 'product_images');
+            }
+
+            $product = DB::transaction(function () use ($request, $store, $tenant, $data, $variants, $imagePaths): Product {
                 $product = $store->products()->create([
                     ...$data,
                     'tenant_id' => $tenant->id,
                     'slug' => Str::slug($data['name']).'-'.Str::lower(Str::random(6)),
                     'status' => 'draft',
                 ]);
-                if ($imagePath !== null) {
-                    $product->images()->create(['path' => $imagePath]);
+                foreach ($imagePaths as $position => $imagePath) {
+                    $product->images()->create(['path' => $imagePath, 'position' => $position]);
+                }
+                foreach ($variants as $variant) {
+                    $product->variants()->create($variant);
                 }
 
                 AuditLog::query()->create([
@@ -105,7 +117,9 @@ class ProductController extends Controller
                 return $product;
             });
         } catch (Throwable $exception) {
-            $this->deleteUploadedImage($imagePath);
+            foreach ($imagePaths as $imagePath) {
+                $this->deleteUploadedImage($imagePath);
+            }
 
             throw $exception;
         }
@@ -117,18 +131,26 @@ class ProductController extends Controller
     {
         $product = $this->editableProduct($request, $product);
 
-        return view('seller.products.edit', ['product' => $product->load('images'), 'store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
+        return view('seller.products.edit', ['product' => $product->load(['images', 'variants']), 'store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
     }
 
-    public function update(UpdateProductRequest $request, Product $product): RedirectResponse
+    public function update(UpdateProductRequest $request, Product $product, StorePublicImage $storePublicImage): RedirectResponse
     {
         $product = $this->editableProduct($request, $product);
         $data = $request->validated();
-        unset($data['image']);
-        $imagePath = $request->file('image')?->store('products', 'product_images');
+        $variants = $data['variants'] ?? [];
+        unset($data['image'], $data['images'], $data['variants']);
+        if ($variants !== []) {
+            $data['stock_quantity'] = array_sum(array_column($variants, 'stock_quantity'));
+        }
+        $imagePaths = [];
 
         try {
-            DB::transaction(function () use ($request, $product, $data, $imagePath): void {
+            foreach (array_filter([$request->file('image'), ...($request->file('images') ?? [])]) as $image) {
+                $imagePaths[] = $storePublicImage->handle($image, 'products', 'product_images');
+            }
+
+            DB::transaction(function () use ($request, $product, $data, $variants, $imagePaths): void {
                 $product = Product::query()->lockForUpdate()->findOrFail($product->id);
 
                 if ($product->status !== 'active' && $data['status'] === 'active') {
@@ -138,8 +160,18 @@ class ProductController extends Controller
                 $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
                 $product->update($data);
 
-                if ($imagePath !== null) {
-                    $product->images()->create(['path' => $imagePath, 'position' => $product->images()->count()]);
+                $position = $product->images()->count();
+                foreach ($imagePaths as $imagePath) {
+                    $product->images()->create(['path' => $imagePath, 'position' => $position++]);
+                }
+                foreach ($variants as $variant) {
+                    $id = $variant['id'] ?? null;
+                    unset($variant['id']);
+                    if ($id !== null) {
+                        $product->variants()->whereKey($id)->firstOrFail()->update($variant);
+                    } else {
+                        $product->variants()->create($variant);
+                    }
                 }
 
                 AuditLog::query()->create([
@@ -153,7 +185,9 @@ class ProductController extends Controller
                 ]);
             });
         } catch (Throwable $exception) {
-            $this->deleteUploadedImage($imagePath);
+            foreach ($imagePaths as $imagePath) {
+                $this->deleteUploadedImage($imagePath);
+            }
 
             throw $exception;
         }

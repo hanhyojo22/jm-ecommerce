@@ -19,6 +19,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
+        <env name="TRUSTED_PROXIES" value="" force="true"/>
         <env name="APP_CONFIG_CACHE" value="bootstrap/cache/config-testing.php" force="true"/>
         <env name="APP_ROUTES_CACHE" value="bootstrap/cache/routes-testing.php" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>

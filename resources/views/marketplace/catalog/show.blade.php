@@ -9,7 +9,7 @@
         <nav aria-label="Breadcrumb" class="mb-5 flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] text-muted"><a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Home</a><span aria-hidden="true">/</span><a href="{{ route('catalog.index') }}" class="shrink-0 font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Marketplace</a><span aria-hidden="true">/</span><a href="{{ route('catalog.store', $product->store->slug) }}" class="max-w-40 shrink-0 truncate font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->store->name }}</a><span aria-hidden="true">/</span><span class="min-w-0 truncate font-semibold text-ink">{{ $product->name }}</span></nav>
         @if($errors->any())<div class="mb-6 flex items-start justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{{ $errors->first() }}</span><a href="#purchase" class="shrink-0 font-semibold underline underline-offset-4">Try again</a></div>@endif
 
-        <div x-data="{ selected: 0, zoomTrigger: null, quantity: 1, max: {{ max($product->stock_quantity, 1) }} }" class="grid items-start gap-9 lg:grid-cols-[minmax(0,55fr)_minmax(0,45fr)]">
+        <div x-data="{ selected: 0, zoomTrigger: null, quantity: 1, max: {{ $product->variants->isNotEmpty() ? 0 : $product->stock_quantity }}, chooseVariant(stock) { this.max = stock; this.quantity = 1 } }" class="grid items-start gap-9 lg:grid-cols-[minmax(0,55fr)_minmax(0,45fr)]">
             <section class="min-w-0" aria-label="Product images">
                 <div class="overflow-hidden rounded-2xl border border-line bg-white">
                     <div class="relative aspect-[4/3.4] bg-gradient-to-br from-blue-100 to-slate-50">
@@ -26,6 +26,9 @@
                             <span class="pointer-events-none absolute bottom-3 right-3 rounded-lg border border-line bg-white/95 px-2.5 py-1 text-xs text-muted"><span x-text="selected + 1"></span> / {{ $product->images->count() }} · Click to zoom</span>
                         @else
                             <div class="flex h-full items-center justify-center px-8 text-center text-sm font-semibold leading-6 text-muted">Product image coming soon from {{ $product->store->name }}</div>
+                        @endif
+                        @if ($product->stock_quantity < 1)
+                            <x-marketplace.sold-out-overlay />
                         @endif
                     </div>
                     @if ($product->images->count() > 1)
@@ -71,25 +74,40 @@
                 @if ($product->brand || $product->condition)<p class="mt-2 text-sm text-muted">{{ $product->brand }}@if ($product->brand && $product->condition) · @endif{{ ucfirst($product->condition ?? '') }}</p>@endif
                 <div class="mt-3 flex flex-wrap items-baseline gap-x-3"><p class="text-[32px] font-bold tabular-nums tracking-[-0.03em]">₱{{ number_format($product->price, 2) }}</p>@if ($isOnSale)<del class="text-base tabular-nums text-muted">₱{{ number_format($product->compare_at_price, 2) }}</del><span class="self-center rounded-[7px] bg-danger px-2 py-0.5 text-xs font-bold text-white">Sale</span>@endif</div>
                 <p class="mt-2 text-sm font-medium text-success">Free shipping · Cash on delivery</p>
-                @if (! Auth::check() || Auth::user()->account_type === 'buyer')
+                @if (! Auth::check() || in_array(Auth::user()->account_type, ['buyer', 'seller'], true))
                 <div id="purchase" class="sticky bottom-0 z-20 -mx-[18px] mt-4 scroll-mt-24 border-t border-line bg-canvas/95 px-[18px] py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
-                    @if (Auth::check() && Auth::user()->account_type === 'buyer' && Auth::user()->hasVerifiedClerkEmail())
+                    @if (Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail() && ! Auth::user()->isMemberOfTenant($product->tenant_id))
                         <form method="POST" action="{{ route('cart.store', $product) }}" data-add-to-cart data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="space-y-4">
                             @csrf
                             <input name="quantity" type="hidden" x-model="quantity">
+                            @if ($product->variants->isNotEmpty())
+                                <fieldset>
+                                    <legend class="mb-2 text-sm font-semibold">Choose color and size</legend>
+                                    <div class="grid gap-2 sm:grid-cols-2">
+                                        @foreach ($product->variants as $variant)
+                                            <label class="flex min-h-12 items-center gap-3 rounded-[10px] border border-line bg-white px-3 py-2 text-sm has-[:checked]:border-brand has-[:checked]:bg-blue-50 {{ $variant->stock_quantity === 0 ? 'opacity-60' : 'cursor-pointer' }}">
+                                                <input type="radio" name="variant_id" value="{{ $variant->id }}" required @disabled($variant->stock_quantity === 0) @change="chooseVariant({{ $variant->stock_quantity }})" class="text-brand focus:ring-brand">
+                                                <span class="min-w-0 flex-1"><strong class="block font-semibold">{{ $variant->color }} / {{ $variant->size }}</strong><span class="text-xs text-muted">{{ $variant->stock_quantity ? number_format($variant->stock_quantity).' available' : 'Sold out' }}</span></span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </fieldset>
+                            @endif
                             <div>
                                 <p class="mb-2 text-sm font-semibold">Quantity</p>
                                 <div class="inline-flex min-h-12 items-center rounded-[10px] border border-line bg-white">
-                                    <button type="button" @click="quantity = Math.max(1, quantity - 1)" :disabled="quantity <= 1 || {{ $product->stock_quantity < 1 ? 'true' : 'false' }}" class="grid size-11 place-items-center text-lg disabled:text-slate-300" aria-label="Reduce quantity">−</button>
+                                    <button type="button" @click="quantity = Math.max(1, quantity - 1)" :disabled="quantity <= 1 || max < 1" class="grid size-11 place-items-center text-lg disabled:text-slate-300" aria-label="Reduce quantity">−</button>
                                     <output class="min-w-10 text-center text-sm font-semibold tabular-nums" x-text="quantity"></output>
-                                    <button type="button" @click="quantity = Math.min(max, quantity + 1)" :disabled="quantity >= max || {{ $product->stock_quantity < 1 ? 'true' : 'false' }}" class="grid size-11 place-items-center text-lg disabled:text-slate-300" aria-label="Increase quantity">+</button>
+                                    <button type="button" @click="quantity = Math.min(max, quantity + 1)" :disabled="quantity >= max || max < 1" class="grid size-11 place-items-center text-lg disabled:text-slate-300" aria-label="Increase quantity">+</button>
                                 </div>
                             </div>
-                            <button @disabled($product->stock_quantity < 1) class="min-h-[50px] w-full rounded-[10px] bg-brand px-5 text-[15px] font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-slate-300">{{ $product->stock_quantity > 0 ? 'Add to cart' : 'Sold out' }}</button>
+                            <button @disabled($product->stock_quantity < 1) :disabled="max < 1" class="min-h-[50px] w-full rounded-[10px] bg-brand px-5 text-[15px] font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-slate-300">{{ $product->stock_quantity > 0 ? 'Add to cart' : 'Sold out' }}</button>
                         </form>
                     @elseif (! Auth::check())
-                        <a href="{{ route('login', ['redirect' => request()->getPathInfo(), 'add_to_cart' => $product->id]) }}" class="flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Sign in to add to cart</a>
-                    @elseif (Auth::user()->account_type === 'buyer')
+                        <a href="{{ route('login', ['redirect' => request()->getPathInfo()] + ($product->variants->isEmpty() ? ['add_to_cart' => $product->id] : [])) }}" class="flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Sign in to add to cart</a>
+                    @elseif (Auth::check() && Auth::user()->isMemberOfTenant($product->tenant_id))
+                        <p class="text-sm font-medium text-muted">You cannot buy products from a store you manage.</p>
+                    @elseif (in_array(Auth::user()->account_type, ['buyer', 'seller'], true))
                         <a href="{{ route('profile.edit') }}" class="flex min-h-12 w-full items-center justify-center rounded-[10px] border border-brand px-5 text-sm font-semibold text-brand hover:bg-blue-50">Verify your email to add to cart</a>
                     @endif
                 </div>
@@ -105,7 +123,7 @@
                         <div class="min-w-0"><p class="truncate font-semibold">{{ $product->store->name }}</p><p class="text-xs text-muted">Independent JMMart seller</p></div>
                         <a href="{{ route('catalog.store', $product->store->slug) }}" class="ml-auto shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">Visit store</a>
                     </div>
-                    @if (Auth::check() && Auth::user()->account_type === 'buyer' && Auth::user()->hasVerifiedClerkEmail())
+                    @if (Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail() && ! Auth::user()->isMemberOfTenant($product->tenant_id))
                         <form method="POST" action="{{ route('messages.products.start', $product) }}" class="mt-3 border-t border-line pt-3">@csrf<button class="text-sm font-semibold text-brand hover:text-brand-hover">Message seller</button></form>
                     @endif
                 </div>
@@ -156,6 +174,57 @@
             </div>
         </section>
 
+        <section id="discussions" class="mt-4 scroll-mt-40 rounded-[14px] border border-line bg-white p-5 sm:p-[26px]" aria-labelledby="discussions-heading">
+            @php($canDiscuss = auth()->check() && in_array(auth()->user()->account_type, ['buyer', 'seller'], true) && auth()->user()->hasVerifiedClerkEmail())
+            @php($actingAsStore = $canDiscuss && auth()->user()->isMemberOfTenant($product->tenant_id))
+            <h2 id="discussions-heading" class="text-2xl font-semibold tracking-[-0.02em]">Product discussions</h2>
+            <p class="mt-1 text-sm text-muted">Ask a question or join the conversation. Reviews above are reserved for verified purchases.</p>
+
+            @if ($canDiscuss)
+                <form method="POST" action="{{ route('discussions.store', $product) }}" class="mt-5 space-y-3">
+                    @csrf
+                    <label for="discussion-body" class="block text-sm font-semibold text-ink">{{ $actingAsStore ? 'Post as '.$product->store->name : 'Join as '.auth()->user()->name }}</label>
+                    @if ($actingAsStore)<p class="text-xs text-brand">Your reply will show the store name and Seller badge.</p>@endif
+                    <textarea id="discussion-body" name="body" rows="3" maxlength="2000" required class="w-full rounded-[10px] border-line text-sm focus:border-brand focus:ring-brand" placeholder="Ask about this product or share a helpful answer.">{{ old('body') }}</textarea>
+                    @error('body')<p class="text-sm text-danger" role="alert">{{ $message }}</p>@enderror
+                    <button type="submit" class="min-h-11 rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Post message</button>
+                </form>
+            @elseif (! auth()->check())
+                <a href="{{ route('login', ['redirect' => request()->getPathInfo()]) }}" class="mt-5 inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">Sign in to join the discussion</a>
+            @endif
+
+            <div class="mt-6 divide-y divide-line">
+                @forelse ($discussions as $discussion)
+                    <article id="discussion-{{ $discussion->id }}" class="py-4 {{ $discussion->parent_id ? 'pl-5 sm:pl-9' : '' }}">
+                        @if ($discussion->parent)<p class="mb-2 text-xs text-muted">Reply to {{ $discussion->parent->author_type === 'seller' ? $product->store->name : $discussion->parent->user?->name }}</p>@endif
+                        <div class="flex items-center gap-2.5">
+                            @if ($discussion->author_type === 'seller' && $product->store->logo_path)
+                                <img src="{{ Storage::disk('public')->url($product->store->logo_path) }}" alt="" class="size-9 rounded-full object-cover">
+                            @else
+                                <span class="grid size-9 place-items-center rounded-full bg-blue-50 text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($discussion->author_type === 'seller' ? $product->store->name : $discussion->user->name, 0, 1)) }}</span>
+                            @endif
+                            <div><p class="text-sm font-semibold text-ink">{{ $discussion->author_type === 'seller' ? $product->store->name : $discussion->user->name }} @if ($discussion->author_type === 'seller')<span class="ml-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-brand">Seller</span>@endif</p><time datetime="{{ $discussion->created_at->toIso8601String() }}" class="text-xs text-muted">{{ $discussion->created_at->diffForHumans() }}</time></div>
+                        </div>
+                        <p class="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{{ $discussion->body }}</p>
+                        @if ($canDiscuss)
+                            <details class="mt-2"><summary class="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-brand hover:text-brand-hover">Reply</summary>
+                                <form method="POST" action="{{ route('discussions.store', $product) }}" class="mt-2 space-y-2">
+                                    @csrf
+                                    <input type="hidden" name="parent_id" value="{{ $discussion->id }}">
+                                    <label for="reply-{{ $discussion->id }}" class="block text-sm font-medium text-ink">Your reply</label>
+                                    <textarea id="reply-{{ $discussion->id }}" name="body" rows="2" maxlength="2000" required class="w-full rounded-[10px] border-line text-sm focus:border-brand focus:ring-brand"></textarea>
+                                    <button type="submit" class="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Post reply</button>
+                                </form>
+                            </details>
+                        @endif
+                    </article>
+                @empty
+                    <p class="py-6 text-sm text-muted">No discussion yet. Be the first to ask a question.</p>
+                @endforelse
+            </div>
+            <div class="mt-4">{{ $discussions->fragment('discussions')->links() }}</div>
+        </section>
+
         @if ($sellerProducts->isNotEmpty())
             <section class="mt-8" aria-labelledby="from-seller-heading">
                 <div class="flex flex-wrap items-end justify-between gap-3">
@@ -185,6 +254,7 @@
         @endif
     </main>
     <x-marketplace.footer />
+<x-cookie-consent />
 @livewireScripts
 </body>
 </html>

@@ -12,7 +12,7 @@ class CheckoutController extends Controller
 {
     public function create(Request $request): RedirectResponse|View
     {
-        $cart = $request->user()->cart()->with('items.product.store')->first();
+        $cart = $request->user()->cart()->with(['items.product.store', 'items.variant'])->first();
 
         if ($cart === null || $cart->items->isEmpty()) {
             return to_route('cart.index')->with('status', 'Your cart is empty. Add a product before checking out.');
@@ -27,7 +27,11 @@ class CheckoutController extends Controller
             '0.00',
         );
 
-        return view('marketplace.checkout.create', compact('cart', 'subtotal'));
+        return view('marketplace.checkout.create', [
+            'cart' => $cart,
+            'subtotal' => $subtotal,
+            'addresses' => $request->user()->deliveryAddresses()->latest()->get(),
+        ]);
     }
 
     public function store(Request $request, CheckoutCart $checkout): RedirectResponse

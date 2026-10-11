@@ -9,6 +9,8 @@ use Illuminate\Validation\Validator;
 
 class StoreProductRequest extends FormRequest
 {
+    use ValidatesProductVariants;
+
     public function authorize(): bool
     {
         return $this->user()?->can('create', Product::class) ?? false;
@@ -25,14 +27,27 @@ class StoreProductRequest extends FormRequest
             'condition' => ['nullable', Rule::in(['new', 'refurbished'])],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'compare_at_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99', 'gt:price'],
-            'stock_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'stock_quantity' => ['required_without:variants', 'integer', 'min:0', 'max:2147483647'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images' => ['nullable', 'array', 'max:8'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'variants' => ['nullable', 'array', 'max:30'],
+            'variants.*' => ['array:color,size,sku,stock_quantity'],
+            'variants.*.color' => ['required', 'string', 'max:60'],
+            'variants.*.size' => ['required', 'string', 'max:60'],
+            'variants.*.sku' => ['required', 'string', 'max:100'],
+            'variants.*.stock_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
         ];
     }
 
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $this->validateVariants($validator);
+            if (count((array) $this->file('images', [])) + ($this->hasFile('image') ? 1 : 0) > 8) {
+                $validator->errors()->add('images', 'Upload no more than 8 product photos.');
+            }
+
             if ($validator->errors()->has('sku')) {
                 return;
             }

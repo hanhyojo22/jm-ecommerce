@@ -1,7 +1,7 @@
 <x-app-layout>
     @php
         $itemsByStore = $cart?->items->groupBy(fn ($item) => $item->product->store_id) ?? collect();
-        $hasUnavailableItems = $cart?->items->contains(fn ($item) => $item->product->status !== 'active' || $item->product->stock_quantity < $item->quantity) ?? false;
+        $hasUnavailableItems = $cart?->items->contains(fn ($item) => $item->product->status !== 'active' || $item->product->stock_quantity < $item->quantity || ($item->product_variant_id !== null && ($item->variant === null || $item->variant->stock_quantity < $item->quantity)) || ($item->product_variant_id === null && $item->product->variants->isNotEmpty())) ?? false;
     @endphp
 
     <div class="page-shell min-h-[calc(100dvh-4.5rem)]">
@@ -48,7 +48,8 @@
 
                                     <div class="divide-y divide-line">
                                         @foreach ($storeItems as $item)
-                                            @php($isUnavailable = $item->product->status !== 'active' || $item->product->stock_quantity < $item->quantity)
+                                            @php($availableStock = $item->variant?->stock_quantity ?? $item->product->stock_quantity)
+                                            @php($isUnavailable = $item->product->status !== 'active' || $item->product->stock_quantity < $item->quantity || $availableStock < $item->quantity || ($item->product_variant_id !== null && $item->variant === null) || ($item->product_variant_id === null && $item->product->variants->isNotEmpty()))
                                             <article class="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-4 p-4 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:p-5">
                                                 <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
                                                     @if ($item->product->thumbnail)
@@ -60,9 +61,10 @@
 
                                                 <div class="min-w-0">
                                                     <h4 class="break-words text-sm font-semibold leading-5 text-ink sm:text-base"><a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $item->product->name }}</a></h4>
+                                                    @if ($item->variant)<p class="mt-1 text-xs font-medium text-brand">{{ $item->variant->label() }}</p>@endif
                                                     <p class="mt-1 text-sm text-muted">₱{{ number_format($item->product->price, 2) }} each</p>
                                                     @if ($isUnavailable)
-                                                        <p class="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">{{ $item->product->status !== 'active' ? 'No longer available' : 'Only '.$item->product->stock_quantity.' available' }}</p>
+                                                        <p class="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">{{ $item->product_variant_id === null && $item->product->variants->isNotEmpty() ? 'Choose a color and size again' : ($item->product->status !== 'active' || ($item->product_variant_id !== null && $item->variant === null) ? 'No longer available' : ($availableStock < 1 ? 'Sold out' : 'Only '.$availableStock.' available')) }}</p>
                                                     @else
                                                         <p class="mt-2 text-xs font-semibold text-success">In stock</p>
                                                     @endif
@@ -73,7 +75,7 @@
                                                             @method('PATCH')
                                                             <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
                                                             <span class="grid h-11 min-w-10 place-items-center border-x border-line text-sm font-semibold">{{ $item->quantity }}</span>
-                                                            <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $item->product->stock_quantity || $item->product->status !== 'active') class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
+                                                            <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
                                                         </form>
                                                         <p class="text-sm font-bold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
                                                     </div>
@@ -86,7 +88,7 @@
                                                         @method('PATCH')
                                                         <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
                                                         <span class="grid h-11 min-w-10 place-items-center border-x border-line text-sm font-semibold">{{ $item->quantity }}</span>
-                                                        <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $item->product->stock_quantity || $item->product->status !== 'active') class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
+                                                        <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
                                                     </form>
                                                     <form method="POST" action="{{ route('cart.destroy', $item) }}">
                                                         @csrf

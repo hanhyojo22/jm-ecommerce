@@ -17,16 +17,11 @@ class ConversationPolicy
             return false;
         }
 
-        if ($user->account_type === 'buyer') {
+        if (in_array($user->account_type, ['buyer', 'seller'], true)) {
             return true;
         }
 
-        return $user->account_type === 'seller' && $user->tenantMemberships()
-            ->whereIn('role', ['owner', 'manager', 'staff'])
-            ->whereHas('tenant', fn ($query) => $query
-                ->where('status', 'active')
-                ->whereHas('store', fn ($store) => $store->where('status', 'active')))
-            ->exists();
+        return false;
     }
 
     /**

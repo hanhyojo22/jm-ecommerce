@@ -97,6 +97,7 @@ class SellerApplicationTest extends TestCase
         $this->assertDatabaseHas('stores', ['tenant_id' => $tenant->id, 'status' => 'active']);
         $this->assertDatabaseHas('tenant_members', ['tenant_id' => $tenant->id, 'user_id' => $customer->id, 'role' => 'owner']);
         $this->assertDatabaseHas('seller_applications', ['id' => $application->id, 'status' => 'approved']);
+        $this->assertDatabaseHas('users', ['id' => $customer->id, 'preferred_workspace' => 'seller']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $administrator->id, 'action' => 'seller_application.approved']);
         $this->assertSame(1, TenantMember::query()->where('tenant_id', $tenant->id)->count());
         $this->assertSame(1, AuditLog::query()->count());

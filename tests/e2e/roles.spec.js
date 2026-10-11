@@ -193,7 +193,7 @@ test('guest is redirected to sign in for protected customer resources', async ({
     await expect(page.getByRole('link', { name: 'Return to sign in' })).toBeVisible();
 });
 
-test('seller remains signed in when Seller Center and Account are opened after the session token expires', async ({ browser }) => {
+test('seller remains signed in when Account and the workspace switch are opened after the session token expires', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'seller');
     const authRefreshRequests = [];
 
@@ -204,23 +204,9 @@ test('seller remains signed in when Seller Center and Account are opened after t
             }
         });
 
-        await page.goto('/');
-        await page.getByRole('button', { name: 'Account menu' }).click();
-
-        const sellerCenterLink = page.locator('#header-account-menu')
-            .getByRole('link', { name: 'Seller Center', exact: true });
-        await expect(sellerCenterLink).toBeVisible();
+        await page.goto('/seller');
         await context.clearCookies({ name: '__session' });
         await context.setExtraHTTPHeaders({});
-        const sellerHandoff = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
-        await sellerCenterLink.click();
-        await expect((await sellerHandoff).ok()).toBeTruthy();
-
-        await expect(page).toHaveURL(/\/seller$/);
-        await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
-        await expect(page).not.toHaveURL(/\/sign-in|\/auth\//);
-
-        await context.clearCookies({ name: '__session' });
         const accountLink = page.getByRole('complementary', { name: 'Seller Center sidebar' })
             .getByRole('link', { name: 'Account', exact: true });
         const accountHandoff = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
@@ -228,6 +214,16 @@ test('seller remains signed in when Seller Center and Account are opened after t
         await expect((await accountHandoff).ok()).toBeTruthy();
 
         await expect(page).toHaveURL(/\/profile$/);
+        await expect(page).not.toHaveURL(/\/sign-in|\/auth\//);
+
+        await page.getByRole('button', { name: 'Account menu' }).click();
+        const switchButton = page.locator('#header-account-menu').getByRole('button', { name: 'Switch Account' });
+        await expect(switchButton).toBeVisible();
+        await context.clearCookies({ name: '__session' });
+        const switchHandoff = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
+        await switchButton.click();
+        await expect((await switchHandoff).ok()).toBeTruthy();
+        await expect(page).toHaveURL(/https?:\/\/[^/]+\/$/);
         await expect(page).not.toHaveURL(/\/sign-in|\/auth\//);
         expect(authRefreshRequests).toEqual([]);
     } finally {

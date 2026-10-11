@@ -29,6 +29,7 @@ class CheckoutCart
 
             $items = $cart->items()
                 ->orderBy('product_id')
+                ->orderBy('variant_key')
                 ->lockForUpdate()
                 ->get();
 
@@ -44,8 +45,18 @@ class CheckoutCart
                 ->get()
                 ->keyBy('id');
 
-            $lines = $items->map(function ($item) use ($products): array {
+            $managedTenantIds = $user->tenantMemberships()->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all();
+
+            $lines = $items->map(function ($item) use ($products, $managedTenantIds): array {
                 $product = $products->get($item->product_id);
+
+                $variant = $product !== null && $item->product_variant_id !== null
+                    ? $product->variants()->lockForUpdate()->find($item->product_variant_id)
+                    : null;
+
+                if ($product !== null && in_array($product->tenant_id, $managedTenantIds, true)) {
+                    throw ValidationException::withMessages(['cart' => 'Remove products from stores you manage before checking out.']);
+                }
 
                 if (
                     $product === null
@@ -53,14 +64,18 @@ class CheckoutCart
                     || $product->store->status !== 'active'
                     || $product->tenant->status !== 'active'
                     || $product->stock_quantity < $item->quantity
+                    || ($item->product_variant_id !== null && ($variant === null || $variant->stock_quantity < $item->quantity))
+                    || ($item->product_variant_id === null && $product->variants()->exists())
                 ) {
                     throw ValidationException::withMessages(['cart' => 'A product in your cart is unavailable.']);
                 }
 
                 $product->decrement('stock_quantity', $item->quantity);
+                $variant?->decrement('stock_quantity', $item->quantity);
 
                 return [
                     'product' => $product,
+                    'variant' => $variant,
                     'quantity' => $item->quantity,
                     'total' => bcmul((string) $product->price, (string) $item->quantity, 2),
                 ];
@@ -99,8 +114,10 @@ class CheckoutCart
                     foreach ($storeLines as $line) {
                         $sellerOrder->items()->create([
                             'product_id' => $line['product']->id,
+                            'product_variant_id' => $line['variant']?->id,
                             'product_name' => $line['product']->name,
-                            'sku' => $line['product']->sku,
+                            'sku' => $line['variant']?->sku ?? $line['product']->sku,
+                            'variant_label' => $line['variant']?->label(),
                             'unit_price' => $line['product']->price,
                             'quantity' => $line['quantity'],
                             'line_total' => $line['total'],

@@ -29,11 +29,12 @@ class AccountTypeAccessTest extends TestCase
         $this->actingAs($seller)->get(route('seller.orders.index'))->assertForbidden();
     }
 
-    public function test_seller_cannot_access_buyer_or_admin_routes(): void
+    public function test_seller_can_shop_but_cannot_access_admin_routes(): void
     {
         $seller = User::factory()->seller()->create();
 
-        $this->actingAs($seller)->get(route('cart.index'))->assertForbidden();
+        $this->actingAs($seller)->get(route('cart.index'))->assertOk();
+        $this->actingAs($seller)->get(route('orders.index'))->assertOk();
         $this->actingAs($seller)->get(route('admin.orders.index'))->assertForbidden();
     }
 

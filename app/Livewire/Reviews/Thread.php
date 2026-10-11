@@ -70,7 +70,7 @@ class Thread extends Component
         $this->review->loadMissing('product.store');
         $store = $this->review->product->store;
         $isSeller = $user->account_type === 'seller' && $user->sellerTenant()?->id === $store->tenant_id;
-        $isBuyer = $user->account_type === 'buyer' && $user->id === $this->review->user_id;
+        $isBuyer = $user->id === $this->review->user_id && ! $isSeller;
         abort_unless($isSeller || $isBuyer, 403);
         if ($this->replyToId === null) {
             abort_unless($isSeller, 403);
@@ -93,7 +93,7 @@ class Thread extends Component
     {
         $parent = $this->review->responses()->findOrFail($responseId);
         $user = auth()->user();
-        abort_unless($user?->account_type === 'buyer' && $this->canReplyTo($parent), 403);
+        abort_unless($user !== null && $this->canReplyTo($parent), 403);
 
         if (is_string($this->replyBodies[$responseId] ?? null)) {
             $this->replyBodies[$responseId] = trim($this->replyBodies[$responseId]);
@@ -134,11 +134,11 @@ class Thread extends Component
             return false;
         }
 
-        if ($user->account_type === 'buyer') {
+        $this->review->loadMissing('product.store');
+
+        if ($user->id === $this->review->user_id && ! $user->isMemberOfTenant($this->review->product->tenant_id)) {
             return $user->id === $this->review->user_id && $response->author_type === 'seller';
         }
-
-        $this->review->loadMissing('product.store');
 
         return $user->account_type === 'seller'
             && $user->sellerTenant()?->id === $this->review->product->store->tenant_id
@@ -163,8 +163,9 @@ class Thread extends Component
         $store = $this->review->product->store;
         $user = auth()->user();
         $actingAsStore = $user?->account_type === 'seller' && $user->sellerTenant()?->id === $store->tenant_id;
-        $canCustomerReply = $user?->account_type === 'buyer'
+        $canCustomerReply = $user !== null
             && $user->id === $this->review->user_id
+            && ! $user->isMemberOfTenant($store->tenant_id)
             && $user->hasVerifiedClerkEmail()
             && $this->review->status === 'published';
 

@@ -40,6 +40,14 @@ class SellerStoreSettingsTest extends TestCase
         $this->assertSame('25 New Market Street', $store->address_line);
         $this->assertSame('Quezon City', $store->city);
         Storage::disk('public')->assertExists($store->logo_path);
+        $this->actingAs($owner)->get(route('seller.store-settings.edit'))
+            ->assertSee('Current Northwind Goods logo', false)
+            ->assertSee(Storage::disk('public')->url($store->logo_path), false);
+        $this->actingAs($owner)->get(route('seller.dashboard'))
+            ->assertSee(Storage::disk('public')->url($store->logo_path), false);
+        $this->get(route('catalog.store', $store->slug))
+            ->assertSee('alt="Northwind Goods logo"', false)
+            ->assertSee(Storage::disk('public')->url($store->logo_path), false);
         $response->assertSessionMissing('seller_store_settings_undo');
         $this->assertDatabaseHas('audit_logs', [
             'actor_user_id' => $owner->id,
@@ -132,6 +140,8 @@ class SellerStoreSettingsTest extends TestCase
 
         $this->assertDatabaseHas('stores', ['id' => $store->id, 'logo_path' => null]);
         Storage::disk('public')->assertMissing('store-logos/current.png');
+        $this->actingAs($owner)->get(route('seller.dashboard'))
+            ->assertDontSee(Storage::disk('public')->url('store-logos/current.png'), false);
     }
 
     public function test_owner_can_undo_a_recent_text_only_settings_save(): void

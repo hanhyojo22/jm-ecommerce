@@ -21,11 +21,9 @@ class CatalogQuery
      *     sort?: 'relevance'|'newest'|'price_asc'|'price_desc'|'top_rated'|null,
      *     min_price?: string|int|float|null,
      *     max_price?: string|int|float|null,
-     *     price_range?: 'under_25000'|'25000_100000'|'over_100000'|null,
      *     in_stock?: bool|int|string|null,
      *     brands?: list<string>,
      *     conditions?: list<'new'|'refurbished'>,
-     *     free_shipping?: bool|int|string|null,
      *     on_sale?: bool|int|string|null,
      *     min_rating?: int|null,
      *     with_photos?: bool|int|string|null
@@ -66,13 +64,9 @@ class CatalogQuery
             ->when(! $seller && ($filters['seller'] ?? null), fn (Builder $query) => $query->whereHas('store', fn (Builder $store) => $store->where('slug', $filters['seller'])))
             ->when(isset($filters['min_price']) && $filters['min_price'] !== null, fn ($query) => $query->where('price', '>=', $filters['min_price']))
             ->when(isset($filters['max_price']) && $filters['max_price'] !== null, fn ($query) => $query->where('price', '<=', $filters['max_price']))
-            ->when(($filters['price_range'] ?? null) === 'under_25000', fn ($query) => $query->where('price', '<', 25000))
-            ->when(($filters['price_range'] ?? null) === '25000_100000', fn ($query) => $query->whereBetween('price', [25000, 100000]))
-            ->when(($filters['price_range'] ?? null) === 'over_100000', fn ($query) => $query->where('price', '>', 100000))
             ->when(! empty($filters['in_stock']), fn ($query) => $query->where('stock_quantity', '>', 0))
             ->when($filters['brands'] ?? [], fn (Builder $query, array $brands) => $query->whereIn('brand', $brands))
             ->when($filters['conditions'] ?? [], fn (Builder $query, array $conditions) => $query->whereIn('condition', $conditions))
-            ->when(! empty($filters['free_shipping']), fn (Builder $query) => $query->where('free_shipping', true))
             ->when(! empty($filters['on_sale']), fn (Builder $query) => $query->whereNotNull('compare_at_price')->whereColumn('compare_at_price', '>', 'price'))
             ->when(! empty($filters['min_rating']), fn ($query) => $query->whereRaw('(SELECT AVG(rating) FROM product_reviews WHERE product_reviews.product_id = products.id AND product_reviews.status = ?) >= ?', ['published', $filters['min_rating']]))
             ->when(! empty($filters['with_photos']), fn (Builder $query) => $query->whereHas('reviews', fn (Builder $review) => $review->published()->whereHas('photos')));

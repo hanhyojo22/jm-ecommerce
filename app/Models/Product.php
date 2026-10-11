@@ -42,6 +42,11 @@ class Product extends Model
         return $this->hasMany(ProductImage::class)->orderBy('position');
     }
 
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('color')->orderBy('size');
+    }
+
     public function thumbnail(): HasOne
     {
         return $this->hasOne(ProductImage::class)->ofMany('position', 'min');
@@ -50,6 +55,11 @@ class Product extends Model
     public function reviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
+    }
+
+    public function discussions(): HasMany
+    {
+        return $this->hasMany(ProductDiscussion::class);
     }
 
     public function orderItems(): HasMany

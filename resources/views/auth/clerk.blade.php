@@ -56,5 +56,6 @@
             <a href="{{ route('catalog.index') }}" class="mt-5 block text-center text-sm font-medium text-muted transition hover:text-ink">Back to marketplace</a>
         </section>
     </main>
+    <x-cookie-consent />
 </body>
 </html>

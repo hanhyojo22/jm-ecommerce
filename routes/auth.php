@@ -29,7 +29,7 @@ Route::middleware('guest')->group(function (): void {
 
         return view('auth.clerk', [
             'mode' => 'sign-in',
-            'afterAuthUrl' => route('clerk.handoff', ['redirect' => $redirect !== '' ? $redirect : '/']),
+            'afterAuthUrl' => route('clerk.handoff', $redirect !== '' ? ['redirect' => $redirect] : []),
         ]);
     })->name('login');
 
@@ -40,7 +40,7 @@ Route::middleware('guest')->group(function (): void {
 
         return view('auth.clerk', [
             'mode' => 'sign-up',
-            'afterAuthUrl' => route('clerk.handoff', ['redirect' => $afterAuthUrl !== '' ? $afterAuthUrl : '/']),
+            'afterAuthUrl' => route('clerk.handoff', $afterAuthUrl !== '' ? ['redirect' => $afterAuthUrl] : []),
         ]);
     })->name('register');
 

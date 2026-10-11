@@ -21,8 +21,8 @@
 </head>
 <body class="marketplace-catalog bg-canvas font-sans text-ink antialiased">
     @php
-        $isBuyer = Auth::check() && Auth::user()->account_type === 'buyer' && Auth::user()->hasVerifiedClerkEmail();
-        $catalogQueryParams = array_filter(request()->only(['q', 'category', 'seller', 'sort', 'min_price', 'max_price', 'price_range', 'in_stock', 'brands', 'conditions', 'free_shipping', 'on_sale', 'min_rating', 'with_photos']), fn ($value) => filled($value) || $value === '0');
+        $isBuyer = Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail();
+        $catalogQueryParams = array_filter(request()->only(['q', 'category', 'seller', 'sort', 'min_price', 'max_price', 'in_stock', 'brands', 'conditions', 'on_sale', 'min_rating', 'with_photos']), fn ($value) => filled($value) || $value === '0');
         $catalogRouteName = $sellerStore ? 'catalog.store' : 'catalog.index';
         $catalogRouteParameters = $sellerStore ? ['store' => $sellerStore] : [];
         $catalogUrl = route($catalogRouteName, $catalogRouteParameters);
@@ -34,10 +34,6 @@
         if (filled(request('category'))) { $categoryName = $categories->firstWhere('slug', request('category'))?->name ?? request('category'); $filterChips[] = ['label' => $categoryName, 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page'])])]; }
         if (! $sellerStore && filled(request('seller'))) { $storeName = $filterStores->firstWhere('slug', request('seller'))?->name ?? request('seller'); $filterChips[] = ['label' => $storeName, 'url' => route($catalogRouteName, request()->except(['seller', 'page']))]; }
         if (! empty($activeFilters['min_price']) || ! empty($activeFilters['max_price'])) { $filterChips[] = ['label' => '₱'.($activeFilters['min_price'] ?? '0').' – ₱'.($activeFilters['max_price'] ?? '∞'), 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['min_price', 'max_price', 'page'])])]; }
-        if (! empty($activeFilters['price_range'])) {
-            $priceRangeLabel = ['under_25000' => 'Under ₱25,000', '25000_100000' => '₱25,000–₱100,000', 'over_100000' => 'Over ₱100,000'][$activeFilters['price_range']];
-            $filterChips[] = ['label' => $priceRangeLabel, 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['price_range', 'min_price', 'max_price', 'page'])])];
-        }
         if (! empty($activeFilters['in_stock'])) { $filterChips[] = ['label' => 'In stock', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['in_stock', 'page'])])]; }
         foreach ($activeFilters['brands'] ?? [] as $activeBrand) {
             $remainingBrands = array_values(array_diff($activeFilters['brands'], [$activeBrand]));
@@ -51,7 +47,6 @@
             if ($remainingConditions !== []) { $queryParameters['conditions'] = $remainingConditions; }
             $filterChips[] = ['label' => ucfirst($activeCondition), 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...$queryParameters])];
         }
-        if (! empty($activeFilters['free_shipping'])) { $filterChips[] = ['label' => 'Free shipping', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['free_shipping', 'page'])])]; }
         if (! empty($activeFilters['on_sale'])) { $filterChips[] = ['label' => 'On sale', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['on_sale', 'page'])])]; }
         if (! empty($activeFilters['min_rating'])) { $filterChips[] = ['label' => $activeFilters['min_rating'].'★ & up', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['min_rating', 'page'])])]; }
         if (! empty($activeFilters['with_photos'])) { $filterChips[] = ['label' => 'With photos', 'url' => route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['with_photos', 'page'])])]; }
@@ -104,10 +99,6 @@
             <div class="bg-[#111c32] px-4 py-3 text-white">
                 <div class="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 text-sm">
                     <p class="font-semibold">Storefront preview <span class="ml-2 font-normal text-slate-300">This is what customers see.</span></p>
-                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
-                        <a href="{{ route('seller.dashboard') }}" class="font-semibold text-white underline decoration-blue-300 underline-offset-4 hover:text-blue-200">Back to Seller Center</a>
-                        <a href="{{ route('seller.products.index') }}" class="font-semibold text-white underline decoration-blue-300 underline-offset-4 hover:text-blue-200">Manage products</a>
-                    </div>
                 </div>
             </div>
         @endif
@@ -184,7 +175,7 @@
                         <h2 id="store-best-heading" class="text-xl font-bold tracking-[-0.02em]">Best sellers</h2>
                         <ol class="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                             @foreach ($storeBestSellers as $product)
-                                <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-[14px] border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}</span></a></li>
+                                <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-[14px] border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}@if ($product->stock_quantity < 1)<span class="mt-1 block font-semibold text-danger">Sold out</span>@endif</span></a></li>
                             @endforeach
                         </ol>
                     </section>
@@ -270,17 +261,9 @@
                             @if (filled(request('sort')))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
                             <div role="group" aria-labelledby="catalog-price-heading" class="border-t border-line py-[14px]">
                                 <h3 id="catalog-price-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Price</h3>
-                                <div class="space-y-0">
-                                    @foreach (['under_25000' => 'Under ₱25,000', '25000_100000' => '₱25,000–₱100,000', 'over_100000' => 'Over ₱100,000'] as $value => $label)
-                                        <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
-                                            <input type="radio" name="price_range" value="{{ $value }}" @checked(($activeFilters['price_range'] ?? null) === $value) x-on:change="$refs.minPrice.value = ''; $refs.maxPrice.value = ''; $el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
-                                            <span>{{ $label }}</span>
-                                        </label>
-                                    @endforeach
-                                </div>
-                                <div class="mt-[7px] grid grid-cols-2 gap-2">
-                                    <div><label for="minimum-price" class="sr-only">Minimum price in pesos</label><input id="minimum-price" x-ref="minPrice" x-on:input="$el.form.querySelectorAll('input[name=price_range]').forEach((radio) => radio.checked = false)" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="min_price" min="0" step="0.01" value="{{ $activeFilters['min_price'] ?? '' }}" placeholder="Min ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
-                                    <div><label for="maximum-price" class="sr-only">Maximum price in pesos</label><input id="maximum-price" x-ref="maxPrice" x-on:input="$el.form.querySelectorAll('input[name=price_range]').forEach((radio) => radio.checked = false)" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="max_price" min="0" step="0.01" value="{{ $activeFilters['max_price'] ?? '' }}" placeholder="Max ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div><label for="minimum-price" class="sr-only">Minimum price in pesos</label><input id="minimum-price" x-ref="minPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="min_price" min="0" step="0.01" value="{{ $activeFilters['min_price'] ?? '' }}" placeholder="Min ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
+                                    <div><label for="maximum-price" class="sr-only">Maximum price in pesos</label><input id="maximum-price" x-ref="maxPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="max_price" min="0" step="0.01" value="{{ $activeFilters['max_price'] ?? '' }}" placeholder="Max ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
                                 </div>
                             </div>
 
@@ -319,10 +302,6 @@
                                 <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
                                     <input type="checkbox" name="in_stock" value="1" @checked(! empty($activeFilters['in_stock'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
                                     <span>In stock only</span>
-                                </label>
-                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
-                                    <input type="checkbox" name="free_shipping" value="1" @checked(! empty($activeFilters['free_shipping'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
-                                    <span>Free shipping</span>
                                 </label>
                                 <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
                                     <input type="checkbox" name="on_sale" value="1" @checked(! empty($activeFilters['on_sale'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
@@ -457,6 +436,7 @@
         </main>
 
     </div>
+<x-cookie-consent />
 @livewireScripts
 </body>
 </html>

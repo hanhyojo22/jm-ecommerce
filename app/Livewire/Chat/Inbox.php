@@ -20,6 +20,9 @@ class Inbox extends Component
     #[Url]
     public string $search = '';
 
+    #[Url]
+    public string $context = 'selling';
+
     public bool $embedded = false;
 
     public ?string $activeConversationId = null;
@@ -52,6 +55,8 @@ class Inbox extends Component
                 ->where('sender_id', '!=', $user->id)
                 ->whereRaw("conversation_messages.id > COALESCE((SELECT last_read_message_id FROM conversation_read_states WHERE conversation_id = conversations.id AND user_id = ? LIMIT 1), '')", [$user->id])])
             ->visibleTo($user)
+            ->when($user->account_type === 'seller' && $this->context === 'buying', fn ($query) => $query->where('buyer_id', $user->id))
+            ->when($user->account_type === 'seller' && $this->context !== 'buying', fn ($query) => $query->where('buyer_id', '!=', $user->id))
             ->when($this->filter === 'product', fn ($query) => $query->whereNotNull('product_id'))
             ->when($this->filter === 'order', fn ($query) => $query->whereNotNull('seller_order_id'))
             ->when($this->filter === 'unread', fn ($query) => $query->unreadFor($user))

@@ -11,12 +11,15 @@ use App\Http\Controllers\Admin\SellerApplicationController as AdminSellerApplica
 use App\Http\Controllers\Admin\SellerPayoutController;
 use App\Http\Controllers\Admin\StoreModerationController;
 use App\Http\Controllers\ClerkWebhookController;
+use App\Http\Controllers\CookiePreferencesController;
 use App\Http\Controllers\Marketplace\CartController;
 use App\Http\Controllers\Marketplace\CatalogController;
 use App\Http\Controllers\Marketplace\CheckoutController;
 use App\Http\Controllers\Marketplace\ConversationAttachmentController;
 use App\Http\Controllers\Marketplace\ConversationController;
+use App\Http\Controllers\Marketplace\DeliveryAddressController;
 use App\Http\Controllers\Marketplace\OrderController;
+use App\Http\Controllers\Marketplace\ProductDiscussionController;
 use App\Http\Controllers\Marketplace\ProductReviewController as MarketplaceProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
@@ -27,11 +30,15 @@ use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\StoreSettingsController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerSuspensionAppealController;
+use App\Http\Controllers\WorkspacePreferenceController;
 use App\Livewire\Chat\Inbox as ChatInbox;
 use App\Livewire\Chat\Thread as ChatThread;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CatalogController::class, 'home'])->name('home');
+Route::view('/privacy-policy', 'privacy-policy')->name('privacy-policy');
+Route::view('/cookie-policy', 'cookie-policy')->name('cookie-policy');
+Route::post('/cookie-preferences', CookiePreferencesController::class)->middleware('throttle:10,1')->name('cookie-preferences.store');
 Route::get('/search', [CatalogController::class, 'index'])->name('catalog.index');
 Route::delete('/recently-viewed', [CatalogController::class, 'clearRecentlyViewed'])->name('catalog.recently-viewed.clear');
 Route::get('/top-products', [CatalogController::class, 'topProducts'])->name('catalog.top-products');
@@ -40,7 +47,7 @@ Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalo
 Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('catalog.show');
 Route::post('/clerk/webhook', ClerkWebhookController::class)->middleware('throttle:60,1')->name('clerk.webhook');
 
-Route::middleware(['auth', 'clerk.verified', 'account:buyer'])->group(function (): void {
+Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/products/{product}', [CartController::class, 'store'])->middleware('throttle:cart')->name('cart.store');
     Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])->middleware('throttle:cart')->name('cart.update');
@@ -50,7 +57,14 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer'])->group(function (
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/my-reviews', [MarketplaceProductReviewController::class, 'index'])->name('reviews.index');
+    Route::get('/delivery-addresses', [DeliveryAddressController::class, 'index'])->name('delivery-addresses.index');
+    Route::post('/delivery-addresses', [DeliveryAddressController::class, 'store'])->middleware('throttle:10,1')->name('delivery-addresses.store');
+    Route::get('/delivery-addresses/{deliveryAddress}/edit', [DeliveryAddressController::class, 'edit'])->name('delivery-addresses.edit');
+    Route::patch('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'update'])->middleware('throttle:10,1')->name('delivery-addresses.update');
+    Route::delete('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'destroy'])->middleware('throttle:10,1')->name('delivery-addresses.destroy');
     Route::post('/order-items/{orderItem}/review', [MarketplaceProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
+    Route::post('/products/{product}/discussions', [ProductDiscussionController::class, 'store'])->middleware('throttle:10,1')->name('discussions.store');
     Route::patch('/reviews/{review}', [MarketplaceProductReviewController::class, 'update'])->middleware('throttle:10,1')->name('reviews.update');
     Route::delete('/reviews/{review}', [MarketplaceProductReviewController::class, 'destroy'])->middleware('throttle:10,1')->name('reviews.destroy');
     Route::post('/reviews/{review}/report', [MarketplaceProductReviewController::class, 'report'])->middleware('throttle:10,1')->name('reviews.report');
@@ -73,6 +87,10 @@ Route::get('/admin/moderation', [DashboardController::class, 'moderation'])->mid
 Route::middleware(['auth', 'account:buyer,seller,admin'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
 });
+
+Route::post('/profile/workspace', WorkspacePreferenceController::class)
+    ->middleware(['auth', 'account:buyer,seller'])
+    ->name('profile.workspace.update');
 
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/start-selling', [SellerApplicationController::class, 'create'])->name('seller-application.create');

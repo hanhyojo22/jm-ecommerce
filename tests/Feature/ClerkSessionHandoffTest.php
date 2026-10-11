@@ -18,7 +18,11 @@ class ClerkSessionHandoffTest extends TestCase
     {
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee(route('clerk.handoff', ['redirect' => '/']), false);
+            ->assertSee(route('clerk.handoff'), false);
+
+        $this->get(route('clerk.handoff'))
+            ->assertOk()
+            ->assertSee('data-redirect-url=""', false);
 
         $this->get(route('register', ['redirect' => '/start-selling']))
             ->assertOk()

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'is_active', 'preferred_workspace'])]
 #[Hidden(['password', 'remember_token', 'clerk_user_id'])]
 class User extends Authenticatable
 {
@@ -53,6 +53,11 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function deliveryAddresses(): HasMany
+    {
+        return $this->hasMany(DeliveryAddress::class);
+    }
+
     public function productReviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
@@ -90,9 +95,11 @@ class User extends Authenticatable
         }
 
         if ($this->account_type === 'seller') {
-            return $this->tenantMemberships()->exists()
-                ? 'seller.dashboard'
-                : 'seller-application.create';
+            if ($this->preferred_workspace === 'seller' && $this->sellerTenant() !== null) {
+                return 'seller.dashboard';
+            }
+
+            return $this->preferred_workspace === 'customer' ? 'home' : 'seller-application.create';
         }
 
         return 'catalog.index';
@@ -100,13 +107,21 @@ class User extends Authenticatable
 
     public function cartItemCount(): int
     {
-        if ($this->account_type !== 'buyer') {
+        if (! in_array($this->account_type, ['buyer', 'seller'], true)) {
             return 0;
         }
 
         $cart = $this->cart()->withSum('items', 'quantity')->first();
 
         return (int) ($cart?->items_sum_quantity ?? 0);
+    }
+
+    public function isMemberOfTenant(string $tenantId): bool
+    {
+        return $this->tenantMemberships()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('role', ['owner', 'manager', 'staff'])
+            ->exists();
     }
 
     /**

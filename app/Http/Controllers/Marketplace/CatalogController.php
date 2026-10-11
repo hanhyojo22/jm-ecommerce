@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Store;
 use App\Queries\CatalogQuery;
 use App\Queries\TopProductQuery;
+use App\Support\CookiePreferences;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,7 +56,9 @@ class CatalogController extends Controller
         $bestSellers = TopProductQuery::featured(8);
         $featuredProduct = $flashDeals->first() ?? $bestSellers->first() ?? $newProducts->first();
 
-        $recentProductIds = $request->session()->get('marketplace.recently_viewed', []);
+        $recentProductIds = CookiePreferences::fromRequest($request)['functional'] ?? false
+            ? $request->session()->get('marketplace.recently_viewed', [])
+            : [];
         $recentlyViewed = $recentProductIds === [] ? collect() : (clone $homeProducts)
             ->whereKey($recentProductIds)
             ->get()
@@ -165,14 +168,16 @@ class CatalogController extends Controller
 
     public function show(Request $request, string $store, string $product): View
     {
-        $product = $this->publishedProducts()->with(['images', 'category:id,name,slug'])
+        $product = $this->publishedProducts()->with(['images', 'variants', 'category:id,name,slug'])
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
             ->whereHas('store', fn ($query) => $query->where('slug', $store))
             ->where('slug', $product)
             ->firstOrFail();
-        $recentlyViewed = $request->session()->get('marketplace.recently_viewed', []);
-        $request->session()->put('marketplace.recently_viewed', array_slice(array_values(array_unique([$product->id, ...$recentlyViewed])), 0, 8));
+        if (CookiePreferences::fromRequest($request)['functional'] ?? false) {
+            $recentlyViewed = $request->session()->get('marketplace.recently_viewed', []);
+            $request->session()->put('marketplace.recently_viewed', array_slice(array_values(array_unique([$product->id, ...$recentlyViewed])), 0, 8));
+        }
         $reviewFilters = $request->validate([
             'rating' => ['nullable', 'integer', 'between:1,5'],
             'photos' => ['nullable', 'boolean'],
@@ -213,6 +218,10 @@ class CatalogController extends Controller
         return view('marketplace.catalog.show', [
             'product' => $product,
             'reviews' => $reviews->paginate(10)->withQueryString(),
+            'discussions' => $product->discussions()->where('status', 'published')
+                ->with(['user:id,name', 'parent.user:id,name'])
+                ->orderBy('created_at')->orderBy('id')
+                ->paginate(20, ['*'], 'discussion_page'),
             'distribution' => $distribution,
             'reviewFilters' => $reviewFilters,
             'cartItemCount' => $request->user()?->cartItemCount() ?? 0,
@@ -230,13 +239,11 @@ class CatalogController extends Controller
             'sort' => ['nullable', Rule::in(['relevance', 'newest', 'price_asc', 'price_desc', 'top_rated'])],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
-            'price_range' => ['nullable', Rule::in(['under_25000', '25000_100000', 'over_100000'])],
             'in_stock' => ['nullable', 'boolean'],
             'brands' => ['nullable', 'array', 'max:20'],
             'brands.*' => ['string', 'max:100', 'distinct'],
             'conditions' => ['nullable', 'array', 'max:2'],
             'conditions.*' => [Rule::in(['new', 'refurbished']), 'distinct'],
-            'free_shipping' => ['nullable', 'boolean'],
             'on_sale' => ['nullable', 'boolean'],
             'min_rating' => ['nullable', 'integer', 'between:1,5'],
             'with_photos' => ['nullable', 'boolean'],
@@ -282,11 +289,9 @@ class CatalogController extends Controller
             'activeFilters' => array_filter([
                 'min_price' => $filters['min_price'] ?? null,
                 'max_price' => $filters['max_price'] ?? null,
-                'price_range' => $filters['price_range'] ?? null,
                 'in_stock' => ! empty($filters['in_stock']) ? true : null,
                 'brands' => $filters['brands'] ?? [],
                 'conditions' => $filters['conditions'] ?? [],
-                'free_shipping' => ! empty($filters['free_shipping']) ? true : null,
                 'on_sale' => ! empty($filters['on_sale']) ? true : null,
                 'min_rating' => $filters['min_rating'] ?? null,
                 'with_photos' => ! empty($filters['with_photos']) ? true : null,

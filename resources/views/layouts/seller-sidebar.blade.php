@@ -9,7 +9,13 @@
     @php($storeStatus = $sellerTenant?->store?->status ?? 'unknown')
     <div class="mx-3 rounded-xl border border-white/10 bg-white/5 p-3">
         <div class="flex min-w-0 items-center gap-3">
-            <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 text-sm font-semibold text-white" aria-hidden="true">{{ Str::upper(Str::substr($sellerTenant?->name ?? 'S', 0, 1)) }}</span>
+            <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white/10 text-sm font-semibold text-white" aria-hidden="true">
+                @if ($sellerTenant?->store?->logo_path)
+                    <img src="{{ Storage::disk('public')->url($sellerTenant->store->logo_path) }}" alt="" class="size-full object-cover">
+                @else
+                    {{ Str::upper(Str::substr($sellerTenant?->name ?? 'S', 0, 1)) }}
+                @endif
+            </span>
             <div class="min-w-0"><p class="truncate text-sm font-semibold text-white">{{ $sellerTenant?->name ?? 'Your store' }}</p><p class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-300"><span @class(['size-1.5 rounded-full', 'bg-emerald-400' => $storeStatus === 'active', 'bg-rose-400' => $storeStatus === 'suspended', 'bg-slate-400' => ! in_array($storeStatus, ['active', 'suspended'], true)]) aria-hidden="true"></span>{{ ucfirst($storeStatus) }} store</p></div>
         </div>
     </div>
@@ -17,10 +23,6 @@
     <x-marketplace.seller-nav-links />
 
     <div class="space-y-1 border-t border-white/10 p-3">
-        <a href="{{ route('home') }}" class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white">
-            <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
-            <span>Shopping</span>
-        </a>
         @if ($sellerTenant)
             <a href="{{ route('catalog.store', $sellerTenant->slug) }}" target="_blank" rel="noopener noreferrer" class="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white" aria-label="View {{ $sellerTenant->name }} storefront in a new tab">
                 <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9" /><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5" /></svg>

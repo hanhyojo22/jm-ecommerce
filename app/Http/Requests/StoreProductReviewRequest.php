@@ -12,7 +12,7 @@ class StoreProductReviewRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->account_type === 'buyer';
+        return in_array($this->user()?->account_type, ['buyer', 'seller'], true);
     }
 
     /**

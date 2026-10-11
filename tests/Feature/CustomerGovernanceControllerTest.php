@@ -42,6 +42,23 @@ class CustomerGovernanceControllerTest extends TestCase
         $this->actingAs($administrator)->get(route('admin.customers.show', $seller))->assertNotFound();
     }
 
+    public function test_admin_can_find_seller_who_has_placed_a_customer_order(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $seller = User::factory()->seller()->create(['name' => 'Seller Customer']);
+        $sellerWithoutOrders = User::factory()->seller()->create(['name' => 'Seller Without Orders']);
+        $order = $this->orderFor($seller, 'JM-SELLER-CUSTOMER', 'delivered', 'paid', '25.00');
+
+        $this->actingAs($administrator)->get(route('admin.customers.index'))
+            ->assertOk()
+            ->assertSee('Seller Customer')
+            ->assertDontSee('Seller Without Orders');
+        $this->actingAs($administrator)->get(route('admin.customers.show', $seller))
+            ->assertOk()
+            ->assertSee($order->number);
+        $this->actingAs($administrator)->get(route('admin.customers.show', $sellerWithoutOrders))->assertNotFound();
+    }
+
     public function test_customer_pagination_keeps_selected_filters(): void
     {
         $administrator = User::factory()->administrator()->create();

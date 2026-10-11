@@ -237,7 +237,6 @@ class Thread extends Component
         $recipientReadState = $lastMessage?->sender_id === auth()->id()
             ? $this->conversation->readStates()
                 ->where('user_id', '!=', auth()->id())
-                ->whereHas('user', fn ($query) => $query->where('account_type', auth()->user()->account_type === 'buyer' ? 'seller' : 'buyer'))
                 ->latest('last_read_at')
                 ->first()
             : null;

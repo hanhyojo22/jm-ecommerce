@@ -31,7 +31,7 @@ class ProductReviewPolicy
      */
     public function create(User $user): bool
     {
-        return $user->account_type === 'buyer';
+        return in_array($user->account_type, ['buyer', 'seller'], true);
     }
 
     /**

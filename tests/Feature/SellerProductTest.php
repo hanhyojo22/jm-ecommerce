@@ -31,6 +31,81 @@ class SellerProductTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.created']);
     }
 
+    public function test_seller_can_create_color_and_size_options_with_multiple_photos(): void
+    {
+        Storage::fake('product_images');
+        [$owner, $tenant] = $this->seller();
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00',
+            'variants' => [
+                ['color' => 'Navy', 'size' => 'M', 'sku' => 'SHIRT-N-M', 'stock_quantity' => 3],
+                ['color' => 'Navy', 'size' => 'L', 'sku' => 'SHIRT-N-L', 'stock_quantity' => 2],
+            ],
+            'images' => [UploadedFile::fake()->image('front.jpg'), UploadedFile::fake()->image('back.jpg')],
+        ])->assertRedirect(route('seller.products.index'));
+
+        $product = Product::query()->with(['variants', 'images'])->sole();
+        $this->assertSame($tenant->id, $product->tenant_id);
+        $this->assertSame(5, $product->stock_quantity);
+        $this->assertCount(2, $product->variants);
+        $this->assertCount(2, $product->images);
+        foreach ($product->images as $image) {
+            Storage::disk('product_images')->assertExists($image->path);
+        }
+
+        $product->update(['status' => 'active']);
+        $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
+            ->assertOk()
+            ->assertSee('Zoom image 1 of 2')
+            ->assertSee('Show image 2');
+    }
+
+    public function test_seller_cannot_save_duplicate_color_and_size_options(): void
+    {
+        [$owner] = $this->seller();
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00',
+            'variants' => [
+                ['color' => 'Navy', 'size' => 'M', 'sku' => 'SHIRT-N-M', 'stock_quantity' => 3],
+                ['color' => 'navy', 'size' => 'm', 'sku' => 'SHIRT-N-M-2', 'stock_quantity' => 2],
+            ],
+        ])->assertSessionHasErrors('variants.1.color');
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
+    public function test_seller_cannot_attach_another_products_variant_while_editing(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Cotton shirt', 'slug' => 'cotton-shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'stock_quantity' => 2, 'status' => 'draft']);
+        $otherProduct = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Other shirt', 'slug' => 'other-shirt', 'sku' => 'OTHER', 'price' => '399.00', 'stock_quantity' => 1, 'status' => 'draft']);
+        $foreignVariant = $otherProduct->variants()->create(['color' => 'Red', 'size' => 'M', 'sku' => 'OTHER-R-M', 'stock_quantity' => 1]);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'status' => 'draft',
+            'variants' => [['id' => $foreignVariant->id, 'color' => 'Navy', 'size' => 'L', 'sku' => 'SHIRT-N-L', 'stock_quantity' => 4]],
+        ])->assertSessionHasErrors('variants.0.id');
+
+        $this->assertDatabaseHas('product_variants', ['id' => $foreignVariant->id, 'product_id' => $otherProduct->id, 'color' => 'Red']);
+        $this->assertSame(2, $product->refresh()->stock_quantity);
+    }
+
+    public function test_seller_can_update_option_stock_without_changing_the_product_price(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Cotton shirt', 'slug' => 'cotton-shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'stock_quantity' => 2, 'status' => 'draft']);
+        $variant = $product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'SHIRT-N-M', 'stock_quantity' => 2]);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'status' => 'draft',
+            'variants' => [['id' => $variant->id, 'color' => 'Navy', 'size' => 'M', 'sku' => 'SHIRT-N-M', 'stock_quantity' => 5]],
+        ])->assertRedirect(route('seller.products.index'));
+
+        $this->assertSame(5, $product->refresh()->stock_quantity);
+        $this->assertSame(5, $variant->refresh()->stock_quantity);
+        $this->assertSame('499.00', $product->price);
+    }
+
     public function test_seller_cannot_view_another_tenants_product_listing(): void
     {
         [$owner] = $this->seller();

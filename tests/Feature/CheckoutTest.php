@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Cart;
+use App\Models\DeliveryAddress;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SellerOrder;
@@ -25,6 +26,19 @@ class CheckoutTest extends TestCase
             ->get(route('checkout.create'))
             ->assertRedirect(route('cart.index'))
             ->assertSessionHas('status', 'Your cart is empty. Add a product before checking out.');
+    }
+
+    public function test_buyer_cannot_view_another_buyers_order(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery());
+        $order = Order::query()->sole();
+
+        $this->actingAs($otherBuyer)->get(route('orders.show', $order))->assertNotFound();
+        $this->actingAs($buyer)->get(route('orders.show', $order))->assertOk();
     }
 
     public function test_guest_product_addition_is_applied_after_clerk_sign_in(): void
@@ -105,7 +119,7 @@ class CheckoutTest extends TestCase
             ->assertSee('data-sign-in-url="'.route('login', ['redirect' => '/checkout']).'"', false);
     }
 
-    public function test_checkout_mobile_action_advances_through_steps_before_submitting(): void
+    public function test_checkout_renders_shipping_and_review_without_duplicate_mobile_action(): void
     {
         [, $product] = $this->sellerProduct('19.99', 5);
         $customer = User::factory()->create(['email_verified_at' => now()]);
@@ -114,10 +128,12 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($customer)->get(route('checkout.create'))
             ->assertOk()
-            ->assertSee('if (step !== 4)', false)
-            ->assertSee('x-show="step < 4"', false)
-            ->assertSee('x-show="step === 4"', false)
-            ->assertSee('type="button" x-show="step < 4"', false);
+            ->assertSee('Review order')
+            ->assertSee('Edit address')
+            ->assertSee('Standard, free')
+            ->assertSee('Cash on delivery.')
+            ->assertDontSee('Continue to delivery')
+            ->assertDontSee('Continue to payment');
     }
 
     public function test_checkout_uses_exact_totals_and_creates_order_snapshots(): void
@@ -141,6 +157,117 @@ class CheckoutTest extends TestCase
         ]);
         $this->assertSame(2, $product->refresh()->stock_quantity);
         $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
+    }
+
+    public function test_customer_selects_a_color_and_size_and_cancellation_restores_that_stock(): void
+    {
+        [$seller, $product] = $this->sellerProduct('19.99', 5);
+        $navy = $product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'TOTE-N-M', 'stock_quantity' => 3]);
+        $red = $product->variants()->create(['color' => 'Red', 'size' => 'L', 'sku' => 'TOTE-R-L', 'stock_quantity' => 2]);
+        [, $otherProduct] = $this->sellerProduct('12.00', 1);
+        $otherVariant = $otherProduct->variants()->create(['color' => 'Black', 'size' => 'S', 'sku' => 'OTHER-B-S', 'stock_quantity' => 1]);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($customer)->get(route('catalog.show', [$product->store->slug, $product->slug]))
+            ->assertOk()
+            ->assertSee('Choose color and size')
+            ->assertSee($navy->id);
+
+        $this->actingAs($customer)->post(route('cart.store', $product), ['quantity' => 1])
+            ->assertSessionHasErrors('variant_id');
+        $this->actingAs($customer)->post(route('cart.store', $product), ['quantity' => 1, 'variant_id' => $otherVariant->id])
+            ->assertSessionHasErrors('variant_id');
+        $this->actingAs($customer)->post(route('cart.store', $product), ['quantity' => 4, 'variant_id' => $navy->id])
+            ->assertSessionHasErrors('quantity');
+        $this->actingAs($customer)->post(route('cart.store', $product), ['quantity' => 2, 'variant_id' => $navy->id])
+            ->assertRedirect(route('cart.index'));
+        $this->actingAs($customer)->post(route('cart.store', $product), ['quantity' => 1, 'variant_id' => $red->id])
+            ->assertRedirect(route('cart.index'));
+        $this->assertDatabaseCount('cart_items', 2);
+        $this->actingAs($customer)->get(route('cart.index'))->assertOk()->assertSee('Navy / M')->assertSee('Red / L');
+
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertRedirect();
+        $this->assertDatabaseHas('orders', ['subtotal' => '59.97']);
+        $this->assertDatabaseHas('order_items', ['product_variant_id' => $navy->id, 'variant_label' => 'Navy / M', 'sku' => 'TOTE-N-M', 'quantity' => 2]);
+        $this->actingAs($customer)->get(route('orders.show', Order::query()->sole()))
+            ->assertOk()
+            ->assertSee('Navy / M');
+        $this->assertSame(1, $navy->refresh()->stock_quantity);
+        $this->assertSame(1, $red->refresh()->stock_quantity);
+        $this->assertSame(2, $product->refresh()->stock_quantity);
+
+        $sellerOrder = SellerOrder::query()->sole();
+        $this->actingAs($seller)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'cancelled'])->assertRedirect();
+        $this->assertSame(3, $navy->refresh()->stock_quantity);
+        $this->assertSame(2, $red->refresh()->stock_quantity);
+        $this->assertSame(5, $product->refresh()->stock_quantity);
+    }
+
+    public function test_seller_can_buy_from_another_store_with_the_same_account(): void
+    {
+        [$seller] = $this->sellerProduct('12.00', 5);
+        [, $otherProduct] = $this->sellerProduct('19.99', 5);
+
+        $this->actingAs($seller)->post(route('cart.store', $otherProduct), ['quantity' => 2])
+            ->assertRedirect(route('cart.index'));
+        $this->actingAs($seller)->post(route('checkout.store'), $this->delivery())
+            ->assertRedirect();
+
+        $order = Order::query()->sole();
+        $this->assertSame($seller->id, $order->user_id);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'total' => '39.98']);
+        $this->actingAs($seller)->get(route('orders.index'))->assertOk()->assertSee($order->number);
+        $this->actingAs($seller)->get(route('seller.orders.index'))->assertOk()->assertDontSee($order->number);
+        $this->assertDatabaseCount('seller_earnings', 0);
+    }
+
+    public function test_seller_checkout_offers_only_their_saved_delivery_addresses(): void
+    {
+        [$seller] = $this->sellerProduct('12.00', 5);
+        [, $otherProduct] = $this->sellerProduct('19.99', 5);
+        $otherUser = User::factory()->create();
+        DeliveryAddress::factory()->for($seller, 'user')->create(['address_line' => 'My saved street']);
+        DeliveryAddress::factory()->for($otherUser, 'user')->create(['address_line' => 'Private street']);
+        $cart = Cart::create(['user_id' => $seller->id]);
+        $cart->items()->create(['product_id' => $otherProduct->id, 'quantity' => 1]);
+
+        $this->actingAs($seller)->get(route('checkout.create'))
+            ->assertOk()->assertSee('My saved street')->assertDontSee('Private street');
+    }
+
+    public function test_seller_cannot_add_a_product_from_a_store_they_manage(): void
+    {
+        [$seller, $product] = $this->sellerProduct('19.99', 5);
+        $seller->update(['preferred_workspace' => 'customer']);
+
+        $this->actingAs($seller)->get(route('home'))
+            ->assertOk()
+            ->assertSee('You cannot buy from your store');
+        $this->actingAs($seller)->get(route('catalog.show', [$product->store->slug, $product->slug]))
+            ->assertOk()
+            ->assertSee('You cannot buy products from a store you manage.');
+
+        $this->actingAs($seller)->post(route('cart.store', $product), ['quantity' => 1])
+            ->assertSessionHasErrors(['cart' => 'You cannot buy products from a store you manage.']);
+
+        $this->assertDatabaseCount('cart_items', 0);
+    }
+
+    public function test_mixed_cart_with_a_managed_store_product_is_rejected_atomically(): void
+    {
+        [$seller, $ownProduct] = $this->sellerProduct('12.00', 5);
+        [, $otherProduct] = $this->sellerProduct('19.99', 5);
+        $cart = Cart::create(['user_id' => $seller->id]);
+        $cart->items()->create(['product_id' => $ownProduct->id, 'quantity' => 1]);
+        $cart->items()->create(['product_id' => $otherProduct->id, 'quantity' => 1]);
+
+        $this->actingAs($seller)->post(route('checkout.store'), $this->delivery())
+            ->assertSessionHasErrors(['cart' => 'Remove products from stores you manage before checking out.']);
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('cart_items', 2);
+        $this->assertSame(5, $ownProduct->refresh()->stock_quantity);
+        $this->assertSame(5, $otherProduct->refresh()->stock_quantity);
     }
 
     public function test_checkout_rejects_totals_that_exceed_order_storage_precision(): void

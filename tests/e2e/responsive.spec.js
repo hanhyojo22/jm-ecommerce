@@ -1,6 +1,68 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
+test('seller adds color and size options in the product form at each viewport', async ({ browser }, testInfo) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+
+    try {
+        await page.goto('/seller/products/create');
+        await page.getByRole('button', { name: 'Reject Optional' }).click();
+        await expect(page.locator('[data-cookie-banner]')).toBeHidden();
+        await page.reload();
+        await expect(page.getByRole('heading', { name: 'Color and size options' })).toBeVisible();
+        await page.locator('#name').fill('Variant QA Shirt');
+        await page.locator('#sku').fill(`VARIANT-QA-${testInfo.project.name}`);
+        await page.locator('#price').fill('199.00');
+        await page.getByRole('button', { name: 'Add option' }).click();
+        await page.locator('input[name="variants[0][color]"]').fill('Navy');
+        await page.locator('input[name="variants[0][size]"]').fill('Medium');
+        await page.locator('input[name="variants[0][sku]"]').fill(`VARIANT-QA-N-M-${testInfo.project.name}`);
+        await page.locator('input[name="variants[0][stock_quantity]"]').fill('3');
+        await expect(page.locator('#stock_quantity')).toBeDisabled();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+        await page.screenshot({ path: testInfo.outputPath('product-variant-form.png'), fullPage: true });
+        await page.getByRole('button', { name: 'Save product' }).click();
+        await expect(page).toHaveURL(/\/seller\/products$/);
+        await expect(page.getByText('Variant QA Shirt').first()).toBeVisible();
+    } finally {
+        await context.close();
+    }
+});
+
+test('guest Sign In stays accessible without header overflow at each viewport', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('header').getByRole('link', { name: 'Sign In', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+});
+
+test('seller switches workspaces from the account dropdown at each viewport', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+
+    try {
+        await page.goto('/seller');
+        await page.getByRole('button', { name: 'Account menu' }).click();
+        const menu = page.locator('#header-account-menu');
+        await expect(menu.locator('[data-workspace-switch]')).toHaveCount(1);
+        if (await menu.locator('[data-workspace-switch] input[name="workspace"]').inputValue() === 'seller') {
+            await menu.getByRole('button', { name: 'Switch Account' }).click();
+            await page.goto('/seller');
+            await page.getByRole('button', { name: 'Account menu' }).click();
+        }
+        await expect(menu.locator('[data-workspace-switch] input[name="workspace"]')).toHaveValue('customer');
+        await menu.getByRole('button', { name: 'Switch Account' }).click();
+        await expect(page).toHaveURL(/https?:\/\/[^/]+\/$/);
+        await expect(page.locator('header[data-header-role="customer"]')).toBeVisible();
+
+        await page.getByRole('button', { name: 'Account menu' }).click();
+        await expect(menu.locator('[data-workspace-switch] input[name="workspace"]')).toHaveValue('seller');
+        await menu.getByRole('button', { name: 'Switch Account' }).click();
+        await expect(page).toHaveURL(/\/seller$/);
+        await expect(page.locator('header[data-header-role="seller"]')).toBeVisible();
+    } finally {
+        await context.close();
+    }
+});
+
 test('seller workspace pages render without horizontal overflow', async ({ browser }, testInfo) => {
     const { context, page } = await openAsRole(browser, 'seller');
     const pages = [
@@ -70,16 +132,24 @@ test('seller order detail and product editor remain usable at each viewport', as
 
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
-        await customer.page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
-        await customer.page.getByRole('link', { name: 'Cart: 1 item' }).click();
+        const customerCookieBanner = customer.page.locator('[data-cookie-banner]');
+        if (await customerCookieBanner.isVisible()) {
+            await customerCookieBanner.locator('[data-cookie-action="reject"]').click();
+        }
+        const cartForm = customer.page.locator('#purchase form');
+        const cartResponse = await customer.context.request.post(await cartForm.getAttribute('action'), {
+            form: { _token: await cartForm.locator('input[name="_token"]').inputValue(), quantity: '1' },
+            headers: { Accept: 'application/json' },
+        });
+        expect(cartResponse.ok()).toBeTruthy();
+        await customer.page.goto('/cart');
         await customer.page.getByRole('link', { name: 'Continue to checkout' }).click();
         await customer.page.getByLabel('Recipient name').fill('Ava QA Customer');
         await customer.page.getByLabel('Mobile number').fill('+639171234567');
         await customer.page.getByLabel('Street address').fill('10 QA Street');
         await customer.page.getByLabel('City').fill('Manila');
-        await customer.page.getByRole('button', { name: 'Continue to delivery' }).click();
-        await customer.page.getByRole('button', { name: 'Continue to payment' }).click();
         await customer.page.getByRole('button', { name: 'Review order' }).click();
+        await expect(customer.page.getByText('10 QA Street, Manila')).toBeVisible();
         await customer.page.getByRole('button', { name: /Place order/ }).click();
         await expect(customer.page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
     } finally {
@@ -94,6 +164,10 @@ test('seller order detail and product editor remain usable at each viewport', as
             ['edit-product', '/seller/products', 'Edit'],
         ]) {
             await seller.page.goto(path);
+            const sellerCookieBanner = seller.page.locator('[data-cookie-banner]');
+            if (await sellerCookieBanner.isVisible()) {
+                await sellerCookieBanner.locator('[data-cookie-action="reject"]').click();
+            }
             if (name === 'order-detail') {
                 const listWidth = await seller.page.evaluate(() => ({
                     viewport: document.documentElement.clientWidth,

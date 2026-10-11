@@ -72,7 +72,7 @@ class ProductController extends Controller
         $this->authorizeAdmin($request);
 
         $product = Product::query()
-            ->with(['images', 'store.tenant', 'category'])
+            ->with(['images', 'variants', 'store.tenant', 'category'])
             ->whereKey($product)
             ->firstOrFail();
 

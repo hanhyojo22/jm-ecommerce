@@ -5,11 +5,66 @@ import { openAsRole } from './support/role-page.js';
 test('guest can browse a product and is prompted to sign in before adding it to cart', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('navigation', { name: 'Marketplace sections' })).toBeVisible();
+    await page.getByRole('link', { name: 'Sign In', exact: true }).click();
+    await expect(page).toHaveURL(/\/sign-in$/);
+    await expect(page.getByRole('tab', { name: 'Create account' })).toBeVisible();
 
     await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
     await expect(page.getByRole('heading', { name: 'QA Canvas Tote', exact: true })).toBeVisible();
-    await expect(page.locator('#discussions')).toHaveCount(0);
+    await expect(page.locator('#discussions')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Sign in to add to cart' })).toHaveAttribute('href', /sign-in/);
+});
+
+test('seller shops another store and returns to Seller Center with the same account', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+
+    try {
+        await page.goto('/seller');
+        await page.getByRole('button', { name: 'Account menu' }).click();
+        if (await page.locator('#header-account-menu [data-workspace-switch] input[name="workspace"]').inputValue() === 'seller') {
+            await page.locator('#header-account-menu').getByRole('button', { name: 'Switch Account' }).click();
+            await expect(page).toHaveURL(/\/seller$/);
+            await page.getByRole('button', { name: 'Account menu' }).click();
+        }
+        await expect(page.locator('#header-account-menu [data-workspace-switch] input[name="workspace"]')).toHaveValue('customer');
+        await page.locator('#header-account-menu').getByRole('button', { name: 'Switch Account' }).click();
+        await expect(page).toHaveURL(/https?:\/\/[^/]+\/$/);
+
+        await page.goto('/delivery-addresses');
+        await page.getByLabel('Recipient name').fill('QA Seller');
+        await page.getByLabel('Mobile number').fill('+639171234567');
+        await page.getByLabel('Street address').fill('20 QA Street');
+        await page.getByLabel('City').fill('Manila');
+        await page.getByRole('button', { name: 'Save address' }).click();
+        await expect(page.getByText('20 QA Street, Manila', { exact: true })).toBeVisible();
+
+        await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await expect(page.locator('#purchase').getByRole('button', { name: 'Add to cart' })).toHaveCount(0);
+
+        await page.goto('/stores/qa-southwind-store/products/other-qa-product');
+        await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
+        await page.getByRole('link', { name: 'Cart: 1 item' }).click();
+        await page.getByRole('link', { name: 'Continue to checkout' }).click();
+        await page.getByLabel('Use a saved address').selectOption({ label: 'QA Seller · 20 QA Street, Manila' });
+        await expect(page.getByLabel('Street address')).toHaveValue('20 QA Street');
+        await page.getByRole('button', { name: 'Review order' }).click();
+        await expect(page.getByText('20 QA Street, Manila', { exact: true })).toBeVisible();
+        await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
+        await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await expect(page.getByText('Other Seller QA Product').first()).toBeVisible();
+
+        await page.getByRole('button', { name: 'Account menu' }).click();
+        await expect(page.getByText('Wishlist')).toHaveCount(0);
+        await page.locator('#header-account-menu').getByRole('link', { name: 'My Purchases' }).click();
+        await expect(page).toHaveURL(/\/orders$/);
+        await expect(page.getByText('Other Seller QA Product').first()).toBeVisible();
+        await page.getByRole('button', { name: 'Account menu' }).click();
+        await expect(page.locator('#header-account-menu [data-workspace-switch] input[name="workspace"]')).toHaveValue('seller');
+        await page.locator('#header-account-menu').getByRole('button', { name: 'Switch Account' }).click();
+        await expect(page).toHaveURL(/\/seller$/);
+    } finally {
+        await context.close();
+    }
 });
 
 test('customer can place a COD order from the product page through checkout', async ({ browser }) => {
@@ -28,16 +83,50 @@ test('customer can place a COD order from the product page through checkout', as
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('10 QA Street');
         await page.getByLabel('City').fill('Manila');
-        await page.getByRole('button', { name: 'Continue to delivery' }).click();
-        await page.getByRole('button', { name: 'Continue to payment' }).click();
-        await expect(page.getByText('Cash on delivery', { exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Review order' }).click();
-        await page.getByRole('button', { name: /Place order/ }).click();
+        await expect(page.getByText('10 QA Street, Manila')).toBeVisible();
+        await expect(page.getByText('Payment:', { exact: true }).locator('..')).toContainText('Cash on delivery.');
+        await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
 
         await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
         await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
         await expect(page.getByText('QA Canvas Tote')).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Order summary' }).locator('..').getByText('COD', { exact: true })).toBeVisible();
+    } finally {
+        await context.close();
+    }
+});
+
+test('mobile checkout shows field errors and lets the customer edit the review address', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer', { viewport: { width: 390, height: 844 } });
+
+    try {
+        await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
+        const cartLink = page.getByRole('link', { name: /Cart: \d+ items?/ });
+        await expect(cartLink).toBeVisible();
+        await cartLink.click();
+        await page.getByRole('link', { name: 'Continue to checkout' }).click();
+        await expect(page).toHaveURL(/\/checkout$/);
+
+        await expect(page.getByRole('button', { name: 'Review order' })).toHaveCount(1);
+        await page.getByRole('button', { name: 'Review order' }).click();
+        await expect(page.getByLabel('Recipient name')).toHaveAttribute('aria-invalid', 'true');
+        await expect(page.locator('#recipient_name-error')).toHaveText('Enter the recipient name.');
+        await expect(page.getByLabel('Mobile number')).toHaveAttribute('aria-describedby', 'phone-error');
+
+        await page.getByLabel('Recipient name').fill('Ava QA Customer');
+        await page.getByLabel('Mobile number').fill('+639171234567');
+        await page.getByLabel('Street address').fill('10 QA Street');
+        await page.getByLabel('City').fill('Manila');
+        await page.getByRole('button', { name: 'Review order' }).click();
+        await expect(page.getByText('10 QA Street, Manila')).toBeVisible();
+        await page.getByRole('button', { name: 'Edit address' }).click();
+        await page.getByLabel('City').fill('Quezon City');
+        await page.getByRole('button', { name: 'Review order' }).click();
+        await expect(page.getByText('10 QA Street, Quezon City')).toBeVisible();
+        await expect(page.getByRole('button', { name: /Place order/ })).toHaveCount(1);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
     } finally {
         await context.close();
     }
@@ -384,6 +473,7 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
     } finally {
         await customer.context.close();
     }
@@ -477,6 +567,7 @@ for (const attachment of [
         try {
             await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
             await customer.page.getByRole('button', { name: 'Message seller' }).click();
+            await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
         } finally {
             await customer.context.close();
         }

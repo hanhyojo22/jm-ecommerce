@@ -169,7 +169,7 @@ class GovernanceController extends Controller
         ]);
 
         $customers = User::query()
-            ->where('account_type', 'buyer')
+            ->where(fn (Builder $query): Builder => $query->where('account_type', 'buyer')->orWhereHas('orders'))
             ->withCount('orders')
             ->withSum([
                 'orders as total_spent' => fn (Builder $query): Builder => $query
@@ -211,7 +211,7 @@ class GovernanceController extends Controller
         return view('admin.governance.customers', [
             'customers' => $customers->paginate(15)->withQueryString(),
             'filters' => $filters,
-            'totalCustomers' => User::query()->where('account_type', 'buyer')->count(),
+            'totalCustomers' => User::query()->where(fn (Builder $query): Builder => $query->where('account_type', 'buyer')->orWhereHas('orders'))->count(),
         ]);
     }
 
@@ -220,7 +220,7 @@ class GovernanceController extends Controller
         $this->authorizeAdmin($request);
 
         $customer = User::query()
-            ->where('account_type', 'buyer')
+            ->where(fn (Builder $query): Builder => $query->where('account_type', 'buyer')->orWhereHas('orders'))
             ->whereKey($customer)
             ->withCount('orders')
             ->withSum([

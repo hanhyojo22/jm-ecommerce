@@ -96,6 +96,39 @@ class ConversationTest extends TestCase
             ->assertSee('Respond to customers about your products and orders.');
     }
 
+    public function test_seller_buying_and_selling_conversations_stay_in_their_respective_inboxes(): void
+    {
+        $ownProduct = $this->product();
+        $otherProduct = $this->product();
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $ownProduct->tenant_id, 'user_id' => $seller->id, 'role' => 'owner']);
+        $customer = User::factory()->create();
+        $sale = Conversation::create(['buyer_id' => $customer->id, 'store_id' => $ownProduct->store_id, 'product_id' => $ownProduct->id]);
+
+        $this->actingAs($seller)->post(route('messages.products.start', $otherProduct))->assertRedirect();
+        $purchase = Conversation::query()->where('buyer_id', $seller->id)->sole();
+
+        $this->actingAs($seller)->get(route('messages.index', ['context' => 'buying']))
+            ->assertOk()->assertSee(route('messages.show', $purchase), false)
+            ->assertDontSee(route('messages.show', $sale), false);
+        $this->actingAs($seller)->get(route('messages.index', ['context' => 'selling']))
+            ->assertOk()->assertSee(route('messages.show', $sale), false)
+            ->assertDontSee(route('messages.show', $purchase), false);
+        $this->actingAs($seller)->get(route('messages.show', $purchase))
+            ->assertOk()->assertSee($otherProduct->store->name)->assertDontSee('Respond to customers about your products and orders.');
+    }
+
+    public function test_seller_cannot_start_a_customer_conversation_with_their_own_store(): void
+    {
+        $product = $this->product();
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'manager']);
+
+        $this->actingAs($seller)->post(route('messages.products.start', $product))->assertForbidden();
+
+        $this->assertDatabaseCount('conversations', 0);
+    }
+
     public function test_buyer_can_open_a_conversation_page(): void
     {
         $buyer = User::factory()->create(['email_verified_at' => now()]);

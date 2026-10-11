@@ -20,6 +20,7 @@ class ConversationController extends Controller
             $product->status === 'active' && $product->store->status === 'active' && $product->store->tenant->status === 'active',
             404,
         );
+        abort_if($request->user()->isMemberOfTenant($product->tenant_id), 403);
 
         $conversation = $this->findOrCreate(
             ['buyer_id' => $request->user()->id, 'product_id' => $product->id],
@@ -33,6 +34,7 @@ class ConversationController extends Controller
     {
         $sellerOrder->loadMissing('order', 'store');
         abort_unless($sellerOrder->order->user_id === $request->user()->id, 404);
+        abort_if($request->user()->isMemberOfTenant($sellerOrder->tenant_id), 403);
 
         $conversation = $this->findOrCreate(
             ['buyer_id' => $request->user()->id, 'seller_order_id' => $sellerOrder->id],
@@ -53,7 +55,7 @@ class ConversationController extends Controller
 
         BlockedUser::query()->firstOrCreate([
             'user_id' => $request->user()->id,
-            'blocked_user_id' => $request->user()->account_type === 'buyer' ? $sellerId : $conversation->buyer_id,
+            'blocked_user_id' => $conversation->buyer_id === $request->user()->id ? $sellerId : $conversation->buyer_id,
         ]);
 
         return to_route('messages.index')->with('status', 'This conversation has been blocked.');

@@ -85,17 +85,19 @@ class Conversation extends Model
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
-        if ($user->account_type === 'buyer') {
-            return $query->where('buyer_id', $user->id);
-        }
+        return $query->where(function (Builder $query) use ($user): void {
+            $query->where('buyer_id', $user->id);
 
-        return $query->whereIn('store_id', Store::query()
-            ->where('status', 'active')
-            ->whereIn('tenant_id', $user->tenantMemberships()
-                ->whereIn('role', ['owner', 'manager', 'staff'])
-                ->whereHas('tenant', fn (Builder $tenant) => $tenant->where('status', 'active'))
-                ->select('tenant_id'))
-            ->select('id'));
+            if ($user->account_type === 'seller') {
+                $query->orWhereIn('store_id', Store::query()
+                    ->where('status', 'active')
+                    ->whereIn('tenant_id', $user->tenantMemberships()
+                        ->whereIn('role', ['owner', 'manager', 'staff'])
+                        ->whereHas('tenant', fn (Builder $tenant) => $tenant->where('status', 'active'))
+                        ->select('tenant_id'))
+                    ->select('id'));
+            }
+        });
     }
 
     public function scopeUnreadFor(Builder $query, User $user): Builder

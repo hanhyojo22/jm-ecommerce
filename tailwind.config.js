@@ -18,7 +18,7 @@ export default {
                 canvas: '#F8FAFC',
                 surface: '#FFFFFF',
                 ink: '#0F172A',
-                muted: '#64748B',
+                muted: '#596B83',
                 line: '#E2E8F0',
                 brand: {
                     DEFAULT: '#2563EB',

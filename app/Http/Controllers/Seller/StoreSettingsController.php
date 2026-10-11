@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Actions\StorePublicImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateStoreSettingsRequest;
 use App\Models\AuditLog;
@@ -32,12 +33,14 @@ class StoreSettingsController extends Controller
         return view('seller.store-settings.edit', ['store' => $tenant->store, 'canUndo' => $canUndo]);
     }
 
-    public function update(UpdateStoreSettingsRequest $request): RedirectResponse
+    public function update(UpdateStoreSettingsRequest $request, StorePublicImage $storePublicImage): RedirectResponse
     {
         $tenant = $request->user()->sellerTenant() ?? abort(403);
         $data = $request->safe()->only(['description', 'phone', 'address_line', 'city']);
         try {
-            $newLogoPath = $request->file('logo')?->store('store-logos', 'public');
+            $newLogoPath = $request->hasFile('logo')
+                ? $storePublicImage->handle($request->file('logo'), 'store-logos', 'public')
+                : null;
         } catch (Throwable $exception) {
             report($exception);
 

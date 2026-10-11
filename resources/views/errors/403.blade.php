@@ -24,5 +24,6 @@
             </p>
         </div>
     </main>
+    <x-cookie-consent />
 </body>
 </html>

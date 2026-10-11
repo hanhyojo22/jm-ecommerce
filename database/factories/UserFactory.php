@@ -47,7 +47,7 @@ class UserFactory extends Factory
 
     public function seller(): static
     {
-        return $this->state(fn (array $attributes) => ['account_type' => 'seller']);
+        return $this->state(fn (array $attributes) => ['account_type' => 'seller', 'preferred_workspace' => 'seller']);
     }
 
     public function administrator(): static

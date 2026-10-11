@@ -12,7 +12,7 @@ This deployment uses Docker Compose, Caddy-managed TLS, PostgreSQL, Redis, Larav
 
 1. Clone the repository on the VPS and change into its directory.
 2. Copy `.env.production.example` to `.env.production`. This file is ignored by Git and must never be committed.
-3. Set `DOMAIN`, `CADDY_SITE_ADDRESS`, `APP_URL`, `CLERK_AUTHORIZED_PARTIES`, `REVERB_ALLOWED_ORIGINS`, and `VITE_REVERB_HOST` to the real domain. Set `ACME_EMAIL` to an address that can receive certificate notices. Set the Clerk publishable key, secret key, and webhook signing secret from the production Clerk instance.
+3. Set `DOMAIN`, `CADDY_SITE_ADDRESS`, `APP_URL`, `CLERK_AUTHORIZED_PARTIES`, `REVERB_ALLOWED_ORIGINS`, and `VITE_REVERB_HOST` to the real domain. Set `ACME_EMAIL` to an address that can receive certificate notices. Set the Clerk publishable key, secret key, and webhook signing secret from the production Clerk instance. Keep `TRUSTED_PROXIES=*` only while Caddy is the sole public entry point and the app container cannot be reached directly; otherwise set it to the trusted proxy IP or CIDR.
 4. Generate unique secrets. Build the image first, then use the command below to generate `APP_KEY` without starting the stack:
 
    ```sh

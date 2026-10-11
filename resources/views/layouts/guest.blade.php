@@ -32,5 +32,6 @@
                 <a href="{{ route('home') }}" class="mt-6 inline-block text-sm font-medium text-muted transition hover:text-ink">Back to marketplace</a>
             </section>
         </main>
+        <x-cookie-consent />
     </body>
 </html>

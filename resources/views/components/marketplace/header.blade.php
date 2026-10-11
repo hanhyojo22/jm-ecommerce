@@ -2,16 +2,18 @@
 
 @php
     $user = auth()->user();
-    $isBuyer = $user?->account_type === 'buyer';
+    $isBuyer = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $canUseMessages = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $cartBadge = $cartItemCount > 99 ? '99+' : $cartItemCount;
     $messageBadge = $unreadConversationCount > 99 ? '99+' : $unreadConversationCount;
+    $buyerMessagesUrl = $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index');
     $sellerEntry = $sellerTenant ? 'Seller Center' : match ($sellerApplication?->status) {
         'pending' => 'Seller application',
         'rejected' => 'Update seller application',
         default => 'Start selling',
     };
-    $isSellerWorkspace = $user?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*', 'messages.*');
+    $isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== $user?->id);
+    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
     $isHomepage = request()->routeIs('home') && ! $isSellerWorkspace;
     $sellerPageTitle = match (true) {
         request()->routeIs('seller.dashboard') => 'Overview',
@@ -21,6 +23,7 @@
         request()->routeIs('seller.reviews.*') => 'Reviews',
         request()->routeIs('seller.earnings.*') => 'Earnings',
         request()->routeIs('seller.store-settings.*') => 'Store settings',
+        request()->routeIs('profile.edit') => 'Account settings',
         default => 'Seller Center',
     };
 @endphp
@@ -85,7 +88,7 @@
 
             <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 min-[641px]:order-none min-[641px]:ml-0">
                 @if ($canUseMessages)
-                    <a href="{{ route('messages.index') }}" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
+                    <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
                         @if ($unreadConversationCount > 0)
                             <span class="absolute right-1 top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-white bg-brand px-[5px] text-[11px] font-bold leading-none text-white">{{ $messageBadge }}</span>
@@ -111,14 +114,23 @@
                             <div class="min-w-0 border-b border-line px-3 py-3"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
                             <div class="space-y-1 py-2">
                                 <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My account</a>
-                                @if ($isBuyer)
-                                    <a href="{{ route('orders.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Orders</a>
+                                @if ($sellerTenant)
+                                    <form method="POST" action="{{ route('profile.workspace.update') }}" data-workspace-switch>
+                                        @csrf
+                                        <input type="hidden" name="workspace" value="{{ $isSellerWorkspace ? 'customer' : 'seller' }}">
+                                        <button type="submit" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-brand transition hover:bg-blue-50">Switch Account</button>
+                                    </form>
+                                @endif
+                                @if ($isBuyer && ! $isSellerWorkspace)
+                                    <a href="{{ route('orders.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
+                                    <a href="{{ route('reviews.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
+                                    <a href="{{ route('delivery-addresses.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Delivery Addresses</a>
                                 @endif
                                 @if ($canUseMessages)
-                                    <a href="{{ route('messages.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
+                                    <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
                                 @endif
-                                @if ($user->account_type === 'seller')
-                                    <a href="{{ $sellerTenant ? route('seller.dashboard') : route('seller-application.create') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">{{ $sellerEntry }}</a>
+                                @if ($user->account_type === 'seller' && ! $sellerTenant)
+                                    <a href="{{ route('seller-application.create') }}" class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>{{ $sellerEntry }}</a>
                                 @endif
                                 @if ($user->isPlatformAdministrator())
                                     <a href="{{ route('dashboard') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Admin workspace</a>
@@ -131,7 +143,7 @@
                     <a href="{{ route('login', ['redirect' => '/cart']) }}" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Sign in to view cart">
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
                     </a>
-                    <a href="{{ route('login') }}" class="flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Sign in to your account"><svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg><span class="hidden min-[641px]:inline">Account</span></a>
+                    <a href="{{ route('login') }}" class="flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Sign In"><svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 17 5-5-5-5M15 12H3" /><path d="M12 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-6" /></svg><span class="hidden min-[641px]:inline">Sign In</span></a>
                 @endauth
             </div>
         </div>
@@ -144,8 +156,8 @@
                     <a href="{{ route('catalog.top-products') }}" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Best Sellers</a>
                     <a href="{{ $isHomepage ? '#flash-deals' : route('home').'#flash-deals' }}" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Deals</a>
                     <a href="{{ route('catalog.stores') }}" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Stores</a>
-                    @if (! $user?->isPlatformAdministrator())
-                        <a href="{{ $user?->account_type === 'seller' ? route('seller.dashboard') : (auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling'])) }}" class="inline-flex min-h-12 shrink-0 items-center text-brand transition hover:text-brand-hover">Sell on JMMart</a>
+                    @if (! $user?->isPlatformAdministrator() && ! $sellerTenant)
+                        <a href="{{ auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling']) }}" class="inline-flex min-h-12 shrink-0 items-center text-brand transition hover:text-brand-hover">Sell on JMMart</a>
                     @endif
                 </div>
             </nav>
@@ -174,10 +186,18 @@
             @endif
 
             @if ($isSellerWorkspace)
-                <div class="border-b border-white/10 px-5 py-4"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Your store</p><p class="mt-1 truncate text-sm font-semibold text-white">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
+                <div class="flex items-center gap-3 border-b border-white/10 px-5 py-4">
+                    <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white/10 text-sm font-semibold text-white" aria-hidden="true">
+                        @if ($sellerTenant?->store?->logo_path)
+                            <img src="{{ Storage::disk('public')->url($sellerTenant->store->logo_path) }}" alt="" class="size-full object-cover">
+                        @else
+                            {{ Str::upper(Str::substr($sellerTenant?->name ?? 'S', 0, 1)) }}
+                        @endif
+                    </span>
+                    <div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Your store</p><p class="mt-1 truncate text-sm font-semibold text-white">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
+                </div>
                 <x-marketplace.seller-nav-links mode="mobile" />
                 <div class="space-y-1 border-t border-white/10 p-4">
-                    <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">Shopping</a>
                     @if ($sellerTenant)
                         <a href="{{ route('catalog.store', $sellerTenant->slug) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">View storefront</a>
                     @endif
@@ -192,13 +212,14 @@
                     <a href="{{ route('catalog.stores') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Stores</a>
                     <a href="{{ route('home') }}#shop-by-category" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Categories</a>
                     @if ($isBuyer)
-                        <a href="{{ route('orders.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Orders</a>
+                        <a href="{{ route('orders.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
+                        <a href="{{ route('reviews.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
                     @endif
                     @if ($canUseMessages)
-                        <a href="{{ route('messages.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
+                        <a href="{{ $buyerMessagesUrl }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
                     @endif
-                    @if ($user?->account_type === 'seller')
-                        <a href="{{ $sellerTenant ? route('seller.dashboard') : route('seller-application.create') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition hover:bg-blue-50">{{ $sellerEntry }}</a>
+                    @if ($user?->account_type === 'seller' && ! $sellerTenant)
+                        <a href="{{ route('seller-application.create') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition hover:bg-blue-50">{{ $sellerEntry }}</a>
                     @elseif ($isBuyer)
                         <a href="{{ route('seller-application.create') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition hover:bg-blue-50">Start selling</a>
                     @elseif ($user?->isPlatformAdministrator())

@@ -6,6 +6,15 @@
             step: 1,
             placing: false,
             errors: {},
+            shipping: {},
+            addresses: @js($addresses->map(fn ($address) => $address->only(['id', 'recipient_name', 'phone', 'address_line', 'city']))),
+            chooseAddress(event) {
+                const address = this.addresses.find((item) => item.id === event.target.value);
+                for (const field of ['recipient_name', 'phone', 'address_line', 'city']) {
+                    document.getElementById(field).value = address?.[field] ?? '';
+                }
+                this.errors = {};
+            },
             scrollBehavior() {
                 return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
             },
@@ -35,6 +44,7 @@
                         if (first && this.step === n) { first.focus(); }
                         return false;
                     }
+                    this.shipping = { recipient_name: name, phone, address_line: address, city };
                 }
                 return true;
             },
@@ -47,18 +57,18 @@
                 </div>
                 <p class="text-xs font-medium text-muted">Cash on delivery · Free shipping</p>
             </div>
-            <ol class="grid grid-cols-4 gap-2" aria-label="Checkout steps">
-                <template x-for="s in [1,2,3,4]" :key="s">
+            <ol class="grid grid-cols-2 gap-2" aria-label="Checkout steps">
+                <template x-for="s in [1,2]" :key="s">
                     <li>
                         <button type="button" @click="go(s)" :disabled="s > step" :aria-current="step === s ? 'step' : null" :class="s <= step ? 'border-brand text-ink' : 'border-line text-muted'" class="block min-h-11 w-full border-t-[3px] px-1 pt-2 text-center text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed sm:text-[13px]">
-                            <span x-text="s + ' · ' + ['Shipping', 'Delivery', 'Payment', 'Review'][s-1]"></span>
+                            <span x-text="s + ' · ' + ['Shipping', 'Review'][s-1]"></span>
                         </button>
                     </li>
                 </template>
             </ol>
 
             <div class="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-                <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="if (step !== 4) { $event.preventDefault(); go(step + 1); } else if (!validate(1)) { $event.preventDefault(); step = 1; $nextTick(() => { const first = document.getElementById(Object.keys(errors)[0]); first?.focus(); first?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' }); }); } else { placing = true; }" class="min-w-0">
+                <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="if (step !== 2) { $event.preventDefault(); go(2); } else if (!validate(1)) { $event.preventDefault(); step = 1; $nextTick(() => { const first = document.getElementById(Object.keys(errors)[0]); first?.focus(); first?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' }); }); } else { placing = true; }" class="min-w-0">
                     @csrf
 
                     @if ($errors->has('cart'))
@@ -69,81 +79,62 @@
                     <section x-show="step === 1" class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-1-heading" data-od-id="ship">
                         <h3 id="step-1-heading" tabindex="-1" class="text-lg font-semibold text-ink">1 · Shipping address</h3>
                         <p class="mt-1 text-sm leading-6 text-muted">Enter the address where your order should be delivered.</p>
+                        @if ($addresses->isNotEmpty())
+                            <div class="mt-5">
+                                <label for="saved-address" class="text-sm font-semibold text-ink">Use a saved address</label>
+                                <select id="saved-address" @change="chooseAddress($event)" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink focus:border-brand focus:ring-brand">
+                                    <option value="">Enter a new address</option>
+                                    @foreach ($addresses as $address)
+                                        <option value="{{ $address->id }}">{{ $address->recipient_name }} · {{ $address->address_line }}, {{ $address->city }}</option>
+                                    @endforeach
+                                </select>
+                                <a href="{{ route('delivery-addresses.index') }}" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">Manage delivery addresses</a>
+                            </div>
+                        @endif
                         <div class="mt-6 grid gap-5 sm:grid-cols-2">
                             <div class="sm:col-span-2">
                                 <label for="recipient_name" class="text-sm font-semibold text-ink">Recipient name</label>
-                                <input id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" autocomplete="name" required :aria-invalid="errors.recipient_name ? 'true' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
-                                <p x-show="errors.recipient_name" x-text="errors.recipient_name" class="mt-2 text-sm font-medium text-danger"></p>
-                                @error('recipient_name')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                                <input id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" autocomplete="name" required :aria-invalid="errors.recipient_name || @js($errors->has('recipient_name')) ? 'true' : null" :aria-describedby="errors.recipient_name || @js($errors->has('recipient_name')) ? 'recipient_name-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p id="recipient_name-error" x-show="errors.recipient_name || @js($errors->has('recipient_name'))" x-text="errors.recipient_name || @js($errors->first('recipient_name'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                             <div class="sm:col-span-2">
                                 <label for="phone" class="text-sm font-semibold text-ink">Mobile number</label>
-                                <input id="phone" name="phone" value="{{ old('phone') }}" type="tel" inputmode="tel" autocomplete="tel" required class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
-                                <p x-show="errors.phone" x-text="errors.phone" class="mt-2 text-sm font-medium text-danger"></p>
-                                @error('phone')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                                <input id="phone" name="phone" value="{{ old('phone') }}" type="tel" inputmode="tel" autocomplete="tel" required :aria-invalid="errors.phone || @js($errors->has('phone')) ? 'true' : null" :aria-describedby="errors.phone || @js($errors->has('phone')) ? 'phone-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p id="phone-error" x-show="errors.phone || @js($errors->has('phone'))" x-text="errors.phone || @js($errors->first('phone'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                             <div class="sm:col-span-2">
                                 <label for="address_line" class="text-sm font-semibold text-ink">Street address</label>
-                                <input id="address_line" name="address_line" value="{{ old('address_line') }}" autocomplete="street-address" required class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
-                                <p x-show="errors.address_line" x-text="errors.address_line" class="mt-2 text-sm font-medium text-danger"></p>
-                                @error('address_line')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                                <input id="address_line" name="address_line" value="{{ old('address_line') }}" autocomplete="street-address" required :aria-invalid="errors.address_line || @js($errors->has('address_line')) ? 'true' : null" :aria-describedby="errors.address_line || @js($errors->has('address_line')) ? 'address_line-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p id="address_line-error" x-show="errors.address_line || @js($errors->has('address_line'))" x-text="errors.address_line || @js($errors->first('address_line'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                             <div>
                                 <label for="city" class="text-sm font-semibold text-ink">City</label>
-                                <input id="city" name="city" value="{{ old('city') }}" autocomplete="address-level2" required class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
-                                <p x-show="errors.city" x-text="errors.city" class="mt-2 text-sm font-medium text-danger"></p>
-                                @error('city')<p class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
+                                <input id="city" name="city" value="{{ old('city') }}" autocomplete="address-level2" required :aria-invalid="errors.city || @js($errors->has('city')) ? 'true' : null" :aria-describedby="errors.city || @js($errors->has('city')) ? 'city-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <p id="city-error" x-show="errors.city || @js($errors->has('city'))" x-text="errors.city || @js($errors->first('city'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                         </div>
                         <div class="mt-7 flex justify-end">
-                            <button type="button" @click="go(2)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Continue to delivery</button>
+                            <button type="button" @click="go(2)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Review order</button>
                         </div>
                     </section>
 
-                    {{-- Step 2: Delivery (grouped by seller) --}}
+                    {{-- Step 2: Review --}}
                     <section x-show="step === 2" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-2-heading">
-                        <h3 id="step-2-heading" tabindex="-1" class="text-lg font-semibold text-ink">2 · Delivery options</h3>
-                        <p class="mt-1 text-sm leading-6 text-muted">Each seller ships their items separately. Standard delivery is free.</p>
-                        <div class="mt-6 space-y-5">
-                            @foreach ($itemsByStore as $storeItems)
-                                @php($store = $storeItems->first()->product->store)
-                                <fieldset class="rounded-[14px] border border-line p-4">
-                                    <legend class="px-2 text-sm font-semibold text-ink">{{ $store->name }} · {{ $storeItems->sum('quantity') }} {{ Str::plural('item', $storeItems->sum('quantity')) }}</legend>
-                                    <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-[10px] border border-brand bg-blue-50/50 px-4">
-                                        <input type="radio" checked class="size-4 border-line text-brand focus:ring-brand" aria-label="Standard delivery, free">
-                                        <span class="flex-1 text-sm font-medium">Standard delivery <span class="text-muted">· 2–5 days</span></span>
-                                        <span class="text-sm font-semibold text-success">Free</span>
-                                    </label>
-                                </fieldset>
-                            @endforeach
-                        </div>
-                        <div class="mt-7 flex justify-between gap-3">
-                            <button type="button" @click="go(1)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold transition hover:border-brand">Back</button>
-                            <button type="button" @click="go(3)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Continue to payment</button>
-                        </div>
-                    </section>
-
-                    {{-- Step 3: Payment --}}
-                    <section x-show="step === 3" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-3-heading">
-                        <h3 id="step-3-heading" tabindex="-1" class="text-lg font-semibold text-ink">3 · Payment method</h3>
-                        <p class="mt-1 text-sm leading-6 text-muted">Pay the delivery rider when your order arrives.</p>
-                        <div class="mt-6 grid gap-3">
-                            <label class="flex min-h-14 cursor-pointer items-center gap-3 rounded-[10px] border border-brand bg-blue-50/50 px-4 ring-1 ring-inset ring-brand/20">
-                                <input type="radio" checked class="size-4 border-line text-brand focus:ring-brand" aria-label="Cash on delivery">
-                                <span class="flex-1"><span class="block text-sm font-semibold">Cash on delivery</span><span class="block text-xs text-muted">No prepayment needed</span></span>
-                                <span class="rounded-lg bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">Available</span>
-                            </label>
-                        </div>
-                        <div class="mt-7 flex justify-between gap-3">
-                            <button type="button" @click="go(2)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold transition hover:border-brand">Back</button>
-                            <button type="button" @click="go(4)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Review order</button>
-                        </div>
-                    </section>
-
-                    {{-- Step 4: Review --}}
-                    <section x-show="step === 4" x-cloak class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-4-heading">
-                        <h3 id="step-4-heading" tabindex="-1" class="text-lg font-semibold text-ink">4 · Review &amp; place order</h3>
+                        <h3 id="step-2-heading" tabindex="-1" class="text-lg font-semibold text-ink">2 · Review &amp; place order</h3>
                         <p class="mt-1 text-sm leading-6 text-muted">Check your items and delivery details before placing the order.</p>
+                        <div class="mt-6 rounded-[10px] border border-line p-4 text-sm leading-6">
+                            <div class="flex items-center justify-between gap-3">
+                                <h4 class="font-semibold text-ink">Deliver to</h4>
+                                <button type="button" @click="go(1)" class="min-h-11 text-sm font-semibold text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Edit address</button>
+                            </div>
+                            <p class="font-medium text-ink" x-text="shipping.recipient_name"></p>
+                            <p class="text-muted" x-text="shipping.phone"></p>
+                            <p class="text-muted"><span x-text="shipping.address_line"></span>, <span x-text="shipping.city"></span></p>
+                        </div>
+                        <div class="mt-4 rounded-[10px] border border-line p-4 text-sm leading-6">
+                            <p><span class="font-semibold text-ink">Delivery:</span> Standard, free. Each seller ships their items separately.</p>
+                            <p><span class="font-semibold text-ink">Payment:</span> Cash on delivery.</p>
+                        </div>
                         <div class="mt-6 space-y-5">
                             @foreach ($itemsByStore as $storeItems)
                                 @php($store = $storeItems->first()->product->store)
@@ -151,14 +142,14 @@
                                     <h4 class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{{ $store->name }}</h4>
                                     <ul class="mt-3 space-y-3">
                                         @foreach ($storeItems as $item)
-                                            <li class="flex items-start justify-between gap-4 text-sm"><span class="min-w-0 leading-5 text-muted"><span class="block break-words font-medium text-ink">{{ $item->product->name }}</span>Qty {{ $item->quantity }} · Standard (Free)</span><span class="shrink-0 font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</span></li>
+                                            <li class="flex items-start justify-between gap-4 text-sm"><span class="min-w-0 leading-5 text-muted"><span class="block break-words font-medium text-ink">{{ $item->product->name }}</span>@if ($item->variant)<span class="block text-xs font-medium text-brand">{{ $item->variant->label() }}</span>@endif Qty {{ $item->quantity }} · Standard (Free)</span><span class="shrink-0 font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</span></li>
                                         @endforeach
                                     </ul>
                                 </div>
                             @endforeach
                         </div>
                         <div class="mt-6 flex justify-between gap-3">
-                            <button type="button" @click="go(3)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold transition hover:border-brand">Back</button>
+                            <button type="button" @click="go(1)" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold transition hover:border-brand">Back</button>
                             <button type="submit" :disabled="placing" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-wait disabled:bg-slate-300" x-text="placing ? 'Placing order…' : 'Place order · ₱{{ number_format($subtotal, 2) }}'"></button>
                         </div>
                     </section>
@@ -174,7 +165,7 @@
                                     <h4 id="checkout-store-{{ $store->id }}" class="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{{ $store->name }}</h4>
                                     <ul class="mt-3 space-y-3">
                                         @foreach ($storeItems as $item)
-                                            <li class="flex items-start justify-between gap-4 text-sm"><span class="min-w-0 leading-5 text-muted"><span class="block break-words font-medium text-ink">{{ $item->product->name }}</span>Qty {{ $item->quantity }}</span><span class="shrink-0 font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</span></li>
+                                            <li class="flex items-start justify-between gap-4 text-sm"><span class="min-w-0 leading-5 text-muted"><span class="block break-words font-medium text-ink">{{ $item->product->name }}</span>@if ($item->variant)<span class="block text-xs font-medium text-brand">{{ $item->variant->label() }}</span>@endif Qty {{ $item->quantity }}</span><span class="shrink-0 font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</span></li>
                                         @endforeach
                                     </ul>
                                 </section>
@@ -189,6 +180,5 @@
             </div>
         </div>
 
-        <div class="sticky bottom-0 z-20 mt-6 border-t border-line bg-canvas/95 px-[18px] py-3 backdrop-blur lg:hidden"><div class="mx-auto flex max-w-[1120px] items-center gap-3"><span class="min-w-0 flex-1 text-sm font-semibold text-ink">Total · ₱{{ number_format($subtotal, 2) }}</span><button type="button" x-show="step < 4" @click="go(step + 1)" x-text="['', 'Delivery', 'Payment', 'Review'][step] + ' →'" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Continue</button><button type="submit" form="checkout-form" x-show="step === 4" x-cloak :disabled="placing" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-wait disabled:bg-slate-300">Place order</button></div></div>
     </div>
 </x-app-layout>

@@ -107,6 +107,9 @@ class UpdateSellerOrderStatus
 
             if ($product !== null) {
                 $product->increment('stock_quantity', $item->quantity);
+                if ($item->product_variant_id !== null) {
+                    $product->variants()->whereKey($item->product_variant_id)->first()?->increment('stock_quantity', $item->quantity);
+                }
             }
         }
     }

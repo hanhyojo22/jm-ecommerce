@@ -46,7 +46,7 @@ class CatalogQueryTest extends TestCase
 
         $result = CatalogQuery::search([
             'q' => 'Aurora',
-            'price_range' => 'under_25000',
+            'max_price' => '24999.99',
             'in_stock' => '1',
             'brands' => ['Aurora'],
         ]);

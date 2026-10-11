@@ -23,7 +23,7 @@
         [
             'label' => 'Engage',
             'items' => [
-                ['label' => 'Messages', 'href' => route('messages.index'), 'icon' => 'messages', 'active' => request()->routeIs('messages.*')],
+                ['label' => 'Messages', 'href' => route('messages.index', ['context' => 'selling']), 'icon' => 'messages', 'active' => request()->routeIs('messages.*')],
                 ['label' => 'Reviews', 'href' => route('seller.reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('seller.reviews.*')],
             ],
         ],

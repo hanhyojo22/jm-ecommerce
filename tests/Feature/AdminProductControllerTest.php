@@ -41,6 +41,7 @@ class AdminProductControllerTest extends TestCase
         $administrator = User::factory()->administrator()->create();
         $store = $this->store('Northwind Goods');
         $product = $this->product($store, 'Canvas Tote', 'TOTE-001', 'active', description: 'A durable market tote.');
+        $product->variants()->create(['color' => 'Navy', 'size' => 'Medium', 'sku' => 'TOTE-N-M', 'stock_quantity' => 3]);
         AuditLog::create(['actor_user_id' => $administrator->id, 'action' => 'product.reviewed', 'entity_type' => Product::class, 'entity_id' => $product->id]);
 
         $this->actingAs($administrator)->get(route('admin.products.show', $product))
@@ -48,6 +49,7 @@ class AdminProductControllerTest extends TestCase
             ->assertSee('A durable market tote.')
             ->assertSee('Northwind Goods')
             ->assertSee('Moderate listing')
+            ->assertSee('Navy / Medium')
             ->assertSee('Product Reviewed');
     }
 

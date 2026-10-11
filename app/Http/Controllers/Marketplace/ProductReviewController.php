@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Actions\StorePublicImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductReviewRequest;
 use App\Models\OrderItem;
@@ -11,16 +12,26 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use RuntimeException;
 use Throwable;
 
 class ProductReviewController extends Controller
 {
-    public function store(StoreProductReviewRequest $request, OrderItem $orderItem): RedirectResponse
+    public function index(Request $request): View
+    {
+        return view('marketplace.reviews.index', [
+            'reviews' => $request->user()->productReviews()
+                ->with(['product.store', 'orderItem.sellerOrder'])
+                ->latest()->paginate(10),
+        ]);
+    }
+
+    public function store(StoreProductReviewRequest $request, OrderItem $orderItem, StorePublicImage $storePublicImage): RedirectResponse
     {
         $orderItem = $this->eligibleItem($request, $orderItem);
         $data = $request->validated();
-        $photoPaths = $this->storePhotos($request->file('photos', []));
+        $photoPaths = $this->storePhotos($request->file('photos', []), $storePublicImage);
 
         try {
             DB::transaction(function () use ($request, $orderItem, $data, $photoPaths): void {
@@ -46,11 +57,11 @@ class ProductReviewController extends Controller
         return to_route('orders.show', $orderItem->sellerOrder->order_id)->with('status', 'Your review was published.');
     }
 
-    public function update(StoreProductReviewRequest $request, ProductReview $review): RedirectResponse
+    public function update(StoreProductReviewRequest $request, ProductReview $review, StorePublicImage $storePublicImage): RedirectResponse
     {
         $this->authorize('update', $review);
         $data = $request->validated();
-        $photoPaths = $this->storePhotos($request->file('photos', []));
+        $photoPaths = $this->storePhotos($request->file('photos', []), $storePublicImage);
 
         try {
             DB::transaction(function () use ($review, $data, $photoPaths): void {
@@ -110,6 +121,7 @@ class ProductReviewController extends Controller
         abort_unless(
             $orderItem->product_id !== null
             && $orderItem->sellerOrder->order->user_id === $request->user()->id
+            && ! $request->user()->isMemberOfTenant($orderItem->sellerOrder->tenant_id)
             && $orderItem->sellerOrder->status === 'delivered'
             && $orderItem->review === null,
             403,
@@ -122,13 +134,13 @@ class ProductReviewController extends Controller
      * @param  array<int, UploadedFile>  $photos
      * @return array<int, string>
      */
-    private function storePhotos(array $photos): array
+    private function storePhotos(array $photos, StorePublicImage $storePublicImage): array
     {
         $paths = [];
 
         try {
             foreach ($photos as $photo) {
-                $path = $photo->store('product-reviews', 'public');
+                $path = $storePublicImage->handle($photo, 'product-reviews', 'public');
                 if (! is_string($path) || $path === '') {
                     throw new RuntimeException('Review photo storage failed.');
                 }

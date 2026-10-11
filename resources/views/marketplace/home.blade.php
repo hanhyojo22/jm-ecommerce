@@ -26,15 +26,22 @@
                         <h2 class="text-[27px] font-bold leading-[1.12] tracking-[-.03em] text-white">{{ $featuredProduct->name }}</h2>
                         <a href="{{ route('catalog.store', $featuredProduct->store->slug) }}" class="mt-2 text-sm text-slate-300 underline underline-offset-4 hover:text-white">{{ $featuredProduct->store->name }}</a>
                         <p class="mt-5 flex flex-wrap items-baseline gap-x-2"><span class="text-[27px] font-bold tabular-nums">₱{{ number_format($featuredProduct->price, fmod((float) $featuredProduct->price, 1) === 0.0 ? 0 : 2) }}</span>@if($featuredIsOnSale)<del class="text-sm text-slate-400">₱{{ number_format($featuredProduct->compare_at_price, fmod((float) $featuredProduct->compare_at_price, 1) === 0.0 ? 0 : 2) }}</del>@endif</p>
+                        @if ($featuredProduct->stock_quantity < 1)
+                            <p class="mt-3 text-sm font-semibold text-white">Sold out · This product is currently unavailable</p>
+                        @endif
                         <a href="{{ route('catalog.show', [$featuredProduct->store->slug, $featuredProduct->slug]) }}" class="mt-5 inline-flex min-h-11 items-center justify-center rounded-[10px] bg-white px-5 text-sm font-semibold text-ink transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ink">View product <span class="ml-2" aria-hidden="true">→</span></a>
                     </div>
-                    <a href="{{ route('catalog.show', [$featuredProduct->store->slug, $featuredProduct->slug]) }}" class="relative hidden min-h-64 place-items-center overflow-hidden bg-gradient-to-br from-indigo-100 to-slate-100 p-6 sm:grid" aria-label="View {{ $featuredProduct->name }}">
+                    <a href="{{ route('catalog.show', [$featuredProduct->store->slug, $featuredProduct->slug]) }}" class="relative hidden min-h-64 place-items-center overflow-hidden bg-gradient-to-br from-indigo-100 to-slate-100 p-6 sm:grid" aria-label="View {{ $featuredProduct->name }}{{ $featuredProduct->stock_quantity < 1 ? ', sold out' : '' }}">
                         @if ($featuredProduct->thumbnail)
                             <img src="{{ Storage::disk('product_images')->url($featuredProduct->thumbnail->path) }}" alt="{{ $featuredProduct->name }}" width="480" height="480" fetchpriority="high" class="h-full max-h-[360px] w-full object-contain mix-blend-multiply" />
                         @else
                             <span class="grid size-40 place-items-center rounded-[24px] bg-white/80 text-brand shadow-xl shadow-ink/10"><svg viewBox="0 0 24 24" class="size-20" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 10h8M8 14h5"/></svg></span>
                         @endif
-                        <span class="absolute right-4 top-4 rounded-xl bg-white px-3 py-2.5 text-ink shadow-lg shadow-ink/10"><span class="block text-sm font-semibold">{{ $featuredProduct->stock_quantity > 0 ? 'In stock' : 'Sold out' }}</span><span class="block text-xs text-muted">{{ $featuredProduct->stock_quantity > 0 ? number_format($featuredProduct->stock_quantity).' available' : 'Currently unavailable' }}</span></span>
+                        @if ($featuredProduct->stock_quantity < 1)
+                            <x-marketplace.sold-out-overlay />
+                        @else
+                            <span class="absolute right-4 top-4 rounded-xl bg-white px-3 py-2.5 text-ink shadow-lg shadow-ink/10"><span class="block text-sm font-semibold">In stock</span><span class="block text-xs text-muted">{{ number_format($featuredProduct->stock_quantity) }} available</span></span>
+                        @endif
                         @if ($featuredProduct->published_reviews_count > 0)
                             <span class="absolute bottom-4 left-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-medium text-ink shadow-lg shadow-ink/10"><svg viewBox="0 0 20 20" class="size-4 fill-amber-400" aria-hidden="true"><path d="m10 1.7 2.55 5.17 5.7.83-4.12 4.02 0.98 5.68L10 14.72l-5.11 2.68.98-5.68L1.75 7.7l5.7-.83L10 1.7Z" /></svg>{{ number_format((float) $featuredProduct->published_reviews_avg_rating, 1) }} <span class="text-muted">· {{ number_format($featuredProduct->published_reviews_count) }} reviews</span></span>
                         @endif
@@ -130,11 +137,11 @@
             </section>
         @endif
 
-        @if (! auth()->user()?->isPlatformAdministrator())
+        @if (! auth()->user()?->isPlatformAdministrator() && ! (auth()->user()?->account_type === 'seller' && auth()->user()->sellerTenant()))
             <section class="my-8 grid overflow-hidden rounded-[20px] border border-line bg-white sm:grid-cols-[1.1fr_.9fr]" aria-labelledby="home-seller-heading">
                 <div class="p-6 sm:p-9"><p class="text-xs font-semibold uppercase tracking-[.12em] text-brand">Sell on JMMart</p><h2 id="home-seller-heading" class="mt-2 max-w-[20ch] text-2xl font-bold leading-tight tracking-[-.03em] text-ink">Open a storefront and grow your business.</h2><p class="mt-3 max-w-xl text-sm leading-6 text-muted">Reach shoppers and manage your products and orders from Seller Center.</p>
                     @auth
-                        @if (auth()->user()->account_type === 'seller')<a href="{{ route('seller.dashboard') }}" class="mt-5 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Open Seller Center</a>@else<a href="{{ route('seller-application.create') }}" class="mt-5 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Start selling</a>@endif
+                        <a href="{{ route('seller-application.create') }}" class="mt-5 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Start selling</a>
                     @else
                         <a href="{{ route('login', ['redirect' => '/start-selling']) }}" class="mt-5 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Start selling</a>
                     @endauth

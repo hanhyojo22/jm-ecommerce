@@ -9,6 +9,8 @@ use Illuminate\Validation\Validator;
 
 class UpdateProductRequest extends FormRequest
 {
+    use ValidatesProductVariants;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -33,9 +35,18 @@ class UpdateProductRequest extends FormRequest
             'condition' => ['nullable', Rule::in(['new', 'refurbished'])],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'compare_at_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99', 'gt:price'],
-            'stock_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
+            'stock_quantity' => ['required_without:variants', 'integer', 'min:0', 'max:2147483647'],
             'status' => ['required', 'in:draft,active,inactive'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images' => ['nullable', 'array', 'max:8'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'variants' => ['nullable', 'array', 'max:30'],
+            'variants.*' => ['array:id,color,size,sku,stock_quantity'],
+            'variants.*.id' => ['nullable', 'ulid'],
+            'variants.*.color' => ['required', 'string', 'max:60'],
+            'variants.*.size' => ['required', 'string', 'max:60'],
+            'variants.*.sku' => ['required', 'string', 'max:100'],
+            'variants.*.stock_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
         ];
     }
 
@@ -43,6 +54,31 @@ class UpdateProductRequest extends FormRequest
     {
         return [function (Validator $validator): void {
             $product = $this->route('product');
+
+            $this->validateVariants($validator);
+            if ($product instanceof Product && $product->images()->count() + count((array) $this->file('images', [])) + ($this->hasFile('image') ? 1 : 0) > 8) {
+                $validator->errors()->add('images', 'A product can have no more than 8 photos.');
+            }
+            $variants = $this->input('variants', []);
+            if ($product instanceof Product && $product->variants()->exists() && (! is_array($variants) || $variants === [])) {
+                $validator->errors()->add('variants', 'Keep at least one variant for this product.');
+            }
+            if (is_array($variants) && $product instanceof Product) {
+                $existingIds = $product->variants()->pluck('id')->all();
+                $submittedIds = [];
+                foreach ($variants as $index => $variant) {
+                    $id = is_array($variant) ? ($variant['id'] ?? null) : null;
+                    if ($id !== null && (! in_array($id, $existingIds, true) || in_array($id, $submittedIds, true))) {
+                        $validator->errors()->add("variants.$index.id", 'This variant does not belong to this product.');
+                    }
+                    if ($id !== null) {
+                        $submittedIds[] = $id;
+                    }
+                }
+                if (array_diff($existingIds, $submittedIds) !== []) {
+                    $validator->errors()->add('variants', 'Existing variants cannot be removed. Set their stock to 0 instead.');
+                }
+            }
 
             if ($product instanceof Product && $product->status !== 'active' && $this->input('status') === 'active') {
                 $validator->errors()->add('status', 'Only an administrator can activate a listing.');

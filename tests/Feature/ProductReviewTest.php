@@ -34,6 +34,42 @@ class ProductReviewTest extends TestCase
         $this->actingAs($buyer)->post(route('reviews.store', $item), ['rating' => 4])->assertForbidden();
     }
 
+    public function test_seller_can_review_a_purchase_from_another_store_as_a_customer(): void
+    {
+        [$buyer, $item] = $this->deliveredOrderItem();
+        $buyer->update(['account_type' => 'seller']);
+        $otherTenant = Tenant::create(['name' => 'Own store', 'slug' => 'own-store', 'status' => 'active']);
+        TenantMember::create(['tenant_id' => $otherTenant->id, 'user_id' => $buyer->id, 'role' => 'owner']);
+
+        $this->actingAs($buyer)->post(route('reviews.store', $item), ['rating' => 5, 'body' => 'Great product.'])
+            ->assertRedirect(route('orders.show', $item->sellerOrder->order_id));
+
+        $this->assertDatabaseHas('product_reviews', ['order_item_id' => $item->id, 'user_id' => $buyer->id, 'status' => 'published']);
+    }
+
+    public function test_seller_cannot_review_a_purchase_from_their_own_store(): void
+    {
+        [$buyer, $item] = $this->deliveredOrderItem();
+        $buyer->update(['account_type' => 'seller']);
+        TenantMember::create(['tenant_id' => $item->sellerOrder->tenant_id, 'user_id' => $buyer->id, 'role' => 'manager']);
+
+        $this->actingAs($buyer)->post(route('reviews.store', $item), ['rating' => 5])->assertForbidden();
+
+        $this->assertDatabaseMissing('product_reviews', ['order_item_id' => $item->id]);
+    }
+
+    public function test_seller_my_reviews_shows_only_their_customer_reviews(): void
+    {
+        [$seller, $item] = $this->deliveredOrderItem();
+        $seller->update(['account_type' => 'seller']);
+        [$otherBuyer, $otherItem] = $this->deliveredOrderItem();
+        ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $seller->id, 'rating' => 5, 'body' => 'My purchase']);
+        ProductReview::create(['product_id' => $otherItem->product_id, 'order_item_id' => $otherItem->id, 'user_id' => $otherBuyer->id, 'rating' => 1, 'body' => 'Someone else']);
+
+        $this->actingAs($seller)->get(route('reviews.index'))
+            ->assertOk()->assertSee('My purchase')->assertDontSee('Someone else');
+    }
+
     public function test_buyer_cannot_review_another_buyers_delivered_order_item(): void
     {
         [, $item] = $this->deliveredOrderItem();

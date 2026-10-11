@@ -33,11 +33,11 @@ class ClerkSessionHandoffController extends Controller
 
     public function show(Request $request): View
     {
-        $afterAuthUrl = $this->safeRedirectPath($request->string('redirect')->toString());
+        $afterAuthUrl = $request->has('redirect') ? $this->safeRedirectPath($request->string('redirect')->toString()) : '';
 
         return view('auth.handoff', [
             'afterAuthUrl' => $afterAuthUrl,
-            'signInUrl' => route('login', ['redirect' => $afterAuthUrl]),
+            'signInUrl' => route('login', $afterAuthUrl !== '' ? ['redirect' => $afterAuthUrl] : []),
         ]);
     }
 
@@ -93,7 +93,10 @@ class ClerkSessionHandoffController extends Controller
 
     public function complete(Request $request, AddProductToCart $addProductToCart): JsonResponse
     {
-        $redirect = $this->safeRedirectPath($request->string('redirect')->toString());
+        $requestedRedirect = $request->string('redirect')->toString();
+        $redirect = $requestedRedirect === ''
+            ? route($request->user()->landingRouteName(), [], false)
+            : $this->safeRedirectPath($requestedRedirect);
 
         $request->session()->forget(self::REFRESH_ATTEMPTS_SESSION_KEY);
 
@@ -103,7 +106,7 @@ class ClerkSessionHandoffController extends Controller
             && ($pendingCartAddition['expires_at'] ?? 0) >= now()->timestamp
             && is_string($pendingCartAddition['product_id'] ?? null)
             && $pendingCartAddition['product_id'] !== ''
-            && $request->user()->account_type === 'buyer'
+            && in_array($request->user()->account_type, ['buyer', 'seller'], true)
             && $request->user()->is_active
             && $request->user()->hasVerifiedClerkEmail()
         ) {

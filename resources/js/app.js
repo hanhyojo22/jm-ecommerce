@@ -1,4 +1,6 @@
 
+import './cookie-consent';
+
 const reverbConfig = {
     key: document.querySelector('meta[name="reverb-app-key"]')?.content,
     host: document.querySelector('meta[name="reverb-host"]')?.content,
@@ -42,7 +44,9 @@ if (sellerDashboard) {
     let dashboardPreferences = {};
 
     try {
-        const savedPreferences = JSON.parse(window.localStorage.getItem(dashboardKey) || '{}');
+        const savedPreferences = document.querySelector('[data-cookie-consent]')?.dataset.functional === 'true'
+            ? JSON.parse(window.localStorage.getItem(dashboardKey) || '{}')
+            : {};
         dashboardPreferences = savedPreferences && typeof savedPreferences === 'object' && !Array.isArray(savedPreferences)
             ? savedPreferences
             : {};
@@ -71,10 +75,12 @@ if (sellerDashboard) {
             dashboardPreferences[toggle.dataset.dashboardToggle] = toggle.checked;
             showDashboardSection(toggle.dataset.dashboardToggle, toggle.checked);
 
-            try {
-                window.localStorage.setItem(dashboardKey, JSON.stringify(dashboardPreferences));
-            } catch {
-                // Keep the current page's preference when browser storage is unavailable.
+            if (document.querySelector('[data-cookie-consent]')?.dataset.functional === 'true') {
+                try {
+                    window.localStorage.setItem(dashboardKey, JSON.stringify(dashboardPreferences));
+                } catch {
+                    // Keep the current page's preference when browser storage is unavailable.
+                }
             }
         });
     });
@@ -628,7 +634,7 @@ document.querySelectorAll('form[data-add-to-cart]').forEach((form) => {
 
             const result = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(result.errors?.quantity?.[0] ?? result.message ?? 'Could not add this item.');
+                throw new Error(result.errors?.variant_id?.[0] ?? result.errors?.quantity?.[0] ?? result.message ?? 'Could not add this item.');
             }
 
             const count = result.cart_count;

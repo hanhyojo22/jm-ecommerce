@@ -36,6 +36,43 @@ class CartTest extends TestCase
             ->assertSee('aria-label="Cart: 3 items"', false);
     }
 
+    public function test_cart_asks_for_a_new_choice_when_a_product_gains_variants(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])
+            ->assertRedirect(route('cart.index'));
+
+        $product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'NAVY-M', 'stock_quantity' => 5]);
+        $this->actingAs($buyer)->get(route('cart.index'))
+            ->assertOk()
+            ->assertSee('Choose a color and size again');
+    }
+
+    public function test_cart_labels_a_product_sold_out_after_it_was_added(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $product->update(['stock_quantity' => 0]);
+
+        $this->actingAs($buyer)->get(route('cart.index'))
+            ->assertSee('Sold out')
+            ->assertDontSee('Only 0 available');
+    }
+
+    public function test_buyer_cannot_add_a_sold_out_product_to_the_cart(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $product->update(['stock_quantity' => 0]);
+
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])
+            ->assertSessionHasErrors('quantity');
+
+        $this->assertDatabaseCount('cart_items', 0);
+    }
+
     public function test_buyer_can_update_a_cart_item_quantity_and_sees_confirmation(): void
     {
         $buyer = User::factory()->create();
@@ -97,7 +134,15 @@ class CartTest extends TestCase
 
         $this->actingAs($otherBuyer)
             ->patch(route('cart.update', $cartItem), ['quantity' => 2])
-            ->assertForbidden();
+            ->assertNotFound();
+
+        $this->actingAs($otherBuyer)
+            ->delete(route('cart.destroy', $cartItem))
+            ->assertNotFound();
+
+        $this->actingAs($otherBuyer)
+            ->patch(route('cart.update', $cartItem), ['quantity' => 0])
+            ->assertNotFound();
 
         $this->assertDatabaseHas('cart_items', ['id' => $cartItem->id, 'quantity' => 1]);
     }

@@ -10,6 +10,7 @@ use App\Models\Conversation;
 use App\Models\Product;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -44,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($trustedProxies = config('app.trusted_proxies')) {
+            TrustProxies::at($trustedProxies);
+        }
+
         Auth::viaRequest('clerk', fn ($request) => app(ClerkUserResolver::class)->resolve($request));
 
         RateLimiter::for('cart', fn (Request $request): Limit => Limit::perMinute(30)->by(

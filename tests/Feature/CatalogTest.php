@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Support\CookiePreferences;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -34,6 +35,36 @@ class CatalogTest extends TestCase
             ->assertDontSee($hidden->name);
     }
 
+    public function test_sold_out_product_shows_availability_notice_across_public_product_pages(): void
+    {
+        $product = $this->product(['stock_quantity' => 0]);
+
+        foreach ([
+            route('home'),
+            route('catalog.index'),
+            route('catalog.store', $product->store->slug),
+            route('catalog.show', [$product->store->slug, $product->slug]),
+        ] as $url) {
+            $this->get($url)
+                ->assertSee($product->name)
+                ->assertSee('This product is currently unavailable');
+        }
+    }
+
+    public function test_available_product_does_not_show_sold_out_image_notice(): void
+    {
+        $product = $this->product(['stock_quantity' => 3]);
+
+        foreach ([
+            route('home'),
+            route('catalog.index'),
+            route('catalog.store', $product->store->slug),
+            route('catalog.show', [$product->store->slug, $product->slug]),
+        ] as $url) {
+            $this->get($url)->assertDontSee('This product is currently unavailable');
+        }
+    }
+
     public function test_homepage_shows_live_flash_deals_and_buyer_cart_actions(): void
     {
         $buyer = User::factory()->create();
@@ -53,7 +84,12 @@ class CatalogTest extends TestCase
         $viewed = $this->product(['name' => 'Viewed headphones', 'category_id' => $category->id]);
         $related = $this->product(['name' => 'Related speaker', 'category_id' => $category->id]);
 
-        $this->get(route('catalog.show', [$viewed->store->slug, $viewed->slug]))
+        $this->withCookie(CookiePreferences::COOKIE_NAME, json_encode([
+            'version' => CookiePreferences::VERSION,
+            'functional' => true,
+            'analytics' => false,
+            'marketing' => false,
+        ]))->get(route('catalog.show', [$viewed->store->slug, $viewed->slug]))
             ->assertOk()
             ->assertSessionHas('marketplace.recently_viewed', [$viewed->id]);
 
@@ -67,6 +103,15 @@ class CatalogTest extends TestCase
 
         $this->delete(route('catalog.recently-viewed.clear'))
             ->assertRedirect(route('home'))
+            ->assertSessionMissing('marketplace.recently_viewed');
+    }
+
+    public function test_recently_viewed_is_not_saved_without_functional_consent(): void
+    {
+        $product = $this->product();
+
+        $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
+            ->assertOk()
             ->assertSessionMissing('marketplace.recently_viewed');
     }
 
@@ -90,8 +135,16 @@ class CatalogTest extends TestCase
     {
         $this->get(route('catalog.index'))
             ->assertSee(route('login'), false)
+            ->assertSee('aria-label="Sign In"', false)
+            ->assertSee('min-[641px]:inline">Sign In</span>', false)
+            ->assertDontSee('aria-label="Account menu"', false)
             ->assertSee('Sign in')
             ->assertSee('aria-label="Open navigation menu"', false);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee(route('register'), false)
+            ->assertSee('Create account');
     }
 
     public function test_marketplace_pages_include_the_clerk_configuration_needed_by_the_shared_header(): void
@@ -118,8 +171,29 @@ class CatalogTest extends TestCase
                 ->assertSee('id="marketplace-search"', false)
                 ->assertSee('aria-label="Marketplace sections"', false)
                 ->assertSee('data-header-promo', false)
-                ->assertSee('aria-label="Account menu"', false);
+                ->assertSee('aria-label="Account menu"', false)
+                ->assertDontSee('aria-label="Sign In"', false);
         }
+    }
+
+    public function test_signed_in_roles_keep_their_account_controls_in_the_header(): void
+    {
+        foreach ([
+            User::factory()->create(),
+            User::factory()->seller()->create(),
+            User::factory()->administrator()->create(),
+        ] as $user) {
+            $this->actingAs($user)->get(route('home'))
+                ->assertOk()
+                ->assertSee('aria-label="Account menu"', false)
+                ->assertDontSee('aria-label="Sign In"', false);
+        }
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('data-header-role="admin"', false)
+            ->assertSee('Account settings')
+            ->assertDontSee('aria-label="Sign In"', false);
     }
 
     public function test_catalog_product_page_404s_for_a_non_public_product(): void
@@ -212,28 +286,28 @@ class CatalogTest extends TestCase
             ->assertSee('value="top_rated" selected', false);
     }
 
-    public function test_catalog_price_range_filter_uses_inclusive_middle_band_bounds(): void
+    public function test_catalog_custom_price_filter_uses_inclusive_bounds(): void
     {
         $belowRange = $this->product(['name' => 'Below the price band', 'price' => 24999.99]);
         $lowerBoundary = $this->product(['name' => 'At lower price boundary', 'price' => 25000]);
         $upperBoundary = $this->product(['name' => 'At upper price boundary', 'price' => 100000]);
         $aboveRange = $this->product(['name' => 'Above the price band', 'price' => 100000.01]);
 
-        $this->get(route('catalog.index', ['price_range' => '25000_100000']))
+        $this->get(route('catalog.index', ['min_price' => '25000', 'max_price' => '100000']))
             ->assertOk()
             ->assertSee($lowerBoundary->name)
             ->assertSee($upperBoundary->name)
             ->assertDontSee($belowRange->name)
             ->assertDontSee($aboveRange->name)
-            ->assertSee('name="price_range" value="25000_100000" checked', false)
-            ->assertSee('₱25,000–₱100,000');
+            ->assertSee('name="min_price"', false)
+            ->assertSee('name="max_price"', false);
     }
 
-    public function test_catalog_rejects_an_unknown_price_range(): void
+    public function test_catalog_rejects_an_invalid_minimum_price(): void
     {
-        $this->get(route('catalog.index', ['price_range' => 'unexpected']))
+        $this->get(route('catalog.index', ['min_price' => 'unexpected']))
             ->assertRedirect()
-            ->assertSessionHasErrors('price_range');
+            ->assertSessionHasErrors('min_price');
     }
 
     public function test_catalog_seller_filter_only_shows_products_from_the_selected_public_store(): void
@@ -261,7 +335,7 @@ class CatalogTest extends TestCase
             ->assertDontSee($otherProduct->name);
     }
 
-    public function test_catalog_filters_products_by_brand_condition_shipping_and_sale_status(): void
+    public function test_catalog_filters_products_by_brand_condition_and_sale_status(): void
     {
         $matchingProduct = $this->product([
             'name' => 'Aurora refurbished headphones',
@@ -269,7 +343,6 @@ class CatalogTest extends TestCase
             'condition' => 'refurbished',
             'compare_at_price' => '250.00',
             'price' => '200.00',
-            'free_shipping' => true,
         ]);
         $otherProduct = $this->product([
             'name' => 'Volt new headphones',
@@ -283,13 +356,11 @@ class CatalogTest extends TestCase
             'condition' => 'refurbished',
             'compare_at_price' => '250.75',
             'price' => '200.50',
-            'free_shipping' => true,
         ]);
 
         $this->get(route('catalog.index', [
             'brands' => ['Aurora'],
             'conditions' => ['refurbished'],
-            'free_shipping' => '1',
             'on_sale' => '1',
         ]))
             ->assertOk()
@@ -466,8 +537,8 @@ class CatalogTest extends TestCase
         $this->actingAs($seller)->get(route('catalog.store', $product->store->slug))
             ->assertOk()
             ->assertSee('Storefront preview')
-            ->assertSee(route('seller.dashboard'), false)
-            ->assertSee(route('seller.products.index'), false);
+            ->assertDontSee(route('seller.dashboard'), false)
+            ->assertDontSee(route('seller.products.index'), false);
 
         $this->actingAs($otherSeller)->get(route('catalog.store', $product->store->slug))
             ->assertOk()

@@ -31,7 +31,8 @@
     <body class="bg-canvas font-sans antialiased text-ink">
         <a href="#main-content" class="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-ink px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Skip to content</a>
         <div class="min-h-screen bg-canvas">
-            @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*', 'messages.*'))
+            @php($isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== auth()->id()))
+            @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && auth()->user()->preferred_workspace === 'seller' && auth()->user()->sellerTenant() !== null)))
             @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
             @if ($isAdminWorkspace)
                 {{-- The admin header belongs to the workspace content column. --}}
@@ -80,6 +81,7 @@
                 <x-marketplace.footer />
             @endif
         </div>
+        <x-cookie-consent />
         @livewireScripts
     </body>
 </html>

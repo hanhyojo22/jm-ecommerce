@@ -46,7 +46,7 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order): View
     {
-        abort_unless($order->user_id === $request->user()->id, 403);
+        abort_unless($order->user_id === $request->user()->id, 404);
 
         return view('marketplace.orders.show', ['order' => $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment')]);
     }
