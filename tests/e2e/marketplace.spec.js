@@ -2,6 +2,11 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { openAsRole } from './support/role-page.js';
 
+async function rejectOptionalCookies(page) {
+    await page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
+    await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+}
+
 test('guest can browse a product and is prompted to sign in before adding it to cart', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('navigation', { name: 'Marketplace sections' })).toBeVisible();
@@ -249,6 +254,7 @@ test('seller response stays on the form when session renewal fails', async ({ br
 
     try {
         await page.goto('/seller/reviews');
+        await rejectOptionalCookies(page);
         await page.route('**/auth/session', (route) => route.fulfill({ status: 401, body: 'Session expired' }));
         await page.getByLabel('Seller response').fill('Please keep this draft.');
         await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
@@ -576,6 +582,7 @@ for (const attachment of [
 
         try {
             await seller.page.goto('/messages');
+            await rejectOptionalCookies(seller.page);
             await seller.page.getByRole('link', { name: /QA Customer/ }).click();
             const rerender = seller.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
             await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Draft before uploading');
@@ -636,6 +643,7 @@ test('an invalid chat file shows an error and can be replaced and retried', asyn
     const seller = await openAsRole(browser, 'seller');
     try {
         await seller.page.goto('/messages');
+        await rejectOptionalCookies(seller.page);
         await seller.page.getByRole('link', { name: /QA Customer/ }).first().click();
         await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Here is the receipt.');
         await seller.page.getByRole('button', { name: 'Add attachment' }).click();
