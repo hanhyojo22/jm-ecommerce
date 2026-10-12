@@ -178,7 +178,7 @@ test('seller order detail and product editor remain usable at each viewport', as
         await customer.page.getByLabel('Street address').fill('10 QA Street');
         await customer.page.getByLabel('City').fill('Manila');
         await customer.page.getByRole('button', { name: 'Review order' }).click();
-        await expect(customer.page.getByText('10 QA Street, Manila')).toBeVisible();
+        await expect(customer.page.getByText('10 QA Street, Manila', { exact: true })).toBeVisible();
         await customer.page.getByRole('button', { name: /Place order/ }).click();
         await expect(customer.page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
     } finally {

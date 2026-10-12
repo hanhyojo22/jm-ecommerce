@@ -118,7 +118,7 @@ test('customer can place a COD order from the product page through checkout', as
         await page.getByLabel('Street address').fill('10 QA Street');
         await page.getByLabel('City').fill('Manila');
         await page.getByRole('button', { name: 'Review order' }).click();
-        await expect(page.getByText('10 QA Street, Manila')).toBeVisible();
+        await expect(page.getByText('10 QA Street, Manila', { exact: true })).toBeVisible();
         await expect(page.getByText('Payment:', { exact: true }).locator('..')).toContainText('Cash on delivery.');
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
 
@@ -144,6 +144,10 @@ test('mobile checkout shows field errors and lets the customer edit the review a
         await expect(page).toHaveURL(/\/checkout$/);
 
         await expect(page.getByRole('button', { name: 'Review order' })).toHaveCount(1);
+        await page.getByLabel('Recipient name').fill('');
+        await page.getByLabel('Mobile number').fill('');
+        await page.getByLabel('Street address').fill('');
+        await page.getByLabel('City').fill('');
         await page.getByRole('button', { name: 'Review order' }).click();
         await expect(page.getByLabel('Recipient name')).toHaveAttribute('aria-invalid', 'true');
         await expect(page.locator('#recipient_name-error')).toHaveText('Enter the recipient name.');
@@ -154,7 +158,7 @@ test('mobile checkout shows field errors and lets the customer edit the review a
         await page.getByLabel('Street address').fill('10 QA Street');
         await page.getByLabel('City').fill('Manila');
         await page.getByRole('button', { name: 'Review order' }).click();
-        await expect(page.getByText('10 QA Street, Manila')).toBeVisible();
+        await expect(page.getByText('10 QA Street, Manila', { exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Edit address' }).click();
         await page.getByLabel('City').fill('Quezon City');
         await page.getByRole('button', { name: 'Review order' }).click();
@@ -177,6 +181,7 @@ test('customer refreshes the Clerk session before adding an item to the cart', a
             await route.continue({ headers });
         });
         await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        const startingCartCount = Number((await page.locator('[data-cart-link]').getAttribute('aria-label')).match(/\d+/)[0]);
         const addToCartForm = page.locator('#purchase form');
         await expect(addToCartForm).toHaveAttribute('data-clerk-session-refresh', /auth\/session/);
         await expect(addToCartForm).toHaveAttribute('action', /cart\/products\//);
@@ -185,7 +190,7 @@ test('customer refreshes the Clerk session before adding an item to the cart', a
         await expect((await refresh).ok()).toBeTruthy();
 
         await expect(page).toHaveURL(/\/stores\/qa-northwind-store\/products\/qa-canvas-tote$/);
-        await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
+        await expect(page.locator('[data-cart-link]')).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCartCount + 1} items?$`));
     } finally {
         await context.close();
     }
