@@ -114,13 +114,6 @@
                             <div class="min-w-0 border-b border-line px-3 py-3"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
                             <div class="space-y-1 py-2">
                                 <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My account</a>
-                                @if ($sellerTenant)
-                                    <form method="POST" action="{{ route('profile.workspace.update') }}" data-workspace-switch>
-                                        @csrf
-                                        <input type="hidden" name="workspace" value="{{ $isSellerWorkspace ? 'customer' : 'seller' }}">
-                                        <button type="submit" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-brand transition hover:bg-blue-50">Switch Account</button>
-                                    </form>
-                                @endif
                                 @if ($isBuyer && ! $isSellerWorkspace)
                                     <a href="{{ route('orders.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
                                     <a href="{{ route('reviews.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
@@ -136,7 +129,16 @@
                                     <a href="{{ route('dashboard') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Admin workspace</a>
                                 @endif
                             </div>
-                            <button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg border-t border-line px-3 pt-2 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800">Sign out</button>
+                            @if ($sellerTenant)
+                                <div class="border-y border-line py-2">
+                                    <form method="POST" action="{{ route('profile.workspace.update') }}" data-workspace-switch>
+                                        @csrf
+                                        <input type="hidden" name="workspace" value="{{ $isSellerWorkspace ? 'customer' : 'seller' }}">
+                                        <button type="submit" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-brand transition hover:bg-blue-50">Switch Account</button>
+                                    </form>
+                                </div>
+                            @endif
+                            <button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 pt-2 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800 {{ $sellerTenant ? '' : 'border-t border-line' }}">Sign out</button>
                         </div>
                     </div>
                 @else
