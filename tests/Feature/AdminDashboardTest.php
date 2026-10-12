@@ -12,8 +12,10 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AdminDashboardTest extends TestCase
@@ -67,6 +69,34 @@ class AdminDashboardTest extends TestCase
             ->assertDontSee($storeWithoutSales->name)
             ->assertDontSee('Unsold Product')
             ->assertSee(route('admin.moderation', ['type' => 'application']), false);
+    }
+
+    public function test_marketplace_totals_use_one_order_aggregate(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $context = $this->productContext();
+        Order::create([
+            'user_id' => $context['buyer']->id,
+            'number' => 'CANCELLED-STATS',
+            'status' => 'cancelled',
+            'recipient_name' => 'Buyer',
+            'phone' => '+639171234567',
+            'address_line' => '1 Market Street',
+            'city' => 'Manila',
+            'subtotal' => 900,
+            'shipping_amount' => 0,
+            'total' => 900,
+        ]);
+        $queries = [];
+        DB::listen(function (QueryExecuted $query) use (&$queries): void {
+            $queries[] = $query->sql;
+        });
+
+        $this->actingAs($administrator)->get(route('dashboard'))
+            ->assertOk()
+            ->assertViewHas('marketplaceStats', fn (array $stats): bool => $stats['gmv'] === 100.0 && $stats['orders'] === 1);
+
+        $this->assertCount(1, array_filter($queries, fn (string $sql): bool => str_contains($sql, 'from "orders"') && str_contains($sql, '"status" !=') && ! str_contains($sql, 'created_at')));
     }
 
     public function test_administrator_sees_live_moderation_counts_and_each_queue_type(): void

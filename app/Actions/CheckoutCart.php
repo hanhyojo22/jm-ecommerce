@@ -97,6 +97,7 @@ class CheckoutCart
                 'shipping_amount' => '0.00',
                 'total' => $total,
             ]);
+            $user->deliveryAddresses()->firstOrCreate($delivery);
 
             $lines->groupBy(fn (array $line): string => $line['product']->store_id)
                 ->each(function ($storeLines) use ($order): void {

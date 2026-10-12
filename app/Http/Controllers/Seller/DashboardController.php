@@ -47,7 +47,7 @@ class DashboardController extends Controller
                     'amount' => $salesByDay->get(now()->subDays($daysAgo)->toDateString(), 0),
                 ]);
             $canManageProducts = $this->hasRole($request, $tenant, ['owner', 'manager']);
-            $canManageOrders = $this->hasRole($request, $tenant, ['owner', 'manager']);
+            $canManageOrders = $canManageProducts;
             $storeSettingsUrl = $canManageProducts ? route('seller.store-settings.edit') : null;
 
             return response()->view('seller.dashboard', [
@@ -77,7 +77,7 @@ class DashboardController extends Controller
                     ['label' => 'Store profile', 'complete' => filled($store->description), 'href' => $storeSettingsUrl, 'action' => 'Edit details'],
                     ['label' => 'Store logo', 'complete' => filled($store->logo_path), 'href' => $storeSettingsUrl, 'action' => 'Upload logo'],
                     ['label' => 'Contact information', 'complete' => filled($store->phone) && filled($store->address_line) && filled($store->city), 'href' => $storeSettingsUrl, 'action' => 'Edit contact'],
-                    ['label' => 'First product', 'complete' => $store->products()->exists(), 'href' => $canManageProducts ? route('seller.products.create') : null, 'action' => 'Add product'],
+                    ['label' => 'First product', 'complete' => (int) $productMetrics->total_products > 0, 'href' => $canManageProducts ? route('seller.products.create') : null, 'action' => 'Add product'],
                 ],
             ]);
         } catch (QueryException $exception) {

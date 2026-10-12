@@ -81,33 +81,34 @@
                                 <select id="saved-address" @change="chooseAddress($event)" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink focus:border-brand focus:ring-brand">
                                     <option value="">Enter a new address</option>
                                     @foreach ($addresses as $address)
-                                        <option value="{{ $address->id }}">{{ $address->recipient_name }} · {{ $address->address_line }}, {{ $address->city }}</option>
+                                        <option value="{{ $address->id }}" @selected(! session()->hasOldInput() && $loop->first)>{{ $address->recipient_name }} · {{ $address->address_line }}, {{ $address->city }}</option>
                                     @endforeach
                                 </select>
                                 <a href="{{ route('delivery-addresses.index') }}" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">Manage delivery addresses</a>
                             </div>
                         @endif
                         <h3 class="mt-7 border-t border-line pt-6 text-xs font-bold uppercase tracking-[0.12em] text-muted">Delivery details</h3>
+                        <p class="mt-2 text-xs text-muted">After you place your order, we'll save this address for your next checkout.</p>
                         <div class="mt-5 grid gap-5 sm:grid-cols-2">
                             <div>
                                 <label for="recipient_name" class="text-sm font-semibold text-ink">Recipient name</label>
-                                <input id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" autocomplete="name" required :aria-invalid="errors.recipient_name || @js($errors->has('recipient_name')) ? 'true' : null" :aria-describedby="errors.recipient_name || @js($errors->has('recipient_name')) ? 'recipient_name-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <input id="recipient_name" name="recipient_name" value="{{ old('recipient_name', $preferredAddress?->recipient_name) }}" autocomplete="name" required :aria-invalid="errors.recipient_name || @js($errors->has('recipient_name')) ? 'true' : null" :aria-describedby="errors.recipient_name || @js($errors->has('recipient_name')) ? 'recipient_name-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
                                 <p id="recipient_name-error" x-show="errors.recipient_name || @js($errors->has('recipient_name'))" x-text="errors.recipient_name || @js($errors->first('recipient_name'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                             <div>
                                 <label for="phone" class="text-sm font-semibold text-ink">Mobile number</label>
-                                <input id="phone" name="phone" value="{{ old('phone') }}" type="tel" inputmode="tel" autocomplete="tel" placeholder="09171234567" required :aria-invalid="errors.phone || @js($errors->has('phone')) ? 'true' : null" :aria-describedby="errors.phone || @js($errors->has('phone')) ? 'phone-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <input id="phone" name="phone" value="{{ old('phone', $preferredAddress?->phone) }}" type="tel" inputmode="tel" autocomplete="tel" placeholder="09171234567" required :aria-invalid="errors.phone || @js($errors->has('phone')) ? 'true' : null" :aria-describedby="errors.phone || @js($errors->has('phone')) ? 'phone-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
                                 <p id="phone-error" x-show="errors.phone || @js($errors->has('phone'))" x-text="errors.phone || @js($errors->first('phone'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                             <div class="sm:col-span-2">
                                 <label for="address_line" class="text-sm font-semibold text-ink">Street address</label>
-                                <input id="address_line" name="address_line" value="{{ old('address_line') }}" autocomplete="street-address" required :aria-invalid="errors.address_line || @js($errors->has('address_line')) ? 'true' : null" :aria-describedby="errors.address_line || @js($errors->has('address_line')) ? 'address_line-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <input id="address_line" name="address_line" value="{{ old('address_line', $preferredAddress?->address_line) }}" autocomplete="street-address" required :aria-invalid="errors.address_line || @js($errors->has('address_line')) ? 'true' : null" :aria-describedby="errors.address_line || @js($errors->has('address_line')) ? 'address_line-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
                                 <p class="mt-1 text-xs leading-5 text-muted">Include barangay, province, and postal code.</p>
                                 <p id="address_line-error" x-show="errors.address_line || @js($errors->has('address_line'))" x-text="errors.address_line || @js($errors->first('address_line'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                             <div>
                                 <label for="city" class="text-sm font-semibold text-ink">City</label>
-                                <input id="city" name="city" value="{{ old('city') }}" autocomplete="address-level2" required :aria-invalid="errors.city || @js($errors->has('city')) ? 'true' : null" :aria-describedby="errors.city || @js($errors->has('city')) ? 'city-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <input id="city" name="city" value="{{ old('city', $preferredAddress?->city) }}" autocomplete="address-level2" required :aria-invalid="errors.city || @js($errors->has('city')) ? 'true' : null" :aria-describedby="errors.city || @js($errors->has('city')) ? 'city-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
                                 <p id="city-error" x-show="errors.city || @js($errors->has('city'))" x-text="errors.city || @js($errors->first('city'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                         </div>

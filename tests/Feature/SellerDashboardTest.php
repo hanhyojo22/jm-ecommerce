@@ -8,7 +8,9 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -95,6 +97,26 @@ class SellerDashboardTest extends TestCase
             ->assertViewHas('customerCount', 1)
             ->assertViewHas('totalOrders', 2)
             ->assertViewHas('salesHistory', fn ($history): bool => $history->count() === 30 && (float) $history->last()['amount'] === 100.0);
+    }
+
+    public function test_dashboard_reuses_role_and_product_counts(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 1, 'status' => 'active']);
+        $queries = [];
+        DB::listen(function (QueryExecuted $query) use (&$queries): void {
+            $queries[] = $query->sql;
+        });
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertViewHas('totalProducts', 1)
+            ->assertViewHas('canManageProducts', true)
+            ->assertViewHas('canManageOrders', true);
+
+        $roleQueries = array_filter($queries, fn (string $sql): bool => str_starts_with($sql, 'select exists(select * from "tenant_members"') && str_contains($sql, 'role'));
+        $this->assertLessThanOrEqual(3, count($roleQueries));
+        $this->assertCount(0, array_filter($queries, fn (string $sql): bool => str_starts_with($sql, 'select exists(select * from "products"')));
     }
 
     private function createSellerOrder(Store $store, User $buyer, string $number, string $status, int $total): void

@@ -139,6 +139,33 @@ class CheckoutTest extends TestCase
             ->assertDontSee('Continue to payment');
     }
 
+    public function test_checkout_saves_and_prefills_the_buyers_delivery_address(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
+        $this->assertDatabaseHas('delivery_addresses', ['user_id' => $customer->id, ...$this->delivery()]);
+
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+        $this->get(route('checkout.create'))
+            ->assertOk()
+            ->assertSee('value="Ava Buyer"', false)
+            ->assertSee('value="10 Market Street"', false);
+
+        $this->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
+        $this->assertSame(1, $customer->deliveryAddresses()->count());
+
+        $customer->deliveryAddresses()->delete();
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+        $this->get(route('checkout.create'))
+            ->assertOk()
+            ->assertSee('value="Ava Buyer"', false)
+            ->assertSee('value="10 Market Street"', false);
+    }
+
     public function test_checkout_uses_exact_totals_and_creates_order_snapshots(): void
     {
         config()->set('services.gmail', ['client_id' => 'test-client', 'client_secret' => 'test-secret', 'refresh_token' => 'test-refresh', 'from' => 'itservices@jmsolutionitservices.com']);
@@ -178,6 +205,7 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($customer)->post(route('checkout.store'), [...$this->delivery(), 'phone' => '123'])->assertSessionHasErrors('phone');
         $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('delivery_addresses', 0);
     }
 
     public function test_order_email_waits_for_gmail_credentials(): void

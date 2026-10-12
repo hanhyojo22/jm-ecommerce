@@ -27,11 +27,15 @@ class CheckoutController extends Controller
             fn (string $total, $item): string => bcadd($total, (string) $item->line_total, 2),
             '0.00',
         );
+        $addresses = $request->user()->deliveryAddresses()->latest()->get();
+        $preferredAddress = $addresses->first()
+            ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city']);
 
         return view('marketplace.checkout.create', [
             'cart' => $cart,
             'subtotal' => $subtotal,
-            'addresses' => $request->user()->deliveryAddresses()->latest()->get(),
+            'addresses' => $addresses,
+            'preferredAddress' => $preferredAddress,
         ]);
     }
 

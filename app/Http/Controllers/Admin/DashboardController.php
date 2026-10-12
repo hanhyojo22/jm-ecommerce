@@ -84,9 +84,14 @@ class DashboardController extends Controller
     /** @return array{gmv:float, orders:int, customers:int, activeSellers:int} */
     private function marketplaceStats(): array
     {
+        $orders = Order::query()
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('COALESCE(SUM(total), 0) as gmv, COUNT(*) as total_orders')
+            ->first();
+
         return [
-            'gmv' => (float) Order::query()->where('status', '!=', 'cancelled')->sum('total'),
-            'orders' => Order::query()->where('status', '!=', 'cancelled')->count(),
+            'gmv' => (float) $orders->gmv,
+            'orders' => (int) $orders->total_orders,
             'customers' => User::query()->where('account_type', 'buyer')->count(),
             'activeSellers' => Tenant::query()->where('status', 'active')->count(),
         ];
