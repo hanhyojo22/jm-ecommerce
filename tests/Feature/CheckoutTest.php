@@ -11,7 +11,9 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Services\GmailOrderMailer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CheckoutTest extends TestCase
@@ -130,7 +132,7 @@ class CheckoutTest extends TestCase
             ->assertOk()
             ->assertSee('Review order')
             ->assertSee('Edit address')
-            ->assertSee('Standard, free')
+            ->assertSee('Free within the Philippines')
             ->assertSee('Cash on delivery.')
             ->assertDontSee('Continue to delivery')
             ->assertDontSee('Continue to payment');
@@ -138,6 +140,11 @@ class CheckoutTest extends TestCase
 
     public function test_checkout_uses_exact_totals_and_creates_order_snapshots(): void
     {
+        config()->set('services.gmail', ['client_id' => 'test-client', 'client_secret' => 'test-secret', 'refresh_token' => 'test-refresh', 'from' => 'itservices@jmsolutionitservices.com']);
+        Http::fake([
+            'https://oauth2.googleapis.com/token' => Http::response(['access_token' => 'test-access-token']),
+            'https://gmail.googleapis.com/gmail/v1/users/me/messages/send' => Http::response(['id' => 'sent-message']),
+        ]);
         [$seller, $product] = $this->sellerProduct('19.99', 5);
         $customer = User::factory()->create(['email_verified_at' => now()]);
         $cart = Cart::create(['user_id' => $customer->id]);
@@ -157,6 +164,42 @@ class CheckoutTest extends TestCase
         ]);
         $this->assertSame(2, $product->refresh()->stock_quantity);
         $this->assertDatabaseMissing('cart_items', ['product_id' => $product->id]);
+        Http::assertSent(fn ($request): bool => str_contains($request->url(), '/messages/send') && str_contains(base64_decode(strtr($request['raw'], '-_', '+/')), 'PHP 59.97'));
+    }
+
+    public function test_checkout_rejects_invalid_mobile_number_before_creating_order(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), [...$this->delivery(), 'phone' => '123'])->assertSessionHasErrors('phone');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_order_email_waits_for_gmail_credentials(): void
+    {
+        Http::fake();
+        $buyer = User::factory()->make();
+        $mailer = new GmailOrderMailer;
+
+        $mailer->send($buyer, 'Order received', 'Your order is ready.');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_checkout_succeeds_when_gmail_api_is_unavailable(): void
+    {
+        config()->set('services.gmail', ['client_id' => 'test-client', 'client_secret' => 'test-secret', 'refresh_token' => 'test-refresh', 'from' => 'itservices@jmsolutionitservices.com']);
+        Http::fake(['https://oauth2.googleapis.com/token' => Http::response(['error' => 'temporarily_unavailable'], 503)]);
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
+        $this->assertDatabaseCount('orders', 1);
     }
 
     public function test_customer_selects_a_color_and_size_and_cancellation_restores_that_stock(): void

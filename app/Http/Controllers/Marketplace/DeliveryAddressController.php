@@ -52,7 +52,7 @@ class DeliveryAddressController extends Controller
     {
         return $request->validate([
             'recipient_name' => ['required', 'string', 'max:150'],
-            'phone' => ['required', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
             'address_line' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:100'],
         ]);

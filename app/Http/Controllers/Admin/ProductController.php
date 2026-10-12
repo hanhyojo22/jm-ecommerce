@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -98,6 +99,9 @@ class ProductController extends Controller
         DB::transaction(function () use ($request, $product, $data): void {
             $product = Product::query()->lockForUpdate()->findOrFail($product->id);
             $oldStatus = $product->status;
+            if ($data['status'] === 'active' && $oldStatus !== 'active' && (! filled($product->description) || $product->category_id === null || ! $product->images()->exists())) {
+                throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before activating this listing.']);
+            }
             $product->update(['status' => $data['status']]);
 
             AuditLog::query()->create([

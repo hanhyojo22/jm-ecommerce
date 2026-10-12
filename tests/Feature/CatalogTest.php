@@ -19,6 +19,19 @@ class CatalogTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_product_page_exposes_search_metadata_for_a_published_listing(): void
+    {
+        $product = $this->product(['description' => 'A useful canvas tote.', 'price' => '19.99']);
+        $product->images()->create(['path' => 'products/tote.jpg', 'sort_order' => 0]);
+
+        $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
+            ->assertOk()
+            ->assertSee('<meta name="description" content="A useful canvas tote.">', false)
+            ->assertSee('<link rel="canonical" href="'.route('catalog.show', [$product->store->slug, $product->slug]).'">', false)
+            ->assertSee('application/ld+json')
+            ->assertSee('InStock');
+    }
+
     public function test_homepage_shows_categories_and_only_public_products(): void
     {
         $category = Category::create(['name' => 'Home essentials', 'slug' => 'home-essentials', 'is_active' => true]);

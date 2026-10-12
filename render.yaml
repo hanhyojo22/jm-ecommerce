@@ -85,6 +85,14 @@ services:
         value: stderr
       - key: MAIL_MAILER
         value: log
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      - key: GMAIL_FROM_ADDRESS
+        value: itservices@jmsolutionitservices.com
 
   - type: web
     name: jmmart-chat-reverb

@@ -1,6 +1,27 @@
+@php
+    $productUrl = route('catalog.show', [$product->store->slug, $product->slug]);
+    $metaDescription = str(strip_tags($product->description ?: $product->name.' from '.$product->store->name.' on JMMart'))->squish()->limit(155)->toString();
+    $productSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Product',
+        'name' => $product->name,
+        'description' => $metaDescription,
+        'image' => $product->images->map(fn ($image) => url(Storage::disk('product_images')->url($image->path)))->all(),
+        'sku' => $product->sku,
+        'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand] : null,
+        'offers' => [
+            '@type' => 'Offer',
+            'url' => $productUrl,
+            'priceCurrency' => 'PHP',
+            'price' => $product->price,
+            'availability' => $product->stock_quantity > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            'seller' => ['@type' => 'Organization', 'name' => $product->store->name],
+        ],
+    ];
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"><meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}"><meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}"><meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">@auth('clerk')<meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">@endauth<title>{{ $product->name }} | JMMart</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"><meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}"><meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}"><meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">@auth('clerk')<meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">@endauth<title>{{ $product->name }} | JMMart</title><meta name="description" content="{{ $metaDescription }}"><link rel="canonical" href="{{ $productUrl }}">@if($product->images->isNotEmpty())<script type="application/ld+json">{!! Illuminate\Support\Js::encode($productSchema) !!}</script>@endif@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
 <body class="min-h-dvh bg-canvas font-sans text-ink antialiased">
     <x-marketplace.header />
     @php($average = (float) ($product->published_reviews_avg_rating ?? 0))
@@ -8,6 +29,12 @@
     <main class="mx-auto max-w-[1320px] px-[18px] pb-10 pt-4 sm:px-8">
         <nav aria-label="Breadcrumb" class="mb-5 flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] text-muted"><a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Home</a><span aria-hidden="true">/</span><a href="{{ route('catalog.index') }}" class="shrink-0 font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Marketplace</a><span aria-hidden="true">/</span><a href="{{ route('catalog.store', $product->store->slug) }}" class="max-w-40 shrink-0 truncate font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->store->name }}</a><span aria-hidden="true">/</span><span class="min-w-0 truncate font-semibold text-ink">{{ $product->name }}</span></nav>
         @if($errors->any())<div class="mb-6 flex items-start justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{{ $errors->first() }}</span><a href="#purchase" class="shrink-0 font-semibold underline underline-offset-4">Try again</a></div>@endif
+
+        <div class="mb-5 lg:hidden">
+            <p class="text-xs font-bold uppercase {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }}">{{ $product->stock_quantity > 0 ? 'In stock — '.number_format($product->stock_quantity).' available' : 'Currently sold out' }}</p>
+            <h1 class="mt-2 text-balance text-2xl font-bold leading-tight text-ink">{{ $product->name }}</h1>
+            <p class="mt-2 text-2xl font-bold tabular-nums text-ink">₱{{ number_format($product->price, 2) }}@if ($isOnSale) <del class="ml-2 text-base font-normal text-muted">₱{{ number_format($product->compare_at_price, 2) }}</del>@endif</p>
+        </div>
 
         <div x-data="{ selected: 0, zoomTrigger: null, quantity: 1, max: {{ $product->variants->isNotEmpty() ? 0 : $product->stock_quantity }}, chooseVariant(stock) { this.max = stock; this.quantity = 1 } }" class="grid items-start gap-9 lg:grid-cols-[minmax(0,55fr)_minmax(0,45fr)]">
             <section class="min-w-0" aria-label="Product images">
@@ -60,8 +87,8 @@
                 </div>
             </section>
             <section class="min-w-0">
-                <p class="text-xs font-bold uppercase tracking-[0.03em] {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }}">{{ $product->stock_quantity > 0 ? 'In stock — '.number_format($product->stock_quantity).' available' : 'Currently sold out' }}</p>
-                <h1 class="mt-2 text-balance text-[30px] font-bold leading-tight tracking-[-0.02em] text-ink">{{ $product->name }}</h1>
+                <p class="hidden text-xs font-bold uppercase tracking-[0.03em] lg:block {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }}">{{ $product->stock_quantity > 0 ? 'In stock — '.number_format($product->stock_quantity).' available' : 'Currently sold out' }}</p>
+                <h1 class="mt-2 hidden text-balance text-[30px] font-bold leading-tight tracking-[-0.02em] text-ink lg:block">{{ $product->name }}</h1>
                 <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-muted">
                     @if ($product->published_reviews_count)
                         <a href="#reviews" class="font-semibold text-ink hover:text-brand"><span class="text-amber-500" aria-hidden="true">★</span> {{ number_format($average, 1) }} <span class="font-normal text-muted">· {{ number_format($product->published_reviews_count) }} {{ Str::plural('review', $product->published_reviews_count) }}</span></a>
@@ -72,7 +99,7 @@
                     <span>Sold by <a href="{{ route('catalog.store', $product->store->slug) }}" class="font-semibold text-brand hover:text-brand-hover">{{ $product->store->name }}</a></span>
                 </div>
                 @if ($product->brand || $product->condition)<p class="mt-2 text-sm text-muted">{{ $product->brand }}@if ($product->brand && $product->condition) · @endif{{ ucfirst($product->condition ?? '') }}</p>@endif
-                <div class="mt-3 flex flex-wrap items-baseline gap-x-3"><p class="text-[32px] font-bold tabular-nums tracking-[-0.03em]">₱{{ number_format($product->price, 2) }}</p>@if ($isOnSale)<del class="text-base tabular-nums text-muted">₱{{ number_format($product->compare_at_price, 2) }}</del><span class="self-center rounded-[7px] bg-danger px-2 py-0.5 text-xs font-bold text-white">Sale</span>@endif</div>
+                <div class="mt-3 hidden flex-wrap items-baseline gap-x-3 lg:flex"><p class="text-[32px] font-bold tabular-nums tracking-[-0.03em]">₱{{ number_format($product->price, 2) }}</p>@if ($isOnSale)<del class="text-base tabular-nums text-muted">₱{{ number_format($product->compare_at_price, 2) }}</del><span class="self-center rounded-[7px] bg-danger px-2 py-0.5 text-xs font-bold text-white">Sale</span>@endif</div>
                 <p class="mt-2 text-sm font-medium text-success">Free shipping · Cash on delivery</p>
                 @if (! Auth::check() || in_array(Auth::user()->account_type, ['buyer', 'seller'], true))
                 <div id="purchase" class="sticky bottom-0 z-20 -mx-[18px] mt-4 scroll-mt-24 border-t border-line bg-canvas/95 px-[18px] py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">

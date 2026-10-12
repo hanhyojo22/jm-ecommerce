@@ -26,6 +26,11 @@ class SellerOrder extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function issues(): HasMany
+    {
+        return $this->hasMany(OrderIssue::class);
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);

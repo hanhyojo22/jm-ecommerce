@@ -100,7 +100,7 @@
             <aside class="space-y-6 lg:sticky lg:top-6 lg:h-fit">
                 <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm">
                     <h2 class="font-semibold text-ink">Listing settings</h2>
-                    <p class="mt-1 text-sm text-muted">{{ $editing ? 'Administrators control whether a listing can be activated.' : 'New listings are saved as drafts and require administrator approval before they appear in the marketplace.' }}</p>
+                    <p class="mt-1 text-sm text-muted">{{ $editing ? 'Administrators control whether a listing can be activated.' : 'New listings are saved as drafts and require administrator approval before they appear in the marketplace.' }} Add a category, description, and photo before requesting activation.</p>
                     <div class="mt-4 space-y-2">
                         @foreach (['draft' => 'Draft', 'active' => 'Active', 'inactive' => 'Inactive'] as $value => $label)
                             @if ($editing && ($value !== 'active' || $product->status === 'active'))

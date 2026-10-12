@@ -1,6 +1,35 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
+test('catalog filters stay out of the mobile product flow until opened', async ({ page }, testInfo) => {
+    await page.goto('/search');
+    const panel = page.locator('#catalog-filters');
+    const button = page.locator('#product-results button[aria-controls="catalog-filters"]').last();
+
+    if (testInfo.project.name === 'desktop-chromium') {
+        await expect(panel).toBeVisible();
+        await expect(button).toBeHidden();
+    } else {
+        await expect(panel).toBeHidden();
+        await expect(button).toBeVisible();
+        await button.click();
+        await expect(panel).toBeVisible();
+        await panel.getByRole('button', { name: /close filters/i }).click();
+        await expect(panel).toBeHidden();
+    }
+});
+
+test('mobile product title and price appear before the gallery', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === 'desktop-chromium', 'Mobile layout only');
+    await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+    const title = page.getByRole('heading', { name: 'QA Canvas Tote', level: 1 });
+    const gallery = page.getByRole('region', { name: 'Product images' });
+    await expect(title).toBeVisible();
+    const titleBox = await title.boundingBox();
+    const galleryBox = await gallery.boundingBox();
+    expect(titleBox.y + titleBox.height).toBeLessThan(galleryBox.y);
+});
+
 test('seller adds color and size options in the product form at each viewport', async ({ browser }, testInfo) => {
     const { context, page } = await openAsRole(browser, 'seller');
 

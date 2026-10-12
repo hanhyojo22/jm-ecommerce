@@ -56,11 +56,11 @@ class SellerOrderController extends Controller
 
         $sellerOrder = $tenant->sellerOrders()
             ->whereKey($sellerOrder)
-            ->with(['items.product.images', 'order.payment'])
+            ->with(['items.product.images', 'order.payment', 'issues'])
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',
-            $canManageOrders ? UpdateSellerOrderStatus::transitionsFor($sellerOrder->status) : [],
+            $canManageOrders ? ($sellerOrder->issues->contains(fn ($issue) => $issue->status === 'open' && $issue->type === 'cancellation') ? ['cancelled'] : UpdateSellerOrderStatus::transitionsFor($sellerOrder->status)) : [],
         );
 
         return view('seller.orders.show', compact('sellerOrder', 'canManageOrders'));

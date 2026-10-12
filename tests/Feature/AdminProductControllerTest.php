@@ -56,7 +56,9 @@ class AdminProductControllerTest extends TestCase
     public function test_administrator_can_moderate_a_product_and_record_the_reason(): void
     {
         $administrator = User::factory()->administrator()->create();
-        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'draft');
+        $category = Category::create(['name' => 'Fashion', 'slug' => 'fashion', 'is_active' => true]);
+        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'draft', $category->id, 'A durable market tote.');
+        $product->images()->create(['path' => 'products/tote.jpg', 'position' => 0]);
 
         $this->actingAs($administrator)->patch(route('admin.products.moderate', $product), [
             'status' => 'active',
@@ -73,6 +75,19 @@ class AdminProductControllerTest extends TestCase
             'new_values->status' => 'active',
             'new_values->reason' => 'Listing passed the product review.',
         ]);
+    }
+
+    public function test_administrator_cannot_activate_an_incomplete_listing(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'draft');
+
+        $this->actingAs($administrator)->patch(route('admin.products.moderate', $product), [
+            'status' => 'active',
+            'reason' => 'This listing looks ready to sell.',
+        ])->assertSessionHasErrors(['status' => 'Add a category, description, and product photo before activating this listing.']);
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'draft']);
     }
 
     public function test_non_administrators_cannot_moderate_a_product(): void

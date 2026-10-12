@@ -354,6 +354,21 @@ class SellerProductTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.updated', 'entity_id' => $product->id]);
     }
 
+    public function test_seller_cannot_remove_required_details_from_a_complete_active_listing(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $category = Category::create(['name' => 'Bags', 'slug' => 'bags', 'is_active' => true]);
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'category_id' => $category->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'description' => 'A durable tote.', 'price' => '299.00', 'stock_quantity' => 2, 'status' => 'active']);
+        $product->images()->create(['path' => 'products/tote.jpg', 'position' => 0]);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Canvas Tote', 'sku' => 'TOTE-001', 'description' => '', 'category_id' => $category->id,
+            'price' => '299.00', 'stock_quantity' => 2, 'status' => 'active',
+        ])->assertSessionHasErrors('status');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'description' => 'A durable tote.', 'status' => 'active']);
+    }
+
     public function test_seller_cannot_activate_a_draft_product(): void
     {
         [$owner, $tenant, $store] = $this->seller();

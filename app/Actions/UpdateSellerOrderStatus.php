@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\User;
 use App\Queries\TopProductQuery;
+use App\Services\GmailOrderMailer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -38,6 +39,10 @@ class UpdateSellerOrderStatus
                 throw ValidationException::withMessages([
                     'status' => 'This order cannot transition to that status.',
                 ]);
+            }
+
+            if ($status !== 'cancelled' && $sellerOrder->issues()->where('status', 'open')->where('type', 'cancellation')->exists()) {
+                throw ValidationException::withMessages(['status' => 'A cancellation request is awaiting review.']);
             }
 
             $previousStatus = $sellerOrder->status;
@@ -75,6 +80,19 @@ class UpdateSellerOrderStatus
         });
 
         TopProductQuery::forgetCachedRankings();
+
+        DB::afterCommit(function () use ($updatedSellerOrder, $status): void {
+            try {
+                $updatedSellerOrder->load('order.user', 'store');
+                app(GmailOrderMailer::class)->send(
+                    $updatedSellerOrder->order->user,
+                    "JMMart order {$updatedSellerOrder->order->number} update",
+                    "{$updatedSellerOrder->store->name} marked its part of order #{$updatedSellerOrder->order->number} as {$status}.\n\nView your order: ".route('orders.show', $updatedSellerOrder->order_id),
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        });
 
         return $updatedSellerOrder;
     }

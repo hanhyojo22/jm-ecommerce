@@ -9,7 +9,7 @@ test('seller sees and updates only products from their own store', async ({ brow
         await expect(page.getByRole('table').getByText('QA Canvas Tote')).toBeVisible();
         await expect(page.getByRole('table').getByText('₱19.99', { exact: true })).toBeVisible();
         await expect(page.getByText('Other Seller QA Product')).toHaveCount(0);
-        await page.getByRole('table').getByRole('link', { name: 'Edit' }).click();
+        await page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByRole('link', { name: 'Edit' }).click();
         await page.getByLabel('Stock quantity').fill('24');
         await page.getByRole('button', { name: 'Save changes' }).click();
 
@@ -95,6 +95,7 @@ test('seller can persist overview visibility preferences and restore defaults', 
 
     try {
         await page.goto('/seller');
+        await page.getByRole('button', { name: 'Accept All' }).click();
         await page.evaluate(() => {
             const dashboard = document.querySelector('[data-seller-dashboard]');
             window.localStorage.setItem(`seller-dashboard:${dashboard.dataset.dashboardKey}`, 'null');

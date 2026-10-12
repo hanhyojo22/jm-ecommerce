@@ -2,6 +2,35 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { openAsRole } from './support/role-page.js';
 
+test('buyer requests a return and admin resolves it', async ({ browser }) => {
+    const buyer = await openAsRole(browser, 'customer');
+
+    try {
+        await buyer.page.goto('/orders');
+        await buyer.page.locator('article').filter({ hasText: 'QA-REVIEW-001' }).getByRole('link', { name: 'View order' }).click();
+        await expect(buyer.page.getByRole('heading', { name: 'Need help with this order?' })).toBeVisible();
+        await buyer.page.getByLabel('Request type').selectOption('return_refund');
+        await buyer.page.getByLabel('Details').fill('The item arrived damaged and I need help.');
+        await buyer.page.getByRole('button', { name: 'Send request' }).click();
+        await expect(buyer.page.getByText('The item arrived damaged and I need help.')).toBeVisible();
+        await expect(buyer.page.getByText('Return Refund · Open')).toBeVisible();
+
+        const admin = await openAsRole(browser, 'admin');
+        try {
+            await admin.page.goto('/admin/order-issues');
+            await expect(admin.page.getByText('The item arrived damaged and I need help.')).toBeVisible();
+            await admin.page.getByLabel('Response to buyer').fill('We will contact you to arrange a return.');
+            await admin.page.getByLabel('Decision').selectOption('resolved');
+            await admin.page.getByRole('button', { name: 'Save decision' }).click();
+            await expect(admin.page.getByRole('status').getByText('Order request updated.')).toBeVisible();
+        } finally {
+            await admin.context.close();
+        }
+    } finally {
+        await buyer.context.close();
+    }
+});
+
 async function rejectOptionalCookies(page) {
     await page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
     await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);

@@ -35,7 +35,7 @@
                     const address = document.getElementById('address_line').value.trim();
                     const city = document.getElementById('city').value.trim();
                     if (!name) { this.errors.recipient_name = 'Enter the recipient name.'; }
-                    if (!phone) { this.errors.phone = 'Enter a mobile number.'; }
+                    if (!/^(\+63|0)9\d{9}$/.test(phone)) { this.errors.phone = 'Enter a Philippine mobile number, such as 09171234567.'; }
                     if (!address) { this.errors.address_line = 'Enter the street address.'; }
                     if (!city) { this.errors.city = 'Enter the city.'; }
                     if (Object.keys(this.errors).length) {
@@ -78,7 +78,7 @@
                     {{-- Step 1: Shipping --}}
                     <section x-show="step === 1" class="rounded-[14px] border border-line bg-surface p-5 sm:p-8" aria-labelledby="step-1-heading" data-od-id="ship">
                         <h3 id="step-1-heading" tabindex="-1" class="text-lg font-semibold text-ink">1 · Shipping address</h3>
-                        <p class="mt-1 text-sm leading-6 text-muted">Enter the address where your order should be delivered.</p>
+                        <p class="mt-1 text-sm leading-6 text-muted">Enter a complete Philippine delivery address, including barangay, city, province, and postal code in the street address field. Your seller will confirm delivery availability and timing.</p>
                         @if ($addresses->isNotEmpty())
                             <div class="mt-5">
                                 <label for="saved-address" class="text-sm font-semibold text-ink">Use a saved address</label>
@@ -99,7 +99,7 @@
                             </div>
                             <div class="sm:col-span-2">
                                 <label for="phone" class="text-sm font-semibold text-ink">Mobile number</label>
-                                <input id="phone" name="phone" value="{{ old('phone') }}" type="tel" inputmode="tel" autocomplete="tel" required :aria-invalid="errors.phone || @js($errors->has('phone')) ? 'true' : null" :aria-describedby="errors.phone || @js($errors->has('phone')) ? 'phone-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
+                                <input id="phone" name="phone" value="{{ old('phone') }}" type="tel" inputmode="tel" autocomplete="tel" placeholder="09171234567" required :aria-invalid="errors.phone || @js($errors->has('phone')) ? 'true' : null" :aria-describedby="errors.phone || @js($errors->has('phone')) ? 'phone-error' : null" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand" />
                                 <p id="phone-error" x-show="errors.phone || @js($errors->has('phone'))" x-text="errors.phone || @js($errors->first('phone'))" x-cloak class="mt-2 text-sm font-medium text-danger" role="alert"></p>
                             </div>
                             <div class="sm:col-span-2">
@@ -132,7 +132,7 @@
                             <p class="text-muted"><span x-text="shipping.address_line"></span>, <span x-text="shipping.city"></span></p>
                         </div>
                         <div class="mt-4 rounded-[10px] border border-line p-4 text-sm leading-6">
-                            <p><span class="font-semibold text-ink">Delivery:</span> Standard, free. Each seller ships their items separately.</p>
+                            <p><span class="font-semibold text-ink">Delivery:</span> Free within the Philippines where the seller can deliver. Each seller confirms availability and timing after receiving the order.</p>
                             <p><span class="font-semibold text-ink">Payment:</span> Cash on delivery.</p>
                         </div>
                         <div class="mt-6 space-y-5">

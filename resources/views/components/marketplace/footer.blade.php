@@ -39,6 +39,8 @@
                     @endif
                     <a href="{{ route('cart.index') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Cart</a>
                     <a href="{{ route('checkout.create') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Checkout</a>
+                    <a href="{{ route('returns') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Returns &amp; refunds</a>
+                    <a href="mailto:itservices@jmsolutionitservices.com" class="block min-h-10 break-all py-2 text-ink transition hover:text-brand">Contact support</a>
                 </div>
             </nav>
             <nav aria-label="Company">
@@ -55,7 +57,7 @@
             </nav>
         </div>
         <div class="flex flex-col gap-2 border-t border-line py-4 text-[13px] text-muted sm:flex-row sm:items-center sm:justify-between">
-            <span>© {{ date('Y') }} JMMart · <a href="{{ route('privacy-policy') }}" class="underline hover:text-brand">Privacy Policy</a> · <a href="{{ route('cookie-policy') }}" class="underline hover:text-brand">Cookie Policy</a> · <button type="button" data-cookie-preferences-open class="underline hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Preferences</button></span>
+            <span>© {{ date('Y') }} JMMart · <a href="{{ route('terms') }}" class="underline hover:text-brand">Terms</a> · <a href="{{ route('privacy-policy') }}" class="underline hover:text-brand">Privacy Policy</a> · <a href="{{ route('cookie-policy') }}" class="underline hover:text-brand">Cookie Policy</a> · <button type="button" data-cookie-preferences-open class="underline hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Preferences</button></span>
             <span>Customer app · Seller app · Admin</span>
         </div>
     </div>

@@ -157,6 +157,11 @@ class ProductController extends Controller
                     abort(403, 'Only an administrator can activate a listing.');
                 }
 
+                $wasComplete = filled($product->description) && $product->category_id !== null && $product->images()->exists();
+                if ($data['status'] === 'active' && $wasComplete && (! filled($data['description'] ?? null) || empty($data['category_id']))) {
+                    throw ValidationException::withMessages(['status' => 'An active listing needs a category, description, and product photo.']);
+                }
+
                 $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
                 $product->update($data);
 

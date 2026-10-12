@@ -224,12 +224,12 @@
                 <div class="{{ $isListing && ! $sellerStore ? 'mt-0 gap-7' : 'mt-6 gap-6' }} grid grid-cols-[minmax(min(354px,calc(100vw-36px)),1fr)] items-start {{ $showFiltersSidebar ? ($isListing ? 'min-[1021px]:grid-cols-[272px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]') : '' }}">
                     {{-- Filters sidebar for marketplace listings and storefronts --}}
                     @if ($showFiltersSidebar)
-                    <aside id="catalog-filters" x-ref="filtersPanel" tabindex="-1" @if ($sellerStore) x-cloak x-show="filtersOpen" x-on:keydown.escape.stop="closeFilters()" @endif class="scroll-mt-4 rounded-[14px] border border-line bg-white p-5 {{ $isListing ? 'min-[1021px]:mt-[9.5px] min-[1021px]:sticky min-[1021px]:top-[130px]' : 'lg:sticky lg:top-[130px] lg:!block' }}" aria-label="Product filters">
+                    <aside id="catalog-filters" x-ref="filtersPanel" tabindex="-1" x-cloak x-show="filtersOpen" x-on:keydown.escape.stop="closeFilters()" class="scroll-mt-4 rounded-[14px] border border-line bg-white p-5 {{ $isListing ? 'min-[1021px]:!block min-[1021px]:mt-[9.5px] min-[1021px]:sticky min-[1021px]:top-[130px]' : 'lg:sticky lg:top-[130px] lg:!block' }}" aria-label="Product filters">
                         <div class="flex items-center justify-between">
                             <h3 class="text-[15px] font-bold leading-[1.55]">Filters</h3>
                             <div class="flex items-center gap-3">
                                 <a href="{{ $clearAllUrl }}" class="inline-flex min-h-6 items-center text-[13px] leading-[1.55] font-medium text-brand hover:text-brand-hover">Clear all</a>
-                                @if ($sellerStore)<button type="button" @click="closeFilters()" class="inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-ink lg:hidden" aria-label="Close filters">×</button>@endif
+                                <button type="button" @click="closeFilters()" class="inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-ink {{ $isListing ? 'min-[1021px]:hidden' : 'lg:hidden' }}" aria-label="Close filters">×</button>
                             </div>
                         </div>
                         @if ($categories->count() > 1)
@@ -359,7 +359,7 @@
                                 <p class="self-center text-sm text-muted" role="status">{{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
                             @endif
                             <div class="flex flex-wrap items-center gap-3 sm:ml-auto">
-                                @if ($sellerStore)<button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold lg:hidden">Filters</button>@endif
+                                @if ($showFiltersSidebar)<button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold {{ $isListing ? 'min-[1021px]:hidden' : 'lg:hidden' }}">Filters</button>@endif
                                 @if ($sellerStore && $categories->count() > 1)
                                     <button id="categories" type="button" @click="openCategories($event)" class="inline-flex min-h-11 scroll-mt-40 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold lg:hidden">Categories</button>
                                 @endif

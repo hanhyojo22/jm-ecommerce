@@ -51,6 +51,13 @@ return [
         'auth_key' => env('PLAYWRIGHT_AUTH_KEY'),
     ],
 
+    'gmail' => [
+        'client_id' => env('GMAIL_CLIENT_ID'),
+        'client_secret' => env('GMAIL_CLIENT_SECRET'),
+        'refresh_token' => env('GMAIL_REFRESH_TOKEN'),
+        'from' => env('GMAIL_FROM_ADDRESS', 'itservices@jmsolutionitservices.com'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
