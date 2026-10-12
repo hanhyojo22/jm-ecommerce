@@ -1,4 +1,4 @@
-<section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6" aria-labelledby="order-help-heading" x-data="{ sellerOrder: @js(old('seller_order_id', $order->sellerOrders->first(fn ($sellerOrder) => ! $sellerOrder->issues->contains('status', 'open'))?->id)) }">
+<section id="order-help" class="rounded-[18px] border border-line bg-surface p-5 sm:p-6" aria-labelledby="order-help-heading" x-data="{ sellerOrder: @js(old('seller_order_id', $order->sellerOrders->first(fn ($sellerOrder) => ! $sellerOrder->issues->contains('status', 'open'))?->id)) }">
     <h2 id="order-help-heading" class="text-lg font-semibold text-ink">Need help with this order?</h2>
     <p class="mt-1 text-sm text-muted">Send a request to JMMart support. We review each request and reply here.</p>
     @foreach($order->sellerOrders as $sellerOrder)

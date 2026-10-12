@@ -13,7 +13,7 @@ class CheckoutController extends Controller
 {
     public function create(Request $request): RedirectResponse|View
     {
-        $cart = $request->user()->cart()->with(['items.product.store', 'items.variant'])->first();
+        $cart = $request->user()->cart()->with(['items.product.store', 'items.product.images', 'items.variant'])->first();
 
         if ($cart === null || $cart->items->isEmpty()) {
             return to_route('cart.index')->with('status', 'Your cart is empty. Add a product before checking out.');
