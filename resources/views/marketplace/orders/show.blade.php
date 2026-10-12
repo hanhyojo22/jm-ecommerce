@@ -50,7 +50,7 @@
                     <dl class="mt-5 space-y-4 text-sm">
                         <div class="flex justify-between gap-4"><dt class="text-muted">Items</dt><dd class="tabular-nums text-ink">₱{{ number_format($order->subtotal, 2) }}</dd></div>
                         <div class="flex justify-between gap-4"><dt class="text-muted">Shipping</dt><dd class="font-semibold tabular-nums text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd></div>
-                        <div class="flex items-baseline justify-between gap-4 border-t border-line pt-5"><dt class="font-semibold text-ink">Total</dt><dd class="text-2xl font-bold tracking-[-0.04em] tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</dd></div>
+                        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 border-t border-line pt-5"><dt class="font-semibold text-ink">Total</dt><dd class="whitespace-nowrap text-xl font-bold tracking-[-0.04em] tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</dd></div>
                     </dl>
                     <div class="mt-5 border-t border-line pt-5">
                         <p class="text-sm font-semibold text-ink">Payment</p>
