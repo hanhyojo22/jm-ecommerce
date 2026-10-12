@@ -8,11 +8,15 @@ use App\Auth\ClerkUserResolver;
 use App\Models\Category;
 use App\Models\Conversation;
 use App\Models\Product;
+use App\Models\Store;
+use App\Models\Tenant;
+use App\Queries\CatalogQuery;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
@@ -69,6 +73,33 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        $forgetPublicFacets = static function (): void {
+            DB::afterCommit(static function (): void {
+                CatalogQuery::forgetCachedPublicFacets();
+            });
+        };
+
+        Product::saved(static function (Product $product) use ($forgetPublicFacets): void {
+            if ($product->wasRecentlyCreated || $product->wasChanged(['tenant_id', 'store_id', 'category_id', 'brand', 'status', 'deleted_at'])) {
+                $forgetPublicFacets();
+            }
+        });
+        Product::deleted($forgetPublicFacets);
+        Store::saved(static function (Store $store) use ($forgetPublicFacets): void {
+            if ($store->wasRecentlyCreated || $store->wasChanged(['tenant_id', 'status', 'deleted_at'])) {
+                $forgetPublicFacets();
+            }
+        });
+        Store::deleted($forgetPublicFacets);
+        Tenant::saved(static function (Tenant $tenant) use ($forgetPublicFacets): void {
+            if ($tenant->wasRecentlyCreated || $tenant->wasChanged(['status', 'deleted_at'])) {
+                $forgetPublicFacets();
+            }
+        });
+        Tenant::deleted($forgetPublicFacets);
+        Category::saved($forgetPublicFacets);
+        Category::deleted($forgetPublicFacets);
 
         View::composer('components.marketplace.header', function (ViewInstance $view): void {
             $user = request()->user();

@@ -5,14 +5,25 @@ namespace App\Queries;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CatalogQuery
 {
+    private const PUBLIC_FACETS_CACHE_KEY = 'marketplace.catalog.public-facets.v1';
+
+    private const PUBLIC_FACETS_CACHE_SECONDS = 300;
+
+    public static function forgetCachedPublicFacets(): void
+    {
+        Cache::forget(self::PUBLIC_FACETS_CACHE_KEY);
+    }
+
     /**
      * @param  array{
      *     q?: string|null,
@@ -81,11 +92,19 @@ class CatalogQuery
             'newest', 'relevance' => $products->latest(),
         };
 
-        $categoryCounts = (clone $categoryProducts)
-            ->select('category_id', DB::raw('count(*) as product_count'))
-            ->whereNotNull('category_id')
-            ->groupBy('category_id')
-            ->pluck('product_count', 'category_id');
+        if ($seller === null) {
+            $facets = self::cachedPublicFacets();
+            $categoryCounts = collect($facets['category_counts']);
+            $brands = collect($facets['brands']);
+        } else {
+            $categoryCounts = (clone $categoryProducts)
+                ->select('category_id', DB::raw('count(*) as product_count'))
+                ->whereNotNull('category_id')
+                ->groupBy('category_id')
+                ->pluck('product_count', 'category_id');
+            $brands = (clone $categoryProducts)->whereNotNull('brand')->where('brand', '!=', '')
+                ->distinct()->orderBy('brand')->pluck('brand');
+        }
         $categories = Category::query()
             ->where('is_active', true)
             ->when($seller, fn (Builder $query) => $query->whereKey($categoryCounts->keys()))
@@ -96,7 +115,43 @@ class CatalogQuery
         return [
             'products' => $products->paginate(12)->withQueryString(),
             'categories' => $categories,
-            'brands' => (clone $categoryProducts)->whereNotNull('brand')->where('brand', '!=', '')->distinct()->orderBy('brand')->pluck('brand'),
+            'brands' => $brands,
+        ];
+    }
+
+    /** @return array{category_counts: array<string, int>, brands: list<string>} */
+    private static function cachedPublicFacets(): array
+    {
+        $facets = Cache::get(self::PUBLIC_FACETS_CACHE_KEY);
+
+        if (is_array($facets)) {
+            return $facets;
+        }
+
+        try {
+            return Cache::lock(self::PUBLIC_FACETS_CACHE_KEY.'.lock', 10)->block(2, fn (): array => Cache::remember(
+                self::PUBLIC_FACETS_CACHE_KEY,
+                self::PUBLIC_FACETS_CACHE_SECONDS,
+                self::loadPublicFacets(...),
+            ));
+        } catch (LockTimeoutException) {
+            return self::loadPublicFacets();
+        }
+    }
+
+    /** @return array{category_counts: array<string, int>, brands: list<string>} */
+    private static function loadPublicFacets(): array
+    {
+        $publicProducts = self::publishedProducts();
+
+        return [
+            'category_counts' => (clone $publicProducts)
+                ->select('category_id', DB::raw('count(*) as product_count'))
+                ->whereNotNull('category_id')
+                ->groupBy('category_id')
+                ->pluck('product_count', 'category_id')->all(),
+            'brands' => (clone $publicProducts)->whereNotNull('brand')->where('brand', '!=', '')
+                ->distinct()->orderBy('brand')->pluck('brand')->all(),
         ];
     }
 
