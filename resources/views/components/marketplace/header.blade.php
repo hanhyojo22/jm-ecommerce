@@ -110,35 +110,40 @@
                             <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
                             <span class="hidden {{ $isSellerWorkspace ? 'lg:inline' : 'min-[641px]:inline' }}">Hi, {{ Str::of($user->name)->before(' ') }}</span>
                         </button>
-                        <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-[14px] border border-line bg-white p-2 shadow-[0_12px_28px_rgba(15,23,42,.10)]">
-                            <div class="min-w-0 border-b border-line px-3 py-3"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
-                            <div class="space-y-1 py-2">
-                                <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My account</a>
+                        <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-[16px] border border-line bg-white p-2 shadow-[0_16px_36px_rgba(15,23,42,.14)]">
+                            <div class="flex min-w-0 items-center gap-3 px-2 py-3">
+                                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-bold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
+                                <div class="min-w-0"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
+                            </div>
+                            <nav aria-label="Account links" class="border-t border-line py-1">
                                 @if ($isBuyer && ! $isSellerWorkspace)
                                     <a href="{{ route('orders.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
-                                    <a href="{{ route('reviews.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
-                                    <a href="{{ route('delivery-addresses.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Delivery Addresses</a>
                                 @endif
                                 @if ($canUseMessages)
                                     <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
                                 @endif
+                                <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My account</a>
                                 @if ($user->account_type === 'seller' && ! $sellerTenant)
-                                    <a href="{{ route('seller-application.create') }}" class="flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>{{ $sellerEntry }}</a>
+                                    <a href="{{ route('seller-application.create') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">{{ $sellerEntry }}</a>
                                 @endif
                                 @if ($user->isPlatformAdministrator())
                                     <a href="{{ route('dashboard') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Admin workspace</a>
                                 @endif
-                            </div>
+                            </nav>
                             @if ($sellerTenant)
-                                <div class="border-y border-line py-2">
+                                <div class="border-t border-line py-2">
                                     <form method="POST" action="{{ route('profile.workspace.update') }}" data-workspace-switch>
                                         @csrf
                                         <input type="hidden" name="workspace" value="{{ $isSellerWorkspace ? 'customer' : 'seller' }}">
-                                        <button type="submit" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-semibold text-brand transition hover:bg-blue-50">Switch Account</button>
+                                        <button type="submit" class="flex min-h-14 w-full items-center gap-3 rounded-xl bg-blue-50 px-3 text-left transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            <svg class="size-5 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h15m0 0-4-4m4 4-4 4M20 17H5m0 0 4-4m-4 4 4 4"/></svg>
+                                            <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-brand">Switch Account</span><span class="block text-xs text-muted">{{ $isSellerWorkspace ? 'Go to shopping' : 'Go to Seller Center' }}</span></span>
+                                            <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                                        </button>
                                     </form>
                                 </div>
                             @endif
-                            <button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 pt-2 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800 {{ $sellerTenant ? '' : 'border-t border-line' }}">Sign out</button>
+                            <div class="border-t border-line pt-1"><button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800">Sign out</button></div>
                         </div>
                     </div>
                 @else
