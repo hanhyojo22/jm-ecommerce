@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 
@@ -20,6 +21,10 @@ class GmailOrderMailer
     public function send(User $recipient, string $subject, string $body): void
     {
         if (! $this->configured()) {
+            Log::warning('Gmail email skipped: missing configuration.', [
+                'missing' => array_keys(array_filter(config('services.gmail'), fn (mixed $value): bool => blank($value))),
+            ]);
+
             return;
         }
 
@@ -43,5 +48,7 @@ class GmailOrderMailer
         Http::withToken($token)->timeout(8)->post('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', [
             'raw' => rtrim(strtr(base64_encode($message->toString()), '+/', '-_'), '='),
         ])->throw();
+
+        Log::info('Gmail email accepted by API.', ['subject' => $subject]);
     }
 }

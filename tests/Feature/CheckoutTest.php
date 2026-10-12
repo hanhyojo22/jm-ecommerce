@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\GmailOrderMailer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class CheckoutTest extends TestCase
@@ -145,6 +146,7 @@ class CheckoutTest extends TestCase
             'https://oauth2.googleapis.com/token' => Http::response(['access_token' => 'test-access-token']),
             'https://gmail.googleapis.com/gmail/v1/users/me/messages/send' => Http::response(['id' => 'sent-message']),
         ]);
+        Log::shouldReceive('info')->once()->withArgs(fn (string $message, array $context): bool => $message === 'Gmail email accepted by API.' && str_starts_with($context['subject'], 'JMMart order '));
         [$seller, $product] = $this->sellerProduct('19.99', 5);
         $customer = User::factory()->create(['email_verified_at' => now()]);
         $cart = Cart::create(['user_id' => $customer->id]);
@@ -180,7 +182,9 @@ class CheckoutTest extends TestCase
 
     public function test_order_email_waits_for_gmail_credentials(): void
     {
+        config()->set('services.gmail', ['client_id' => 'test-client', 'client_secret' => 'test-secret', 'refresh_token' => null, 'from' => 'sender@example.com']);
         Http::fake();
+        Log::shouldReceive('warning')->once()->with('Gmail email skipped: missing configuration.', ['missing' => ['refresh_token']]);
         $buyer = User::factory()->make();
         $mailer = new GmailOrderMailer;
 
