@@ -34,9 +34,10 @@
             @php($isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== auth()->id()))
             @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && auth()->user()->preferred_workspace === 'seller' && auth()->user()->sellerTenant() !== null)))
             @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
+            @php($isCustomerWorkspace = in_array(auth()->user()?->account_type, ['buyer', 'seller'], true) && ! $isSellerWorkspace && request()->routeIs('orders.*', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit'))
             @if ($isAdminWorkspace)
                 {{-- The admin header belongs to the workspace content column. --}}
-            @elseif (! $isSellerWorkspace)
+            @elseif (! $isSellerWorkspace && ! $isCustomerWorkspace)
                 @include('layouts.navigation')
             @endif
 
@@ -57,6 +58,19 @@
             @elseif ($isSellerWorkspace)
                 <div data-workspace="seller" x-data="{ sellerSidebarOpen: true }" @seller-sidebar-toggle.window="sellerSidebarOpen = !sellerSidebarOpen" :class="{ 'seller-sidebar-collapsed': !sellerSidebarOpen }" class="seller-workspace min-h-screen bg-canvas lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
                     @include('layouts.seller-sidebar', ['sellerTenant' => auth()->user()?->sellerTenant()])
+                    <main id="main-content" tabindex="-1" class="workspace-main min-w-0">
+                        @include('layouts.navigation')
+                        @isset($header)
+                            <header class="px-4 pb-2 pt-6 sm:px-6 lg:px-7 lg:pt-8">
+                                {{ $header }}
+                            </header>
+                        @endisset
+                        {{ $slot }}
+                    </main>
+                </div>
+            @elseif ($isCustomerWorkspace)
+                <div data-workspace="customer" x-data="{ customerSidebarOpen: true }" @customer-sidebar-toggle.window="customerSidebarOpen = !customerSidebarOpen" :class="{ 'customer-sidebar-collapsed': !customerSidebarOpen }" class="customer-workspace min-h-screen bg-canvas lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
+                    @include('layouts.customer-sidebar')
                     <main id="main-content" tabindex="-1" class="workspace-main min-w-0">
                         @include('layouts.navigation')
                         @isset($header)

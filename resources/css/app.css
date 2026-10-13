@@ -123,48 +123,52 @@
     line-height: 1.2;
 }
 
-.seller-workspace {
+.seller-workspace,
+.customer-workspace {
     background: #f4f7fb;
 }
 
-.seller-workspace .workspace-main {
+.seller-workspace .workspace-main,
+.customer-workspace .workspace-main {
     background: #f4f7fb;
 }
 
 @media (min-width: 1024px) {
     .seller-workspace.seller-sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
     .seller-workspace.seller-sidebar-collapsed > [data-workspace-header='seller'] { display: none; }
+    .customer-workspace.customer-sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
+    .customer-workspace.customer-sidebar-collapsed > [data-workspace-header='customer'] { display: none; }
 }
 
-[data-header-role='seller'] > div:first-child { max-width: none; padding-block: .5rem; }
-[data-header-role='seller'] form label { height: 2.5rem; }
-[data-header-role='seller'] form input { font-size: .8rem; }
-[data-header-role='seller'] form button[type='submit'] { height: 2rem; font-size: .75rem; }
-[data-header-role='seller'] [aria-label='Account menu'] { min-height: 2.5rem; }
+:is([data-header-role='seller'], [data-header-role='customer-workspace']) > div:first-child { max-width: none; padding-block: .5rem; }
+:is([data-header-role='seller'], [data-header-role='customer-workspace']) form label { height: 2.5rem; }
+:is([data-header-role='seller'], [data-header-role='customer-workspace']) form input { font-size: .8rem; }
+:is([data-header-role='seller'], [data-header-role='customer-workspace']) form button[type='submit'] { height: 2rem; font-size: .75rem; }
+:is([data-header-role='seller'], [data-header-role='customer-workspace']) [aria-label='Account menu'] { min-height: 2.5rem; }
 
-.seller-workspace .workspace-main > header:not([data-header-design]) {
+:is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
     margin-inline: auto;
     max-width: 1500px;
     padding-top: 1.25rem;
     padding-bottom: 0.5rem;
 }
 
-.seller-workspace .page-shell {
+:is(.seller-workspace, .customer-workspace) .page-shell {
     background: transparent;
     padding-top: 0.25rem;
     padding-bottom: 2.5rem;
 }
 
-.seller-workspace .page-container {
+:is(.seller-workspace, .customer-workspace) .page-container {
     max-width: 1500px;
     padding-inline: 1rem;
 }
 
-.seller-workspace .page-container.max-w-4xl {
+:is(.seller-workspace, .customer-workspace) .page-container.max-w-4xl {
     max-width: 56rem;
 }
 
-.seller-workspace .page-container.max-w-6xl {
+:is(.seller-workspace, .customer-workspace) .page-container.max-w-6xl {
     max-width: 72rem;
 }
 
@@ -273,13 +277,13 @@
 }
 
 @media (min-width: 640px) {
-    .seller-workspace .page-container {
+    :is(.seller-workspace, .customer-workspace) .page-container {
         padding-inline: 1.5rem;
     }
 }
 
 @media (min-width: 1024px) {
-    .seller-workspace .page-container {
+    :is(.seller-workspace, .customer-workspace) .page-container {
         padding-inline: 1.75rem;
     }
 }
