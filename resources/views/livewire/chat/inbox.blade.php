@@ -1,4 +1,4 @@
-<div data-conversation-inbox>
+<div data-conversation-inbox x-data="chatInbox(@js(auth()->id()))">
     @php($isBuyerMessages = auth()->user()->account_type === 'buyer' || $context === 'buying')
     @if ($embedded)
         @include('livewire.chat.inbox-content')
@@ -19,45 +19,3 @@
         </div></div>
     @endif
 </div>
-
-@script
-<script>
-    const inbox = document.querySelector('[data-conversation-inbox]');
-    const joinedConversations = new Set();
-
-    const syncConversationChannels = () => {
-        if (! inbox || ! window.Echo) {
-            return;
-        }
-
-        const visibleConversations = new Set(
-            [...inbox.querySelectorAll('[data-presence-conversation]')]
-                .map((conversation) => conversation.dataset.presenceConversation),
-        );
-
-        for (const conversationId of joinedConversations) {
-            if (! visibleConversations.has(conversationId)) {
-                window.Echo.leave(`conversation.${conversationId}`);
-                joinedConversations.delete(conversationId);
-            }
-        }
-
-        for (const conversationId of visibleConversations) {
-            if (! joinedConversations.has(conversationId)) {
-                window.Echo.join(`conversation.${conversationId}`);
-                window.Echo.private(`conversation.${conversationId}`)
-                    .listen('.message.created', () => $wire.$refresh())
-                    .listen('.message.read', () => $wire.$refresh());
-                joinedConversations.add(conversationId);
-            }
-        }
-    };
-
-    syncConversationChannels();
-    window.addEventListener('reverb:ready', syncConversationChannels, { once: true });
-
-    if (inbox) {
-        new MutationObserver(syncConversationChannels).observe(inbox, { childList: true, subtree: true });
-    }
-</script>
-@endscript

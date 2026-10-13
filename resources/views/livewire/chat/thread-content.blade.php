@@ -1,4 +1,4 @@
-            <section class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface">
+            <section x-data="chatThread(@js($conversation->id), @js(auth()->id()))" x-on:chat-upload-progress="attachmentProgress($event.detail.progress)" x-on:chat-upload-error="attachmentFailed($event.detail.message)" x-on:chat-upload-sent="attachmentSent($event.detail)" class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface">
                 <header class="flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-3 sm:gap-4 sm:px-5">
                 <div class="flex min-w-0 items-center gap-2.5 sm:gap-3">
                     <a href="{{ auth()->user()->account_type === 'seller' ? route('messages.index', ['context' => $isBuyerMessages ? 'buying' : 'selling']) : route('messages.index') }}" class="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand lg:hidden" aria-label="Back to messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6M9 12h11"/></svg></a>
@@ -8,7 +8,7 @@
                         @else
                             <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold text-brand-hover" aria-hidden="true">{{ Str::upper(Str::substr($isBuyerMessages ? $conversation->store->name : $conversation->buyer->name, 0, 1)) }}</span>
                         @endif
-                        <div class="min-w-0">@if ($isBuyerMessages)<h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $conversation->store->name }}</h1>@else<h2 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $conversation->buyer->name }}</h2>@endif<p id="chat-presence" x-data="{ online: false }" x-on:chat-presence-status.window="if ($event.detail.conversationId === '{{ $conversation->id }}') online = $event.detail.online" class="flex items-center gap-1.5 truncate text-xs"><span data-presence-dot class="size-1.5 shrink-0 rounded-full" x-bind:class="{ 'bg-blue-500': online, 'bg-slate-400': ! online }"></span><span data-presence-label data-context="{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}" x-text="(online ? 'Online' : 'Offline') + ' · ' + $el.dataset.context">Offline · {{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}</span></p><p id="chat-typing" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
+                        <div class="min-w-0">@if ($isBuyerMessages)<h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $conversation->store->name }}</h1>@else<h2 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $conversation->buyer->name }}</h2>@endif<p id="chat-presence" x-data="{ online: false }" x-on:chat-presence-status.window="if ($event.detail.conversationId === '{{ $conversation->id }}') online = $event.detail.online" class="flex items-center gap-1.5 truncate text-xs"><span data-presence-dot class="size-1.5 shrink-0 rounded-full" x-bind:class="{ 'bg-blue-500': online, 'bg-slate-400': ! online }"></span><span data-presence-label data-context="{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}" x-text="(online ? 'Online' : 'Offline') + ' · ' + $el.dataset.context">Offline · {{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}</span></p><p id="chat-typing" x-ref="typingIndicator" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
@@ -32,14 +32,15 @@
                 </div>
             @endif
 
-            <div wire:offline class="mx-3 mt-2 shrink-0 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-5" role="status">You’re offline. Messages will send when your connection returns.</div>
-            <div id="conversation-messages" class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6" role="log" aria-live="polite" aria-label="Conversation messages" tabindex="0">
-                @if ($hasMoreMessages)<div class="mb-5 text-center"><button wire:click="loadOlderMessages" wire:loading.attr="disabled" type="button" class="inline-flex min-h-11 items-center rounded-[10px] bg-canvas px-4 text-sm font-semibold text-ink transition hover:bg-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60">Load earlier messages</button></div>@endif
+            <div x-cloak x-show="!online" class="mx-3 mt-2 shrink-0 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-5" role="status">You’re offline. Sending is paused until your connection returns.</div>
+            <div x-cloak x-show="online && !liveConnected" class="mx-3 mt-2 shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-brand-hover sm:mx-5" role="status">Reconnecting live updates. You can still send messages.</div>
+            <div id="conversation-messages" x-ref="messageList" class="chat-message-list min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6" role="log" aria-live="polite" aria-label="Conversation messages" tabindex="0">
+                @if ($hasMoreMessages)<div class="mb-5 text-center"><button x-on:click="loadOlder()" x-bind:disabled="loadingOlder" type="button" class="inline-flex min-h-11 items-center rounded-[10px] bg-white px-4 text-sm font-semibold text-ink shadow-sm transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60">Load earlier messages</button><span x-show="loadingOlder" class="ml-2 text-xs text-muted" role="status">Loading messages…</span><p x-cloak x-show="historyError" x-text="historyError" class="mt-2 text-sm text-red-700" role="alert"></p></div>@endif
                 @php($previousDate = null)
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-5 flex items-center gap-3 text-xs font-medium text-muted"><span class="h-px flex-1 bg-slate-100"></span><span data-chat-date-label>{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-slate-100"></span></div>
-                    <article wire:key="message-{{ $message->id }}" class="mb-1 flex items-end gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
+                    <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1 flex items-end gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
                         @if ($message->sender_id !== auth()->id())
                             <span class="grid size-7 shrink-0 place-items-center rounded-full bg-blue-50 text-[11px] font-bold text-brand-hover {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">{{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}</span>
                         @endif
@@ -80,39 +81,34 @@
                     @php($previousDate = $message->created_at)
                     @php($previousSenderId = $message->sender_id)
                 @empty
-                    <div class="flex min-h-64 flex-col items-center justify-center px-6 text-center"><div class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11.5h8M8 14.5h5"/></svg></div><p class="mt-3 text-sm font-semibold text-ink">Start the conversation</p><p class="mt-1 text-sm text-muted">Send a message about this {{ $conversation->product ? 'product' : 'order' }}.</p></div>
+                    <div x-show="pending.length === 0" class="flex min-h-64 flex-col items-center justify-center px-6 text-center"><div class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11.5h8M8 14.5h5"/></svg></div><p class="mt-3 text-sm font-semibold text-ink">Start the conversation</p><p class="mt-1 text-sm text-muted">Send a message about this {{ $conversation->product ? 'product' : 'order' }}.</p></div>
                 @endforelse
+                <div wire:ignore aria-live="polite">
+                    <template x-for="item in pending" :key="item.id">
+                        <article class="mb-1 flex justify-end" :data-pending-message-id="item.id">
+                            <div class="mt-3 min-w-0 max-w-[82%] sm:max-w-[70%]">
+                                <div class="rounded-[20px] rounded-br-md bg-brand px-4 py-2.5 text-sm leading-6 text-white">
+                                    <template x-if="item.previewUrl"><img :src="item.previewUrl" alt="Pending photo" class="mb-2 max-h-80 max-w-full rounded-lg object-contain"></template>
+                                    <p x-show="item.fileName" x-text="item.fileName" class="truncate text-xs font-semibold"></p>
+                                    <p x-show="item.body" x-text="item.body" class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]"></p>
+                                    <time class="mt-1 block text-[11px] text-blue-50" x-text="item.time"></time>
+                                </div>
+                                <div class="mt-1 flex items-center justify-end gap-2 text-xs" :class="item.status === 'Failed' ? 'text-red-700' : 'text-muted'">
+                                    <span x-text="item.status === 'Sending' && item.progress !== null ? 'Uploading ' + item.progress + '%' : item.status"></span>
+                                    <button x-show="item.status === 'Failed'" type="button" x-on:click="retry(item)" class="min-h-10 rounded-lg px-2 font-semibold text-brand-hover underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Retry</button>
+                                </div>
+                            </div>
+                        </article>
+                    </template>
+                </div>
+                @if ($hasNewerMessages)
+                    <div class="mt-4 flex justify-center gap-2">
+                        <button wire:click="loadNewerMessages" wire:loading.attr="disabled" type="button" class="min-h-11 rounded-full bg-canvas px-4 text-sm font-semibold text-ink hover:bg-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Load newer messages</button>
+                        <button wire:click="jumpToLatest" wire:loading.attr="disabled" type="button" class="min-h-11 rounded-full bg-blue-50 px-4 text-sm font-semibold text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Jump to latest</button>
+                    </div>
+                @endif
             </div>
-            <div wire:cloak class="shrink-0 border-t border-line bg-surface p-3 sm:p-4" x-data="{
-                selectedType: null,
-                fileName: '',
-                fileSize: '',
-                previewUrl: null,
-                attachmentMenuOpen: false,
-                uploading: false,
-                uploadProgress: 0,
-                uploadError: '',
-                selectFile(type, event) {
-                    const file = event.target.files[0];
-                    if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
-                    this.$refs[type === 'photo' ? 'documentInput' : 'photoInput'].value = '';
-                    this.selectedType = file ? type : null;
-                    this.fileName = file?.name ?? '';
-                    this.fileSize = file ? (file.size < 1024 ? file.size + ' B' : (file.size / 1024).toFixed(1) + ' KB') : '';
-                    this.previewUrl = file && type === 'photo' ? URL.createObjectURL(file) : null;
-                    this.attachmentMenuOpen = false;
-                    this.uploadError = '';
-                },
-                clearFile() {
-                    if (this.previewUrl) URL.revokeObjectURL(this.previewUrl);
-                    this.$refs.photoInput.value = '';
-                    this.$refs.documentInput.value = '';
-                    this.selectedType = null;
-                    this.fileName = '';
-                    this.fileSize = '';
-                    this.previewUrl = null;
-                }
-            }" x-init="const key = 'chat-draft-{{ auth()->id() }}-{{ $conversation->id }}'; const draft = sessionStorage.getItem(key); if (draft !== null && ! @js(session('status') === 'Attachment sent.')) { $wire.body = draft; } sessionStorage.removeItem(key);" x-on:chat-upload-progress="uploadProgress = $event.detail.progress" x-on:chat-upload-error="uploading = false; uploadError = $event.detail.message">
+            <div wire:cloak class="shrink-0 border-t border-line bg-surface p-3 sm:p-4">
                 @cannot('send', $conversation)<p class="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">Messaging is unavailable for this conversation.</p>@endcannot
                 @if (! $isBuyerMessages && auth()->user()->can('send', $conversation))
                     <div class="mb-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Quick replies">@foreach (['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?'] as $reply)<button x-on:click="$wire.body = @js($reply)" type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-[10px] border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $reply }}</button>@endforeach</div>
@@ -126,7 +122,7 @@
                     </div>
                 @endcan
                 <label for="message-body" class="sr-only">Write a message</label>
-                <form wire:submit="send" x-ref="messageForm" x-on:submit.capture="$wire.body = $refs.messageBody.value; if (selectedType) { $event.preventDefault(); $event.stopImmediatePropagation(); if (uploading) return; uploading = true; uploadProgress = 0; uploadError = ''; sessionStorage.setItem('chat-draft-{{ auth()->id() }}-{{ $conversation->id }}', $wire.body); $refs[selectedType === 'photo' ? 'photoForm' : 'documentForm'].requestSubmit(); }">
+                <form x-ref="messageForm" x-on:submit.prevent="submitMessage()">
                 <div class="flex min-w-0 items-end gap-2">
                     @can('send', $conversation)
                         <div class="relative shrink-0" x-on:click.outside="attachmentMenuOpen = false" x-on:keydown.escape.window="attachmentMenuOpen = false">
@@ -138,7 +134,7 @@
                         </div>
                     @endcan
                     <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; $el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="2" maxlength="2000" class="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-transparent bg-canvas text-sm text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! auth()->user()->can('send', $conversation))></textarea>
-                    <button type="submit" x-bind:aria-label="selectedType === 'photo' ? 'Send photo' : selectedType === 'document' ? 'Send document' : 'Send message'" x-bind:disabled="uploading" class="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" wire:loading.attr="disabled" wire:target="send" @disabled(! auth()->user()->can('send', $conversation))><svg wire:loading.remove wire:target="send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg><span wire:loading wire:target="send" class="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span></button>
+                    <button type="submit" x-bind:aria-label="selectedType === 'photo' ? 'Send photo' : selectedType === 'document' ? 'Send document' : 'Send message'" x-bind:disabled="!online || uploading" class="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" @disabled(! auth()->user()->can('send', $conversation))><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg></button>
                 </div>
                 <div id="message-help" class="flex items-center justify-between gap-3 text-xs text-muted"><span class="hidden sm:inline">Enter to send · Shift + Enter for a new line</span><span class="ml-auto tabular-nums" x-text="Array.from($wire.body).length + '/2000'">{{ Str::length($body) }}/2000</span></div>
                 @error('body')<p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ $message }}</p>@enderror
@@ -148,8 +144,8 @@
                 </form>
                 @can('send', $conversation)
                     <p class="mt-1 text-xs text-muted">Photos: JPG, PNG, WebP · Documents: PDF · Up to 5 MB</p>
-                    <form id="chat-photo-form" x-ref="photoForm" method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload data-chat-draft-key="chat-draft-{{ auth()->id() }}-{{ $conversation->id }}" class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" x-bind:value="$wire.body"></form>
-                    <form id="chat-document-form" x-ref="documentForm" method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload data-chat-draft-key="chat-draft-{{ auth()->id() }}-{{ $conversation->id }}" class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" x-bind:value="$wire.body"></form>
+                    <form id="chat-photo-form" x-ref="photoForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
+                    <form id="chat-document-form" x-ref="documentForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
                 @endcan
             </div>
         </section>

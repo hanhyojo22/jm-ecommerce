@@ -1,4 +1,4 @@
-<section data-conversation-list class="flex h-full min-h-0 flex-col bg-surface" aria-label="Your conversations">
+<section data-conversation-list class="relative flex h-full min-h-0 flex-col bg-surface" aria-label="Your conversations">
     <header class="shrink-0 border-b border-line px-4 pb-3 pt-4 sm:px-5">
         @if ($isBuyerMessages)<h1 class="text-xl font-semibold tracking-tight text-ink">Messages</h1>@else<h2 class="text-base font-semibold tracking-tight text-ink">Inbox</h2>@endif
         <p class="mt-0.5 text-xs text-muted">{{ $isBuyerMessages ? 'Contact stores about products and orders.' : 'Your customer conversations.' }}</p>
@@ -14,7 +14,12 @@
         </div>
     </header>
 
-    <div class="min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain" aria-live="polite">
+    <div wire:loading.flex wire:target="search,filter" class="absolute inset-x-0 bottom-0 top-44 z-10 flex-col gap-4 bg-white/95 px-5 py-5" role="status" aria-label="Loading conversations">
+        @for ($row = 0; $row < 3; $row++)
+            <div class="flex animate-pulse items-center gap-3" aria-hidden="true"><span class="size-11 shrink-0 rounded-full bg-slate-100"></span><span class="flex-1 space-y-2"><span class="block h-3 w-2/3 rounded-full bg-slate-100"></span><span class="block h-3 w-full rounded-full bg-slate-100"></span></span></div>
+        @endfor
+    </div>
+    <div class="chat-inbox-list min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain" aria-live="polite">
         @forelse ($conversations as $conversation)
             @php($latest = $conversation->messages->first())
             @php($isUnread = $conversation->unread_messages_count > 0)

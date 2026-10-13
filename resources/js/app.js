@@ -1,5 +1,6 @@
 
 import './cookie-consent';
+import './chat';
 
 const reverbConfig = {
     key: document.querySelector('meta[name="reverb-app-key"]')?.content,
@@ -542,7 +543,7 @@ document.addEventListener('submit', async (event) => {
         console.error(error);
 
         if (form.hasAttribute('data-chat-upload')) {
-            form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Your session could not be refreshed. Press Send to retry.' } }));
+            form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Your session could not be refreshed. Use Retry to try again.' } }));
             return;
         }
 
@@ -570,6 +571,7 @@ document.addEventListener('submit', (event) => {
     const request = new XMLHttpRequest();
     request.open('POST', form.action);
     request.responseType = 'json';
+    request.timeout = 20000;
     request.setRequestHeader('Accept', 'application/json');
     request.upload.addEventListener('progress', (progress) => {
         if (progress.lengthComputable) {
@@ -579,18 +581,21 @@ document.addEventListener('submit', (event) => {
     request.addEventListener('load', () => {
         delete form.dataset.uploading;
         if (request.status >= 200 && request.status < 300 && request.response?.message === 'Attachment sent.') {
-            sessionStorage.removeItem(form.dataset.chatDraftKey);
-            window.location.reload();
+            form.dispatchEvent(new CustomEvent('chat-upload-sent', { bubbles: true, detail: request.response }));
             return;
         }
 
         const errors = request.response?.errors;
         const message = errors ? Object.values(errors).flat()[0] : request.response?.message;
-        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: message || 'Upload failed. Press Send to retry.' } }));
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: message || 'Upload failed. Use Retry to try again.' } }));
     });
     request.addEventListener('error', () => {
         delete form.dataset.uploading;
-        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Upload failed. Check your connection and press Send to retry.' } }));
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Upload failed. Check your connection and use Retry.' } }));
+    });
+    request.addEventListener('timeout', () => {
+        delete form.dataset.uploading;
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Upload timed out. Use Retry to check whether it was saved.' } }));
     });
     request.send(new FormData(form));
 });

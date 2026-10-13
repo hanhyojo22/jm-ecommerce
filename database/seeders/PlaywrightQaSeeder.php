@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\Conversation;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
@@ -47,7 +48,15 @@ class PlaywrightQaSeeder extends Seeder
         [$otherTenant, $otherStore] = $this->storeFor($otherSeller, 'qa-southwind', 'QA Southwind');
 
         $product = $this->product($tenant, $store, $category, 'QA Canvas Tote', 'qa-canvas-tote', 'QA-TOTE-001', '19.99', 25);
+        $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);
         $this->product($otherTenant, $otherStore, $category, 'Other Seller QA Product', 'other-qa-product', 'QA-OTHER-001', '39.99', 10);
+        $historyProduct = $this->product($otherTenant, $otherStore, $category, 'QA History Sample', 'qa-history-sample', 'QA-HISTORY-001', '29.99', 10);
+
+        $historyConversation = Conversation::query()->create(['buyer_id' => $customer->id, 'store_id' => $otherStore->id, 'product_id' => $historyProduct->id]);
+        for ($number = 1; $number <= 225; $number++) {
+            $historyConversation->messages()->create(['sender_id' => $customer->id, 'body' => "History message {$number}"]);
+        }
+        $historyConversation->update(['latest_message_at' => now()]);
 
         $order = Order::query()->create(['user_id' => $customer->id, 'number' => 'QA-REVIEW-001', 'status' => 'delivered', 'recipient_name' => $customer->name, 'phone' => '+639171234567', 'address_line' => '10 QA Street', 'city' => 'Manila', 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
         $order->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '19.99']);

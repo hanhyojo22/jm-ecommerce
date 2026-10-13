@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Events\ConversationInboxChanged;
 use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
@@ -41,6 +42,7 @@ class SendConversationMessage
 
         if ($message->wasRecentlyCreated) {
             MessageSent::dispatch($message);
+            ConversationInboxChanged::dispatch($conversation);
         }
 
         return $message;

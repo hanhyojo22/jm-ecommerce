@@ -3,6 +3,7 @@
 namespace App\Livewire\Chat;
 
 use App\Actions\SendConversationMessage;
+use App\Events\ConversationInboxChanged;
 use App\Events\ConversationReceiptUpdated;
 use App\Events\TypingStatusChanged;
 use App\Models\Conversation;
@@ -22,7 +23,7 @@ class Thread extends Component
 {
     private const INITIAL_MESSAGE_LIMIT = 50;
 
-    private const MAX_MESSAGE_LIMIT = 200;
+    private const WINDOW_MESSAGE_LIMIT = 200;
 
     public Conversation $conversation;
 
@@ -31,6 +32,8 @@ class Thread extends Component
     public string $clientMessageId = '';
 
     public int $messageLimit = self::INITIAL_MESSAGE_LIMIT;
+
+    public bool $viewingHistory = false;
 
     /** @var array<int, string> */
     public array $messageIds = [];
@@ -53,9 +56,16 @@ class Thread extends Component
         $this->markRead();
     }
 
-    public function send(SendConversationMessage $sendMessage): void
+    /** @return array{id: string, client_message_id: string}|null */
+    public function send(SendConversationMessage $sendMessage, ?string $draft = null, ?string $clientId = null): ?array
     {
         Gate::authorize('send', $this->conversation);
+        if ($draft !== null) {
+            $this->body = $draft;
+        }
+        if ($clientId !== null) {
+            $this->clientMessageId = $clientId;
+        }
         $validated = $this->validate([
             'body' => ['required', 'string', 'max:2000'],
             'clientMessageId' => ['required', 'uuid'],
@@ -65,7 +75,7 @@ class Thread extends Component
         if ($body === '') {
             $this->addError('body', 'A message cannot be empty.');
 
-            return;
+            return null;
         }
 
         $user = auth()->user();
@@ -77,7 +87,7 @@ class Thread extends Component
         if (! $isRetry && RateLimiter::tooManyAttempts($key, 20)) {
             $this->addError('body', 'Please wait a moment before sending another message.');
 
-            return;
+            return null;
         }
 
         $message = $sendMessage->handle($this->conversation, $user, $body, $this->clientMessageId);
@@ -85,9 +95,14 @@ class Thread extends Component
             RateLimiter::hit($key, 60);
         }
         $this->appendMessageId($message->id);
+        if ($this->viewingHistory) {
+            $this->jumpToLatest();
+        }
         $this->reset('body');
         $this->clientMessageId = (string) Str::uuid();
         $this->markRead();
+
+        return ['id' => $message->id, 'client_message_id' => $message->client_message_id];
     }
 
     public function startTyping(): void
@@ -111,11 +126,10 @@ class Thread extends Component
     public function loadOlderMessages(): void
     {
         Gate::authorize('view', $this->conversation);
-        $this->messageIds = array_slice(array_values(array_unique($this->messageIds)), -self::MAX_MESSAGE_LIMIT);
+        $this->messageIds = array_slice(array_values(array_unique($this->messageIds)), -self::WINDOW_MESSAGE_LIMIT);
         $oldestMessage = $this->conversation->messages()->find($this->messageIds[0] ?? null);
-        $remainingLimit = self::MAX_MESSAGE_LIMIT - count($this->messageIds);
 
-        if ($oldestMessage === null || $remainingLimit === 0) {
+        if ($oldestMessage === null) {
             $this->messageLimit = count($this->messageIds);
 
             return;
@@ -128,14 +142,49 @@ class Thread extends Component
             })
             ->latest('created_at')
             ->latest('id')
-            ->limit(min(self::INITIAL_MESSAGE_LIMIT, $remainingLimit))
+            ->limit(self::INITIAL_MESSAGE_LIMIT)
             ->pluck('id')
             ->reverse()
             ->values()
             ->all();
 
-        $this->messageIds = [...$olderMessages, ...$this->messageIds];
+        $this->messageIds = array_slice([...$olderMessages, ...$this->messageIds], 0, self::WINDOW_MESSAGE_LIMIT);
+        $this->viewingHistory = $this->hasNewerMessages();
         $this->messageLimit = count($this->messageIds);
+    }
+
+    public function loadNewerMessages(): void
+    {
+        Gate::authorize('view', $this->conversation);
+        $newestMessage = $this->conversation->messages()->find($this->messageIds[array_key_last($this->messageIds)] ?? null);
+        if ($newestMessage === null) {
+            return;
+        }
+
+        $newerMessages = $this->conversation->messages()
+            ->where(function ($query) use ($newestMessage): void {
+                $query->where('created_at', '>', $newestMessage->created_at)
+                    ->orWhere(fn ($query) => $query->where('created_at', $newestMessage->created_at)->where('id', '>', $newestMessage->id));
+            })
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->limit(self::INITIAL_MESSAGE_LIMIT)
+            ->pluck('id')->all();
+
+        $this->messageIds = array_slice([...$this->messageIds, ...$newerMessages], -self::WINDOW_MESSAGE_LIMIT);
+        $this->messageLimit = count($this->messageIds);
+        $this->viewingHistory = $this->hasNewerMessages();
+    }
+
+    public function jumpToLatest(): void
+    {
+        Gate::authorize('view', $this->conversation);
+        $this->messageIds = $this->conversation->messages()
+            ->latest('created_at')->latest('id')
+            ->limit(self::INITIAL_MESSAGE_LIMIT)
+            ->pluck('id')->reverse()->values()->all();
+        $this->messageLimit = count($this->messageIds);
+        $this->viewingHistory = false;
     }
 
     public function markRead(): void
@@ -150,7 +199,9 @@ class Thread extends Component
         if ($latestIncomingMessage === null) {
             return;
         }
-        $this->appendMessageId($latestIncomingMessage->id);
+        if (! $this->viewingHistory) {
+            $this->appendMessageId($latestIncomingMessage->id);
+        }
 
         $state = ConversationReadState::query()->firstOrCreate([
             'conversation_id' => $this->conversation->id,
@@ -165,6 +216,7 @@ class Thread extends Component
             'last_read_at' => now(),
         ])->save();
         ConversationReceiptUpdated::dispatch($state, 'message.read', $latestIncomingMessage->id);
+        ConversationInboxChanged::dispatch($this->conversation, (string) auth()->id());
     }
 
     public function markDelivered(): void
@@ -195,21 +247,24 @@ class Thread extends Component
     public function syncLatestMessages(): void
     {
         Gate::authorize('view', $this->conversation);
+        if ($this->viewingHistory) {
+            return;
+        }
         $latestMessageIds = $this->conversation->messages()
             ->latest('created_at')
             ->latest('id')
-            ->limit(self::MAX_MESSAGE_LIMIT)
+            ->limit(self::INITIAL_MESSAGE_LIMIT)
             ->pluck('id')
             ->reverse()
             ->values()
             ->all();
-        $this->messageIds = array_slice(array_values(array_unique([...$this->messageIds, ...$latestMessageIds])), -self::MAX_MESSAGE_LIMIT);
+        $this->messageIds = array_slice(array_values(array_unique([...$this->messageIds, ...$latestMessageIds])), -self::WINDOW_MESSAGE_LIMIT);
         $this->messageLimit = count($this->messageIds);
     }
 
     private function appendMessageId(string $messageId): void
     {
-        $this->messageIds = array_slice([...$this->messageIds, $messageId], -self::MAX_MESSAGE_LIMIT);
+        $this->messageIds = array_slice([...$this->messageIds, $messageId], -self::WINDOW_MESSAGE_LIMIT);
         $this->messageLimit = count($this->messageIds);
     }
 
@@ -217,7 +272,7 @@ class Thread extends Component
     {
         Gate::authorize('view', $this->conversation);
 
-        $this->messageIds = array_slice(array_values(array_unique($this->messageIds)), -self::MAX_MESSAGE_LIMIT);
+        $this->messageIds = array_slice(array_values(array_unique($this->messageIds)), -self::WINDOW_MESSAGE_LIMIT);
         $messages = $this->conversation->messages()
             ->whereKey($this->messageIds)
             ->with(['sender', 'attachments'])
@@ -226,12 +281,13 @@ class Thread extends Component
             ->get();
         $this->messageLimit = count($this->messageIds);
         $oldestMessage = $messages->first();
-        $hasMoreMessages = $oldestMessage !== null && $this->messageLimit < self::MAX_MESSAGE_LIMIT && $this->conversation->messages()
+        $hasMoreMessages = $oldestMessage !== null && $this->conversation->messages()
             ->where(function ($query) use ($oldestMessage): void {
                 $query->where('created_at', '<', $oldestMessage->created_at)
                     ->orWhere(fn ($query) => $query->where('created_at', $oldestMessage->created_at)->where('id', '<', $oldestMessage->id));
             })
             ->exists();
+        $hasNewerMessages = $this->hasNewerMessages();
 
         $lastMessage = $messages->last();
         $recipientReadState = $lastMessage?->sender_id === auth()->id()
@@ -247,8 +303,23 @@ class Thread extends Component
         return view('livewire.chat.thread', [
             'messages' => $messages,
             'hasMoreMessages' => $hasMoreMessages,
+            'hasNewerMessages' => $hasNewerMessages,
             'lastMessage' => $lastMessage,
             'receipt' => $receipt,
         ]);
+    }
+
+    private function hasNewerMessages(): bool
+    {
+        $newestMessage = $this->conversation->messages()->find($this->messageIds[array_key_last($this->messageIds)] ?? null);
+        if ($newestMessage === null) {
+            return false;
+        }
+
+        return $this->conversation->messages()
+            ->where(function ($query) use ($newestMessage): void {
+                $query->where('created_at', '>', $newestMessage->created_at)
+                    ->orWhere(fn ($query) => $query->where('created_at', $newestMessage->created_at)->where('id', '>', $newestMessage->id));
+            })->exists();
     }
 }

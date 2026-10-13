@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Actions\SendConversationMessage;
+use App\Events\ConversationInboxChanged;
 use App\Events\ConversationReceiptUpdated;
 use App\Events\MessageSent;
 use App\Events\TypingStatusChanged;
@@ -28,6 +29,48 @@ use Tests\TestCase;
 class ConversationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_new_conversation_and_message_notify_only_authorized_inbox_recipients(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $seller = User::factory()->seller()->create();
+        $otherSeller = User::factory()->seller()->create();
+        $product = $this->product();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'staff']);
+        Event::fake([ConversationInboxChanged::class, MessageSent::class]);
+
+        $this->actingAs($buyer)->post(route('messages.products.start', $product))->assertRedirect();
+        $conversation = Conversation::query()->firstOrFail();
+        Event::assertDispatchedTimes(ConversationInboxChanged::class, 1);
+
+        $channels = (new ConversationInboxChanged($conversation))->broadcastOn();
+        $channelNames = array_map(fn ($channel): string => $channel->name, $channels);
+        $this->assertContains('private-chat.inbox.'.$buyer->id, $channelNames);
+        $this->assertContains('private-chat.inbox.'.$seller->id, $channelNames);
+        $this->assertNotContains('private-chat.inbox.'.$otherSeller->id, $channelNames);
+        $this->assertSame(['private-chat.inbox.'.$buyer->id], array_map(fn ($channel) => $channel->name, (new ConversationInboxChanged($conversation, $buyer->id))->broadcastOn()));
+
+        app(SendConversationMessage::class)->handle($conversation, $buyer, 'Hello', (string) str()->uuid());
+        Event::assertDispatchedTimes(ConversationInboxChanged::class, 2);
+
+        $this->post(route('messages.products.start', $product))->assertRedirect();
+        Event::assertDispatchedTimes(ConversationInboxChanged::class, 2);
+    }
+
+    public function test_inbox_broadcast_channel_rejects_another_user_and_inactive_accounts(): void
+    {
+        config(['broadcasting.default' => 'reverb']);
+        Broadcast::forgetDrivers();
+        require base_path('routes/channels.php');
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $payload = ['socket_id' => '123.456', 'channel_name' => 'private-chat.inbox.'.$buyer->id];
+
+        $this->actingAs($buyer)->postJson('/broadcasting/auth', $payload)->assertOk();
+        $this->actingAs($otherBuyer)->postJson('/broadcasting/auth', $payload)->assertForbidden();
+        $buyer->forceFill(['is_active' => false])->save();
+        $this->actingAs($buyer)->postJson('/broadcasting/auth', $payload)->assertForbidden();
+    }
 
     public function test_verified_buyer_can_start_only_one_product_conversation(): void
     {
@@ -228,7 +271,7 @@ class ConversationTest extends TestCase
         $this->assertDatabaseCount('conversations', 0);
     }
 
-    public function test_chat_history_limit_cannot_exceed_two_hundred_messages(): void
+    public function test_chat_history_keeps_a_bounded_window_while_older_messages_remain_accessible(): void
     {
         $buyer = User::factory()->create();
         $product = $this->product();
@@ -242,10 +285,12 @@ class ConversationTest extends TestCase
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
-            ->assertSet('messageLimit', 200);
+            ->assertSet('messageLimit', 200)
+            ->assertSee('Message 0')
+            ->assertSee('Load newer messages');
     }
 
-    public function test_chat_history_does_not_offer_older_messages_after_the_limit(): void
+    public function test_chat_history_can_return_to_the_latest_messages_after_loading_beyond_two_hundred(): void
     {
         $buyer = User::factory()->create();
         $product = $this->product();
@@ -265,10 +310,13 @@ class ConversationTest extends TestCase
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
+            ->call('loadOlderMessages')
             ->assertSet('messageLimit', 200)
+            ->assertSee('oldest-message-marker')
+            ->assertSee('Load newer messages')
+            ->call('jumpToLatest')
             ->assertSee('Message 200')
-            ->assertDontSee('oldest-message-marker')
-            ->assertDontSee('Load older messages');
+            ->assertDontSee('oldest-message-marker');
     }
 
     public function test_retrying_a_message_with_the_same_client_id_does_not_duplicate_or_rebroadcast_it(): void

@@ -17,7 +17,7 @@ services:
     healthCheckPath: /up
     envVars:
       - key: PORT
-        value: "80"
+        value: "10000"
       - key: APP_NAME
         value: JMMart
       - key: APP_ENV

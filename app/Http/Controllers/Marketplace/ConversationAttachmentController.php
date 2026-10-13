@@ -46,7 +46,9 @@ class ConversationAttachmentController extends Controller
         if ($existingMessage !== null) {
             abort_unless($existingMessage->type === 'file', 409);
 
-            return $request->expectsJson() ? response()->json(['message' => 'Attachment sent.']) : back();
+            return $request->expectsJson()
+                ? response()->json(['message' => 'Attachment sent.', 'id' => $existingMessage->id, 'client_message_id' => $existingMessage->client_message_id])
+                : back();
         }
 
         $disk = 'chat_attachments';
@@ -54,9 +56,10 @@ class ConversationAttachmentController extends Controller
         abort_if($path === false, 503);
         $stored = false;
         $attachment = null;
+        $message = null;
 
         try {
-            DB::transaction(function () use ($request, $conversation, $sendMessage, $data, $file, $disk, $path, &$stored, &$attachment): void {
+            DB::transaction(function () use ($request, $conversation, $sendMessage, $data, $file, $disk, $path, &$stored, &$attachment, &$message): void {
                 $body = trim($data['body'] ?? '');
                 $message = $sendMessage->handle($conversation, $request->user(), $body !== '' ? $body : $file->getClientOriginalName(), $data['client_message_id'], 'file');
                 if (! $message->wasRecentlyCreated) {
@@ -85,7 +88,9 @@ class ConversationAttachmentController extends Controller
             MessageAttachmentStored::dispatch($attachment);
         }
 
-        return $request->expectsJson() ? response()->json(['message' => 'Attachment sent.']) : back()->with('status', 'Attachment sent.');
+        return $request->expectsJson()
+            ? response()->json(['message' => 'Attachment sent.', 'id' => $message->id, 'client_message_id' => $message->client_message_id])
+            : back()->with('status', 'Attachment sent.');
     }
 
     public function show(Request $request, MessageAttachment $attachment): StreamedResponse

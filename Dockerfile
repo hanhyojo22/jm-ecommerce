@@ -40,7 +40,7 @@ RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions 
     && chmod +x /usr/local/bin/jmmart-entrypoint \
     && chown -R www-data:www-data storage bootstrap/cache
 
-EXPOSE 80
+EXPOSE 10000
 
 ENTRYPOINT ["jmmart-entrypoint"]
 CMD ["apache2-foreground"]

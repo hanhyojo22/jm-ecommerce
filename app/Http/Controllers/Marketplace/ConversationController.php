@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Events\ConversationInboxChanged;
 use App\Http\Controllers\Controller;
 use App\Models\BlockedUser;
 use App\Models\Conversation;
@@ -27,6 +28,10 @@ class ConversationController extends Controller
             ['store_id' => $product->store_id],
         );
 
+        if ($conversation->wasRecentlyCreated) {
+            ConversationInboxChanged::dispatch($conversation);
+        }
+
         return to_route('messages.show', $conversation);
     }
 
@@ -40,6 +45,10 @@ class ConversationController extends Controller
             ['buyer_id' => $request->user()->id, 'seller_order_id' => $sellerOrder->id],
             ['store_id' => $sellerOrder->store_id],
         );
+
+        if ($conversation->wasRecentlyCreated) {
+            ConversationInboxChanged::dispatch($conversation);
+        }
 
         return to_route('messages.show', $conversation);
     }

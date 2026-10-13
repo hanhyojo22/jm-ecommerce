@@ -12,3 +12,7 @@ Broadcast::channel('conversation.{conversation}', function ($user, Conversation 
         ? ['id' => $user->id, 'name' => $user->name]
         : false;
 });
+
+Broadcast::channel('chat.inbox.{userId}', function ($user, string $userId): bool {
+    return (string) $user->id === $userId && $user->can('viewAny', Conversation::class);
+});

@@ -12,6 +12,7 @@ const run = (command, args) => {
     }
 };
 
+run('php', ['artisan', 'route:clear', '--no-interaction']);
 run('npm', ['run', 'build']);
 run('php', [
     'artisan',
@@ -21,6 +22,12 @@ run('php', [
     '--seeder=Database\\Seeders\\PlaywrightQaSeeder',
 ]);
 
+const reverb = spawn('php', ['artisan', 'reverb:start', '--host=127.0.0.1', '--port=4180', '--no-interaction'], {
+    env: process.env,
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+});
+
 const server = spawn('php', ['artisan', 'serve', '--host=127.0.0.1', '--port=4173'], {
     env: process.env,
     stdio: 'inherit',
@@ -28,7 +35,13 @@ const server = spawn('php', ['artisan', 'serve', '--host=127.0.0.1', '--port=417
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
-    process.on(signal, () => server.kill(signal));
+    process.on(signal, () => {
+        server.kill(signal);
+        reverb.kill(signal);
+    });
 }
 
-server.on('exit', (code) => process.exit(code ?? 0));
+server.on('exit', (code) => {
+    reverb.kill();
+    process.exit(code ?? 0);
+});

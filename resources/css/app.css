@@ -331,6 +331,32 @@
     line-height: 1.25rem;
 }
 
+.chat-inbox-list > a[aria-current='page'] {
+    box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.chat-inbox-list > a:hover {
+    transform: translateX(2px);
+}
+
+.chat-message-list {
+    background: linear-gradient(180deg, #f8fafc 0%, #f3f7fc 100%);
+}
+
+.chat-message-list article > div > div:first-child {
+    box-shadow: 0 2px 10px rgb(15 23 42 / 5%);
+}
+
+.chat-message-list article.justify-start > div > div:first-child {
+    background: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-inbox-list > a:hover {
+        transform: none;
+    }
+}
+
 @media (min-width: 640px) {
     [data-conversation-thread] h1,
     .seller-workspace [data-conversation-thread] h2 {
