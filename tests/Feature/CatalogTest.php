@@ -182,8 +182,8 @@ class CatalogTest extends TestCase
             $this->actingAs($buyer)->get($url)
                 ->assertOk()
                 ->assertSee('id="marketplace-search"', false)
-                ->assertSee('aria-label="Marketplace sections"', false)
-                ->assertSee('data-header-promo', false)
+                ->assertSee($url === route('cart.index') ? 'aria-label="Marketplace sections"' : 'aria-label="My account navigation"', false)
+                ->assertSee($url === route('cart.index') ? 'data-header-promo' : 'data-header-role="customer-workspace"', false)
                 ->assertSee('aria-label="Account menu"', false)
                 ->assertDontSee('aria-label="Sign In"', false);
         }
