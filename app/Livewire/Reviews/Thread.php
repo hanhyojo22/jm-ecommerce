@@ -82,7 +82,7 @@ class Thread extends Component
             $this->saveNestedReply($parent, $user, $body, $isSeller);
         }
 
-        $this->body = $this->sellerView ? $this->review->response()->first()?->body ?? '' : '';
+        $this->body = '';
         $this->replyToId = null;
         $this->composerOpen = $this->sellerView;
         $this->repliesExpanded = true;

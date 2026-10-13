@@ -219,6 +219,7 @@ class ProductReviewTest extends TestCase
         Livewire::test(Thread::class, ['review' => $review, 'sellerView' => true])
             ->set('body', 'Thank you for your feedback.')
             ->call('submit')
+            ->assertSet('body', '')
             ->assertSee('Official Tote Shop')
             ->assertSee('Thank you for your feedback.');
         $root = $review->response()->firstOrFail();
@@ -238,7 +239,7 @@ class ProductReviewTest extends TestCase
             ->call('replyTo', $buyerReply->id)
             ->set('body', 'Yes, we can help.')
             ->call('submit')
-            ->assertSet('body', 'Thank you for your feedback.')
+            ->assertSet('body', '')
             ->assertSeeInOrder(['Thank you for your feedback.', 'Can you help with the size?', 'Yes, we can help.'])
             ->assertDontSee($seller->name);
 
@@ -259,6 +260,7 @@ class ProductReviewTest extends TestCase
         Livewire::test(Thread::class, ['review' => $review, 'sellerView' => true])
             ->set('body', 'Thanks again for your feedback.')
             ->call('submit')
+            ->assertSet('body', '')
             ->assertSee('Can you help with the size?');
         $this->assertSame(4, $review->responses()->count());
         $this->assertSame('Thanks again for your feedback.', $root->fresh()->body);
