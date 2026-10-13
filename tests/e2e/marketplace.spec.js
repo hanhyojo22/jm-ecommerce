@@ -65,6 +65,7 @@ test('seller shops another store and returns to Seller Center with the same acco
         await expect(page).toHaveURL(/https?:\/\/[^/]+\/$/);
 
         await page.goto('/delivery-addresses');
+        await rejectOptionalCookies(page);
         await page.getByLabel('Recipient name').fill('QA Seller');
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('20 QA Street');
@@ -492,6 +493,8 @@ test('seller quick reply fills the message draft without a server request', asyn
         await seller.page.goto('/messages');
         await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        await expect.poll(() => seller.page.evaluate(() => window.Echo?.connector.pusher.connection.state)).toBe('connected');
+        await seller.page.waitForLoadState('networkidle');
 
         let updateRequests = 0;
         await seller.page.route(/\/livewire-[^/]+\/update$/, (route) => {

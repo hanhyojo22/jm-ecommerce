@@ -128,7 +128,7 @@ test('seller can cancel bulk listing deactivation before any change is submitted
         });
         await page.getByRole('button', { name: 'Deactivate selected' }).click();
         await expect(page.getByRole('button', { name: 'Deactivate selected' })).toBeVisible();
-        await expect(page.getByRole('table').getByText('Active', { exact: true })).toBeVisible();
+        await expect(page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByText('Active', { exact: true })).toBeVisible();
     } finally {
         await context.close();
     }
