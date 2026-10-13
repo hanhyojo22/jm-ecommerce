@@ -381,28 +381,46 @@ const clerkSessionNeedsRefresh = () => {
 };
 
 const refreshClerkSession = async (endpoint) => {
-    const clerk = await loadClerk();
-    const sessionToken = await clerk.session?.getToken();
+    const controller = new AbortController();
+    let timer;
 
-    if (!sessionToken) {
-        throw new Error('Clerk did not provide a session token for the navigation request.');
+    try {
+        await Promise.race([
+            (async () => {
+                const clerk = await loadClerk();
+                const sessionToken = await clerk.session?.getToken();
+
+                if (!sessionToken) {
+                    throw new Error('Clerk did not provide a session token for the navigation request.');
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    signal: controller.signal,
+                    headers: {
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${sessionToken}`,
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Laravel rejected the Clerk session refresh (${response.status}).`);
+                }
+
+                rememberClerkSessionDeadline(sessionToken);
+            })(),
+            new Promise((_, reject) => {
+                timer = setTimeout(() => {
+                    controller.abort();
+                    reject(new Error('Session refresh timed out.'));
+                }, 8000);
+            }),
+        ]);
+    } finally {
+        clearTimeout(timer);
     }
-
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${sessionToken}`,
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error(`Laravel rejected the Clerk session refresh (${response.status}).`);
-    }
-
-    rememberClerkSessionDeadline(sessionToken);
 };
 
 // Livewire sends its own fetch requests, including chat typing and Send, without submitting a form.
@@ -481,13 +499,11 @@ document.addEventListener('click', (event) => {
     link.setAttribute('aria-busy', 'true');
 
     refreshClerkSession(clerkSessionRefreshEndpoint)
-        .then(() => {
-            window.location.assign(destination.href);
-        })
         .catch((error) => {
             console.error(error);
-            forgetClerkSessionDeadline();
-            window.location.assign(`/sign-in?redirect=${encodeURIComponent(destination.pathname + destination.search)}`);
+        })
+        .finally(() => {
+            window.location.assign(destination.href);
         });
 });
 

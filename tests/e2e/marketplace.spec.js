@@ -365,6 +365,24 @@ test('signed-in customer refreshes the Clerk token before opening messages', asy
     }
 });
 
+test('stalled session renewal does not trap navigation on the current page', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer');
+
+    try {
+        await page.goto('/');
+        await page.clock.install();
+        await page.route('**/auth/session', () => new Promise(() => {}));
+
+        await page.getByRole('link', { name: /Messages/ }).first().evaluate((link) => link.click());
+        await expect(page.getByRole('link', { name: /Messages/ }).first()).toHaveAttribute('aria-busy', 'true');
+        await page.clock.fastForward(10_000);
+
+        await expect(page).toHaveURL(/\/messages$/);
+    } finally {
+        await context.close();
+    }
+});
+
 test('messaging workspace adapts from split desktop panels to a mobile chat view', async ({ browser }, testInfo) => {
     const customer = await openAsRole(browser, 'customer');
     try {
