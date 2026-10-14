@@ -618,14 +618,15 @@ document.addEventListener('submit', (event) => {
 
 const newArrivalsSection = document.querySelector('[data-new-arrivals]');
 newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener('click', async (event) => {
+    event.preventDefault();
     const button = event.currentTarget;
     const grid = newArrivalsSection.querySelector('[data-new-arrivals-grid]');
     const status = newArrivalsSection.querySelector('[data-new-arrivals-status]');
-    if (button.disabled || !newArrivalsSection.dataset.nextUrl) {
+    if (button.getAttribute('aria-disabled') === 'true' || !newArrivalsSection.dataset.nextUrl) {
         return;
     }
 
-    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
     button.textContent = 'Loading…';
     grid.setAttribute('aria-busy', 'true');
     status.textContent = '';
@@ -648,6 +649,9 @@ newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener(
         fragment.content.querySelectorAll('form[data-add-to-cart]').forEach(bindAddToCartForm);
         grid.append(fragment.content);
         newArrivalsSection.dataset.nextUrl = result.next_url ?? '';
+        if (result.next_url) {
+            button.href = result.next_url;
+        }
         status.setAttribute('role', 'status');
         status.className = 'text-sm text-muted';
         status.textContent = count ? `${count} more products loaded.` : 'All new arrivals are shown.';
@@ -661,7 +665,7 @@ newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener(
         status.textContent = error.message || 'Could not load more products. Please try again.';
     } finally {
         grid.removeAttribute('aria-busy');
-        button.disabled = false;
+        button.removeAttribute('aria-disabled');
         button.textContent = 'Load More';
     }
 });

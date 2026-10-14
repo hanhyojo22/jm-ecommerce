@@ -256,6 +256,7 @@ test('store settings save, logo removal, and validation work in the browser', as
     try {
         await page.goto('/seller/store-settings');
         await page.getByRole('button', { name: 'Reject Optional' }).click();
+        await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
         await page.getByLabel('Store description').fill('A local shop with useful goods.');
         await page.getByLabel('Phone').fill('+639171234568');
         await page.getByLabel('City').fill('Quezon City');
@@ -339,6 +340,7 @@ test('seller order detail and product editor remain usable at each viewport', as
         const customerCookieBanner = customer.page.locator('[data-cookie-banner]');
         if (await customerCookieBanner.isVisible()) {
             await customerCookieBanner.locator('[data-cookie-action="reject"]').click();
+            await expect(customerCookieBanner).toHaveCount(0);
         }
         const cartForm = customer.page.locator('#purchase form');
         const cartResponse = await customer.context.request.post(await cartForm.getAttribute('action'), {
@@ -371,6 +373,7 @@ test('seller order detail and product editor remain usable at each viewport', as
             const sellerCookieBanner = seller.page.locator('[data-cookie-banner]');
             if (await sellerCookieBanner.isVisible()) {
                 await sellerCookieBanner.locator('[data-cookie-action="reject"]').click();
+                await expect(sellerCookieBanner).toHaveCount(0);
             }
             if (name === 'order-detail') {
                 const listWidth = await seller.page.evaluate(() => ({
@@ -414,11 +417,12 @@ test('new arrivals append the next page without horizontal overflow', async ({ p
     await page.getByRole('button', { name: 'Reject Optional' }).click();
     await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
     const arrivals = page.locator('#new-arrivals');
-    const loadMore = arrivals.getByRole('button', { name: 'Load More' });
+    const loadMore = arrivals.getByRole('link', { name: 'Load More' });
 
     await expect(arrivals.locator('article')).toHaveCount(20);
+    await expect(loadMore).toHaveAttribute('href', /new_cursor=/);
     if (testInfo.project.name === 'desktop-chromium') {
-        await page.route(/\?new_page=2$/, route => route.fulfill({ status: 500, body: 'Try again' }), { times: 1 });
+        await page.route(/[?&]new_cursor=/, route => route.fulfill({ status: 500, body: 'Try again' }), { times: 1 });
         await loadMore.click();
         await expect(arrivals.locator('[data-new-arrivals-status]')).toHaveText('Could not load more products. Please try again.');
         await expect(loadMore).toBeEnabled();

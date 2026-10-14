@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -24,13 +25,24 @@ class CatalogController extends Controller
 
     public function home(Request $request): View|JsonResponse
     {
-        if ($request->expectsJson() && $request->has('new_page')) {
-            $request->validate(['new_page' => ['required', 'integer', 'min:2']]);
+        $cursor = null;
+        if ($request->has('new_cursor')) {
+            $encodedCursor = $request->validate(['new_cursor' => ['required', 'string', 'max:512']])['new_cursor'];
+            $cursor = Cursor::fromEncoded($encodedCursor);
+            $parameters = $cursor?->toArray() ?? [];
+            abort_unless(count($parameters) === 3
+                && is_string($parameters['created_at'] ?? null)
+                && is_string($parameters['id'] ?? null)
+                && ($parameters['_pointsToNextItems'] ?? null) === true, 422);
+        }
+
+        if ($request->expectsJson() && $cursor !== null) {
 
             $products = $this->homeProducts()
                 ->latest()
                 ->orderByDesc('id')
-                ->simplePaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_page');
+                ->cursorPaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_cursor', $cursor)
+                ->fragment('new-arrivals');
 
             return response()->json([
                 'html' => view('marketplace.catalog._new-arrival-cards', ['products' => $products])->render(),
@@ -62,7 +74,8 @@ class CatalogController extends Controller
         $newProducts = (clone $homeProducts)
             ->latest()
             ->orderByDesc('id')
-            ->simplePaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_page', 1);
+            ->cursorPaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_cursor', $cursor)
+            ->fragment('new-arrivals');
         $flashDeals = (clone $homeProducts)
             ->whereNotNull('compare_at_price')
             ->whereColumn('compare_at_price', '>', 'price')

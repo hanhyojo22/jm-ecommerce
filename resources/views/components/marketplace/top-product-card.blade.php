@@ -1,7 +1,10 @@
 @props(['product'])
 
 @php
-    $isBuyer = Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail() && ! Auth::user()->isMemberOfTenant($product->tenant_id);
+    $shopper = Auth::user();
+    $canShop = $shopper && in_array($shopper->account_type, ['buyer', 'seller'], true);
+    $isOwnStore = $canShop && $shopper->tenantMemberships->contains('tenant_id', $product->tenant_id);
+    $isBuyer = $canShop && $shopper->hasVerifiedClerkEmail() && ! $isOwnStore;
     $isOnSale = $product->compare_at_price !== null && (float) $product->compare_at_price > (float) $product->price;
     $discountPercent = $isOnSale ? (int) round((1 - ((float) $product->price / (float) $product->compare_at_price)) * 100) : 0;
     $priceDecimals = fmod((float) $product->price, 1) === 0.0 ? 0 : 2;
@@ -37,9 +40,9 @@
             <form method="POST" action="{{ route('cart.store', $product) }}" data-add-to-cart data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="mt-auto">@csrf<input type="hidden" name="quantity" value="1"><button @disabled($product->stock_quantity < 1) class="min-h-11 w-full rounded-[9px] border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:text-muted">{{ $product->stock_quantity > 0 ? 'Add to cart' : 'Sold out' }}</button></form>
         @elseif (! Auth::check() && $product->stock_quantity > 0)
             <a href="{{ route('login', ['redirect' => request()->getPathInfo(), 'add_to_cart' => $product->id]) }}" class="mt-auto flex min-h-11 w-full items-center justify-center rounded-[9px] border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Sign in to add {{ $product->name }} to cart">Add to cart</a>
-        @elseif (Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && $product->stock_quantity > 0 && ! Auth::user()->isMemberOfTenant($product->tenant_id))
+        @elseif ($canShop && $product->stock_quantity > 0 && ! $isOwnStore)
             <a href="{{ route('profile.edit') }}" class="mt-auto flex min-h-11 w-full items-center justify-center rounded-[9px] border border-line bg-white px-3 text-sm font-semibold text-ink">Verify email to add to cart</a>
-        @elseif (Auth::check() && Auth::user()->isMemberOfTenant($product->tenant_id))
+        @elseif ($isOwnStore)
             <span class="mt-auto flex min-h-[35px] w-full items-center justify-center rounded-[9px] border border-line px-3 text-center text-sm font-semibold text-muted">You cannot buy from your store</span>
         @elseif ($product->stock_quantity > 0)
             <span class="mt-auto flex min-h-[35px] w-full items-center justify-center rounded-[9px] border border-line px-3 text-center text-sm font-semibold text-muted">Shopping unavailable for this account</span>

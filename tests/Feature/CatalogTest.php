@@ -12,6 +12,7 @@ use App\Models\TenantMember;
 use App\Models\User;
 use App\Support\CookiePreferences;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -121,27 +122,58 @@ class CatalogTest extends TestCase
         }
         $this->product(['name' => 'Hidden arrival', 'status' => 'draft']);
 
-        $this->get(route('home'))
+        $firstPage = $this->get(route('home'));
+        $firstPage
             ->assertSee('Arrival 41')
             ->assertSee('Arrival 22')
             ->assertDontSee('Arrival 21')
             ->assertDontSee('Hidden arrival')
             ->assertSee('data-new-arrivals-more', false);
-        $this->getJson(route('home', ['new_page' => 2]))
+        $nextUrl = $firstPage->viewData('newProducts')->nextPageUrl();
+        $this->assertNotNull($nextUrl);
+
+        $this->product(['name' => 'Later arrival']);
+
+        $secondPage = $this->getJson($nextUrl);
+        $secondPage
             ->assertOk()
             ->assertSee('Arrival 21')
             ->assertDontSee('Arrival 41')
+            ->assertDontSee('Arrival 22')
+            ->assertDontSee('Later arrival')
             ->assertDontSee('Hidden arrival')
-            ->assertJsonPath('next_url', route('home', ['new_page' => 3]));
-        $this->getJson(route('home', ['new_page' => 3]))
+            ->assertJsonStructure(['html', 'next_url']);
+        $this->get($nextUrl)
+            ->assertSee('Arrival 21')
+            ->assertDontSee('Arrival 22');
+        $this->getJson($secondPage->json('next_url'))
             ->assertOk()
             ->assertSee('Arrival 1')
             ->assertJsonPath('next_url', null);
     }
 
-    public function test_new_arrivals_rejects_invalid_page_numbers(): void
+    public function test_new_arrivals_rejects_invalid_cursors(): void
     {
-        $this->getJson(route('home', ['new_page' => 0]))->assertUnprocessable();
+        $this->getJson(route('home', ['new_cursor' => 'invalid']))->assertUnprocessable();
+        $this->getJson(route('home', ['new_cursor' => base64_encode(json_encode(['id' => 'bad', '_pointsToNextItems' => true]))]))->assertUnprocessable();
+    }
+
+    public function test_homepage_checks_shopper_store_membership_once_for_product_cards(): void
+    {
+        $buyer = User::factory()->create();
+        for ($number = 1; $number <= 5; $number++) {
+            $this->product(['name' => "Membership card {$number}"]);
+        }
+        $membershipQueries = [];
+        DB::listen(function ($query) use (&$membershipQueries): void {
+            if (str_contains($query->sql, 'tenant_members')) {
+                $membershipQueries[] = $query->sql;
+            }
+        });
+
+        $this->actingAs($buyer)->get(route('home'))->assertSee('Membership card 1');
+
+        $this->assertCount(1, $membershipQueries);
     }
 
     public function test_homepage_tracks_recently_viewed_products_and_recommends_their_category(): void

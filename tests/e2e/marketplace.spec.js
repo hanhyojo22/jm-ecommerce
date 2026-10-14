@@ -56,7 +56,7 @@ test('customer can add a newly loaded arrival to the cart', async ({ browser }) 
         await page.goto('/');
         await rejectOptionalCookies(page);
         const arrivals = page.locator('#new-arrivals');
-        await arrivals.getByRole('button', { name: 'Load More' }).click();
+        await arrivals.getByRole('link', { name: 'Load More' }).click();
         await arrivals.locator('article').filter({ hasText: 'QA Arrival 21' }).getByRole('button', { name: 'Add to cart' }).click();
 
         await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
