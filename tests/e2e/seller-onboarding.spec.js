@@ -2,12 +2,14 @@ import { expect, test } from '@playwright/test';
 import { resolve } from 'node:path';
 import { openAsRole } from './support/role-page.js';
 
-test('customer applies, admin approves and suspends, and rejected applicant sees the reason', async ({ browser }) => {
+test('customer applies, admin approves and suspends, and rejected applicant sees the reason', async ({ browser }, testInfo) => {
     test.setTimeout(90_000);
-    const customer = await openAsRole(browser, 'customer');
+    const customer = await openAsRole(browser, testInfo.retry ? 'customer' : 'applicant');
     const admin = await openAsRole(browser, 'admin');
     const rejected = await openAsRole(browser, 'rejected');
     const logo = resolve('public/images/categories/fashion.png');
+    const storeName = testInfo.retry ? 'QA Applicant Retry Goods' : 'QA Applicant Goods';
+    const storeSlug = testInfo.retry ? 'qa-applicant-retry-goods' : 'qa-applicant-goods';
 
     try {
         await customer.page.goto('/start-selling');
@@ -18,8 +20,8 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
         await customer.page.getByLabel('Date of birth').fill('1990-01-01');
         await customer.page.getByRole('button', { name: 'Save and continue' }).click();
 
-        await customer.page.getByLabel('Store name').fill('QA Applicant Goods');
-        await customer.page.getByLabel('Storefront URL slug').fill('qa-applicant-goods');
+        await customer.page.getByLabel('Store name').fill(storeName);
+        await customer.page.getByLabel('Storefront URL slug').fill(storeSlug);
         await customer.page.getByLabel('Store description').fill('Useful marketplace goods.');
         await customer.page.getByLabel('Primary product category').fill('Fashion');
         await customer.page.getByLabel('Customer support contact').fill('qa-customer@example.test');
@@ -55,7 +57,7 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
         expect((await customer.page.goto('/seller/products')).status()).toBe(403);
         await expect(customer.page.getByRole('heading', { name: 'Access restricted' })).toBeVisible();
 
-        await admin.page.goto('/admin/seller-applications?search=QA+Applicant+Goods');
+        await admin.page.goto(`/admin/seller-applications?search=${encodeURIComponent(storeName)}`);
         await admin.page.getByRole('link', { name: 'Review application' }).click();
         await expect(admin.page.getByText('•••• 9012')).toBeVisible();
         admin.page.once('dialog', (dialog) => dialog.accept());
@@ -64,11 +66,12 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
         await customer.page.goto('/seller');
         await expect(customer.page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
 
-        await admin.page.goto('/admin/seller-applications?search=QA+Applicant+Goods');
+        await admin.page.goto(`/admin/seller-applications?search=${encodeURIComponent(storeName)}`);
         await admin.page.getByRole('link', { name: 'Review application' }).click();
         await admin.page.getByLabel('Suspend seller').fill('Marketplace policy violation confirmed.');
         admin.page.once('dialog', (dialog) => dialog.accept());
         await admin.page.getByRole('button', { name: 'Suspend seller' }).click();
+        await expect(admin.page.getByRole('status')).toHaveText('Seller suspended.');
         expect((await customer.page.goto('/seller/products')).status()).toBe(403);
         await expect(customer.page.getByRole('heading', { name: 'Access restricted' })).toBeVisible();
         await customer.page.goto('/start-selling');
