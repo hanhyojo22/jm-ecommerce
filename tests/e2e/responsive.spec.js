@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { openAsRole } from './support/role-page.js';
 
 test('seller application steps remain usable on mobile and desktop', async ({ browser }) => {
@@ -179,13 +180,24 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
         await page.goto('/seller/store-settings');
         await page.getByRole('button', { name: 'Reject Optional' }).click();
         await expect(page.locator('[data-cookie-banner]')).toBeHidden();
+        if (testInfo.project.name === 'desktop-chromium') {
+            const accessibility = await new AxeBuilder({ page })
+                .include('form[action$="/seller/store-settings"]')
+                .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+                .analyze();
+            expect(accessibility.violations).toEqual([]);
+        }
+        await expect(page.getByText('All changes saved')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
         await page.getByLabel('Store description').fill('A local shop.');
+        await expect(page.getByText('Unsaved changes')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Save store settings' })).toBeEnabled();
         await expect(page.locator('#description-count')).toHaveText('13 / 2,000 characters');
         await page.getByLabel('Store description').fill('A local shop. 🛍');
         await expect(page.locator('#description-count')).toHaveText('15 / 2,000 characters');
-        await page.getByLabel('Store logo').setInputFiles({ name: 'new-logo.png', mimeType: 'image/png', buffer: tinyPng });
+        await page.getByLabel('Change logo').setInputFiles({ name: 'new-logo.png', mimeType: 'image/png', buffer: tinyPng });
         await expect(page.getByAltText('Selected store logo preview')).toBeVisible();
-        await expect(page.getByText('New logo selected')).toBeVisible();
+        await expect(page.getByText('New logo preview')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
         if (testInfo.project.name === 'mobile-chromium') {
             await page.setViewportSize({ width: 375, height: 812 });
@@ -194,6 +206,68 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
         await page.evaluate(() => window.scrollTo(0, 0));
         await page.screenshot({ path: testInfo.outputPath('store-settings-edit.png'), fullPage: true });
     } finally {
+        await context.close();
+    }
+});
+
+test('store settings save, logo removal, and validation work in the browser', async ({ browser }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'One end-to-end save flow is sufficient');
+    const { context, page } = await openAsRole(browser, 'seller');
+    const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL6TAAAAABJRU5ErkJggg==', 'base64');
+    let releaseFirstUpdate;
+    const firstUpdate = new Promise(resolve => { releaseFirstUpdate = resolve; });
+
+    try {
+        await page.goto('/seller/store-settings');
+        await page.getByRole('button', { name: 'Reject Optional' }).click();
+        await page.getByLabel('Store description').fill('A local shop with useful goods.');
+        await page.getByLabel('Phone').fill('+639171234568');
+        await page.getByLabel('City').fill('Quezon City');
+        await page.getByLabel('Street address').fill('25 QA Street');
+        await page.getByLabel('Change logo').setInputFiles({ name: 'new-logo.png', mimeType: 'image/png', buffer: tinyPng });
+
+        let updates = 0;
+        await page.route('**/seller/store-settings', async route => {
+            if (route.request().method() === 'POST') {
+                updates++;
+                if (updates === 1) {
+                    await firstUpdate;
+                }
+            }
+            await route.continue();
+        });
+        const saveButton = page.getByRole('button', { name: 'Save store settings' });
+        await saveButton.scrollIntoViewIfNeeded();
+        const saveButtonBox = await saveButton.boundingBox();
+        await page.mouse.dblclick(saveButtonBox.x + saveButtonBox.width / 2, saveButtonBox.y + saveButtonBox.height / 2, { delay: 20 });
+        await expect.poll(() => updates).toBe(1);
+        releaseFirstUpdate();
+        await expect(page.getByText('Store details saved.')).toBeVisible();
+        expect(updates).toBe(1);
+        await expect(page.getByLabel('Store description')).toHaveValue('A local shop with useful goods.');
+        await expect(page.getByLabel('Phone')).toHaveValue('+639171234568');
+        await expect(page.getByLabel('City')).toHaveValue('Quezon City');
+        await expect(page.getByLabel('Street address')).toHaveValue('25 QA Street');
+        await expect(page.locator('section[aria-labelledby="store-preview-heading"] img')).toHaveCount(1);
+        await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
+
+        await page.getByLabel('Remove current logo on save').check();
+        await expect(page.getByText('Logo will be removed')).toBeVisible();
+        await page.getByLabel('Change logo').setInputFiles({ name: 'replacement.png', mimeType: 'image/png', buffer: tinyPng });
+        await expect(page.getByLabel('Remove current logo on save')).not.toBeChecked();
+        await page.getByLabel('Remove current logo on save').check();
+        await expect(page.getByText('Logo will be removed')).toBeVisible();
+        await page.getByRole('button', { name: 'Save store settings' }).click();
+        await expect(page.getByText('Store details saved.')).toBeVisible();
+        await expect(page.getByLabel('Remove current logo on save')).toHaveCount(0);
+        await expect(page.locator('section[aria-labelledby="store-preview-heading"] img')).toHaveCount(0);
+
+        await page.getByLabel('Change logo').setInputFiles({ name: 'invalid.txt', mimeType: 'text/plain', buffer: Buffer.from('not an image') });
+        await page.getByRole('button', { name: 'Save store settings' }).click();
+        await expect(page.getByRole('alert')).toContainText('We could not save your changes');
+        await expect(page.locator('#logo-error')).toBeVisible();
+    } finally {
+        releaseFirstUpdate?.();
         await context.close();
     }
 });
