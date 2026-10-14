@@ -183,7 +183,7 @@
 
                 <section id="store-about" class="mt-10 scroll-mt-24 rounded-[14px] border border-line bg-white p-5 sm:p-6" aria-labelledby="store-about-heading">
                     <h2 id="store-about-heading" class="text-lg font-semibold">About {{ $sellerStore->name }}</h2>
-                    <p class="mt-2 max-w-2xl text-sm leading-6 text-muted">{{ filled($sellerStore->description) ? $sellerStore->description : 'An independent JMMart seller offering quality products with cash on delivery and free shipping.' }}</p>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-muted">{{ filled($sellerStore->description) ? $sellerStore->description : 'No description added yet.' }}</p>
                     <dl class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
                         <div><dt class="sr-only">Products</dt><dd><span class="font-semibold text-ink">{{ number_format($sellerStore->public_products_count) }}</span> {{ Str::plural('product', $sellerStore->public_products_count) }}</dd></div>
                         @if (filled($sellerStore->city))<div><dt class="sr-only">Location</dt><dd>{{ $sellerStore->city }}</dd></div>@endif

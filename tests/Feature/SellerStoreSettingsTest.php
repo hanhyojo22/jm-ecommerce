@@ -23,6 +23,8 @@ class SellerStoreSettingsTest extends TestCase
             'store-logo.png',
             base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL6TAAAAABJRU5ErkJggg=='),
         );
+        $this->actingAs($owner)->get(route('catalog.store', $store->slug))
+            ->assertSee('No description added yet.');
 
         $response = $this->actingAs($owner)->patch(route('seller.store-settings.update'), [
             'description' => 'Handmade home goods from Manila.',
@@ -42,11 +44,19 @@ class SellerStoreSettingsTest extends TestCase
         Storage::disk('public')->assertExists($store->logo_path);
         $this->actingAs($owner)->get(route('seller.store-settings.edit'))
             ->assertSee('Current Northwind Goods logo', false)
+            ->assertSee('Handmade home goods from Manila.')
+            ->assertSee('+639171234568')
+            ->assertSee('25 New Market Street')
+            ->assertSee('Quezon City')
             ->assertSee(Storage::disk('public')->url($store->logo_path), false);
         $this->actingAs($owner)->get(route('seller.dashboard'))
             ->assertSee(Storage::disk('public')->url($store->logo_path), false);
         $this->get(route('catalog.store', $store->slug))
             ->assertSee('alt="Northwind Goods logo"', false)
+            ->assertSee('Handmade home goods from Manila.')
+            ->assertSee('Quezon City')
+            ->assertDontSee('+639171234568')
+            ->assertDontSee('25 New Market Street')
             ->assertSee(Storage::disk('public')->url($store->logo_path), false);
         $response->assertSessionMissing('seller_store_settings_undo');
         $this->assertDatabaseHas('audit_logs', [
