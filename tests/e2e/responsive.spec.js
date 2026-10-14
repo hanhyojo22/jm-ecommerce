@@ -171,6 +171,33 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
     }
 });
 
+test('store settings preview edits at each viewport', async ({ browser }, testInfo) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+    const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL6TAAAAABJRU5ErkJggg==', 'base64');
+
+    try {
+        await page.goto('/seller/store-settings');
+        await page.getByRole('button', { name: 'Reject Optional' }).click();
+        await expect(page.locator('[data-cookie-banner]')).toBeHidden();
+        await page.getByLabel('Store description').fill('A local shop.');
+        await expect(page.locator('#description-count')).toHaveText('13 / 2,000 characters');
+        await page.getByLabel('Store description').fill('A local shop. 🛍');
+        await expect(page.locator('#description-count')).toHaveText('15 / 2,000 characters');
+        await page.getByLabel('Store logo').setInputFiles({ name: 'new-logo.png', mimeType: 'image/png', buffer: tinyPng });
+        await expect(page.getByAltText('Selected store logo preview')).toBeVisible();
+        await expect(page.getByText('New logo selected')).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+        if (testInfo.project.name === 'mobile-chromium') {
+            await page.setViewportSize({ width: 375, height: 812 });
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+        }
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.screenshot({ path: testInfo.outputPath('store-settings-edit.png'), fullPage: true });
+    } finally {
+        await context.close();
+    }
+});
+
 test('seller order detail and product editor remain usable at each viewport', async ({ browser }, testInfo) => {
     test.setTimeout(60_000);
     const customer = await openAsRole(browser, 'customer');
