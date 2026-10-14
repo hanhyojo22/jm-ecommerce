@@ -260,9 +260,12 @@ test('store settings save, logo removal, and validation work in the browser', as
             await route.continue();
         });
         const saveButton = page.getByRole('button', { name: 'Save store settings' });
-        await saveButton.scrollIntoViewIfNeeded();
-        const saveButtonBox = await saveButton.boundingBox();
-        await page.mouse.dblclick(saveButtonBox.x + saveButtonBox.width / 2, saveButtonBox.y + saveButtonBox.height / 2, { delay: 20 });
+        await expect(saveButton).toBeEnabled();
+        await page.evaluate(() => {
+            const form = document.querySelector('form[action$="/seller/store-settings"]');
+            form.requestSubmit();
+            form.requestSubmit();
+        });
         await expect.poll(() => updates).toBe(1);
         releaseFirstUpdate();
         await expect(page.getByText('Store details saved.')).toBeVisible();

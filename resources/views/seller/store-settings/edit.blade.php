@@ -21,23 +21,26 @@
             @endif
 
             <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
-            <section class="flex min-w-0 flex-col gap-4 rounded-[14px] border border-line bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5 xl:col-start-2 xl:row-start-1 xl:items-stretch xl:flex-col" aria-labelledby="store-preview-heading">
+            <section class="min-w-0 overflow-hidden rounded-2xl border border-line bg-white shadow-sm xl:col-start-2 xl:row-start-1" aria-labelledby="store-preview-heading">
+                <div class="flex flex-col gap-5 bg-ink p-5 text-white sm:flex-row sm:items-center sm:justify-between xl:items-start xl:flex-col">
                 <div class="flex min-w-0 items-center gap-4">
                     @if ($store->logo_path)
-                        <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-14 shrink-0 rounded-xl border border-line bg-canvas object-cover">
+                        <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-16 shrink-0 rounded-2xl border-2 border-white/30 bg-white object-cover">
                     @else
-                        <div class="grid size-14 shrink-0 place-items-center rounded-xl bg-blue-50 text-xl font-bold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
+                        <div class="grid size-16 shrink-0 place-items-center rounded-2xl bg-white text-2xl font-bold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
                     @endif
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-muted">Live storefront</p>
-                        <h2 id="store-preview-heading" class="mt-0.5 truncate text-base font-semibold text-ink">{{ $store->name }}</h2>
-                        <p class="truncate text-sm text-muted">/stores/{{ $store->slug }}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-blue-200">Your storefront</p>
+                        <h2 id="store-preview-heading" class="mt-1 truncate text-xl font-bold text-white">{{ $store->name }}</h2>
+                        <p class="mt-1 truncate text-sm text-slate-300">/stores/{{ $store->slug }}</p>
                     </div>
                 </div>
-                <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 sm:self-auto xl:self-start">
-                    View storefront
+                <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-lg bg-white px-4 text-sm font-semibold text-ink transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-ink sm:self-auto xl:self-start">
+                    Visit storefront
                     <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>
                 </a>
+                </div>
+                <p class="px-5 py-3 text-sm text-muted">Your store name and URL are set. Update the details below to keep your storefront current.</p>
             </section>
 
             <form method="POST" action="{{ route('seller.store-settings.update') }}" enctype="multipart/form-data" class="min-w-0 space-y-5 xl:col-start-1 xl:row-start-1"
@@ -55,23 +58,21 @@
                 <p class="text-sm font-medium" :class="dirty ? 'text-warning-text' : 'text-muted'" role="status" aria-live="polite"
                     x-text="saving ? 'Saving store settings…' : dirty ? 'Unsaved changes' : 'All changes saved'">{{ $errors->any() ? 'Unsaved changes' : 'All changes saved' }}</p>
 
-                <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="store-profile-heading">
-                    <div class="flex items-start gap-3">
-                        <span class="grid size-10 shrink-0 place-items-center rounded-[10px] bg-blue-50 text-brand" aria-hidden="true">
+                <section class="grid min-w-0 gap-6 rounded-2xl border border-line bg-white p-5 shadow-sm md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] md:gap-8 md:p-7" aria-labelledby="store-profile-heading">
+                    <div>
+                        <span class="grid size-10 place-items-center rounded-xl bg-blue-50 text-brand" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5 5 4h14l2 5.5M4 10h16v10H4zM9 20v-6h6v6M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>
                         </span>
-                        <div>
-                            <h2 id="store-profile-heading" class="text-lg font-semibold text-ink">Store identity</h2>
-                            <p class="mt-1 text-sm text-muted">Choose a recognizable logo and describe what your store offers.</p>
-                        </div>
+                        <h2 id="store-profile-heading" class="mt-4 text-lg font-semibold text-ink">Store identity</h2>
+                        <p class="mt-2 text-sm leading-6 text-muted">Choose a recognizable logo and describe what your store offers.</p>
                     </div>
 
-                    <div class="mt-6 grid min-w-0 gap-6 border-t border-line pt-6 2xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+                    <div class="min-w-0 space-y-7">
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-ink">Store logo</p>
                             <p id="logo-help" class="mt-1 text-sm text-muted">Square JPEG, PNG, or WebP. Maximum 2 MB.</p>
-                            <div class="mt-3 flex min-w-0 flex-wrap items-center gap-4 rounded-[10px] border border-line bg-canvas p-4">
-                                <div class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[10px] border border-line bg-white">
+                            <div class="mt-4 flex min-w-0 flex-wrap items-center gap-4 rounded-xl border border-dashed border-line bg-canvas p-4">
+                                <div class="grid size-24 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-white">
                                     @if ($store->logo_path)
                                         <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="Current {{ $store->name }} logo" class="size-full object-cover" x-show="!logoPreview && !removeLogo">
                                         <span x-cloak x-show="removeLogo" class="text-center text-xs font-medium text-muted">No logo</span>
@@ -102,7 +103,7 @@
                             @endif
                         </div>
 
-                        <div class="min-w-0">
+                        <div class="min-w-0 border-t border-line pt-6">
                             <label for="description" class="block text-sm font-semibold text-ink">Store description</label>
                             <p id="description-help" class="mt-1 text-sm text-muted">Tell shoppers what you sell and what makes your store distinct.</p>
                             <textarea id="description" name="description" rows="5" maxlength="2000" aria-describedby="description-help description-count @error('description') description-error @enderror" @error('description') aria-invalid="true" @enderror @input="descriptionLength = Array.from($event.target.value).length" class="field-control mt-3 resize-y @error('description') border-rose-500 @enderror">{{ old('description', $store->description) }}</textarea>
@@ -114,18 +115,16 @@
                     </div>
                 </section>
 
-                <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="contact-details-heading">
-                    <div class="flex items-start gap-3">
-                        <span class="grid size-10 shrink-0 place-items-center rounded-[10px] bg-blue-50 text-brand" aria-hidden="true">
+                <section class="grid min-w-0 gap-6 rounded-2xl border border-line bg-white p-5 shadow-sm md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] md:gap-8 md:p-7" aria-labelledby="contact-details-heading">
+                    <div>
+                        <span class="grid size-10 place-items-center rounded-xl bg-blue-50 text-brand" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.5 7-12a7 7 0 0 0-14 0c0 6.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
                         </span>
-                        <div>
-                            <h2 id="contact-details-heading" class="text-lg font-semibold text-ink">Contact and address</h2>
-                            <p class="mt-1 text-sm text-muted">Keep these details current for customer and order follow-up.</p>
-                        </div>
+                        <h2 id="contact-details-heading" class="mt-4 text-lg font-semibold text-ink">Contact and address</h2>
+                        <p class="mt-2 text-sm leading-6 text-muted">Keep these details current for customer and order follow-up.</p>
                     </div>
 
-                    <div class="mt-6 grid min-w-0 gap-5 border-t border-line pt-6 sm:grid-cols-2">
+                    <div class="grid min-w-0 gap-5 sm:grid-cols-2">
                         <div class="min-w-0">
                             <label for="phone" class="block text-sm font-semibold text-ink">Phone <span class="font-normal text-muted">(required)</span></label>
                             <input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="30" required @error('phone') aria-describedby="phone-error" aria-invalid="true" @enderror value="{{ old('phone', $store->phone) }}" class="field-control mt-2 @error('phone') border-rose-500 @enderror">
@@ -144,11 +143,11 @@
                     </div>
                 </section>
 
-                <div class="flex flex-col gap-4 rounded-[14px] border border-line bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-4 rounded-2xl border border-line bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-sm text-muted">Changes appear on your storefront after you save.</p>
                     <div class="flex flex-col-reverse gap-3 sm:flex-row">
-                        <a href="{{ route('seller.dashboard') }}" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line bg-white px-5 text-sm font-semibold text-ink transition hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Cancel</a>
-                        <button type="submit" :disabled="saving || !dirty" :aria-busy="saving" class="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
+                        <a href="{{ route('seller.dashboard') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Cancel</a>
+                        <button type="submit" :disabled="saving || !dirty" :aria-busy="saving" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
                             <span x-show="!saving">Save store settings</span>
                             <span x-cloak x-show="saving">Saving…</span>
                         </button>
