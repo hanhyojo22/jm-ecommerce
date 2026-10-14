@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="mx-auto w-full max-w-[1096px]">
+        <div>
             <h1 class="text-[28px] font-bold leading-[1.35] tracking-[-0.02em] text-ink">Store settings</h1>
             <p class="mt-1 text-sm text-muted">Manage the identity and contact details shoppers see on your storefront.</p>
         </div>
     </x-slot>
 
     <div class="page-shell">
-        <div class="page-container max-w-6xl">
+        <div class="page-container">
             @if (session('status') || $canUndo)
                 <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/20 bg-success/10 px-4 py-3" role="status">
                     <p class="text-sm font-medium text-success">{{ session('status', 'A recent text-only save can still be undone.') }}</p>
@@ -66,7 +66,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-6 grid min-w-0 gap-6 border-t border-line pt-6">
+                    <div class="mt-6 grid min-w-0 gap-6 border-t border-line pt-6 2xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-ink">Store logo</p>
                             <p id="logo-help" class="mt-1 text-sm text-muted">Square JPEG, PNG, or WebP. Maximum 2 MB.</p>
@@ -136,7 +136,7 @@
                             <input id="city" name="city" autocomplete="address-level2" maxlength="100" required @error('city') aria-describedby="city-error" aria-invalid="true" @enderror value="{{ old('city', $store->city) }}" class="field-control mt-2 @error('city') border-rose-500 @enderror">
                             <x-input-error id="city-error" :messages="$errors->get('city')" class="mt-2" />
                         </div>
-                        <div class="min-w-0 sm:col-span-2">
+                        <div class="min-w-0 max-w-3xl sm:col-span-2">
                             <label for="address_line" class="block text-sm font-semibold text-ink">Street address <span class="font-normal text-muted">(required)</span></label>
                             <input id="address_line" name="address_line" autocomplete="street-address" maxlength="255" required @error('address_line') aria-describedby="address-line-error" aria-invalid="true" @enderror value="{{ old('address_line', $store->address_line) }}" class="field-control mt-2 @error('address_line') border-rose-500 @enderror">
                             <x-input-error id="address-line-error" :messages="$errors->get('address_line')" class="mt-2" />

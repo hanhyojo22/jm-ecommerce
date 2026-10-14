@@ -180,10 +180,16 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
         await page.goto('/seller/store-settings');
         await page.getByRole('button', { name: 'Reject Optional' }).click();
         await expect(page.locator('[data-cookie-banner]')).toBeHidden();
-        const container = await page.locator('.page-container').boundingBox();
+        const container = await page.locator('.page-shell > .page-container').boundingBox();
+        for (const path of ['/seller/products', '/seller/orders']) {
+            await page.goto(path);
+            const peerContainer = await page.locator('.page-shell > .page-container').boundingBox();
+            expect(peerContainer.x).toBeCloseTo(container.x, 0);
+            expect(peerContainer.width).toBeCloseTo(container.width, 0);
+        }
+        await page.goto('/seller/store-settings');
         const form = await page.locator('form[action$="/seller/store-settings"]').boundingBox();
         const preview = await page.locator('section[aria-labelledby="store-preview-heading"]').boundingBox();
-        expect(container.width).toBeLessThanOrEqual(1152);
         if (testInfo.project.name === 'desktop-chromium') {
             expect(preview.x).toBeGreaterThan(form.x + form.width);
             expect(Math.abs(preview.y - form.y)).toBeLessThan(2);
@@ -214,6 +220,14 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
         }
         await page.evaluate(() => window.scrollTo(0, 0));
         await page.screenshot({ path: testInfo.outputPath('store-settings-edit.png'), fullPage: true });
+        if (testInfo.project.name === 'desktop-chromium') {
+            await page.setViewportSize({ width: 1920, height: 1080 });
+            const wideContainer = await page.locator('.page-shell > .page-container').boundingBox();
+            const address = await page.getByLabel('Street address').boundingBox();
+            expect(wideContainer.width).toBeCloseTo(1500, 0);
+            expect(address.width).toBeLessThanOrEqual(768);
+            await page.screenshot({ path: testInfo.outputPath('store-settings-wide.png'), fullPage: true });
+        }
     } finally {
         await context.close();
     }
