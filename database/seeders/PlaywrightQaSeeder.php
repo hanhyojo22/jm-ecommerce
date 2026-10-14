@@ -32,6 +32,11 @@ class PlaywrightQaSeeder extends Seeder
             'email' => 'qa-applicant@example.test',
             'clerk_user_id' => 'qa-applicant-identity',
         ]);
+        User::factory()->create([
+            'name' => 'QA Responsive Applicant',
+            'email' => 'qa-responsive-applicant@example.test',
+            'clerk_user_id' => 'qa-responsive-applicant-identity',
+        ]);
         $rejectedApplicant = User::factory()->create([
             'name' => 'QA Rejected Applicant',
             'email' => 'qa-rejected@example.test',

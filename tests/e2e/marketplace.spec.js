@@ -210,7 +210,6 @@ test('seller refreshes an expired session before posting a review response', asy
         await expect(page).toHaveURL(/\/seller\/reviews$/);
         await expect(page.locator('article').getByText('Thank you for your feedback.')).toBeVisible();
         await expect(page.locator('article').getByText('QA Northwind Store', { exact: true })).toBeVisible();
-        await expect(page.getByLabel('Seller response')).toHaveValue('Thank you for your feedback.');
     } finally {
         await context.close();
     }

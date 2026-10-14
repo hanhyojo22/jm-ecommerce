@@ -5,6 +5,7 @@ const identities = {
     admin: 'qa-admin-identity',
     rejected: 'qa-rejected-identity',
     applicant: 'qa-applicant-identity',
+    responsiveApplicant: 'qa-responsive-applicant-identity',
 };
 
 export async function openAsRole(browser, role, contextOptions = {}) {

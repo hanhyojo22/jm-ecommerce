@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
 test('seller application steps remain usable on mobile and desktop', async ({ browser }) => {
-    const { context, page } = await openAsRole(browser, 'applicant');
+    const { context, page } = await openAsRole(browser, 'responsiveApplicant');
 
     try {
         await page.goto('/start-selling');
