@@ -192,11 +192,13 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
         const contact = await page.locator('section[aria-labelledby="contact-details-heading"]').boundingBox();
         const previewSection = page.locator('section[aria-labelledby="store-preview-heading"]');
         const preview = await previewSection.boundingBox();
+        const saveAction = await page.getByRole('button', { name: 'Save store settings' }).boundingBox();
         expect(await page.locator('#store-preview-heading').evaluate(element => element.scrollWidth <= element.clientWidth)).toBeTruthy();
         if (testInfo.project.name === 'desktop-chromium') {
             expect(preview.x).toBeGreaterThan(identity.x + identity.width);
             expect(Math.abs(preview.y - identity.y)).toBeLessThan(2);
             expect(identity.width / preview.width).toBeGreaterThan(1.8);
+            expect(saveAction.x).toBeLessThan(identity.x + identity.width);
             const accessibility = await new AxeBuilder({ page })
                 .include('form[action$="/seller/store-settings"]')
                 .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -204,12 +206,15 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
             expect(accessibility.violations).toEqual([]);
         } else {
             expect(preview.y).toBeGreaterThan(contact.y + contact.height);
+            expect(saveAction.y).toBeLessThan(preview.y);
+            expect(await page.getByLabel('Store description').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+            expect(await page.locator('[data-cookie-floating]').evaluate(element => getComputedStyle(element).position)).not.toBe('fixed');
         }
         await expect(page.getByText('All changes saved')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
         await page.getByLabel('Store description').fill('A local shop.');
         await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
-        await expect(previewSection.locator('dd').nth(2)).toHaveText('A local shop.');
+        await expect(previewSection.locator('dd').nth(0)).toHaveText('A local shop.');
         await expect(previewSection.getByText('Previewing unsaved changes.')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Save store settings' })).toBeEnabled();
         await expect(page.locator('#description-count')).toHaveText('13 / 2,000 characters');
@@ -221,6 +226,8 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
         await expect(page.getByText('New logo preview')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
         if (testInfo.project.name === 'mobile-chromium') {
+            await page.setViewportSize({ width: 320, height: 700 });
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
             await page.setViewportSize({ width: 375, height: 812 });
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
         }
@@ -255,10 +262,10 @@ test('store settings save, logo removal, and validation work in the browser', as
         await page.getByLabel('Street address').fill('25 QA Street');
         await page.getByLabel('Change logo').setInputFiles({ name: 'new-logo.png', mimeType: 'image/png', buffer: tinyPng });
         const preview = page.locator('section[aria-labelledby="store-preview-heading"]');
-        await expect(preview.locator('dd').nth(2)).toHaveText('A local shop with useful goods.');
-        await expect(preview.locator('dd').nth(3)).toHaveText('+639171234568');
-        await expect(preview.locator('dd').nth(4)).toHaveText('Quezon City');
-        await expect(preview.locator('dd').nth(5)).toHaveText('25 QA Street');
+        await expect(preview.locator('dd').nth(0)).toHaveText('A local shop with useful goods.');
+        await expect(preview.locator('dd').nth(1)).toHaveText('+639171234568');
+        await expect(preview.locator('dd').nth(2)).toHaveText('Quezon City');
+        await expect(preview.locator('dd').nth(3)).toHaveText('25 QA Street');
         await expect(preview.getByAltText('Selected storefront logo preview')).toBeVisible();
 
         let updates = 0;
@@ -287,14 +294,14 @@ test('store settings save, logo removal, and validation work in the browser', as
         await expect(page.getByLabel('City')).toHaveValue('Quezon City');
         await expect(page.getByLabel('Street address')).toHaveValue('25 QA Street');
         await expect(preview.locator('img:visible')).toHaveCount(1);
-        await expect(preview.locator('dd').nth(2)).toHaveText('A local shop with useful goods.');
-        await expect(preview.locator('dd').nth(3)).toHaveText('+639171234568');
-        await expect(preview.locator('dd').nth(4)).toHaveText('Quezon City');
-        await expect(preview.locator('dd').nth(5)).toHaveText('25 QA Street');
+        await expect(preview.locator('dd').nth(0)).toHaveText('A local shop with useful goods.');
+        await expect(preview.locator('dd').nth(1)).toHaveText('+639171234568');
+        await expect(preview.locator('dd').nth(2)).toHaveText('Quezon City');
+        await expect(preview.locator('dd').nth(3)).toHaveText('25 QA Street');
         await expect(preview.getByText('Previewing unsaved changes.')).toBeHidden();
         await page.reload();
-        await expect(preview.locator('dd').nth(2)).toHaveText('A local shop with useful goods.');
-        await expect(preview.locator('dd').nth(3)).toHaveText('+639171234568');
+        await expect(preview.locator('dd').nth(0)).toHaveText('A local shop with useful goods.');
+        await expect(preview.locator('dd').nth(1)).toHaveText('+639171234568');
         await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
 
         await page.getByLabel('Remove current logo on save').check();
@@ -315,7 +322,7 @@ test('store settings save, logo removal, and validation work in the browser', as
         await page.getByRole('button', { name: 'Save store settings' }).click();
         await expect(page.getByRole('alert')).toContainText('We could not save your changes');
         await expect(page.locator('#logo-error')).toBeVisible();
-        await expect(preview.locator('dd').nth(2)).toHaveText('This failed save should stay unsaved.');
+        await expect(preview.locator('dd').nth(0)).toHaveText('This failed save should stay unsaved.');
         await expect(preview.getByText('Previewing unsaved changes.')).toBeVisible();
     } finally {
         releaseFirstUpdate?.();
