@@ -188,19 +188,21 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
             expect(peerContainer.width).toBeCloseTo(container.width, 0);
         }
         await page.goto('/seller/store-settings');
-        const form = await page.locator('form[action$="/seller/store-settings"]').boundingBox();
+        const identity = await page.locator('section[aria-labelledby="store-profile-heading"]').boundingBox();
+        const contact = await page.locator('section[aria-labelledby="contact-details-heading"]').boundingBox();
         const preview = await page.locator('section[aria-labelledby="store-preview-heading"]').boundingBox();
+        expect(await page.locator('#store-preview-heading').evaluate(element => element.scrollWidth <= element.clientWidth)).toBeTruthy();
         if (testInfo.project.name === 'desktop-chromium') {
-            expect(preview.x).toBeGreaterThan(form.x + form.width);
-            expect(Math.abs(preview.y - form.y)).toBeLessThan(2);
-            expect(form.width / preview.width).toBeGreaterThan(1.8);
+            expect(preview.x).toBeGreaterThan(identity.x + identity.width);
+            expect(Math.abs(preview.y - identity.y)).toBeLessThan(2);
+            expect(identity.width / preview.width).toBeGreaterThan(1.8);
             const accessibility = await new AxeBuilder({ page })
                 .include('form[action$="/seller/store-settings"]')
                 .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
                 .analyze();
             expect(accessibility.violations).toEqual([]);
         } else {
-            expect(form.y).toBeGreaterThan(preview.y + preview.height);
+            expect(preview.y).toBeGreaterThan(contact.y + contact.height);
         }
         await expect(page.getByText('All changes saved')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
