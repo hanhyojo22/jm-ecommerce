@@ -180,12 +180,21 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
         await page.goto('/seller/store-settings');
         await page.getByRole('button', { name: 'Reject Optional' }).click();
         await expect(page.locator('[data-cookie-banner]')).toBeHidden();
+        const container = await page.locator('.page-container').boundingBox();
+        const form = await page.locator('form[action$="/seller/store-settings"]').boundingBox();
+        const preview = await page.locator('section[aria-labelledby="store-preview-heading"]').boundingBox();
+        expect(container.width).toBeLessThanOrEqual(1152);
         if (testInfo.project.name === 'desktop-chromium') {
+            expect(preview.x).toBeGreaterThan(form.x + form.width);
+            expect(Math.abs(preview.y - form.y)).toBeLessThan(2);
+            expect(form.width / preview.width).toBeGreaterThan(1.8);
             const accessibility = await new AxeBuilder({ page })
                 .include('form[action$="/seller/store-settings"]')
                 .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
                 .analyze();
             expect(accessibility.violations).toEqual([]);
+        } else {
+            expect(form.y).toBeGreaterThan(preview.y + preview.height);
         }
         await expect(page.getByText('All changes saved')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();

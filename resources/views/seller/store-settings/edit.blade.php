@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
+        <div class="mx-auto w-full max-w-[1096px]">
             <h1 class="text-[28px] font-bold leading-[1.35] tracking-[-0.02em] text-ink">Store settings</h1>
             <p class="mt-1 text-sm text-muted">Manage the identity and contact details shoppers see on your storefront.</p>
         </div>
@@ -20,7 +20,8 @@
                 </div>
             @endif
 
-            <section class="flex flex-col gap-4 rounded-[14px] border border-line bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-labelledby="store-preview-heading">
+            <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start">
+            <section class="flex min-w-0 flex-col gap-4 rounded-[14px] border border-line bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5 xl:col-start-2 xl:row-start-1 xl:items-stretch xl:flex-col" aria-labelledby="store-preview-heading">
                 <div class="flex min-w-0 items-center gap-4">
                     @if ($store->logo_path)
                         <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-14 shrink-0 rounded-xl border border-line bg-canvas object-cover">
@@ -33,13 +34,13 @@
                         <p class="truncate text-sm text-muted">/stores/{{ $store->slug }}</p>
                     </div>
                 </div>
-                <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 sm:self-auto">
+                <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 sm:self-auto xl:self-start">
                     View storefront
                     <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>
                 </a>
             </section>
 
-            <form method="POST" action="{{ route('seller.store-settings.update') }}" enctype="multipart/form-data" class="mt-5 space-y-5"
+            <form method="POST" action="{{ route('seller.store-settings.update') }}" enctype="multipart/form-data" class="min-w-0 space-y-5 xl:col-start-1 xl:row-start-1"
                 x-data="{ dirty: {{ $errors->any() ? 'true' : 'false' }}, saving: false, logoPreview: null, logoName: '', removeLogo: {{ old('remove_logo') ? 'true' : 'false' }}, descriptionLength: {{ mb_strlen(old('description', $store->description) ?? '') }} }"
                 x-init="window.addEventListener('beforeunload', event => { if (dirty && !saving) { event.preventDefault(); event.returnValue = ''; } })"
                 @input="dirty = true" @change="dirty = true"
@@ -65,7 +66,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-6 grid min-w-0 gap-6 border-t border-line pt-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+                    <div class="mt-6 grid min-w-0 gap-6 border-t border-line pt-6">
                         <div class="min-w-0">
                             <p class="text-sm font-semibold text-ink">Store logo</p>
                             <p id="logo-help" class="mt-1 text-sm text-muted">Square JPEG, PNG, or WebP. Maximum 2 MB.</p>
@@ -154,6 +155,7 @@
                     </div>
                 </div>
             </form>
+            </div>
         </div>
     </div>
 </x-app-layout>
