@@ -49,6 +49,25 @@ test('guest can browse a product and is prompted to sign in before adding it to 
     await expect(page.getByRole('link', { name: 'Sign in to add to cart' })).toHaveAttribute('href', /sign-in/);
 });
 
+test('customer can add a newly loaded arrival to the cart', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer');
+
+    try {
+        await page.goto('/');
+        await rejectOptionalCookies(page);
+        const arrivals = page.locator('#new-arrivals');
+        await arrivals.getByRole('button', { name: 'Load More' }).click();
+        await arrivals.locator('article').filter({ hasText: 'QA Arrival 21' }).getByRole('button', { name: 'Add to cart' }).click();
+
+        await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
+        await page.goto('/cart');
+        await page.getByRole('button', { name: 'Remove' }).click();
+        await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+    } finally {
+        await context.close();
+    }
+});
+
 test('seller shops another store and returns to Seller Center with the same account', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'seller');
 

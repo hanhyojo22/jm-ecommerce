@@ -63,13 +63,17 @@
         @endif
 
         @if ($newProducts->isNotEmpty())
-            <section class="border-t border-line py-10 sm:py-12" aria-labelledby="home-new-heading">
+            <section id="new-arrivals" data-new-arrivals data-next-url="{{ $newProducts->hasMorePages() ? route('home', ['new_page' => 2]) : '' }}" class="scroll-mt-24 border-t border-line py-10 sm:py-12" aria-labelledby="home-new-heading">
                 <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-new-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">New arrivals</h2><p class="mt-1 text-sm text-muted">Recently added by marketplace sellers.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">View all <span aria-hidden="true">→</span></a></div>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                    @foreach ($newProducts->take(4) as $product)
-                        <x-marketplace.top-product-card :product="$product" />
-                    @endforeach
+                <div id="new-arrivals-products" data-new-arrivals-grid class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                    @include('marketplace.catalog._new-arrival-cards', ['products' => $newProducts])
                 </div>
+                @if ($newProducts->hasMorePages())
+                    <div class="mt-7 flex flex-col items-center gap-3">
+                        <button type="button" data-new-arrivals-more aria-controls="new-arrivals-products" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line bg-white px-6 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-60">Load More</button>
+                        <p data-new-arrivals-status role="status" aria-live="polite" class="text-sm text-muted"></p>
+                    </div>
+                @endif
             </section>
         @endif
 
@@ -86,9 +90,9 @@
             </section>
         @endif
 
-        @if ($recommendedProducts->isNotEmpty())
+        @if ($recentlyViewed->isNotEmpty() && $recommendedProducts->isNotEmpty())
             <section class="border-t border-line py-10 sm:py-12" aria-labelledby="home-recommended-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-recommended-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">{{ $recentlyViewed->isNotEmpty() ? 'Recommended for you' : 'Popular picks' }}</h2><p class="mt-1 text-sm text-muted">{{ $recentlyViewed->isNotEmpty() ? 'More to explore from categories you recently viewed.' : 'A few customer favorites to get you started.' }}</p></div><a href="{{ route('catalog.index') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">Explore marketplace <span aria-hidden="true">→</span></a></div>
+                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-recommended-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Recommended for you</h2><p class="mt-1 text-sm text-muted">More to explore from categories you recently viewed.</p></div><a href="{{ route('catalog.index') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">Explore marketplace <span aria-hidden="true">→</span></a></div>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
                     @foreach ($recommendedProducts as $product)
                         <x-marketplace.top-product-card :product="$product" />

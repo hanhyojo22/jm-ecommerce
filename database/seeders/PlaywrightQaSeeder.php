@@ -71,6 +71,11 @@ class PlaywrightQaSeeder extends Seeder
         $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);
         $this->product($otherTenant, $otherStore, $category, 'Other Seller QA Product', 'other-qa-product', 'QA-OTHER-001', '39.99', 10);
         $historyProduct = $this->product($otherTenant, $otherStore, $category, 'QA History Sample', 'qa-history-sample', 'QA-HISTORY-001', '29.99', 10);
+        for ($number = 1; $number <= 21; $number++) {
+            $arrival = $this->product($otherTenant, $otherStore, $category, "QA Arrival {$number}", "qa-arrival-{$number}", "QA-ARRIVAL-{$number}", '29.99', 10);
+            $arrival->created_at = now()->subDay()->subMinutes($number);
+            $arrival->save();
+        }
 
         $historyConversation = Conversation::query()->create(['buyer_id' => $customer->id, 'store_id' => $otherStore->id, 'product_id' => $historyProduct->id]);
         for ($number = 1; $number <= 225; $number++) {

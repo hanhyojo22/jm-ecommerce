@@ -616,7 +616,57 @@ document.addEventListener('submit', (event) => {
     request.send(new FormData(form));
 });
 
-document.querySelectorAll('form[data-add-to-cart]').forEach((form) => {
+const newArrivalsSection = document.querySelector('[data-new-arrivals]');
+newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    const grid = newArrivalsSection.querySelector('[data-new-arrivals-grid]');
+    const status = newArrivalsSection.querySelector('[data-new-arrivals-status]');
+    if (button.disabled || !newArrivalsSection.dataset.nextUrl) {
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Loading…';
+    grid.setAttribute('aria-busy', 'true');
+    status.textContent = '';
+
+    try {
+        const response = await fetch(newArrivalsSection.dataset.nextUrl, { headers: { Accept: 'application/json' } });
+        if (!response.ok) {
+            throw new Error('Could not load more products. Please try again.');
+        }
+
+        const result = await response.json();
+        if (typeof result.html !== 'string') {
+            throw new Error('Could not load more products. Please try again.');
+        }
+
+        const fragment = document.createElement('template');
+        fragment.innerHTML = result.html;
+        const count = fragment.content.children.length;
+        const firstNewLink = fragment.content.querySelector('a');
+        fragment.content.querySelectorAll('form[data-add-to-cart]').forEach(bindAddToCartForm);
+        grid.append(fragment.content);
+        newArrivalsSection.dataset.nextUrl = result.next_url ?? '';
+        status.setAttribute('role', 'status');
+        status.className = 'text-sm text-muted';
+        status.textContent = count ? `${count} more products loaded.` : 'All new arrivals are shown.';
+        if (!result.next_url) {
+            button.remove();
+        }
+        firstNewLink?.focus();
+    } catch (error) {
+        status.setAttribute('role', 'alert');
+        status.className = 'text-sm text-danger';
+        status.textContent = error.message || 'Could not load more products. Please try again.';
+    } finally {
+        grid.removeAttribute('aria-busy');
+        button.disabled = false;
+        button.textContent = 'Load More';
+    }
+});
+
+const bindAddToCartForm = (form) => {
     form.addEventListener('submit', async (event) => {
         if (event.defaultPrevented) {
             return;
@@ -691,7 +741,9 @@ document.querySelectorAll('form[data-add-to-cart]').forEach((form) => {
             }
         }
     });
-});
+};
+
+document.querySelectorAll('form[data-add-to-cart]').forEach(bindAddToCartForm);
 
 const signOut = async () => {
     try {

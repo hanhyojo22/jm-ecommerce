@@ -409,6 +409,26 @@ test('homepage remains usable without page-level horizontal overflow', async ({ 
     expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
 });
 
+test('new arrivals append the next page without horizontal overflow', async ({ page }, testInfo) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Reject Optional' }).click();
+    await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+    const arrivals = page.locator('#new-arrivals');
+    const loadMore = arrivals.getByRole('button', { name: 'Load More' });
+
+    await expect(arrivals.locator('article')).toHaveCount(20);
+    if (testInfo.project.name === 'desktop-chromium') {
+        await page.route(/\?new_page=2$/, route => route.fulfill({ status: 500, body: 'Try again' }), { times: 1 });
+        await loadMore.click();
+        await expect(arrivals.locator('[data-new-arrivals-status]')).toHaveText('Could not load more products. Please try again.');
+        await expect(loadMore).toBeEnabled();
+    }
+    await loadMore.click();
+    await expect(arrivals.locator('article')).toHaveCount(25);
+    await expect(loadMore).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+});
+
 test('customer header uses the intended shopping and account layouts', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'customer');
 

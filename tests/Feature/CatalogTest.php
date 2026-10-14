@@ -91,6 +91,59 @@ class CatalogTest extends TestCase
             ->assertSee('Add to cart');
     }
 
+    public function test_homepage_hides_popular_picks_without_viewing_history(): void
+    {
+        $product = $this->product();
+        $this->attachReview($product, false);
+
+        $this->get(route('home'))
+            ->assertSee('Trending products')
+            ->assertDontSee('Popular picks')
+            ->assertDontSee('home-recommended-heading');
+    }
+
+    public function test_homepage_loads_new_arrivals_in_public_batches_of_twenty(): void
+    {
+        $newest = $this->product(['name' => 'Arrival 41']);
+        foreach (range(40, 1) as $number) {
+            $product = new Product([
+                'tenant_id' => $newest->tenant_id,
+                'store_id' => $newest->store_id,
+                'name' => "Arrival {$number}",
+                'slug' => "arrival-{$number}",
+                'sku' => "ARRIVAL-{$number}",
+                'price' => 199,
+                'stock_quantity' => 3,
+                'status' => 'active',
+            ]);
+            $product->created_at = now()->subMinutes(41 - $number);
+            $product->save();
+        }
+        $this->product(['name' => 'Hidden arrival', 'status' => 'draft']);
+
+        $this->get(route('home'))
+            ->assertSee('Arrival 41')
+            ->assertSee('Arrival 22')
+            ->assertDontSee('Arrival 21')
+            ->assertDontSee('Hidden arrival')
+            ->assertSee('data-new-arrivals-more', false);
+        $this->getJson(route('home', ['new_page' => 2]))
+            ->assertOk()
+            ->assertSee('Arrival 21')
+            ->assertDontSee('Arrival 41')
+            ->assertDontSee('Hidden arrival')
+            ->assertJsonPath('next_url', route('home', ['new_page' => 3]));
+        $this->getJson(route('home', ['new_page' => 3]))
+            ->assertOk()
+            ->assertSee('Arrival 1')
+            ->assertJsonPath('next_url', null);
+    }
+
+    public function test_new_arrivals_rejects_invalid_page_numbers(): void
+    {
+        $this->getJson(route('home', ['new_page' => 0]))->assertUnprocessable();
+    }
+
     public function test_homepage_tracks_recently_viewed_products_and_recommends_their_category(): void
     {
         $category = Category::create(['name' => 'Audio', 'slug' => 'audio', 'is_active' => true]);

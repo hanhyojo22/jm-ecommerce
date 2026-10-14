@@ -10,6 +10,7 @@ use App\Queries\CatalogQuery;
 use App\Queries\TopProductQuery;
 use App\Support\CookiePreferences;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,8 +20,24 @@ use Illuminate\View\View;
 
 class CatalogController extends Controller
 {
-    public function home(Request $request): View
+    private const NEW_ARRIVALS_PAGE_SIZE = 20;
+
+    public function home(Request $request): View|JsonResponse
     {
+        if ($request->expectsJson() && $request->has('new_page')) {
+            $request->validate(['new_page' => ['required', 'integer', 'min:2']]);
+
+            $products = $this->homeProducts()
+                ->latest()
+                ->orderByDesc('id')
+                ->simplePaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_page');
+
+            return response()->json([
+                'html' => view('marketplace.catalog._new-arrival-cards', ['products' => $products])->render(),
+                'next_url' => $products->nextPageUrl(),
+            ]);
+        }
+
         $categoryCounts = $this->publishedProducts()
             ->select('category_id', DB::raw('count(*) as product_count'))
             ->whereNotNull('category_id')
@@ -44,8 +61,8 @@ class CatalogController extends Controller
         $homeProducts = $this->homeProducts();
         $newProducts = (clone $homeProducts)
             ->latest()
-            ->limit(8)
-            ->get();
+            ->orderByDesc('id')
+            ->simplePaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_page', 1);
         $flashDeals = (clone $homeProducts)
             ->whereNotNull('compare_at_price')
             ->whereColumn('compare_at_price', '>', 'price')
