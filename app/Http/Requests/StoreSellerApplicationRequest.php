@@ -22,14 +22,8 @@ class StoreSellerApplicationRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'store_name' => ['required', 'string', 'max:120'],
-            'store_description' => ['nullable', 'string', 'max:2000'],
-            'seller_name' => ['required', 'string', 'max:120'],
-            'phone' => ['required', 'string', 'max:30'],
-            'address_line' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:100'],
-            'store_category' => ['nullable', 'string', 'max:100'],
-        ];
+        return collect(['seller_agreement', 'terms', 'privacy', 'prohibited_products', 'returns_refunds', 'fees'])
+            ->mapWithKeys(fn (string $policy): array => ['agreements.'.$policy => ['required', 'accepted']])
+            ->all();
     }
 }

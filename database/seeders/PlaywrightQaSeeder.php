@@ -27,6 +27,21 @@ class PlaywrightQaSeeder extends Seeder
             'email' => 'qa-customer@example.test',
             'clerk_user_id' => 'qa-customer-identity',
         ]);
+        User::factory()->create([
+            'name' => 'QA Applicant',
+            'email' => 'qa-applicant@example.test',
+            'clerk_user_id' => 'qa-applicant-identity',
+        ]);
+        $rejectedApplicant = User::factory()->create([
+            'name' => 'QA Rejected Applicant',
+            'email' => 'qa-rejected@example.test',
+            'clerk_user_id' => 'qa-rejected-identity',
+        ]);
+        $rejectedApplicant->sellerApplications()->create([
+            'store_name' => 'QA Rejected Shop',
+            'status' => 'rejected',
+            'review_note' => 'Verification documents did not match the applicant.',
+        ]);
         $seller = User::factory()->seller()->create([
             'name' => 'QA Seller',
             'email' => 'qa-seller@example.test',

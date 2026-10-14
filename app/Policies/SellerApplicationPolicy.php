@@ -28,7 +28,7 @@ class SellerApplicationPolicy
      */
     public function create(User $user): bool
     {
-        return $user->account_type === 'seller';
+        return in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail() && ! $user->tenantMemberships()->exists();
     }
 
     /**
@@ -36,7 +36,7 @@ class SellerApplicationPolicy
      */
     public function update(User $user, SellerApplication $sellerApplication): bool
     {
-        return $user->isPlatformAdministrator() || ($sellerApplication->user_id === $user->id && in_array($sellerApplication->status, ['draft', 'rejected'], true));
+        return $sellerApplication->user_id === $user->id && in_array($sellerApplication->status, ['draft', 'more_information_required'], true);
     }
 
     /**
@@ -65,6 +65,6 @@ class SellerApplicationPolicy
 
     public function approve(User $user, SellerApplication $sellerApplication): bool
     {
-        return $user->isPlatformAdministrator() && $sellerApplication->status === 'pending';
+        return $user->isPlatformAdministrator() && in_array($sellerApplication->status, ['pending', 'submitted', 'under_review'], true);
     }
 }

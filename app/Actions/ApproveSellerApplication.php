@@ -19,7 +19,7 @@ class ApproveSellerApplication
         return DB::transaction(function () use ($administrator, $application, $ipAddress): Tenant {
             $application = SellerApplication::query()->lockForUpdate()->findOrFail($application->id);
 
-            if ($application->status !== 'pending') {
+            if (! in_array($application->status, ['pending', 'submitted', 'under_review'], true)) {
                 throw new LogicException('Only pending seller applications can be approved.');
             }
 
@@ -35,7 +35,7 @@ class ApproveSellerApplication
 
             $tenant = Tenant::query()->create([
                 'name' => $application->store_name,
-                'slug' => $this->uniqueSlug($application->store_name, Tenant::class),
+                'slug' => $this->uniqueSlug($application->store_slug ?? $application->store_name, Tenant::class),
                 'status' => 'active',
             ]);
 
@@ -48,21 +48,26 @@ class ApproveSellerApplication
             Store::query()->create([
                 'tenant_id' => $tenant->id,
                 'name' => $application->store_name,
-                'slug' => $this->uniqueSlug($application->store_name, Store::class),
+                'slug' => $this->uniqueSlug($application->store_slug ?? $application->store_name, Store::class),
                 'description' => $application->store_description,
                 'logo_path' => $application->logo_path,
+                'banner_path' => $application->banner_path,
                 'phone' => $application->phone,
                 'address_line' => $application->address_line,
                 'city' => $application->city,
                 'status' => 'active',
             ]);
 
+            $oldStatus = $application->status;
             $application->update([
                 'tenant_id' => $tenant->id,
                 'status' => 'approved',
                 'reviewed_at' => now(),
                 'reviewed_by' => $administrator->id,
             ]);
+
+            $application->statusHistory()->create(['actor_user_id' => $administrator->id, 'from_status' => $oldStatus, 'to_status' => 'approved', 'created_at' => now()]);
+            $application->reviews()->create(['reviewer_id' => $administrator->id, 'action' => 'approved']);
 
             $seller->update(['account_type' => 'seller', 'preferred_workspace' => 'seller']);
 

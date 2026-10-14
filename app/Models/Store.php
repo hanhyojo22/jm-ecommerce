@@ -12,7 +12,7 @@ class Store extends Model
 {
     use HasUlids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'phone', 'address_line', 'city', 'status'];
+    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status'];
 
     public function tenant(): BelongsTo
     {

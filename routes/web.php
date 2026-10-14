@@ -100,6 +100,7 @@ Route::post('/profile/workspace', WorkspacePreferenceController::class)
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/start-selling', [SellerApplicationController::class, 'create'])->name('seller-application.create');
     Route::post('/start-selling', [SellerApplicationController::class, 'store'])->middleware('throttle:10,1')->name('seller-application.store');
+    Route::post('/start-selling/steps/{step}', [SellerApplicationController::class, 'saveStep'])->middleware('throttle:10,1')->whereNumber('step')->name('seller-application.step');
 });
 
 Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function (): void {
@@ -134,6 +135,11 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (
     Route::get('/admin/seller-applications/{sellerApplication}', [AdminSellerApplicationController::class, 'show'])->name('admin.seller-applications.show');
     Route::post('/admin/seller-applications/{sellerApplication}/approve', [AdminSellerApplicationController::class, 'approve'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.approve');
     Route::post('/admin/seller-applications/{sellerApplication}/reject', [AdminSellerApplicationController::class, 'reject'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.reject');
+    Route::post('/admin/seller-applications/{sellerApplication}/review', [AdminSellerApplicationController::class, 'review'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.review');
+    Route::post('/admin/seller-applications/{sellerApplication}/notes', [AdminSellerApplicationController::class, 'note'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.note');
+    Route::post('/admin/seller-applications/{sellerApplication}/request-information', [AdminSellerApplicationController::class, 'requestInformation'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.request-information');
+    Route::post('/admin/seller-applications/{sellerApplication}/suspend', [AdminSellerApplicationController::class, 'suspend'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.suspend');
+    Route::get('/admin/seller-applications/{sellerApplication}/documents/{document}', [AdminSellerApplicationController::class, 'document'])->scopeBindings()->name('admin.seller-applications.document');
     Route::get('/admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
     Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
     Route::get('/admin/order-issues', [AdminOrderIssueController::class, 'index'])->name('admin.order-issues.index');

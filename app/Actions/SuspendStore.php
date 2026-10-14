@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\AuditLog;
+use App\Models\SellerApplication;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,12 @@ class SuspendStore
 
             $store->update(['status' => 'suspended']);
             $tenant->update(['status' => 'suspended']);
+            $application = SellerApplication::query()->where('tenant_id', $tenant->id)->lockForUpdate()->first();
+            if ($application && $application->status === 'approved') {
+                $application->update(['status' => 'suspended', 'review_note' => $reason, 'reviewed_by' => $administrator->id, 'reviewed_at' => now()]);
+                $application->statusHistory()->create(['actor_user_id' => $administrator->id, 'from_status' => 'approved', 'to_status' => 'suspended', 'reason' => $reason, 'created_at' => now()]);
+                $application->reviews()->create(['reviewer_id' => $administrator->id, 'action' => 'suspended', 'note' => $reason]);
+            }
 
             AuditLog::query()->create([
                 'actor_user_id' => $administrator->id,

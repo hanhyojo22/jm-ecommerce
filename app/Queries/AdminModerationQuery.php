@@ -31,7 +31,7 @@ class AdminModerationQuery
     public static function counts(): array
     {
         $counts = [
-            'applications' => SellerApplication::query()->where('status', 'pending')->count(),
+            'applications' => SellerApplication::query()->whereIn('status', ['pending', 'submitted', 'under_review'])->count(),
             'appeals' => StoreSuspensionAppeal::query()->where('status', 'pending')->count(),
             'productReports' => ProductReview::query()->published()->whereHas('reports')->count(),
             'chatReports' => MessageReport::query()->where('status', 'pending')->count(),
@@ -70,7 +70,7 @@ class AdminModerationQuery
     private static function applications(string $direction): Collection
     {
         return SellerApplication::query()
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'submitted', 'under_review'])
             ->orderByRaw('COALESCE(submitted_at, created_at) '.$direction)
             ->limit(self::ITEM_LIMIT)
             ->get(['id', 'store_name', 'seller_name', 'submitted_at', 'created_at'])

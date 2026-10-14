@@ -11,6 +11,7 @@ const e2eEnvironment = {
     DB_CONNECTION: 'sqlite',
     DB_URL: '',
     DB_DATABASE: resolve('database/playwright.sqlite'),
+    NEON_PRODUCT_IMAGES_BUCKET: '',
     SESSION_DRIVER: 'database',
     SESSION_COOKIE: 'jmmart_playwright_session',
     CACHE_STORE: 'array',

@@ -53,6 +53,6 @@ class AdminStoreQuery
 
     public static function pendingReviewCount(): int
     {
-        return SellerApplication::query()->where('status', 'pending')->count();
+        return SellerApplication::query()->whereIn('status', ['pending', 'submitted', 'under_review'])->count();
     }
 }

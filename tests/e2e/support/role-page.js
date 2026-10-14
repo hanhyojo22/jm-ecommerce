@@ -3,6 +3,8 @@ const identities = {
     seller: 'qa-seller-identity',
     otherSeller: 'qa-other-seller-identity',
     admin: 'qa-admin-identity',
+    rejected: 'qa-rejected-identity',
+    applicant: 'qa-applicant-identity',
 };
 
 export async function openAsRole(browser, role, contextOptions = {}) {

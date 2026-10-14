@@ -14,6 +14,8 @@ class PlaywrightClerkSessionVerifier implements ClerkSessionVerifier
         'qa-seller-identity',
         'qa-other-seller-identity',
         'qa-admin-identity',
+        'qa-rejected-identity',
+        'qa-applicant-identity',
     ];
 
     public function __construct(private readonly string $authKey) {}

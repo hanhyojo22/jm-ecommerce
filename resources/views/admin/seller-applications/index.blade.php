@@ -5,8 +5,8 @@
         </div>
     </x-slot>
 
-    @php($statusStyles = ['pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'approved' => 'bg-success/10 text-success ring-success/20', 'rejected' => 'bg-danger/10 text-danger ring-danger/20'])
-    @php($hasFilters = filled($filters['search'] ?? null) || filled($filters['status'] ?? null))
+    @php($statusStyles = ['draft' => 'bg-canvas text-muted ring-line', 'pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'submitted' => 'bg-warning/10 text-warning-text ring-warning/20', 'under_review' => 'bg-warning/10 text-warning-text ring-warning/20', 'more_information_required' => 'bg-warning/10 text-warning-text ring-warning/20', 'approved' => 'bg-success/10 text-success ring-success/20', 'rejected' => 'bg-danger/10 text-danger ring-danger/20', 'suspended' => 'bg-danger/10 text-danger ring-danger/20'])
+    @php($hasFilters = collect($filters)->filter()->isNotEmpty())
 
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
@@ -20,7 +20,7 @@
 
             <section class="grid gap-3 sm:grid-cols-3" aria-label="Seller application summaries">
                 @foreach ([
-                    ['label' => 'Pending', 'count' => $statusCounts['pending'] ?? 0, 'valueClass' => 'text-warning-text'],
+                    ['label' => 'Awaiting review', 'count' => ($statusCounts['pending'] ?? 0) + ($statusCounts['submitted'] ?? 0) + ($statusCounts['under_review'] ?? 0), 'valueClass' => 'text-warning-text'],
                     ['label' => 'Approved', 'count' => $statusCounts['approved'] ?? 0, 'valueClass' => 'text-success'],
                     ['label' => 'Rejected', 'count' => $statusCounts['rejected'] ?? 0, 'valueClass' => 'text-danger'],
                 ] as $summary)
@@ -43,6 +43,10 @@
                         @endif
                         <label class="sr-only" for="search">Search applications</label>
                         <input id="search" name="search" value="{{ $filters['search'] ?? '' }}" type="search" placeholder="Search applicant or store" class="block h-11 w-full rounded-lg border-line bg-surface text-sm text-ink placeholder:text-muted focus:border-brand focus:ring-brand sm:w-72">
+                        <label class="sr-only" for="seller_type">Seller type</label><select id="seller_type" name="seller_type" class="h-11 rounded-lg border-line text-sm"><option value="">All seller types</option><option value="individual" @selected(($filters['seller_type'] ?? '') === 'individual')>Individual</option><option value="business" @selected(($filters['seller_type'] ?? '') === 'business')>Business</option></select>
+                        <label class="sr-only" for="submitted_from">Submitted from</label><input id="submitted_from" type="date" name="submitted_from" value="{{ $filters['submitted_from'] ?? '' }}" class="h-11 rounded-lg border-line text-sm">
+                        <label class="sr-only" for="submitted_to">Submitted to</label><input id="submitted_to" type="date" name="submitted_to" value="{{ $filters['submitted_to'] ?? '' }}" class="h-11 rounded-lg border-line text-sm">
+                        <button class="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-white">Filter</button>
                         @if ($hasFilters)
                             <a href="{{ route('admin.seller-applications.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-muted transition hover:bg-surface hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Reset</a>
                         @endif
@@ -50,7 +54,7 @@
                 </div>
 
                 <nav class="mt-4 flex gap-1 overflow-x-auto border-b border-line" aria-label="Application status filters">
-                    @foreach (['' => 'All', 'pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $value => $label)
+                    @foreach (['' => 'All', 'draft' => 'Draft', 'pending' => 'Legacy pending', 'submitted' => 'Submitted', 'under_review' => 'Under review', 'more_information_required' => 'More info', 'approved' => 'Approved', 'rejected' => 'Rejected', 'suspended' => 'Suspended'] as $value => $label)
                         @php($selected = ($filters['status'] ?? '') === $value)
                         <a href="{{ route('admin.seller-applications.index', [...request()->except('status', 'page'), ...($value ? ['status' => $value] : [])]) }}" @class([
                             'inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand',
@@ -80,7 +84,7 @@
                             <div>
                                 <p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Status / submitted</p>
                                 <div class="flex flex-wrap items-center justify-between gap-2 md:block">
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$application->status] }}">{{ ucfirst($application->status) }}</span>
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$application->status] ?? 'bg-canvas text-muted ring-line' }}">{{ str_replace('_', ' ', ucfirst($application->status)) }}</span>
                                     <time @if ($application->submitted_at) datetime="{{ $application->submitted_at->toIso8601String() }}" @endif class="text-xs text-muted md:mt-1 md:block">{{ $application->submitted_at?->format('M j, Y') ?? 'Not submitted' }}</time>
                                 </div>
                             </div>

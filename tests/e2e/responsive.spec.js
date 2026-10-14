@@ -1,6 +1,22 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
+test('seller application steps remain usable on mobile and desktop', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'applicant');
+
+    try {
+        await page.goto('/start-selling');
+        await expect(page.getByRole('heading', { name: 'Become a seller' })).toBeVisible();
+        await expect(page.getByRole('navigation', { name: 'Application progress' }).getByRole('link')).toHaveCount(7);
+        await page.getByRole('link', { name: /Step 4 Address and fulfillment/ }).click();
+        await expect(page.getByLabel('Region')).toBeVisible();
+        await expect(page.getByLabel('Return address')).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+    } finally {
+        await context.close();
+    }
+});
+
 test('catalog filters stay out of the mobile product flow until opened', async ({ page }, testInfo) => {
     await page.goto('/search');
     const panel = page.locator('#catalog-filters');
@@ -190,7 +206,7 @@ test('seller order detail and product editor remain usable at each viewport', as
     try {
         for (const [name, path, action] of [
             ['order-detail', '/seller/orders', 'View order'],
-            ['edit-product', '/seller/products', 'Edit'],
+            ['edit-product', '/seller/products', 'Edit listing'],
         ]) {
             await seller.page.goto(path);
             const sellerCookieBanner = seller.page.locator('[data-cookie-banner]');

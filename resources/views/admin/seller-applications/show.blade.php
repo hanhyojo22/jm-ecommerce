@@ -5,7 +5,7 @@
                 <a href="{{ route('admin.seller-applications.index') }}" class="text-sm font-semibold text-brand underline decoration-brand/30 underline-offset-4 focus:outline-none focus:ring-2 focus:ring-brand">Seller applications</a>
                 <h1 class="mt-2 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Review application</h1>
             </div>
-            <span class="inline-flex h-fit w-fit rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset {{ ['pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'approved' => 'bg-success/10 text-success ring-success/20', 'rejected' => 'bg-danger/10 text-danger ring-danger/20'][$application->status] }}">{{ ucfirst($application->status) }}</span>
+            <span class="inline-flex h-fit w-fit rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset bg-canvas text-ink ring-line">{{ str_replace('_', ' ', ucfirst($application->status)) }}</span>
         </div>
     </x-slot>
 
@@ -37,6 +37,12 @@
                             @if (filled($application->phone))
                                 <div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Phone</dt><dd class="mt-1 break-words font-medium text-ink">{{ $application->phone }}</dd></div>
                             @endif
+                        </dl>
+                        <dl class="mt-5 grid gap-4 border-t border-line pt-5 text-sm sm:grid-cols-2">
+                            @if ($application->id_type)<div><dt class="font-semibold text-muted">Government ID</dt><dd>{{ str_replace('_', ' ', ucfirst($application->id_type)) }} · •••• {{ substr($application->id_number, -4) }}</dd></div>@endif
+                            @foreach (['seller_type' => 'Seller type', 'business_name' => 'Business name', 'registration_number' => 'DTI or SEC number', 'bir_details' => 'BIR details', 'representative_name' => 'Representative', 'date_of_birth' => 'Date of birth', 'region' => 'Region', 'province' => 'Province', 'barangay' => 'Barangay', 'postal_code' => 'Postal code', 'pickup_address' => 'Pickup address', 'return_address' => 'Return address', 'processing_days' => 'Processing days', 'fulfillment_methods' => 'Fulfillment', 'delivery_areas' => 'Delivery areas', 'support_contact' => 'Support contact', 'store_slug' => 'Storefront slug'] as $field => $label)
+                                @if ($application->{$field})<div><dt class="font-semibold text-muted">{{ $label }}</dt><dd>{{ $application->{$field} instanceof \Carbon\CarbonInterface ? $application->{$field}->toDateString() : $application->{$field} }}</dd></div>@endif
+                            @endforeach
                         </dl>
                     </section>
 
@@ -83,7 +89,7 @@
                         </dl>
                     </section>
 
-                    @if ($application->status === 'pending')
+                    @if (in_array($application->status, ['pending', 'submitted', 'under_review'], true))
                         <section class="rounded-[14px] border border-success/20 bg-surface p-5 " aria-labelledby="decision-heading">
                             <h2 id="decision-heading" class="font-semibold text-ink">Make a decision</h2>
                             <p class="mt-2 text-sm leading-6 text-muted">Approving creates an active store and an owner membership for this applicant. It will then appear in Stores.</p>
@@ -97,10 +103,22 @@
                                 <p class="mt-1 text-xs leading-5 text-muted">A reason is required and will be recorded with the application.</p>
                                 <textarea id="reason" name="reason" rows="4" required aria-describedby="reason-error" class="mt-3 block w-full rounded-lg border-line text-sm focus:border-danger focus:ring-danger @error('reason') border-danger @enderror" placeholder="Explain why this application cannot be approved.">{{ old('reason') }}</textarea>
                                 @error('reason')<p id="reason-error" class="mt-2 text-sm font-medium text-danger">{{ $message }}</p>@enderror
-                                <button type="submit" class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-danger/20 bg-danger/10 px-4 text-sm font-semibold text-danger transition hover:border-danger/30 hover:bg-danger/15 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2">Reject application</button>
+                                <button type="submit" onclick="return confirm('Reject this application?')" class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-danger/20 bg-danger/10 px-4 text-sm font-semibold text-danger transition hover:border-danger/30 hover:bg-danger/15 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2">Reject application</button>
+                            </form>
+                            @if (in_array($application->status, ['pending', 'submitted'], true))<form method="POST" action="{{ route('admin.seller-applications.review', $application) }}" class="mt-4">@csrf<button class="min-h-11 rounded-lg border border-line px-4 text-sm font-semibold">Mark under review</button></form>@endif
+                            <form method="POST" action="{{ route('admin.seller-applications.request-information', $application) }}" class="mt-5 space-y-3 border-t border-line pt-5">@csrf
+                                <label for="correction_reason" class="block text-sm font-semibold">Request more information</label>
+                                <textarea id="correction_reason" name="reason" required minlength="10" rows="3" class="w-full rounded-lg border-line text-sm" placeholder="Explain what needs correction"></textarea>
+                                <fieldset><legend class="text-sm font-semibold">Reopen steps</legend>@foreach ([1 => 'Seller type', 2 => 'Personal or business', 3 => 'Store', 4 => 'Address', 5 => 'Documents', 6 => 'Payout'] as $number => $label)<label class="mt-2 flex gap-2 text-sm"><input type="checkbox" name="steps[]" value="{{ $number }}"> {{ $label }}</label>@endforeach</fieldset>
+                                <button type="submit" onclick="return confirm('Request these corrections?')" class="min-h-11 rounded-lg border border-line px-4 text-sm font-semibold">Request corrections</button>
                             </form>
                         </section>
                     @endif
+                    @if ($application->status === 'approved')<form method="POST" action="{{ route('admin.seller-applications.suspend', $application) }}" class="rounded-xl border border-danger/20 bg-white p-5">@csrf<label for="suspend_reason" class="block text-sm font-semibold">Suspend seller</label><textarea id="suspend_reason" name="reason" required minlength="10" class="mt-2 w-full rounded-lg border-line text-sm"></textarea><button type="submit" onclick="return confirm('Suspend this seller and store?')" class="mt-2 min-h-11 rounded-lg bg-danger px-4 text-sm font-semibold text-white">Suspend seller</button></form>@endif
+                    <section class="rounded-xl border border-line bg-white p-5"><h2 class="font-semibold">Verification documents</h2><ul class="mt-3 space-y-2 text-sm">@forelse ($application->documents as $document)<li><a href="{{ route('admin.seller-applications.document', [$application, $document]) }}" target="_blank" rel="noopener" class="font-semibold text-brand underline">{{ str_replace('_', ' ', ucfirst($document->type)) }}</a></li>@empty<li class="text-muted">No documents uploaded.</li>@endforelse</ul></section>
+                    <section class="rounded-xl border border-line bg-white p-5"><h2 class="font-semibold">Payout verification</h2><p class="mt-2 text-sm">{{ $application->payoutProfile?->provider ?? 'Not provided' }} · {{ $application->payoutProfile?->maskedAccountNumber() }}</p>@if ($application->payoutProfile?->name_requires_review)<p class="mt-2 text-sm text-warning-text">Account name needs manual review.</p>@endif</section>
+                    <section class="rounded-xl border border-line bg-white p-5"><h2 class="font-semibold">Status history</h2><ol class="mt-3 space-y-2 text-sm">@forelse ($application->statusHistory as $event)<li>{{ $event->created_at->format('M j, Y g:i A') }} · {{ str_replace('_', ' ', $event->to_status) }} @if ($event->reason) · {{ $event->reason }} @endif</li>@empty<li class="text-muted">No status changes recorded.</li>@endforelse</ol></section>
+                    <section class="rounded-xl border border-line bg-white p-5"><h2 class="font-semibold">Review notes</h2><ol class="mt-3 space-y-2 text-sm">@forelse ($application->reviews as $review)<li>{{ $review->created_at->format('M j, Y g:i A') }} · {{ str_replace('_', ' ', $review->action) }} @if ($review->note) · {{ $review->note }} @endif</li>@empty<li class="text-muted">No notes yet.</li>@endforelse</ol><form method="POST" action="{{ route('admin.seller-applications.note', $application) }}" class="mt-4">@csrf<label for="review_note" class="block text-sm font-semibold">Add review note</label><textarea id="review_note" name="note" required minlength="3" maxlength="2000" rows="3" class="mt-2 w-full rounded-lg border-line text-sm"></textarea><button class="mt-2 min-h-11 rounded-lg border border-line px-4 text-sm font-semibold">Save note</button></form></section>
                 </aside>
             </div>
         </div>

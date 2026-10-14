@@ -140,7 +140,7 @@ class ClerkSessionRefreshTest extends TestCase
                 continue;
             }
 
-            $path = '/'.preg_replace('/\{[^}]+\}/', '01J00000000000000000000000', $route->uri());
+            $path = '/'.preg_replace('/\{[^}]+\}/', '01J00000000000000000000000', str_replace('{step}', '1', $route->uri()));
 
             foreach (array_intersect($route->methods(), ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']) as $method) {
                 $redirect = $method === 'GET'

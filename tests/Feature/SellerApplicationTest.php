@@ -15,48 +15,29 @@ class SellerApplicationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_verified_customer_can_submit_a_seller_application(): void
+    public function test_verified_customer_can_start_a_seller_application_draft(): void
     {
         $customer = User::factory()->seller()->create(['email_verified_at' => now()]);
 
-        $response = $this->actingAs($customer)->post(route('seller-application.store'), [
-            'store_name' => 'Northwind Goods',
-            'store_description' => 'Useful things.',
-            'seller_name' => 'Ava Seller',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'store_category' => 'General',
-        ]);
+        $response = $this->actingAs($customer)->post(route('seller-application.step', 1), ['seller_type' => 'individual']);
 
-        $response->assertRedirect(route('seller-application.create'));
+        $response->assertRedirect(route('seller-application.create', ['step' => 2]));
         $this->assertDatabaseHas('seller_applications', [
             'user_id' => $customer->id,
-            'store_name' => 'Northwind Goods',
-            'status' => 'pending',
+            'seller_type' => 'individual',
+            'status' => 'draft',
         ]);
-        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $customer->id, 'action' => 'seller_application.submitted']);
     }
 
     public function test_a_second_pending_application_is_rejected_without_creating_another_record(): void
     {
         $customer = User::factory()->create(['email_verified_at' => now()]);
-        $application = [
-            'store_name' => 'Northwind Goods',
-            'seller_name' => 'Ava Seller',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-        ];
-
-        $this->actingAs($customer)->post(route('seller-application.store'), $application)
-            ->assertRedirect(route('seller-application.create'));
-
-        $this->actingAs($customer)->post(route('seller-application.store'), $application)
-            ->assertSessionHasErrors(['application' => 'Your seller application is still under review.']);
+        $customer->sellerApplications()->create(['store_name' => 'Northwind Goods', 'status' => 'pending']);
+        $this->actingAs($customer)->post(route('seller-application.step', 1), ['seller_type' => 'individual'])
+            ->assertSessionHasErrors('application');
 
         $this->assertDatabaseCount('seller_applications', 1);
-        $this->assertDatabaseCount('audit_logs', 1);
+        $this->assertDatabaseCount('audit_logs', 0);
     }
 
     public function test_only_a_platform_administrator_can_approve_an_application(): void
@@ -119,11 +100,7 @@ class SellerApplicationTest extends TestCase
         app(ApproveSellerApplication::class)->handle($administrator, $approvedApplication);
 
         $this->actingAs($seller)->post(route('seller-application.store'), [
-            'store_name' => 'Second Store',
-            'seller_name' => 'Ava Seller',
-            'phone' => '+639171234567',
-            'address_line' => '20 Market Street',
-            'city' => 'Manila',
+            'agreements' => array_fill_keys(['seller_agreement', 'terms', 'privacy', 'prohibited_products', 'returns_refunds', 'fees'], '1'),
         ])->assertRedirect(route('seller.dashboard'));
 
         $this->assertDatabaseCount('seller_applications', 1);
