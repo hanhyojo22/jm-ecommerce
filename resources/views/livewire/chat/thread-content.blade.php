@@ -34,18 +34,19 @@
 
             <div x-cloak x-show="!online" class="mx-3 mt-2 shrink-0 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-5" role="status">You’re offline. Sending is paused until your connection returns.</div>
             <div x-cloak x-show="online && !liveConnected" class="mx-3 mt-2 shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-brand-hover sm:mx-5" role="status">Reconnecting live updates. You can still send messages.</div>
-            <div id="conversation-messages" x-ref="messageList" class="chat-message-list min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6" role="log" aria-live="polite" aria-label="Conversation messages" tabindex="0">
+            <div id="conversation-messages" x-ref="messageList" class="chat-message-list min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6 sm:py-6" role="log" aria-live="polite" aria-label="Conversation messages" tabindex="0">
                 @if ($hasMoreMessages)<div class="mb-5 text-center"><button x-on:click="loadOlder()" x-bind:disabled="loadingOlder" type="button" class="inline-flex min-h-11 items-center rounded-[10px] bg-white px-4 text-sm font-semibold text-ink shadow-sm transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60">Load earlier messages</button><span x-show="loadingOlder" class="ml-2 text-xs text-muted" role="status">Loading messages…</span><p x-cloak x-show="historyError" x-text="historyError" class="mt-2 text-sm text-red-700" role="alert"></p></div>@endif
                 @php($previousDate = null)
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
-                    <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-5 flex items-center gap-3 text-xs font-medium text-muted"><span class="h-px flex-1 bg-slate-100"></span><span data-chat-date-label>{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-slate-100"></span></div>
+                    <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-[11px] font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
                     <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1 flex items-end gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
                         @if ($message->sender_id !== auth()->id())
-                            <span class="grid size-7 shrink-0 place-items-center rounded-full bg-blue-50 text-[11px] font-bold text-brand-hover {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">{{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}</span>
+                            <span class="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white text-xs font-bold text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">{{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}</span>
                         @endif
-                        <div class="min-w-0 max-w-[82%] sm:max-w-[70%] {{ $message->sender_id === $previousSenderId ? '' : 'mt-3' }}">
-                            <div class="rounded-[20px] px-4 py-2.5 text-sm leading-6 {{ $message->sender_id === auth()->id() ? 'rounded-br-md bg-brand text-white' : 'rounded-bl-md bg-canvas text-ink' }}">
+                        <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem] {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
+                            @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 ml-1 text-xs font-semibold text-muted">{{ $message->sender->name }}</p>@endif
+                            <div class="chat-message-bubble w-fit max-w-full rounded-[18px] border px-4 py-3 text-sm leading-[1.6] {{ $message->sender_id === auth()->id() ? 'ml-auto rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
                                 @if ($message->type === 'file' && $message->attachments->isNotEmpty())
                                     @php($attachment = $message->attachments->first())
                                     @if (in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
@@ -54,7 +55,7 @@
                                             <span class="mt-1 block text-xs underline underline-offset-2">{{ $attachment->original_name }}</span>
                                         </a>
                                     @else
-                                        <div class="w-64 max-w-full min-w-0 rounded-[14px] bg-white/90 p-3 text-ink">
+                                        <div class="w-64 max-w-full min-w-0 rounded-[12px] border border-line bg-white p-3 text-ink">
                                             <div class="flex min-w-0 items-center gap-3">
                                             <span class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $message->sender_id === auth()->id() ? 'bg-brand text-white' : 'bg-slate-100 text-muted' }}" aria-hidden="true">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg>
@@ -70,12 +71,14 @@
                                 @else
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
                                 @endif
-                                <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time class="mt-1 block text-[11px] {{ $message->sender_id === auth()->id() ? 'text-blue-50' : 'text-muted' }}">{{ $message->created_at->format('g:i A') }}</time>
+                            </div>
+                            <div class="mt-1 flex items-center gap-1.5 px-1 text-[11px] font-medium text-muted {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
+                                <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time>{{ $message->created_at->format('g:i A') }}</time>
                                 @if ($message->id === $lastMessage?->id && $message->sender_id === auth()->id())
-                                    <span class="mt-0.5 block text-right text-[11px] text-blue-50">{{ $receipt }}</span>
+                                    <span aria-hidden="true">·</span><span>{{ $receipt }}</span>
                                 @endif
                             </div>
-                            @if ($message->sender_id !== auth()->id())<details class="mt-1 px-1 text-xs"><summary class="cursor-pointer text-muted">Report message</summary><form method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="mt-2 space-y-2">@csrf<select name="reason" required class="rounded-lg border-line text-xs"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-line text-xs"></textarea><button class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3 font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Submit report</button></form></details>@endif
+                            @if ($message->sender_id !== auth()->id())<details x-on:toggle="if ($el.open) $nextTick(() => $el.querySelector('form').scrollIntoView({ block: 'nearest' }))" class="mt-0.5 px-1 text-xs"><summary class="inline-flex min-h-8 cursor-pointer list-none items-center gap-1.5 rounded-md px-1.5 text-[11px] font-medium text-muted transition hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 21V4m0 1c4-3 7 3 14 0v11c-7 3-10-3-14 0"/></svg>Report</summary><form method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="mt-2 w-64 max-w-full space-y-2 rounded-[12px] border border-line bg-white p-3 shadow-sm">@csrf<select name="reason" required aria-label="Report reason" class="min-h-10 w-full rounded-lg border-line text-sm"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-line text-sm"></textarea><button class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Submit report</button></form></details>@endif
                         </div>
                     </article>
                     @php($previousDate = $message->created_at)
@@ -86,14 +89,14 @@
                 <div wire:ignore aria-live="polite">
                     <template x-for="item in pending" :key="item.id">
                         <article class="mb-1 flex justify-end" :data-pending-message-id="item.id">
-                            <div class="mt-3 min-w-0 max-w-[82%] sm:max-w-[70%]">
-                                <div class="rounded-[20px] rounded-br-md bg-brand px-4 py-2.5 text-sm leading-6 text-white">
+                            <div class="mt-4 min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem]">
+                                <div class="chat-message-bubble ml-auto w-fit max-w-full rounded-[18px] rounded-br-[6px] border border-brand bg-brand px-4 py-3 text-sm leading-[1.6] text-white">
                                     <template x-if="item.previewUrl"><img :src="item.previewUrl" alt="Pending photo" class="mb-2 max-h-80 max-w-full rounded-lg object-contain"></template>
                                     <p x-show="item.fileName" x-text="item.fileName" class="truncate text-xs font-semibold"></p>
                                     <p x-show="item.body" x-text="item.body" class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]"></p>
-                                    <time class="mt-1 block text-[11px] text-blue-50" x-text="item.time"></time>
                                 </div>
-                                <div class="mt-1 flex items-center justify-end gap-2 text-xs" :class="item.status === 'Failed' ? 'text-red-700' : 'text-muted'">
+                                <div class="mt-1 flex items-center justify-end gap-2 px-1 text-[11px] font-medium" :class="item.status === 'Failed' ? 'text-red-700' : 'text-muted'">
+                                    <time x-text="item.time"></time><span aria-hidden="true">·</span>
                                     <span x-text="item.status === 'Sending' && item.progress !== null ? 'Uploading ' + item.progress + '%' : item.status"></span>
                                     <button x-show="item.status === 'Failed'" type="button" x-on:click="retry(item)" class="min-h-10 rounded-lg px-2 font-semibold text-brand-hover underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Retry</button>
                                 </div>
@@ -108,7 +111,7 @@
                     </div>
                 @endif
             </div>
-            <div wire:cloak class="shrink-0 border-t border-line bg-surface p-3 sm:p-4">
+            <div wire:cloak class="shrink-0 border-t border-line bg-white px-3 pb-3 pt-3 shadow-[0_-8px_24px_rgb(15_23_42_/_0.04)] sm:px-5 sm:pb-4 sm:pt-4">
                 @unless ($canSend)
                     <div class="mb-3 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">
                         <p class="min-w-0 flex-1">{{ $canUnblock ? 'You blocked this contact, so messaging is paused for both of you.' : 'Messaging is unavailable for this conversation.' }}</p>
@@ -128,7 +131,7 @@
                         <button type="button" x-on:click="clearFile()" x-bind:disabled="uploading" class="grid size-10 shrink-0 place-items-center rounded-lg text-muted hover:bg-line hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50" aria-label="Remove attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg></button>
                     </div>
                 @endif
-                <label for="message-body" class="sr-only">Write a message</label>
+                <label for="message-body" class="mb-2 block text-xs font-semibold text-ink">Write a message</label>
                 <form x-ref="messageForm" x-on:submit.prevent="submitMessage()">
                 <div class="flex min-w-0 items-end gap-2">
                     @if ($canSend)
@@ -140,7 +143,7 @@
                             </div>
                         </div>
                     @endif
-                    <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; $el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="2" maxlength="2000" class="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-transparent bg-canvas text-sm text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! $canSend)></textarea>
+                    <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; $el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="2" maxlength="2000" class="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-line bg-canvas text-sm leading-6 text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! $canSend)></textarea>
                     <button type="submit" x-bind:aria-label="selectedType === 'photo' ? 'Send photo' : selectedType === 'document' ? 'Send document' : 'Send message'" x-bind:disabled="!online || uploading" class="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" @disabled(! $canSend)><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg></button>
                 </div>
                 <div id="message-help" class="flex items-center justify-between gap-3 text-xs text-muted"><span class="hidden sm:inline">Enter to send · Shift + Enter for a new line</span><span class="ml-auto tabular-nums" x-text="Array.from($wire.body).length + '/2000'">{{ Str::length($body) }}/2000</span></div>

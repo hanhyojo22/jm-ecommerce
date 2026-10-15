@@ -340,15 +340,11 @@
 }
 
 .chat-message-list {
-    background: linear-gradient(180deg, #f8fafc 0%, #f3f7fc 100%);
+    background: var(--color-bg);
 }
 
-.chat-message-list article > div > div:first-child {
-    box-shadow: 0 2px 10px rgb(15 23 42 / 5%);
-}
-
-.chat-message-list article.justify-start > div > div:first-child {
-    background: white;
+.chat-message-bubble {
+    box-shadow: 0 3px 12px rgb(15 23 42 / 6%);
 }
 
 @media (prefers-reduced-motion: reduce) {
