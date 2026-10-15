@@ -1,6 +1,32 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
+test('seller conversation fills the available desktop height without horizontal overflow', async ({ browser }) => {
+    const buyer = await openAsRole(browser, 'customer');
+    const seller = await openAsRole(browser, 'seller', { viewport: { width: 1440, height: 900 } });
+
+    try {
+        await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
+        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await seller.page.goto('/messages');
+        const inboxBottom = await seller.page.locator('[data-conversation-inbox] > .page-shell > .page-container > .grid').evaluate((panel) => panel.getBoundingClientRect().bottom);
+        expect(900 - inboxBottom).toBeLessThanOrEqual(32);
+        await seller.page.locator('[data-conversation-list] a').first().click();
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        const dimensions = await seller.page.evaluate(() => ({
+            composerBottom: document.querySelector('[data-conversation-thread] .grid').getBoundingClientRect().bottom,
+            viewportHeight: window.innerHeight,
+            documentWidth: document.documentElement.scrollWidth,
+            viewportWidth: document.documentElement.clientWidth,
+        }));
+        expect(dimensions.viewportHeight - dimensions.composerBottom).toBeLessThanOrEqual(32);
+        expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    } finally {
+        await buyer.context.close();
+        await seller.context.close();
+    }
+});
+
 test('buyer sees an optimistic message that reconciles after confirmation', async ({ browser }) => {
     const buyer = await openAsRole(browser, 'customer');
 
