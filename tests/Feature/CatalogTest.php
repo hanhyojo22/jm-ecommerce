@@ -131,6 +131,7 @@ class CatalogTest extends TestCase
             ->assertSee('data-new-arrivals-more', false);
         $nextUrl = $firstPage->viewData('newProducts')->nextPageUrl();
         $this->assertNotNull($nextUrl);
+        $this->assertStringStartsWith('/?new_cursor=', $nextUrl);
 
         $this->product(['name' => 'Later arrival']);
 
@@ -143,6 +144,7 @@ class CatalogTest extends TestCase
             ->assertDontSee('Later arrival')
             ->assertDontSee('Hidden arrival')
             ->assertJsonStructure(['html', 'next_url']);
+        $this->assertStringStartsWith('/?new_cursor=', $secondPage->json('next_url'));
         $this->get($nextUrl)
             ->assertSee('Arrival 21')
             ->assertDontSee('Arrival 22');

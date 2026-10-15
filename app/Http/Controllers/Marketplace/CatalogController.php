@@ -42,6 +42,7 @@ class CatalogController extends Controller
                 ->latest()
                 ->orderByDesc('id')
                 ->cursorPaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_cursor', $cursor)
+                ->withPath(route('home', absolute: false))
                 ->fragment('new-arrivals');
 
             return response()->json([
@@ -75,6 +76,7 @@ class CatalogController extends Controller
             ->latest()
             ->orderByDesc('id')
             ->cursorPaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_cursor', $cursor)
+            ->withPath(route('home', absolute: false))
             ->fragment('new-arrivals');
         $flashDeals = (clone $homeProducts)
             ->whereNotNull('compare_at_price')
