@@ -17,8 +17,6 @@
             </div>
             <p data-cookie-error role="alert" class="mt-2 hidden text-sm text-red-700"></p>
         </section>
-    @else
-        <button type="button" data-cookie-preferences-open data-cookie-floating class="{{ request()->routeIs('seller.store-settings.*', 'messages.*') ? 'relative mb-4 ml-auto mr-4 mt-2 block w-max sm:mr-8' : 'fixed bottom-20 left-4 z-40 sm:bottom-4' }} min-h-9 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-ink shadow-md before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Preferences</button>
     @endif
 
     <dialog data-cookie-dialog aria-labelledby="cookie-dialog-title" class="w-[calc(100%-2rem)] max-w-md max-h-[85dvh] overflow-y-auto rounded-xl border border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-slate-950/50">

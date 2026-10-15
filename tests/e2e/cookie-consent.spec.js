@@ -15,8 +15,9 @@ test('visitor can accept, reopen, and withdraw functional consent', async ({ pag
     expect(trackerRequests).toEqual([]);
     await page.getByRole('button', { name: 'Accept All' }).click();
     await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+    await expect(page.locator('[data-cookie-floating]')).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Cookie Preferences', exact: true }).click();
+    await page.locator('footer').getByRole('button', { name: 'Cookie Preferences', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Cookie preferences' });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('checkbox', { name: /Functional/ })).toBeChecked();
@@ -25,7 +26,7 @@ test('visitor can accept, reopen, and withdraw functional consent', async ({ pag
     await expect(page.locator('[data-cookie-consent]')).toHaveAttribute('data-functional', 'false');
     expect(await page.evaluate(() => localStorage.getItem('seller-dashboard:verification'))).toBeNull();
     await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
-    await page.getByRole('button', { name: 'Cookie Preferences', exact: true }).click();
+    await page.locator('footer').getByRole('button', { name: 'Cookie Preferences', exact: true }).click();
     await expect(dialog.getByRole('checkbox', { name: /Functional/ })).not.toBeChecked();
 });
 
@@ -63,7 +64,7 @@ test('rejecting optional storage keeps seller and customer pages available', asy
         await seller.page.goto('/seller');
         await seller.page.getByRole('button', { name: 'Reject Optional' }).click();
         await expect(seller.page).toHaveURL(/\/seller$/);
-        await expect(seller.page.getByRole('button', { name: 'Cookie Preferences', exact: true })).toBeVisible();
+        await expect(seller.page.locator('[data-cookie-floating]')).toHaveCount(0);
 
         await customer.page.goto('/cart');
         await customer.page.getByRole('button', { name: 'Reject Optional' }).click();
