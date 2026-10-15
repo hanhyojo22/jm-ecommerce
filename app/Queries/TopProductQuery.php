@@ -17,7 +17,7 @@ class TopProductQuery
      * Aggregated sales metrics refresh every five minutes. Product availability, price,
      * visibility, store status, images, and review metrics are intentionally queried live.
      */
-    private const CACHE_KEY = 'marketplace.top-products.ranking.v1';
+    private const CACHE_KEY = 'marketplace.top-products.ranking.v2';
 
     private const CACHE_MINUTES = 5;
 
@@ -66,7 +66,6 @@ class TopProductQuery
                 ->leftJoin('payments', 'payments.order_id', '=', 'orders.id')
                 ->whereNotNull('order_items.product_id')
                 ->where('seller_orders.status', 'delivered')
-                ->where('orders.status', 'delivered')
                 ->where('seller_orders.updated_at', '>=', now()->subDays(self::RANKING_PERIOD_DAYS))
                 ->where(function ($query): void {
                     $query->whereNull('payments.id')->orWhereNotIn('payments.status', ['failed', 'refunded']);

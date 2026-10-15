@@ -33,6 +33,31 @@ class TopProductsTest extends TestCase
             ->assertSee('last 30 days');
     }
 
+    public function test_delivered_store_items_rank_while_another_store_in_the_order_is_pending(): void
+    {
+        $deliveredProduct = $this->product('Delivered store item');
+        $pendingProduct = $this->product('Pending store item');
+        $order = $this->sellerOrderItem($deliveredProduct, 2, 'delivered', 'pending');
+        $order->sellerOrders()->create([
+            'tenant_id' => $pendingProduct->tenant_id,
+            'store_id' => $pendingProduct->store_id,
+            'status' => 'pending',
+            'subtotal' => '299.00',
+            'shipping_amount' => '0.00',
+            'total' => '299.00',
+        ]);
+        $order->update(['status' => 'pending']);
+        TopProductQuery::forgetCachedRankings();
+
+        $this->assertSame(
+            ['Delivered store item'],
+            $this->get(route('home'))->viewData('bestSellers')->pluck('name')->all(),
+        );
+        $this->get(route('catalog.top-products'))
+            ->assertSee('Delivered store item')
+            ->assertDontSee('Pending store item');
+    }
+
     private function product(string $name): Product
     {
         $suffix = str()->lower(str()->random(8));
@@ -42,12 +67,14 @@ class TopProductsTest extends TestCase
         return Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => $name, 'slug' => str($name)->slug()."-{$suffix}", 'sku' => "SKU-{$suffix}", 'price' => '299.00', 'stock_quantity' => 5, 'status' => 'active']);
     }
 
-    private function sellerOrderItem(Product $product, int $quantity, string $sellerOrderStatus, string $paymentStatus): void
+    private function sellerOrderItem(Product $product, int $quantity, string $sellerOrderStatus, string $paymentStatus): Order
     {
         $buyer = User::factory()->create();
         $order = Order::create(['user_id' => $buyer->id, 'number' => 'ORD-'.str()->upper(str()->random(10)), 'status' => $sellerOrderStatus === 'delivered' ? 'delivered' : 'cancelled', 'recipient_name' => 'Buyer', 'phone' => '+639171234567', 'address_line' => '1 Market Street', 'city' => 'Manila', 'subtotal' => '299.00', 'shipping_amount' => '0.00', 'total' => '299.00']);
         $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $product->tenant_id, 'store_id' => $product->store_id, 'status' => $sellerOrderStatus, 'subtotal' => '299.00', 'shipping_amount' => '0.00', 'total' => '299.00']);
         $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => '299.00', 'quantity' => $quantity, 'line_total' => bcmul('299.00', (string) $quantity, 2)]);
         $order->payment()->create(['method' => 'cod', 'status' => $paymentStatus, 'amount' => '299.00']);
+
+        return $order;
     }
 }
