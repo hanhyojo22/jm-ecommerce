@@ -70,6 +70,19 @@ class ProductReviewTest extends TestCase
             ->assertOk()->assertSee('My purchase')->assertDontSee('Someone else');
     }
 
+    public function test_review_rating_bars_follow_star_values_and_leave_empty_ratings_unfilled(): void
+    {
+        [$buyer, $item] = $this->deliveredOrderItem();
+        $secondItem = $item->sellerOrder->items()->create(['product_id' => $item->product_id, 'product_name' => $item->product_name, 'sku' => $item->sku, 'unit_price' => 100, 'quantity' => 1, 'line_total' => 100]);
+        ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 1]);
+        ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $secondItem->id, 'user_id' => $buyer->id, 'rating' => 5]);
+
+        $this->get(route('catalog.show', [$item->product->store->slug, $item->product->slug]))
+            ->assertSee('style="width: 100%"', false)
+            ->assertSee('style="width: 20%"', false)
+            ->assertSee('style="width: 0%"', false);
+    }
+
     public function test_buyer_cannot_review_another_buyers_delivered_order_item(): void
     {
         [, $item] = $this->deliveredOrderItem();
@@ -248,6 +261,7 @@ class ProductReviewTest extends TestCase
         $this->actingAs($buyer);
         $customerThread = Livewire::test(Thread::class, ['review' => $review]);
         $this->assertSame(2, substr_count($customerThread->html(), 'placeholder="Write a reply..."'));
+        $customerThread->assertSeeInOrder(['Thank you for your feedback.', 'Can you help with the size?', 'Yes, we can help.', 'Write a reply...']);
         $customerThread->set('replyBodies.'.$root->id, 'Draft for the first response')
             ->set('replyBodies.'.$followup->id, 'That answers my question.')
             ->call('submitCustomerReply', $followup->id)
