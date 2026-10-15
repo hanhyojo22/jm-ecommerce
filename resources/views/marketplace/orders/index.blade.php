@@ -1,19 +1,187 @@
 <x-app-layout>
     @php
-        $statusStyles=['pending'=>'bg-amber-50 text-warning-text ring-amber-200','confirmed'=>'bg-blue-50 text-brand-hover ring-blue-200','processing'=>'bg-blue-50 text-brand-hover ring-blue-200','shipped'=>'bg-blue-50 text-brand-hover ring-blue-200','delivered'=>'bg-green-50 text-success ring-green-200','cancelled'=>'bg-red-50 text-danger ring-red-200'];
-        $paymentStyles=['pending'=>'bg-amber-50 text-warning-text ring-amber-200','paid'=>'bg-green-50 text-success ring-green-200','failed'=>'bg-red-50 text-danger ring-red-200','refunded'=>'bg-slate-100 text-muted ring-line'];
-        $hasFilters=filled($filters['search']??null)||filled($filters['status']??null);
+        $statusStyles = [
+            'pending' => 'bg-amber-50 text-warning-text ring-amber-200',
+            'confirmed' => 'bg-blue-50 text-brand-hover ring-blue-200',
+            'processing' => 'bg-blue-50 text-brand-hover ring-blue-200',
+            'shipped' => 'bg-blue-50 text-brand-hover ring-blue-200',
+            'delivered' => 'bg-green-50 text-success ring-green-200',
+            'cancelled' => 'bg-red-50 text-danger ring-red-200',
+        ];
+        $statusLabels = ['' => 'All', 'pending' => 'Pending', 'confirmed' => 'Confirmed', 'processing' => 'Processing', 'shipped' => 'Shipped', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'];
+        $hasFilters = filled($filters['search'] ?? null) || filled($filters['status'] ?? null);
     @endphp
-    <x-marketplace.account-shell active="orders" title="Orders">
-        <div><h1 class="text-3xl font-semibold tracking-[-0.03em] text-ink">My purchases</h1><p class="mt-2 text-sm text-muted">See what you ordered, where it is, and what to do next.</p></div>
-        <div class="mt-6">
-        <form method="GET" x-data="{ loading:false }" @submit="loading=true" class="flex flex-col gap-3 sm:flex-row"><label class="block flex-1"><span class="field-label">Search by product, store, or order number</span><div class="relative"><svg viewBox="0 0 24 24" class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input name="search" value="{{ $filters['search']??'' }}" type="search" class="field-control pl-10" placeholder="Search purchases"></div></label><input type="hidden" name="status" value="{{ $filters['status']??'' }}"><button class="min-h-11 self-end rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover disabled:bg-blue-300" :disabled="loading"><span x-text="loading ? 'Searching…' : 'Search'"></span></button></form>
-        <nav class="mt-6 flex gap-5 overflow-x-auto border-b border-line" aria-label="Purchase status filters">@foreach([''=>'All','pending'=>'Pending','confirmed'=>'Confirmed','processing'=>'Processing','shipped'=>'Shipped','delivered'=>'Delivered','cancelled'=>'Cancelled'] as $value=>$label)@php($active=($filters['status']??'')===$value)@php($count=$value?($statusCounts[$value]??0):array_sum($statusCounts->all()))<a href="{{ route('orders.index',[...request()->except('status','page'),...($value?['status'=>$value]:[])]) }}" class="inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand {{ $active?'border-brand text-brand-hover':'border-transparent text-muted hover:border-blue-200 hover:text-brand-hover' }}" @if($active) aria-current="page" @endif>{{ $label }}<span class="rounded-full px-1.5 py-0.5 text-xs tabular-nums {{ $active?'bg-blue-50 text-ink':'bg-slate-100 text-muted' }}">{{ $count }}</span></a>@endforeach</nav>
-        <div class="mt-6 space-y-5">@forelse($orders as $order)<article class="rounded-[14px] border border-line bg-surface p-4 sm:p-6"><header class="flex flex-wrap items-start justify-between gap-4"><div class="min-w-0"><p class="text-sm font-semibold text-ink">Placed {{ $order->created_at->format('M j, Y') }}</p><div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1" x-data="{ copied: false, copy() { navigator.clipboard?.writeText(@js($order->number)); this.copied = true; setTimeout(() => this.copied = false, 1800); } }"><p class="break-all text-xs text-muted">Order #{{ $order->number }}</p><button type="button" @click="copy" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :aria-label="copied ? 'Order number copied' : 'Copy order number'" title="Copy order number"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg></button><span x-cloak x-show="copied" class="text-xs font-medium text-brand-hover" role="status">Copied</span></div></div><div class="flex flex-wrap justify-end gap-2"><span class="status-badge {{ $statusStyles[$order->status] }}">{{ match($order->status){'pending'=>'Awaiting confirmation',default=>ucfirst($order->status)} }}</span>@if($order->payment)<span class="status-badge {{ $paymentStyles[$order->payment->status] }}">{{ $order->payment->status==='pending'?'Awaiting payment':ucfirst($order->payment->status) }}</span>@endif</div></header>
-            <div class="mt-5 space-y-4">@foreach($order->sellerOrders as $sellerOrder)<section x-data="{ expanded:false }" class="border-t border-line pt-4 first:border-0 first:pt-0"><div class="flex items-center justify-between gap-3"><div class="flex min-w-0 items-center gap-2.5"><span class="grid size-8 shrink-0 place-items-center rounded-lg bg-blue-50 text-xs font-bold text-ink">{{ Str::upper(Str::substr($sellerOrder->store->name,0,1)) }}</span><div class="min-w-0"><p class="truncate text-sm font-semibold text-ink">{{ $sellerOrder->store->name }}</p><p class="text-xs text-muted">{{ $sellerOrder->items->count() }} {{ Str::plural('product',$sellerOrder->items->count()) }} · {{ ucfirst($sellerOrder->status) }}</p></div></div><form method="POST" action="{{ route('messages.seller-orders.start',$sellerOrder) }}">@csrf<button class="min-h-10 rounded-lg px-2 text-xs font-semibold text-brand-hover hover:bg-blue-50">Message seller</button></form></div><div class="mt-4 space-y-3">@foreach($sellerOrder->items as $item)<div x-show="expanded || {{ $loop->index }} < 3" class="flex min-w-0 items-center gap-3"><div class="grid size-16 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100">@if($item->product?->thumbnail)<img src="{{ Storage::disk('product_images')->url($item->product->thumbnail->path) }}" alt="{{ $item->product_name }}" width="64" height="64" loading="lazy" class="h-full w-full object-contain">@else<svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>@endif</div><div class="min-w-0 flex-1">@if($item->product)<a href="{{ route('catalog.show',[$item->product->store->slug,$item->product->slug]) }}" class="block truncate text-sm font-semibold text-ink hover:text-brand-hover">{{ $item->product_name }}</a>@else<p class="truncate text-sm font-semibold text-ink">{{ $item->product_name }}</p>@endif@if($item->variant_label)<p class="mt-1 text-xs font-medium text-brand">{{ $item->variant_label }}</p>@endif<p class="mt-1 text-xs text-muted">Qty {{ $item->quantity }}</p></div><p class="shrink-0 text-sm font-semibold tabular-nums text-ink">₱{{ number_format($item->line_total,2) }}</p></div>@endforeach</div>@if($sellerOrder->items->count()>3)<button type="button" @click="expanded=!expanded" class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand-hover hover:text-brand-hover"><span x-text="expanded ? 'Show fewer products' : 'Show all {{ $sellerOrder->items->count() }} products'"></span></button>@endif</section>@endforeach</div>
-            <footer class="mt-5 flex flex-col gap-4 border-t border-line pt-4 sm:flex-row sm:items-center sm:justify-between"><p class="text-sm text-muted">Order total <span class="ml-1 text-lg font-semibold tabular-nums text-ink">₱{{ number_format($order->total,2) }}</span></p><a href="{{ route('orders.show',$order) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">View order</a></footer>
-        </article>@empty<div class="rounded-[14px] border border-dashed border-line bg-surface px-6 py-16 text-center sm:py-20"><svg viewBox="0 0 24 24" class="mx-auto size-10 text-brand" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2 12h10l2-8H6"/><circle cx="9" cy="20" r="1"/><circle cx="17" cy="20" r="1"/></svg><h2 class="mt-4 text-lg font-semibold text-ink">{{ $hasFilters?'No purchases match those filters':'No purchases yet' }}</h2><p class="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">{{ $hasFilters?'Try another product, store, order reference, or status.':'Orders you place will appear here for delivery tracking and eligible reviews.' }}</p><a href="{{ $hasFilters?route('orders.index'):route('catalog.index') }}" class="mt-5 inline-flex min-h-10 items-center rounded-lg {{ $hasFilters?'px-3 text-sm font-semibold text-brand-hover hover:bg-blue-50':'bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover' }}">{{ $hasFilters?'Reset filters':'Browse products' }}</a></div>@endforelse</div>
-        @if($orders->hasPages())<div class="mt-7">{{ $orders->links() }}</div>@endif
+
+    <x-marketplace.account-shell active="orders" title="My purchases">
+        <div data-purchases class="flex flex-col gap-6 sm:gap-7">
+            <header class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight text-ink">My purchases</h1>
+                    <p class="mt-2 max-w-xl text-sm leading-6 text-muted">Your orders, from checkout to your doorstep.</p>
+                </div>
+                <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                    Continue shopping
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-5-5 5 5-5 5" /></svg>
+                </a>
+            </header>
+
+            <section class="min-w-0 rounded-2xl border border-line bg-surface" aria-label="Find a purchase">
+                <form method="GET" action="{{ route('orders.index') }}" x-data="{ loading: false }" @submit="loading = true" class="flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:p-5">
+                    <div class="min-w-0 flex-1">
+                        <label for="purchase-search" class="mb-2 block text-sm font-semibold text-ink">Search purchases</label>
+                        <div class="relative">
+                            <svg viewBox="0 0 24 24" class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path stroke-linecap="round" d="m20 20-4-4" /></svg>
+                            <input id="purchase-search" name="search" value="{{ $filters['search'] ?? '' }}" type="search" maxlength="100" class="field-control bg-canvas pl-10" placeholder="Product, store, or order number" @error('search') aria-invalid="true" aria-describedby="purchase-search-error" @enderror>
+                        </div>
+                        <x-input-error id="purchase-search-error" :messages="$errors->get('search')" class="mt-2" />
+                    </div>
+                    <input type="hidden" name="status" value="{{ $filters['status'] ?? '' }}">
+                    <button type="submit" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-60" :disabled="loading">
+                        <span x-text="loading ? 'Searching…' : 'Search'">Search</span>
+                    </button>
+                </form>
+                <x-input-error :messages="$errors->get('status')" class="px-5 pb-3" />
+                <nav class="flex gap-1 overflow-x-auto overscroll-x-contain border-t border-line px-3 py-2 sm:px-4" aria-label="Purchase status filters" tabindex="0">
+                    @foreach ($statusLabels as $value => $label)
+                        @php($active = ($filters['status'] ?? '') === $value)
+                        @php($count = $value ? ($statusCounts[$value] ?? 0) : $statusCounts->sum())
+                        <a href="{{ route('orders.index', [...request()->except('status', 'page'), ...($value ? ['status' => $value] : [])]) }}" @class([
+                            'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand',
+                            'bg-blue-50 text-brand-hover' => $active,
+                            'text-muted hover:bg-canvas hover:text-ink' => ! $active,
+                        ]) @if ($active) aria-current="page" @endif>
+                            {{ $label }}
+                            <span @class(['min-w-5 rounded-md px-1.5 py-0.5 text-center text-xs tabular-nums', 'bg-white text-brand-hover' => $active, 'bg-canvas text-muted' => ! $active])>{{ $count }}</span>
+                        </a>
+                    @endforeach
+                </nav>
+            </section>
+
+            <section class="flex min-w-0 flex-col gap-4" aria-labelledby="purchase-results-heading">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h2 id="purchase-results-heading" class="text-base font-semibold text-ink">{{ $hasFilters ? 'Matching purchases' : 'Order history' }} <span class="ml-1 text-sm font-normal tabular-nums text-muted">({{ $orders->total() }})</span></h2>
+                    @if ($hasFilters)
+                        <a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-brand-hover transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" /></svg>
+                            Clear filters
+                        </a>
+                    @else
+                        <p class="text-xs text-muted">Most recent first</p>
+                    @endif
+                </div>
+
+                @forelse ($orders as $order)
+                    <article class="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm" aria-labelledby="purchase-{{ $order->id }}">
+                        <header class="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-b border-line bg-canvas/70 px-4 py-3 sm:px-6">
+                            <div class="min-w-0">
+                                <div class="flex min-w-0 items-center gap-1" x-data="{ copied: false, copy() { navigator.clipboard?.writeText(@js($order->number)); this.copied = true; setTimeout(() => this.copied = false, 1800); } }">
+                                    <h3 id="purchase-{{ $order->id }}" class="min-w-0 break-all text-sm font-semibold text-ink">Order #{{ $order->number }}</h3>
+                                    <button type="button" @click="copy" class="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-white hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :aria-label="copied ? 'Order number copied' : 'Copy order number'" title="Copy order number">
+                                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path stroke-linecap="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                    </button>
+                                    <span x-cloak x-show="copied" class="text-xs font-medium text-brand-hover" role="status">Copied</span>
+                                </div>
+                                <p class="text-xs text-muted">Placed <time datetime="{{ $order->created_at->toIso8601String() }}">{{ $order->created_at->format('M j, Y') }}</time></p>
+                            </div>
+                            <span class="status-badge gap-1.5 {{ $statusStyles[$order->status] }}">
+                                <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    @if ($order->status === 'delivered')
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6" />
+                                    @elseif ($order->status === 'cancelled')
+                                        <path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
+                                    @else
+                                        <circle cx="12" cy="12" r="9" /><path stroke-linecap="round" d="M12 7v5l3 2" />
+                                    @endif
+                                </svg>
+                                {{ $order->status === 'pending' ? 'Awaiting confirmation' : ucfirst($order->status) }}
+                            </span>
+                        </header>
+
+                        <div class="divide-y divide-line px-4 sm:px-6">
+                            @foreach ($order->sellerOrders as $sellerOrder)
+                                <section x-data="{ expanded: false }" class="flex flex-col gap-4 py-5" aria-label="Items from {{ $sellerOrder->store->name }}">
+                                    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                                        <div class="flex min-w-0 flex-1 items-center gap-2.5">
+                                            <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-canvas text-xs font-semibold text-ink" aria-hidden="true">
+                                                @if ($sellerOrder->store->logo_path)
+                                                    <img src="{{ Storage::disk('public')->url($sellerOrder->store->logo_path) }}" alt="" width="36" height="36" loading="lazy" class="size-full object-cover">
+                                                @else
+                                                    {{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}
+                                                @endif
+                                            </span>
+                                            <div class="min-w-0">
+                                                <a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="block truncate text-sm font-semibold text-ink hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->store->name }}</a>
+                                                <p class="mt-0.5 text-xs text-muted">{{ $sellerOrder->items->count() }} {{ Str::plural('product', $sellerOrder->items->count()) }} <span aria-hidden="true">·</span> {{ ucfirst($sellerOrder->status) }}</p>
+                                            </div>
+                                        </div>
+                                        <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}" class="shrink-0">
+                                            @csrf
+                                            <button type="submit" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 text-xs font-semibold text-brand-hover transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">
+                                                <svg class="hidden size-4 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-9.5A7.5 7.5 0 0 1 10.5 4h2A7.5 7.5 0 0 1 20 11.5Z" /><path stroke-linecap="round" d="M8 10h8M8 14h5" /></svg>
+                                                Message seller
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <div id="purchase-items-{{ $sellerOrder->id }}" class="flex flex-col gap-4">
+                                        @foreach ($sellerOrder->items as $item)
+                                            <div @if ($loop->index >= 3) x-cloak x-show="expanded" @endif class="grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] gap-x-3 gap-y-1 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:gap-x-4">
+                                                <div class="row-span-2 grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-canvas sm:size-20">
+                                                    @if ($item->product?->thumbnail)
+                                                        <img src="{{ Storage::disk('product_images')->url($item->product->thumbnail->path) }}" alt="{{ $item->product_name }}" width="80" height="80" loading="lazy" class="size-full object-contain">
+                                                    @else
+                                                        <svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 3-3 5 5" /></svg>
+                                                        <span class="sr-only">Product image unavailable</span>
+                                                    @endif
+                                                </div>
+                                                <div class="min-w-0 sm:row-span-2 sm:self-center">
+                                                    @if ($item->product)
+                                                        <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="line-clamp-2 break-words text-sm font-semibold leading-6 text-ink hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $item->product_name }}</a>
+                                                    @else
+                                                        <p class="line-clamp-2 break-words text-sm font-semibold leading-6 text-ink">{{ $item->product_name }}</p>
+                                                    @endif
+                                                    <p class="mt-1 text-xs leading-5 text-muted">@if ($item->variant_label){{ $item->variant_label }} <span aria-hidden="true">·</span> @endif Qty {{ $item->quantity }}</p>
+                                                </div>
+                                                <p class="col-start-2 text-sm font-semibold tabular-nums text-ink sm:col-start-3 sm:row-span-2 sm:self-center sm:text-right">₱{{ number_format($item->line_total, 2) }}</p>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @if ($sellerOrder->items->count() > 3)
+                                        <button type="button" @click="expanded = !expanded" :aria-expanded="expanded" aria-controls="purchase-items-{{ $sellerOrder->id }}" class="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-lg border border-line px-3 text-sm font-semibold text-brand-hover transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            <span x-text="expanded ? 'Show fewer products' : 'Show all {{ $sellerOrder->items->count() }} products'">Show all {{ $sellerOrder->items->count() }} products</span>
+                                            <svg class="size-4" :class="expanded && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                                        </button>
+                                    @endif
+                                </section>
+                            @endforeach
+                        </div>
+
+                        <footer class="flex flex-col gap-4 border-t border-line px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                            <div class="flex min-w-0 flex-col gap-1">
+                                <p class="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">Order total <span class="text-xl font-bold tracking-tight tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</span></p>
+                                @if ($order->payment)
+                                    <p class="text-xs text-muted">{{ $order->payment->method === 'cod' ? 'Cash on delivery' : Str::headline($order->payment->method) }} <span aria-hidden="true">·</span> {{ $order->payment->status === 'pending' ? 'Awaiting payment' : ucfirst($order->payment->status) }}</p>
+                                @endif
+                            </div>
+                            <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                                View order
+                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-5-5 5 5-5 5" /></svg>
+                            </a>
+                        </footer>
+                    </article>
+                @empty
+                    <div class="flex flex-col items-center rounded-2xl border border-line bg-surface px-5 py-14 text-center sm:py-20">
+                        <span class="grid size-16 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-brand" aria-hidden="true"><svg viewBox="0 0 24 24" class="size-8" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m12 3 9 5v8l-9 5-9-5V8l9-5Zm0 10v8M3 8l9 5 9-5M7.5 5.5l9 5" /></svg></span>
+                        <h3 class="mt-5 text-lg font-semibold text-ink">{{ $hasFilters ? 'No purchases match those filters' : 'Your first purchase starts here' }}</h3>
+                        <p class="mt-2 max-w-sm text-sm leading-6 text-muted">{{ $hasFilters ? 'Try another product, store, order number, or status to find your purchase.' : 'Find something you love. Your orders and delivery updates will appear here.' }}</p>
+                        <a href="{{ $hasFilters ? route('orders.index') : route('catalog.index') }}" class="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">{{ $hasFilters ? 'Reset filters' : 'Browse products' }}</a>
+                    </div>
+                @endforelse
+            </section>
+
+            @if ($orders->hasPages())
+                <div>{{ $orders->links() }}</div>
+            @endif
         </div>
     </x-marketplace.account-shell>
 </x-app-layout>

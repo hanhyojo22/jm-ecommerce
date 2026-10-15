@@ -2,6 +2,43 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { openAsRole } from './support/role-page.js';
 
+test('customer finds purchases and opens order actions at each viewport', async ({ browser }, testInfo) => {
+    test.setTimeout(60_000);
+    const { context, page } = await openAsRole(browser, 'customer');
+
+    try {
+        await page.goto('/orders');
+        const rejectCookies = page.getByRole('button', { name: 'Reject Optional', exact: true }).first();
+        if (await rejectCookies.isVisible()) {
+            await rejectCookies.click();
+            await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+        }
+        await expect(page.getByRole('heading', { name: 'My purchases', exact: true })).toBeVisible();
+        const purchase = page.getByRole('article', { name: 'Order #QA-REVIEW-001', exact: true });
+        await expect(purchase).toContainText('QA Canvas Tote');
+        await expect(purchase).toContainText('Cash on delivery');
+        await page.screenshot({ path: testInfo.outputPath('my-purchases.png'), fullPage: true });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+        expect((await new AxeBuilder({ page }).include('[data-purchases]').analyze()).violations).toEqual([]);
+
+        await page.getByRole('searchbox', { name: 'Search purchases', exact: true }).fill('QA-REVIEW-001');
+        await page.locator('[data-purchases]').getByRole('button', { name: 'Search', exact: true }).click();
+        await expect(purchase).toBeVisible();
+        const filters = page.getByRole('navigation', { name: 'Purchase status filters' });
+        await filters.getByRole('link', { name: /^Pending/ }).click();
+        await expect(page.getByRole('heading', { name: 'No purchases match those filters' })).toBeVisible();
+        await expect(page.getByRole('searchbox', { name: 'Search purchases', exact: true })).toHaveValue('QA-REVIEW-001');
+        await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
+        await purchase.getByRole('link', { name: 'View order', exact: true }).click();
+        await expect(page.getByRole('heading', { name: 'Order details', exact: true })).toBeVisible();
+        await page.goto('/orders');
+        await purchase.getByRole('button', { name: 'Message seller', exact: true }).click();
+        await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+    } finally {
+        await context.close();
+    }
+});
+
 test('seller application steps remain usable on mobile and desktop', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'responsiveApplicant');
 
