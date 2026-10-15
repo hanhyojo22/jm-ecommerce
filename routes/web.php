@@ -81,6 +81,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::get('/messages', ChatInbox::class)->name('messages.index');
     Route::get('/messages/{conversation}', ChatThread::class)->name('messages.show');
     Route::post('/messages/{conversation}/block', [ConversationController::class, 'block'])->middleware('throttle:10,1')->name('messages.block');
+    Route::delete('/messages/{conversation}/block', [ConversationController::class, 'unblock'])->middleware('throttle:10,1')->name('messages.unblock');
     Route::post('/messages/{conversation}/messages/{message}/report', [ConversationController::class, 'report'])->middleware('throttle:10,1')->name('messages.report');
     Route::post('/messages/{conversation}/attachments', [ConversationAttachmentController::class, 'store'])->middleware('throttle:10,1')->name('messages.attachments.store');
     Route::get('/messages/attachments/{attachment}', [ConversationAttachmentController::class, 'show'])->name('messages.attachments.show');

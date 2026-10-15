@@ -51,9 +51,7 @@ class Inbox extends Component
                 'messages' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id')->limit(1),
                 'readStates' => fn ($query) => $query->where('user_id', $user->id),
             ])
-            ->withCount(['messages as unread_messages_count' => fn ($query) => $query
-                ->where('sender_id', '!=', $user->id)
-                ->whereRaw("conversation_messages.id > COALESCE((SELECT last_read_message_id FROM conversation_read_states WHERE conversation_id = conversations.id AND user_id = ? LIMIT 1), '')", [$user->id])])
+            ->withCount(['messages as unread_messages_count' => fn ($query) => Conversation::constrainToUnread($query, $user)])
             ->visibleTo($user)
             ->when($user->account_type === 'seller' && $this->context === 'buying', fn ($query) => $query->where('buyer_id', $user->id))
             ->when($user->account_type === 'seller' && $this->context !== 'buying', fn ($query) => $query->where('buyer_id', '!=', $user->id))
@@ -61,12 +59,12 @@ class Inbox extends Component
             ->when($this->filter === 'order', fn ($query) => $query->whereNotNull('seller_order_id'))
             ->when($this->filter === 'unread', fn ($query) => $query->unreadFor($user))
             ->when(filled($this->search), function ($query): void {
-                $term = '%'.mb_strtolower(trim($this->search)).'%';
+                $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($this->search))).'%';
                 $query->where(function ($query) use ($term): void {
-                    $query->whereHas('buyer', fn ($buyer) => $buyer->whereRaw('LOWER(name) LIKE ?', [$term]))
-                        ->orWhereHas('store', fn ($store) => $store->whereRaw('LOWER(name) LIKE ?', [$term]))
-                        ->orWhereHas('product', fn ($product) => $product->whereRaw('LOWER(name) LIKE ?', [$term]))
-                        ->orWhereHas('sellerOrder.order', fn ($order) => $order->whereRaw('LOWER(number) LIKE ?', [$term]));
+                    $query->whereHas('buyer', fn ($buyer) => $buyer->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
+                        ->orWhereHas('store', fn ($store) => $store->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
+                        ->orWhereHas('product', fn ($product) => $product->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
+                        ->orWhereHas('sellerOrder.order', fn ($order) => $order->whereRaw("LOWER(number) LIKE ? ESCAPE '!'", [$term]));
                 });
             })
             ->orderByDesc('latest_message_at')

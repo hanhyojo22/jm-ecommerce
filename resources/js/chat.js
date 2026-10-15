@@ -131,10 +131,7 @@ window.chatThread = (conversationId, userId) => ({
         this.channel = window.Echo.private(`conversation.${conversationId}`);
         this.channel.listen('.message.created', (event) => {
             this.$wire.syncLatestMessages();
-            if (event.message?.sender_id !== userId) {
-                this.$wire.markDelivered();
-                this.$wire.markRead();
-            }
+            if (event.message?.sender_id !== userId) this.$wire.markRead();
         });
         this.channel.listen('.message.read', () => this.$wire.$refresh());
         this.channel.listen('.message.delivered', () => this.$wire.$refresh());
@@ -164,7 +161,6 @@ window.chatThread = (conversationId, userId) => ({
         this.onConnected = () => {
             this.liveConnected = true;
             this.$wire.syncLatestMessages();
-            this.$wire.markDelivered();
             this.$wire.markRead();
         };
         this.onStateChange = ({ current }) => { this.liveConnected = current === 'connected'; };

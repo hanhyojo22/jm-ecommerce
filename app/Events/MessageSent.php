@@ -33,7 +33,7 @@ class MessageSent implements ShouldBroadcast, ShouldDispatchAfterCommit
         return 'message.created';
     }
 
-    /** @return array{event: string, conversation_id: string, message: array{id: string, sender_id: string, client_message_id: ?string, type: string, body: string, reply_to_id: ?string, created_at: string}} */
+    /** @return array{event: string, conversation_id: string, message: array{id: string, sender_id: string, client_message_id: ?string, type: string, body: string, created_at: string}} */
     public function broadcastWith(): array
     {
         return [
@@ -45,7 +45,6 @@ class MessageSent implements ShouldBroadcast, ShouldDispatchAfterCommit
                 'client_message_id' => $this->message->client_message_id,
                 'type' => $this->message->type,
                 'body' => $this->message->body,
-                'reply_to_id' => $this->message->reply_to_id,
                 'created_at' => $this->message->created_at->toIso8601String(),
             ],
         ];

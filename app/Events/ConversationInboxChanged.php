@@ -24,6 +24,7 @@ class ConversationInboxChanged implements ShouldBroadcast, ShouldDispatchAfterCo
         }
 
         $recipientIds = [$this->conversation->buyer_id];
+        $this->conversation->loadMissing('store.tenant');
 
         if ($this->conversation->store->status === 'active' && $this->conversation->store->tenant->status === 'active') {
             $recipientIds = array_merge($recipientIds, TenantMember::query()

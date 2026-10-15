@@ -60,8 +60,7 @@ class ConversationAttachmentController extends Controller
 
         try {
             DB::transaction(function () use ($request, $conversation, $sendMessage, $data, $file, $disk, $path, &$stored, &$attachment, &$message): void {
-                $body = trim($data['body'] ?? '');
-                $message = $sendMessage->handle($conversation, $request->user(), $body !== '' ? $body : $file->getClientOriginalName(), $data['client_message_id'], 'file');
+                $message = $sendMessage->handle($conversation, $request->user(), trim($data['body'] ?? ''), $data['client_message_id'], 'file');
                 if (! $message->wasRecentlyCreated) {
                     return;
                 }
@@ -106,6 +105,7 @@ class ConversationAttachmentController extends Controller
                 [
                     'Content-Type' => $attachment->mime_type,
                     'X-Content-Type-Options' => 'nosniff',
+                    'Content-Security-Policy' => "sandbox; default-src 'none'",
                 ],
             );
         }

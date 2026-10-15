@@ -72,15 +72,38 @@ class Conversation extends Model
 
     public function isBlocked(): bool
     {
-        $sellerIds = TenantMember::query()
-            ->where('tenant_id', $this->store()->value('tenant_id'))
-            ->whereIn('role', ['owner', 'manager', 'staff'])
-            ->select('user_id');
+        return $this->blocks()->exists();
+    }
+
+    /**
+     * Blocks between the buyer and this store's members that the given user created.
+     */
+    public function blocksCreatedBy(User $user): Builder
+    {
+        return $this->blocks()->where('user_id', $user->id);
+    }
+
+    /**
+     * Every block standing between the buyer and this store's members.
+     */
+    private function blocks(): Builder
+    {
+        $sellerIds = $this->storeMemberIds();
 
         return BlockedUser::query()->where(function (Builder $query) use ($sellerIds): void {
             $query->where(fn (Builder $query) => $query->where('user_id', $this->buyer_id)->whereIn('blocked_user_id', $sellerIds))
                 ->orWhere(fn (Builder $query) => $query->where('blocked_user_id', $this->buyer_id)->whereIn('user_id', $sellerIds));
-        })->exists();
+        });
+    }
+
+    public function storeMemberIds(): Builder
+    {
+        $this->loadMissing('store');
+
+        return TenantMember::query()
+            ->where('tenant_id', $this->store->tenant_id)
+            ->whereIn('role', ['owner', 'manager', 'staff'])
+            ->select('user_id');
     }
 
     public function scopeVisibleTo(Builder $query, User $user): Builder
@@ -102,8 +125,19 @@ class Conversation extends Model
 
     public function scopeUnreadFor(Builder $query, User $user): Builder
     {
-        return $query->whereHas('messages', fn (Builder $messages) => $messages
+        return $query->whereHas('messages', fn (Builder $messages) => self::constrainToUnread($messages, $user));
+    }
+
+    /**
+     * Limit a conversation's messages to those the given user has not read yet.
+     *
+     * @param  Builder<ConversationMessage>  $messages
+     * @return Builder<ConversationMessage>
+     */
+    public static function constrainToUnread(Builder $messages, User $user): Builder
+    {
+        return $messages
             ->where('sender_id', '!=', $user->id)
-            ->whereRaw("conversation_messages.id > COALESCE((SELECT last_read_message_id FROM conversation_read_states WHERE conversation_id = conversations.id AND user_id = ? LIMIT 1), '')", [$user->id]));
+            ->whereRaw("conversation_messages.id > COALESCE((SELECT last_read_message_id FROM conversation_read_states WHERE conversation_id = conversations.id AND user_id = ? LIMIT 1), '')", [$user->id]);
     }
 }

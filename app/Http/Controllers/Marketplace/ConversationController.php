@@ -56,18 +56,30 @@ class ConversationController extends Controller
     public function block(Request $request, Conversation $conversation): RedirectResponse
     {
         $this->authorize('view', $conversation);
-        $sellerId = TenantMember::query()
-            ->where('tenant_id', $conversation->store->tenant_id)
-            ->where('role', 'owner')
-            ->value('user_id');
-        abort_if($sellerId === null, 409);
+        $blockedUserId = $conversation->buyer_id === $request->user()->id
+            ? TenantMember::query()
+                ->where('tenant_id', $conversation->store->tenant_id)
+                ->where('role', 'owner')
+                ->value('user_id')
+            : $conversation->buyer_id;
+        abort_if($blockedUserId === null, 409);
 
         BlockedUser::query()->firstOrCreate([
             'user_id' => $request->user()->id,
-            'blocked_user_id' => $conversation->buyer_id === $request->user()->id ? $sellerId : $conversation->buyer_id,
+            'blocked_user_id' => $blockedUserId,
         ]);
 
         return to_route('messages.index')->with('status', 'This conversation has been blocked.');
+    }
+
+    public function unblock(Request $request, Conversation $conversation): RedirectResponse
+    {
+        $this->authorize('view', $conversation);
+        $removed = $conversation->blocksCreatedBy($request->user())->delete();
+
+        return back()->with('status', $removed > 0
+            ? 'This conversation has been unblocked.'
+            : 'You have not blocked this conversation.');
     }
 
     public function report(Request $request, Conversation $conversation, ConversationMessage $message): RedirectResponse

@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -285,7 +286,7 @@ class ConversationTest extends TestCase
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
-            ->assertSet('messageLimit', 200)
+            ->assertCount('messageIds', 200)
             ->assertSee('Message 0')
             ->assertSee('Load newer messages');
     }
@@ -311,7 +312,7 @@ class ConversationTest extends TestCase
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
             ->call('loadOlderMessages')
-            ->assertSet('messageLimit', 200)
+            ->assertCount('messageIds', 200)
             ->assertSee('oldest-message-marker')
             ->assertSee('Load newer messages')
             ->call('jumpToLatest')
@@ -499,7 +500,8 @@ class ConversationTest extends TestCase
 
         $this->assertDatabaseCount('conversation_messages', 1);
         $this->assertDatabaseCount('message_attachments', 1);
-        $this->assertSame('receipt.pdf', $conversation->messages()->first()->body);
+        $this->assertSame('', $conversation->messages()->first()->body);
+        $this->assertSame('receipt.pdf', $conversation->messages()->first()->attachments()->first()->original_name);
         $attachment = $conversation->messages()->first()->attachments()->first();
         Storage::disk('chat_attachments')->assertExists($attachment->path);
     }
@@ -645,6 +647,95 @@ class ConversationTest extends TestCase
 
         $this->expectException(DomainException::class);
         Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $otherProduct->id]);
+    }
+
+    public function test_inbox_search_treats_like_wildcards_as_literal_text(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $product->store->forceFill(['name' => '50% off store'])->save();
+        $otherProduct = $this->product();
+        $otherProduct->store->forceFill(['name' => '50 off store'])->save();
+        Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $otherProduct->store_id, 'product_id' => $otherProduct->id]);
+
+        $this->actingAs($buyer);
+
+        Livewire::test(Inbox::class)
+            ->set('search', '50% off')
+            ->assertSee('50% off store')
+            ->assertDontSee('50 off store');
+    }
+
+    public function test_unblocking_restores_messaging_for_both_participants(): void
+    {
+        $buyer = User::factory()->create();
+        $owner = User::factory()->seller()->create();
+        $product = $this->product();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $owner->id, 'role' => 'owner']);
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $this->actingAs($buyer)->post(route('messages.block', $conversation));
+
+        $this->actingAs($buyer)->delete(route('messages.unblock', $conversation))->assertRedirect();
+
+        $this->assertDatabaseCount('blocked_users', 0);
+        $this->assertTrue(Gate::forUser($buyer)->allows('send', $conversation));
+        $this->assertTrue(Gate::forUser($owner)->allows('send', $conversation));
+    }
+
+    public function test_a_participant_cannot_lift_a_block_the_other_side_created(): void
+    {
+        $buyer = User::factory()->create();
+        $owner = User::factory()->seller()->create();
+        $product = $this->product();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $owner->id, 'role' => 'owner']);
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $this->actingAs($owner)->post(route('messages.block', $conversation));
+
+        $this->actingAs($buyer)->delete(route('messages.unblock', $conversation))->assertRedirect();
+
+        $this->assertDatabaseHas('blocked_users', ['user_id' => $owner->id, 'blocked_user_id' => $buyer->id]);
+        $this->assertFalse(Gate::forUser($buyer)->allows('send', $conversation));
+    }
+
+    public function test_sending_is_rate_limited_per_user(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+
+        $this->actingAs($buyer);
+        $component = Livewire::test(Thread::class, ['conversation' => $conversation]);
+
+        for ($index = 0; $index < 20; $index++) {
+            $component->set('clientMessageId', (string) str()->uuid())
+                ->set('body', "Message {$index}")
+                ->call('send')
+                ->assertHasNoErrors();
+        }
+
+        $component->set('clientMessageId', (string) str()->uuid())
+            ->set('body', 'One too many')
+            ->call('send')
+            ->assertHasErrors('body');
+
+        $this->assertDatabaseCount('conversation_messages', 20);
+    }
+
+    public function test_a_client_message_id_cannot_be_replayed_into_another_conversation(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $otherProduct = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $otherConversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $otherProduct->store_id, 'product_id' => $otherProduct->id]);
+        $clientMessageId = (string) str()->uuid();
+
+        $sendMessage = app(SendConversationMessage::class);
+        $sendMessage->handle($conversation, $buyer, 'Is this available?', $clientMessageId);
+
+        $this->expectException(ValidationException::class);
+        $sendMessage->handle($otherConversation, $buyer, 'Is this available?', $clientMessageId);
     }
 
     private function product(): Product

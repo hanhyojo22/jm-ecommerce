@@ -15,7 +15,7 @@
                     @if ($isBuyerMessages)
                         <a href="{{ route('catalog.store', $conversation->store->slug) }}" aria-label="Open store" class="inline-flex min-h-10 items-center gap-2 rounded-[10px] px-3 text-xs font-semibold text-brand-hover transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.25h16.5l-1.5 10h-13.5l-1.5-10ZM5 9.25l2-5h10l2 5M9 19.25v-6h6v6"/></svg><span class="hidden sm:inline">Store</span></a>
                     @endif
-                    <form method="POST" action="{{ route('messages.block', $conversation) }}">@csrf<button type="submit" class="inline-flex min-h-10 items-center rounded-[10px] px-3 text-xs font-medium text-muted transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 sm:text-sm" onclick="return confirm('Block this conversation?')">Block</button></form>
+                    <form method="POST" action="{{ route('messages.block', $conversation) }}">@csrf<button type="submit" class="inline-flex min-h-10 items-center rounded-[10px] px-3 text-xs font-medium text-muted transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700 sm:text-sm" onclick="return confirm('Block this contact? This stops messages between you in every conversation, until you unblock them.')">Block</button></form>
                 </div>
             </header>
             @if ($conversation->product)
@@ -64,7 +64,7 @@
                                             <div class="mt-2 flex gap-3 border-t border-line pt-2 text-xs font-semibold text-brand-hover"><a href="{{ route('messages.attachments.show', $attachment) }}?preview=1" target="_blank" rel="noopener" class="rounded underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Open</a><a href="{{ route('messages.attachments.show', $attachment) }}" class="rounded underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Download</a></div>
                                         </div>
                                     @endif
-                                    @if ($message->body !== $attachment->original_name)
+                                    @if (filled($message->body))
                                         <p class="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
                                     @endif
                                 @else
@@ -109,22 +109,29 @@
                 @endif
             </div>
             <div wire:cloak class="shrink-0 border-t border-line bg-surface p-3 sm:p-4">
-                @cannot('send', $conversation)<p class="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">Messaging is unavailable for this conversation.</p>@endcannot
-                @if (! $isBuyerMessages && auth()->user()->can('send', $conversation))
+                @unless ($canSend)
+                    <div class="mb-3 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">
+                        <p class="min-w-0 flex-1">{{ $canUnblock ? 'You blocked this contact, so messaging is paused for both of you.' : 'Messaging is unavailable for this conversation.' }}</p>
+                        @if ($canUnblock)
+                            <form method="POST" action="{{ route('messages.unblock', $conversation) }}" class="shrink-0">@csrf @method('DELETE')<button type="submit" class="inline-flex min-h-10 items-center rounded-[10px] bg-amber-900 px-3 text-xs font-semibold text-white transition hover:bg-amber-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-900 sm:text-sm">Unblock</button></form>
+                        @endif
+                    </div>
+                @endunless
+                @if (! $isBuyerMessages && $canSend)
                     <div class="mb-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Quick replies">@foreach (['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?'] as $reply)<button x-on:click="$wire.body = @js($reply)" type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-[10px] border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $reply }}</button>@endforeach</div>
                 @endif
-                @can('send', $conversation)
+                @if ($canSend)
                     <div x-cloak x-show="selectedType" class="mb-3 flex max-w-full items-center gap-2 rounded-[10px] border border-line bg-canvas px-2 py-1.5 text-sm text-ink" role="status">
                         <img x-cloak x-show="previewUrl" x-bind:src="previewUrl" alt="Selected photo preview" class="size-10 shrink-0 rounded-md object-cover">
                         <span x-show="selectedType === 'document'" class="grid size-10 shrink-0 place-items-center rounded-md bg-blue-50 text-xs font-bold text-brand-hover" aria-hidden="true">PDF</span>
                         <span class="min-w-0 flex-1"><span x-text="fileName" class="block truncate font-medium"></span><span x-text="fileSize" class="block text-xs text-muted"></span></span>
                         <button type="button" x-on:click="clearFile()" x-bind:disabled="uploading" class="grid size-10 shrink-0 place-items-center rounded-lg text-muted hover:bg-line hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50" aria-label="Remove attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg></button>
                     </div>
-                @endcan
+                @endif
                 <label for="message-body" class="sr-only">Write a message</label>
                 <form x-ref="messageForm" x-on:submit.prevent="submitMessage()">
                 <div class="flex min-w-0 items-end gap-2">
-                    @can('send', $conversation)
+                    @if ($canSend)
                         <div class="relative shrink-0" x-on:click.outside="attachmentMenuOpen = false" x-on:keydown.escape.window="attachmentMenuOpen = false">
                             <button type="button" x-on:click="attachmentMenuOpen = ! attachmentMenuOpen" x-bind:aria-expanded="attachmentMenuOpen" aria-haspopup="true" aria-label="Add attachment" class="grid size-12 place-items-center rounded-[10px] border border-line bg-white text-ink transition hover:border-blue-300 hover:bg-blue-50 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 10.5 12 18.5a5 5 0 0 1-7-7L13 3.5a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7.5-7.5"/></svg></button>
                             <div x-cloak x-show="attachmentMenuOpen" class="absolute bottom-14 left-0 z-20 w-64 rounded-[14px] border border-line bg-white p-1.5 shadow-lg" aria-label="Attach a file">
@@ -132,9 +139,9 @@
                                 <label for="chat-document" class="flex min-h-12 cursor-pointer items-center gap-3 rounded-[10px] px-3 text-sm text-ink transition hover:bg-blue-50 focus-within:ring-2 focus-within:ring-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5 shrink-0 text-brand-hover" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 3.5h8l4 4v13H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 3.5v4h4M8 12h7M8 15h7M8 18h5"/></svg><span class="font-medium">PDF document</span><input id="chat-document" x-ref="documentInput" form="chat-document-form" name="attachment" type="file" accept="application/pdf,.pdf" aria-label="PDF document" required class="sr-only" x-on:change="selectFile('document', $event)"></label>
                             </div>
                         </div>
-                    @endcan
-                    <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; $el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="2" maxlength="2000" class="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-transparent bg-canvas text-sm text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! auth()->user()->can('send', $conversation))></textarea>
-                    <button type="submit" x-bind:aria-label="selectedType === 'photo' ? 'Send photo' : selectedType === 'document' ? 'Send document' : 'Send message'" x-bind:disabled="!online || uploading" class="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" @disabled(! auth()->user()->can('send', $conversation))><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg></button>
+                    @endif
+                    <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; $el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 160) + 'px'" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="2" maxlength="2000" class="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-transparent bg-canvas text-sm text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! $canSend)></textarea>
+                    <button type="submit" x-bind:aria-label="selectedType === 'photo' ? 'Send photo' : selectedType === 'document' ? 'Send document' : 'Send message'" x-bind:disabled="!online || uploading" class="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" @disabled(! $canSend)><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg></button>
                 </div>
                 <div id="message-help" class="flex items-center justify-between gap-3 text-xs text-muted"><span class="hidden sm:inline">Enter to send · Shift + Enter for a new line</span><span class="ml-auto tabular-nums" x-text="Array.from($wire.body).length + '/2000'">{{ Str::length($body) }}/2000</span></div>
                 @error('body')<p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ $message }}</p>@enderror
@@ -142,10 +149,10 @@
                 <div x-cloak x-show="uploading" class="mt-2 text-xs text-muted" role="status"><span>Uploading attachment</span><span class="ml-1 tabular-nums" x-text="uploadProgress + '%'">0%</span><div class="mt-1 h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Attachment upload progress" aria-valuemin="0" aria-valuemax="100" x-bind:aria-valuenow="uploadProgress"><div class="h-full rounded-full bg-brand transition-[width]" x-bind:style="'width: ' + uploadProgress + '%'"></div></div></div>
                 <p x-cloak x-show="uploadError" x-text="uploadError" class="mt-2 text-sm font-medium text-red-700" role="alert"></p>
                 </form>
-                @can('send', $conversation)
+                @if ($canSend)
                     <p class="mt-1 text-xs text-muted">Photos: JPG, PNG, WebP · Documents: PDF · Up to 5 MB</p>
                     <form id="chat-photo-form" x-ref="photoForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
                     <form id="chat-document-form" x-ref="documentForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
-                @endcan
+                @endif
             </div>
         </section>
