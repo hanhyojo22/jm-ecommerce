@@ -132,23 +132,49 @@ window.cartSelection = (config) => ({
 
     async send() {
         try {
-            const response = await fetch(config.endpoint, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    'X-CSRF-TOKEN': config.csrf,
-                },
-                body: JSON.stringify({ selected: [...this.selected] }),
-            });
+            const response = await this.request();
+
+            // The Clerk-backed session is short lived. One stale response is
+            // worth a single retry after a refresh before troubling the buyer.
+            if (response.status === 401 || response.status === 419) {
+                const retry = await this.request();
+
+                if (!retry.ok) {
+                    this.error = 'Your sign-in expired. Reload the page to save your selection.';
+                }
+
+                return;
+            }
+
+            if (response.status === 429) {
+                this.error = 'Too many changes at once. Wait a moment and try again.';
+
+                return;
+            }
 
             if (!response.ok) {
-                throw new Error('Selection could not be saved');
+                this.error = 'Your selection could not be saved. Reload the page and try again.';
             }
         } catch {
             this.error = 'Your selection could not be saved. Check your connection.';
         } finally {
             this.saving = false;
         }
+    },
+
+    request() {
+        return fetch(config.endpoint, {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': config.csrf,
+                // Opts this request into the Clerk session refresh that every
+                // other state-changing request in the app already goes through.
+                'X-Requires-Session': '1',
+            },
+            body: JSON.stringify({ selected: [...this.selected] }),
+        });
     },
 });

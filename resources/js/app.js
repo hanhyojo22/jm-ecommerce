@@ -430,7 +430,10 @@ if (clerkSessionRefreshEndpoint) {
     let pendingClerkSessionRefresh;
 
     window.fetch = async (input, options) => {
-        if (options?.headers?.['X-Livewire'] === '1' && clerkSessionNeedsRefresh()) {
+        const needsSession = options?.headers?.['X-Livewire'] === '1'
+            || options?.headers?.['X-Requires-Session'] === '1';
+
+        if (needsSession && clerkSessionNeedsRefresh()) {
             pendingClerkSessionRefresh ??= refreshClerkSession(clerkSessionRefreshEndpoint)
                 .finally(() => { pendingClerkSessionRefresh = null; });
 
