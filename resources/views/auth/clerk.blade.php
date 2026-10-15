@@ -1,3 +1,16 @@
+@php
+    $isSignUp = $mode === 'sign-up';
+    $redirectParams = array_filter(['redirect' => request('redirect')]);
+    $isAddingToCart = filled(request('add_to_cart'));
+    $heading = $isAddingToCart
+        ? ($isSignUp ? 'Create an account to add this item' : 'Sign in to add this to your cart')
+        : ($isSignUp ? 'Create your account' : 'Welcome back');
+    $subheading = $isAddingToCart
+        ? 'We’ll add it for you and take you straight back to the item.'
+        : (filled(request('redirect'))
+            ? 'You’ll return to the page you were viewing.'
+            : ($isSignUp ? 'Email and password — that’s all it takes.' : 'Sign in to check out, track orders, and message sellers.'));
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -8,54 +21,93 @@
     <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
     <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
     <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
-    <title>{{ $mode === 'sign-up' ? 'Create account' : 'Sign in' }} · JMMart</title>
+    <title>{{ $isSignUp ? 'Create account' : 'Sign in' }} · JMMart</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="min-h-screen bg-canvas font-sans text-ink antialiased">
-    <header class="border-b border-line bg-white">
-        <div class="mx-auto flex h-[60px] max-w-[1120px] items-center gap-3 px-[18px] sm:px-8">
-            <a href="{{ route('catalog.index') }}" class="flex items-center gap-2.5 font-bold tracking-[-0.02em]" aria-label="JMMart marketplace home">
-                <x-application-logo class="size-9 fill-current text-brand" />
-                <span class="text-lg">JMMart</span>
+<body class="min-h-screen bg-surface font-sans text-ink antialiased">
+    <div class="flex items-center gap-3 bg-[linear-gradient(120deg,#163a86,#10234d)] px-[18px] py-4 lg:hidden">
+        <a href="{{ route('catalog.index') }}" class="flex shrink-0 items-center gap-2.5 font-bold tracking-[-0.02em] text-white" aria-label="JMMart marketplace home">
+            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-bold text-[#10234d]" aria-hidden="true">JM</span>
+            <span class="sr-only">JMMart</span>
+        </a>
+        <p class="min-w-0 text-[13px] leading-snug text-[#c3d4ef]"><strong class="font-semibold text-white">JMMart</strong> — protected checkout, order tracking, and direct seller chat.</p>
+    </div>
+
+    <div class="lg:grid lg:min-h-screen lg:grid-cols-2">
+        <aside class="relative hidden flex-col overflow-hidden bg-[linear-gradient(158deg,#163a86_0%,#10234d_58%,#0b1a3c_100%)] px-12 py-10 text-white lg:flex">
+            <span class="pointer-events-none absolute -right-36 top-10 size-[460px] rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(59,130,246,.4),transparent_62%)]" aria-hidden="true"></span>
+            <a href="{{ route('catalog.index') }}" class="relative z-10 inline-flex items-center gap-2.5 self-start text-lg font-bold tracking-[-0.02em] text-white" aria-label="JMMart marketplace home">
+                <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-bold text-[#10234d]" aria-hidden="true">JM</span>
+                JMMart
             </a>
-            <span class="ml-auto hidden text-sm text-muted sm:block">Browse freely · sign in to manage your cart</span>
-        </div>
-    </header>
 
-    <main class="mx-auto grid max-w-[1120px] items-start gap-10 px-[18px] py-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <div>
-            <p class="font-mono text-xs uppercase tracking-[0.08em] text-brand">Guest → Customer</p>
-            <h1 class="mt-3 max-w-[22ch] text-balance text-4xl font-bold leading-tight tracking-[-0.035em]">Browse everything. Sign in only when you need to.</h1>
-            <p class="mt-4 max-w-[52ch] text-base leading-7 text-muted">Browse products and visit stores without an account. Sign in to add items to your cart, check out, track orders, or message sellers.</p>
+            <div class="relative z-10 my-auto max-w-[27rem] py-10">
+                <h2 class="text-balance text-[32px] font-bold leading-[1.18] tracking-[-0.035em]">Everything you need, from sellers you can check.</h2>
+                <p class="mt-2.5 text-[15px] leading-relaxed text-[#b9cbe8]">Your account keeps the cart, the orders, and the conversation in one place.</p>
 
-            <div class="mt-8 rounded-[16px] border border-line bg-white p-5 sm:p-6">
-                <h2 class="font-semibold">{{ request('redirect') ? 'Sign in to continue' : 'Your account unlocks more' }}</h2>
-                <p class="mt-1 text-sm leading-6 text-muted">{{ request('add_to_cart') ? 'After signing in, this item will be added to your cart.' : (request('redirect') ? 'After signing in, you’ll return to the page you were viewing.' : 'Keep a cart, check out, track orders, and contact sellers in one place.') }}</p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <a href="{{ route('login', array_filter(['redirect' => request('redirect')])) }}" class="inline-flex min-h-11 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover">Sign in</a>
-                    <a href="{{ route('register', array_filter(['redirect' => request('redirect')])) }}" class="inline-flex min-h-11 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold transition hover:border-brand">Create account</a>
-                    <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center rounded-[10px] px-3 text-sm font-semibold text-muted transition hover:text-ink">Continue browsing</a>
+                <dl class="mt-7">
+                    @foreach ([
+                        ['Cart that waits for you', 'Add now, decide later — it’s there on your next visit.', 'M3.5 4.5h2l2.2 10.2h9.1l2.2-7.4H7'],
+                        ['Track every order', 'From confirmed to delivered, per seller, in one list.', 'M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z'],
+                        ['Message the seller', 'Ask about stock or delivery before you commit.', 'M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z'],
+                    ] as [$title, $copy, $path])
+                        <div @class(['flex gap-3.5 py-3.5', 'border-t border-white/10' => ! $loop->first])>
+                            <span class="grid size-[38px] shrink-0 place-items-center rounded-[11px] bg-white/10 text-[#93b4f5]" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-[19px]"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
+                            </span>
+                            <div class="min-w-0">
+                                <dt class="text-sm font-semibold">{{ $title }}</dt>
+                                <dd class="mt-0.5 text-[13px] leading-relaxed text-[#9db2d4]">{{ $copy }}</dd>
+                            </div>
+                        </div>
+                    @endforeach
+                </dl>
+            </div>
+
+            <p class="relative z-10 flex items-center gap-2.5 text-[12.5px] font-medium text-[#8fa6cb]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="size-[15px] shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9.2 12.2 2 2 3.6-3.8"/></svg>
+                Payments are processed on verified stores only
+            </p>
+        </aside>
+
+        <main class="flex items-start justify-center px-[18px] py-7 sm:px-8 lg:items-center lg:py-12">
+            <section class="w-full max-w-[392px]" aria-labelledby="auth-heading" data-od-id="auth-card">
+                <div class="flex gap-1 rounded-[10px] bg-canvas p-1" role="tablist" aria-label="Sign in or create account">
+                    <a href="{{ route('login', $redirectParams) }}" role="tab" @if (! $isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => ! $isSignUp, 'text-muted hover:text-ink' => $isSignUp])>Sign in</a>
+                    <a href="{{ route('register', $redirectParams) }}" role="tab" @if ($isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => $isSignUp, 'text-muted hover:text-ink' => ! $isSignUp])>Create account</a>
                 </div>
-            </div>
-        </div>
-        <section class="rounded-[16px] border border-line bg-white p-5 sm:p-7" aria-labelledby="auth-heading" data-od-id="auth-card">
-            <div class="flex gap-1 rounded-[10px] bg-canvas p-1" role="tablist" aria-label="Sign in or create account">
-                <a href="{{ route('login', array_filter(['redirect' => request('redirect')])) }}" role="tab" @if ($mode === 'sign-in') aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => $mode === 'sign-in', 'text-muted hover:text-ink' => $mode !== 'sign-in'])>Sign in</a>
-                <a href="{{ route('register', array_filter(['redirect' => request('redirect')])) }}" role="tab" @if ($mode === 'sign-up') aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => $mode === 'sign-up', 'text-muted hover:text-ink' => $mode !== 'sign-up'])>Create account</a>
-            </div>
-            <h2 id="auth-heading" class="mt-5 text-xl font-semibold">{{ $mode === 'sign-up' ? 'Create your account' : 'Welcome back' }}</h2>
-            <p class="mt-1 text-sm text-muted">{{ $mode === 'sign-up' ? 'Name, email, and password — that’s all it takes.' : 'Sign in to check out, track orders, and message sellers.' }}</p>
-            <div class="mt-5">
-                <div data-clerk-component="{{ $mode }}" data-after-auth-url="{{ $afterAuthUrl }}" class="min-h-[28rem] w-full min-w-0 max-w-full"></div>
-                <noscript><p class="px-3 py-8 text-center text-sm text-muted">JavaScript is required to sign in with Clerk.</p></noscript>
-            </div>
-            <a href="{{ route('catalog.index') }}" class="mt-5 block text-center text-sm font-medium text-muted transition hover:text-ink">Back to marketplace</a>
-        </section>
-    </main>
+
+                <h1 id="auth-heading" class="mt-5 text-balance text-[25px] font-bold leading-tight tracking-[-0.03em]">{{ $heading }}</h1>
+                <p class="mt-1.5 text-sm leading-relaxed text-muted">{{ $subheading }}</p>
+
+                <div class="mt-5">
+                    <div data-clerk-component="{{ $mode }}" data-after-auth-url="{{ $afterAuthUrl }}" class="min-h-[28rem] w-full min-w-0 max-w-full"></div>
+                    <noscript><p class="px-3 py-8 text-center text-sm text-muted">JavaScript is required to sign in with Clerk.</p></noscript>
+                </div>
+
+                <ul class="mt-6 grid grid-cols-3 gap-2.5 lg:hidden">
+                    @foreach ([
+                        ['Protected checkout', 'M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z'],
+                        ['Order tracking', 'M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z'],
+                        ['Message sellers', 'M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z'],
+                    ] as [$label, $path])
+                        <li class="flex flex-col items-center gap-1.5 text-center text-xs font-semibold leading-tight text-muted">
+                            <span class="grid size-9 place-items-center rounded-full bg-blue-50 text-brand" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="size-[17px]"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
+                            </span>
+                            {{ $label }}
+                        </li>
+                    @endforeach
+                </ul>
+
+                <a href="{{ route('catalog.index') }}" class="mt-6 block text-center text-sm font-medium text-muted transition hover:text-ink">Browse without an account →</a>
+            </section>
+        </main>
+    </div>
     <x-cookie-consent />
 </body>
 </html>
