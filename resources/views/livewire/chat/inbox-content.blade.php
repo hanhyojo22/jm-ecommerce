@@ -1,4 +1,4 @@
-<section data-conversation-list class="relative flex h-full min-h-0 flex-col bg-surface" aria-label="Your conversations">
+<section data-conversation-list class="relative flex h-full min-h-0 min-w-0 flex-col bg-surface" aria-label="Your conversations">
     <header class="shrink-0 border-b border-line px-4 pb-3 pt-4 sm:px-5">
         @if ($isBuyerMessages)<h1 class="text-xl font-semibold tracking-tight text-ink">Messages</h1>@else<h2 class="text-base font-semibold tracking-tight text-ink">Inbox</h2>@endif
         <p class="mt-0.5 text-xs text-muted">{{ $isBuyerMessages ? 'Contact stores about products and orders.' : 'Your customer conversations.' }}</p>
@@ -9,7 +9,7 @@
         </label>
         <div class="mt-3 flex gap-1 overflow-x-auto" role="group" aria-label="Conversation filters">
             @foreach (['all' => 'All', 'unread' => 'Unread', 'product' => 'Products', 'order' => 'Orders'] as $value => $label)
-                <button wire:key="filter-{{ $value }}" wire:click="$set('filter', '{{ $value }}')" type="button" class="min-h-10 shrink-0 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand {{ $filter === $value ? 'bg-blue-50 text-brand-hover' : 'text-muted hover:bg-canvas hover:text-ink' }}" aria-pressed="{{ $filter === $value ? 'true' : 'false' }}">{{ $label }}</button>
+                <button wire:key="filter-{{ $value }}" wire:click="$set('filter', '{{ $value }}')" type="button" class="min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand {{ $filter === $value ? 'bg-blue-50 text-brand-hover' : 'text-muted hover:bg-canvas hover:text-ink' }}" aria-pressed="{{ $filter === $value ? 'true' : 'false' }}">{{ $label }}</button>
             @endforeach
         </div>
     </header>
