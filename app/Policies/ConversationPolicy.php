@@ -54,6 +54,8 @@ class ConversationPolicy
             return false;
         }
 
+        $conversation->loadMissing('store');
+
         return $user->tenantMemberships()
             ->where('tenant_id', $conversation->store->tenant_id)
             ->whereIn('role', ['owner', 'manager', 'staff'])

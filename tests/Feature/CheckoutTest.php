@@ -58,7 +58,8 @@ class CheckoutTest extends TestCase
             ->assertSee(route('login', ['redirect' => '/', 'add_to_cart' => $product->id]));
 
         $this->get($loginUrl)
-            ->assertSee('After signing in, this item will be added to your cart.');
+            ->assertSee('Sign in to add this to your cart')
+            ->assertSee('We’ll add it for you and take you straight back to the item.');
 
         $buyer = User::factory()->create();
         $this->actingAs($buyer)

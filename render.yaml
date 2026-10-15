@@ -8,12 +8,27 @@ envVarGroups:
       - key: REVERB_APP_SECRET
         generateValue: true
 
+  - name: jmmart-reverb-credentials-staging
+    envVars:
+      - key: REVERB_APP_ID
+        value: jmmart-staging
+      - key: REVERB_APP_KEY
+        value: 6c1f0ab93e7d4a52b8f05c6d17e9a34f2b8071dc45e6903a
+      - key: REVERB_APP_SECRET
+        generateValue: true
+
 services:
+  # ----------------------------------------------------------------------
+  # Production — deploys from master
+  # ----------------------------------------------------------------------
   - type: web
     name: jmmart-marketplace
     runtime: docker
-    plan: free
+    # Paid instance: free services sleep after 15 minutes idle and take
+    # about a minute to wake, which showed up as a 25s first-byte time.
+    plan: starter
     region: singapore
+    branch: master
     healthCheckPath: /up
     envVars:
       - key: PORT
@@ -100,6 +115,7 @@ services:
     dockerCommand: php artisan reverb:start --host=0.0.0.0 --port=10000
     plan: free
     region: singapore
+    branch: master
     envVars:
       - key: PORT
         value: "10000"
@@ -140,5 +156,147 @@ services:
       - key: REVERB_ALLOWED_ORIGINS
         value: jmmart-marketplace.onrender.com
       - fromGroup: jmmart-reverb-credentials
+      - key: LOG_CHANNEL
+        value: stderr
+
+  # ----------------------------------------------------------------------
+  # Staging — deploys from the staging branch.
+  # APP_ENV stays "production" so staging mirrors production exactly;
+  # the only behaviour that keys off it is lazy-load prevention
+  # (AppServiceProvider.php:75), which local and CI already cover.
+  # ----------------------------------------------------------------------
+  - type: web
+    name: jmmart-marketplace-staging
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: staging
+    healthCheckPath: /up
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: APP_NAME
+        value: JMMart Staging
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        fromService:
+          name: jmmart-marketplace-staging
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: APP_KEY
+        sync: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: CACHE_STORE
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: RUN_MIGRATIONS
+        value: "true"
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: BROADCAST_CONNECTION
+        value: reverb
+      - fromGroup: jmmart-reverb-credentials-staging
+      - key: REVERB_HOST
+        value: jmmart-chat-reverb-staging.onrender.com
+      - key: REVERB_PORT
+        value: "443"
+      - key: REVERB_SCHEME
+        value: https
+      - key: REVERB_ALLOWED_ORIGINS
+        value: jmmart-marketplace-staging.onrender.com
+      - key: FILESYSTEM_DISK
+        value: public
+      - key: NEON_PRODUCT_IMAGES_BUCKET
+        value: product-images-staging
+      - key: CHAT_ATTACHMENTS_BUCKET
+        value: uploads-staging
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_AUTHORIZED_PARTIES
+        fromService:
+          name: jmmart-marketplace-staging
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: MAIL_MAILER
+        value: log
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      - key: GMAIL_FROM_ADDRESS
+        value: itservices@jmsolutionitservices.com
+
+  - type: web
+    name: jmmart-chat-reverb-staging
+    runtime: docker
+    dockerCommand: php artisan reverb:start --host=0.0.0.0 --port=10000
+    plan: free
+    region: singapore
+    branch: staging
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: APP_NAME
+        value: JMMart Staging
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        fromService:
+          name: jmmart-marketplace-staging
+          type: web
+          envVarKey: APP_KEY
+      - key: APP_URL
+        fromService:
+          name: jmmart-marketplace-staging
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: RUN_MIGRATIONS
+        value: "false"
+      - key: RUN_OPTIMIZATIONS
+        value: "false"
+      - key: CACHE_STORE
+        value: file
+      - key: BROADCAST_CONNECTION
+        value: log
+      - key: REVERB_HOST
+        value: jmmart-chat-reverb-staging.onrender.com
+      - key: REVERB_PORT
+        value: "443"
+      - key: REVERB_SCHEME
+        value: https
+      - key: REVERB_SERVER_HOST
+        value: 0.0.0.0
+      - key: REVERB_SERVER_PORT
+        value: "10000"
+      - key: REVERB_ALLOWED_ORIGINS
+        value: jmmart-marketplace-staging.onrender.com
+      - fromGroup: jmmart-reverb-credentials-staging
       - key: LOG_CHANNEL
         value: stderr

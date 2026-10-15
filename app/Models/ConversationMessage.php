@@ -11,12 +11,7 @@ class ConversationMessage extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['conversation_id', 'sender_id', 'client_message_id', 'type', 'body', 'reply_to_id', 'edited_at', 'deleted_at'];
-
-    protected function casts(): array
-    {
-        return ['edited_at' => 'datetime', 'deleted_at' => 'datetime'];
-    }
+    protected $fillable = ['conversation_id', 'sender_id', 'client_message_id', 'type', 'body'];
 
     public function conversation(): BelongsTo
     {
@@ -26,11 +21,6 @@ class ConversationMessage extends Model
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
-    }
-
-    public function replyTo(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'reply_to_id');
     }
 
     public function reports(): HasMany
