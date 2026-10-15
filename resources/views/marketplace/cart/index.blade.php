@@ -12,6 +12,7 @@
             'centavos' => (int) bcmul((string) $item->line_total, '100', 0),
         ])->values();
         $selectedIds = $items->where('selected', true)->pluck('id')->values();
+        $allSelected = $availableItems->isNotEmpty() && $selectedIds->count() === $availableItems->count();
     @endphp
 
     <div class="page-shell min-h-[calc(100dvh-4.5rem)]">
@@ -44,7 +45,7 @@
 
                             <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[14px] border border-line bg-surface px-4 py-3 sm:px-5">
                                 <label class="inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-ink">
-                                    <input type="checkbox" data-select-all x-bind:checked="allSelected" x-on:change="toggleAll()" @disabled($availableItems->isEmpty()) class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
+                                    <input type="checkbox" data-select-all @checked($allSelected) x-bind:checked="allSelected" x-on:change="toggleAll()" @disabled($availableItems->isEmpty()) class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
                                     Select all
                                 </label>
                                 <p class="text-sm text-muted" aria-live="polite"><span x-text="selectedCount">{{ $selectedIds->count() }}</span> of {{ $availableItems->count() }} selected</p>
@@ -61,12 +62,14 @@
                                     @php
                                         $store = $storeItems->first()->product->store;
                                         $storeSelectable = $storeItems->filter(fn ($item) => $item->isAvailable());
+                                        $storeAllSelected = $storeSelectable->isNotEmpty()
+                                            && $storeSelectable->where('selected', true)->count() === $storeSelectable->count();
                                     @endphp
 
                                     <section class="overflow-hidden rounded-[14px] border border-line bg-surface" aria-labelledby="store-{{ $store->id }}">
                                         <div class="flex items-center justify-between gap-4 border-b border-line bg-canvas/70 px-4 py-3 sm:px-5">
                                             <div class="flex min-w-0 items-center gap-3">
-                                                <input type="checkbox" data-store-checkbox="{{ $storeId }}" x-on:change="toggleStore('{{ $storeId }}')" @disabled($storeSelectable->isEmpty()) aria-label="Select all items from {{ $store->name }}" class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
+                                                <input type="checkbox" data-store-checkbox="{{ $storeId }}" @checked($storeAllSelected) x-on:change="toggleStore('{{ $storeId }}')" @disabled($storeSelectable->isEmpty()) aria-label="Select all items from {{ $store->name }}" class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
                                                 <div class="min-w-0">
                                                     <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Sold by</p>
                                                     <a id="store-{{ $store->id }}" href="{{ route('catalog.store', $store->slug) }}" class="mt-0.5 block truncate text-sm font-semibold text-brand transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $store->name }}</a>
@@ -80,8 +83,8 @@
                                                 @php($availableStock = $item->variant?->stock_quantity ?? $item->product->stock_quantity)
                                                 @php($isUnavailable = ! $item->isAvailable())
                                                 <article class="grid grid-cols-[auto_5rem_minmax(0,1fr)] gap-x-3 gap-y-4 p-4 sm:grid-cols-[auto_7rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:p-5 {{ $isUnavailable ? 'bg-canvas/40' : '' }}">
-                                                    <div class="flex items-start pt-1">
-                                                        <input type="checkbox" id="select-{{ $item->id }}" x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
+                                                    <div class="flex items-center">
+                                                        <input type="checkbox" id="select-{{ $item->id }}" @checked($item->selected) x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
                                                     </div>
 
                                                     <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $isUnavailable ? 'opacity-60' : '' }}">
@@ -173,7 +176,7 @@
                     <div class="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 px-4 py-3 shadow-[0_-4px_16px_-8px_rgb(15_23_42/0.25)] backdrop-blur lg:hidden" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
                         <div class="mx-auto flex max-w-3xl items-center gap-3">
                             <label class="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 text-sm font-semibold text-ink">
-                                <input type="checkbox" data-select-all x-bind:checked="allSelected" x-on:change="toggleAll()" @disabled($availableItems->isEmpty()) class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40" aria-label="Select all items">
+                                <input type="checkbox" data-select-all @checked($allSelected) x-bind:checked="allSelected" x-on:change="toggleAll()" @disabled($availableItems->isEmpty()) class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40" aria-label="Select all items">
                                 All
                             </label>
                             <div class="min-w-0 flex-1 text-right">
