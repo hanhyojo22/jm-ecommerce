@@ -102,7 +102,7 @@
                                                             <p class="mt-2 text-xs font-semibold text-success">In stock</p>
                                                         @endif
 
-                                                        <div class="mt-4 flex items-center justify-between gap-3 sm:hidden">
+                                                        <div class="mt-4 flex items-center gap-2 sm:hidden">
                                                             <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-[10px] border border-line bg-surface">
                                                                 @csrf
                                                                 @method('PATCH')
@@ -110,12 +110,20 @@
                                                                 <span class="grid h-11 min-w-10 place-items-center border-x border-line text-sm font-semibold">{{ $item->quantity }}</span>
                                                                 <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
                                                             </form>
-                                                            <p class="text-sm font-bold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
+                                                            <p class="ml-auto shrink-0 whitespace-nowrap text-sm font-bold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
+                                                            <form method="POST" action="{{ route('cart.destroy', $item) }}">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" title="Remove" aria-label="Remove {{ $item->product->name }} from your cart" class="grid size-11 shrink-0 place-items-center rounded-[10px] text-muted transition hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                                                </button>
+                                                            </form>
                                                         </div>
                                                     </div>
 
                                                     <div class="hidden min-w-36 items-end justify-between gap-4 sm:flex sm:flex-col">
                                                         <p class="text-right text-base font-bold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
+                                                        <div class="flex items-center gap-1.5">
                                                         <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-[10px] border border-line bg-surface">
                                                             @csrf
                                                             @method('PATCH')
@@ -126,15 +134,12 @@
                                                         <form method="POST" action="{{ route('cart.destroy', $item) }}">
                                                             @csrf
                                                             @method('DELETE')
-                                                            <button class="min-h-11 text-xs font-semibold text-muted transition duration-200 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:ring-offset-2">Remove</button>
+                                                            <button type="submit" title="Remove" aria-label="Remove {{ $item->product->name }} from your cart" class="grid size-11 place-items-center rounded-[10px] text-muted transition hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                                            </button>
                                                         </form>
+                                                        </div>
                                                     </div>
-
-                                                    <form method="POST" action="{{ route('cart.destroy', $item) }}" class="col-span-3 sm:hidden">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button class="min-h-11 text-xs font-semibold text-muted transition duration-200 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-700 focus:ring-offset-2">Remove</button>
-                                                    </form>
                                                 </article>
                                             @endforeach
                                         </div>
