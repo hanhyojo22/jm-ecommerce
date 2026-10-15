@@ -1,4 +1,4 @@
-﻿@php($cookiePreferences = \App\Support\CookiePreferences::fromRequest(request()))
+@php($cookiePreferences = \App\Support\CookiePreferences::fromRequest(request()))
 
 <div data-cookie-consent data-functional="{{ $cookiePreferences['functional'] ?? false ? 'true' : 'false' }}" data-save-url="{{ route('cookie-preferences.store') }}" data-csrf="{{ csrf_token() }}">
     @if ($cookiePreferences === null)
