@@ -24,7 +24,9 @@ services:
   - type: web
     name: jmmart-marketplace
     runtime: docker
-    plan: free
+    # Paid instance: free services sleep after 15 minutes idle and take
+    # about a minute to wake, which showed up as a 25s first-byte time.
+    plan: starter
     region: singapore
     branch: master
     healthCheckPath: /up
