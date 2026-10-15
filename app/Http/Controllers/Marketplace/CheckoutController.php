@@ -19,6 +19,12 @@ class CheckoutController extends Controller
             return to_route('cart.index')->with('status', 'Your cart is empty. Add a product before checking out.');
         }
 
+        $cart->setRelation('items', $cart->items->where('selected', true)->values());
+
+        if ($cart->items->isEmpty()) {
+            return to_route('cart.index')->with('status', 'Select an item to check out.');
+        }
+
         $cart->items->each(function ($item): void {
             $item->setAttribute('line_total', bcmul((string) $item->product->price, (string) $item->quantity, 2));
         });

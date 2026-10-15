@@ -10,6 +10,7 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -29,10 +30,55 @@ class CartController extends Controller
             $item->setAttribute('line_total', bcmul((string) $item->product->price, (string) $item->quantity, 2));
         });
 
+        $this->deselectUnavailableItems($cart);
+
         return view('marketplace.cart.index', [
             'cart' => $cart,
             'subtotal' => $this->subtotal($cart),
         ]);
+    }
+
+    /**
+     * Replace the buyer's selection with the given cart item ids.
+     */
+    public function updateSelection(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'selected' => ['present', 'array'],
+            'selected.*' => ['ulid'],
+        ]);
+
+        $cart = $request->user()->cart()->first();
+
+        if ($cart === null) {
+            return response()->json(['selected_count' => 0, 'subtotal' => '0.00']);
+        }
+
+        $selectedIds = $cart->items()->whereKey($data['selected'])->pluck('id');
+
+        $cart->items()->whereKey($selectedIds)->update(['selected' => true]);
+        $cart->items()->whereKeyNot($selectedIds)->update(['selected' => false]);
+
+        return response()->json([
+            'selected_count' => $selectedIds->count(),
+            'subtotal' => $this->subtotal($cart->load([
+                'items.product:id,store_id,name,slug,price,stock_quantity,status',
+                'items.variant',
+            ])),
+        ]);
+    }
+
+    public function destroySelected(Request $request): RedirectResponse
+    {
+        $cart = $request->user()->cart()->first();
+        $removed = $cart?->items()->where('selected', true)->delete() ?? 0;
+
+        return to_route('cart.index')->with(
+            'status',
+            $removed > 0
+                ? $removed.' '.Str::plural('item', $removed).' removed.'
+                : 'Select an item to remove first.',
+        );
     }
 
     public function store(Request $request, AddProductToCart $addProductToCart, Product $product): RedirectResponse|JsonResponse
@@ -146,15 +192,35 @@ class CartController extends Controller
         return to_route('cart.index')->with('status', 'Item restored to your cart.');
     }
 
+    /**
+     * An item that went out of stock while ticked is unticked, so the summary
+     * and the checkout button always agree with what the buyer can see.
+     */
+    private function deselectUnavailableItems(?Cart $cart): void
+    {
+        $unavailableIds = $cart?->items
+            ->filter(fn (CartItem $item): bool => $item->selected && ! $item->isAvailable())
+            ->pluck('id');
+
+        if ($unavailableIds === null || $unavailableIds->isEmpty()) {
+            return;
+        }
+
+        $cart->items()->whereKey($unavailableIds)->update(['selected' => false]);
+        $cart->items->whereIn('id', $unavailableIds)->each->setAttribute('selected', false);
+    }
+
     private function subtotal(?Cart $cart): string
     {
-        return $cart?->items->reduce(
-            fn (string $total, CartItem $item): string => bcadd(
-                $total,
-                bcmul((string) $item->product->price, (string) $item->quantity, 2),
-                2,
-            ),
-            '0.00',
-        ) ?? '0.00';
+        return $cart?->items
+            ->where('selected', true)
+            ->reduce(
+                fn (string $total, CartItem $item): string => bcadd(
+                    $total,
+                    bcmul((string) $item->product->price, (string) $item->quantity, 2),
+                    2,
+                ),
+                '0.00',
+            ) ?? '0.00';
     }
 }

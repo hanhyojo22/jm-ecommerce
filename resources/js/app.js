@@ -1,6 +1,7 @@
 
 import './cookie-consent';
 import './chat';
+import './cart';
 
 const reverbConfig = {
     key: document.querySelector('meta[name="reverb-app-key"]')?.content,

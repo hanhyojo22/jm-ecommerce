@@ -165,13 +165,103 @@ class CartTest extends TestCase
         $this->assertDatabaseHas('cart_items', ['id' => $cartItem->id, 'quantity' => 1]);
     }
 
-    private function product(): Product
+    public function test_items_are_selected_by_default_when_added_to_the_cart(): void
     {
-        $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
+        $buyer = User::factory()->create();
+        $product = $this->product();
+
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+
+        $this->assertTrue($buyer->cart->items()->first()->selected);
+    }
+
+    public function test_updating_the_selection_persists_only_the_given_items(): void
+    {
+        $buyer = User::factory()->create();
+        $first = $this->product();
+        $second = $this->product('canvas-tote-two', 'TOTE-002');
+        $this->actingAs($buyer)->post(route('cart.store', $first), ['quantity' => 1]);
+        $this->actingAs($buyer)->post(route('cart.store', $second), ['quantity' => 1]);
+        $keptItem = $buyer->cart->items()->where('product_id', $first->id)->first();
+
+        $this->actingAs($buyer)
+            ->patchJson(route('cart.selection'), ['selected' => [$keptItem->id]])
+            ->assertOk()
+            ->assertJson(['selected_count' => 1, 'subtotal' => '299.00']);
+
+        $this->assertTrue($keptItem->refresh()->selected);
+        $this->assertFalse($buyer->cart->items()->where('product_id', $second->id)->first()->selected);
+    }
+
+    public function test_the_selection_cannot_be_set_to_another_buyers_cart_item(): void
+    {
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $product = $this->product();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $this->actingAs($otherBuyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $otherItem = $otherBuyer->cart->items()->first();
+
+        $this->actingAs($buyer)
+            ->patchJson(route('cart.selection'), ['selected' => [$otherItem->id]])
+            ->assertOk()
+            ->assertJson(['selected_count' => 0]);
+
+        $this->assertTrue($otherItem->refresh()->selected);
+        $this->assertFalse($buyer->cart->items()->first()->selected);
+    }
+
+    public function test_removing_selected_items_leaves_the_unselected_ones(): void
+    {
+        $buyer = User::factory()->create();
+        $first = $this->product();
+        $second = $this->product('canvas-tote-two', 'TOTE-002');
+        $this->actingAs($buyer)->post(route('cart.store', $first), ['quantity' => 1]);
+        $this->actingAs($buyer)->post(route('cart.store', $second), ['quantity' => 1]);
+        $keptItem = $buyer->cart->items()->where('product_id', $second->id)->first();
+        $keptItem->update(['selected' => false]);
+
+        $this->actingAs($buyer)->delete(route('cart.destroy-selected'))
+            ->assertRedirect(route('cart.index'));
+
+        $this->assertSame(1, $buyer->cart->items()->count());
+        $this->assertSame($second->id, $buyer->cart->items()->first()->product_id);
+    }
+
+    public function test_the_summary_totals_only_the_selected_items(): void
+    {
+        $buyer = User::factory()->create();
+        $first = $this->product();
+        $second = $this->product('canvas-tote-two', 'TOTE-002');
+        $this->actingAs($buyer)->post(route('cart.store', $first), ['quantity' => 1]);
+        $this->actingAs($buyer)->post(route('cart.store', $second), ['quantity' => 1]);
+        $buyer->cart->items()->where('product_id', $second->id)->update(['selected' => false]);
+
+        $this->actingAs($buyer)->get(route('cart.index'))
+            ->assertSee('of 2 selected')
+            ->assertSee('299.00')
+            ->assertDontSee('598.00');
+    }
+
+    public function test_an_item_that_sold_out_while_selected_is_unselected_when_the_cart_is_viewed(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 2]);
+        $product->update(['stock_quantity' => 1]);
+
+        $this->actingAs($buyer)->get(route('cart.index'))->assertSee('Only 1 available');
+
+        $this->assertFalse($buyer->cart->items()->first()->selected);
+    }
+
+    private function product(string $slug = 'canvas-tote', string $sku = 'TOTE-001'): Product
+    {
+        $tenant = Tenant::create(['name' => 'Northwind '.$sku, 'slug' => 'northwind-'.str()->lower($sku), 'status' => 'active']);
         $store = Store::create([
             'tenant_id' => $tenant->id,
             'name' => 'Northwind Goods',
-            'slug' => 'northwind-goods',
+            'slug' => 'northwind-goods-'.str()->lower($sku),
             'phone' => '+639171234567',
             'address_line' => '10 Market Street',
             'city' => 'Manila',
@@ -182,8 +272,8 @@ class CartTest extends TestCase
             'tenant_id' => $tenant->id,
             'store_id' => $store->id,
             'name' => 'Canvas Tote',
-            'slug' => 'canvas-tote',
-            'sku' => 'TOTE-001',
+            'slug' => $slug,
+            'sku' => $sku,
             'price' => '299.00',
             'stock_quantity' => 5,
             'status' => 'active',

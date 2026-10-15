@@ -28,13 +28,14 @@ class CheckoutCart
             }
 
             $items = $cart->items()
+                ->where('selected', true)
                 ->orderBy('product_id')
                 ->orderBy('variant_key')
                 ->lockForUpdate()
                 ->get();
 
             if ($items->isEmpty()) {
-                throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
+                throw ValidationException::withMessages(['cart' => 'Select an item to check out.']);
             }
 
             $products = Product::query()
@@ -127,7 +128,7 @@ class CheckoutCart
                 });
 
             $order->payment()->create(['method' => 'cod', 'amount' => $total]);
-            $cart->items()->delete();
+            $cart->items()->whereKey($items->modelKeys())->delete();
 
             return $order;
         });

@@ -456,6 +456,46 @@ class CheckoutTest extends TestCase
     /**
      * @return array{0: User, 1: Product}
      */
+    public function test_checkout_buys_only_the_selected_items_and_leaves_the_rest_in_the_cart(): void
+    {
+        $buyer = User::factory()->create();
+        [, $boughtProduct] = $this->sellerProduct('150.00', 5);
+        [, $keptProduct] = $this->sellerProduct('250.00', 5);
+        $this->actingAs($buyer)->post(route('cart.store', $boughtProduct), ['quantity' => 2]);
+        $this->actingAs($buyer)->post(route('cart.store', $keptProduct), ['quantity' => 1]);
+        $buyer->cart->items()->where('product_id', $keptProduct->id)->update(['selected' => false]);
+
+        $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery())->assertRedirect();
+
+        $order = Order::query()->latest()->first();
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '300.00', 'total' => '300.00']);
+        $this->assertSame(1, $order->sellerOrders()->count());
+
+        $remaining = $buyer->cart->items()->get();
+        $this->assertCount(1, $remaining);
+        $this->assertSame($keptProduct->id, $remaining->first()->product_id);
+        $this->assertSame(5, $keptProduct->refresh()->stock_quantity);
+        $this->assertSame(3, $boughtProduct->refresh()->stock_quantity);
+    }
+
+    public function test_checkout_is_refused_when_nothing_is_selected(): void
+    {
+        $buyer = User::factory()->create();
+        [, $product] = $this->sellerProduct('150.00', 5);
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $buyer->cart->items()->update(['selected' => false]);
+
+        $this->actingAs($buyer)->get(route('checkout.create'))
+            ->assertRedirect(route('cart.index'))
+            ->assertSessionHas('status', 'Select an item to check out.');
+
+        $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery())
+            ->assertSessionHasErrors('cart');
+
+        $this->assertSame(0, Order::query()->count());
+        $this->assertSame(1, $buyer->cart->items()->count());
+    }
+
     private function sellerProduct(string $price, int $stock): array
     {
         $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
