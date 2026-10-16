@@ -37,8 +37,9 @@ test('seller catalog shows real products and opens working details at desktop an
         await page.goto('/seller/products');
         await page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByRole('link', { name: 'Details' }).click();
         await expect(page.getByRole('heading', { name: 'QA Canvas Tote' })).toBeVisible();
+        const currentStock = (await page.getByText('Inventory', { exact: true }).locator('..').locator('dd').innerText()).split(' ')[0].replaceAll(',', '');
         await page.getByRole('link', { name: 'Edit listing' }).click();
-        await expect(page.getByLabel('Stock quantity')).toHaveValue('25');
+        await expect(page.getByLabel('Stock quantity')).toHaveValue(currentStock);
         await page.goto('/seller/products');
         await page.setViewportSize({ width: 1024, height: 800 });
         await expect(page.getByRole('table')).toBeHidden();

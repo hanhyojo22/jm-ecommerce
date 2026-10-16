@@ -14,6 +14,7 @@ const run = (command, args) => {
 
 run('php', ['artisan', 'route:clear', '--no-interaction']);
 run('npm', ['run', 'build']);
+run('php', ['artisan', 'storage:link', '--no-interaction']);
 run('php', [
     'artisan',
     'migrate:fresh',
