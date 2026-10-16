@@ -92,8 +92,10 @@
                 <main id="main-content" tabindex="-1">
                     {{ $slot }}
                 </main>
-                <x-marketplace.footer />
             @endif
+            @unless ($isSellerWorkspace || $isCustomerWorkspace)
+                <x-marketplace.footer />
+            @endunless
         </div>
         <x-cookie-consent />
         @livewireScripts

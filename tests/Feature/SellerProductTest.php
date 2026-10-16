@@ -56,8 +56,8 @@ class SellerProductTest extends TestCase
         $product->update(['status' => 'active']);
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
-            ->assertSee('Zoom image 1 of 2')
-            ->assertSee('Show image 2');
+            ->assertSee('Choose a product image')
+            ->assertSee('Choose a variant');
     }
 
     public function test_seller_cannot_save_duplicate_color_and_size_options(): void
@@ -114,6 +114,32 @@ class SellerProductTest extends TestCase
 
         $this->actingAs($owner)->get(route('seller.products.index'))
             ->assertOk()->assertDontSee('Private Item');
+    }
+
+    public function test_product_catalog_links_to_tenant_scoped_details_with_real_variants(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 3, 'status' => 'draft']);
+        $product->variants()->create(['color' => 'Blue', 'size' => 'M', 'sku' => 'TOTE-BLUE', 'stock_quantity' => 3]);
+        [, , $otherStore] = $this->seller();
+        $otherProduct = $otherStore->products()->create(['tenant_id' => $otherStore->tenant_id, 'name' => 'Private Item', 'slug' => 'private-item', 'sku' => 'PRIVATE-1', 'price' => '100.00', 'stock_quantity' => 1, 'status' => 'draft']);
+
+        $this->actingAs($owner)->get(route('seller.products.index'))
+            ->assertSee('Product catalog')
+            ->assertSee('1 variant')
+            ->assertSee(route('seller.products.show', $product), false)
+            ->assertDontSee('Private Item');
+        $this->actingAs($owner)->get(route('seller.products.show', $product))
+            ->assertSee('Canvas Tote')
+            ->assertSee('TOTE-BLUE')
+            ->assertSee('₱299.00');
+        $this->actingAs($owner)->get(route('seller.products.show', $otherProduct))->assertNotFound();
+
+        $staff = User::factory()->seller()->create();
+        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $staff->id, 'role' => 'staff']);
+        $this->actingAs($staff)->get(route('seller.products.show', $product))
+            ->assertSee('Canvas Tote')
+            ->assertDontSee('Edit listing');
     }
 
     public function test_owner_can_assign_a_category_to_a_product(): void
@@ -331,7 +357,8 @@ class SellerProductTest extends TestCase
         ]))
             ->assertSee('Canvas Tote')
             ->assertDontSee('Leather Wallet')
-            ->assertSee('Reset filters');
+            ->assertSee('Show all products')
+            ->assertDontSee('More filters');
     }
 
     public function test_owner_can_update_their_own_product(): void
@@ -350,7 +377,7 @@ class SellerProductTest extends TestCase
             'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 7, 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 7, 'status' => 'draft']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.updated', 'entity_id' => $product->id]);
     }
 

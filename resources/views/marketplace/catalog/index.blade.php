@@ -436,6 +436,7 @@
         </main>
 
     </div>
+<x-marketplace.footer />
 <x-cookie-consent />
 @livewireScripts
 </body>

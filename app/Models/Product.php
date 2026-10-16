@@ -13,9 +13,22 @@ class Product extends Model
 {
     use HasUlids, SoftDeletes;
 
+    public const STATUSES = ['draft' => 'Draft', 'pending' => 'Pending review', 'active' => 'Published', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'inactive' => 'Suspended'];
+
     protected $fillable = [
-        'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status',
+        'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason',
     ];
+
+    /** @return array<string, string> */
+    public function moderationOptions(): array
+    {
+        return match ($this->status) {
+            'pending' => ['active' => 'Approve and publish', 'changes_required' => 'Request changes', 'rejected' => 'Reject listing'],
+            'active' => ['inactive' => 'Suspend listing'],
+            'inactive' => ['active' => 'Restore publication'],
+            default => [],
+        };
+    }
 
     protected function casts(): array
     {

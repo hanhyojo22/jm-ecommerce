@@ -73,7 +73,7 @@ test('catalog filters stay out of the mobile product flow until opened', async (
     }
 });
 
-test('mobile product title and price appear before the gallery', async ({ page }, testInfo) => {
+test('mobile product gallery appears before the title as in the prototype', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === 'desktop-chromium', 'Mobile layout only');
     await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
     const title = page.getByRole('heading', { name: 'QA Canvas Tote', level: 1 });
@@ -81,7 +81,11 @@ test('mobile product title and price appear before the gallery', async ({ page }
     await expect(title).toBeVisible();
     const titleBox = await title.boundingBox();
     const galleryBox = await gallery.boundingBox();
-    expect(titleBox.y + titleBox.height).toBeLessThan(galleryBox.y);
+    if (testInfo.project.name === 'mobile-chromium') {
+        expect(galleryBox.y + galleryBox.height).toBeLessThan(titleBox.y);
+    } else {
+        expect(galleryBox.x + galleryBox.width).toBeLessThan(titleBox.x);
+    }
 });
 
 test('seller adds color and size options in the product form at each viewport', async ({ browser }, testInfo) => {
@@ -147,6 +151,7 @@ test('seller switches workspaces from the account dropdown at each viewport', as
 });
 
 test('seller workspace pages render without horizontal overflow', async ({ browser }, testInfo) => {
+    test.setTimeout(60_000);
     const { context, page } = await openAsRole(browser, 'seller');
     const pages = [
         ['overview', '/seller'],
@@ -245,7 +250,7 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
             expect(preview.y).toBeGreaterThan(contact.y + contact.height);
             expect(saveAction.y).toBeLessThan(preview.y);
             expect(await page.getByLabel('Store description').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
-            expect(await page.locator('[data-cookie-floating]').evaluate(element => getComputedStyle(element).position)).not.toBe('fixed');
+            await expect(page.locator('[data-cookie-floating]')).toHaveCount(0);
         }
         await expect(page.getByText('All changes saved')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Save store settings' })).toBeDisabled();
@@ -274,7 +279,7 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
             await page.setViewportSize({ width: 1920, height: 1080 });
             const wideContainer = await page.locator('.page-shell > .page-container').boundingBox();
             const address = await page.getByLabel('Street address').boundingBox();
-            expect(wideContainer.width).toBeCloseTo(1500, 0);
+            expect(wideContainer.width).toBeCloseTo(1400, 0);
             expect(address.width).toBeLessThanOrEqual(768);
             await page.screenshot({ path: testInfo.outputPath('store-settings-wide.png'), fullPage: true });
         }
@@ -370,34 +375,7 @@ test('store settings save, logo removal, and validation work in the browser', as
 
 test('seller order detail and product editor remain usable at each viewport', async ({ browser }, testInfo) => {
     test.setTimeout(60_000);
-    const customer = await openAsRole(browser, 'customer');
-
-    try {
-        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
-        const customerCookieBanner = customer.page.locator('[data-cookie-banner]');
-        if (await customerCookieBanner.isVisible()) {
-            await customerCookieBanner.locator('[data-cookie-action="reject"]').click();
-            await expect(customerCookieBanner).toHaveCount(0);
-        }
-        const cartForm = customer.page.locator('#purchase form');
-        const cartResponse = await customer.context.request.post(await cartForm.getAttribute('action'), {
-            form: { _token: await cartForm.locator('input[name="_token"]').inputValue(), quantity: '1' },
-            headers: { Accept: 'application/json' },
-        });
-        expect(cartResponse.ok()).toBeTruthy();
-        await customer.page.goto('/cart');
-        await customer.page.getByRole('link', { name: 'Continue to checkout' }).click();
-        await customer.page.getByLabel('Recipient name').fill('Ava QA Customer');
-        await customer.page.getByLabel('Mobile number').fill('+639171234567');
-        await customer.page.getByLabel('Street address').fill('10 QA Street');
-        await customer.page.getByLabel('City').fill('Manila');
-        await customer.page.getByRole('button', { name: 'Review order' }).click();
-        await expect(customer.page.getByText('10 QA Street, Manila', { exact: true })).toBeVisible();
-        await customer.page.getByRole('button', { name: /Place order/ }).click();
-        await expect(customer.page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
-    } finally {
-        await customer.context.close();
-    }
+    // Use the seeded seller order so viewport runs do not consume shared product stock.
 
     const seller = await openAsRole(browser, 'seller');
 

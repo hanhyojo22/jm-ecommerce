@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Product;
 use Illuminate\Validation\Validator;
 
 trait ValidatesProductVariants
@@ -33,6 +34,14 @@ trait ValidatesProductVariants
             $combinations[$combination] = true;
             $skus[$sku] = true;
             $totalStock += (int) $variant['stock_quantity'];
+
+            if (isset($variant['id'])) {
+                $product = $this->route('product');
+                if ($product instanceof Product && $product->variants()->whereKey($variant['id'])->exists()
+                    && $product->images()->where('product_variant_id', $variant['id'])->count() + count((array) $this->file("variants.$index.images", [])) > 4) {
+                    $validator->errors()->add("variants.$index.images", 'Each variant can have no more than 4 photos.');
+                }
+            }
         }
 
         if ($totalStock > 2147483647) {

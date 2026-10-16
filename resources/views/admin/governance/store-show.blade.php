@@ -10,7 +10,6 @@
         </div>
     </x-slot>
     @php($orderStyles = ['pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'confirmed' => 'bg-brand/10 text-brand ring-brand/20', 'processing' => 'bg-brand/10 text-brand ring-brand/20', 'shipped' => 'bg-brand/10 text-brand ring-brand/20', 'delivered' => 'bg-success/10 text-success ring-success/20', 'cancelled' => 'bg-danger/10 text-danger ring-danger/20'])
-    @php($productStyles = ['active' => 'bg-success/10 text-success ring-success/20', 'draft' => 'bg-warning/10 text-warning-text ring-warning/20', 'inactive' => 'bg-canvas text-muted ring-line'])
     <div class="py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
             @if (session('status'))
@@ -70,7 +69,7 @@
                                             <td class="px-5 py-4"><p class="font-medium text-ink">{{ $product->name }}</p><p class="mt-0.5 text-xs text-muted">SKU {{ $product->sku }} · {{ number_format($product->stock_quantity) }} in stock</p></td>
                                             <td class="px-5 py-4 text-sm text-ink">{{ $product->category?->name ?? 'Uncategorized' }}</td>
                                             <td class="whitespace-nowrap px-5 py-4 text-right text-sm font-semibold tabular-nums text-ink">₱{{ number_format($product->price, 2) }}</td>
-                                            <td class="px-5 py-4"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $productStyles[$product->status] }}">{{ ucfirst($product->status) }}</span></td>
+                                            <td class="px-5 py-4"><x-marketplace.product-status :status="$product->status" /></td>
                                             <td class="px-5 py-4 text-right"><a href="{{ route('admin.products.show', $product) }}" class="text-sm font-semibold text-brand underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-brand">Open</a></td>
                                         </tr>
                                     @empty
@@ -82,7 +81,7 @@
                         <div class="divide-y divide-line md:hidden">
                             @forelse ($products as $product)
                                 <article class="flex items-center justify-between gap-3 p-4">
-                                    <div class="min-w-0"><p class="truncate font-medium text-ink">{{ $product->name }}</p><p class="mt-1 text-xs text-muted">₱{{ number_format($product->price, 2) }} · {{ ucfirst($product->status) }}</p></div>
+                                    <div class="min-w-0"><p class="truncate font-medium text-ink">{{ $product->name }}</p><p class="mt-1 text-xs text-muted">₱{{ number_format($product->price, 2) }} · {{ \App\Models\Product::STATUSES[$product->status] }}</p></div>
                                     <a href="{{ route('admin.products.show', $product) }}" class="inline-flex min-h-11 items-center rounded-lg border border-line px-3 text-sm font-semibold text-ink focus:outline-none focus:ring-2 focus:ring-brand">Open</a>
                                 </article>
                             @empty

@@ -36,12 +36,15 @@ class UpdateProductRequest extends FormRequest
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'compare_at_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99', 'gt:price'],
             'stock_quantity' => ['required_without:variants', 'integer', 'min:0', 'max:2147483647'],
-            'status' => ['required', 'in:draft,active,inactive'],
+            'status' => ['required', 'in:draft,active,inactive,changes_required,rejected'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'images' => ['nullable', 'array', 'max:8'],
             'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'variants' => ['nullable', 'array', 'max:30'],
-            'variants.*' => ['array:id,color,size,sku,stock_quantity'],
+            'variants.*' => ['array:id,color,size,sku,stock_quantity,price,images'],
+            'variants.*.price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
+            'variants.*.images' => ['nullable', 'array', 'max:4'],
+            'variants.*.images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'variants.*.id' => ['nullable', 'ulid'],
             'variants.*.color' => ['required', 'string', 'max:60'],
             'variants.*.size' => ['required', 'string', 'max:60'],
@@ -56,7 +59,7 @@ class UpdateProductRequest extends FormRequest
             $product = $this->route('product');
 
             $this->validateVariants($validator);
-            if ($product instanceof Product && $product->images()->count() + count((array) $this->file('images', [])) + ($this->hasFile('image') ? 1 : 0) > 8) {
+            if ($product instanceof Product && $product->images()->whereNull('product_variant_id')->count() + count((array) $this->file('images', [])) + ($this->hasFile('image') ? 1 : 0) > 8) {
                 $validator->errors()->add('images', 'A product can have no more than 8 photos.');
             }
             $variants = $this->input('variants', []);
@@ -82,6 +85,10 @@ class UpdateProductRequest extends FormRequest
 
             if ($product instanceof Product && $product->status !== 'active' && $this->input('status') === 'active') {
                 $validator->errors()->add('status', 'Only an administrator can activate a listing.');
+            }
+
+            if ($product instanceof Product && (in_array($product->status, ['pending', 'inactive'], true) || ! in_array($this->input('status'), [$product->status, 'draft', ...($product->status === 'active' ? ['inactive'] : [])], true))) {
+                $validator->errors()->add('status', 'This listing cannot be edited in its current review state.');
             }
 
             if ($validator->errors()->has('sku')) {

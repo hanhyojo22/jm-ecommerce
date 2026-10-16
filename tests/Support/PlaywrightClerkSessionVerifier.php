@@ -11,6 +11,7 @@ class PlaywrightClerkSessionVerifier implements ClerkSessionVerifier
 {
     private const IDENTITIES = [
         'qa-customer-identity',
+        'qa-integration-identity',
         'qa-seller-identity',
         'qa-other-seller-identity',
         'qa-admin-identity',

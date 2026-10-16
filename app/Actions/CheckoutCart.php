@@ -13,10 +13,12 @@ use Illuminate\Validation\ValidationException;
 class CheckoutCart
 {
     /**
-     * @param  array{recipient_name: string, phone: string, address_line: string, city: string}  $delivery
+     * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      */
     public function handle(User $user, array $delivery): Order
     {
+        abort_unless($user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(), 403);
+
         return DB::transaction(function () use ($user, $delivery): Order {
             $cart = Cart::query()
                 ->where('user_id', $user->id)
@@ -52,7 +54,7 @@ class CheckoutCart
                 $product = $products->get($item->product_id);
 
                 $variant = $product !== null && $item->product_variant_id !== null
-                    ? $product->variants()->lockForUpdate()->find($item->product_variant_id)
+                    ? $product->variants()->with('images')->lockForUpdate()->find($item->product_variant_id)
                     : null;
 
                 if ($product !== null && in_array($product->tenant_id, $managedTenantIds, true)) {
@@ -74,11 +76,15 @@ class CheckoutCart
                 $product->decrement('stock_quantity', $item->quantity);
                 $variant?->decrement('stock_quantity', $item->quantity);
 
+                $unitPrice = (string) ($variant?->price ?? $product->price);
+
                 return [
                     'product' => $product,
                     'variant' => $variant,
                     'quantity' => $item->quantity,
-                    'total' => bcmul((string) $product->price, (string) $item->quantity, 2),
+                    'unit_price' => $unitPrice,
+                    'image_path' => $variant?->images->first()?->path ?? $product->images()->orderBy('position')->value('path'),
+                    'total' => bcmul($unitPrice, (string) $item->quantity, 2),
                 ];
             });
 
@@ -98,7 +104,7 @@ class CheckoutCart
                 'shipping_amount' => '0.00',
                 'total' => $total,
             ]);
-            $user->deliveryAddresses()->firstOrCreate($delivery);
+            $user->deliveryAddresses()->firstOrCreate(collect($delivery)->except('delivery_note')->all());
 
             $lines->groupBy(fn (array $line): string => $line['product']->store_id)
                 ->each(function ($storeLines) use ($order): void {
@@ -120,7 +126,8 @@ class CheckoutCart
                             'product_name' => $line['product']->name,
                             'sku' => $line['variant']?->sku ?? $line['product']->sku,
                             'variant_label' => $line['variant']?->label(),
-                            'unit_price' => $line['product']->price,
+                            'unit_price' => $line['unit_price'],
+                            'image_path' => $line['image_path'],
                             'quantity' => $line['quantity'],
                             'line_total' => $line['total'],
                         ]);

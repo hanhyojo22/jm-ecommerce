@@ -13,7 +13,7 @@ class DeliveryAddress extends Model
     /** @use HasFactory<DeliveryAddressFactory> */
     use HasFactory, HasUlids;
 
-    protected $fillable = ['recipient_name', 'phone', 'address_line', 'city'];
+    protected $fillable = ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code'];
 
     public function user(): BelongsTo
     {

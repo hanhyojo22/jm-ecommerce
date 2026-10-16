@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 class PlaywrightQaSeeder extends Seeder
 {
@@ -21,6 +22,8 @@ class PlaywrightQaSeeder extends Seeder
         }
 
         $this->call(CategorySeeder::class);
+
+        User::factory()->create(['name' => 'QA Integration Customer', 'email' => 'qa-integration@example.test', 'clerk_user_id' => 'qa-integration-identity']);
 
         $customer = User::factory()->create([
             'name' => 'QA Customer',
@@ -71,6 +74,18 @@ class PlaywrightQaSeeder extends Seeder
         $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);
         $this->product($otherTenant, $otherStore, $category, 'Other Seller QA Product', 'other-qa-product', 'QA-OTHER-001', '39.99', 10);
         $historyProduct = $this->product($otherTenant, $otherStore, $category, 'QA History Sample', 'qa-history-sample', 'QA-HISTORY-001', '29.99', 10);
+        $variantProduct = $this->product($otherTenant, $otherStore, $category, 'QA Variant Speaker', 'qa-variant-speaker', 'QA-SPEAKER', '10.00', 5);
+        foreach (['black' => 'home-product-collection.jpg', 'white' => 'categories/electronics.png'] as $color => $asset) {
+            Storage::disk('product_images')->put('qa/variant-'.$color.'.jpg', file_get_contents(public_path('images/'.$asset)));
+        }
+        foreach ([['Black', '12.35', 2], ['White', '13.50', 0], ['Navy', null, 3]] as [$color, $price, $stock]) {
+            $variant = $variantProduct->variants()->create(['color' => $color, 'size' => 'Standard', 'sku' => 'QA-SPEAKER-'.strtoupper($color), 'price' => $price, 'stock_quantity' => $stock]);
+            $variantProduct->images()->create(['product_variant_id' => $variant->id, 'path' => 'qa/variant-'.($color === 'White' ? 'white' : 'black').'.jpg', 'position' => $variantProduct->images()->count()]);
+        }
+        $variantProduct->images()->create(['product_variant_id' => $variantProduct->variants()->where('color', 'Black')->sole()->id, 'path' => 'qa/variant-white.jpg', 'position' => 3]);
+        $draft = $this->product($tenant, $store, $category, 'QA Approval Draft', 'qa-approval-draft', 'QA-APPROVAL', '15.00', 3);
+        $draft->update(['status' => 'draft']);
+        $draft->images()->create(['path' => 'qa/variant-black.jpg', 'position' => 0]);
         for ($number = 1; $number <= 21; $number++) {
             $arrival = $this->product($otherTenant, $otherStore, $category, "QA Arrival {$number}", "qa-arrival-{$number}", "QA-ARRIVAL-{$number}", '29.99', 10);
             $arrival->created_at = now()->subDay()->subMinutes($number);

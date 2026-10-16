@@ -99,7 +99,7 @@
 
                         <div class="divide-y divide-line px-4 sm:px-6">
                             @foreach ($order->sellerOrders as $sellerOrder)
-                                <section x-data="{ expanded: false }" class="flex flex-col gap-4 py-5" aria-label="Items from {{ $sellerOrder->store->name }}">
+                                <section x-data="{ expanded: false }" class="flex flex-col gap-4 py-5" aria-label="Items from {{ $sellerOrder->store->name }} in order {{ $order->number }}">
                                     <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                                         <div class="flex min-w-0 flex-1 items-center gap-2.5">
                                             <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-canvas text-xs font-semibold text-ink" aria-hidden="true">
@@ -127,8 +127,8 @@
                                         @foreach ($sellerOrder->items as $item)
                                             <div @if ($loop->index >= 3) x-cloak x-show="expanded" @endif class="grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] gap-x-3 gap-y-1 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:gap-x-4">
                                                 <div class="row-span-2 grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-canvas sm:size-20">
-                                                    @if ($item->product?->thumbnail)
-                                                        <img src="{{ Storage::disk('product_images')->url($item->product->thumbnail->path) }}" alt="{{ $item->product_name }}" width="80" height="80" loading="lazy" class="size-full object-contain">
+                                                    @if (($item->image_path || $item->product?->thumbnail))
+                                                        <img src="{{ Storage::disk('product_images')->url(($item->image_path ?? $item->product->thumbnail->path)) }}" alt="{{ $item->product_name }}" width="80" height="80" loading="lazy" class="size-full object-contain">
                                                     @else
                                                         <svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 3-3 5 5" /></svg>
                                                         <span class="sr-only">Product image unavailable</span>

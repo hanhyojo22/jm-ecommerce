@@ -47,7 +47,7 @@ class DeliveryAddressController extends Controller
         return to_route('delivery-addresses.index')->with('status', 'Delivery address removed.');
     }
 
-    /** @return array{recipient_name: string, phone: string, address_line: string, city: string} */
+    /** @return array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string} */
     private function validatedAddress(Request $request): array
     {
         return $request->validate([
@@ -55,6 +55,8 @@ class DeliveryAddressController extends Controller
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
             'address_line' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:100'],
+            'province' => ['required', 'string', 'max:100'],
+            'postal_code' => ['required', 'regex:/^\d{4}$/'],
         ]);
     }
 }

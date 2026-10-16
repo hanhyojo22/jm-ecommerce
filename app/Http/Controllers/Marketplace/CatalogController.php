@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -130,6 +131,8 @@ class CatalogController extends Controller
         return $this->publishedProducts()
             ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
             ->with(['thumbnail', 'category:id,name,slug'])
+            ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
+            ->withMin('variants', 'price')
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
             ->withSum(['orderItems as sold_quantity' => fn (Builder $query) => $query
@@ -139,6 +142,27 @@ class CatalogController extends Controller
     public function index(Request $request): View
     {
         return $this->catalog($request);
+    }
+
+    public function suggestions(Request $request): JsonResponse
+    {
+        $search = $request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? '';
+
+        return response()->json(['items' => CatalogQuery::suggestions($search)->map(function (Product $product): array {
+            $price = (string) $product->price;
+            if ($product->variants_min_price !== null && (! $product->variants_using_base_price_exists || bccomp((string) $product->variants_min_price, $price, 2) < 0)) {
+                $price = (string) $product->variants_min_price;
+            }
+
+            return [
+                'name' => $product->name,
+                'image' => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null,
+                'price' => '₱'.number_format((float) $price, 2),
+                'store' => $product->store->name,
+                'sold_out' => $product->stock_quantity < 1,
+                'url' => route('catalog.show', [$product->store->slug, $product->slug]),
+            ];
+        })->all()]);
     }
 
     public function clearRecentlyViewed(Request $request): RedirectResponse
@@ -200,7 +224,11 @@ class CatalogController extends Controller
 
     public function show(Request $request, string $store, string $product): View
     {
-        $product = $this->publishedProducts()->with(['images', 'variants', 'category:id,name,slug'])
+        $product = $this->publishedProducts()->with(['images', 'variants', 'category:id,name,slug', 'store:id,name,slug,status,city,logo_path'])
+            ->withSum(['orderItems as sold_quantity' => fn (Builder $query) => $query
+                ->whereHas('sellerOrder', fn (Builder $sellerOrder) => $sellerOrder->where('status', '!=', 'cancelled'))], 'quantity')
+            ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
+            ->withMin('variants', 'price')
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
             ->whereHas('store', fn ($query) => $query->where('slug', $store))
@@ -229,6 +257,8 @@ class CatalogController extends Controller
         $relatedProducts = $this->publishedProducts()
             ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
             ->with(['thumbnail', 'store:id,name,slug,status'])
+            ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
+            ->withMin('variants', 'price')
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
             ->where('products.id', '!=', $product->id)
@@ -239,6 +269,8 @@ class CatalogController extends Controller
         $sellerProducts = $this->publishedProducts()
             ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
             ->with(['thumbnail', 'store:id,name,slug,status'])
+            ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
+            ->withMin('variants', 'price')
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
             ->where('products.id', '!=', $product->id)
@@ -250,8 +282,8 @@ class CatalogController extends Controller
         return view('marketplace.catalog.show', [
             'product' => $product,
             'reviews' => $reviews->paginate(10)->withQueryString(),
-            'discussions' => $product->discussions()->where('status', 'published')
-                ->with(['user:id,name', 'parent.user:id,name'])
+            'discussions' => $product->discussions()->where('status', 'published')->whereNull('parent_id')
+                ->with(['user:id,name', 'parent.user:id,name', 'replies.user:id,name', 'replies.parent.user:id,name'])
                 ->orderBy('created_at')->orderBy('id')
                 ->paginate(20, ['*'], 'discussion_page'),
             'distribution' => $distribution,

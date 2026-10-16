@@ -13,7 +13,7 @@ class CheckoutController extends Controller
 {
     public function create(Request $request): RedirectResponse|View
     {
-        $cart = $request->user()->cart()->with(['items.product.store', 'items.product.images', 'items.variant'])->first();
+        $cart = $request->user()->cart()->with(['items.product.store', 'items.product.tenant', 'items.product.thumbnail', 'items.product.variants', 'items.variant.images'])->first();
 
         if ($cart === null || $cart->items->isEmpty()) {
             return to_route('cart.index')->with('status', 'Your cart is empty. Add a product before checking out.');
@@ -25,8 +25,12 @@ class CheckoutController extends Controller
             return to_route('cart.index')->with('status', 'Select an item to check out.');
         }
 
+        if ($cart->items->contains(fn ($item): bool => ! $item->isAvailable() || $request->user()->isMemberOfTenant($item->product->tenant_id))) {
+            return to_route('cart.index')->withErrors(['cart' => 'A product in your cart is unavailable. Update your cart before checking out.']);
+        }
+
         $cart->items->each(function ($item): void {
-            $item->setAttribute('line_total', bcmul((string) $item->product->price, (string) $item->quantity, 2));
+            $item->setAttribute('line_total', bcmul($item->unitPrice(), (string) $item->quantity, 2));
         });
 
         $subtotal = $cart->items->reduce(
@@ -35,7 +39,7 @@ class CheckoutController extends Controller
         );
         $addresses = $request->user()->deliveryAddresses()->latest()->get();
         $preferredAddress = $addresses->first()
-            ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city']);
+            ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
         return view('marketplace.checkout.create', [
             'cart' => $cart,
@@ -47,7 +51,15 @@ class CheckoutController extends Controller
 
     public function store(Request $request, CheckoutCart $checkout, GmailOrderMailer $mailer): RedirectResponse
     {
-        $data = $request->validate(['recipient_name' => ['required', 'string', 'max:150'], 'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'], 'address_line' => ['required', 'string', 'max:255'], 'city' => ['required', 'string', 'max:100']]);
+        $data = $request->validate([
+            'recipient_name' => ['required', 'string', 'max:150'],
+            'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
+            'address_line' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:100'],
+            'province' => ['required', 'string', 'max:100'],
+            'postal_code' => ['required', 'regex:/^\d{4}$/'],
+            'delivery_note' => ['nullable', 'string', 'max:1000'],
+        ]);
         $order = $checkout->handle($request->user(), $data);
 
         try {

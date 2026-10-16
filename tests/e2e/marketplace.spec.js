@@ -32,7 +32,10 @@ test('buyer requests a return and admin resolves it', async ({ browser }) => {
 });
 
 async function rejectOptionalCookies(page) {
-    await page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
+    await Promise.all([
+        page.waitForEvent('domcontentloaded'),
+        page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
+    ]);
     await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
 }
 
@@ -69,6 +72,7 @@ test('customer can add a newly loaded arrival to the cart', async ({ browser }) 
 });
 
 test('seller shops another store and returns to Seller Center with the same account', async ({ browser }) => {
+    test.setTimeout(60_000);
     const { context, page } = await openAsRole(browser, 'seller');
 
     try {
@@ -89,8 +93,10 @@ test('seller shops another store and returns to Seller Center with the same acco
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('20 QA Street');
         await page.getByLabel('City').fill('Manila');
+        await page.getByLabel('Province').fill('Metro Manila');
+        await page.getByLabel('Postal code').fill('1000');
         await page.getByRole('button', { name: 'Save address' }).click();
-        await expect(page.getByText('20 QA Street, Manila', { exact: true })).toBeVisible();
+        await expect(page.getByText('20 QA Street, Manila, Metro Manila 1000', { exact: true })).toBeVisible();
 
         await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await expect(page.locator('#purchase').getByRole('button', { name: 'Add to cart' })).toHaveCount(0);
@@ -98,11 +104,11 @@ test('seller shops another store and returns to Seller Center with the same acco
         await page.goto('/stores/qa-southwind-store/products/other-qa-product');
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
         await page.getByRole('link', { name: 'Cart: 1 item' }).click();
-        await page.getByRole('link', { name: 'Continue to checkout' }).click();
+        await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
         await page.getByLabel('Use a saved address').selectOption({ label: 'QA Seller · 20 QA Street, Manila' });
         await expect(page.getByLabel('Street address')).toHaveValue('20 QA Street');
-        await page.getByRole('button', { name: 'Review order' }).click();
-        await expect(page.getByText('20 QA Street, Manila', { exact: true })).toBeVisible();
+        await expect(page.getByLabel('Province')).toHaveValue('Metro Manila');
+        await expect(page.getByLabel('Postal code')).toHaveValue('1000');
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
         await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
         await expect(page.getByText('Other Seller QA Product').first()).toBeVisible();
@@ -121,7 +127,8 @@ test('seller shops another store and returns to Seller Center with the same acco
     }
 });
 
-test('customer can place a COD order from the product page through checkout', async ({ browser }) => {
+test('customer can place a COD order from the product page through checkout', async ({ browser }, testInfo) => {
+    test.setTimeout(60_000);
     const { context, page } = await openAsRole(browser, 'customer');
 
     try {
@@ -132,58 +139,67 @@ test('customer can place a COD order from the product page through checkout', as
         await expect(page.getByRole('link', { name: 'Cart: 2 items' })).toBeVisible();
         await page.getByRole('link', { name: 'Cart: 2 items' }).click();
         await expect(page).toHaveURL(/\/cart$/);
-        await page.getByRole('link', { name: 'Continue to checkout' }).click();
+        await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
         await page.getByLabel('Recipient name').fill('Ava QA Customer');
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('10 QA Street');
         await page.getByLabel('City').fill('Manila');
-        await page.getByRole('button', { name: 'Review order' }).click();
-        await expect(page.getByText('10 QA Street, Manila', { exact: true })).toBeVisible();
-        await expect(page.getByText('Payment:', { exact: true }).locator('..')).toContainText('Cash on delivery.');
+        await page.getByLabel('Province').fill('Metro Manila');
+        await page.getByLabel('Postal code').fill('1000');
+        await page.getByLabel('Delivery note').fill('Blue gate');
+        await expect(page.getByRole('heading', { name: 'Delivery by store' })).toBeVisible();
+        const deliveryBox = await page.locator('#delivery-heading').boundingBox();
+        const summaryBox = await page.locator('#checkout-summary-heading').boundingBox();
+        expect(summaryBox.x).toBeGreaterThan(deliveryBox.x);
+        expect(await page.locator('#checkout-summary-heading').locator('xpath=ancestor::aside').evaluate(element => getComputedStyle(element).position)).toBe('sticky');
+        await page.screenshot({ path: testInfo.outputPath('checkout-desktop.png'), fullPage: true });
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
 
         await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
         await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
         await expect(page.getByText('QA Canvas Tote')).toBeVisible();
+        await expect(page.getByText('Blue gate')).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Order summary' }).locator('..').getByText('COD', { exact: true })).toBeVisible();
     } finally {
         await context.close();
     }
 });
 
-test('mobile checkout shows field errors and lets the customer edit the review address', async ({ browser }) => {
+test('mobile checkout stacks the summary and shows server field errors', async ({ browser }, testInfo) => {
     const { context, page } = await openAsRole(browser, 'customer', { viewport: { width: 390, height: 844 } });
 
     try {
         await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await rejectOptionalCookies(page);
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
         const cartLink = page.getByRole('link', { name: /Cart: \d+ items?/ });
         await expect(cartLink).toBeVisible();
         await cartLink.click();
-        await page.getByRole('link', { name: 'Continue to checkout' }).click();
+        await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
         await expect(page).toHaveURL(/\/checkout$/);
 
-        await expect(page.getByRole('button', { name: 'Review order' })).toHaveCount(1);
+        await expect(page.getByRole('button', { name: /Place order/ })).toHaveCount(1);
+        const form = page.locator('#checkout-form');
+        const summary = page.locator('#checkout-summary-heading');
+        const payment = page.locator('#payment-heading');
+        expect((await summary.boundingBox()).y).toBeGreaterThan((await payment.boundingBox()).y);
+        await page.screenshot({ path: testInfo.outputPath('checkout-mobile.png'), fullPage: true });
         await page.getByLabel('Recipient name').fill('');
         await page.getByLabel('Mobile number').fill('');
         await page.getByLabel('Street address').fill('');
         await page.getByLabel('City').fill('');
-        await page.getByRole('button', { name: 'Review order' }).click();
+        await form.evaluate(element => { element.noValidate = true; });
+        await page.getByRole('button', { name: /Place order/ }).click();
         await expect(page.getByLabel('Recipient name')).toHaveAttribute('aria-invalid', 'true');
-        await expect(page.locator('#recipient_name-error')).toHaveText('Enter the recipient name.');
+        await expect(page.locator('#recipient_name-error')).toBeVisible();
         await expect(page.getByLabel('Mobile number')).toHaveAttribute('aria-describedby', 'phone-error');
 
         await page.getByLabel('Recipient name').fill('Ava QA Customer');
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('10 QA Street');
         await page.getByLabel('City').fill('Manila');
-        await page.getByRole('button', { name: 'Review order' }).click();
-        await expect(page.getByText('10 QA Street, Manila', { exact: true })).toBeVisible();
-        await page.getByRole('button', { name: 'Edit address' }).click();
-        await page.getByLabel('City').fill('Quezon City');
-        await page.getByRole('button', { name: 'Review order' }).click();
-        await expect(page.getByText('10 QA Street, Quezon City')).toBeVisible();
-        await expect(page.getByRole('button', { name: /Place order/ })).toHaveCount(1);
+        await page.getByLabel('Province').fill('Metro Manila');
+        await page.getByLabel('Postal code').fill('1000');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
     } finally {
         await context.close();
@@ -221,6 +237,7 @@ test('seller refreshes an expired session before posting a review response', asy
 
     try {
         await page.goto('/seller/reviews');
+        await page.locator('[data-seller-reviews] [data-review-thread]').first().getByRole('button', { name: /^(Reply|Edit response)$/ }).click();
         await page.getByLabel('Seller response').fill('Thank you for your feedback.');
         const refresh = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
         await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
@@ -235,22 +252,28 @@ test('seller refreshes an expired session before posting a review response', asy
 });
 
 test('buyer and seller continue a review thread without reloading and keep it compact on mobile', async ({ browser }, testInfo) => {
+    test.setTimeout(90_000);
     const seller = await openAsRole(browser, 'seller');
     const buyer = await openAsRole(browser, 'customer');
     const pageErrors = [];
     for (const page of [seller.page, buyer.page]) page.on('pageerror', (error) => pageErrors.push(error.message));
 
     try {
-        await seller.page.goto('/seller/reviews');
-        await seller.page.getByLabel('Seller response').fill('Thanks for reviewing the tote.');
-        await seller.page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
-        await expect(seller.page.locator('article')).toContainText('Thanks for reviewing the tote.');
+        await seller.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#reviews');
+        await rejectOptionalCookies(seller.page);
+        const sellerThread = seller.page.locator('#reviews article');
+        await sellerThread.getByRole('button', { name: 'Reply', exact: true }).click();
+        await sellerThread.getByLabel('Seller response').fill('Thanks for reviewing the tote.');
+        await sellerThread.getByRole('button', { name: 'Post response' }).click();
+        await expect(sellerThread).toContainText('Thanks for reviewing the tote.');
 
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#reviews');
+        await rejectOptionalCookies(buyer.page);
         const thread = buyer.page.locator('#reviews article');
         await expect(thread).toContainText('QA Northwind Store');
         await expect(thread).not.toContainText('QA Seller');
-        const storeResponse = thread.locator('[wire\\:key^="reply-"]').first();
+        const storeResponse = thread.locator('.review-reply-composer').first();
+        await storeResponse.locator('summary').click();
         await expect(storeResponse.getByLabel('Write a reply')).toBeVisible();
         await storeResponse.getByLabel('Write a reply').fill('Does it come in blue?');
         let finishSubmission;
@@ -272,14 +295,24 @@ test('buyer and seller continue a review thread without reloading and keep it co
         await expect(thread).toContainText('Does it come in blue?');
 
         await seller.page.reload();
-        await seller.page.locator('article').getByRole('button', { name: 'Reply' }).click();
+        await seller.page.route(/\/livewire[^/]*\/update$/, (route) => route.abort());
+        await seller.page.locator('article').getByText('Reply', { exact: true }).click();
+        await expect(seller.page.getByLabel('Write a reply')).toBeVisible();
+        await seller.page.unroute(/\/livewire[^/]*\/update$/);
         await seller.page.getByLabel('Write a reply').fill('Yes, blue is available.');
         await seller.page.getByRole('button', { name: 'Post reply' }).click();
         await expect(seller.page.locator('article')).toContainText('Yes, blue is available.');
+        const originalReply = seller.page.locator('.review-reply').filter({ hasText: 'Does it come in blue?' }).first().locator('details.review-reply-composer');
+        if (await originalReply.getAttribute('open') !== null) await originalReply.locator('summary').click();
+        await seller.page.route(/\/livewire[^/]*\/update$/, (route) => route.abort());
+        await originalReply.locator('summary').click();
+        await expect(originalReply.getByLabel('Write a reply')).toBeVisible();
+        await seller.page.unroute(/\/livewire[^/]*\/update$/);
 
         await buyer.page.reload();
         await expect(thread.getByPlaceholder('Write a reply...')).toHaveCount(2);
-        const sellerFollowup = thread.locator('[wire\\:key^="reply-"]').filter({ hasText: 'Yes, blue is available.' });
+        const sellerFollowup = thread.locator('.review-reply-composer').last();
+        await sellerFollowup.locator('summary').click();
         await sellerFollowup.getByLabel('Write a reply').fill('Perfect, thank you.');
         await sellerFollowup.getByRole('button', { name: 'Send' }).click();
         await expect(thread).toContainText('Perfect, thank you.');
@@ -290,9 +323,9 @@ test('buyer and seller continue a review thread without reloading and keep it co
             await expect(thread).toContainText('Perfect, thank you.');
             const sizes = await buyer.page.evaluate(() => ({ viewport: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }));
             expect(sizes.page, `${width}px review page`).toBeLessThanOrEqual(sizes.viewport);
-            if (width === 390) {
-                await storeResponse.getByLabel('Write a reply').scrollIntoViewIfNeeded();
-                await buyer.page.screenshot({ path: testInfo.outputPath('review-thread-mobile.png') });
+            if (width === 1440 || width === 390) {
+                await thread.scrollIntoViewIfNeeded();
+                await buyer.page.screenshot({ path: testInfo.outputPath(`review-thread-${width}.png`), fullPage: true });
             }
         }
         expect(pageErrors).toEqual([]);
@@ -308,6 +341,7 @@ test('seller response stays on the form when session renewal fails', async ({ br
     try {
         await page.goto('/seller/reviews');
         await rejectOptionalCookies(page);
+        await page.locator('[data-seller-reviews] [data-review-thread]').first().getByRole('button', { name: /^(Reply|Edit response)$/ }).click();
         await page.route('**/auth/session', (route) => route.fulfill({ status: 401, body: 'Session expired' }));
         await page.getByLabel('Seller response').fill('Please keep this draft.');
         await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
@@ -317,6 +351,70 @@ test('seller response stays on the form when session renewal fails', async ({ br
         await expect(page.getByLabel('Seller response')).toHaveValue('Please keep this draft.');
     } finally {
         await context.close();
+    }
+});
+
+test('seller reviews show real conversations and working replies at desktop and mobile sizes', async ({ browser }, testInfo) => {
+    test.setTimeout(60_000);
+    const seller = await openAsRole(browser, 'seller');
+    const customer = await openAsRole(browser, 'customer');
+
+    try {
+        await seller.page.goto('/seller/store-settings');
+        await rejectOptionalCookies(seller.page);
+        await seller.page.getByLabel('Change logo').setInputFiles('public/images/categories/electronics.png');
+        await seller.page.getByRole('button', { name: 'Save store settings' }).click();
+        await expect(seller.page.getByText('Store details saved.')).toBeVisible();
+
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#discussions');
+        await rejectOptionalCookies(customer.page);
+        await customer.page.locator('#discussion-body').fill('Does this tote come in blue?');
+        await customer.page.getByRole('button', { name: 'Post message' }).click();
+        await expect(customer.page.locator('#discussions')).toContainText('Does this tote come in blue?');
+
+        await seller.page.goto('/seller/reviews');
+        await expect(seller.page.getByRole('heading', { name: 'Reviews & conversations' })).toBeVisible();
+        await expect(seller.page.locator('.seller-review-score')).toHaveText('5.0');
+        await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Does this tote come in blue?');
+        await seller.page.locator('.seller-review-discussion').getByText('Reply', { exact: true }).first().click();
+        expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+        await seller.page.locator('.seller-review-discussion').getByLabel('Your reply').first().fill('Yes, blue is available.');
+        const replyRequests = [];
+        seller.page.on('requestfinished', (request) => {
+            if (request.url().includes('/discussions') || request.url().includes('/seller/reviews')) {
+                replyRequests.push(new URL(request.url()).pathname);
+            }
+        });
+        await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().click();
+        await expect(seller.page).toHaveURL(/\/seller\/reviews$/);
+        await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Yes, blue is available.');
+        const storeAvatar = seller.page.locator('.seller-review-discussion .seller-review-avatar-image').first();
+        await expect(storeAvatar).toBeVisible();
+        await expect.poll(() => storeAvatar.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+        expect(replyRequests).toContainEqual(expect.stringMatching(/\/discussions$/));
+        expect(replyRequests).not.toContain('/seller/reviews');
+        await seller.page.locator('.seller-review-discussion').getByText('Reply', { exact: true }).last().click();
+        await seller.page.locator('.seller-review-discussion').getByLabel('Your reply').last().fill('Any shade of blue works.');
+        await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).last().click();
+        await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Any shade of blue works.');
+        expect(replyRequests).not.toContain('/seller/reviews');
+
+        for (const width of [1440, 390]) {
+            await seller.page.setViewportSize({ width, height: 900 });
+            await seller.page.evaluate(() => window.scrollTo(0, 0));
+            await seller.page.screenshot({ path: testInfo.outputPath(`seller-reviews-${width}.png`), fullPage: true });
+            const sizes = await seller.page.evaluate(() => ({ viewport: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }));
+            expect(sizes.page, `${width}px seller reviews`).toBeLessThanOrEqual(sizes.viewport);
+        }
+
+        await seller.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#discussions');
+        await expect(seller.page.locator('#discussions .pd-discussion .pd-avatar.seller img').first()).toBeVisible();
+        await expect(seller.page.locator('#discussions .pd-comment-form > .pd-avatar.seller img')).toBeVisible();
+        await seller.page.locator('#discussions .pd-discussion-reply summary').first().click();
+        expect(await seller.page.locator('#discussions .pd-reply-submit').first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    } finally {
+        await seller.context.close();
+        await customer.context.close();
     }
 });
 

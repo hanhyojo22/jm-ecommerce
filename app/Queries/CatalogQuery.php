@@ -24,6 +24,49 @@ class CatalogQuery
         Cache::forget(self::PUBLIC_FACETS_CACHE_KEY);
     }
 
+    /** @return Collection<int, Product> */
+    public static function suggestions(string $search): Collection
+    {
+        $search = Str::lower(trim($search));
+        if (Str::length($search) < 2 || ! preg_match('/[\pL\pN]/u', $search)) {
+            return collect();
+        }
+
+        $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
+        $prefix = $escaped.'%';
+        $postgres = DB::connection()->getDriverName() === 'pgsql';
+        if ($postgres) {
+            preg_match_all('/[\pL\pN]+/u', $search, $matches);
+            $wordQuery = implode(' & ', array_map(fn (string $word): string => $word.':*', $matches[0]));
+            $wordMatch = "to_tsvector('simple', products.name) @@ to_tsquery('simple', ?)";
+            $wordBindings = [$wordQuery];
+        } else {
+            $wordMatch = "LOWER(products.name) LIKE ? ESCAPE '!'";
+            $wordBindings = ['%'.$escaped.'%'];
+        }
+
+        $query = self::publishedProducts()
+            ->select(['products.id', 'products.store_id', 'products.name', 'products.slug', 'products.price', 'products.stock_quantity'])
+            ->with('thumbnail')
+            ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
+            ->withMin('variants', 'price')
+            ->where(function (Builder $query) use ($prefix, $wordMatch, $wordBindings, $postgres, $search): void {
+                $query->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$prefix])
+                    ->orWhereRaw($wordMatch, $wordBindings);
+                if ($postgres && Str::length($search) >= 3) {
+                    $query->orWhereRaw('LOWER(products.name) %>> ?', [$search]);
+                }
+            });
+
+        $rank = "CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 WHEN {$wordMatch} THEN 2 ELSE 3 END";
+
+        return $query->orderByRaw($rank, [$search, $prefix, ...$wordBindings])
+            ->orderBy('products.name')
+            ->orderBy('products.id')
+            ->limit(8)
+            ->get();
+    }
+
     /**
      * @param  array{
      *     q?: string|null,
@@ -67,6 +110,8 @@ class CatalogQuery
         $products = (clone $catalogProducts)
             ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
             ->with(['thumbnail', 'category:id,name,slug'])
+            ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
+            ->withMin('variants', 'price')
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $query) => $query->published()], 'rating')
             ->withSum(['orderItems as sold_quantity' => fn (Builder $query) => $query

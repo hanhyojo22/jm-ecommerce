@@ -2,47 +2,34 @@
     @section('title', 'Marketplace · JMMart')
 
     <div class="page-container">
-        <section class="py-8 sm:py-10 lg:pb-2 lg:pt-10" aria-labelledby="marketplace-home-heading">
-            <div class="grid grid-cols-1 overflow-hidden rounded-[24px] bg-ink text-white lg:grid-cols-[.9fr_1.1fr]">
-                <div class="flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:px-12 lg:py-14">
-                    <p class="mb-4 text-xs font-semibold uppercase tracking-[.16em] text-blue-200">JMMart · Independent stores</p>
-                    <h1 id="marketplace-home-heading" class="max-w-[13ch] text-4xl font-bold leading-[1.08] tracking-[-.04em] sm:text-5xl lg:text-[54px]">Good things, great finds.</h1>
-                    <p class="mt-5 max-w-lg text-base leading-7 text-slate-300">Discover products for everyday life from independent sellers. Shipping is free, and you can pay when your order arrives.</p>
-                    <div class="mt-7 flex flex-wrap gap-3">
-                        <a href="{{ route('catalog.index') }}" class="inline-flex min-h-12 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ink">Shop products <span class="ml-2" aria-hidden="true">→</span></a>
-                        <a href="{{ route('catalog.stores') }}" class="inline-flex min-h-12 items-center justify-center rounded-[10px] border border-white/30 px-5 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ink">Explore stores</a>
-                    </div>
-                    <div class="mt-9 flex flex-wrap gap-x-6 gap-y-2 border-t border-white/15 pt-5 text-sm text-slate-300">
-                        <span>Free shipping</span>
-                        <span>Cash on delivery</span>
-                        <span>Independent sellers</span>
-                    </div>
+        @php($heroProducts = $newProducts->getCollection()->filter(fn ($item) => $item->thumbnail !== null)->take(2)->values())
+        <section class="py-6 sm:py-8" aria-labelledby="marketplace-home-heading">
+            <div class="marketplace-hero">
+                <div class="marketplace-hero-copy">
+                    <p class="text-xs font-bold uppercase tracking-[.15em] text-brand">Your local marketplace, reimagined</p>
+                    <h1 id="marketplace-home-heading" class="mt-5 text-4xl font-bold leading-[1.08] tracking-[-.045em] sm:text-5xl">Good finds.<br>Closer to <span class="text-brand">home.</span></h1>
+                    <p class="mt-5 max-w-sm text-sm leading-7 text-muted">Discover everyday favorites from stores you'll love. Thoughtfully picked, locally connected.</p>
+                    <a href="{{ route('catalog.index') }}" class="mt-6 inline-flex min-h-12 items-center gap-4 rounded-xl bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Explore the marketplace <span aria-hidden="true">&rarr;</span></a>
                 </div>
-
-                <div class="relative bg-[#dce9f7] lg:min-h-[480px]">
-                    <div class="relative aspect-[3/2] lg:absolute lg:inset-0 lg:aspect-auto">
-                        <img src="{{ asset('images/home-product-collection.jpg') }}" alt="" width="1536" height="1024" fetchpriority="high" class="absolute inset-0 h-full w-full object-cover object-center" />
-                    </div>
-                    @if ($featuredProduct)
-                        <a href="{{ route('catalog.show', [$featuredProduct->store->slug, $featuredProduct->slug]) }}" class="relative mx-4 -mt-5 mb-4 flex min-h-20 items-center gap-3 rounded-2xl bg-white/95 p-3 text-ink shadow-xl shadow-ink/15 transition hover:bg-white focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-ink sm:mx-6 sm:mb-6 sm:p-4 lg:absolute lg:bottom-6 lg:left-6 lg:right-6 lg:m-0">
-                            @if ($featuredProduct->thumbnail)
-                                <img src="{{ Storage::disk('product_images')->url($featuredProduct->thumbnail->path) }}" alt="" width="64" height="64" class="size-14 shrink-0 rounded-xl bg-slate-100 object-contain sm:size-16" />
-                            @endif
-                            <span class="min-w-0 flex-1">
-                                <span class="block text-[11px] font-semibold uppercase tracking-[.1em] text-brand">Featured listing</span>
-                                <span class="mt-0.5 block truncate text-sm font-semibold sm:text-base">{{ $featuredProduct->name }}</span>
-                                <span class="block text-sm font-semibold tabular-nums">₱{{ number_format($featuredProduct->price, fmod((float) $featuredProduct->price, 1) === 0.0 ? 0 : 2) }}@if ($featuredProduct->stock_quantity < 1) <span class="ml-2 font-medium text-muted">Sold out</span>@endif</span>
-                            </span>
-                            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-brand text-white" aria-hidden="true">→</span>
-                        </a>
-                    @endif
+                <div class="marketplace-hero-art" aria-hidden="true">
+                    <div class="marketplace-hero-orbit"></div>
+                    @foreach ([0, 1] as $index)
+                        <div class="marketplace-hero-photo marketplace-hero-photo-{{ $index }}"><img src="{{ isset($heroProducts[$index]) ? Storage::disk('product_images')->url($heroProducts[$index]->thumbnail->path) : asset('images/home-product-collection.jpg') }}" alt="" width="400" height="440" fetchpriority="{{ $index === 0 ? 'high' : 'auto' }}"></div>
+                    @endforeach
+                    <div class="marketplace-hero-note"><span class="grid size-9 place-items-center rounded-full bg-emerald-50 text-success">&#10003;</span><span><strong class="block text-xs">Small stores. Big discoveries.</strong><span class="mt-1 block text-xs text-muted">Shop from trusted marketplace sellers</span></span></div>
                 </div>
             </div>
+        </section>
+        <section class="grid grid-cols-2 mb-8 rounded-2xl border border-line bg-white py-4 sm:grid-cols-4 sm:py-7" aria-label="Marketplace benefits">
+            <div class="flex gap-3 p-3 sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><p><strong class="block text-sm text-ink">Secure checkout</strong><span class="text-xs leading-5 text-muted">Your order details stay protected</span></p></div>
+            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="m8.5 13.5-1.5 7.5 5-2.5 5 2.5-1.5-7.5"/></svg><p><strong class="block text-sm text-ink">Independent sellers</strong><span class="text-xs leading-5 text-muted">Discover unique local stores</span></p></div>
+            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 7h13v10H3zM16 10h4l2 3v4h-4"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg><p><strong class="block text-sm text-ink">Free shipping</strong><span class="text-xs leading-5 text-muted">On every marketplace order</span></p></div>
+            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21C7 17 3 13.5 3 9.5 3 7 5 5 7.5 5c1.7 0 3.3.9 4.5 2.6C13.2 5.9 15 5 16.5 5 19 5 21 7 21 9.5c0 4-4 7.5-9 11.5Z"/></svg><p><strong class="block text-sm text-ink">Cash on delivery</strong><span class="text-xs leading-5 text-muted">Pay when your order arrives</span></p></div>
         </section>
 
         @if ($categories->isNotEmpty())
             <section id="shop-by-category" class="scroll-mt-[168px] border-t border-line py-10 min-[641px]:scroll-mt-[118px] sm:py-12" aria-labelledby="home-categories-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-categories-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Shop by category</h2><p class="mt-1 text-sm text-muted">Browse products by what you need.</p></div><a href="{{ route('catalog.index') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">View all <span aria-hidden="true">→</span></a></div>
+                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-categories-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Find your kind of good.</h2><p class="mt-1 text-sm text-muted">A little of everything. Something for you.</p></div><a href="{{ route('catalog.index') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">View all <span aria-hidden="true">→</span></a></div>
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
                     @foreach ($categories as $category)
                         <x-marketplace.category-card :category="$category" :show-count="true" :href="route('catalog.index', ['category' => $category->slug])" />
@@ -125,12 +112,7 @@
             </section>
         @endif
 
-        <section class="grid grid-cols-2 border-y border-line py-5 sm:grid-cols-4 sm:py-7" aria-label="Marketplace benefits">
-            <div class="flex gap-3 p-3 sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><p><strong class="block text-sm text-ink">Secure checkout</strong><span class="text-xs leading-5 text-muted">Your order details stay protected</span></p></div>
-            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="m8.5 13.5-1.5 7.5 5-2.5 5 2.5-1.5-7.5"/></svg><p><strong class="block text-sm text-ink">Independent sellers</strong><span class="text-xs leading-5 text-muted">Discover unique local stores</span></p></div>
-            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 7h13v10H3zM16 10h4l2 3v4h-4"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg><p><strong class="block text-sm text-ink">Free shipping</strong><span class="text-xs leading-5 text-muted">On every marketplace order</span></p></div>
-            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21C7 17 3 13.5 3 9.5 3 7 5 5 7.5 5c1.7 0 3.3.9 4.5 2.6C13.2 5.9 15 5 16.5 5 19 5 21 7 21 9.5c0 4-4 7.5-9 11.5Z"/></svg><p><strong class="block text-sm text-ink">Cash on delivery</strong><span class="text-xs leading-5 text-muted">Pay when your order arrives</span></p></div>
-        </section>
+
 
         @if ($stores->isNotEmpty())
             <section class="border-t border-line py-10 sm:py-12" aria-labelledby="home-stores-heading">

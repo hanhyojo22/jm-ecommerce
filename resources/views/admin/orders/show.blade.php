@@ -1,4 +1,4 @@
-<x-app-layout>
+﻿<x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -26,7 +26,7 @@
 
                     <section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
                         <h2 class="font-semibold text-ink">Customer information</h2>
-                        <div class="mt-5 grid gap-5 sm:grid-cols-2"><div><p class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Customer</p><p class="mt-1 font-medium text-ink">{{ $order->user->name }}</p><p class="mt-1 text-sm text-muted">{{ $order->user->email }}</p><p class="mt-1 text-sm text-muted">{{ $order->phone }}</p></div><div><p class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Delivery address</p><p class="mt-1 text-sm leading-6 text-ink">{{ $order->recipient_name }}<br>{{ $order->address_line }}<br>{{ $order->city }}</p></div></div>
+                        <div class="mt-5 grid gap-5 sm:grid-cols-2"><div><p class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Customer</p><p class="mt-1 font-medium text-ink">{{ $order->user->name }}</p><p class="mt-1 text-sm text-muted">{{ $order->user->email }}</p><p class="mt-1 text-sm text-muted">{{ $order->phone }}</p></div><div><p class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Delivery address</p><p class="mt-1 text-sm leading-6 text-ink">{{ $order->recipient_name }}<br>{{ $order->address_line }}<br>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@if ($order->delivery_note)<p class="mt-2 whitespace-pre-line text-sm text-ink"><span class="font-semibold">Delivery note:</span> {{ $order->delivery_note }}</p>@endif</div></div>
                     </section>
 
                     <section class="space-y-5" aria-labelledby="seller-orders-heading">

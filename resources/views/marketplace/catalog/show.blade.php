@@ -1,4 +1,14 @@
 @php
+    $sharedImages = $product->images->whereNull('product_variant_id');
+    $fallbackImages = $sharedImages->isNotEmpty() ? $sharedImages : $product->images;
+    $media = fn ($images) => $images->map(fn ($image) => ['url' => Storage::disk('product_images')->url($image->path), 'alt' => $product->name])->values()->all();
+    $variantOptions = $product->variants->map(function ($variant) use ($product, $media, $fallbackImages) {
+        $images = $product->images->where('product_variant_id', $variant->id);
+        $price = $variant->price ?? $product->price;
+        return ['id' => $variant->id, 'stock' => min($variant->stock_quantity, $product->stock_quantity), 'discount' => $product->compare_at_price ? max(0, (int) round((1 - (float) $price / (float) $product->compare_at_price) * 100)) : 0, 'label' => $variant->label(), 'sku' => $variant->sku, 'price' => '₱'.number_format($price, 2), 'onSale' => $product->compare_at_price !== null && bccomp((string) $product->compare_at_price, (string) $price, 2) > 0, 'images' => $media($images->isNotEmpty() ? $images : $fallbackImages)];
+    });
+    $initialVariant = $variantOptions->first(fn ($variant) => $variant['stock'] > 0) ?? $variantOptions->first();
+    $detailState = ['discount' => $initialVariant['discount'] ?? ($product->compare_at_price ? max(0, (int) round((1 - (float) $product->price / (float) $product->compare_at_price) * 100)) : 0), 'label' => $initialVariant['label'] ?? '', 'sku' => $initialVariant['sku'] ?? $product->sku, 'selected' => 0, 'quantity' => 1, 'variantId' => $initialVariant['id'] ?? '', 'max' => $initialVariant['stock'] ?? $product->stock_quantity, 'price' => $initialVariant['price'] ?? '₱'.number_format($product->price, 2), 'onSale' => $initialVariant['onSale'] ?? ($product->compare_at_price !== null && bccomp((string) $product->compare_at_price, (string) $product->price, 2) > 0), 'gallery' => $initialVariant['images'] ?? $media($fallbackImages), 'variants' => $variantOptions->all()];
     $productUrl = route('catalog.show', [$product->store->slug, $product->slug]);
     $metaDescription = str(strip_tags($product->description ?: $product->name.' from '.$product->store->name.' on JMMart'))->squish()->limit(155)->toString();
     $productSchema = [
@@ -21,267 +31,89 @@
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"><meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}"><meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}"><meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">@auth('clerk')<meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">@endauth<title>{{ $product->name }} | JMMart</title><meta name="description" content="{{ $metaDescription }}"><link rel="canonical" href="{{ $productUrl }}">@if($product->images->isNotEmpty())<script type="application/ld+json">{!! Illuminate\Support\Js::encode($productSchema) !!}</script>@endif@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}"><meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}"><meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}"><meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">@auth('clerk')<meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">@endauth<title>{{ $product->name }} | JMMart</title><meta name="description" content="{{ $metaDescription }}"><link rel="canonical" href="{{ $productUrl }}">@if($product->images->isNotEmpty())<script type="application/ld+json">{!! Illuminate\Support\Js::encode($productSchema) !!}</script>@endif<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
 <body class="min-h-dvh bg-canvas font-sans text-ink antialiased">
     <x-marketplace.header />
+    <div class="prototype-product">
     @php($average = (float) ($product->published_reviews_avg_rating ?? 0))
-    @php($isOnSale = $product->compare_at_price !== null && (float) $product->compare_at_price > (float) $product->price)
-    <main class="mx-auto max-w-[1320px] px-[18px] pb-10 pt-4 sm:px-8">
-        <nav aria-label="Breadcrumb" class="mb-5 flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] text-muted"><a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Home</a><span aria-hidden="true">/</span><a href="{{ route('catalog.index') }}" class="shrink-0 font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Marketplace</a><span aria-hidden="true">/</span><a href="{{ route('catalog.store', $product->store->slug) }}" class="max-w-40 shrink-0 truncate font-medium transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->store->name }}</a><span aria-hidden="true">/</span><span class="min-w-0 truncate font-semibold text-ink">{{ $product->name }}</span></nav>
-        @if($errors->any())<div class="mb-6 flex items-start justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert"><span>{{ $errors->first() }}</span><a href="#purchase" class="shrink-0 font-semibold underline underline-offset-4">Try again</a></div>@endif
-
-        <div class="mb-5 lg:hidden">
-            <p class="text-xs font-bold uppercase {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }}">{{ $product->stock_quantity > 0 ? 'In stock — '.number_format($product->stock_quantity).' available' : 'Currently sold out' }}</p>
-            <h1 class="mt-2 text-balance text-2xl font-bold leading-tight text-ink">{{ $product->name }}</h1>
-            <p class="mt-2 text-2xl font-bold tabular-nums text-ink">₱{{ number_format($product->price, 2) }}@if ($isOnSale) <del class="ml-2 text-base font-normal text-muted">₱{{ number_format($product->compare_at_price, 2) }}</del>@endif</p>
-        </div>
-
-        <div x-data="{ selected: 0, zoomTrigger: null, quantity: 1, max: {{ $product->variants->isNotEmpty() ? 0 : $product->stock_quantity }}, chooseVariant(stock) { this.max = stock; this.quantity = 1 } }" class="grid items-start gap-9 lg:grid-cols-[minmax(0,55fr)_minmax(0,45fr)]">
-            <section class="min-w-0" aria-label="Product images">
-                <div class="overflow-hidden rounded-2xl border border-line bg-white">
-                    <div class="relative aspect-[4/3.4] bg-gradient-to-br from-blue-100 to-slate-50">
-                        @if ($product->images->isNotEmpty())
-                            @foreach ($product->images as $image)
-                                <button type="button" x-show="selected === {{ $loop->index }}" @if (! $loop->first) x-cloak @endif @click="zoomTrigger = $event.currentTarget; $refs.zoomDialog.showModal()" class="absolute inset-0 h-full w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]" aria-label="Zoom image {{ $loop->iteration }} of {{ $product->images->count() }}">
-                                    <img src="{{ Storage::disk('product_images')->url($image->path) }}" alt="{{ $product->name }}{{ $product->images->count() > 1 ? ', image '.$loop->iteration : '' }}" width="800" height="680" loading="{{ $loop->first ? 'eager' : 'lazy' }}" @if ($loop->first) fetchpriority="high" @endif class="h-full w-full object-contain">
-                                </button>
-                            @endforeach
-                            @if ($product->images->count() > 1)
-                                <button type="button" @click="selected = (selected - 1 + {{ $product->images->count() }}) % {{ $product->images->count() }}" class="absolute left-3 top-1/2 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-line bg-white text-xl shadow-sm hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Previous product image">‹</button>
-                                <button type="button" @click="selected = (selected + 1) % {{ $product->images->count() }}" class="absolute right-3 top-1/2 z-10 grid size-10 -translate-y-1/2 place-items-center rounded-full border border-line bg-white text-xl shadow-sm hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Next product image">›</button>
-                            @endif
-                            <span class="pointer-events-none absolute bottom-3 right-3 rounded-lg border border-line bg-white/95 px-2.5 py-1 text-xs text-muted"><span x-text="selected + 1"></span> / {{ $product->images->count() }} · Click to zoom</span>
-                        @else
-                            <div class="flex h-full items-center justify-center px-8 text-center text-sm font-semibold leading-6 text-muted">Product image coming soon from {{ $product->store->name }}</div>
-                        @endif
-                        @if ($product->stock_quantity < 1)
-                            <x-marketplace.sold-out-overlay />
-                        @endif
-                    </div>
-                    @if ($product->images->count() > 1)
-                        <div class="flex items-center gap-2.5 overflow-x-auto border-t border-line bg-white p-[14px]" role="group" aria-label="Choose a product image">
-                            @foreach ($product->images as $image)
-                                <button type="button" @click="selected = {{ $loop->index }}" @keydown.right.prevent="selected = Math.min(selected + 1, {{ $product->images->count() - 1 }})" @keydown.left.prevent="selected = Math.max(selected - 1, 0)" :aria-pressed="selected === {{ $loop->index }}" class="size-[72px] shrink-0 overflow-hidden rounded-[10px] border-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :class="selected === {{ $loop->index }} ? 'border-brand' : 'border-line hover:border-brand/50'" aria-label="Show image {{ $loop->iteration }}"><img src="{{ Storage::disk('product_images')->url($image->path) }}" alt="" width="72" height="72" loading="lazy" class="h-full w-full object-cover"></button>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-                @if ($product->images->isNotEmpty())
-                    <dialog x-ref="zoomDialog" @close="zoomTrigger?.focus()" @keydown.left.prevent="selected = (selected - 1 + {{ $product->images->count() }}) % {{ $product->images->count() }}" @keydown.right.prevent="selected = (selected + 1) % {{ $product->images->count() }}" aria-label="Enlarged product image" class="max-h-[95dvh] w-[min(95vw,72rem)] max-w-none rounded-[14px] border border-line bg-white p-4 shadow-xl backdrop:bg-slate-950/80 sm:p-6">
-                        <div class="flex justify-end"><button type="button" @click="$refs.zoomDialog.close()" class="min-h-10 rounded-lg border border-line px-4 text-sm font-semibold hover:border-brand">Close</button></div>
-                        @foreach ($product->images as $image)
-                            <img x-show="selected === {{ $loop->index }}" @if (! $loop->first) x-cloak @endif src="{{ Storage::disk('product_images')->url($image->path) }}" alt="Enlarged image {{ $loop->iteration }} of {{ $product->name }}" width="1200" height="1020" class="mx-auto max-h-[75dvh] w-full object-contain">
-                        @endforeach
-                        @if ($product->images->count() > 1)
-                            <div class="mt-3 flex items-center justify-center gap-4 text-sm text-muted">
-                                <button type="button" @click="selected = (selected - 1 + {{ $product->images->count() }}) % {{ $product->images->count() }}" class="min-h-10 rounded-lg border border-line px-3 hover:border-brand" aria-label="Previous enlarged image">Previous</button>
-                                <span><span x-text="selected + 1"></span> / {{ $product->images->count() }}</span>
-                                <button type="button" @click="selected = (selected + 1) % {{ $product->images->count() }}" class="min-h-10 rounded-lg border border-line px-3 hover:border-brand" aria-label="Next enlarged image">Next</button>
-                            </div>
-                        @endif
-                    </dialog>
-                @endif
-                <div class="mt-4 rounded-[14px] border border-line bg-white p-[18px]">
-                    <h2 class="text-base font-semibold">Shopping with {{ $product->store->name }}</h2>
-                    <p class="mt-2 text-sm leading-6 text-muted">Free shipping on this item · Cash on delivery · Message the seller for order and return help.</p>
-                </div>
-            </section>
-            <section class="min-w-0">
-                <p class="hidden text-xs font-bold uppercase tracking-[0.03em] lg:block {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }}">{{ $product->stock_quantity > 0 ? 'In stock — '.number_format($product->stock_quantity).' available' : 'Currently sold out' }}</p>
-                <h1 class="mt-2 hidden text-balance text-[30px] font-bold leading-tight tracking-[-0.02em] text-ink lg:block">{{ $product->name }}</h1>
-                <div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-muted">
-                    @if ($product->published_reviews_count)
-                        <a href="#reviews" class="font-semibold text-ink hover:text-brand"><span class="text-amber-500" aria-hidden="true">★</span> {{ number_format($average, 1) }} <span class="font-normal text-muted">· {{ number_format($product->published_reviews_count) }} {{ Str::plural('review', $product->published_reviews_count) }}</span></a>
+    <main id="main-content" x-data="{ ...@js($detailState), zoomTrigger: null, chooseVariant(id) { const variant = this.variants.find(option => option.id === id); if (!variant) return; this.variantId = id; this.discount = variant.discount; this.label = variant.label; this.sku = variant.sku; this.max = variant.stock; this.price = variant.price; this.onSale = variant.onSale; this.gallery = variant.images; this.selected = 0; this.quantity = 1; } }" class="pd-container pd-page">
+        <nav aria-label="Breadcrumb" class="pd-breadcrumb"><a href="{{ route('home') }}">Home</a><span aria-hidden="true">&#8250;</span><a href="{{ route('catalog.index') }}">Marketplace</a>@if ($product->category)<span aria-hidden="true">&#8250;</span><a href="{{ route('catalog.index', ['category' => $product->category->slug]) }}">{{ $product->category->name }}</a>@endif<span aria-hidden="true">&#8250;</span><span aria-current="page">{{ $product->name }}</span></nav>
+        @if($errors->any())<div class="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert">{{ $errors->first() }} <a href="#purchase" class="font-semibold underline">Try again</a></div>@endif
+        <div class="pd-grid">
+            <x-marketplace.product-gallery :product="$product" :initial-images="$detailState['gallery']" />
+            <section class="pd-info" aria-labelledby="product-heading">
+                <a href="{{ route('catalog.store', $product->store->slug) }}" class="pd-store-line"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5985d0" stroke-width="1.7" aria-hidden="true"><path d="m12 3 8 3v6c0 5-5 8-8 10-3-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>VERIFIED LOCAL STORE @if ($product->store->city)&middot; {{ Str::upper($product->store->city) }}@endif</a>
+                <h1 id="product-heading">{{ $product->name }}</h1>
+                <div class="pd-rating"><span class="pd-stars" role="img" aria-label="{{ number_format($average, 1) }} out of 5 stars">@foreach(range(1,5) as $star)<span @class(['text-slate-300' => $star > round($average)])>&#9733;</span>@endforeach</span><b>{{ $product->published_reviews_count ? number_format($average, 1) : 'New' }}</b><a href="#reviews">({{ $product->published_reviews_count }} {{ Str::plural('review', $product->published_reviews_count) }})</a><span aria-hidden="true">&middot;</span><span>{{ number_format((int) $product->sold_quantity) }} sold</span></div>
+                @if (filled($product->description))
+                    @if (Str::length($product->description) > 240)
+                        <details class="pd-description-disclosure">
+                            <summary>
+                                <span class="pd-description-more">Read product description</span>
+                                <span class="pd-description-less">Hide product description</span>
+                            </summary>
+                            <p class="pd-description">{{ $product->description }}</p>
+                        </details>
                     @else
-                        <a href="#reviews" class="hover:text-brand">No reviews yet</a>
+                        <p class="pd-description">{{ $product->description }}</p>
                     @endif
-                    <span aria-hidden="true">·</span>
-                    <span>Sold by <a href="{{ route('catalog.store', $product->store->slug) }}" class="font-semibold text-brand hover:text-brand-hover">{{ $product->store->name }}</a></span>
-                </div>
-                @if ($product->brand || $product->condition)<p class="mt-2 text-sm text-muted">{{ $product->brand }}@if ($product->brand && $product->condition) · @endif{{ ucfirst($product->condition ?? '') }}</p>@endif
-                <div class="mt-3 hidden flex-wrap items-baseline gap-x-3 lg:flex"><p class="text-[32px] font-bold tabular-nums tracking-[-0.03em]">₱{{ number_format($product->price, 2) }}</p>@if ($isOnSale)<del class="text-base tabular-nums text-muted">₱{{ number_format($product->compare_at_price, 2) }}</del><span class="self-center rounded-[7px] bg-danger px-2 py-0.5 text-xs font-bold text-white">Sale</span>@endif</div>
-                <p class="mt-2 text-sm font-medium text-success">Free shipping · Cash on delivery</p>
-                @if (! Auth::check() || in_array(Auth::user()->account_type, ['buyer', 'seller'], true))
-                <div id="purchase" class="sticky bottom-0 z-20 -mx-[18px] mt-4 scroll-mt-24 border-t border-line bg-canvas/95 px-[18px] py-3 backdrop-blur sm:-mx-8 sm:px-8 lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
+                @endif
+                <div class="pd-price-panel"><span data-selected-price class="pd-price" x-text="price">{{ $detailState['price'] }}</span>@if ($product->compare_at_price)<del x-show="onSale" class="pd-old-price">&#8369;{{ number_format($product->compare_at_price, 2) }}</del><span x-show="onSale" class="pd-sale" x-text="'Save ' + discount + '%'">Save {{ $detailState['discount'] }}%</span>@endif<p>Price per item @if ($product->sku || $product->variants->isNotEmpty())&middot; SKU <span x-text="sku">{{ $detailState['sku'] }}</span>@endif</p></div>
+                @if ($product->variants->isNotEmpty())
+                    <fieldset><legend class="pd-label"><strong>Choose a variant</strong><span class="text-muted" x-text="label">{{ $detailState['label'] }}</span></legend><div class="pd-variants">
+                        @foreach ($product->variants as $variant)
+                            <label @class(['pd-variant', 'is-empty' => $variant->stock_quantity < 1])><input type="radio" name="product-option" value="{{ $variant->id }}" @checked($detailState['variantId'] === $variant->id) :checked="variantId === @js($variant->id)" @change="chooseVariant(@js($variant->id))"><i aria-hidden="true" style="background:{{ match (strtolower($variant->color)) { 'black', 'midnight black' => '#292d34', 'white', 'cloud white' => '#e8e4dc', 'navy' => '#263b60', 'blue' => '#4d7fc4', 'red' => '#b74e57', 'green' => '#62856b', 'pink' => '#ddb2bf', default => '#97a0af' } }}"></i><span>{{ $variant->label() }}@if ($variant->stock_quantity < 1) &middot; Sold out @endif</span></label>
+                        @endforeach
+                    </div></fieldset>
+                @endif
+                <p data-selected-stock class="pd-stock" :class="{ sold: max < 1 }" aria-live="polite"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg><span x-text="max > 0 ? max + (variants.length ? ' available in this option' : ' available') + ' · Ready to ship' : 'This option is sold out'"></span></p>
+                <div id="purchase">
                     @if (Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail() && ! Auth::user()->isMemberOfTenant($product->tenant_id))
-                        <form method="POST" action="{{ route('cart.store', $product) }}" data-add-to-cart data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="space-y-4">
-                            @csrf
-                            <input name="quantity" type="hidden" x-model="quantity">
-                            @if ($product->variants->isNotEmpty())
-                                <fieldset>
-                                    <legend class="mb-2 text-sm font-semibold">Choose color and size</legend>
-                                    <div class="grid gap-2 sm:grid-cols-2">
-                                        @foreach ($product->variants as $variant)
-                                            <label class="flex min-h-12 items-center gap-3 rounded-[10px] border border-line bg-white px-3 py-2 text-sm has-[:checked]:border-brand has-[:checked]:bg-blue-50 {{ $variant->stock_quantity === 0 ? 'opacity-60' : 'cursor-pointer' }}">
-                                                <input type="radio" name="variant_id" value="{{ $variant->id }}" required @disabled($variant->stock_quantity === 0) @change="chooseVariant({{ $variant->stock_quantity }})" class="text-brand focus:ring-brand">
-                                                <span class="min-w-0 flex-1"><strong class="block font-semibold">{{ $variant->color }} / {{ $variant->size }}</strong><span class="text-xs text-muted">{{ $variant->stock_quantity ? number_format($variant->stock_quantity).' available' : 'Sold out' }}</span></span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                </fieldset>
-                            @endif
-                            <div>
-                                <p class="mb-2 text-sm font-semibold">Quantity</p>
-                                <div class="inline-flex min-h-12 items-center rounded-[10px] border border-line bg-white">
-                                    <button type="button" @click="quantity = Math.max(1, quantity - 1)" :disabled="quantity <= 1 || max < 1" class="grid size-11 place-items-center text-lg disabled:text-slate-300" aria-label="Reduce quantity">−</button>
-                                    <output class="min-w-10 text-center text-sm font-semibold tabular-nums" x-text="quantity"></output>
-                                    <button type="button" @click="quantity = Math.min(max, quantity + 1)" :disabled="quantity >= max || max < 1" class="grid size-11 place-items-center text-lg disabled:text-slate-300" aria-label="Increase quantity">+</button>
-                                </div>
+                        <form method="POST" action="{{ route('cart.store', $product) }}" data-add-to-cart data-clerk-session-refresh="{{ route('clerk.session.refresh') }}">
+                            @csrf<input name="quantity" type="hidden" x-model="quantity">@if ($product->variants->isNotEmpty())<input type="hidden" name="variant_id" value="{{ $detailState['variantId'] }}" :value="variantId">@endif
+                            <div class="pd-buy-row">
+                                <div class="pd-qty" role="group" aria-label="Quantity"><button type="button" @click="quantity = Math.max(1, quantity - 1)" :disabled="quantity <= 1 || max < 1" aria-label="Reduce quantity">&#8722;</button><output x-text="quantity">1</output><button type="button" @click="quantity = Math.min(100, max, quantity + 1)" :disabled="quantity >= Math.min(100, max) || max < 1" aria-label="Increase quantity">+</button></div>
+                                <button @disabled($product->stock_quantity < 1) :disabled="max < 1" class="pd-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 7h14l1 15H4L5 7ZM8 8V5a4 4 0 0 1 8 0v3"/></svg><span x-text="max > 0 ? 'Add to cart' : 'Sold out'">{{ $product->stock_quantity > 0 ? 'Add to cart' : 'Sold out' }}</span></button>
+                                <button @disabled($product->stock_quantity < 1) :disabled="max < 1" data-checkout-url="{{ route('checkout.create') }}" class="pd-btn secondary">Buy now</button>
                             </div>
-                            <button @disabled($product->stock_quantity < 1) :disabled="max < 1" class="min-h-[50px] w-full rounded-[10px] bg-brand px-5 text-[15px] font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-slate-300">{{ $product->stock_quantity > 0 ? 'Add to cart' : 'Sold out' }}</button>
                         </form>
                     @elseif (! Auth::check())
-                        <a href="{{ route('login', ['redirect' => request()->getPathInfo()] + ($product->variants->isEmpty() ? ['add_to_cart' => $product->id] : [])) }}" class="flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Sign in to add to cart</a>
-                    @elseif (Auth::check() && Auth::user()->isMemberOfTenant($product->tenant_id))
-                        <p class="text-sm font-medium text-muted">You cannot buy products from a store you manage.</p>
+                        <div class="pd-buy-row"><a x-show="max > 0" href="{{ route('login', ['redirect' => request()->getPathInfo()] + ($product->variants->isEmpty() ? ['add_to_cart' => $product->id] : [])) }}" class="pd-btn" aria-label="Sign in to add to cart">Add to cart</a><a x-show="max > 0" href="{{ route('login', ['redirect' => request()->getPathInfo()]) }}" class="pd-btn secondary">Buy now</a><button x-show="max < 1" disabled class="pd-btn secondary">Sold out</button></div>
+                    @elseif (Auth::user()->isMemberOfTenant($product->tenant_id))
+                        <p class="pd-help">You cannot buy products from a store you manage.</p>
                     @elseif (in_array(Auth::user()->account_type, ['buyer', 'seller'], true))
-                        <a href="{{ route('profile.edit') }}" class="flex min-h-12 w-full items-center justify-center rounded-[10px] border border-brand px-5 text-sm font-semibold text-brand hover:bg-blue-50">Verify your email to add to cart</a>
+                        <a href="{{ route('profile.edit') }}" class="pd-btn secondary mt-5">Verify your email to add to cart</a>
                     @endif
                 </div>
-                @endif
-                <ul class="mt-4 space-y-2 border-t border-line pt-4 text-[13.5px] text-muted">
-                    <li>Secure checkout with cash on delivery</li>
-                    <li>Free shipping on this item</li>
-                    <li>Message the seller for order and return help</li>
-                </ul>
-                <div class="mt-[18px] rounded-[14px] border border-line bg-white p-[18px]">
-                    <div class="flex items-center gap-3">
-                        <span class="grid size-12 shrink-0 place-items-center rounded-xl bg-brand text-lg font-bold text-white">{{ Str::upper(Str::substr($product->store->name, 0, 1)) }}</span>
-                        <div class="min-w-0"><p class="truncate font-semibold">{{ $product->store->name }}</p><p class="text-xs text-muted">Independent JMMart seller</p></div>
-                        <a href="{{ route('catalog.store', $product->store->slug) }}" class="ml-auto shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">Visit store</a>
-                    </div>
-                    @if (Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail() && ! Auth::user()->isMemberOfTenant($product->tenant_id))
-                        <form method="POST" action="{{ route('messages.products.start', $product) }}" class="mt-3 border-t border-line pt-3">@csrf<button class="text-sm font-semibold text-brand hover:text-brand-hover">Message seller</button></form>
-                    @endif
-                </div>
+                <div class="pd-meta"><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 5h13v13H2zM15 10h4l3 4v4h-7"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg>Free shipping</span><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Cash on delivery</span><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 8 3v6c0 5-5 8-8 10-3-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>Seller approved</span></div>
+                <div class="pd-store-card"><span class="pd-store-avatar">@if ($product->store->logo_path)<img src="{{ Storage::disk('public')->url($product->store->logo_path) }}" alt="" class="size-full object-cover">@else{{ Str::upper(Str::substr($product->store->name, 0, 2)) }}@endif</span><div><b>{{ $product->store->name }}</b><p>Approved store @if ($product->store->city)&middot; {{ $product->store->city }}@endif</p></div><div class="pd-store-actions">@if (Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail() && ! Auth::user()->isMemberOfTenant($product->tenant_id))<form method="POST" action="{{ route('messages.products.start', $product) }}">@csrf<button type="submit" class="pd-btn secondary small">Message seller</button></form>@endif<a href="{{ route('catalog.store', $product->store->slug) }}" class="pd-btn secondary small">Visit store <span aria-hidden="true">&#8594;</span></a></div></div>
             </section>
         </div>
-
-        <nav x-data="{ active: ({ '#specifications': 'specifications', '#reviews': 'reviews', '#shipping-heading': 'shipping' })[location.hash] || 'description' }" aria-label="Product information" class="sticky top-[52px] z-20 mt-9 flex gap-1 overflow-x-auto border-b border-line bg-canvas text-sm font-semibold min-[641px]:top-[70px]">
-            <a href="#details-heading" x-on:click="active = 'description'" :aria-current="active === 'description' ? 'location' : null" :class="active === 'description' ? 'border-brand text-ink' : 'border-transparent text-muted hover:border-brand hover:text-ink'" class="flex min-h-[50px] shrink-0 items-center border-b-2 px-4 transition">Description</a>
-            <a href="#specifications" x-on:click="active = 'specifications'" :aria-current="active === 'specifications' ? 'location' : null" :class="active === 'specifications' ? 'border-brand text-ink' : 'border-transparent text-muted hover:border-brand hover:text-ink'" class="flex min-h-[50px] shrink-0 items-center border-b-2 px-4 transition">Specifications</a>
-            <a href="#reviews" x-on:click="active = 'reviews'" :aria-current="active === 'reviews' ? 'location' : null" :class="active === 'reviews' ? 'border-brand text-ink' : 'border-transparent text-muted hover:border-brand hover:text-ink'" class="flex min-h-[50px] shrink-0 items-center border-b-2 px-4 transition">Reviews ({{ number_format($product->published_reviews_count) }})</a>
-            <a href="#shipping-heading" x-on:click="active = 'shipping'" :aria-current="active === 'shipping' ? 'location' : null" :class="active === 'shipping' ? 'border-brand text-ink' : 'border-transparent text-muted hover:border-brand hover:text-ink'" class="flex min-h-[50px] shrink-0 items-center border-b-2 px-4 transition">Shipping &amp; returns</a>
-        </nav>
-
-        <section class="mt-5 space-y-4" aria-labelledby="details-heading">
-            <div class="rounded-[14px] border border-line bg-surface p-5 sm:p-[26px]">
-                <h2 id="details-heading" class="scroll-mt-40 text-xl font-semibold tracking-[-0.02em]">Product details</h2>
-                @if (filled($product->description))
-                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-muted">{{ $product->description }}</p>
-                @endif
-                <dl id="specifications" class="mt-5 scroll-mt-40 divide-y divide-line border-t border-line text-sm">
-                    @if ($product->category)
-                        <div class="grid grid-cols-[10rem_1fr] gap-3 py-3"><dt class="font-medium text-muted">Category</dt><dd class="font-medium text-ink">{{ $product->category->name }}</dd></div>
-                    @endif
-                    @if ($product->brand)<div class="grid grid-cols-[10rem_1fr] gap-3 py-3"><dt class="font-medium text-muted">Brand</dt><dd class="font-medium text-ink">{{ $product->brand }}</dd></div>@endif
-                    @if ($product->condition)<div class="grid grid-cols-[10rem_1fr] gap-3 py-3"><dt class="font-medium text-muted">Condition</dt><dd class="font-medium text-ink">{{ ucfirst($product->condition) }}</dd></div>@endif
-                    <div class="grid grid-cols-[10rem_1fr] gap-3 py-3"><dt class="font-medium text-muted">Sold by</dt><dd><a href="{{ route('catalog.store', $product->store->slug) }}" class="font-semibold text-brand hover:text-brand-hover">{{ $product->store->name }}</a></dd></div>
-                    @if (filled($product->sku))
-                        <div class="grid grid-cols-[10rem_1fr] gap-3 py-3"><dt class="font-medium text-muted">SKU</dt><dd class="tabular-nums text-ink">{{ $product->sku }}</dd></div>
-                    @endif
-                    <div class="grid grid-cols-[10rem_1fr] gap-3 py-3"><dt class="font-medium text-muted">Availability</dt><dd class="font-medium {{ $product->stock_quantity > 0 ? 'text-success' : 'text-danger' }}">{{ $product->stock_quantity > 0 ? 'In stock ('.number_format($product->stock_quantity).' available)' : 'Out of stock' }}</dd></div>
-                </dl>
-            </div>
-            <div>
-                <div class="rounded-[14px] border border-line bg-surface p-5 sm:p-[26px]" aria-labelledby="shipping-heading">
-                    <h2 id="shipping-heading" class="scroll-mt-40 text-xl font-semibold tracking-[-0.02em]">Shipping &amp; returns</h2>
-                    <ul class="mt-3 space-y-2.5 text-sm leading-6 text-muted">
-                        <li class="flex gap-2.5"><span class="text-success" aria-hidden="true">✓</span>Free shipping on this item</li>
-                        <li class="flex gap-2.5"><span class="text-success" aria-hidden="true">✓</span>Cash on delivery — pay when your order arrives</li>
-                        <li class="flex gap-2.5"><span class="text-success" aria-hidden="true">✓</span>Message the seller directly for order or return help</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <section id="reviews" class="mt-4 scroll-mt-40 rounded-[14px] border border-line bg-white p-5 sm:p-[26px]" aria-labelledby="reviews-heading"><div class="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]"><aside class="lg:sticky lg:top-36 lg:h-fit"><h2 id="reviews-heading" class="text-2xl font-semibold tracking-[-0.02em] text-ink">Customer reviews</h2>@if($product->published_reviews_count)<div class="mt-5 flex items-baseline gap-3"><p class="text-5xl font-semibold tabular-nums tracking-[-0.04em] text-ink">{{ number_format($average, 1) }}</p><p class="text-sm text-muted">out of 5</p></div><div class="mt-2 flex gap-0.5 text-amber-500" role="img" aria-label="{{ number_format($average, 1) }} out of 5 stars">@foreach(range(1,5) as $star)<svg viewBox="0 0 20 20" class="size-5 {{ $star <= round($average) ? 'fill-current' : 'fill-slate-200' }}"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z"/></svg>@endforeach</div><p class="mt-2 text-sm leading-6 text-muted">From {{ $product->published_reviews_count }} verified {{ Str::plural('purchase', $product->published_reviews_count) }}</p><div class="mt-7 space-y-2">@foreach(range(5,1) as $star)@php($count=(int)$distribution->get($star,0))<a href="{{ route('catalog.show', [$product->store->slug, $product->slug, 'rating'=>$star]) }}#reviews" class="grid min-h-9 grid-cols-[2rem_1fr_2rem] items-center gap-2 rounded-md text-xs font-medium text-muted transition hover:bg-amber-50 hover:text-amber-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><span>{{ $star }} star</span><span class="h-1.5 overflow-hidden rounded-full bg-slate-200"><span class="block h-full rounded-full bg-amber-400" style="width: {{ $count > 0 ? $star * 20 : 0 }}%"></span></span><span class="text-right tabular-nums">{{ $count }}</span></a>@endforeach</div>@else<p class="mt-3 max-w-xs text-sm leading-6 text-muted">There are no customer reviews yet. Delivered buyers can be the first to share their experience.</p>@endif</aside>
-                <div><form method="GET" x-data="{ loading:false }" @submit="loading=true" class="flex flex-wrap items-end gap-3 border-y border-line py-4"><div><label for="review-rating" class="field-label">Rating</label><select id="review-rating" name="rating" class="field-control w-36"><option value="">All ratings</option>@foreach(range(5,1) as $star)<option value="{{ $star }}" @selected(($reviewFilters['rating'] ?? null)===$star)>{{ $star }} stars</option>@endforeach</select></div><label class="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-muted"><input type="checkbox" name="photos" value="1" @checked($reviewFilters['photos'] ?? false) class="rounded border-line text-brand focus:ring-brand">With photos</label><div><label for="sort-reviews" class="field-label">Sort</label><select id="sort-reviews" name="sort_reviews" class="field-control w-40"><option value="recent" @selected(($reviewFilters['sort_reviews'] ?? 'recent')==='recent')>Most recent</option><option value="highest" @selected(($reviewFilters['sort_reviews'] ?? '')==='highest')>Highest rating</option><option value="lowest" @selected(($reviewFilters['sort_reviews'] ?? '')==='lowest')>Lowest rating</option></select></div><button class="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-wait disabled:bg-slate-300" :disabled="loading"><span x-text="loading ? 'Loading…' : 'Apply'"></span></button></form>
-                    <div class="mt-6 space-y-5">@forelse($reviews as $review)<livewire:reviews.thread :review="$review" :key="'catalog-review-'.$review->id" />@empty<div class="py-8 text-center"><p class="font-semibold text-ink">{{ $product->published_reviews_count ? 'No reviews match those filters.' : 'No customer reviews yet.' }}</p>@if ($product->published_reviews_count)<a href="{{ route('catalog.show', [$product->store->slug,$product->slug]) }}#reviews" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">Clear filters</a>@endif</div>@endforelse</div><div class="mt-8">{{ $reviews->fragment('reviews')->links() }}</div></div>
-            </div>
-        </section>
-
-        <section id="discussions" class="mt-4 scroll-mt-40 rounded-[14px] border border-line bg-white p-5 sm:p-[26px]" aria-labelledby="discussions-heading">
-            @php($canDiscuss = auth()->check() && in_array(auth()->user()->account_type, ['buyer', 'seller'], true) && auth()->user()->hasVerifiedClerkEmail())
-            @php($actingAsStore = $canDiscuss && auth()->user()->isMemberOfTenant($product->tenant_id))
-            <h2 id="discussions-heading" class="text-2xl font-semibold tracking-[-0.02em]">Product discussions</h2>
-            <p class="mt-1 text-sm text-muted">Ask a question or join the conversation. Reviews above are reserved for verified purchases.</p>
-
-            @if ($canDiscuss)
-                <form method="POST" action="{{ route('discussions.store', $product) }}" class="mt-5 space-y-3">
-                    @csrf
-                    <label for="discussion-body" class="block text-sm font-semibold text-ink">{{ $actingAsStore ? 'Post as '.$product->store->name : 'Join as '.auth()->user()->name }}</label>
-                    @if ($actingAsStore)<p class="text-xs text-brand">Your reply will show the store name and Seller badge.</p>@endif
-                    <textarea id="discussion-body" name="body" rows="3" maxlength="2000" required class="w-full rounded-[10px] border-line text-sm focus:border-brand focus:ring-brand" placeholder="Ask about this product or share a helpful answer.">{{ old('body') }}</textarea>
-                    @error('body')<p class="text-sm text-danger" role="alert">{{ $message }}</p>@enderror
-                    <button type="submit" class="min-h-11 rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Post message</button>
-                </form>
-            @elseif (! auth()->check())
-                <a href="{{ route('login', ['redirect' => request()->getPathInfo()]) }}" class="mt-5 inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">Sign in to join the discussion</a>
-            @endif
-
-            <div class="mt-6 divide-y divide-line">
-                @forelse ($discussions as $discussion)
-                    <article id="discussion-{{ $discussion->id }}" class="py-4 {{ $discussion->parent_id ? 'pl-5 sm:pl-9' : '' }}">
-                        @if ($discussion->parent)<p class="mb-2 text-xs text-muted">Reply to {{ $discussion->parent->author_type === 'seller' ? $product->store->name : $discussion->parent->user?->name }}</p>@endif
-                        <div class="flex items-center gap-2.5">
-                            @if ($discussion->author_type === 'seller' && $product->store->logo_path)
-                                <img src="{{ Storage::disk('public')->url($product->store->logo_path) }}" alt="" class="size-9 rounded-full object-cover">
-                            @else
-                                <span class="grid size-9 place-items-center rounded-full bg-blue-50 text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($discussion->author_type === 'seller' ? $product->store->name : $discussion->user->name, 0, 1)) }}</span>
-                            @endif
-                            <div><p class="text-sm font-semibold text-ink">{{ $discussion->author_type === 'seller' ? $product->store->name : $discussion->user->name }} @if ($discussion->author_type === 'seller')<span class="ml-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-brand">Seller</span>@endif</p><time datetime="{{ $discussion->created_at->toIso8601String() }}" class="text-xs text-muted">{{ $discussion->created_at->diffForHumans() }}</time></div>
-                        </div>
-                        <p class="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-ink">{{ $discussion->body }}</p>
-                        @if ($canDiscuss)
-                            <details class="mt-2"><summary class="inline-flex min-h-11 cursor-pointer items-center text-sm font-semibold text-brand hover:text-brand-hover">Reply</summary>
-                                <form method="POST" action="{{ route('discussions.store', $product) }}" class="mt-2 space-y-2">
-                                    @csrf
-                                    <input type="hidden" name="parent_id" value="{{ $discussion->id }}">
-                                    <label for="reply-{{ $discussion->id }}" class="block text-sm font-medium text-ink">Your reply</label>
-                                    <textarea id="reply-{{ $discussion->id }}" name="body" rows="2" maxlength="2000" required class="w-full rounded-[10px] border-line text-sm focus:border-brand focus:ring-brand"></textarea>
-                                    <button type="submit" class="min-h-11 rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Post reply</button>
-                                </form>
-                            </details>
-                        @endif
-                    </article>
-                @empty
-                    <p class="py-6 text-sm text-muted">No discussion yet. Be the first to ask a question.</p>
-                @endforelse
-            </div>
-            <div class="mt-4">{{ $discussions->fragment('discussions')->links() }}</div>
-        </section>
-
-        @if ($sellerProducts->isNotEmpty())
-            <section class="mt-8" aria-labelledby="from-seller-heading">
-                <div class="flex flex-wrap items-end justify-between gap-3">
-                    <div><h2 id="from-seller-heading" class="text-2xl font-bold tracking-[-0.02em]">More from {{ $product->store->name }}</h2></div>
-                    <a href="{{ route('catalog.store', $product->store->slug) }}" class="text-sm font-semibold text-brand hover:text-brand-hover">Visit store →</a>
-                </div>
-                <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                    @foreach ($sellerProducts as $sellerProduct)
-                        <x-marketplace.top-product-card :product="$sellerProduct" />
-                    @endforeach
-                </div>
+        <div class="pd-below">
+            <section class="pd-panel pd-conversations" aria-labelledby="conversations-heading">
+                @php($conversationCount = $product->published_reviews_count + $discussions->total())
+                <div class="pd-panel-head"><h2 id="conversations-heading">Reviews &amp; conversations</h2><span class="pd-small">{{ $conversationCount }} {{ Str::plural('conversation', $conversationCount) }}</span></div>
+                <p class="pd-small">Ask a question, share your experience, or reply to the store.</p>
+                <section id="reviews" aria-labelledby="reviews-heading">
+                    <h3 id="reviews-heading" class="sr-only">Customer reviews</h3>
+                    <div class="pd-summary"><span class="pd-score">{{ $product->published_reviews_count ? number_format($average, 1) : '—' }}</span><div><span class="pd-stars" aria-hidden="true">@foreach(range(1,5) as $star)<span @class(['text-slate-300' => $star > round($average)])>&#9733;</span>@endforeach</span><p class="pd-small">{{ $product->published_reviews_count }} product reviews</p></div><div class="pd-bars">@foreach(range(5,1) as $star)@php($count=(int)$distribution->get($star,0))<a href="{{ route('catalog.show', [$product->store->slug, $product->slug, 'rating'=>$star]) }}#reviews" class="pd-bar" aria-label="{{ $star }} star reviews: {{ $count }}"><span>{{ $star }}</span><span class="pd-bar-track"><span class="pd-bar-fill" style="width: {{ $count > 0 ? $star * 20 : 0 }}%"></span></span></a>@endforeach</div></div>
+                    <details class="mb-5 pd-small" @if (request()->hasAny(['rating', 'photos', 'sort_reviews'])) open @endif><summary class="cursor-pointer py-2">Filter reviews</summary><form method="GET" class="mt-2 flex flex-wrap items-end gap-3"><div><label for="review-rating" class="field-label">Rating</label><select id="review-rating" name="rating" class="field-control"><option value="">All ratings</option>@foreach(range(5,1) as $star)<option value="{{ $star }}" @selected(($reviewFilters['rating'] ?? null)===$star)>{{ $star }} stars</option>@endforeach</select></div><label class="inline-flex min-h-11 items-center gap-2"><input type="checkbox" name="photos" value="1" @checked($reviewFilters['photos'] ?? false) class="rounded border-line text-brand">With photos</label><div><label for="sort-reviews" class="field-label">Sort</label><select id="sort-reviews" name="sort_reviews" class="field-control"><option value="recent" @selected(($reviewFilters['sort_reviews'] ?? 'recent')==='recent')>Most recent</option><option value="highest" @selected(($reviewFilters['sort_reviews'] ?? '')==='highest')>Highest rating</option><option value="lowest" @selected(($reviewFilters['sort_reviews'] ?? '')==='lowest')>Lowest rating</option></select></div><button class="pd-btn small">Apply</button></form></details>
+                    @forelse($reviews as $review)<livewire:reviews.thread :review="$review" :key="'catalog-review-'.$review->id" />@empty<p class="pd-small py-3">{{ $product->published_reviews_count ? 'No reviews match those filters.' : 'No customer reviews yet. Delivered buyers can be the first to share their experience.' }}</p>@endforelse
+                    {{ $reviews->fragment('reviews')->links() }}
+                </section>
+                @include('marketplace.catalog._product-discussions')
             </section>
-        @endif
-
-        @if ($relatedProducts->isNotEmpty())
-            <section class="mt-8" aria-labelledby="related-heading">
-                <div class="flex flex-wrap items-end justify-between gap-3">
-                    <div><h2 id="related-heading" class="text-2xl font-bold tracking-[-0.02em]">Related products</h2><p class="mt-1 text-sm text-muted">More to explore across the marketplace.</p></div>
-                    <a href="{{ route('catalog.index') }}" class="text-sm font-semibold text-brand hover:text-brand-hover">View all →</a>
-                </div>
-                <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-                    @foreach ($relatedProducts as $relatedProduct)
-                        <x-marketplace.top-product-card :product="$relatedProduct" />
-                    @endforeach
-                </div>
-            </section>
-        @endif
+            <aside class="min-w-0 space-y-6">
+                <section class="pd-panel" aria-labelledby="details-heading"><h2 id="details-heading">The details</h2><dl id="specifications" class="pd-specs">@if ($product->category)<div><dt>Category</dt><dd>{{ $product->category->name }}</dd></div>@endif @if ($product->brand)<div><dt>Brand</dt><dd>{{ $product->brand }}</dd></div>@endif @if ($product->condition)<div><dt>Condition</dt><dd>{{ ucfirst($product->condition) }}</dd></div>@endif @if ($product->sku)<div><dt>SKU</dt><dd>{{ $product->sku }}</dd></div>@endif<div><dt>Sold by</dt><dd><a href="{{ route('catalog.store', $product->store->slug) }}">{{ $product->store->name }}</a></dd></div><div><dt>Availability</dt><dd>{{ $product->stock_quantity > 0 ? 'In stock ('.number_format($product->stock_quantity).' available)' : 'Out of stock' }}</dd></div></dl><div class="pd-help"><b id="shipping-heading">Good to know</b>Free shipping on this item. Items from different stores are prepared separately. Pay the courier on delivery. Message the seller directly for order or return help.</div></section>
+                @php($suggestions = $relatedProducts->isNotEmpty() ? $relatedProducts : $sellerProducts)
+                @if ($suggestions->isNotEmpty())<section class="pd-panel" aria-labelledby="related-heading"><h2 id="related-heading">You might also like</h2>@foreach($suggestions->take(2) as $suggestion)<a href="{{ route('catalog.show', [$suggestion->store->slug,$suggestion->slug]) }}" class="pd-recommendation">@if($suggestion->thumbnail)<img src="{{ Storage::disk('product_images')->url($suggestion->thumbnail->path) }}" alt="" width="42" height="42" loading="lazy">@endif<span><strong>{{ $suggestion->name }}</strong><small>{{ $suggestion->store->name }}</small></span><b>&#8369;{{ number_format($suggestion->price, 2) }}</b></a>@endforeach</section>@endif
+            </aside>
+        </div>
     </main>
     <x-marketplace.footer />
-<x-cookie-consent />
-@livewireScripts
+        <nav class="pd-mobile-nav" aria-label="Mobile marketplace navigation"><a href="{{ route('home') }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3V10"/></svg>Discover</a><a href="{{ route('catalog.index') }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 3h7v7H3V3ZM14 3h7v7h-7V3ZM3 14h7v7H3v-7ZM14 14h7v7h-7v-7"/></svg>Shop</a><a href="{{ route('cart.index') }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 7h14l1 15H4L5 7ZM8 8V5a4 4 0 0 1 8 0v3"/></svg>Cart</a><a href="{{ route('orders.index') }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 8v10l9 5 9-5V8M12 13v10"/></svg>Orders</a><a href="{{ route('profile.edit') }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4 22v-3a8 8 0 0 1 16 0v3"/></svg>Account</a></nav>
+    </div>
+    <x-cookie-consent />
+    @livewireScripts
 </body>
 </html>

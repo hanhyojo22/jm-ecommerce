@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewInstance;
 use Tests\Support\PlaywrightClerkSessionVerifier;
@@ -50,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->environment('testing') && config('services.playwright.auth_key')) {
+            Vite::useHotFile(storage_path('framework/playwright-vite.hot'));
+        }
+
         if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceHttps();
         }

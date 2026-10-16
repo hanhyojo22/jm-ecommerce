@@ -24,6 +24,8 @@ class DeliveryAddressFactory extends Factory
             'phone' => '+639171234567',
             'address_line' => fake()->streetAddress(),
             'city' => fake()->city(),
+            'province' => fake()->word(),
+            'postal_code' => '1000',
         ];
     }
 }

@@ -19,8 +19,6 @@ class Thread extends Component
 
     public bool $repliesExpanded = true;
 
-    public ?string $replyToId = null;
-
     public bool $composerOpen = false;
 
     public string $body = '';
@@ -36,25 +34,19 @@ class Thread extends Component
         $this->review = $review;
         $this->sellerView = $sellerView;
         $this->body = $sellerView ? $review->response()->first()?->body ?? '' : '';
-        $this->composerOpen = $sellerView;
     }
 
-    public function replyTo(string $responseId): void
+    public function openResponse(): void
     {
-        $response = $this->review->responses()->findOrFail($responseId);
-        abort_unless($this->canReplyTo($response), 403);
-
-        $this->replyToId = $response->id;
-        $this->body = '';
+        $this->body = $this->review->response()->first()?->body ?? '';
         $this->saved = false;
         $this->composerOpen = true;
     }
 
     public function cancelReply(): void
     {
-        $this->replyToId = null;
         $this->body = $this->sellerView ? $this->review->response()->first()?->body ?? '' : '';
-        $this->composerOpen = $this->sellerView;
+        $this->composerOpen = false;
         $this->resetValidation();
     }
 
@@ -70,26 +62,16 @@ class Thread extends Component
         $this->review->loadMissing('product.store');
         $store = $this->review->product->store;
         $isSeller = $user->account_type === 'seller' && $user->sellerTenant()?->id === $store->tenant_id;
-        $isBuyer = $user->id === $this->review->user_id && ! $isSeller;
-        abort_unless($isSeller || $isBuyer, 403);
-        if ($this->replyToId === null) {
-            abort_unless($isSeller, 403);
-            $saveSellerResponse->handle($this->review, $user, $body, request()->ip());
-        } else {
-            abort_unless($this->review->fresh()?->status === 'published', 403);
-            $parent = $this->review->responses()->findOrFail($this->replyToId);
-            abort_unless(($isBuyer && $parent->author_type === 'seller') || ($isSeller && $parent->author_type === 'buyer'), 403);
-            $this->saveNestedReply($parent, $user, $body, $isSeller);
-        }
+        abort_unless($isSeller, 403);
+        $saveSellerResponse->handle($this->review, $user, $body, request()->ip());
 
         $this->body = '';
-        $this->replyToId = null;
-        $this->composerOpen = $this->sellerView;
+        $this->composerOpen = false;
         $this->repliesExpanded = true;
         $this->saved = true;
     }
 
-    public function submitCustomerReply(string $responseId): void
+    public function submitNestedReply(string $responseId): void
     {
         $parent = $this->review->responses()->findOrFail($responseId);
         $user = auth()->user();
@@ -100,7 +82,7 @@ class Thread extends Component
         }
 
         $this->validate(["replyBodies.{$responseId}" => ['required', 'string', 'max:2000']]);
-        $this->saveNestedReply($parent, $user, $this->replyBodies[$responseId], false);
+        $this->saveNestedReply($parent, $user, $this->replyBodies[$responseId], $parent->author_type === 'buyer');
         $this->replyBodies[$responseId] = '';
         $this->savedReplyId = $responseId;
         $this->repliesExpanded = true;

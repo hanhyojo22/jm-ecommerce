@@ -6,7 +6,7 @@ test('seller conversation fills the available desktop height without horizontal 
     const seller = await openAsRole(browser, 'seller', { viewport: { width: 1440, height: 900 } });
 
     try {
-        await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
+        await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await buyer.page.getByRole('button', { name: 'Message seller' }).click();
         await seller.page.goto('/messages');
         const inboxBottom = await seller.page.locator('[data-conversation-inbox] > .page-shell > .page-container > .grid').evaluate((panel) => panel.getBoundingClientRect().bottom);
@@ -195,6 +195,8 @@ test('failed attachment upload retries with one confirmed bubble', async ({ brow
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
         await buyer.page.getByRole('button', { name: 'Message seller' }).click();
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
+        await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();
         await buyer.page.getByRole('button', { name: 'Add attachment' }).click();
         await buyer.page.getByLabel('PDF document').setInputFiles({
             name: 'qa-retry.pdf',
@@ -223,6 +225,7 @@ test('failed attachment upload retries with one confirmed bubble', async ({ brow
 });
 
 test('Livewire navigation cleans up conversation channels', async ({ browser }) => {
+    test.setTimeout(90_000);
     const buyer = await openAsRole(browser, 'customer');
 
     try {

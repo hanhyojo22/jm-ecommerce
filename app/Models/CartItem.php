@@ -26,10 +26,22 @@ class CartItem extends Model
         $availableStock = $this->variant?->stock_quantity ?? $this->product->stock_quantity;
 
         return $this->product->status === 'active'
+            && $this->product->store->status === 'active'
+            && $this->product->tenant->status === 'active'
             && $this->product->stock_quantity >= $this->quantity
             && $availableStock >= $this->quantity
             && ! ($this->product_variant_id !== null && $this->variant === null)
             && ! ($this->product_variant_id === null && $this->product->variants->isNotEmpty());
+    }
+
+    public function unitPrice(): string
+    {
+        return (string) ($this->variant?->price ?? $this->product->price);
+    }
+
+    public function imagePath(): ?string
+    {
+        return $this->variant?->images->first()?->path ?? $this->product->thumbnail?->path;
     }
 
     public function cart(): BelongsTo

@@ -19,15 +19,16 @@ class CartController extends Controller
     public function index(Request $request): View
     {
         $cart = $request->user()->cart()->with([
-            'items.product:id,store_id,name,slug,price,stock_quantity,status',
-            'items.product.store:id,name,slug',
+            'items.product:id,tenant_id,store_id,name,slug,price,stock_quantity,status',
+            'items.product.store:id,name,slug,status',
+            'items.product.tenant:id,status',
             'items.product.thumbnail',
             'items.product.variants',
-            'items.variant',
+            'items.variant.images',
         ])->first();
 
         $cart?->items->each(function (CartItem $item): void {
-            $item->setAttribute('line_total', bcmul((string) $item->product->price, (string) $item->quantity, 2));
+            $item->setAttribute('line_total', bcmul($item->unitPrice(), (string) $item->quantity, 2));
         });
 
         $this->deselectUnavailableItems($cart);
@@ -62,7 +63,7 @@ class CartController extends Controller
         return response()->json([
             'selected_count' => $selectedIds->count(),
             'subtotal' => $this->subtotal($cart->load([
-                'items.product:id,store_id,name,slug,price,stock_quantity,status',
+                'items.product:id,tenant_id,store_id,name,slug,price,stock_quantity,status',
                 'items.variant',
             ])),
         ]);
@@ -217,7 +218,7 @@ class CartController extends Controller
             ->reduce(
                 fn (string $total, CartItem $item): string => bcadd(
                     $total,
-                    bcmul((string) $item->product->price, (string) $item->quantity, 2),
+                    bcmul($item->unitPrice(), (string) $item->quantity, 2),
                     2,
                 ),
                 '0.00',

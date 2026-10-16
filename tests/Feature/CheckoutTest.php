@@ -123,7 +123,7 @@ class CheckoutTest extends TestCase
             ->assertSee('data-sign-in-url="'.route('login', ['redirect' => '/checkout']).'"', false);
     }
 
-    public function test_checkout_renders_shipping_and_review_without_duplicate_mobile_action(): void
+    public function test_checkout_renders_single_page_delivery_and_order_summary(): void
     {
         [, $product] = $this->sellerProduct('19.99', 5);
         $customer = User::factory()->create(['email_verified_at' => now()]);
@@ -132,12 +132,13 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($customer)->get(route('checkout.create'))
             ->assertOk()
-            ->assertSee('Review order')
-            ->assertSee('Edit address')
-            ->assertSee('Free within the Philippines')
-            ->assertSee('Cash on delivery.')
-            ->assertDontSee('Continue to delivery')
-            ->assertDontSee('Continue to payment');
+            ->assertSee('Delivery by store')
+            ->assertSee('Cash on delivery')
+            ->assertSee('Place order')
+            ->assertSee('name="province"', false)
+            ->assertSee('name="postal_code"', false)
+            ->assertSee('name="delivery_note"', false)
+            ->assertDontSee('Review order');
     }
 
     public function test_checkout_saves_and_prefills_the_buyers_delivery_address(): void
@@ -154,7 +155,9 @@ class CheckoutTest extends TestCase
         $this->get(route('checkout.create'))
             ->assertOk()
             ->assertSee('value="Ava Buyer"', false)
-            ->assertSee('value="10 Market Street"', false);
+            ->assertSee('value="10 Market Street"', false)
+            ->assertSee('value="Metro Manila"', false)
+            ->assertSee('value="1000"', false);
 
         $this->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
         $this->assertSame(1, $customer->deliveryAddresses()->count());
@@ -164,7 +167,9 @@ class CheckoutTest extends TestCase
         $this->get(route('checkout.create'))
             ->assertOk()
             ->assertSee('value="Ava Buyer"', false)
-            ->assertSee('value="10 Market Street"', false);
+            ->assertSee('value="10 Market Street"', false)
+            ->assertSee('value="Metro Manila"', false)
+            ->assertSee('value="1000"', false);
     }
 
     public function test_checkout_uses_exact_totals_and_creates_order_snapshots(): void
@@ -180,11 +185,15 @@ class CheckoutTest extends TestCase
         $cart = Cart::create(['user_id' => $customer->id]);
         $cart->items()->create(['product_id' => $product->id, 'quantity' => 3]);
 
-        $response = $this->actingAs($customer)->post(route('checkout.store'), $this->delivery());
+        $response = $this->actingAs($customer)->post(route('checkout.store'), [...$this->delivery(), 'delivery_note' => 'Blue gate']);
         $order = Order::query()->firstOrFail();
 
         $response->assertRedirect(route('orders.show', $order));
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '59.97', 'total' => '59.97']);
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '59.97', 'shipping_amount' => '0.00', 'total' => '59.97', 'province' => 'Metro Manila', 'postal_code' => '1000', 'delivery_note' => 'Blue gate']);
+        $this->assertDatabaseHas('delivery_addresses', ['user_id' => $customer->id, 'province' => 'Metro Manila', 'postal_code' => '1000']);
+        $this->actingAs($customer)->get(route('orders.show', $order))->assertOk()->assertSee('Blue gate')->assertSee('Metro Manila');
+        $this->actingAs($seller)->get(route('seller.orders.show', $order->sellerOrders()->sole()))->assertOk()->assertSee('Blue gate')->assertSee('1000');
+        $this->actingAs(User::factory()->administrator()->create())->get(route('admin.orders.show', $order))->assertOk()->assertSee('Blue gate')->assertSee('Metro Manila');
         $this->assertDatabaseHas('order_items', [
             'product_id' => $product->id,
             'product_name' => $product->name,
@@ -207,6 +216,34 @@ class CheckoutTest extends TestCase
         $this->actingAs($customer)->post(route('checkout.store'), [...$this->delivery(), 'phone' => '123'])->assertSessionHasErrors('phone');
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('delivery_addresses', 0);
+    }
+
+    public function test_checkout_requires_province_and_four_digit_postal_code(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), [...$this->delivery(), 'province' => '', 'postal_code' => '123'])
+            ->assertSessionHasErrors(['province', 'postal_code']);
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('delivery_addresses', 0);
+    }
+
+    public function test_older_saved_address_can_be_completed_at_checkout(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        DeliveryAddress::factory()->for($customer, 'user')->create(['province' => null, 'postal_code' => null, 'address_line' => 'Older street']);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+
+        $this->actingAs($customer)->get(route('checkout.create'))
+            ->assertOk()->assertSee('Older street')->assertSee('Fill in any missing details');
+        $this->post(route('checkout.store'), [...$this->delivery(), 'address_line' => 'Older street'])
+            ->assertSessionHas('order_placed');
+        $this->assertDatabaseHas('orders', ['address_line' => 'Older street', 'province' => 'Metro Manila', 'postal_code' => '1000']);
     }
 
     public function test_order_email_waits_for_gmail_credentials(): void
@@ -246,7 +283,7 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($customer)->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
-            ->assertSee('Choose color and size')
+            ->assertSee('Choose a variant')
             ->assertSee($navy->id);
 
         $this->actingAs($customer)->post(route('cart.store', $product), ['quantity' => 1])
@@ -526,7 +563,7 @@ class CheckoutTest extends TestCase
     }
 
     /**
-     * @return array{recipient_name: string, phone: string, address_line: string, city: string}
+     * @return array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string}
      */
     private function delivery(): array
     {
@@ -535,6 +572,8 @@ class CheckoutTest extends TestCase
             'phone' => '+639171234567',
             'address_line' => '10 Market Street',
             'city' => 'Manila',
+            'province' => 'Metro Manila',
+            'postal_code' => '1000',
         ];
     }
 }

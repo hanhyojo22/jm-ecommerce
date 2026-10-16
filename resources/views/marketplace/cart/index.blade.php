@@ -88,8 +88,8 @@
                                                     </div>
 
                                                     <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $isUnavailable ? 'opacity-60' : '' }}">
-                                                        @if ($item->product->thumbnail)
-                                                            <img src="{{ Storage::disk('product_images')->url($item->product->thumbnail->path) }}" alt="{{ $item->product->name }}" width="96" height="96" loading="lazy" class="h-full w-full object-cover">
+                                                        @if ($item->imagePath())
+                                                            <img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="{{ $item->product->name }}" width="96" height="96" loading="lazy" class="h-full w-full object-cover">
                                                         @else
                                                             <div class="grid h-full place-items-center text-lg font-bold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($store->name, 0, 1)) }}</div>
                                                         @endif
@@ -98,7 +98,7 @@
                                                     <div class="min-w-0">
                                                         <h4 class="break-words text-sm font-semibold leading-5 text-ink sm:text-base"><a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $item->product->name }}</a></h4>
                                                         @if ($item->variant)<p class="mt-1 text-xs font-medium text-brand">{{ $item->variant->label() }}</p>@endif
-                                                        <p class="mt-1 text-sm text-muted">₱{{ number_format($item->product->price, 2) }} each</p>
+                                                        <p class="mt-1 text-sm text-muted">₱{{ number_format($item->unitPrice(), 2) }} each</p>
                                                         @if ($isUnavailable)
                                                             <p class="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">{{ $item->product_variant_id === null && $item->product->variants->isNotEmpty() ? 'Choose a color and size again' : ($item->product->status !== 'active' || ($item->product_variant_id !== null && $item->variant === null) ? 'No longer available' : ($availableStock < 1 ? 'Sold out' : 'Only '.$availableStock.' available')) }}</p>
                                                         @else

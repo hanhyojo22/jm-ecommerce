@@ -1,6 +1,6 @@
 @php
     $editing = $product !== null;
-    $existingVariants = $product?->variants?->map(fn ($variant) => $variant->only(['id', 'color', 'size', 'sku', 'stock_quantity']))->all() ?? [];
+    $existingVariants = $product?->variants?->map(fn ($variant) => [...$variant->only(['id', 'color', 'size', 'sku', 'stock_quantity', 'price']), 'image_urls' => $variant->images->map(fn ($image) => Storage::disk('product_images')->url($image->path))->all()])->all() ?? [];
     $variantRows = collect(old('variants', $existingVariants))
         ->values()
         ->map(fn ($variant, $index) => ['key' => $index, ...$variant])
@@ -9,8 +9,12 @@
 
 <div class="page-shell">
     <div class="page-container">
+        @if ($editing && $product->moderation_reason)<div class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong>Administrator feedback</strong><p class="mt-1 whitespace-pre-line">{{ $product->moderation_reason }}</p></div>@endif
+        @if ($editing && in_array($product->status, ['pending', 'inactive'], true))
+            <div class="mb-5 rounded-xl border border-line bg-white p-5"><x-marketplace.product-status :status="$product->status" /><p class="mt-3 text-sm text-muted">{{ $product->status === 'pending' ? 'Your submission is under review. Editing is paused until the administrator records a decision.' : 'This listing is suspended. Contact the platform administrator before making changes.' }}</p><a href="{{ route('seller.products.index') }}" class="mt-3 inline-flex min-h-11 items-center font-semibold text-brand">Back to products</a></div>
+        @else
         <form method="POST" enctype="multipart/form-data" action="{{ $formAction }}"
-            x-data="{ dirty: false, saving: false, previews: [], variants: @js($variantRows), nextKey: {{ count($variantRows) }}, addVariant() { this.variants.push({ key: this.nextKey++, color: '', size: '', sku: '', stock_quantity: 0 }); this.dirty = true } }"
+            x-data="{ dirty: false, saving: false, previews: [], variants: @js($variantRows), nextKey: {{ count($variantRows) }}, addVariant() { this.variants.push({ key: this.nextKey++, color: '', size: '', sku: '', stock_quantity: 0, price: '' }); this.dirty = true } }"
             x-init="window.addEventListener('beforeunload', e => { if (dirty && !saving) { e.preventDefault(); e.returnValue = ''; } })"
             @submit="saving = true; dirty = false"
             class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -20,7 +24,7 @@
             <div class="min-w-0 space-y-6">
                 <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-details-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-8 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-bold text-brand" aria-hidden="true">1</span>
+                        <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">1</span>
                         <div><h2 id="product-details-heading" class="text-lg font-semibold text-ink">Product details</h2><p class="mt-1 text-sm text-muted">Describe the item customers will receive.</p></div>
                     </div>
                     <div class="mt-6 space-y-5">
@@ -36,11 +40,11 @@
 
                 <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-photos-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-8 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-bold text-brand" aria-hidden="true">2</span>
+                        <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">2</span>
                         <div><h2 id="product-photos-heading" class="text-lg font-semibold text-ink">Product photos</h2><p class="mt-1 text-sm text-muted">Show the front, back, details, and available colors.</p></div>
                     </div>
-                    @if ($editing && $product->images->isNotEmpty())
-                        <div class="mt-5"><p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Current photos</p><div class="flex gap-3 overflow-x-auto">@foreach ($product->images as $image)<img src="{{ Storage::disk('product_images')->url($image->path) }}" alt="Existing product image {{ $loop->iteration }}" class="size-20 shrink-0 rounded-[10px] border border-line object-cover">@endforeach</div></div>
+                    @if ($editing && $product->images->whereNull('product_variant_id')->isNotEmpty())
+                        <div class="mt-5"><p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Current photos</p><div class="flex gap-3 overflow-x-auto">@foreach ($product->images->whereNull('product_variant_id') as $image)<img src="{{ Storage::disk('product_images')->url($image->path) }}" alt="Existing product image {{ $loop->iteration }}" class="size-20 shrink-0 rounded-[10px] border border-line object-cover">@endforeach</div></div>
                     @endif
                     <div class="mt-5 rounded-[14px] border-2 border-dashed border-line bg-canvas p-5 text-center transition focus-within:border-brand">
                         <label for="images" class="block cursor-pointer text-sm font-semibold text-brand">Choose product photos</label>
@@ -57,8 +61,8 @@
 
                 <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-pricing-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-8 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-bold text-brand" aria-hidden="true">3</span>
-                        <div><h2 id="product-pricing-heading" class="text-lg font-semibold text-ink">Price and inventory</h2><p class="mt-1 text-sm text-muted">All color and size options share this price.</p></div>
+                        <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">3</span>
+                        <div><h2 id="product-pricing-heading" class="text-lg font-semibold text-ink">Price and inventory</h2><p class="mt-1 text-sm text-muted">Set the base price. Each variant can use a different price and its own photos.</p></div>
                     </div>
                     <div class="mt-6 grid gap-5 sm:grid-cols-2">
                         <div><label for="price" class="text-sm font-semibold">Price (PHP) *</label><input id="price" name="price" type="number" min="0.01" step="0.01" value="{{ old('price', $product?->price) }}" required @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><x-input-error :messages="$errors->get('price')" class="mt-2" /></div>
@@ -70,7 +74,7 @@
 
                 <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-variants-heading">
                     <div class="flex flex-wrap items-start justify-between gap-4">
-                        <div class="flex items-start gap-3"><span class="grid size-8 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-bold text-brand" aria-hidden="true">4</span><div><h2 id="product-variants-heading" class="text-lg font-semibold text-ink">Color and size options</h2><p class="mt-1 max-w-xl text-sm text-muted">Add one row for each combination customers can buy. Each needs its own SKU and stock count.</p></div></div>
+                        <div class="flex items-start gap-3"><span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">4</span><div><h2 id="product-variants-heading" class="text-lg font-semibold text-ink">Color and size options</h2><p class="mt-1 max-w-xl text-sm text-muted">Add one row for each combination customers can buy. Each needs its own SKU and stock count.</p></div></div>
                         <button type="button" @click="addVariant()" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-brand px-4 text-sm font-semibold text-brand transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-brand">+ Add option</button>
                     </div>
                     <p x-show="variants.length === 0" class="mt-5 rounded-[10px] bg-canvas p-4 text-sm text-muted">No options added. Customers will buy this product using the single stock quantity above.</p>
@@ -84,7 +88,10 @@
                                     <label class="text-sm font-semibold text-ink">Size *<input :name="'variants[' + index + '][size]'" x-model="variant.size" required maxlength="60" @input="dirty = true" placeholder="e.g. Medium" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"></label>
                                     <label class="text-sm font-semibold text-ink">Option SKU *<input :name="'variants[' + index + '][sku]'" x-model="variant.sku" required maxlength="100" @input="dirty = true" placeholder="e.g. TOTE-NAVY-M" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"></label>
                                     <label class="text-sm font-semibold text-ink">Stock *<input :name="'variants[' + index + '][stock_quantity]'" x-model="variant.stock_quantity" required type="number" min="0" @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"></label>
+                                    <label class="text-sm font-semibold text-ink">Option price (PHP)<input :name="'variants[' + index + '][price]'" x-model="variant.price" type="number" min="0.01" step="0.01" @input="dirty = true" placeholder="Use base price" class="field-control mt-1.5"><span class="mt-1 block text-xs font-normal text-muted">Leave empty to use the base price.</span></label>
+                                    <label class="min-w-0 text-sm font-semibold text-ink">Option photos<input :name="'variants[' + index + '][images][]'" type="file" multiple accept="image/jpeg,image/png,image/webp" @change="dirty = true" class="mt-2 block w-full text-xs"><span class="mt-2 block text-xs font-normal text-muted">Up to 4 photos per option, 5 MB each. Shared product photos are used when no option photo is uploaded.</span></label>
                                 </div>
+                                <div x-show="variant.image_urls?.length" class="mt-3 flex flex-wrap gap-2"><template x-for="url in (variant.image_urls || [])" :key="url"><img :src="url" alt="Existing option photo" class="size-16 rounded-lg border border-line object-cover"></template></div>
                             </div>
                         </template>
                     </div>
@@ -100,11 +107,11 @@
             <aside class="space-y-6 lg:sticky lg:top-6 lg:h-fit">
                 <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm">
                     <h2 class="font-semibold text-ink">Listing settings</h2>
-                    <p class="mt-1 text-sm text-muted">{{ $editing ? 'Administrators control whether a listing can be activated.' : 'New listings are saved as drafts and require administrator approval before they appear in the marketplace.' }} Add a category, description, and photo before requesting activation.</p>
+                    <p class="mt-1 text-sm leading-6 text-muted">Save your draft, then submit it for review from Products. Add a category, description, and photo before submitting. Saving changes to a published listing returns it to Draft for a fresh review.</p>
                     <div class="mt-4 space-y-2">
-                        @foreach (['draft' => 'Draft', 'active' => 'Active', 'inactive' => 'Inactive'] as $value => $label)
+                        @foreach (['draft' => 'Save as draft'] as $value => $label)
                             @if ($editing && ($value !== 'active' || $product->status === 'active'))
-                                <label class="flex min-h-11 items-center gap-3 rounded-[10px] border p-3 has-[:checked]:border-brand has-[:checked]:bg-blue-50"><input type="radio" name="status" value="{{ $value }}" @checked(old('status', $product?->status ?? 'draft') === $value) @change="dirty = true" class="text-brand focus:ring-brand"><span class="text-sm font-semibold">{{ $label }}</span></label>
+                                <label class="flex min-h-11 items-center gap-3 rounded-[10px] border p-3 has-[:checked]:border-brand has-[:checked]:bg-blue-50"><input type="radio" name="status" value="{{ $value }}" checked @change="dirty = true" class="text-brand focus:ring-brand"><span class="text-sm font-semibold">{{ $label }}</span></label>
                             @endif
                         @endforeach
                     </div>
@@ -116,5 +123,6 @@
                 </div>
             </aside>
         </form>
+        @endif
     </div>
 </div>

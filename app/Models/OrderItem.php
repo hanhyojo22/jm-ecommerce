@@ -20,6 +20,7 @@ class OrderItem extends Model
         'unit_price',
         'quantity',
         'line_total',
+        'image_path',
     ];
 
     public function product(): BelongsTo

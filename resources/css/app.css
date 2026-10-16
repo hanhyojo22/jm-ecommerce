@@ -1,3 +1,6 @@
+@import './product-detail.css';
+@import './seller-center.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,12 +8,12 @@
 @layer base {
     :root {
         color-scheme: light;
-        --color-bg: #f8fafc;
+        --color-bg: #f6f8fc;
         --color-surface: #ffffff;
-        --color-fg: #0f172a;
+        --color-fg: #182c48;
         --color-muted: #596b83;
-        --color-border: #e2e8f0;
-        --color-accent: #2563eb;
+        --color-border: #e3e8f1;
+        --color-accent: #205bf4;
         --color-accent-hover: #1d4ed8;
         --color-success: #166534;
         --color-warning: #f59e0b;
@@ -123,12 +126,18 @@
     line-height: 1.2;
 }
 
-.seller-workspace,
+.seller-workspace {
+    background: #f8fafc;
+}
+
 .customer-workspace {
     background: #f4f7fb;
 }
 
-.seller-workspace .workspace-main,
+.seller-workspace .workspace-main {
+    background: #f8fafc;
+}
+
 .customer-workspace .workspace-main {
     background: #f4f7fb;
 }
@@ -151,6 +160,12 @@
     max-width: 1500px;
     padding-top: 1.25rem;
     padding-bottom: 0.5rem;
+}
+
+/* Swiss seller center: the page header closes with a hairline, like a ruled grid. */
+.seller-workspace .workspace-main > header:not([data-header-design]) {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 1rem;
 }
 
 :is(.seller-workspace, .customer-workspace) .page-shell {
@@ -188,8 +203,9 @@
 }
 
 .seller-workspace :where(.section-card, .content-card) {
-    border-color: #dce4ef;
-    box-shadow: 0 2px 10px rgb(15 23 42 / 0.035);
+    border-color: var(--color-border);
+    border-radius: 6px;
+    box-shadow: none;
 }
 
 .seller-workspace .empty-state { padding-block: 2.5rem; }
@@ -197,15 +213,15 @@
 
 .seller-workspace .seller-panel,
 .seller-workspace .seller-kpi-card {
-    border: 1px solid #e3eaf2;
-    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
     background: #fff;
-    box-shadow: 0 2px 9px rgb(15 23 42 / 0.035);
+    box-shadow: none;
 }
 
 .seller-workspace .seller-panel h2 {
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.3;
 }
 
@@ -223,7 +239,9 @@
     height: 3.3rem;
     flex: none;
     place-items: center;
-    border-radius: 10px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #334155;
 }
 
 .seller-kpi-icon svg {
@@ -237,31 +255,31 @@
     display: block;
 }
 
-.seller-kpi-label { font-size: .75rem; font-weight: 500; }
-.seller-kpi-value { margin-top: .25rem; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.025em; }
-.seller-kpi-context { margin-top: .5rem; font-size: .7rem; line-height: 1.35; color: #64748b; }
+.seller-kpi-label { font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--color-muted); }
+.seller-kpi-value { margin-top: .25rem; font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.seller-kpi-context { margin-top: .5rem; font-size: .7rem; line-height: 1.35; color: var(--color-muted); }
 
 .seller-overview-grid { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr); }
 .seller-overview-grid-secondary { grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); }
 .seller-overview-grid-footer { grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); }
 
-.seller-period { border: 1px solid #dce5f0; border-radius: 8px; padding: .45rem .7rem; font-size: .75rem; font-weight: 600; }
+.seller-period { border: 1px solid var(--color-border); border-radius: 4px; background: #fff; color: var(--color-muted); padding: .4rem .6rem; font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 .seller-panel-link { display: inline-flex; min-height: 1.5rem; align-items: center; color: var(--color-accent); font-size: .75rem; font-weight: 600; white-space: nowrap; }
-.seller-empty { display: flex; min-height: 154px; flex-direction: column; align-items: center; justify-content: center; border-top: 1px solid #e8edf4; margin-top: .65rem; padding: .75rem; text-align: center; }
+.seller-empty { display: flex; min-height: 154px; flex-direction: column; align-items: center; justify-content: center; border-top: 1px solid var(--color-border); margin-top: .65rem; padding: .75rem; text-align: center; }
 .seller-primary-button,
-.seller-outline-button { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: .5rem; border-radius: 9px; padding: .5rem 1rem; font-size: .75rem; font-weight: 700; text-align: center; }
+.seller-outline-button { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: .5rem; border-radius: 4px; padding: .5rem 1rem; font-size: .75rem; font-weight: 600; text-align: center; }
 .seller-primary-button { background: var(--color-accent); color: white; }
 .seller-primary-button:hover { background: var(--color-accent-hover); }
-.seller-outline-button { border: 1px solid #d5e0ee; background: white; color: #101c38; }
+.seller-outline-button { border: 1px solid var(--color-border); background: white; color: #101c38; }
 .seller-outline-button:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.seller-action { display: flex; min-width: 0; min-height: 3.8rem; align-items: center; gap: .65rem; border: 1px solid #e6ecf3; border-radius: 9px; padding: .5rem; }
-.seller-action:hover { border-color: #adc7ff; background: #f8fbff; }
+.seller-action { display: flex; min-width: 0; min-height: 3.8rem; align-items: center; gap: .65rem; border: 1px solid var(--color-border); border-radius: 4px; padding: .5rem; }
+.seller-action:hover { border-color: var(--color-accent); }
 .seller-action-icon { width: 2.5rem; height: 2.5rem; font-size: 1.4rem; font-weight: 700; }
 .seller-action strong,
 .seller-action small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seller-action strong { font-size: .75rem; }
-.seller-action small { margin-top: .1rem; color: #64748b; font-size: .65rem; }
-.seller-help-item { border-bottom: 1px solid #edf1f6; padding: .35rem 0; color: #536683; }
+.seller-action small { margin-top: .1rem; color: var(--color-muted); font-size: .65rem; }
+.seller-help-item { border-bottom: 1px solid var(--color-border); padding: .35rem 0; color: var(--color-muted); }
 .seller-help-item a:hover { color: var(--color-accent); text-decoration: underline; }
 
 @media (max-width: 1199px) {
@@ -471,7 +489,32 @@
 }
 
 [data-workspace-header='seller'] a[aria-current='page'] {
-    box-shadow: inset 3px 0 0 #79a9ff;
+    box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+/* Swiss seller center: one radius scale for the whole workspace.
+   Containers and panels take 6px, controls and tags take 4px; shadows are
+   removed so surfaces read as hairlines instead of floating cards. */
+.seller-workspace .rounded-\[14px\],
+.seller-workspace .rounded-\[12px\],
+.seller-workspace .rounded-xl,
+.seller-workspace .rounded-2xl {
+    border-radius: 6px;
+}
+
+.seller-workspace .rounded-\[10px\],
+.seller-workspace .rounded-lg,
+.seller-workspace :where(.field-control) {
+    border-radius: 4px;
+}
+
+.seller-workspace [class*='ring-1'][class*='ring-inset'],
+.seller-workspace .status-badge {
+    border-radius: 4px;
+}
+
+.seller-workspace :where(.shadow-sm, .shadow-md) {
+    box-shadow: none;
 }
 
 [data-header-role='admin'] select {
@@ -519,4 +562,23 @@
 }
 body:has(footer) [data-cookie-floating] {
     display: none;
+}
+
+/* Marketplace handoff: shared tokens and real product imagery. */
+.marketplace-hero { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; min-height: 365px; overflow: hidden; border: 1px solid #dfe7f5; border-radius: 22px; background: #eaf0fa; }
+.marketplace-hero-copy { z-index: 1; padding: 48px 40px; }
+.marketplace-hero-art { position: relative; min-width: 0; }
+.marketplace-hero-orbit { position: absolute; width: 420px; height: 420px; top: -35px; left: 5%; border: 1px solid #d7e3f6; border-radius: 50%; box-shadow: 0 0 0 44px #eaf0fa, 0 0 0 45px #d7e3f6; }
+.marketplace-hero-photo { position: absolute; overflow: hidden; width: 46%; height: 70%; top: 12%; border: 8px solid white; border-radius: 18px; background: white; box-shadow: 0 20px 40px #182c4820; }
+.marketplace-hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+.marketplace-hero-photo-0 { left: 3%; transform: rotate(-8deg); }
+.marketplace-hero-photo-1 { right: 6%; top: 28%; width: 40%; height: 57%; transform: rotate(10deg); }
+.marketplace-hero-note { position: absolute; right: 5%; bottom: 7%; display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 14px; background: white; box-shadow: 0 12px 24px #182c4810; }
+@media (max-width: 767px) {
+    .marketplace-hero { grid-template-columns: 1fr; min-height: 560px; }
+    .marketplace-hero-copy { padding: 28px 24px 0; }
+    .marketplace-hero-art { min-height: 240px; width: min(100%, 360px); margin-left: auto; }
+    .marketplace-hero-photo { top: 8%; height: 77%; }
+    .marketplace-hero-photo-1 { top: 20%; height: 65%; }
+    .marketplace-hero-note { bottom: 5%; padding: 10px 12px; }
 }

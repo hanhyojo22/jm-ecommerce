@@ -15,13 +15,13 @@ export default {
                 sans: ['Inter', ...defaultTheme.fontFamily.sans],
             },
             colors: {
-                canvas: '#F8FAFC',
+                canvas: '#F6F8FC',
                 surface: '#FFFFFF',
-                ink: '#0F172A',
+                ink: '#182C48',
                 muted: '#596B83',
-                line: '#E2E8F0',
+                line: '#E3E8F1',
                 brand: {
-                    DEFAULT: '#2563EB',
+                    DEFAULT: '#205BF4',
                     hover: '#1D4ED8',
                 },
                 success: '#166534',

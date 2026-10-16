@@ -108,6 +108,7 @@
             </section>
         </main>
     </div>
+    <x-marketplace.footer />
     <x-cookie-consent />
 </body>
 </html>

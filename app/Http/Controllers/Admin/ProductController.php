@@ -24,7 +24,7 @@ class ProductController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'store_id' => ['nullable', 'exists:stores,id'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'status' => ['nullable', 'in:active,draft,inactive'],
+            'status' => ['nullable', 'in:active,draft,inactive,pending,changes_required,rejected'],
             'added' => ['nullable', 'in:last_30_days,last_90_days,this_year'],
             'sort' => ['nullable', 'in:newest,oldest,recently_updated,name'],
         ]);
@@ -92,17 +92,26 @@ class ProductController extends Controller
     {
         $this->authorizeAdmin($request);
         $data = $request->validate([
-            'status' => ['required', 'in:active,inactive'],
+            'status' => ['required', 'in:active,inactive,changes_required,rejected'],
             'reason' => ['required', 'string', 'min:10', 'max:1000'],
         ]);
 
         DB::transaction(function () use ($request, $product, $data): void {
-            $product = Product::query()->lockForUpdate()->findOrFail($product->id);
+            $product = Product::query()->with('store.tenant')->lockForUpdate()->findOrFail($product->id);
             $oldStatus = $product->status;
+            if ($data['status'] === 'active' && ($product->store->status !== 'active' || $product->store->tenant->status !== 'active')) {
+                throw ValidationException::withMessages(['status' => 'The store and seller must be approved and active before publication.']);
+            }
             if ($data['status'] === 'active' && $oldStatus !== 'active' && (! filled($product->description) || $product->category_id === null || ! $product->images()->exists())) {
                 throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before activating this listing.']);
             }
-            $product->update(['status' => $data['status']]);
+            if ($data['status'] === 'active' && ! $product->images()->whereNull('product_variant_id')->exists() && $product->variants()->whereDoesntHave('images')->exists()) {
+                throw ValidationException::withMessages(['status' => 'Each variant needs photos or a shared product photo before publication.']);
+            }
+            if (! array_key_exists($data['status'], $product->moderationOptions())) {
+                throw ValidationException::withMessages(['status' => 'This decision is not available for the current listing state.']);
+            }
+            $product->update(['status' => $data['status'], 'moderation_reason' => $data['reason']]);
 
             AuditLog::query()->create([
                 'actor_user_id' => $request->user()->id,

@@ -7,7 +7,7 @@
     </x-slot>
 
     <div class="page-shell">
-        <div class="page-container">
+        <div class="page-container seller-workspace-page">
             @if (session('status') || $canUndo)
                 <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/20 bg-success/10 px-4 py-3" role="status">
                     <p class="text-sm font-medium text-success">{{ session('status', 'A recent text-only save can still be undone.') }}</p>
@@ -40,7 +40,7 @@
                 <div class="min-w-0 space-y-5">
                 <section class="min-w-0 rounded-xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="store-profile-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-blue-50 text-brand" aria-hidden="true">
+                        <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5 5 4h14l2 5.5M4 10h16v10H4zM9 20v-6h6v6M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>
                         </span>
                         <div>
@@ -103,7 +103,7 @@
 
                 <section class="min-w-0 rounded-xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="contact-details-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-blue-50 text-brand" aria-hidden="true">
+                        <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.5 7-12a7 7 0 0 0-14 0c0 6.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
                         </span>
                         <div>
@@ -143,7 +143,7 @@
                     <section class="min-w-0 overflow-hidden rounded-xl border border-line bg-white shadow-sm" aria-labelledby="store-preview-heading">
                         <div class="flex items-center justify-between gap-2 px-3 py-3">
                             <h2 id="store-preview-heading" class="flex min-w-0 items-center gap-1.5 text-base font-semibold leading-5 text-ink">
-                                <span class="grid size-6 shrink-0 place-items-center rounded-md bg-blue-50 text-brand" aria-hidden="true"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                                <span class="grid size-6 shrink-0 place-items-center rounded bg-slate-100 text-slate-600" aria-hidden="true"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
                                 Store details
                             </h2>
                             <span class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold {{ $store->status === 'active' ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-muted' }}">
@@ -151,7 +151,6 @@
                             </span>
                         </div>
                         <div class="relative overflow-hidden bg-ink px-5 py-6 text-white">
-                            <div class="pointer-events-none absolute -right-12 -top-16 size-48 rounded-full border-[30px] border-white/[0.03]" aria-hidden="true"></div>
                             <div class="relative flex min-w-0 items-center gap-4">
                                 @if ($store->logo_path)
                                     <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" x-show="!logoPreview && !removeLogo" class="size-16 shrink-0 rounded-xl border-2 border-white/60 bg-white object-cover">

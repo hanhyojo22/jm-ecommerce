@@ -20,6 +20,66 @@ class CatalogTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_product_suggestions_rank_direct_names_and_limit_results(): void
+    {
+        $exact = $this->product(['name' => 'Arc']);
+        $prefix = $this->product(['name' => 'Arc Keyboard']);
+        $word = $this->product(['name' => 'Travel Arc Headset']);
+        $ranked = $this->getJson(route('catalog.suggestions', ['q' => 'arc']))->assertOk()->json('items');
+        $this->assertSame([$exact->name, $prefix->name, $word->name], array_column($ranked, 'name'));
+
+        foreach (range(1, 9) as $number) {
+            $this->product(['name' => "Arc accessory {$number}"]);
+        }
+
+        $items = $this->getJson(route('catalog.suggestions', ['q' => 'arc']))
+            ->assertOk()
+            ->assertJsonCount(8, 'items')
+            ->json('items');
+
+        $this->assertSame($exact->name, $items[0]['name']);
+        $this->assertContains($prefix->name, array_column($items, 'name'));
+        $this->assertNotContains($word->name, array_column($items, 'name'));
+        $this->getJson(route('catalog.suggestions', ['q' => 'a']))->assertJsonPath('items', []);
+        $this->getJson(route('catalog.suggestions', ['q' => 'arc%']))->assertJsonPath('items', []);
+    }
+
+    public function test_product_suggestions_only_include_approved_public_products_from_active_stores(): void
+    {
+        $visible = $this->product(['name' => 'Cedar Lamp']);
+        foreach (['draft', 'pending', 'changes_required', 'rejected', 'inactive'] as $status) {
+            $this->product(['name' => "Cedar {$status} Lamp", 'status' => $status]);
+        }
+        $this->product(['name' => 'Cedar inactive store'], 'active', 'inactive');
+        $this->product(['name' => 'Cedar suspended tenant'], 'suspended');
+        $deleted = $this->product(['name' => 'Cedar deleted Lamp']);
+        $deleted->delete();
+
+        $this->getJson(route('catalog.suggestions', ['q' => 'cedar']))
+            ->assertOk()
+            ->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.name', $visible->name)
+            ->assertJsonPath('items.0.store', $visible->store->name);
+    }
+
+    public function test_product_suggestions_show_variant_price_image_and_sold_out_status(): void
+    {
+        $available = $this->product(['name' => 'Copper Headphones', 'price' => '299.00', 'stock_quantity' => 2]);
+        $available->variants()->create(['color' => 'Black', 'size' => 'Standard', 'sku' => 'COPPER-BLACK', 'stock_quantity' => 2, 'price' => '249.50']);
+        $available->images()->create(['path' => 'products/copper.jpg', 'position' => 0]);
+        $soldOut = $this->product(['name' => 'Copper Speaker', 'stock_quantity' => 0]);
+        $soldOut->variants()->create(['color' => 'Blue', 'size' => 'Standard', 'sku' => 'COPPER-BLUE', 'stock_quantity' => 0, 'price' => null]);
+
+        $items = $this->getJson(route('catalog.suggestions', ['q' => 'copper']))->assertOk()->json('items');
+
+        $this->assertSame('₱249.50', $items[0]['price']);
+        $this->assertFalse($items[0]['sold_out']);
+        $this->assertStringContainsString('products/copper.jpg', $items[0]['image']);
+        $this->assertSame(route('catalog.show', [$available->store->slug, $available->slug]), $items[0]['url']);
+        $this->assertTrue($items[1]['sold_out']);
+        $this->assertSame('₱199.00', $items[1]['price']);
+    }
+
     public function test_product_page_exposes_search_metadata_for_a_published_listing(): void
     {
         $product = $this->product(['description' => 'A useful canvas tote.', 'price' => '19.99']);
@@ -33,6 +93,24 @@ class CatalogTest extends TestCase
             ->assertSee('InStock');
     }
 
+    public function test_long_product_description_can_expand_without_a_generated_preview(): void
+    {
+        $longDescription = str_repeat('RGB lighting with tactile mechanical switches and aluminum housing. ', 6).'Includes a detachable wrist rest.';
+        $longProduct = $this->product(['description' => $longDescription]);
+
+        $this->get(route('catalog.show', [$longProduct->store->slug, $longProduct->slug]))
+            ->assertSee('<details class="pd-description-disclosure">', false)
+            ->assertSee('Read product description')
+            ->assertDontSee('pd-description-preview')
+            ->assertSee('Includes a detachable wrist rest.');
+
+        $shortProduct = $this->product(['description' => 'A compact keyboard.']);
+
+        $this->get(route('catalog.show', [$shortProduct->store->slug, $shortProduct->slug]))
+            ->assertSee('A compact keyboard.')
+            ->assertDontSee('pd-description-disclosure');
+    }
+
     public function test_homepage_shows_categories_and_only_public_products(): void
     {
         $category = Category::create(['name' => 'Home essentials', 'slug' => 'home-essentials', 'is_active' => true]);
@@ -41,7 +119,7 @@ class CatalogTest extends TestCase
 
         $this->get(route('home'))
             ->assertOk()
-            ->assertSee('Shop by category')
+            ->assertSee('Find your kind of good.')
             ->assertSee($category->name)
             ->assertSee('id="marketplace-search"', false)
             ->assertSee('Mobile marketplace navigation')
@@ -318,7 +396,7 @@ class CatalogTest extends TestCase
             ->assertOk()
             ->assertSee('data-module-url=', false)
             ->assertSee(Storage::disk('product_images')->url($path))
-            ->assertSee(Storage::disk('product_images')->url($secondPath))
+            ->assertSee('Choose a product image')
             ->assertSee('aria-label="Previous product image"', false)
             ->assertSee('aria-label="Next product image"', false)
             ->assertSee('aria-label="Enlarged product image"', false);

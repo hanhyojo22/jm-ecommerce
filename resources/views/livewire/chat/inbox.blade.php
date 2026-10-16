@@ -10,7 +10,7 @@
             </div>
         </x-marketplace.account-shell>
     @else
-        <div class="page-shell seller-messages-page"><div class="page-container seller-messages-container">
+        <div class="page-shell seller-messages-page"><div class="page-container seller-messages-container seller-workspace-page">
             <div class="mb-5"><h1 class="text-[28px] font-bold tracking-tight text-ink">Messages</h1><p class="mt-1 text-sm text-muted">Respond to customers about your products and orders.</p></div>
             <div class="grid h-[calc(100dvh-15rem)] min-h-[28rem] min-w-0 overflow-hidden rounded-[14px] border border-line bg-surface shadow-sm sm:h-[calc(100dvh-11rem)] lg:min-h-[32rem] lg:grid-cols-[minmax(18rem,34%)_minmax(0,1fr)]">
                 @include('livewire.chat.inbox-content')

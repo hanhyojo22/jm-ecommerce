@@ -90,20 +90,23 @@
                     </div>
                 @else
                     <a href="{{ route('home') }}" class="flex min-w-[140px] shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2" aria-label="JMMart marketplace home">
-                        <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-lg font-bold leading-none text-white" aria-hidden="true">J</span>
-                        <span class="text-xl font-bold tracking-[-0.02em] text-ink">JMMart</span><span class="inline-block size-1.5 rounded-full bg-warning" aria-hidden="true"></span>
+                        <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-base font-bold leading-none text-white" aria-hidden="true">jm</span>
+                        <span class="text-2xl font-bold tracking-[-0.04em] text-ink">JM<span class="text-brand">Mart.</span></span>
                     </a>
                 @endif
             </div>
 
-            <form method="GET" action="{{ $isSellerWorkspace ? route('seller.products.index') : route('catalog.index') }}" x-data="{ query: @js($isSellerWorkspace ? request('search', $search) : $search), loading: false }" @submit="loading = true" class="order-3 min-w-0 basis-full min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1">
+            <form method="GET" action="{{ $isSellerWorkspace ? route('seller.products.index') : route('catalog.index') }}" x-data="{{ $isSellerWorkspace ? '{ query: '.Js::from(request('search', $search)).', loading: false }' : 'marketplaceSuggestions('.Js::from($search).', '.Js::from(route('catalog.suggestions')).', '.Js::from(route('catalog.index')).')' }}" @submit="loading = true" @unless ($isSellerWorkspace) @click.outside="open = false" @endunless class="relative order-3 min-w-0 basis-full min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1">
                 <label for="marketplace-search" class="flex h-[46px] items-center gap-2 rounded-[10px] border border-line bg-canvas pl-3.5 pr-2 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
                     <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
-<input id="marketplace-search" name="{{ $isSellerWorkspace ? 'search' : 'q' }}" aria-label="{{ $isSellerWorkspace ? 'Search your products by name or SKU' : 'Search products, brands, and stores' }}" @if ($isSellerWorkspace) data-seller-shortcut="search" aria-keyshortcuts="S" @endif x-model="query" value="{{ $isSellerWorkspace ? request('search', $search) : $search }}" autocomplete="off" placeholder="{{ $isSellerWorkspace ? 'Search your products' : 'Search products and stores' }}" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink placeholder:text-muted focus:ring-0">
-                    <button x-cloak x-show="query.length" type="button" @click="query = ''; $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+<input id="marketplace-search" name="{{ $isSellerWorkspace ? 'search' : 'q' }}" aria-label="{{ $isSellerWorkspace ? 'Search your products by name or SKU' : 'Search products, brands, and stores' }}" @if ($isSellerWorkspace) data-seller-shortcut="search" aria-keyshortcuts="S" @else role="combobox" aria-autocomplete="list" aria-controls="marketplace-search-results" :aria-expanded="open.toString()" :aria-activedescendant="active >= 0 ? 'marketplace-result-' + active : null" @input.debounce.275ms="load()" @focus="load()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter="select($event)" @keydown.escape="open = false" @endif x-model="query" value="{{ $isSellerWorkspace ? request('search', $search) : $search }}" autocomplete="off" placeholder="{{ $isSellerWorkspace ? 'Search your products' : 'Search products and stores' }}" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink placeholder:text-muted focus:ring-0">
+                    <button x-cloak x-show="query.length" type="button" @click="{{ $isSellerWorkspace ? "query = ''" : 'clear()' }}; $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
                     <button type="submit" class="h-[34px] rounded-[8px] bg-brand px-[18px] py-0 text-[15px] font-semibold text-white transition hover:bg-brand-hover">Search</button>
                     <span x-cloak x-show="loading" class="text-xs font-semibold text-brand">Searching…</span>
                 </label>
+                @unless ($isSellerWorkspace)
+                    @include('components.marketplace.search-suggestions', ['listId' => 'marketplace-search-results', 'optionPrefix' => 'marketplace-result-'])
+                @endunless
             </form>
 
             <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 min-[641px]:order-none min-[641px]:ml-0">
@@ -193,43 +196,44 @@
         <div x-cloak x-show="drawerOpen" x-transition.opacity class="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
             <button type="button" @click="closeDrawer" class="h-full w-full" tabindex="-1" aria-label="Close navigation menu"></button>
         </div>
-        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden {{ $isSellerWorkspace || $isCustomerWorkspace ? 'bg-[#111c32] text-white' : 'bg-white text-ink' }}" role="dialog" aria-modal="true" aria-label="{{ $isSellerWorkspace ? 'Seller Center navigation' : ($isCustomerWorkspace ? 'My account navigation' : 'Marketplace navigation') }}">
-            <div class="flex h-[56px] items-center justify-between border-b px-5 {{ $isSellerWorkspace || $isCustomerWorkspace ? 'border-white/10' : 'border-line' }}">
+        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden {{ $isCustomerWorkspace ? 'bg-[#111c32] text-white' : 'bg-white text-ink' }}" role="dialog" aria-modal="true" aria-label="{{ $isSellerWorkspace ? 'Seller Center navigation' : ($isCustomerWorkspace ? 'My account navigation' : 'Marketplace navigation') }}">
+            <div class="flex h-[56px] items-center justify-between border-b px-5 {{ $isCustomerWorkspace ? 'border-white/10' : 'border-line' }}">
                 <a href="{{ $isSellerWorkspace ? route('seller.dashboard') : ($isCustomerWorkspace ? route('orders.index') : route('home')) }}" data-drawer-focus @click="closeDrawer" class="flex items-center gap-2 font-semibold">
-                    @if ($isSellerWorkspace || $isCustomerWorkspace)<span class="grid size-8 place-items-center rounded-lg bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>@else<x-application-logo class="size-8 fill-current text-brand" />@endif
+                    @if ($isSellerWorkspace || $isCustomerWorkspace)<span class="grid size-8 place-items-center rounded bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>@else<x-application-logo class="size-8 fill-current text-brand" />@endif
                     <span>{{ $isSellerWorkspace ? 'Seller Center' : ($isCustomerWorkspace ? 'My account' : 'JMMart') }}</span>
                 </a>
-                <button type="button" @click="closeDrawer" class="grid size-11 place-items-center rounded-[10px] transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand {{ $isSellerWorkspace || $isCustomerWorkspace ? 'text-slate-300 hover:text-white' : 'text-muted hover:text-ink' }}" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+                <button type="button" @click="closeDrawer" class="grid size-11 place-items-center rounded transition focus-visible:ring-2 focus-visible:ring-brand {{ $isCustomerWorkspace ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-muted hover:bg-canvas hover:text-ink' }}" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
             </div>
 
             @if (! $isSellerWorkspace && ! $isCustomerWorkspace)
-                <form method="GET" action="{{ route('catalog.index') }}" x-data="{ query: @js($search), loading: false }" @submit="loading = true" class="border-b border-line px-4 py-4">
+                <form method="GET" action="{{ route('catalog.index') }}" x-data="marketplaceSuggestions(@js($search), @js(route('catalog.suggestions')), @js(route('catalog.index')))" @submit="loading = true" @click.outside="open = false" class="relative border-b border-line px-4 py-4">
                     <label for="marketplace-search-drawer" class="flex h-11 items-center gap-3 rounded-[10px] border border-line bg-canvas px-3.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
-<input id="marketplace-search-drawer" name="q" aria-label="{{ $isSellerWorkspace ? 'Search the marketplace' : 'Search products, brands, and stores' }}" x-model="query" value="{{ $search }}" autocomplete="off" placeholder="{{ $isSellerWorkspace ? 'Search the marketplace' : 'Search products, brands, and stores' }}" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
-                        <button x-cloak x-show="query.length" type="button" @click="query = ''; $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+<input id="marketplace-search-drawer" name="q" aria-label="Search products, brands, and stores" role="combobox" aria-autocomplete="list" aria-controls="marketplace-search-results-drawer" :aria-expanded="open.toString()" :aria-activedescendant="active >= 0 ? 'marketplace-drawer-result-' + active : null" @input.debounce.275ms="load()" @focus="load()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter="select($event)" @keydown.escape="open = false" x-model="query" value="{{ $search }}" autocomplete="off" placeholder="Search products, brands, and stores" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
+                        <button x-cloak x-show="query.length" type="button" @click="clear(); $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
                     </label>
+                    @include('components.marketplace.search-suggestions', ['listId' => 'marketplace-search-results-drawer', 'optionPrefix' => 'marketplace-drawer-result-'])
                 </form>
             @endif
 
             @if ($isSellerWorkspace)
-                <div class="flex items-center gap-3 border-b border-white/10 px-5 py-4">
-                    <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-white/10 text-sm font-semibold text-white" aria-hidden="true">
+                <div class="flex items-center gap-3 border-b border-line px-5 py-4">
+                    <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded bg-slate-200 text-sm font-semibold text-ink" aria-hidden="true">
                         @if ($sellerTenant?->store?->logo_path)
                             <img src="{{ Storage::disk('public')->url($sellerTenant->store->logo_path) }}" alt="" class="size-full object-cover">
                         @else
                             {{ Str::upper(Str::substr($sellerTenant?->name ?? 'S', 0, 1)) }}
                         @endif
                     </span>
-                    <div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Your store</p><p class="mt-1 truncate text-sm font-semibold text-white">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
+                    <div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-muted">Your store</p><p class="mt-1 truncate text-sm font-semibold text-ink">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
                 </div>
                 <x-marketplace.seller-nav-links mode="mobile" />
-                <div class="space-y-1 border-t border-white/10 p-4">
+                <div class="space-y-1 border-t border-line p-4">
                     @if ($sellerTenant)
-                        <a href="{{ route('catalog.store', $sellerTenant->slug) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">View storefront</a>
+                        <a href="{{ route('catalog.store', $sellerTenant->slug) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded px-3 text-sm font-medium text-muted transition hover:bg-canvas hover:text-ink">View storefront</a>
                     @endif
-                    <a href="{{ route('profile.edit') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">Account</a>
-                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">Sign out</button>
+                    <a href="{{ route('profile.edit') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded px-3 text-sm font-medium text-muted transition hover:bg-canvas hover:text-ink">Account</a>
+                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="flex min-h-11 w-full items-center rounded px-3 text-left text-sm font-medium text-muted transition hover:bg-canvas hover:text-ink">Sign out</button>
                 </div>
             @elseif ($isCustomerWorkspace)
                 <x-marketplace.customer-nav-links mode="mobile" />

@@ -57,7 +57,7 @@ class AdminProductControllerTest extends TestCase
     {
         $administrator = User::factory()->administrator()->create();
         $category = Category::create(['name' => 'Fashion', 'slug' => 'fashion', 'is_active' => true]);
-        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'draft', $category->id, 'A durable market tote.');
+        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'pending', $category->id, 'A durable market tote.');
         $product->images()->create(['path' => 'products/tote.jpg', 'position' => 0]);
 
         $this->actingAs($administrator)->patch(route('admin.products.moderate', $product), [
@@ -71,7 +71,7 @@ class AdminProductControllerTest extends TestCase
             'action' => 'product.moderated',
             'entity_type' => Product::class,
             'entity_id' => $product->id,
-            'old_values->status' => 'draft',
+            'old_values->status' => 'pending',
             'new_values->status' => 'active',
             'new_values->reason' => 'Listing passed the product review.',
         ]);

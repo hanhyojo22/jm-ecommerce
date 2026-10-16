@@ -30,6 +30,8 @@ Docker-based VPS deployment, TLS, workers, scheduler, Reverb, backups, and produ
 ## MVP decisions
 
 - Brand: **JMMart**
-- Seller products: publish automatically after seller approval
+- Seller products: save as Draft, submit for Pending review, then an admin publishes, requests changes, or rejects the listing. Published listings can be suspended.
+- Editing a published listing returns it to Draft. Resubmit it for review before it appears in the marketplace again. Stores and seller accounts must be active before publication.
+- Product variants can have their own price, stock, and up to four photos. An empty variant price uses the product base price; variants without photos use shared product photos.
 - Shipping: free (PHP 0.00)
 - Payment method: Cash on Delivery

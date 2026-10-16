@@ -19,6 +19,8 @@ class DeliveryAddressTest extends TestCase
             'phone' => '+639171234567',
             'address_line' => '10 Market Street',
             'city' => 'Manila',
+            'province' => 'Metro Manila',
+            'postal_code' => '1000',
         ];
 
         $this->actingAs($seller)->post(route('delivery-addresses.store'), $address)
@@ -35,6 +37,22 @@ class DeliveryAddressTest extends TestCase
 
         $this->actingAs($seller)->delete(route('delivery-addresses.destroy', $saved))
             ->assertRedirect(route('delivery-addresses.index'));
+        $this->assertDatabaseCount('delivery_addresses', 0);
+    }
+
+    public function test_delivery_address_requires_province_and_four_digit_postal_code(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($buyer)->post(route('delivery-addresses.store'), [
+            'recipient_name' => 'Ava Buyer',
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'province' => '',
+            'postal_code' => '123',
+        ])->assertSessionHasErrors(['province', 'postal_code']);
+
         $this->assertDatabaseCount('delivery_addresses', 0);
     }
 

@@ -1,20 +1,104 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
-test('seller sees and updates only products from their own store', async ({ browser }) => {
+test('seller catalog shows real products and opens working details at desktop and mobile sizes', async ({ browser }, testInfo) => {
     const { context, page } = await openAsRole(browser, 'seller');
 
     try {
+        await page.setViewportSize({ width: 1682, height: 800 });
         await page.goto('/seller/products');
+        await page.getByRole('button', { name: 'Reject Optional' }).click();
+        await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+        await expect(page.getByRole('heading', { name: 'Product catalog' })).toBeVisible();
+        await expect(page.getByText('More filters')).toHaveCount(0);
+        const desktopAlignment = await page.evaluate(() => {
+            const header = document.querySelector('.seller-products-header').getBoundingClientRect();
+            const catalog = document.querySelector('.seller-products-catalog').getBoundingClientRect();
+            const workspace = document.querySelector('.workspace-main').getBoundingClientRect();
+            return { headerLeft: header.left, catalogLeft: catalog.left, leftGutter: catalog.left - workspace.left, catalogWidth: catalog.width };
+        });
+        expect(Math.abs(desktopAlignment.headerLeft - desktopAlignment.catalogLeft)).toBeLessThanOrEqual(1);
+        expect(desktopAlignment.leftGutter).toBe(32);
+        expect(desktopAlignment.catalogWidth).toBe(1336);
         await expect(page.getByRole('table').getByText('QA Canvas Tote')).toBeVisible();
         await expect(page.getByRole('table').getByText('₱19.99', { exact: true })).toBeVisible();
         await expect(page.getByText('Other Seller QA Product')).toHaveCount(0);
-        await page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByRole('link', { name: 'Edit' }).click();
-        await page.getByLabel('Stock quantity').fill('24');
-        await page.getByRole('button', { name: 'Save changes' }).click();
+        await page.screenshot({ path: testInfo.outputPath('seller-products-desktop.png'), fullPage: true });
+        await page.getByRole('navigation', { name: 'Product status' }).getByRole('link', { name: 'Draft', exact: true }).click();
+        await expect(page.getByRole('table')).toContainText('QA Approval Draft');
+        await expect(page.getByRole('table')).not.toContainText('QA Canvas Tote');
+        await page.goto('/seller/products');
+        await page.locator('#product-search').fill('QA Canvas Tote');
+        await page.getByRole('search').getByRole('button', { name: 'Search products' }).click();
+        await expect(page.getByRole('table')).toContainText('QA Canvas Tote');
+        await expect(page.getByRole('table')).not.toContainText('QA Chat Sample');
+        await expect(page.locator('.seller-products-catalog table')).toHaveCSS('table-layout', 'auto');
+        await expect(page.locator('.seller-products-search')).toHaveCSS('width', '230px');
+        await page.goto('/seller/products');
+        await page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByRole('link', { name: 'Details' }).click();
+        await expect(page.getByRole('heading', { name: 'QA Canvas Tote' })).toBeVisible();
+        await page.getByRole('link', { name: 'Edit listing' }).click();
+        await expect(page.getByLabel('Stock quantity')).toHaveValue('25');
+        await page.goto('/seller/products');
+        await page.setViewportSize({ width: 1024, height: 800 });
+        await expect(page.getByRole('table')).toBeHidden();
+        expect(await page.evaluate(() => document.querySelector('.seller-products-catalog').getBoundingClientRect().left - document.querySelector('.workspace-main').getBoundingClientRect().left)).toBe(25);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+        await page.setViewportSize({ width: 390, height: 844 });
+        expect(await page.evaluate(() => document.querySelector('.seller-products-catalog').getBoundingClientRect().left - document.querySelector('.workspace-main').getBoundingClientRect().left)).toBe(17);
+        await expect(page.getByRole('navigation', { name: 'Product status' }).getByRole('link', { name: 'Suspended' })).toBeInViewport();
+        await page.screenshot({ path: testInfo.outputPath('seller-products-mobile.png'), fullPage: true });
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    } finally {
+        await context.close();
+    }
+});
 
-        await expect(page).toHaveURL(/\/seller\/products$/);
-        await expect(page.getByRole('table').getByText('24', { exact: true })).toBeVisible();
+test('seller workspace sections keep the prototype catalog gutters', async ({ browser }) => {
+    test.setTimeout(90_000);
+    const { context, page } = await openAsRole(browser, 'seller');
+    const sections = ['/seller/orders', '/messages?context=selling', '/seller/reviews', '/seller/earnings', '/seller/store-settings'];
+
+    try {
+        for (const [width, height, expectedGutter] of [[1682, 800, 32], [390, 844, 17]]) {
+            await page.setViewportSize({ width, height });
+
+            for (const section of sections) {
+                await page.goto(section);
+                await expect(page.locator('.seller-workspace-page')).toBeVisible();
+
+                const layout = await page.evaluate(() => {
+                    const container = document.querySelector('.seller-workspace-page').getBoundingClientRect();
+                    const workspace = document.querySelector('.workspace-main').getBoundingClientRect();
+                    const header = document.querySelector('.workspace-main > header:not([data-header-design])');
+
+                    return {
+                        gutter: container.left + parseFloat(getComputedStyle(document.querySelector('.seller-workspace-page')).paddingLeft) - workspace.left,
+                        width: container.width - parseFloat(getComputedStyle(document.querySelector('.seller-workspace-page')).paddingLeft) * 2,
+                        headerLeft: header ? header.getBoundingClientRect().left + parseFloat(getComputedStyle(header).paddingLeft) : null,
+                        contentLeft: container.left + parseFloat(getComputedStyle(document.querySelector('.seller-workspace-page')).paddingLeft),
+                    };
+                });
+
+                expect(layout.gutter, section).toBe(expectedGutter);
+                if (width === 1682) {
+                    expect(layout.width, section).toBe(1336);
+                }
+                if (layout.headerLeft !== null) {
+                    expect(layout.headerLeft, section).toBe(layout.contentLeft);
+                }
+                expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), section).toBe(true);
+            }
+
+            await page.goto('/seller/orders');
+            await page.getByRole('link', { name: 'QA-REVIEW-001' }).click();
+            await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
+            expect(await page.evaluate(() => {
+                const container = document.querySelector('.seller-workspace-page');
+                const workspace = document.querySelector('.workspace-main');
+                return container.getBoundingClientRect().left + parseFloat(getComputedStyle(container).paddingLeft) - workspace.getBoundingClientRect().left;
+            })).toBe(expectedGutter);
+        }
     } finally {
         await context.close();
     }
@@ -128,7 +212,7 @@ test('seller can cancel bulk listing deactivation before any change is submitted
         });
         await page.getByRole('button', { name: 'Deactivate selected' }).click();
         await expect(page.getByRole('button', { name: 'Deactivate selected' })).toBeVisible();
-        await expect(page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByText('Active', { exact: true })).toBeVisible();
+        await expect(page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByText('Published', { exact: true })).toBeVisible();
     } finally {
         await context.close();
     }
@@ -140,6 +224,7 @@ test('seller product selection fits and remains usable on mobile', async ({ brow
     try {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto('/seller/products');
+        await page.getByRole('button', { name: 'Reject Optional' }).click();
         await page.getByRole('checkbox', { name: 'Select listing QA Canvas Tote' }).last().check();
         page.once('dialog', (dialog) => dialog.dismiss());
         await page.getByRole('button', { name: 'Deactivate selected' }).click();

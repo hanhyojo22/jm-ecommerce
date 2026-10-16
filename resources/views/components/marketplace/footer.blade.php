@@ -1,65 +1,18 @@
-@php
-    $user = auth()->user();
-    $isBuyer = $user && in_array($user->account_type, ['buyer', 'seller'], true);
-    $isSeller = $user?->account_type === 'seller';
-@endphp
-
-<footer class="mt-12 border-t border-line bg-white">
-    <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
-        <div class="grid gap-7 py-12 sm:grid-cols-2 lg:grid-cols-[1.3fr_repeat(4,1fr)]">
-            <div>
-                <a href="{{ route('home') }}" class="flex items-center gap-2.5 font-bold tracking-[-0.02em] text-ink" aria-label="JMMart marketplace home">
-                    <x-application-logo class="size-8 fill-current text-brand" />
-                    <span>JMMart</span>
-                </a>
-                <p class="mt-4 max-w-[30ch] text-sm leading-6 text-muted">A multi-vendor marketplace for independent stores. Cash on delivery, verified sellers, and free shipping.</p>
-            </div>
-            <nav aria-label="Shop">
-                <h2 class="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Shop</h2>
-                <div class="mt-3 space-y-0.5 text-sm">
-                    <a href="{{ route('catalog.index') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Marketplace</a>
-                    <a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">New arrivals</a>
-                    <a href="{{ route('catalog.top-products') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Best sellers</a>
-                    <a href="{{ route('catalog.stores') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Stores</a>
-                </div>
-            </nav>
-            @if (! $isSeller || ! $user->sellerTenant())
-            <nav aria-label="Sell">
-                <h2 class="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Sell</h2>
-                <div class="mt-3 space-y-0.5 text-sm">
-                    <a href="{{ route('seller-application.create') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Start selling</a>
-                </div>
-            </nav>
-            @endif
-            <nav aria-label="Support">
-                <h2 class="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Support</h2>
-                <div class="mt-3 space-y-0.5 text-sm">
-                    @if ($isBuyer)
-                        <a href="{{ route('orders.index') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Track order</a>
-                    @endif
-                    <a href="{{ route('cart.index') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Cart</a>
-                    <a href="{{ route('checkout.create') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Checkout</a>
-                    <a href="{{ route('returns') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Returns &amp; refunds</a>
-                    <a href="mailto:itservices@jmsolutionitservices.com" class="block min-h-10 break-all py-2 text-ink transition hover:text-brand">Contact support</a>
-                </div>
-            </nav>
-            <nav aria-label="Company">
-                <h2 class="text-[13px] font-semibold uppercase tracking-[0.05em] text-muted">Account</h2>
-                <div class="mt-3 space-y-0.5 text-sm">
-                    <a href="{{ route('profile.edit') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">My account</a>
-                    @if ($canUseMessages ?? ($user && in_array($user->account_type, ['buyer', 'seller'], true)))
-                        <a href="{{ $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Messages</a>
-                    @endif
-                    @if ($user?->isPlatformAdministrator())
-                        <a href="{{ route('dashboard') }}" class="block min-h-10 py-2 text-ink transition hover:text-brand">Admin</a>
-                    @endif
-                </div>
-            </nav>
+<footer class="border-t border-line bg-white text-[11px] text-muted">
+    <div class="mx-auto flex w-full max-w-[1320px] flex-wrap items-center justify-between gap-5 px-[18px] py-7 sm:px-8 xl:px-[42px]">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('home') }}" class="inline-flex items-center text-xl font-extrabold tracking-[-0.05em] text-ink" aria-label="JMMart marketplace home">
+                <span class="mr-2 grid size-[27px] place-items-center rounded-lg bg-brand text-sm font-extrabold text-white" aria-hidden="true">jm</span>JM<span class="text-brand">Mart.</span>
+            </a>
+            <span>Good finds. Great local stores.</span>
         </div>
-        <div class="flex flex-col gap-2 border-t border-line py-4 text-[13px] text-muted sm:flex-row sm:items-center sm:justify-between">
-            <span>© {{ date('Y') }} JMMart · <a href="{{ route('terms') }}" class="underline hover:text-brand">Terms</a> · <a href="{{ route('privacy-policy') }}" class="underline hover:text-brand">Privacy Policy</a> · <a href="{{ route('cookie-policy') }}" class="underline hover:text-brand">Cookie Policy</a> · <button type="button" data-cookie-preferences-open class="underline hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Preferences</button></span>
-            <span>Customer app · Seller app · Admin</span>
-        </div>
+        <nav aria-label="Footer" class="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <a href="{{ route('terms') }}" class="inline-flex min-h-11 items-center hover:text-brand">Terms</a>
+            <a href="{{ route('privacy-policy') }}" class="inline-flex min-h-11 items-center hover:text-brand">Privacy</a>
+            <a href="{{ route('cookie-policy') }}" class="inline-flex min-h-11 items-center hover:text-brand">Cookie Policy</a>
+            <button type="button" data-cookie-preferences-open class="min-h-11 hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Preferences</button>
+            <span>&copy; {{ date('Y') }} JMMart</span>
+        </nav>
     </div>
 </footer>
 

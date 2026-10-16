@@ -3,6 +3,62 @@ import './cookie-consent';
 import './chat';
 import './cart';
 
+window.marketplaceSuggestions = (initialQuery, url, resultsUrl) => ({
+    query: initialQuery,
+    items: [],
+    open: false,
+    loading: false,
+    active: -1,
+    url,
+    resultsUrl,
+    request: null,
+    async load() {
+        const query = this.query.trim();
+        this.request?.abort();
+        this.items = [];
+        this.active = -1;
+        if ([...query].length < 2) {
+            this.open = false;
+            this.loading = false;
+            return;
+        }
+        this.open = true;
+        this.loading = true;
+        const request = new AbortController();
+        this.request = request;
+        try {
+            const response = await fetch(`${this.url}?q=${encodeURIComponent(query)}`, {
+                signal: request.signal,
+                headers: { Accept: 'application/json' },
+            });
+            if (!response.ok) throw new Error('Search suggestions failed');
+            const data = await response.json();
+            if (this.request === request) this.items = data.items;
+        } catch (error) {
+            if (error.name !== 'AbortError') this.open = false;
+        } finally {
+            if (this.request === request) this.loading = false;
+        }
+    },
+    move(direction) {
+        if (!this.open || !this.items.length) return;
+        this.active = (this.active + direction + this.items.length) % this.items.length;
+    },
+    select(event) {
+        if (!this.open || this.active < 0) return;
+        event.preventDefault();
+        window.location.href = this.items[this.active].url;
+    },
+    clear() {
+        this.request?.abort();
+        this.query = '';
+        this.items = [];
+        this.open = false;
+        this.loading = false;
+        this.active = -1;
+    },
+});
+
 const reverbConfig = {
     key: document.querySelector('meta[name="reverb-app-key"]')?.content,
     host: document.querySelector('meta[name="reverb-host"]')?.content,
@@ -722,6 +778,11 @@ const bindAddToCartForm = (form) => {
                 throw new Error('Could not update your cart. Please refresh the page.');
             }
 
+            if (button?.dataset.checkoutUrl) {
+                window.location.assign(button.dataset.checkoutUrl);
+                return;
+            }
+
             if (cartLink) {
                 cartLink.setAttribute('aria-label', `Cart: ${count} ${count === 1 ? 'item' : 'items'}`);
                 const badge = cartLink.querySelector('[data-cart-badge]');
@@ -752,6 +813,61 @@ const bindAddToCartForm = (form) => {
 };
 
 document.querySelectorAll('form[data-add-to-cart]').forEach(bindAddToCartForm);
+
+document.querySelector('[data-seller-reviews]')?.addEventListener('submit', async (event) => {
+    const form = event.target.closest('form[data-discussion-reply-form]');
+    if (!form) {
+        return;
+    }
+
+    event.preventDefault();
+    if (form.dataset.submitting === 'true') {
+        return;
+    }
+
+    form.dataset.submitting = 'true';
+    const button = form.querySelector('button[type="submit"]');
+    const feedback = form.querySelector('[data-discussion-feedback]');
+    button.disabled = true;
+    button.textContent = 'Posting...';
+    feedback.hidden = true;
+
+    try {
+        const submit = () => fetch(form.action, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { Accept: 'application/json' },
+            body: new FormData(form),
+        });
+
+        let response = await submit();
+        if (response.status === 401) {
+            await refreshClerkSession(form.dataset.clerkSessionRefresh);
+            response = await submit();
+        }
+
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(result.errors?.body?.[0] ?? result.errors?.parent_id?.[0] ?? result.message ?? 'Could not post your reply.');
+        }
+        if (!result.html) {
+            window.location.reload();
+            return;
+        }
+
+        form.closest('.seller-review-discussion').insertAdjacentHTML('beforeend', result.html);
+        form.reset();
+        form.closest('details').open = false;
+        document.querySelector('[data-discussion-announcement]').textContent = 'Reply posted.';
+    } catch (error) {
+        feedback.textContent = error.message || 'Could not confirm your reply. Refresh before trying again.';
+        feedback.hidden = false;
+    } finally {
+        delete form.dataset.submitting;
+        button.disabled = false;
+        button.textContent = 'Post reply';
+    }
+});
 
 const signOut = async () => {
     try {

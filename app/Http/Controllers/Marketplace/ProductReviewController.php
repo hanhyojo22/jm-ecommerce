@@ -22,7 +22,7 @@ class ProductReviewController extends Controller
     {
         return view('marketplace.reviews.index', [
             'reviews' => $request->user()->productReviews()
-                ->with(['product.store', 'orderItem.sellerOrder'])
+                ->with(['product.store', 'product.thumbnail', 'orderItem.sellerOrder'])
                 ->latest()->paginate(10),
         ]);
     }

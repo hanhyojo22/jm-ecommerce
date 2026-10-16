@@ -7,7 +7,7 @@
     </x-slot>
 
     <div class="page-shell">
-        <div class="page-container">
+        <div class="page-container seller-workspace-page">
             <section class="grid gap-4 sm:grid-cols-2" aria-label="Earnings summary">
                 <article class="section-card">
                     <p class="text-sm font-medium text-muted">Available for payout</p>

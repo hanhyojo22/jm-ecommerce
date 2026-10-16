@@ -29,12 +29,13 @@ class ProductController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'status' => ['nullable', 'in:active,draft,inactive'],
+            'status' => ['nullable', 'in:active,draft,inactive,pending,changes_required,rejected'],
             'stock' => ['nullable', 'in:in_stock,out_of_stock'],
             'sort' => ['nullable', 'in:newest,name,price,stock'],
         ]);
         $products = $tenant->store->products()
             ->with(['images', 'category:id,name'])
+            ->withCount('variants')
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 
@@ -60,9 +61,7 @@ class ProductController extends Controller
             'products' => $products->paginate(20)->withQueryString(),
             'store' => $tenant->store,
             'filters' => $filters,
-            'categories' => Category::query()->where('is_active', true)->orderBy('name')->get(),
             'productCounts' => $tenant->store->products()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status'),
-            'outOfStockCount' => $tenant->store->products()->where('stock_quantity', 0)->count(),
             'canManageProducts' => $this->canManageProducts($request, $tenant),
         ]);
     }
@@ -72,6 +71,18 @@ class ProductController extends Controller
         $this->authorize('create', Product::class);
 
         return view('seller.products.create', ['store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
+    }
+
+    public function show(Request $request, Product $product): View
+    {
+        $tenant = $this->activeTenant($request);
+        $product = $tenant->store->products()->whereKey($product)->firstOrFail();
+        $this->authorize('view', $product);
+
+        return view('seller.products.show', [
+            'product' => $product->load(['images', 'variants.images', 'category:id,name']),
+            'canManageProducts' => $this->canManageProducts($request, $tenant),
+        ]);
     }
 
     public function store(StoreProductRequest $request, StorePublicImage $storePublicImage): RedirectResponse
@@ -85,13 +96,21 @@ class ProductController extends Controller
             $data['stock_quantity'] = array_sum(array_column($variants, 'stock_quantity'));
         }
         $imagePaths = [];
+        $variantImagePaths = [];
 
         try {
             foreach (array_filter([$request->file('image'), ...($request->file('images') ?? [])]) as $image) {
                 $imagePaths[] = $storePublicImage->handle($image, 'products', 'product_images');
             }
 
-            $product = DB::transaction(function () use ($request, $store, $tenant, $data, $variants, $imagePaths): Product {
+            foreach ($variants as $index => $variant) {
+                foreach (($request->file("variants.$index.images") ?? []) as $image) {
+                    $variantImagePaths[$index][] = $storePublicImage->handle($image, 'products', 'product_images');
+                }
+                unset($variants[$index]['images']);
+            }
+
+            $product = DB::transaction(function () use ($request, $store, $tenant, $data, $variants, $imagePaths, $variantImagePaths): Product {
                 $product = $store->products()->create([
                     ...$data,
                     'tenant_id' => $tenant->id,
@@ -101,8 +120,12 @@ class ProductController extends Controller
                 foreach ($imagePaths as $position => $imagePath) {
                     $product->images()->create(['path' => $imagePath, 'position' => $position]);
                 }
-                foreach ($variants as $variant) {
-                    $product->variants()->create($variant);
+                $position = count($imagePaths);
+                foreach ($variants as $index => $variant) {
+                    $savedVariant = $product->variants()->create($variant);
+                    foreach ($variantImagePaths[$index] ?? [] as $path) {
+                        $product->images()->create(['path' => $path, 'position' => $position++, 'product_variant_id' => $savedVariant->id]);
+                    }
                 }
 
                 AuditLog::query()->create([
@@ -117,7 +140,7 @@ class ProductController extends Controller
                 return $product;
             });
         } catch (Throwable $exception) {
-            foreach ($imagePaths as $imagePath) {
+            foreach ([...$imagePaths, ...array_merge([], ...array_values($variantImagePaths))] as $imagePath) {
                 $this->deleteUploadedImage($imagePath);
             }
 
@@ -131,7 +154,7 @@ class ProductController extends Controller
     {
         $product = $this->editableProduct($request, $product);
 
-        return view('seller.products.edit', ['product' => $product->load(['images', 'variants']), 'store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
+        return view('seller.products.edit', ['product' => $product->load(['images', 'variants.images']), 'store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function update(UpdateProductRequest $request, Product $product, StorePublicImage $storePublicImage): RedirectResponse
@@ -144,17 +167,29 @@ class ProductController extends Controller
             $data['stock_quantity'] = array_sum(array_column($variants, 'stock_quantity'));
         }
         $imagePaths = [];
+        $variantImagePaths = [];
 
         try {
             foreach (array_filter([$request->file('image'), ...($request->file('images') ?? [])]) as $image) {
                 $imagePaths[] = $storePublicImage->handle($image, 'products', 'product_images');
             }
 
-            DB::transaction(function () use ($request, $product, $data, $variants, $imagePaths): void {
+            foreach ($variants as $index => $variant) {
+                foreach (($request->file("variants.$index.images") ?? []) as $image) {
+                    $variantImagePaths[$index][] = $storePublicImage->handle($image, 'products', 'product_images');
+                }
+                unset($variants[$index]['images']);
+            }
+
+            DB::transaction(function () use ($request, $product, $data, $variants, $imagePaths, $variantImagePaths): void {
                 $product = Product::query()->lockForUpdate()->findOrFail($product->id);
 
                 if ($product->status !== 'active' && $data['status'] === 'active') {
                     abort(403, 'Only an administrator can activate a listing.');
+                }
+
+                if (in_array($product->status, ['pending', 'inactive'], true)) {
+                    throw ValidationException::withMessages(['status' => 'This listing cannot be edited in its current review state.']);
                 }
 
                 $wasComplete = filled($product->description) && $product->category_id !== null && $product->images()->exists();
@@ -163,19 +198,24 @@ class ProductController extends Controller
                 }
 
                 $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
+                $data['status'] = $data['status'] === 'inactive' ? 'inactive' : 'draft';
                 $product->update($data);
 
                 $position = $product->images()->count();
                 foreach ($imagePaths as $imagePath) {
                     $product->images()->create(['path' => $imagePath, 'position' => $position++]);
                 }
-                foreach ($variants as $variant) {
+                foreach ($variants as $index => $variant) {
                     $id = $variant['id'] ?? null;
                     unset($variant['id']);
                     if ($id !== null) {
-                        $product->variants()->whereKey($id)->firstOrFail()->update($variant);
+                        $savedVariant = $product->variants()->whereKey($id)->firstOrFail();
+                        $savedVariant->update($variant);
                     } else {
-                        $product->variants()->create($variant);
+                        $savedVariant = $product->variants()->create($variant);
+                    }
+                    foreach ($variantImagePaths[$index] ?? [] as $path) {
+                        $product->images()->create(['path' => $path, 'position' => $position++, 'product_variant_id' => $savedVariant->id]);
                     }
                 }
 
@@ -190,7 +230,7 @@ class ProductController extends Controller
                 ]);
             });
         } catch (Throwable $exception) {
-            foreach ($imagePaths as $imagePath) {
+            foreach ([...$imagePaths, ...array_merge([], ...array_values($variantImagePaths))] as $imagePath) {
                 $this->deleteUploadedImage($imagePath);
             }
 
@@ -198,6 +238,28 @@ class ProductController extends Controller
         }
 
         return to_route('seller.products.index')->with('status', "{$product->name} was updated.");
+    }
+
+    public function submit(Request $request, Product $product): RedirectResponse
+    {
+        $product = $this->editableProduct($request, $product);
+        DB::transaction(function () use ($request, $product): void {
+            $product = Product::query()->lockForUpdate()->findOrFail($product->id);
+            if (! in_array($product->status, ['draft', 'changes_required', 'rejected'], true)) {
+                throw ValidationException::withMessages(['status' => 'Only a draft or returned listing can be submitted for review.']);
+            }
+            if (! filled($product->description) || $product->category_id === null || ! $product->images()->exists()) {
+                throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before submitting for review.']);
+            }
+            if (! $product->images()->whereNull('product_variant_id')->exists() && $product->variants()->whereDoesntHave('images')->exists()) {
+                throw ValidationException::withMessages(['status' => 'Add photos for every variant or upload a shared product photo before submitting.']);
+            }
+            $oldStatus = $product->status;
+            $product->update(['status' => 'pending', 'moderation_reason' => null]);
+            AuditLog::query()->create(['actor_user_id' => $request->user()->id, 'action' => 'product.submitted', 'entity_type' => Product::class, 'entity_id' => $product->id, 'old_values' => ['status' => $oldStatus], 'new_values' => ['status' => 'pending'], 'ip_address' => $request->ip()]);
+        });
+
+        return to_route('seller.products.index')->with('status', 'Listing submitted for administrator review.');
     }
 
     public function bulkDeactivate(Request $request): RedirectResponse
