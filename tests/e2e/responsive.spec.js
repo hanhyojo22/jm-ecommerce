@@ -207,7 +207,7 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
             await expect(drawer).toBeVisible();
             await drawer.getByRole('link', { name: 'Reviews' }).click();
             await expect(page).toHaveURL(/\/seller\/reviews$/);
-            await expect(page.getByRole('heading', { name: 'Reviews', exact: true })).toBeVisible();
+            await expect(page.getByRole('heading', { name: 'Reviews & conversations' })).toBeVisible();
         }
     } finally {
         await context.close();
@@ -460,7 +460,7 @@ test('customer header uses the intended shopping and account layouts', async ({ 
             const header = page.locator('header[data-header-design]');
             const isAccountPage = ['/profile', '/orders'].includes(path);
 
-            await expect(header.getByRole('textbox', { name: 'Search products, brands, and stores' })).toBeVisible();
+            await expect(header.getByRole('combobox', { name: 'Search products, brands, and stores' })).toBeVisible();
             if (isAccountPage) {
                 await expect(header).toHaveAttribute('data-header-role', 'customer-workspace');
                 await expect(header.getByRole('navigation', { name: 'Marketplace sections' })).toHaveCount(0);
