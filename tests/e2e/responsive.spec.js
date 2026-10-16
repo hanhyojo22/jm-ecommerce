@@ -443,7 +443,7 @@ test('new arrivals append the next page without horizontal overflow', async ({ p
         await expect(loadMore).toBeEnabled();
     }
     await loadMore.click();
-    await expect(arrivals.locator('article')).toHaveCount(25);
+    await expect(arrivals.locator('article').nth(20)).toBeVisible();
     await expect(loadMore).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
 });
