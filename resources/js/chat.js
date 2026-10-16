@@ -48,6 +48,7 @@ window.chatThread = (conversationId, userId) => ({
     onOnline: null,
     onOffline: null,
     onReady: null,
+    onNavigating: null,
     onFocus: null,
     connection: null,
     onConnected: null,
@@ -71,10 +72,12 @@ window.chatThread = (conversationId, userId) => ({
         };
         this.onOffline = () => { this.online = false; };
         this.onReady = () => this.connect();
+        this.onNavigating = () => { if (this.channel) window.Echo?.leave(`conversation.${conversationId}`); };
         this.onFocus = () => { if (this.online) this.$wire.syncLatestMessages(); };
         window.addEventListener('online', this.onOnline);
         window.addEventListener('offline', this.onOffline);
         window.addEventListener('reverb:ready', this.onReady);
+        document.addEventListener('livewire:navigating', this.onNavigating);
         window.addEventListener('focus', this.onFocus);
         this.observer = new MutationObserver(() => {
             this.reconcile();
@@ -109,6 +112,7 @@ window.chatThread = (conversationId, userId) => ({
         window.removeEventListener('online', this.onOnline);
         window.removeEventListener('offline', this.onOffline);
         window.removeEventListener('reverb:ready', this.onReady);
+        document.removeEventListener('livewire:navigating', this.onNavigating);
         window.removeEventListener('focus', this.onFocus);
         this.$refs.messageList.removeEventListener('scroll', this.onMessageScroll);
         this.unhook?.();
