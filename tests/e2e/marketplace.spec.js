@@ -60,12 +60,13 @@ test('customer can add a newly loaded arrival to the cart', async ({ browser }) 
         await rejectOptionalCookies(page);
         const arrivals = page.locator('#new-arrivals');
         await arrivals.getByRole('link', { name: 'Load More' }).click();
-        await arrivals.locator('article').filter({ hasText: 'QA Arrival 21' }).getByRole('button', { name: 'Add to cart' }).click();
+        const arrival = arrivals.locator('article').filter({ hasText: 'QA Arrival 21' });
+        await arrival.getByRole('button', { name: 'Add to cart' }).click();
+        await expect(arrival.getByRole('status')).toHaveText('Added to cart.');
 
-        await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
         await page.goto('/cart');
-        await page.getByRole('button', { name: 'Remove' }).click();
-        await expect(page.getByRole('button', { name: 'Remove' })).toHaveCount(0);
+        await page.getByRole('button', { name: 'Remove QA Arrival 21 from your cart' }).click();
+        await expect(page.getByRole('button', { name: 'Remove QA Arrival 21 from your cart' })).toHaveCount(0);
     } finally {
         await context.close();
     }
@@ -259,13 +260,17 @@ test('buyer and seller continue a review thread without reloading and keep it co
     for (const page of [seller.page, buyer.page]) page.on('pageerror', (error) => pageErrors.push(error.message));
 
     try {
-        await seller.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#reviews');
+        await seller.page.goto('/seller/reviews');
         await rejectOptionalCookies(seller.page);
-        const sellerThread = seller.page.locator('#reviews article');
-        await sellerThread.getByRole('button', { name: 'Reply', exact: true }).click();
+        const sellerThread = seller.page.locator('[data-seller-reviews] [data-review-thread]').filter({ hasText: 'QA Canvas Tote' }).first();
+        const responseButton = sellerThread.getByRole('button', { name: /^(Reply|Edit response)$/ });
+        const alreadyResponded = await responseButton.textContent() === 'Edit response';
+        await responseButton.click();
         await sellerThread.getByLabel('Seller response').fill('Thanks for reviewing the tote.');
-        await sellerThread.getByRole('button', { name: 'Post response' }).click();
+        await sellerThread.getByRole('button', { name: alreadyResponded ? 'Update response' : 'Post response' }).click();
         await expect(sellerThread).toContainText('Thanks for reviewing the tote.');
+
+        await seller.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#reviews');
 
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#reviews');
         await rejectOptionalCookies(buyer.page);
