@@ -36,6 +36,10 @@ window.cartSelection = (config) => ({
         return this.selectedItems.length;
     },
 
+    get checkoutReady() {
+        return this.selectedCount > 0 && !this.saving && !this.error;
+    },
+
     get selectedQuantity() {
         return this.selectedItems.reduce((total, item) => total + item.quantity, 0);
     },

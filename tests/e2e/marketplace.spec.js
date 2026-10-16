@@ -134,13 +134,18 @@ test('customer can place a COD order from the product page through checkout', as
 
     try {
         await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        const cartLink = page.locator('[data-cart-link]');
+        const startingCartCount = Number((await cartLink.getAttribute('aria-label')).match(/\d+/)[0]);
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
-        await expect(page.getByRole('link', { name: 'Cart: 1 item' })).toBeVisible();
+        await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCartCount + 1} items?$`));
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
-        await expect(page.getByRole('link', { name: 'Cart: 2 items' })).toBeVisible();
-        await page.getByRole('link', { name: 'Cart: 2 items' }).click();
+        await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCartCount + 2} items?$`));
+        await cartLink.click();
         await expect(page).toHaveURL(/\/cart$/);
-        await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
+        await page.getByRole('checkbox', { name: 'Select QA Canvas Tote' }).check();
+        const checkoutLink = page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ });
+        await expect(checkoutLink).toHaveAttribute('aria-disabled', 'false');
+        await checkoutLink.click();
         await page.getByLabel('Recipient name').fill('Ava QA Customer');
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('10 QA Street');
