@@ -28,10 +28,11 @@ class OrderDetailsTest extends TestCase
             // reporting one store's status as the whole order's.
             ->assertSee('aria-label="Franil Store progress"', false)
             ->assertSee('aria-label="Trail &amp; Tide progress"', false)
-            ->assertSee('aria-label="Progress by store"', false)
-            ->assertSee('1 of 2 stores delivered')
+            ->assertSee('1 of 2 stores delivered · 1 awaiting confirmation')
             ->assertSee('Order in progress')
-            ->assertDontSee('Order received');
+            ->assertDontSee('Order received')
+            // The card counts the stores rather than repeating the badge each store already shows.
+            ->assertDontSee('Awaiting seller confirmation');
     }
 
     public function test_a_single_store_order_keeps_the_one_progress_bar(): void

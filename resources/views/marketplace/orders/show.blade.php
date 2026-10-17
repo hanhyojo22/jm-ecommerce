@@ -10,7 +10,8 @@
          * page counts them off instead of picking one store's status to stand for all of them.
          */
         $storeStep = fn (string $status): int => ['pending'=>1,'confirmed'=>2,'processing'=>2,'shipped'=>3,'delivered'=>4][$status] ?? 1;
-        $statusLabel = fn (string $status): string => $status === 'pending' ? 'Awaiting seller confirmation' : ucfirst($status);
+        // The badge sits beside the store it belongs to, so naming the seller again only makes it long.
+        $statusLabel = fn (string $status): string => $status === 'pending' ? 'Awaiting confirmation' : ucfirst($status);
         $storeCount = $order->sellerOrders->count();
         $isMultiStore = $storeCount > 1;
         $deliveredStores = $order->sellerOrders->where('status', 'delivered')->count();
@@ -19,8 +20,19 @@
         $anyStoreMoved = $order->sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status !== 'pending');
         $multiStoreHeadline = $allSettled && $deliveredStores > 0 ? 'Delivered' : ($anyStoreMoved ? 'Order in progress' : 'Order received');
 
-        $storeSummary = $deliveredStores.' of '.$storeCount.' '.Str::plural('store', $storeCount).' delivered'
-            .($cancelledStores > 0 ? ' · '.$cancelledStores.' cancelled' : '');
+        /*
+         * Every store already shows its own badge below, so the card counts them instead of
+         * listing the same badges a second time.
+         */
+        $storeStatusCounts = $order->sellerOrders->countBy('status');
+        $awaitingStores = $storeStatusCounts['pending'] ?? 0;
+        $movingStores = ($storeStatusCounts['confirmed'] ?? 0) + ($storeStatusCounts['processing'] ?? 0) + ($storeStatusCounts['shipped'] ?? 0);
+        $storeSummary = collect([
+            $deliveredStores.' of '.$storeCount.' '.Str::plural('store', $storeCount).' delivered',
+            $movingStores > 0 ? $movingStores.' on the way' : null,
+            $awaitingStores > 0 ? $awaitingStores.' awaiting confirmation' : null,
+            $cancelledStores > 0 ? $cancelledStores.' cancelled' : null,
+        ])->filter()->join(' · ');
 
         if ($isMultiStore) {
             $progressNote = $allSettled && $deliveredStores > 0
@@ -46,8 +58,8 @@
         @endif
         <div class="mt-7 flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0"><p class="text-xs font-bold uppercase tracking-[0.14em] text-brand">My purchases / Order details</p><h1 class="mt-2 text-3xl font-bold tracking-[-0.04em] text-ink sm:text-4xl">Order details</h1><div x-data="{ copied:false, copy() { navigator.clipboard?.writeText('{{ $order->number }}'); this.copied=true; setTimeout(() => this.copied=false, 1800) } }" class="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted"><p class="break-all">Order #{{ $order->number }} · Placed {{ $order->created_at->format('M j, Y · g:i A') }}</p><button type="button" @click="copy" class="inline-flex min-h-11 items-center text-xs font-semibold text-brand hover:text-brand-hover" :aria-label="copied ? 'Order number copied' : 'Copy order number'" x-text="copied ? 'Copied' : 'Copy number'"></button></div></div>
-            {{-- With several stores the order has no single status, so the badge counts them instead. --}}
-            <span class="status-badge {{ $statusStyles[$order->status] }}">{{ $isMultiStore ? $storeSummary : ($order->status === 'pending' ? 'Awaiting seller confirmation' : ucfirst($order->status)) }}</span>
+            {{-- With several stores the order has no single status, so the badge says how far it is as a whole. --}}
+            <span class="status-badge {{ $statusStyles[$order->status] }}">{{ $isMultiStore ? $multiStoreHeadline : ($order->status === 'pending' ? 'Awaiting seller confirmation' : ucfirst($order->status)) }}</span>
         </div>
         <div class="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
             <div class="space-y-6">
@@ -57,11 +69,6 @@
                     @else
                         <div class="flex items-start gap-3"><span class="grid size-10 shrink-0 place-items-center rounded-xl {{ $order->status === 'delivered' ? 'bg-green-50 text-success' : 'bg-blue-50 text-brand' }}" aria-hidden="true"><svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2">@if($order->status === 'delivered')<path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/>@else<circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 2"/>@endif</svg></span><div><h2 class="text-lg font-semibold text-ink">{{ $isMultiStore ? $multiStoreHeadline : ($order->status === 'pending' ? 'Order received' : ucfirst($order->status)) }}</h2><p class="mt-1 text-sm leading-6 text-muted">{{ $progressNote }}</p></div></div>
                         @if($isMultiStore)
-                            <ul class="mt-6 grid gap-2 border-t border-line pt-5 text-sm" aria-label="Progress by store">
-                                @foreach($order->sellerOrders as $sellerOrder)
-                                    <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3"><span class="truncate text-muted">{{ $sellerOrder->store->name }}</span><span class="status-badge {{ $statusStyles[$sellerOrder->status] }}">{{ $statusLabel($sellerOrder->status) }}</span></li>
-                                @endforeach
-                            </ul>
                             <p class="mt-4 text-sm font-semibold text-ink">{{ $storeSummary }}</p>
                         @else
                             <ol class="mt-7 grid grid-cols-4 gap-2" aria-label="Order progress">
