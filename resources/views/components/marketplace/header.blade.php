@@ -109,12 +109,12 @@
                 @endunless
             </form>
 
-            <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 min-[641px]:order-none min-[641px]:ml-0">
+            <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-2 min-[641px]:order-none min-[641px]:ml-0">
                 @if ($canUseMessages)
                     <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
                         @if ($unreadConversationCount > 0)
-                            <span class="absolute right-1 top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-white bg-brand px-[5px] text-[11px] font-bold leading-none text-white">{{ $messageBadge }}</span>
+                            <span class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-white bg-brand px-[5px] text-[11px] font-bold leading-none text-white">{{ $messageBadge }}</span>
                         @endif
                     </a>
                 @endif
@@ -122,8 +122,9 @@
                 @if ($isBuyer)
                     <a href="{{ route('cart.index') }}" data-cart-link class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Cart: {{ $cartItemCount }} {{ Str::plural('item', $cartItemCount) }}">
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
-                        <span data-cart-count-text class="sr-only">Cart ({{ $cartItemCount }})</span>
-                        <span data-cart-badge class="absolute right-1 top-1 grid h-[19px] min-w-[19px] place-items-center border-2 border-white px-[5px] text-[11px] rounded-full bg-brand font-bold leading-none text-white" @if ($cartItemCount === 0) style="display: none" @endif>{{ $cartBadge }}</span>
+                        {{-- The link's own label already names the count, so the badge repeats it for the eye only. --}}
+                        {{-- Anchored outside the icon's corner: a wide count grows leftward over empty padding, so the cart stays legible at any number. --}}
+                        <span data-cart-badge aria-hidden="true" class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[5px] text-[11px] font-bold leading-none tabular-nums text-white" @if ($cartItemCount === 0) style="display: none" @endif>{{ $cartBadge }}</span>
                     </a>
                 @endif
 

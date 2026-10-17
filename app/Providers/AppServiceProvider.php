@@ -69,6 +69,15 @@ class AppServiceProvider extends ServiceProvider
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));
 
+        /*
+         * Ticking items is idempotent and the chattiest thing the cart does — one request per
+         * tick once the 350ms debounce stops collapsing them. It gets its own budget so a buyer
+         * working through a long cart cannot spend the allowance that adding and removing needs.
+         */
+        RateLimiter::for('cart-selection', fn (Request $request): Limit => Limit::perMinute(60)->by(
+            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+        ));
+
         RateLimiter::for('checkout', fn (Request $request): Limit => Limit::perHour(10)->by(
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));

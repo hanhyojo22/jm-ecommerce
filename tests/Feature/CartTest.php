@@ -23,8 +23,9 @@ class CartTest extends TestCase
 
         $this->actingAs($buyer)->get(route('cart.index'))
             ->assertSee('2 items')
-            ->assertSee('Cart (2)')
-            ->assertSee('aria-label="Cart: 2 items"', false);
+            ->assertSee('aria-label="Cart: 2 items"', false)
+            // The badge repeats the count the link already announces, so it stays out of the tree.
+            ->assertSee('data-cart-badge aria-hidden="true"', false);
 
         $this->actingAs($buyer)->postJson(route('cart.store', $product), ['quantity' => 1])
             ->assertOk()
@@ -32,7 +33,6 @@ class CartTest extends TestCase
 
         $this->actingAs($buyer)->get(route('cart.index'))
             ->assertSee('3 items')
-            ->assertSee('Cart (3)')
             ->assertSee('aria-label="Cart: 3 items"', false);
     }
 
@@ -278,5 +278,35 @@ class CartTest extends TestCase
             'stock_quantity' => 5,
             'status' => 'active',
         ]);
+    }
+
+    public function test_adding_a_product_again_ticks_an_item_the_buyer_had_unticked(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product('re-tick', 'TICK-002');
+
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $this->actingAs($buyer)->patchJson(route('cart.selection'), ['selected' => []])->assertOk();
+        $this->assertFalse($buyer->cart->items()->first()->selected);
+
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+
+        // Checkout only takes ticked items, so Buy now has to leave this one ready to buy.
+        $this->assertTrue($buyer->cart->items()->first()->refresh()->selected);
+        $this->actingAs($buyer)->get(route('checkout.create'))->assertOk();
+    }
+
+    public function test_ticking_items_does_not_spend_the_allowance_that_adding_to_the_cart_needs(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product('tick-budget', 'TICK-001');
+
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+
+        for ($request = 0; $request < 30; $request++) {
+            $this->actingAs($buyer)->patchJson(route('cart.selection'), ['selected' => []])->assertOk();
+        }
+
+        $this->actingAs($buyer)->postJson(route('cart.store', $product), ['quantity' => 1])->assertOk();
     }
 }

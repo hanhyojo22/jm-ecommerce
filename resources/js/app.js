@@ -480,21 +480,56 @@ const refreshClerkSession = async (endpoint) => {
     }
 };
 
+/*
+ * One refresh at a time, whoever asks. A link click, a form submit and a Livewire request that
+ * overlap used to mint a cookie each, because only the Livewire path shared its in-flight call.
+ */
+let pendingClerkSessionRefresh;
+
+/** Needing a live cookie from here on shares a call; a rejected credential mints its own. */
+const ensureClerkSession = (endpoint) => {
+    pendingClerkSessionRefresh ??= refreshClerkSession(endpoint)
+        .finally(() => { pendingClerkSessionRefresh = null; });
+
+    return pendingClerkSessionRefresh;
+};
+
+/*
+ * The forms whose navigation needs a live session cookie. The submit handler below refreshes for
+ * exactly these, and the pointerdown warm starts that refresh while the press is still happening
+ * instead of after it, so the wait overlaps the click rather than following it.
+ */
+const formNeedsClerkSessionCookie = (form) => {
+    if (!(form instanceof HTMLFormElement) || form.method.toUpperCase() === 'GET') {
+        return false;
+    }
+
+    if (form.hasAttribute('wire:submit') || form.hasAttribute('data-add-to-cart')) {
+        return false;
+    }
+
+    let action;
+
+    try {
+        action = new URL(form.action);
+    } catch {
+        return false;
+    }
+
+    return action.origin === window.location.origin && action.pathname !== '/sign-out';
+};
+
 // Livewire sends its own fetch requests, including chat typing and Send, without submitting a form.
 if (clerkSessionRefreshEndpoint) {
     const browserFetch = window.fetch.bind(window);
-    let pendingClerkSessionRefresh;
 
     window.fetch = async (input, options) => {
         const needsSession = options?.headers?.['X-Livewire'] === '1'
             || options?.headers?.['X-Requires-Session'] === '1';
 
         if (needsSession && clerkSessionNeedsRefresh()) {
-            pendingClerkSessionRefresh ??= refreshClerkSession(clerkSessionRefreshEndpoint)
-                .finally(() => { pendingClerkSessionRefresh = null; });
-
             try {
-                await pendingClerkSessionRefresh;
+                await ensureClerkSession(clerkSessionRefreshEndpoint);
                 document.querySelector('[data-clerk-refresh-error]')?.remove();
             } catch (error) {
                 const form = document.activeElement?.closest('form[wire\\:submit]')
@@ -558,7 +593,7 @@ document.addEventListener('click', (event) => {
     event.preventDefault();
     link.setAttribute('aria-busy', 'true');
 
-    refreshClerkSession(clerkSessionRefreshEndpoint)
+    ensureClerkSession(clerkSessionRefreshEndpoint)
         .catch((error) => {
             console.error(error);
         })
@@ -570,13 +605,7 @@ document.addEventListener('click', (event) => {
 document.addEventListener('submit', async (event) => {
     const form = event.target;
 
-    if (!(form instanceof HTMLFormElement)) {
-        return;
-    }
-
-    const action = new URL(form.action);
-
-    if (form.method.toUpperCase() === 'GET' || action.origin !== window.location.origin || action.pathname === '/sign-out' || form.hasAttribute('wire:submit')) {
+    if (!formNeedsClerkSessionCookie(form)) {
         return;
     }
 
@@ -605,17 +634,37 @@ document.addEventListener('submit', async (event) => {
 
     form.dataset.clerkSessionRefreshing = 'true';
 
+    /*
+     * The submit is swallowed for the length of the refresh, so without this the page looks dead
+     * while it waits. The submitter is re-enabled before the real submit, because a cart quantity
+     * button carries the new quantity in its own name and value.
+     */
+    const submitter = event.submitter;
+    form.setAttribute('aria-busy', 'true');
+    if (submitter) {
+        submitter.disabled = true;
+    }
+
+    const clearBusy = () => {
+        form.removeAttribute('aria-busy');
+        if (submitter) {
+            submitter.disabled = false;
+        }
+    };
+
     try {
-        await refreshClerkSession(refreshEndpoint);
+        await ensureClerkSession(refreshEndpoint);
         form.dataset.clerkSessionRefreshed = 'true';
         delete form.dataset.clerkSessionRefreshing;
-        if (event.submitter) {
-            form.requestSubmit(event.submitter);
+        clearBusy();
+        if (submitter) {
+            form.requestSubmit(submitter);
         } else {
             form.requestSubmit();
         }
     } catch (error) {
         delete form.dataset.clerkSessionRefreshing;
+        clearBusy();
         console.error(error);
 
         if (form.hasAttribute('data-chat-upload')) {
@@ -730,6 +779,62 @@ newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener(
     }
 });
 
+const cartLink = document.querySelector('[data-cart-link]');
+let confirmedCartCount = Number(cartLink?.getAttribute('aria-label')?.match(/\d+/)?.[0] ?? 0);
+let pendingCartQuantity = 0;
+let concurrentCartAdds = false;
+
+let renderedCartCount = confirmedCartCount;
+let cartBadgePop;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+const renderCartCount = () => {
+    if (!cartLink) return;
+
+    const count = confirmedCartCount + pendingCartQuantity;
+    const changed = count !== renderedCartCount;
+    renderedCartCount = count;
+
+    cartLink.setAttribute('aria-label', `Cart: ${count} ${count === 1 ? 'item' : 'items'}`);
+
+    const badge = cartLink.querySelector('[data-cart-badge]');
+    if (!badge) return;
+
+    badge.textContent = count > 99 ? '99+' : String(count);
+    badge.style.display = count > 0 ? '' : 'none';
+
+    /*
+     * The count is already correct by here, so the beat is decoration the badge can lose: a burst
+     * of adds replaces the motion in flight instead of queueing behind it, and nothing waits on it
+     * finishing. The page does not move when the count changes, so without this the number swaps
+     * silently and the add reads as if it never landed.
+     */
+    if (changed && count > 0 && !reducedMotion.matches) {
+        cartBadgePop?.cancel();
+        cartBadgePop = badge.animate?.(
+            [{ transform: 'scale(1)' }, { transform: 'scale(1.3)' }, { transform: 'scale(1)' }],
+            { duration: 260, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+        );
+    }
+};
+
+/*
+ * Clerk session tokens live 60 seconds, so an add to cart almost always found the backend
+ * session lapsed and spent a whole round trip on the bridge minting a cookie before the cart
+ * request could even start. The token rides on the cart request itself instead, and the bridge
+ * stays as the fallback for a token the server rejects. Overlapping clicks share one lookup.
+ */
+let pendingClerkToken;
+
+const clerkSessionToken = () => {
+    pendingClerkToken ??= loadClerk()
+        .then((clerk) => clerk.session?.getToken())
+        .catch(() => null)
+        .finally(() => { pendingClerkToken = null; });
+
+    return pendingClerkToken;
+};
+
 const bindAddToCartForm = (form) => {
     form.addEventListener('submit', async (event) => {
         if (event.defaultPrevented) {
@@ -748,22 +853,44 @@ const bindAddToCartForm = (form) => {
             button.disabled = true;
         }
 
+        const quantity = Number(new FormData(form).get('quantity'));
+        const optimisticQuantity = Number.isInteger(quantity) && quantity >= 1 && quantity <= 100 ? quantity : 0;
+        if (pendingCartQuantity > 0) concurrentCartAdds = true;
+        pendingCartQuantity += optimisticQuantity;
+        renderCartCount();
+        form.setAttribute('aria-busy', 'true');
+
         const feedback = form.querySelector('[data-cart-feedback]') ?? document.createElement('p');
         feedback.dataset.cartFeedback = '';
-        feedback.className = 'mt-2 text-sm font-semibold';
+        feedback.className = 'mt-2 text-sm font-semibold text-muted';
+        feedback.setAttribute('role', 'status');
+        feedback.textContent = 'Adding to cart…';
         form.append(feedback);
 
         try {
+            const headers = { Accept: 'application/json' };
+
+            if (form.dataset.clerkSessionRefresh) {
+                const sessionToken = await clerkSessionToken();
+
+                if (sessionToken) {
+                    headers.Authorization = `Bearer ${sessionToken}`;
+                }
+            }
+
             const submit = () => fetch(form.action, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { Accept: 'application/json' },
+                headers,
                 body: new FormData(form),
             });
 
             let response = await submit();
             if (response.status === 401 && form.dataset.clerkSessionRefresh) {
                 await refreshClerkSession(form.dataset.clerkSessionRefresh);
+                // Clerk reads the header in preference to the cookie, so the rejected token has to
+                // go for the cookie the bridge just minted to be the one that counts.
+                delete headers.Authorization;
                 response = await submit();
             }
 
@@ -773,37 +900,39 @@ const bindAddToCartForm = (form) => {
             }
 
             const count = result.cart_count;
-            const cartLink = document.querySelector('[data-cart-link]');
             if (!Number.isInteger(count)) {
                 throw new Error('Could not update your cart. Please refresh the page.');
             }
 
+            // shortcut: overlapping adds only increase this page's count; reload after edits in another tab.
+            confirmedCartCount = concurrentCartAdds ? Math.max(confirmedCartCount, count) : count;
+
             if (button?.dataset.checkoutUrl) {
+                /*
+                 * Buy now leaves on a plain navigation, which carries cookies and no header, so
+                 * the session this request authenticated itself with has to be put in a cookie
+                 * first. Skipping it would land on the bridge page and redirect from there.
+                 */
+                if (form.dataset.clerkSessionRefresh && clerkSessionNeedsRefresh()) {
+                    await ensureClerkSession(form.dataset.clerkSessionRefresh).catch(() => {});
+                }
+
                 window.location.assign(button.dataset.checkoutUrl);
                 return;
             }
 
-            if (cartLink) {
-                cartLink.setAttribute('aria-label', `Cart: ${count} ${count === 1 ? 'item' : 'items'}`);
-                const badge = cartLink.querySelector('[data-cart-badge]');
-                if (badge) {
-                    badge.textContent = count > 99 ? '99+' : String(count);
-                    badge.style.display = count > 0 ? '' : 'none';
-                }
-                const countText = cartLink.querySelector('[data-cart-count-text]');
-                if (countText) {
-                    countText.textContent = `Cart (${count})`;
-                }
-            }
-
             feedback.setAttribute('role', 'status');
-            feedback.classList.add('text-success');
+            feedback.className = 'mt-2 text-sm font-semibold text-success';
             feedback.textContent = 'Added to cart.';
         } catch (error) {
             feedback.setAttribute('role', 'alert');
-            feedback.classList.add('text-danger');
+            feedback.className = 'mt-2 text-sm font-semibold text-danger';
             feedback.textContent = error.message || 'Could not add this item. Please try again.';
         } finally {
+            pendingCartQuantity -= optimisticQuantity;
+            if (pendingCartQuantity === 0) concurrentCartAdds = false;
+            renderCartCount();
+            form.removeAttribute('aria-busy');
             delete form.dataset.cartSubmitting;
             if (button) {
                 button.disabled = false;
@@ -811,6 +940,31 @@ const bindAddToCartForm = (form) => {
         }
     });
 };
+
+/*
+ * Clerk is loaded, and the credential the submit needs fetched, while the pointer is still down,
+ * so the press pays for the wait rather than the click that follows it. An add to cart needs a
+ * token for its own request; every other form needs the cookie its navigation will carry.
+ */
+document.addEventListener('pointerdown', (event) => {
+    if (!(event.target instanceof Element)) {
+        return;
+    }
+
+    if (event.target.closest('form[data-add-to-cart][data-clerk-session-refresh]')) {
+        clerkSessionToken();
+
+        return;
+    }
+
+    const submitter = event.target.closest('button:not([type="button"]), input[type="submit"]');
+    const form = submitter?.form;
+    const endpoint = form?.dataset.clerkSessionRefresh || clerkSessionRefreshEndpoint;
+
+    if (endpoint && formNeedsClerkSessionCookie(form) && clerkSessionNeedsRefresh()) {
+        ensureClerkSession(endpoint).catch(() => {});
+    }
+}, { passive: true });
 
 document.querySelectorAll('form[data-add-to-cart]').forEach(bindAddToCartForm);
 

@@ -57,7 +57,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::post('/cart/products/{product}', [CartController::class, 'store'])->middleware('throttle:cart')->name('cart.store');
     Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])->middleware('throttle:cart')->name('cart.update');
     Route::delete('/cart/items/{cartItem}', [CartController::class, 'destroy'])->middleware('throttle:cart')->name('cart.destroy');
-    Route::patch('/cart/selection', [CartController::class, 'updateSelection'])->middleware('throttle:cart')->name('cart.selection');
+    Route::patch('/cart/selection', [CartController::class, 'updateSelection'])->middleware('throttle:cart-selection')->name('cart.selection');
     Route::delete('/cart/selected', [CartController::class, 'destroySelected'])->middleware('throttle:cart')->name('cart.destroy-selected');
     Route::post('/cart/restore', [CartController::class, 'restore'])->middleware('throttle:cart')->name('cart.restore');
     Route::get('/checkout', [CheckoutController::class, 'create'])->name('checkout.create');

@@ -19,8 +19,7 @@ class AddProductToCart
         );
 
         return DB::transaction(function () use ($user, $product, $quantity, $variantId): CartItem {
-            $cart = Cart::firstOrCreate(['user_id' => $user->id]);
-            $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
+            $cart = Cart::query()->lockForUpdate()->firstOrCreate(['user_id' => $user->id]);
             $product = Product::query()->with(['store', 'tenant'])->lockForUpdate()->findOrFail($product->id);
 
             if ($user->isMemberOfTenant($product->tenant_id)) {
@@ -49,6 +48,9 @@ class AddProductToCart
             $item = $cart->items()->firstOrNew(['product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default']);
             $item->product_variant_id = $variant?->id;
             $item->quantity = ($item->exists ? $item->quantity : 0) + $quantity;
+            // Adding a product says it is wanted, so a row left unticked earlier is ticked again.
+            // Without this, Buy now on an unticked item sends the buyer back to the cart.
+            $item->selected = true;
             if ($item->quantity > min($availableStock, $product->stock_quantity, 100)) {
                 throw ValidationException::withMessages(['quantity' => 'The combined cart quantity exceeds the available stock or the 100 item limit.']);
             }
