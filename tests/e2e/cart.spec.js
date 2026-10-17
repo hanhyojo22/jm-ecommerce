@@ -164,3 +164,41 @@ test('the cart icon stays legible behind the widest count', async ({ browser }) 
         await context.close();
     }
 });
+
+test('the checkout link stays usable while a tick is still saving', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer');
+    let releaseSave;
+    const heldSave = new Promise((resolve) => { releaseSave = resolve; });
+
+    try {
+        await addFirstProductToCart(page);
+
+        const checkbox = page.locator('input[type="checkbox"][id^="select-"]').first();
+        const checkout = page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ });
+
+        // Start unticked so the tick below is what sends the save being held open.
+        if (await checkbox.isChecked()) {
+            await checkbox.uncheck();
+            await page.waitForResponse((response) => response.url().includes('/cart/selection'));
+        }
+
+        await page.route('**/cart/selection', async (route) => {
+            await heldSave;
+            await route.continue();
+        });
+
+        await checkbox.check();
+
+        // The save is still in flight: the control the buyer is reaching for must stay live.
+        await expect(checkout).toHaveAttribute('aria-disabled', 'false');
+
+        // Checkout reads the ticked items from the server, so the click waits for that save.
+        const navigated = page.waitForURL(/\/checkout$/);
+        await checkout.click();
+        releaseSave();
+        await navigated;
+    } finally {
+        releaseSave();
+        await context.close();
+    }
+});

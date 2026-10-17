@@ -37,7 +37,36 @@ window.cartSelection = (config) => ({
     },
 
     get checkoutReady() {
-        return this.selectedCount > 0 && !this.saving && !this.error;
+        return this.selectedCount > 0 && !this.error;
+    },
+
+    /**
+     * Checkout reads the ticked items back from the server, so a save still in flight has to
+     * land before the page opens.
+     *
+     * Waiting for it here rather than disabling the button is what keeps ticking responsive: the
+     * save is debounced and can take a session refresh with it, so gating the button on `saving`
+     * greyed out the control the buyer was reaching for on every single tick.
+     */
+    async openCheckout(event) {
+        if (!this.checkoutReady) {
+            event.preventDefault();
+
+            return;
+        }
+
+        if (!this.saving) {
+            return;
+        }
+
+        event.preventDefault();
+        const destination = event.currentTarget.href;
+        clearTimeout(this.saveTimer);
+        await this.send();
+
+        if (!this.error) {
+            window.location.assign(destination);
+        }
     },
 
     get selectedQuantity() {

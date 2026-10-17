@@ -161,7 +161,7 @@
                                 </div>
                                 <div class="mt-5 flex items-end justify-between"><span class="font-semibold text-ink">Total</span><span class="text-2xl font-bold tabular-nums tracking-[-0.04em] text-ink">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></span></div>
 
-                                <a href="{{ route('checkout.create') }}" x-bind:aria-disabled="checkoutReady ? 'false' : 'true'" x-bind:tabindex="checkoutReady ? '0' : '-1'" x-on:click="if (!checkoutReady) $event.preventDefault()" x-bind:class="checkoutReady ? '' : 'pointer-events-none opacity-50'" class="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition duration-200 hover:bg-brand-hover active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Check out (<span x-text="selectedCount">{{ $selectedIds->count() }}</span>)</a>
+                                <a href="{{ route('checkout.create') }}" x-bind:aria-disabled="checkoutReady ? 'false' : 'true'" x-bind:tabindex="checkoutReady ? '0' : '-1'" x-on:click="openCheckout($event)" x-bind:class="checkoutReady ? '' : 'pointer-events-none opacity-50'" class="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition duration-200 hover:bg-brand-hover active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Check out (<span x-text="selectedCount">{{ $selectedIds->count() }}</span>)</a>
                                 <p x-cloak x-show="selectedCount === 0" class="mt-3 text-center text-xs font-medium text-muted" role="status">Select an item to check out.</p>
 
                                 @if ($unavailableCount > 0)
@@ -183,7 +183,7 @@
                                 <p class="text-[11px] font-medium text-muted">Total (<span x-text="selectedCount">{{ $selectedIds->count() }}</span>)</p>
                                 <p class="truncate text-lg font-bold tabular-nums tracking-[-0.03em] text-ink">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></p>
                             </div>
-                            <a href="{{ route('checkout.create') }}" x-bind:aria-disabled="checkoutReady ? 'false' : 'true'" x-bind:tabindex="checkoutReady ? '0' : '-1'" x-on:click="if (!checkoutReady) $event.preventDefault()" x-bind:class="checkoutReady ? '' : 'pointer-events-none opacity-50'" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Check out</a>
+                            <a href="{{ route('checkout.create') }}" x-bind:aria-disabled="checkoutReady ? 'false' : 'true'" x-bind:tabindex="checkoutReady ? '0' : '-1'" x-on:click="openCheckout($event)" x-bind:class="checkoutReady ? '' : 'pointer-events-none opacity-50'" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Check out</a>
                         </div>
                     </div>
                 </div>
