@@ -71,17 +71,15 @@
                 </div>
 
                 @forelse ($orders as $order)
-                    <article class="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm" aria-labelledby="purchase-{{ $order->id }}">
-                        <header class="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 border-b border-line bg-canvas/70 px-4 py-3 sm:px-6">
-                            <div class="min-w-0">
-                                <div class="flex min-w-0 items-center gap-1" x-data="{ copied: false, copy() { navigator.clipboard?.writeText(@js($order->number)); this.copied = true; setTimeout(() => this.copied = false, 1800); } }">
-                                    <h3 id="purchase-{{ $order->id }}" class="min-w-0 break-all text-sm font-semibold text-ink">Order #{{ $order->number }}</h3>
-                                    <button type="button" @click="copy" class="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-white hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :aria-label="copied ? 'Order number copied' : 'Copy order number'" title="Copy order number">
-                                        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path stroke-linecap="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-                                    </button>
-                                    <span x-cloak x-show="copied" class="text-xs font-medium text-brand-hover" role="status">Copied</span>
-                                </div>
-                                <p class="text-xs text-muted">Placed <time datetime="{{ $order->created_at->toIso8601String() }}">{{ $order->created_at->format('M j, Y') }}</time></p>
+                    <article class="min-w-0 overflow-hidden rounded-xl border border-line bg-surface" aria-labelledby="purchase-{{ $order->id }}">
+                        <header class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line px-4 py-2.5 sm:px-5">
+                            <div class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px]" x-data="{ copied: false, copy() { navigator.clipboard?.writeText(@js($order->number)); this.copied = true; setTimeout(() => this.copied = false, 1800); } }">
+                                <h3 id="purchase-{{ $order->id }}" class="min-w-0 break-all font-semibold text-ink">Order #{{ $order->number }}</h3>
+                                <p class="text-muted"><span aria-hidden="true">·</span> <span class="sr-only sm:not-sr-only">Placed </span><time datetime="{{ $order->created_at->toIso8601String() }}">{{ $order->created_at->format('M j, Y') }}</time></p>
+                                <button type="button" @click="copy" class="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted transition hover:bg-canvas hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :aria-label="copied ? 'Order number copied' : 'Copy order number'" title="Copy order number">
+                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path stroke-linecap="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                                </button>
+                                <span x-cloak x-show="copied" class="text-xs font-medium text-brand-hover" role="status">Copied</span>
                             </div>
                             <span class="status-badge gap-1.5 {{ $statusStyles[$order->status] }}">
                                 <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -97,22 +95,19 @@
                             </span>
                         </header>
 
-                        <div class="divide-y divide-line px-4 sm:px-6">
+                        <div class="divide-y divide-line px-4 sm:px-5">
                             @foreach ($order->sellerOrders as $sellerOrder)
-                                <section x-data="{ expanded: false }" class="flex flex-col gap-4 py-5" aria-label="Items from {{ $sellerOrder->store->name }} in order {{ $order->number }}">
+                                <section x-data="{ expanded: false }" class="flex flex-col gap-3.5 py-5" aria-label="Items from {{ $sellerOrder->store->name }} in order {{ $order->number }}">
                                     <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                                        <div class="flex min-w-0 flex-1 items-center gap-2.5">
-                                            <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-canvas text-xs font-semibold text-ink" aria-hidden="true">
+                                        <div class="flex min-w-0 flex-1 items-center gap-2">
+                                            <span class="grid size-5 shrink-0 place-items-center overflow-hidden rounded text-brand" aria-hidden="true">
                                                 @if ($sellerOrder->store->logo_path)
-                                                    <img src="{{ Storage::disk('public')->url($sellerOrder->store->logo_path) }}" alt="" width="36" height="36" loading="lazy" class="size-full object-cover">
+                                                    <img src="{{ Storage::disk('public')->url($sellerOrder->store->logo_path) }}" alt="" width="20" height="20" loading="lazy" class="size-full rounded object-cover">
                                                 @else
-                                                    {{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}
+                                                    <svg viewBox="0 0 24 24" class="size-[18px]" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.25h16.5l-1.5 10h-13.5l-1.5-10ZM5 9.25l2-5h10l2 5" /></svg>
                                                 @endif
                                             </span>
-                                            <div class="min-w-0">
-                                                <a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="block truncate text-sm font-semibold text-ink hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->store->name }}</a>
-                                                <p class="mt-0.5 text-xs text-muted">{{ $sellerOrder->items->count() }} {{ Str::plural('product', $sellerOrder->items->count()) }} <span aria-hidden="true">·</span> {{ ucfirst($sellerOrder->status) }}</p>
-                                            </div>
+                                            <a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="min-w-0 truncate text-[13px] font-semibold text-muted transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->store->name }}</a>
                                         </div>
                                         <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}" class="shrink-0">
                                             @csrf
@@ -152,18 +147,20 @@
                                             <svg class="size-4" :class="expanded && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
                                         </button>
                                     @endif
+
+                                    <x-marketplace.order-timeline :status="$sellerOrder->status" :label="$sellerOrder->store->name.' progress'" class="mb-0.5 mt-2.5" />
                                 </section>
                             @endforeach
                         </div>
 
-                        <footer class="flex flex-col gap-4 border-t border-line px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                            <div class="flex min-w-0 flex-col gap-1">
-                                <p class="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">Order total <span class="text-xl font-bold tracking-tight tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</span></p>
+                        <footer class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-t border-line bg-canvas px-4 py-3 sm:px-5">
+                            <p class="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-[13px] text-muted">
+                                Order total <span class="text-base font-bold tracking-tight tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</span>
                                 @if ($order->payment)
-                                    <p class="text-xs text-muted">{{ $order->payment->method === 'cod' ? 'Cash on delivery' : Str::headline($order->payment->method) }} <span aria-hidden="true">·</span> {{ $order->payment->status === 'pending' ? 'Awaiting payment' : ucfirst($order->payment->status) }}</p>
+                                    <span class="text-xs"><span aria-hidden="true">·</span> {{ $order->payment->method === 'cod' ? 'Cash on delivery' : Str::headline($order->payment->method) }} <span aria-hidden="true">·</span> {{ $order->payment->status === 'pending' ? 'Awaiting payment' : ucfirst($order->payment->status) }}</span>
                                 @endif
-                            </div>
-                            <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                            </p>
+                            <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface px-4 text-[13px] font-semibold text-ink transition hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                                 View order
                                 <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-5-5 5 5-5 5" /></svg>
                             </a>
