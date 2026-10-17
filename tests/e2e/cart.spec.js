@@ -53,10 +53,13 @@ test('a lapsed session is retried instead of shown as an error', async ({ browse
     try {
         await addFirstProductToCart(page);
 
-        // Start from a known ticked state; an earlier test shares this cart.
+        // Start from a known ticked state. Adding ticks the item already, so only tick it here
+        // when it somehow arrived unticked — check() on a ticked box sends no request to wait for.
         const checkbox = page.locator('input[type="checkbox"][id^="select-"]').first();
-        await checkbox.check();
-        await page.waitForResponse((response) => response.url().includes('/cart/selection'));
+        if (!(await checkbox.isChecked())) {
+            await checkbox.check();
+            await page.waitForResponse((response) => response.url().includes('/cart/selection'));
+        }
 
         let attempts = 0;
         await page.route('**/cart/selection', async (route) => {
