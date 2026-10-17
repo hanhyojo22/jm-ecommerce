@@ -133,20 +133,25 @@ class UpdateSellerOrderStatus
     }
 
     /**
+     * The order is only as far along as the store that has moved the least.
+     *
+     * Reporting the furthest store instead told the buyer their order was shipped while another
+     * store had not yet confirmed, and it put the order under that status in their purchases.
+     * Cancelled stores are left out: they are no longer part of what is being waited on, and an
+     * order is cancelled only once every store is.
+     *
      * @param  array<int, string>  $statuses
      */
     private function aggregateStatus(array $statuses): string
     {
-        if (count(array_diff($statuses, ['cancelled'])) === 0) {
+        $awaited = array_filter($statuses, static fn (string $status): bool => $status !== 'cancelled');
+
+        if ($awaited === []) {
             return 'cancelled';
         }
 
-        if (count(array_diff($statuses, ['delivered', 'cancelled'])) === 0) {
-            return 'delivered';
-        }
-
-        foreach (['shipped', 'processing', 'confirmed'] as $status) {
-            if (in_array($status, $statuses, true)) {
+        foreach (['pending', 'confirmed', 'processing', 'shipped', 'delivered'] as $status) {
+            if (in_array($status, $awaited, true)) {
                 return $status;
             }
         }
