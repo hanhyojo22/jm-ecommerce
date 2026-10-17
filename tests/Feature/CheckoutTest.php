@@ -250,7 +250,7 @@ class CheckoutTest extends TestCase
     {
         config()->set('services.gmail', ['client_id' => 'test-client', 'client_secret' => 'test-secret', 'refresh_token' => null, 'from' => 'sender@example.com']);
         Http::fake();
-        Log::shouldReceive('warning')->once()->with('Gmail email skipped: missing configuration.', ['missing' => ['refresh_token']]);
+        Log::shouldReceive('warning')->once()->with('Gmail email skipped: missing configuration. Set these for the mailbox the refresh token belongs to.', ['missing' => ['refresh_token']]);
         $buyer = User::factory()->make();
         $mailer = new GmailOrderMailer;
 

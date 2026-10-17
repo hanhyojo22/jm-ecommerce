@@ -107,7 +107,7 @@ services:
       - key: GMAIL_REFRESH_TOKEN
         sync: false
       - key: GMAIL_FROM_ADDRESS
-        value: itservices@jmsolutionitservices.com
+        sync: false
 
   - type: web
     name: jmmart-chat-reverb
@@ -249,7 +249,7 @@ services:
       - key: GMAIL_REFRESH_TOKEN
         sync: false
       - key: GMAIL_FROM_ADDRESS
-        value: itservices@jmsolutionitservices.com
+        sync: false
 
   - type: web
     name: jmmart-chat-reverb-staging

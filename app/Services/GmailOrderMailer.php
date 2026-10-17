@@ -21,7 +21,7 @@ class GmailOrderMailer
     public function send(User $recipient, string $subject, string $body): void
     {
         if (! $this->configured()) {
-            Log::warning('Gmail email skipped: missing configuration.', [
+            Log::warning('Gmail email skipped: missing configuration. Set these for the mailbox the refresh token belongs to.', [
                 'missing' => array_keys(array_filter(config('services.gmail'), fn (mixed $value): bool => blank($value))),
             ]);
 

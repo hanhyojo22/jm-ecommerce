@@ -55,7 +55,13 @@ return [
         'client_id' => env('GMAIL_CLIENT_ID'),
         'client_secret' => env('GMAIL_CLIENT_SECRET'),
         'refresh_token' => env('GMAIL_REFRESH_TOKEN'),
-        'from' => env('GMAIL_FROM_ADDRESS', 'itservices@jmsolutionitservices.com'),
+        /*
+         * Must be the mailbox the refresh token was issued for, or an alias verified on it.
+         * Gmail sends as the authenticated account, so a From on any other domain goes out
+         * unaligned with the signature and is filtered as spoofed. No default on purpose:
+         * sending nothing is better than sending as a domain this app cannot authenticate for.
+         */
+        'from' => env('GMAIL_FROM_ADDRESS'),
     ],
 
     'slack' => [
