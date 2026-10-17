@@ -186,9 +186,10 @@
 }
 
 /*
- * Pinned to the sidebar, the way Seller Center pins its own pages. Centred, the container keeps
- * its 1400px and pushes the page away from the sidebar as the screen grows, which is the gap
- * that shows on a wide monitor and not at all on a narrow one.
+ * The default for pages without their own measure: pinned to the sidebar the way Seller Center
+ * pins its own pages. Centred, the container keeps its 1400px and pushes the page away from the
+ * sidebar as the screen grows, which is the gap that shows on a wide monitor and not at all on
+ * a narrow one.
  */
 .customer-workspace[data-workspace='customer'] .page-container {
     margin-inline: 0;
@@ -207,7 +208,7 @@
 
 @media (max-width: 600px) {
     :is(.seller-workspace, .customer-workspace) .page-container {
-        padding-inline: 17px;
+        padding-inline: 24px;
     }
 
     :is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
@@ -223,19 +224,48 @@
     max-width: 72rem;
 }
 
+/*
+ * My Account measures. Each page reads best at its own width, so the account shell tags its
+ * container and the width is set here beside the other workspace measures. Messages takes the
+ * full content column; every other account page centres in that column, so the content is not
+ * stranded against the sidebar on a wide monitor.
+ */
+:is(.seller-workspace, .customer-workspace) .page-container.account-measure-orders {
+    margin-inline: auto;
+    max-width: 1400px;
+}
+
+:is(.seller-workspace, .customer-workspace) .page-container.account-measure-messages {
+    max-width: none;
+}
+
+:is(.seller-workspace, .customer-workspace) .page-container.account-measure-reviews {
+    margin-inline: auto;
+    max-width: 1160px;
+}
+
+:is(.seller-workspace, .customer-workspace) .page-container.account-measure-addresses {
+    margin-inline: auto;
+    max-width: 960px;
+}
+
+:is(.seller-workspace, .customer-workspace) .page-container.account-measure-settings {
+    margin-inline: auto;
+    max-width: 800px;
+}
+
+/* One page padding across every account page, rather than a per-page guess. */
+.customer-workspace .page-shell {
+    padding-top: 24px;
+    padding-bottom: 32px;
+}
+
+.customer-workspace .page-shell.account-messages-shell {
+    padding-block: 24px;
+}
+
 .seller-workspace .seller-messages-page {
     padding-block: 20px 24px;
-}
-
-.seller-workspace .page-container.seller-messages-container {
-    max-width: none;
-    padding-inline: 20px;
-}
-
-@media (min-width: 640px) {
-    .seller-workspace .page-container.seller-messages-container {
-        padding-inline: 24px;
-    }
 }
 
 .seller-workspace :where(.section-card, .content-card) {

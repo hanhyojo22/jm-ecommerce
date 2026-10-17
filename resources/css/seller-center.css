@@ -117,9 +117,12 @@
 .seller-workspace[data-workspace='seller'] .seller-catalog-search-input { flex: 1; min-width: min(100%,240px); }
 .seller-workspace[data-workspace='seller'] .seller-catalog-filters { flex-basis: 100%; order: 3; }
 .seller-workspace[data-workspace='seller'] .seller-catalog-search-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
-.seller-workspace[data-workspace='seller'] .workspace-main:has(.seller-workspace-page) > header:not([data-header-design]),
-.seller-workspace[data-workspace='seller'] .page-container.seller-workspace-page { max-width: 1400px; margin-inline: 0; }
-.seller-workspace[data-workspace='seller'] .page-container.seller-workspace-page { padding-inline: 32px; }
+/* Seller Center pages centre in the content column like the account pages. The workspace header
+   follows the shared header measure in app.css, so the two stay aligned at the 1400px column. */
+.seller-workspace[data-workspace='seller'] .page-container.seller-workspace-page { max-width: 1400px; margin-inline: auto; padding-inline: 32px; }
+/* Messages is the exception: the two-panel chat stretches across the whole content column, the
+   same as My Account's messages page. */
+.seller-workspace[data-workspace='seller'] .page-container.seller-messages-container { max-width: none; }
 .seller-workspace[data-workspace='seller'] .seller-products-catalog { border-color: var(--seller-line); box-shadow: none; }
 .seller-workspace[data-workspace='seller'] .seller-products-panel-head { padding: 21px 22px 0; margin-bottom: 21px; }
 .seller-workspace[data-workspace='seller'] .seller-products-toolbar { gap: 15px; padding: 0 20px 18px; }

@@ -14,11 +14,19 @@ test('seller catalog shows real products and opens working details at desktop an
         const desktopAlignment = await page.evaluate(() => {
             const header = document.querySelector('.seller-products-header').getBoundingClientRect();
             const catalog = document.querySelector('.seller-products-catalog').getBoundingClientRect();
+            const container = document.querySelector('.seller-workspace-page').getBoundingClientRect();
             const workspace = document.querySelector('.workspace-main').getBoundingClientRect();
-            return { headerLeft: header.left, catalogLeft: catalog.left, leftGutter: catalog.left - workspace.left, catalogWidth: catalog.width };
+            return {
+                headerLeft: header.left,
+                catalogLeft: catalog.left,
+                leftSlack: Math.round(container.left - workspace.left),
+                rightSlack: Math.round(workspace.right - container.right),
+                catalogWidth: catalog.width,
+            };
         });
         expect(Math.abs(desktopAlignment.headerLeft - desktopAlignment.catalogLeft)).toBeLessThanOrEqual(1);
-        expect(desktopAlignment.leftGutter).toBe(32);
+        // Centred in the content column, not pinned to the sidebar.
+        expect(desktopAlignment.leftSlack).toBe(desktopAlignment.rightSlack);
         expect(desktopAlignment.catalogWidth).toBe(1336);
         await expect(page.getByRole('table').getByText('QA Canvas Tote')).toBeVisible();
         await expect(page.getByRole('table').getByText('₱19.99', { exact: true })).toBeVisible();
@@ -55,13 +63,13 @@ test('seller catalog shows real products and opens working details at desktop an
     }
 });
 
-test('seller workspace sections keep the prototype catalog gutters', async ({ browser }) => {
+test('seller workspace sections centre with their catalog gutters', async ({ browser }) => {
     test.setTimeout(90_000);
     const { context, page } = await openAsRole(browser, 'seller');
     const sections = ['/seller/orders', '/messages?context=selling', '/seller/reviews', '/seller/earnings', '/seller/store-settings'];
 
     try {
-        for (const [width, height, expectedGutter] of [[1682, 800, 32], [390, 844, 17]]) {
+        for (const [width, height, expectedPadding] of [[1682, 800, 32], [390, 844, 17]]) {
             await page.setViewportSize({ width, height });
 
             for (const section of sections) {
@@ -69,21 +77,28 @@ test('seller workspace sections keep the prototype catalog gutters', async ({ br
                 await expect(page.locator('.seller-workspace-page')).toBeVisible();
 
                 const layout = await page.evaluate(() => {
-                    const container = document.querySelector('.seller-workspace-page').getBoundingClientRect();
+                    const element = document.querySelector('.seller-workspace-page');
+                    const style = getComputedStyle(element);
+                    const container = element.getBoundingClientRect();
                     const workspace = document.querySelector('.workspace-main').getBoundingClientRect();
                     const header = document.querySelector('.workspace-main > header:not([data-header-design])');
 
                     return {
-                        gutter: container.left + parseFloat(getComputedStyle(document.querySelector('.seller-workspace-page')).paddingLeft) - workspace.left,
-                        width: container.width - parseFloat(getComputedStyle(document.querySelector('.seller-workspace-page')).paddingLeft) * 2,
+                        leftSlack: Math.round(container.left - workspace.left),
+                        rightSlack: Math.round(workspace.right - container.right),
+                        paddingInline: parseFloat(style.paddingLeft),
+                        width: container.width - parseFloat(style.paddingLeft) * 2,
                         headerLeft: header ? header.getBoundingClientRect().left + parseFloat(getComputedStyle(header).paddingLeft) : null,
-                        contentLeft: container.left + parseFloat(getComputedStyle(document.querySelector('.seller-workspace-page')).paddingLeft),
+                        contentLeft: container.left + parseFloat(style.paddingLeft),
                     };
                 });
 
-                expect(layout.gutter, section).toBe(expectedGutter);
+                // Centred in the content column at the workspace measure, with the prototype gutters.
+                expect(layout.leftSlack, section).toBe(layout.rightSlack);
+                expect(layout.paddingInline, section).toBe(expectedPadding);
                 if (width === 1682) {
-                    expect(layout.width, section).toBe(1336);
+                    // Messages stretches across the whole content column; the rest take the 1400px measure.
+                    expect(layout.width, section).toBe(section === '/messages?context=selling' ? 1396 : 1336);
                 }
                 if (layout.headerLeft !== null) {
                     expect(layout.headerLeft, section).toBe(layout.contentLeft);
@@ -95,10 +110,10 @@ test('seller workspace sections keep the prototype catalog gutters', async ({ br
             await page.getByRole('link', { name: 'QA-REVIEW-001' }).click();
             await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
             expect(await page.evaluate(() => {
-                const container = document.querySelector('.seller-workspace-page');
-                const workspace = document.querySelector('.workspace-main');
-                return container.getBoundingClientRect().left + parseFloat(getComputedStyle(container).paddingLeft) - workspace.getBoundingClientRect().left;
-            })).toBe(expectedGutter);
+                const container = document.querySelector('.seller-workspace-page').getBoundingClientRect();
+                const workspace = document.querySelector('.workspace-main').getBoundingClientRect();
+                return Math.round((container.left - workspace.left) - (workspace.right - container.right));
+            })).toBe(0);
         }
     } finally {
         await context.close();

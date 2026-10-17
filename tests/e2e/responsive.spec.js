@@ -481,7 +481,7 @@ test('customer header uses the intended shopping and account layouts', async ({ 
     }
 });
 
-test('my account pages use the same container measure as Seller Center', async ({ browser }) => {
+test('workspace pages hold their own measure and gutter', async ({ browser }) => {
     test.setTimeout(60_000);
 
     const measure = async (page, path) => {
@@ -500,24 +500,34 @@ test('my account pages use the same container measure as Seller Center', async (
             const container = document.querySelector('.page-container');
             const main = document.querySelector('.workspace-main');
             const style = getComputedStyle(container);
+            const box = container.getBoundingClientRect();
+            const mainBox = main.getBoundingClientRect();
 
             return {
                 sidebar: getComputedStyle(workspace).gridTemplateColumns.split(' ')[0],
                 paddingInline: style.paddingLeft,
-                maxWidth: style.maxWidth,
-                // How far the page sits from the sidebar. Centring only shows once the screen is
-                // wider than the container's own measure, so this is read at a width where it is.
-                offsetFromSidebar: Math.round(container.getBoundingClientRect().left - main.getBoundingClientRect().left),
+                width: Math.round(box.width),
+                mainWidth: Math.round(mainBox.width),
+                // Centred pages leave the same slack either side of the content column.
+                leftSlack: Math.round(box.left - mainBox.left),
+                rightSlack: Math.round(mainBox.right - box.right),
             };
         });
     };
 
     const wide = { width: 1800, height: 900 };
     const seller = await openAsRole(browser, 'seller', { viewport: wide });
-    let reference;
+    let sidebar;
 
     try {
-        reference = await measure(seller.page, '/seller/orders');
+        // Seller Center pages centre in their content column at the same 1400px measure.
+        for (const path of ['/seller', '/seller/orders', '/seller/products', '/seller/reviews', '/seller/earnings', '/seller/store-settings']) {
+            const center = await measure(seller.page, path);
+            expect(center.width, path).toBe(1400);
+            expect(center.leftSlack, path).toBe(center.rightSlack);
+            sidebar ??= center.sidebar;
+            expect(center.sidebar, path).toBe(sidebar);
+        }
     } finally {
         await seller.context.close();
     }
@@ -525,9 +535,34 @@ test('my account pages use the same container measure as Seller Center', async (
     const customer = await openAsRole(browser, 'customer', { viewport: wide });
 
     try {
-        // Every account page sits in the same shell, so one drifting means they all have.
-        for (const path of ['/orders', '/my-reviews', '/delivery-addresses']) {
-            expect(await measure(customer.page, path), path).toEqual(reference);
+        // One sidebar column for both workspaces, then each page takes the measure its content reads at.
+        const purchases = await measure(customer.page, '/orders');
+        expect(purchases.sidebar).toBe(sidebar);
+        expect(purchases.width).toBe(1400);
+        expect(purchases.leftSlack).toBe(purchases.rightSlack);
+
+        // Messages gives the two-panel chat the whole content column.
+        const messages = await measure(customer.page, '/messages');
+        expect(messages.width).toBe(messages.mainWidth);
+        expect(messages.leftSlack).toBe(0);
+        const inbox = await customer.page.locator('[data-conversation-list]').boundingBox();
+        expect(inbox.width).toBeGreaterThanOrEqual(380);
+        expect(inbox.width).toBeLessThanOrEqual(420);
+
+        for (const [path, width] of [['/my-reviews', 1160], ['/delivery-addresses', 960], ['/profile', 800]]) {
+            const page = await measure(customer.page, path);
+            expect(page.width, path).toBe(width);
+            expect(page.leftSlack, path).toBe(page.rightSlack);
+        }
+
+        // One 24-32px gutter across every account page, at every width.
+        for (const viewport of [wide, { width: 1024, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
+            await customer.page.setViewportSize(viewport);
+            for (const path of ['/orders', '/my-reviews', '/delivery-addresses', '/profile', '/messages']) {
+                const gutter = parseFloat((await measure(customer.page, path)).paddingInline);
+                expect(gutter, `${path} at ${viewport.width}`).toBeGreaterThanOrEqual(24);
+                expect(gutter, `${path} at ${viewport.width}`).toBeLessThanOrEqual(32);
+            }
         }
     } finally {
         await customer.context.close();
