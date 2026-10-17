@@ -143,6 +143,8 @@
 }
 
 @media (min-width: 1024px) {
+    /* The same sidebar column as Seller Center, so both workspaces start the page at one edge. */
+    .customer-workspace[data-workspace='customer']:not(.customer-sidebar-collapsed) { grid-template-columns: 222px minmax(0, 1fr); }
     .seller-workspace.seller-sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
     .seller-workspace.seller-sidebar-collapsed > [data-workspace-header='seller'] { display: none; }
     .customer-workspace.customer-sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
@@ -155,11 +157,15 @@
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) form button[type='submit'] { height: 2rem; font-size: .75rem; }
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) [aria-label='Account menu'] { min-height: 2.5rem; }
 
+/*
+ * Seller Center sets the measure for a workspace page: a 1400px column with 32px of gutter.
+ * These are the shared values so My Account reads at the same width and rhythm; the seller
+ * file no longer has to differ, and neither can drift from the other.
+ */
 :is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
     margin-inline: auto;
-    max-width: 1500px;
-    padding-top: 1.25rem;
-    padding-bottom: 0.5rem;
+    max-width: 1400px;
+    padding: 32px 32px 28px;
 }
 
 /* Swiss seller center: the page header closes with a hairline, like a ruled grid. */
@@ -170,13 +176,34 @@
 
 :is(.seller-workspace, .customer-workspace) .page-shell {
     background: transparent;
-    padding-top: 0.25rem;
-    padding-bottom: 2.5rem;
+    padding-top: 0;
+    padding-bottom: 40px;
 }
 
 :is(.seller-workspace, .customer-workspace) .page-container {
-    max-width: 1500px;
-    padding-inline: 1rem;
+    max-width: 1400px;
+    padding-inline: 32px;
+}
+
+/* The gutter closes in step with the viewport, as Seller Center already did. */
+@media (max-width: 1100px) {
+    :is(.seller-workspace, .customer-workspace) .page-container {
+        padding-inline: 25px;
+    }
+
+    :is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
+        padding: 25px 25px 24px;
+    }
+}
+
+@media (max-width: 600px) {
+    :is(.seller-workspace, .customer-workspace) .page-container {
+        padding-inline: 17px;
+    }
+
+    :is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
+        padding: 23px 17px 22px;
+    }
 }
 
 :is(.seller-workspace, .customer-workspace) .page-container.max-w-4xl {
@@ -302,7 +329,8 @@
 
 @media (min-width: 1024px) {
     :is(.seller-workspace, .customer-workspace) .page-container {
-        padding-inline: 1.75rem;
+        /* 32px, the Seller Center gutter. Seller only escaped the 28px here on specificity. */
+        padding-inline: 32px;
     }
 }
 

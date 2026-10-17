@@ -480,3 +480,51 @@ test('customer header uses the intended shopping and account layouts', async ({ 
         await context.close();
     }
 });
+
+test('my account pages use the same container measure as Seller Center', async ({ browser }) => {
+    test.setTimeout(60_000);
+
+    const measure = async (page, path) => {
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+            try {
+                await page.goto(path, { waitUntil: 'domcontentloaded' });
+                break;
+            } catch {
+                await page.waitForTimeout(1200);
+            }
+        }
+        await expect(page.locator('.workspace-main')).toBeVisible();
+
+        return page.evaluate(() => {
+            const workspace = document.querySelector('.seller-workspace, .customer-workspace');
+            const container = document.querySelector('.page-container');
+            const style = getComputedStyle(container);
+
+            return {
+                sidebar: getComputedStyle(workspace).gridTemplateColumns.split(' ')[0],
+                paddingInline: style.paddingLeft,
+                maxWidth: style.maxWidth,
+            };
+        });
+    };
+
+    const seller = await openAsRole(browser, 'seller', { viewport: { width: 1440, height: 900 } });
+    let reference;
+
+    try {
+        reference = await measure(seller.page, '/seller/orders');
+    } finally {
+        await seller.context.close();
+    }
+
+    const customer = await openAsRole(browser, 'customer', { viewport: { width: 1440, height: 900 } });
+
+    try {
+        // Every account page sits in the same shell, so one drifting means they all have.
+        for (const path of ['/orders', '/my-reviews', '/delivery-addresses']) {
+            expect(await measure(customer.page, path), path).toEqual(reference);
+        }
+    } finally {
+        await customer.context.close();
+    }
+});
