@@ -9,6 +9,7 @@ use App\Events\MessageSent;
 use App\Events\TypingStatusChanged;
 use App\Livewire\Chat\Inbox;
 use App\Livewire\Chat\Thread;
+use App\Models\BlockedUser;
 use App\Models\Conversation;
 use App\Models\ConversationReadState;
 use App\Models\Product;
@@ -20,6 +21,7 @@ use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -381,6 +383,49 @@ class ConversationTest extends TestCase
 
         Event::assertDispatched(TypingStatusChanged::class, fn (TypingStatusChanged $event): bool => $event->conversationId === $conversation->id && $event->userId === $buyer->id && $event->typing,
         );
+    }
+
+    public function test_a_blocked_participant_cannot_broadcast_a_typing_start(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $seller = User::factory()->seller()->create();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'owner']);
+        $component = Livewire::actingAs($buyer)->test(Thread::class, ['conversation' => $conversation]);
+
+        // Blocked after opening the thread: they can still read it, but may no longer send.
+        BlockedUser::create(['user_id' => $seller->id, 'blocked_user_id' => $buyer->id]);
+        Event::fake([TypingStatusChanged::class]);
+
+        $component->call('startTyping');
+
+        Event::assertNotDispatched(TypingStatusChanged::class);
+    }
+
+    public function test_typing_checks_the_policy_once_per_broadcast_not_once_per_keystroke(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        Event::fake([TypingStatusChanged::class]);
+
+        $component = Livewire::actingAs($buyer)->test(Thread::class, ['conversation' => $conversation]);
+
+        $policyChecks = 0;
+        DB::listen(function ($query) use (&$policyChecks): void {
+            if (str_contains($query->sql, 'blocked_users')) {
+                $policyChecks++;
+            }
+        });
+
+        // Two seconds of typing at the 500ms debounce: the limiter allows one broadcast.
+        foreach (range(1, 4) as $ignored) {
+            $component->call('startTyping');
+        }
+
+        $this->assertSame(1, $policyChecks);
+        Event::assertDispatchedTimes(TypingStatusChanged::class, 1);
     }
 
     public function test_mark_read_rechecks_conversation_access(): void

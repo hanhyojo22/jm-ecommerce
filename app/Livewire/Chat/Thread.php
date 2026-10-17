@@ -7,6 +7,7 @@ use App\Events\ConversationInboxChanged;
 use App\Events\ConversationReceiptUpdated;
 use App\Events\TypingStatusChanged;
 use App\Models\Conversation;
+use App\Models\ConversationMessage;
 use App\Models\ConversationReadState;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
@@ -92,10 +93,19 @@ class Thread extends Component
     #[Renderless]
     public function startTyping(): void
     {
-        Gate::authorize('send', $this->conversation);
         $user = auth()->user();
         $eventKey = 'conversation-typing:'.$this->conversation->id.':'.$user->id;
-        RateLimiter::attempt($eventKey, 1, fn () => TypingStatusChanged::dispatch($this->conversation->id, $user->id, true), 2);
+
+        /*
+         * Typing calls this every 500ms, and the limiter drops three of every four. Authorising
+         * first meant each of those dropped calls still paid for a policy check, so the store and
+         * the block list were read on every keystroke. Nothing is broadcast without the check; it
+         * just happens where the work actually is.
+         */
+        RateLimiter::attempt($eventKey, 1, function () use ($user): void {
+            Gate::authorize('send', $this->conversation);
+            TypingStatusChanged::dispatch($this->conversation->id, $user->id, true);
+        }, 2);
     }
 
     public function loadOlderMessages(): void
@@ -247,9 +257,9 @@ class Thread extends Component
                     ->orWhere(fn ($query) => $query->where('created_at', $oldestMessage->created_at)->where('id', '<', $oldestMessage->id));
             })
             ->exists();
-        $hasNewerMessages = $this->hasNewerMessages();
-
         $lastMessage = $messages->last();
+        // The window's last message is the one this would otherwise go and fetch again.
+        $hasNewerMessages = $this->hasNewerMessages($lastMessage);
         $recipientReadState = $lastMessage?->sender_id === auth()->id()
             ? $this->conversation->readStates()
                 ->where('user_id', '!=', auth()->id())
@@ -273,9 +283,9 @@ class Thread extends Component
         ]);
     }
 
-    private function hasNewerMessages(): bool
+    private function hasNewerMessages(?ConversationMessage $newestMessage = null): bool
     {
-        $newestMessage = $this->conversation->messages()->find($this->messageIds[array_key_last($this->messageIds)] ?? null);
+        $newestMessage ??= $this->conversation->messages()->find($this->messageIds[array_key_last($this->messageIds)] ?? null);
         if ($newestMessage === null) {
             return false;
         }
