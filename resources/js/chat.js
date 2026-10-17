@@ -368,6 +368,29 @@ window.chatThread = (conversationId, userId) => ({
         form.requestSubmit();
     },
 
+    /**
+     * Grows the composer to its content, capped so it never takes the thread over.
+     *
+     * Typing fires `input` and resizes on its own, but a quick reply assigns the body straight to
+     * Livewire, which raises no event — the box kept its one-row height and clipped the text.
+     */
+    fitComposer() {
+        const composer = this.$refs.messageBody;
+
+        if (!composer) {
+            return;
+        }
+
+        composer.style.height = 'auto';
+        composer.style.height = `${Math.min(composer.scrollHeight, 160)}px`;
+    },
+
+    useQuickReply(reply) {
+        this.$wire.body = reply;
+        this.$refs.messageBody.value = reply;
+        this.$nextTick(() => this.fitComposer());
+    },
+
     attachmentProgress(progress) {
         this.uploadProgress = progress;
         const item = this.pending.find((entry) => entry.id === this.activeUploadId);

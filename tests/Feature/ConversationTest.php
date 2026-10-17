@@ -199,7 +199,8 @@ class ConversationTest extends TestCase
             ->assertOk()
             ->assertSee('data-conversation-thread')
             ->assertSee('Write a message')
-            ->assertSee('x-on:click="$wire.body = \'Your order is being prepared.\'"', false)
+            // Still Alpine, so a quick reply costs no server round trip.
+            ->assertSee('x-on:click="useQuickReply(\'Your order is being prepared.\')"', false)
             ->assertDontSee('wire:click="useQuickReply(', false);
     }
 
