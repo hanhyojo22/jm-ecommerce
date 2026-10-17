@@ -185,6 +185,15 @@
     padding-inline: 32px;
 }
 
+/*
+ * Pinned to the sidebar, the way Seller Center pins its own pages. Centred, the container keeps
+ * its 1400px and pushes the page away from the sidebar as the screen grows, which is the gap
+ * that shows on a wide monitor and not at all on a narrow one.
+ */
+.customer-workspace[data-workspace='customer'] .page-container {
+    margin-inline: 0;
+}
+
 /* The gutter closes in step with the viewport, as Seller Center already did. */
 @media (max-width: 1100px) {
     :is(.seller-workspace, .customer-workspace) .page-container {

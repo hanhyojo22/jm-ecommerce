@@ -498,17 +498,22 @@ test('my account pages use the same container measure as Seller Center', async (
         return page.evaluate(() => {
             const workspace = document.querySelector('.seller-workspace, .customer-workspace');
             const container = document.querySelector('.page-container');
+            const main = document.querySelector('.workspace-main');
             const style = getComputedStyle(container);
 
             return {
                 sidebar: getComputedStyle(workspace).gridTemplateColumns.split(' ')[0],
                 paddingInline: style.paddingLeft,
                 maxWidth: style.maxWidth,
+                // How far the page sits from the sidebar. Centring only shows once the screen is
+                // wider than the container's own measure, so this is read at a width where it is.
+                offsetFromSidebar: Math.round(container.getBoundingClientRect().left - main.getBoundingClientRect().left),
             };
         });
     };
 
-    const seller = await openAsRole(browser, 'seller', { viewport: { width: 1440, height: 900 } });
+    const wide = { width: 1800, height: 900 };
+    const seller = await openAsRole(browser, 'seller', { viewport: wide });
     let reference;
 
     try {
@@ -517,7 +522,7 @@ test('my account pages use the same container measure as Seller Center', async (
         await seller.context.close();
     }
 
-    const customer = await openAsRole(browser, 'customer', { viewport: { width: 1440, height: 900 } });
+    const customer = await openAsRole(browser, 'customer', { viewport: wide });
 
     try {
         // Every account page sits in the same shell, so one drifting means they all have.
