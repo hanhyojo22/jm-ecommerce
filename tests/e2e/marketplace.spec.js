@@ -72,6 +72,104 @@ test('customer can add a newly loaded arrival to the cart', async ({ browser }) 
     }
 });
 
+test('cart badge responds while the add carries its own session token, rolls back errors, and reconciles later adds', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer');
+    let releaseRequest;
+    const heldRequest = new Promise((resolve) => { releaseRequest = resolve; });
+    let sessionRefreshes = 0;
+    const addAuthorizations = [];
+
+    try {
+        await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        const cartLink = page.locator('[data-cart-link]');
+        const startingCount = Number((await cartLink.getAttribute('aria-label')).match(/\d+/)[0]);
+        const form = page.locator('#purchase form[data-add-to-cart]');
+        await page.route('**/auth/session', async (route) => {
+            sessionRefreshes++;
+            await route.continue();
+        });
+        await page.route('**/cart/products/**', async (route) => {
+            addAuthorizations.push(route.request().headers().authorization ?? '');
+            await heldRequest;
+            await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ errors: { quantity: ['This item is no longer available.'] } }) });
+        });
+
+        await form.getByRole('button', { name: 'Add to cart' }).click();
+        await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCount + 1} items?$`));
+        await expect(form).toHaveAttribute('aria-busy', 'true');
+        await expect(form.locator('[data-cart-feedback]')).toHaveText('Adding to cart…');
+
+        releaseRequest();
+        await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCount} items?$`));
+        await expect(form.locator('[data-cart-feedback]')).toHaveText('This item is no longer available.');
+        await expect(form).not.toHaveAttribute('aria-busy');
+
+        // The add authenticates itself, so it never waits on the session bridge for a cookie.
+        expect(addAuthorizations).toEqual([expect.stringMatching(/^Bearer \S+$/)]);
+        expect(sessionRefreshes).toBe(0);
+
+        await page.unroute('**/cart/products/**');
+        await form.getByRole('button', { name: 'Add to cart' }).click();
+        await expect(form.locator('[data-cart-feedback]')).toHaveText('Added to cart.');
+        await expect(form).not.toHaveAttribute('aria-busy');
+        await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCount + 1} items?$`));
+        await form.getByRole('button', { name: 'Add to cart' }).click();
+        await expect(form.locator('[data-cart-feedback]')).toHaveText('Added to cart.');
+        await expect(form).not.toHaveAttribute('aria-busy');
+        await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCount + 2} items?$`));
+
+        // A token the server rejects is dropped, so the retry presents the cookie the bridge minted
+        // rather than the same refused credential.
+        const retryAuthorizations = [];
+        let rejectOnce = true;
+        await page.route('**/cart/products/**', async (route) => {
+            retryAuthorizations.push(route.request().headers().authorization ?? '');
+
+            if (rejectOnce) {
+                rejectOnce = false;
+                await route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
+
+                return;
+            }
+
+            await route.continue();
+        });
+        await form.getByRole('button', { name: 'Add to cart' }).click();
+        await expect(form.locator('[data-cart-feedback]')).toHaveText('Added to cart.');
+        await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCount + 3} items?$`));
+        expect(retryAuthorizations).toEqual([expect.stringMatching(/^Bearer \S+$/), '']);
+        expect(sessionRefreshes).toBe(1);
+    } finally {
+        releaseRequest();
+        await context.close();
+    }
+});
+
+test('buy now puts the session in a cookie before it navigates to checkout', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer');
+    const events = [];
+
+    try {
+        await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await page.route('**/auth/session', async (route) => {
+            events.push('session');
+            await route.continue();
+        });
+        await page.route('**/cart/products/**', async (route) => {
+            events.push('add');
+            await route.continue();
+        });
+
+        await page.locator('#purchase').getByRole('button', { name: 'Buy now' }).click();
+        await expect(page).toHaveURL(/\/checkout$/);
+
+        // Checkout is reached by a plain navigation, which carries no Authorization header.
+        expect(events).toEqual(['add', 'session']);
+    } finally {
+        await context.close();
+    }
+});
+
 test('seller shops another store and returns to Seller Center with the same account', async ({ browser }) => {
     test.setTimeout(60_000);
     const { context, page } = await openAsRole(browser, 'seller');
@@ -212,12 +310,14 @@ test('mobile checkout stacks the summary and shows server field errors', async (
     }
 });
 
-test('customer refreshes the Clerk session before adding an item to the cart', async ({ browser }) => {
+test('customer adds an item to the cart on the session token the request carries itself', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'customer');
+    let addAuthorization;
 
     try {
         await page.route('**/cart/products/**', async (route) => {
             const headers = { ...route.request().headers() };
+            addAuthorization = headers.authorization;
             delete headers['x-playwright-auth-key'];
             delete headers['x-playwright-identity'];
             await route.continue({ headers });
@@ -227,9 +327,10 @@ test('customer refreshes the Clerk session before adding an item to the cart', a
         const addToCartForm = page.locator('#purchase form');
         await expect(addToCartForm).toHaveAttribute('data-clerk-session-refresh', /auth\/session/);
         await expect(addToCartForm).toHaveAttribute('action', /cart\/products\//);
-        const refresh = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
+        const add = page.waitForResponse((response) => /\/cart\/products\//.test(response.url()) && response.request().method() === 'POST');
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
-        await expect((await refresh).ok()).toBeTruthy();
+        await expect((await add).ok()).toBeTruthy();
+        expect(addAuthorization).toMatch(/^Bearer \S+$/);
 
         await expect(page).toHaveURL(/\/stores\/qa-northwind-store\/products\/qa-canvas-tote$/);
         await expect(page.locator('[data-cart-link]')).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCartCount + 1} items?$`));
@@ -352,13 +453,19 @@ test('seller response stays on the form when session renewal fails', async ({ br
         await page.goto('/seller/reviews');
         await rejectOptionalCookies(page);
         await page.locator('[data-seller-reviews] [data-review-thread]').first().getByRole('button', { name: /^(Reply|Edit response)$/ }).click();
+
+        // The composer arrives over Livewire, so it has to be open before the session is broken —
+        // otherwise the 401 lands on the request that was still fetching it.
+        const composer = page.getByLabel('Seller response');
+        await expect(composer).toBeVisible();
+
         await page.route('**/auth/session', (route) => route.fulfill({ status: 401, body: 'Session expired' }));
-        await page.getByLabel('Seller response').fill('Please keep this draft.');
+        await composer.fill('Please keep this draft.');
         await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
 
         await expect(page.getByRole('alert')).toContainText('session could not be refreshed');
         await expect(page).toHaveURL(/\/seller\/reviews$/);
-        await expect(page.getByLabel('Seller response')).toHaveValue('Please keep this draft.');
+        await expect(composer).toHaveValue('Please keep this draft.');
     } finally {
         await context.close();
     }
@@ -645,12 +752,55 @@ test('seller quick reply fills the message draft without a server request', asyn
             updateRequests++;
             return route.abort();
         });
+        const composer = seller.page.getByRole('textbox', { name: 'Write a message' });
         for (const reply of ['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?']) {
             await seller.page.getByRole('button', { name: reply }).click();
-            await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue(reply);
+            await expect(composer).toHaveValue(reply);
             await expect(seller.page.locator('#message-help')).toContainText(`${Array.from(reply).length}/2000`);
+
+            // A quick reply raises no input event, so the box has to be told to grow or it clips.
+            const clipped = await composer.evaluate((node) => node.scrollHeight - node.clientHeight);
+            expect(clipped).toBeLessThanOrEqual(1);
         }
         expect(updateRequests).toBe(0);
+    } finally {
+        await seller.context.close();
+    }
+});
+
+test('a quick reply that wraps stays fully visible in the composer on a phone', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
+        await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+    } finally {
+        await customer.context.close();
+    }
+
+    const seller = await openAsRole(browser, 'seller', { viewport: { width: 390, height: 844 } });
+
+    try {
+        await seller.page.goto('/messages');
+        const conversationUrl = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).first().getAttribute('href');
+        await seller.page.goto(conversationUrl, { waitUntil: 'domcontentloaded' });
+        const composer = seller.page.getByRole('textbox', { name: 'Write a message' });
+        await expect(composer).toBeVisible();
+
+        const reply = 'We’ll update you once your order ships.';
+        await seller.page.getByRole('button', { name: reply }).click();
+        await expect(composer).toHaveValue(reply);
+
+        // The reply needs two lines at this width, and setting the body raises no input event, so
+        // the box has to be told to grow or it hides the second line behind its own scroll.
+        const composerBox = await composer.evaluate((node) => ({
+            hidden: node.scrollHeight - node.clientHeight,
+            lineHeight: parseFloat(getComputedStyle(node).lineHeight),
+        }));
+
+        // Anything approaching a whole line out of view means the box never grew.
+        expect(composerBox.hidden).toBeLessThan(composerBox.lineHeight / 2);
     } finally {
         await seller.context.close();
     }
