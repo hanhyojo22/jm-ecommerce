@@ -13,13 +13,26 @@ class CheckoutController extends Controller
 {
     public function create(Request $request): RedirectResponse|View
     {
-        $cart = $request->user()->cart()->with(['items.product.store', 'items.product.tenant', 'items.product.thumbnail', 'items.product.variants', 'items.variant.images'])->first();
+        /*
+         * Only the ticked items are bought here, so only they are worth loading products, variants
+         * and images for. The count still covers the whole cart, which is what tells an empty cart
+         * apart from one where nothing is ticked.
+         */
+        $cart = $request->user()->cart()
+            ->withCount('items')
+            ->with([
+                'items' => fn ($query) => $query->where('selected', true),
+                'items.product.store',
+                'items.product.tenant',
+                'items.product.thumbnail',
+                'items.product.variants',
+                'items.variant.images',
+            ])
+            ->first();
 
-        if ($cart === null || $cart->items->isEmpty()) {
+        if ($cart === null || $cart->items_count === 0) {
             return to_route('cart.index')->with('status', 'Your cart is empty. Add a product before checking out.');
         }
-
-        $cart->setRelation('items', $cart->items->where('selected', true)->values());
 
         if ($cart->items->isEmpty()) {
             return to_route('cart.index')->with('status', 'Select an item to check out.');
@@ -61,16 +74,25 @@ class CheckoutController extends Controller
             'delivery_note' => ['nullable', 'string', 'max:1000'],
         ]);
         $order = $checkout->handle($request->user(), $data);
+        $buyer = $request->user();
 
-        try {
-            $mailer->send(
-                $request->user(),
-                "JMMart order {$order->number} received",
-                "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, payable on delivery. Each store confirms its delivery timing.\n\nTrack your order or request help: ".route('orders.show', $order),
-            );
-        } catch (\Throwable $exception) {
-            report($exception);
-        }
+        /*
+         * Two calls to Google, each allowed eight seconds, used to sit between the buyer pressing
+         * Place order and seeing it. The order does not depend on the mail, so it is sent once the
+         * response is already on its way. A failure is still reported and still does not fail the
+         * order; a queued job would add retries if the receipt ever has to be guaranteed.
+         */
+        defer(function () use ($mailer, $buyer, $order): void {
+            try {
+                $mailer->send(
+                    $buyer,
+                    "JMMart order {$order->number} received",
+                    "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, payable on delivery. Each store confirms its delivery timing.\n\nTrack your order or request help: ".route('orders.show', $order),
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        });
 
         return to_route('orders.show', $order)->with('order_placed', true);
     }

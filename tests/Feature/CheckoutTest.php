@@ -533,6 +533,23 @@ class CheckoutTest extends TestCase
         $this->assertSame(1, $buyer->cart->items()->count());
     }
 
+    public function test_a_rejected_delivery_detail_is_named_and_linked_at_the_top_of_checkout(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $buyer = User::factory()->create();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+
+        $this->actingAs($buyer)
+            ->from(route('checkout.create'))
+            ->post(route('checkout.store'), array_merge($this->delivery(), ['phone' => '12345', 'city' => '']))
+            ->assertRedirect(route('checkout.create'));
+
+        $this->actingAs($buyer)->get(route('checkout.create'))
+            ->assertSee('There are 2 details to fix')
+            ->assertSee('href="#phone"', false)
+            ->assertSee('href="#city"', false);
+    }
+
     private function sellerProduct(string $price, int $stock): array
     {
         $seller = User::factory()->seller()->create(['email_verified_at' => now()]);

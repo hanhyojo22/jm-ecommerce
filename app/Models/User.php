@@ -116,12 +116,32 @@ class User extends Authenticatable
         return (int) ($cart?->items_sum_quantity ?? 0);
     }
 
+    /**
+     * Membership is asked once per product when a cart is read, so the answer is kept for the
+     * life of the instance rather than costing a query per item.
+     *
+     * @var array<string, true>|null
+     */
+    private ?array $staffTenantIds = null;
+
     public function isMemberOfTenant(string $tenantId): bool
     {
-        return $this->tenantMemberships()
-            ->where('tenant_id', $tenantId)
+        $this->staffTenantIds ??= $this->tenantMemberships()
             ->whereIn('role', ['owner', 'manager', 'staff'])
-            ->exists();
+            ->pluck('tenant_id')
+            ->flip()
+            ->map(fn (): bool => true)
+            ->all();
+
+        return isset($this->staffTenantIds[$tenantId]);
+    }
+
+    /**
+     * Drops the remembered memberships so a role change made during this request is seen.
+     */
+    public function forgetTenantMemberships(): void
+    {
+        $this->staffTenantIds = null;
     }
 
     /**

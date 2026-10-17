@@ -1,7 +1,8 @@
 <x-app-layout>
     @php($itemsByStore = $cart->items->groupBy(fn ($item) => $item->product->store_id))
 
-    <div class="min-h-[calc(100dvh-4.5rem)] bg-canvas py-6">
+    {{-- Room at the foot so the fixed phone action bar never covers the last of the summary. --}}
+    <div class="min-h-[calc(100dvh-4.5rem)] bg-canvas py-6 max-lg:pb-28">
         <div class="mx-auto flex w-full max-w-[1220px] flex-col gap-6 px-6" x-data="{
             placing: false,
             addresses: @js($addresses->map(fn ($address) => $address->only(['id', 'recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']))),
@@ -27,6 +28,18 @@
                 <div class="grid min-w-0 gap-6">
                     @if ($errors->has('cart'))
                         <div class="rounded-[10px] border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
+                    @endif
+                    @php($fieldErrors = collect(['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City', 'province' => 'Province', 'postal_code' => 'Postal code', 'delivery_note' => 'Delivery note'])->filter(fn ($label, $field) => $errors->has($field)))
+                    @if ($fieldErrors->isNotEmpty())
+                        {{-- A rejected field can sit far below the fold, so the page says what to fix and takes the reader there. --}}
+                        <div role="alert" tabindex="-1" x-init="$el.focus()" aria-labelledby="checkout-errors-title" class="rounded-[10px] border border-danger bg-red-50 p-6 text-sm leading-6 text-ink">
+                            <h2 id="checkout-errors-title" class="font-semibold text-danger">{{ $fieldErrors->count() === 1 ? 'There is 1 detail to fix' : 'There are '.$fieldErrors->count().' details to fix' }}</h2>
+                            <ul class="mt-2 grid gap-1">
+                                @foreach ($fieldErrors as $field => $label)
+                                    <li><a href="#{{ $field }}" class="font-semibold text-danger underline">{{ $label }}: {{ $errors->first($field) }}</a></li>
+                                @endforeach
+                            </ul>
+                        </div>
                     @endif
                     <section class="rounded-[18px] border border-line bg-surface p-6 shadow-sm" aria-labelledby="delivery-heading">
                         <div class="grid gap-2"><h2 id="delivery-heading" class="text-lg font-semibold text-ink">Delivery address</h2><p class="text-sm text-muted">Where should your order be delivered?</p></div>
@@ -109,7 +122,7 @@
                                     <ul class="mt-4 grid gap-4">
                                         @foreach ($storeItems as $item)
                                             <li class="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)_auto] items-start gap-4 text-sm">
-                                                <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">@if ($item->imagePath())<img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="" class="size-full object-contain">@else<svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>@endif</span>
+                                                <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">@if ($item->imagePath())<img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="" loading="lazy" decoding="async" class="size-full object-contain">@else<svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>@endif</span>
                                                 <span class="min-w-0 leading-5 text-muted"><span class="block break-words font-medium text-ink">{{ $item->product->name }}</span>@if ($item->variant)<span class="block text-xs font-medium text-brand">{{ $item->variant->label() }}</span>@endif<span class="block text-xs">Qty {{ $item->quantity }}</span></span>
                                                 <span class="text-right font-semibold tabular-nums text-ink">₱{{ number_format($item->line_total, 2) }}</span>
                                             </li>
@@ -119,10 +132,24 @@
                             @endforeach
                         </div>
                         <dl class="mt-6 grid gap-4 text-sm"><div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-muted"><dt>Subtotal</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div><div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-muted"><dt>Shipping</dt><dd class="text-right font-semibold text-success">Free</dd></div><div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 border-t border-line pt-6 font-semibold text-ink"><dt>Total to pay</dt><dd class="whitespace-nowrap text-right text-xl font-bold tabular-nums">₱{{ number_format($subtotal, 2) }}</dd></div></dl>
-                        <button type="submit" :disabled="placing" class="mt-6 flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:bg-slate-300" x-text="placing ? 'Placing order…' : 'Place order · ₱{{ number_format($subtotal, 2) }}'">Place order · ₱{{ number_format($subtotal, 2) }}</button>
-                        <p class="mt-3 text-center text-xs leading-5 text-muted">You will pay on delivery.</p>
+                        <button type="submit" :disabled="placing" class="mt-6 flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:bg-slate-300 max-lg:hidden" x-text="placing ? 'Placing order…' : 'Place order · ₱{{ number_format($subtotal, 2) }}'">Place order · ₱{{ number_format($subtotal, 2) }}</button>
+                        <p class="mt-3 text-center text-xs leading-5 text-muted max-lg:hidden">You will pay on delivery.</p>
                     </div>
                 </aside>
+
+                {{--
+                    On a phone the summary and its button sit a few screens below the form, so the
+                    total and the way to act on it stay in reach instead of being scrolled to.
+                --}}
+                <div class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-2px_12px_rgb(15_23_42/8%)] backdrop-blur lg:hidden">
+                    <div class="mx-auto flex w-full max-w-[1220px] items-center gap-4">
+                        <div class="min-w-0">
+                            <p class="text-xs text-muted">Total to pay</p>
+                            <p class="truncate text-lg font-bold tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</p>
+                        </div>
+                        <button type="submit" :disabled="placing" class="ml-auto flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:bg-slate-300" x-text="placing ? 'Placing order…' : 'Place order'">Place order</button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
