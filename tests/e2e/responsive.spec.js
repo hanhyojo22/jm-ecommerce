@@ -541,6 +541,12 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
         expect(purchases.width).toBe(1400);
         expect(purchases.leftSlack).toBe(purchases.rightSlack);
 
+        // The details page drills into that list and holds the same measure.
+        const orderHref = await customer.page.getByRole('link', { name: 'View order', exact: true }).first().getAttribute('href');
+        const details = await measure(customer.page, orderHref);
+        expect(details.width).toBe(1400);
+        expect(details.leftSlack).toBe(details.rightSlack);
+
         // Messages gives the two-panel chat the whole content column.
         const messages = await measure(customer.page, '/messages');
         expect(messages.width).toBe(messages.mainWidth);
