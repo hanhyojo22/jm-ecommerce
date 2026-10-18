@@ -555,7 +555,7 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
         expect(inbox.width).toBeGreaterThanOrEqual(380);
         expect(inbox.width).toBeLessThanOrEqual(420);
 
-        for (const [path, width] of [['/my-reviews', 1160], ['/delivery-addresses', 960], ['/profile', 800]]) {
+        for (const [path, width] of [['/my-reviews', 1160], ['/delivery-addresses', 960], ['/profile', 880]]) {
             const page = await measure(customer.page, path);
             expect(page.width, path).toBe(width);
             expect(page.leftSlack, path).toBe(page.rightSlack);

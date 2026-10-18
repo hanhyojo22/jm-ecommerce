@@ -249,9 +249,36 @@
     max-width: 960px;
 }
 
+/*
+ * Account settings hosts Clerk's profile card, which is drawn for 55rem of room: the two-pane
+ * shell plus a label/value grid needs the full 880px to keep its rows on one line.
+ */
 :is(.seller-workspace, .customer-workspace) .page-container.account-measure-settings {
     margin-inline: auto;
-    max-width: 800px;
+    max-width: 880px;
+}
+
+/*
+ * Account settings is Clerk's hosted profile on one of our cards (see clerk-appearance.js).
+ * Two parts of it have no appearance key: the navbar heading, which becomes the quiet section
+ * label the other sidebars use, and its description, which just repeats the page subtitle.
+ */
+[data-clerk-component='user-profile'] .cl-navbar h1 {
+    font-size: .6875rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    line-height: 1.4;
+    text-transform: uppercase;
+    color: var(--color-muted);
+}
+
+[data-clerk-component='user-profile'] .cl-navbar h1 + * {
+    display: none;
+}
+
+/* Without a publishable key the mount renders our own error block (app.js); give it room. */
+[data-clerk-component='user-profile'][role='alert'] {
+    margin: 1.5rem;
 }
 
 /* One page padding across every account page, rather than a per-page guess. */

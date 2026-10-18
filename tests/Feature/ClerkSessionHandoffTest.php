@@ -36,6 +36,27 @@ class ClerkSessionHandoffTest extends TestCase
             ->assertSee('data-redirect-url="/"', false);
     }
 
+    public function test_handoff_page_explains_a_handoff_that_never_finishes(): void
+    {
+        /*
+         * The spinner is only ever replaced by JavaScript, so the page has to carry the failure
+         * state and a deadline of its own: a stalled bundle or an unanswered Clerk call used to
+         * leave a buyer watching the spinner with nothing to act on.
+         */
+        $this->get(route('clerk.handoff'))
+            ->assertOk()
+            ->assertSeeInOrder(['data-clerk-handoff-error', 'hidden', 'role="alert"'], false)
+            ->assertSee('data-clerk-handoff-retry', false)
+            ->assertSee('window.clerkHandoffState', false)
+            ->assertSee(route('login'), false);
+
+        $this->get(route('clerk.refresh', ['redirect' => '/cart']))
+            ->assertOk()
+            ->assertSee('data-clerk-session-handoff', false)
+            ->assertSeeInOrder(['data-clerk-handoff-error', 'hidden'], false)
+            ->assertSee(route('login', ['redirect' => '/cart']), false);
+    }
+
     public function test_authenticated_clerk_session_completes_handoff_to_validated_destination(): void
     {
         $user = User::factory()->create(['clerk_user_id' => 'user_handoff']);

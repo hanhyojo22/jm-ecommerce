@@ -2,6 +2,7 @@
 import './cookie-consent';
 import './chat';
 import './cart';
+import { clerkComponentAppearance, clerkUserProfileAppearance } from './clerk-appearance';
 
 window.marketplaceSuggestions = (initialQuery, url, resultsUrl) => ({
     query: initialQuery,
@@ -170,37 +171,6 @@ document.querySelectorAll('form[data-confirm-message]').forEach((form) => {
     });
 });
 
-const clerkComponentAppearance = {
-    variables: {
-        colorPrimary: '#2563eb',
-        colorForeground: '#0f172a',
-        colorBackground: '#ffffff',
-        colorBorder: '#e2e8f0',
-        borderRadius: '10px',
-        fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    },
-    options: {
-        elevation: 'flush',
-    },
-    elements: {
-        rootBox: {
-            width: '100%',
-            maxWidth: '100%',
-            minWidth: '0',
-        },
-        cardBox: {
-            width: '100%',
-            maxWidth: '100%',
-            minWidth: '0',
-        },
-        card: {
-            width: '100%',
-            maxWidth: '100%',
-            minWidth: '0',
-        },
-    },
-};
-
 const clerkAuthAppearance = {
     ...clerkComponentAppearance,
     elements: {
@@ -208,6 +178,26 @@ const clerkAuthAppearance = {
         header: { display: 'none' },
     },
 };
+
+/*
+ * Every step of a sign-in hand-off — the bundle, Clerk, the token, the server — sits behind a
+ * request that can stall without ever failing, and a stalled promise leaves the page waiting
+ * with nothing to report. Callers here would rather show an error than wait forever.
+ */
+const withTimeout = (work, milliseconds, message) => new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), milliseconds);
+
+    Promise.resolve(work).then(
+        (value) => {
+            window.clearTimeout(timer);
+            resolve(value);
+        },
+        (error) => {
+            window.clearTimeout(timer);
+            reject(error);
+        },
+    );
+});
 
 const renderClerkComponentError = (message = 'Authentication could not load. Please refresh the page.') => {
     document.querySelectorAll('[data-clerk-component]').forEach((element) => {
@@ -232,21 +222,40 @@ const renderClerkHandoffError = (message = 'We could not finish signing you in.'
         return;
     }
 
-    const title = document.createElement('p');
-    const description = document.createElement('p');
-    const signInLink = document.createElement('a');
+    /*
+     * The page ships the error block next to the spinner so that a bundle which never ran still
+     * leaves a way out. Shown from here directly rather than through the page's own deadline:
+     * that script is the one piece of this page nothing else can stand in for, so this error
+     * path must not depend on it having run.
+     */
+    window.clerkHandoffState?.finish();
 
-    title.className = 'font-semibold text-slate-900';
-    title.textContent = message;
-    description.className = 'text-sm text-slate-600';
-    description.textContent = 'Please return to sign in and try again.';
-    signInLink.className = 'inline-flex min-h-11 items-center justify-center rounded-[10px] bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700';
-    signInLink.href = clerkHandoff.dataset.signInUrl || '/sign-in';
-    signInLink.textContent = 'Return to sign in';
+    const errorBlock = document.querySelector('[data-clerk-handoff-error]');
 
-    clerkHandoff.setAttribute('role', 'alert');
-    clerkHandoff.replaceChildren(title, description, signInLink);
+    if (!errorBlock) {
+        return;
+    }
+
+    const title = errorBlock.querySelector('[data-clerk-handoff-error-title]');
+
+    if (title) {
+        title.textContent = message;
+    }
+
+    clerkHandoff.setAttribute('hidden', '');
+    errorBlock.removeAttribute('hidden');
 };
+
+const clerkHandoffTokenTimeout = 10_000;
+const clerkHandoffPostTimeout = 15_000;
+
+/*
+ * The page starts a deadline of its own, long enough to say that this bundle never arrived but
+ * shorter than the chain below. Each step that is reached buys the deadline the time that step
+ * is allowed, so a hand-off that is still working is never told it has failed — and a step with
+ * no deadline of its own, such as reading the response body, is still covered.
+ */
+const clerkHandoffDeadlineSlack = 2_000;
 
 const completeClerkHandoff = async (clerk) => {
     if (!clerkHandoff) {
@@ -258,7 +267,13 @@ const completeClerkHandoff = async (clerk) => {
         return;
     }
 
-    const sessionToken = await clerk.session?.getToken();
+    window.clerkHandoffState?.extend(clerkHandoffTokenTimeout + clerkHandoffDeadlineSlack);
+
+    const sessionToken = await withTimeout(
+        clerk.session?.getToken(),
+        clerkHandoffTokenTimeout,
+        'Clerk did not hand back a session token in time.',
+    );
 
     if (!sessionToken) {
         throw new Error('Clerk did not provide a session token for the sign-in handoff.');
@@ -266,17 +281,30 @@ const completeClerkHandoff = async (clerk) => {
 
     rememberClerkSessionDeadline(sessionToken);
 
-    const response = await fetch(clerkHandoff.dataset.sessionEndpoint, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${sessionToken}`,
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
-        },
-        body: JSON.stringify({ redirect: clerkHandoff.dataset.redirectUrl }),
-    });
+    window.clerkHandoffState?.extend(clerkHandoffPostTimeout + clerkHandoffDeadlineSlack);
+
+    const abort = new AbortController();
+    const abortTimer = window.setTimeout(() => abort.abort(), clerkHandoffPostTimeout);
+    let response;
+
+    try {
+        response = await fetch(clerkHandoff.dataset.sessionEndpoint, {
+            signal: abort.signal,
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${sessionToken}`,
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+            },
+            body: JSON.stringify({ redirect: clerkHandoff.dataset.redirectUrl }),
+        });
+    } catch (error) {
+        throw new Error('The server did not answer the sign-in handoff.', { cause: error });
+    } finally {
+        window.clearTimeout(abortTimer);
+    }
 
     if (!response.ok) {
         throw new Error(`Laravel rejected the Clerk sign-in handoff (${response.status}).`);
@@ -288,6 +316,7 @@ const completeClerkHandoff = async (clerk) => {
         throw new Error('Laravel returned an invalid sign-in destination.');
     }
 
+    window.clerkHandoffState?.finish();
     window.location.assign(result.redirect);
 };
 
@@ -311,6 +340,12 @@ const clerkDomainFromPublishableKey = (publishableKey) => {
 };
 
 let clerkLoadPromise;
+
+/*
+ * Clerk's UI script and Clerk's own boot each sit behind a network request. Without a deadline
+ * a stalled request leaves every page that mounts a Clerk component waiting on it forever.
+ */
+const clerkLoadTimeout = 15_000;
 
 const loadClerk = () => {
     if (window.clerk) {
@@ -342,20 +377,20 @@ const loadClerk = () => {
     clerkUiScript.async = true;
     clerkUiScript.crossOrigin = 'anonymous';
 
-    clerkLoadPromise = new Promise((resolve, reject) => {
+    clerkLoadPromise = withTimeout(new Promise((resolve, reject) => {
         clerkUiScript.onload = resolve;
         clerkUiScript.onerror = () => reject(new Error('Unable to load Clerk authentication UI.'));
         document.head.appendChild(clerkUiScript);
-    }).then(async () => {
+    }), clerkLoadTimeout, 'Unable to load Clerk authentication UI.').then(async () => {
         const { Clerk } = await import('@clerk/clerk-js');
         const clerk = new Clerk(clerkPublishableKey);
 
-        await clerk.load({
+        await withTimeout(clerk.load({
             afterSignOutUrl: '/',
             signInUrl: document.querySelector('meta[name="clerk-sign-in-url"]')?.content,
             signUpUrl: document.querySelector('meta[name="clerk-sign-up-url"]')?.content,
             ui: { ClerkUI: window.__internal_ClerkUICtor },
-        });
+        }), clerkLoadTimeout, 'Clerk did not finish loading.');
 
         window.clerk = clerk;
 
@@ -1141,8 +1176,11 @@ if (document.querySelector('[data-seller-shortcut="search"]')) {
 if (clerkComponents.length > 0 || clerkHandoff) {
     if (!clerkPublishableKey) {
         renderClerkComponentError('Authentication settings are unavailable. Please refresh the page or try again later.');
-        renderClerkHandoffError();
+        renderClerkHandoffError('Authentication settings are unavailable. Please try again later.');
     } else {
+        // Loading Clerk is two requests in turn, each with the deadline above.
+        window.clerkHandoffState?.extend((clerkLoadTimeout * 2) + clerkHandoffDeadlineSlack);
+
         loadClerk().then(async (clerk) => {
             await completeClerkHandoff(clerk);
             window.dispatchEvent(new Event('clerk:loaded'));
@@ -1166,14 +1204,14 @@ if (clerkComponents.length > 0 || clerkHandoff) {
                     userProfileMode: 'navigation',
                     userProfileUrl: '/profile',
                     appearance: clerkComponentAppearance,
-                    userProfileProps: { appearance: clerkComponentAppearance },
+                    userProfileProps: { appearance: clerkUserProfileAppearance },
                 });
             });
 
             document.querySelectorAll('[data-clerk-component="user-profile"]').forEach((element) => {
                 element.replaceChildren();
                 element.setAttribute('aria-busy', 'false');
-                clerk.mountUserProfile(element);
+                clerk.mountUserProfile(element, { appearance: clerkUserProfileAppearance });
             });
         }).catch((error) => {
             console.error(error);
