@@ -71,7 +71,7 @@ class PlaywrightQaSeeder extends Seeder
         [$otherTenant, $otherStore] = $this->storeFor($otherSeller, 'qa-southwind', 'QA Southwind');
 
         $product = $this->product($tenant, $store, $category, 'QA Canvas Tote', 'qa-canvas-tote', 'QA-TOTE-001', '19.99', 25);
-        $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);
+        $chatProduct = $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);
         $this->product($otherTenant, $otherStore, $category, 'Other Seller QA Product', 'other-qa-product', 'QA-OTHER-001', '39.99', 10);
         $historyProduct = $this->product($otherTenant, $otherStore, $category, 'QA History Sample', 'qa-history-sample', 'QA-HISTORY-001', '29.99', 10);
         $variantProduct = $this->product($otherTenant, $otherStore, $category, 'QA Variant Speaker', 'qa-variant-speaker', 'QA-SPEAKER', '10.00', 5);
@@ -103,6 +103,14 @@ class PlaywrightQaSeeder extends Seeder
         $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
         $item = $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => '19.99', 'quantity' => 1, 'line_total' => '19.99']);
         $item->review()->create(['product_id' => $product->id, 'user_id' => $customer->id, 'rating' => 5, 'body' => 'Great tote.', 'status' => 'published']);
+
+        $rowOrder = Order::query()->create(['user_id' => $customer->id, 'number' => 'QA-ROWS-001', 'status' => 'delivered', 'recipient_name' => $customer->name, 'phone' => '+639171234567', 'address_line' => '10 QA Street', 'city' => 'Manila', 'subtotal' => '80.97', 'shipping_amount' => '0', 'total' => '80.97']);
+        $rowOrder->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '80.97']);
+        $rowSellerOrder = $rowOrder->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'subtotal' => '80.97', 'shipping_amount' => '0', 'total' => '80.97']);
+        $rowSellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => '19.99', 'quantity' => 1, 'line_total' => '19.99']);
+        $rowSellerOrder->items()->create(['product_id' => $chatProduct->id, 'product_name' => $chatProduct->name, 'sku' => $chatProduct->sku, 'variant_label' => 'Blue / Medium', 'unit_price' => '24.99', 'quantity' => 2, 'line_total' => '49.98']);
+        $rowSellerOrder->items()->create(['product_name' => 'QA Archived Accessory', 'sku' => 'QA-ARCHIVE-001', 'unit_price' => '5.00', 'quantity' => 1, 'line_total' => '5.00']);
+        $rowSellerOrder->items()->create(['product_name' => 'QA Retired Pouch', 'sku' => 'QA-RETIRED-001', 'unit_price' => '6.00', 'quantity' => 1, 'line_total' => '6.00']);
     }
 
     /**

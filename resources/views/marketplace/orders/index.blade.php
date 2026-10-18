@@ -118,26 +118,34 @@
                                         </form>
                                     </div>
 
-                                    <div id="purchase-items-{{ $sellerOrder->id }}" class="flex flex-col gap-4">
+                                    <div id="purchase-items-{{ $sellerOrder->id }}">
+                                        <div class="hidden grid-cols-[minmax(0,1fr)_3.5rem_7rem] gap-4 border-b border-line pb-2 text-xs font-semibold uppercase tracking-wide text-muted sm:grid">
+                                            <span>Product</span>
+                                            <span class="text-center">Qty</span>
+                                            <span class="text-right">Amount</span>
+                                        </div>
                                         @foreach ($sellerOrder->items as $item)
-                                            <div @if ($loop->index >= 3) x-cloak x-show="expanded" @endif class="grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] gap-x-3 gap-y-1 sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:gap-x-4">
-                                                <div class="row-span-2 grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-canvas sm:size-20">
-                                                    @if (($item->image_path || $item->product?->thumbnail))
-                                                        <img src="{{ Storage::disk('product_images')->url(($item->image_path ?? $item->product->thumbnail->path)) }}" alt="{{ $item->product_name }}" width="80" height="80" loading="lazy" class="size-full object-contain">
-                                                    @else
-                                                        <svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 3-3 5 5" /></svg>
-                                                        <span class="sr-only">Product image unavailable</span>
-                                                    @endif
+                                            <div @if ($loop->index >= 3) x-cloak x-show="expanded" @endif class="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 border-b border-line py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_3.5rem_7rem] sm:items-center">
+                                                <div class="col-span-2 flex min-w-0 items-center gap-3 sm:col-span-1">
+                                                    <div class="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-line bg-canvas">
+                                                        @if (($item->image_path || $item->product?->thumbnail))
+                                                            <img src="{{ Storage::disk('product_images')->url(($item->image_path ?? $item->product->thumbnail->path)) }}" alt="{{ $item->product_name }}" width="64" height="64" loading="lazy" class="size-full object-contain">
+                                                        @else
+                                                            <svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 3-3 5 5" /></svg>
+                                                            <span class="sr-only">Product image unavailable</span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        @if ($item->product)
+                                                            <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="line-clamp-2 break-words text-sm font-semibold leading-6 text-ink hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">{{ $item->product_name }}</a>
+                                                        @else
+                                                            <p class="line-clamp-2 break-words text-sm font-semibold leading-6 text-ink">{{ $item->product_name }}</p>
+                                                        @endif
+                                                        @if ($item->variant_label)<p class="mt-1 text-xs leading-5 text-muted">{{ $item->variant_label }}</p>@endif
+                                                    </div>
                                                 </div>
-                                                <div class="min-w-0 sm:row-span-2 sm:self-center">
-                                                    @if ($item->product)
-                                                        <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="line-clamp-2 break-words text-sm font-semibold leading-6 text-ink hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $item->product_name }}</a>
-                                                    @else
-                                                        <p class="line-clamp-2 break-words text-sm font-semibold leading-6 text-ink">{{ $item->product_name }}</p>
-                                                    @endif
-                                                    <p class="mt-1 text-xs leading-5 text-muted">@if ($item->variant_label){{ $item->variant_label }} <span aria-hidden="true">·</span> @endif Qty {{ $item->quantity }}</p>
-                                                </div>
-                                                <p class="col-start-2 text-sm font-semibold tabular-nums text-ink sm:col-start-3 sm:row-span-2 sm:self-center sm:text-right">₱{{ number_format($item->line_total, 2) }}</p>
+                                                <p class="text-sm tabular-nums text-muted sm:text-center"><span class="font-medium sm:hidden">Qty </span>{{ $item->quantity }}</p>
+                                                <p class="text-right text-sm font-semibold tabular-nums text-ink"><span class="font-medium text-muted sm:hidden">Amount </span>₱{{ number_format($item->line_total, 2) }}</p>
                                             </div>
                                         @endforeach
                                     </div>

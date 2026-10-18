@@ -17,6 +17,26 @@ test('customer finds purchases and opens order actions at each viewport', async 
         const purchase = page.getByRole('article', { name: 'Order #QA-REVIEW-001', exact: true });
         await expect(purchase).toContainText('QA Canvas Tote');
         await expect(purchase).toContainText('Cash on delivery');
+        const rowsOrder = page.getByRole('article', { name: 'Order #QA-ROWS-001', exact: true });
+        const items = rowsOrder.locator('[id^="purchase-items-"]');
+        const chatRow = items.locator(':scope > div').filter({ hasText: 'QA Chat Sample' });
+        await expect(chatRow).toContainText('Blue / Medium');
+        await expect(chatRow).toContainText('Qty 2');
+        await expect(chatRow).toContainText('₱49.98');
+        await expect(items.getByText('QA Retired Pouch')).toBeHidden();
+        await rowsOrder.getByRole('button', { name: 'Show all 4 products' }).click();
+        await expect(items.getByText('QA Retired Pouch')).toBeVisible();
+        await expect(items.getByRole('link', { name: 'QA Retired Pouch' })).toHaveCount(0);
+        await expect(items.locator(':scope > div').filter({ hasText: 'QA Retired Pouch' }).getByText('Product image unavailable')).toHaveCount(1);
+        if (testInfo.project.name === 'mobile-chromium') {
+            await expect(chatRow.getByText('Qty', { exact: true })).toBeVisible();
+            await expect(chatRow.getByText('Amount', { exact: true })).toBeVisible();
+        } else {
+            const headings = items.locator(':scope > div').first();
+            await expect(headings.getByText('Product', { exact: true })).toBeVisible();
+            await expect(headings.getByText('Qty', { exact: true })).toBeVisible();
+            await expect(headings.getByText('Amount', { exact: true })).toBeVisible();
+        }
         await page.screenshot({ path: testInfo.outputPath('my-purchases.png'), fullPage: true });
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
         expect((await new AxeBuilder({ page }).include('[data-purchases]').analyze()).violations).toEqual([]);
