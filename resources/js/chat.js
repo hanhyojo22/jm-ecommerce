@@ -39,7 +39,6 @@ window.chatThread = (conversationId, userId) => ({
     fileName: '',
     fileSize: '',
     previewUrl: null,
-    dragging: false,
     uploading: false,
     uploadProgress: 0,
     uploadError: '',
@@ -251,9 +250,8 @@ window.chatThread = (conversationId, userId) => ({
     /**
      * Takes the file the person chose, from the picker or from a drop, and readies it to send.
      *
-     * The kind is read from the file rather than asked for up front. A file the server would
-     * refuse is refused here instead, inside the dialog, where the message is next to the thing
-     * it is about; the dialog stays open so another file can be chosen straight away.
+     * The kind is read from the file rather than asked for up front. An unsupported file is
+     * rejected beside the composer, where another file can be chosen straight away.
      */
     chooseFile(file) {
         if (!file) return;
@@ -263,7 +261,7 @@ window.chatThread = (conversationId, userId) => ({
             : (['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ? 'photo' : null);
 
         if (!type) {
-            this.$refs.attachmentInput.value = '';
+            this.clearFile();
             this.uploadError = 'Choose a JPG, PNG, WebP or PDF file.';
             return;
         }
@@ -287,7 +285,6 @@ window.chatThread = (conversationId, userId) => ({
         this.fileSize = file.size < 1024 ? `${file.size} B` : `${(file.size / 1024).toFixed(1)} KB`;
         this.previewUrl = type === 'photo' ? URL.createObjectURL(file) : null;
         this.uploadError = '';
-        this.$refs.attachmentDialog.close();
     },
 
     clearFile(keepPreview = false) {

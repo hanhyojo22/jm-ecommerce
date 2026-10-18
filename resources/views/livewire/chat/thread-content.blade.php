@@ -125,7 +125,7 @@
                     </div>
                 @endif
             </div>
-            <div wire:cloak class="shrink-0 border-t border-line bg-white px-3 pb-3 pt-3 shadow-[0_-8px_24px_rgb(15_23_42_/_0.04)] sm:px-5 sm:pb-4 sm:pt-4">
+            <div wire:cloak @if ($canSend) x-on:dragover.prevent x-on:drop.prevent="chooseFile($event.dataTransfer.files[0])" @endif class="shrink-0 border-t border-line bg-white px-3 pb-3 pt-3 shadow-[0_-8px_24px_rgb(15_23_42_/_0.04)] sm:px-5 sm:pb-4 sm:pt-4">
                 @unless ($canSend)
                     <div class="mb-3 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status">
                         <p class="min-w-0 flex-1">{{ $canUnblock ? 'You blocked this contact, so messaging is paused for both of you.' : 'Messaging is unavailable for this conversation.' }}</p>
@@ -151,40 +151,8 @@
                 <div class="flex min-w-0 items-end gap-2">
                     @if ($canSend)
                         <div class="shrink-0">
-                            <button type="button" x-ref="attachmentTrigger" x-on:click="$refs.attachmentDialog.showModal()" aria-haspopup="dialog" aria-label="Add attachment" class="grid size-11 place-items-center rounded-[10px] border border-line bg-white text-ink transition hover:border-blue-300 hover:bg-blue-50 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 10.5 12 18.5a5 5 0 0 1-7-7L13 3.5a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7.5-7.5"/></svg></button>
-                            {{--
-                             - A file is chosen in a modal rather than a dropdown: there is room to drop one, and
-                             - the kind of file is read from the file itself. The server takes images and PDFs
-                             - through the same field, so one input carries either (ConversationAttachmentController).
-                             --}}
-                            <dialog
-                                x-ref="attachmentDialog"
-                                wire:ignore
-                                x-on:close="dragging = false; $refs.attachmentTrigger?.focus()"
-                                aria-labelledby="attachment-dialog-title"
-                                class="w-[calc(100%-2rem)] max-w-md rounded-[14px] border-0 p-0 shadow-2xl backdrop:bg-slate-950/40"
-                            >
-                                <div class="bg-white p-6">
-                                    <h2 id="attachment-dialog-title" class="text-lg font-semibold text-ink">Attach a file</h2>
-                                    <div
-                                        x-on:dragover.prevent="dragging = true"
-                                        x-on:dragleave.prevent="dragging = false"
-                                        x-on:drop.prevent="dragging = false; chooseFile($event.dataTransfer.files[0])"
-                                        x-bind:class="dragging ? 'border-brand bg-blue-50' : 'border-line bg-canvas'"
-                                        class="mt-4 rounded-[12px] border-2 border-dashed px-6 py-8 text-center transition"
-                                    >
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="mx-auto size-8 text-muted" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-                                        <p class="mt-3 text-sm text-muted">Drop a file here, or</p>
-                                        <label for="chat-attachment" class="mt-2 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand">Browse</label>
-                                        <input id="chat-attachment" x-ref="attachmentInput" form="chat-attachment-form" name="attachment" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Image or PDF document" required class="sr-only" x-on:change="chooseFile($event.target.files[0])">
-                                        <p class="mt-3 text-xs text-muted">JPG, PNG, WebP or PDF &middot; up to 5 MB</p>
-                                    </div>
-                                    <p x-cloak x-show="uploadError" x-text="uploadError" role="alert" class="mt-3 text-sm font-medium text-red-700"></p>
-                                    <div class="mt-6 flex justify-end">
-                                        <button type="button" x-on:click="$refs.attachmentDialog.close()" class="min-h-11 rounded-[10px] px-4 text-sm font-semibold text-muted transition hover:bg-canvas hover:text-ink focus:outline-none focus:ring-2 focus:ring-brand">Cancel</button>
-                                    </div>
-                                </div>
-                            </dialog>
+                            <button type="button" x-on:click="$refs.attachmentInput.click()" x-bind:disabled="uploading" aria-label="Add attachment" title="Attach a JPG, PNG, WebP or PDF (up to 5 MB)" class="grid size-11 place-items-center rounded-[10px] border border-line bg-white text-ink transition hover:border-blue-300 hover:bg-blue-50 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 10.5 12 18.5a5 5 0 0 1-7-7L13 3.5a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7.5-7.5"/></svg></button>
+                            <div wire:ignore><input id="chat-attachment" x-ref="attachmentInput" form="chat-attachment-form" name="attachment" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Image or PDF document" tabindex="-1" required class="sr-only" x-on:change="chooseFile($event.target.files[0])"></div>
                         </div>
                     @endif
                     <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; fitComposer()" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="1" maxlength="2000" class="min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-line bg-canvas px-3 py-2 text-sm leading-6 text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! $canSend)></textarea>

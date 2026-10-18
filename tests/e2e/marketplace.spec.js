@@ -928,12 +928,14 @@ for (const attachment of [
             await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Draft before uploading');
             await rerender;
 
+            const fileChooser = seller.page.waitForEvent('filechooser');
             await seller.page.getByRole('button', { name: 'Add attachment' }).click();
-            await seller.page.getByLabel('Image or PDF document').setInputFiles({
+            await (await fileChooser).setFiles({
                 name: attachment.filename,
                 mimeType: attachment.mimeType,
                 buffer: typeof attachment.contents === 'string' ? Buffer.from(attachment.contents, 'base64') : attachment.contents,
             });
+            await expect(seller.page.getByRole('dialog')).toHaveCount(0);
             await expect(seller.page.getByRole('status').filter({ hasText: attachment.filename })).toBeVisible();
             await expect(seller.page.getByRole('button', { name: 'Send message' })).toHaveCount(0);
             if (attachment.label === 'photo') {
@@ -945,12 +947,13 @@ for (const attachment of [
                 expect(Math.max(...composerRow) - Math.min(...composerRow)).toBeLessThan(3);
                 await seller.page.getByRole('button', { name: 'Remove attachment' }).click();
                 await expect(seller.page.getByRole('button', { name: 'Send message' })).toBeVisible();
-                await seller.page.getByRole('button', { name: 'Add attachment' }).click();
-                await seller.page.getByLabel('Image or PDF document').setInputFiles({
-                    name: attachment.filename,
-                    mimeType: attachment.mimeType,
-                    buffer: Buffer.from(attachment.contents, 'base64'),
-                });
+                await seller.page.locator('#message-body').evaluate((messageBody, contents) => {
+                    const bytes = Uint8Array.from(atob(contents), (character) => character.charCodeAt(0));
+                    const transfer = new DataTransfer();
+                    transfer.items.add(new File([bytes], 'chat-photo.png', { type: 'image/png' }));
+                    messageBody.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+                }, attachment.contents);
+                await expect(seller.page.getByRole('status').filter({ hasText: attachment.filename })).toBeVisible();
             }
             await seller.context.clearCookies({ name: '__session' });
             await seller.context.setExtraHTTPHeaders({});
@@ -987,11 +990,15 @@ test('an invalid chat file shows an error and can be replaced and retried', asyn
         await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
         await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Here is the receipt.');
         await seller.page.getByRole('button', { name: 'Add attachment' }).click();
+        await seller.page.getByLabel('Image or PDF document').setInputFiles({ name: 'first.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') });
+        await expect(seller.page.getByRole('status').filter({ hasText: 'first.pdf' })).toBeVisible();
 
-        // A kind the server would never take is refused in the dialog, before anything is sent.
+        // A kind the server would never take is refused beside the composer, before anything is sent.
         await seller.page.getByLabel('Image or PDF document').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a PDF') });
-        await expect(seller.page.getByRole('dialog')).toBeVisible();
-        await expect(seller.page.getByRole('dialog').getByRole('alert')).toContainText('Choose a JPG, PNG, WebP or PDF file.');
+        await expect(seller.page.getByRole('dialog')).toHaveCount(0);
+        await expect(seller.page.getByRole('alert')).toContainText('Choose a JPG, PNG, WebP or PDF file.');
+        await expect(seller.page.getByRole('status').filter({ hasText: 'first.pdf' })).toHaveCount(0);
+        await expect(seller.page.getByRole('button', { name: 'Send message' })).toBeVisible();
         await expect(seller.page.getByRole('status').filter({ hasText: 'notes.txt' })).toHaveCount(0);
 
         // One the server alone can see through — an image header over contents that are not an
