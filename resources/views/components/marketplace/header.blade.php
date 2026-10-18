@@ -239,7 +239,10 @@
             @elseif ($isCustomerWorkspace)
                 <x-marketplace.customer-nav-links mode="mobile" />
                 <div class="border-t border-white/10 p-4">
-                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">Sign out</button>
+                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="group flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white">
+                        <svg class="size-[18px] shrink-0 text-slate-400 group-hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-6" /></svg>
+                        <span>Sign out</span>
+                    </button>
                 </div>
             @else
                 <nav class="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Mobile marketplace navigation">
