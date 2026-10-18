@@ -56,18 +56,18 @@
     @foreach ($groups as $group)
         <div class="space-y-1">
             @if ($group['label'])
-                <p class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[.16em] text-muted">{{ $group['label'] }}</p>
+                <p class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[.16em] text-slate-400">{{ $group['label'] }}</p>
             @endif
             @foreach ($group['items'] as $item)
                 <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @endif @class([
-                    'group flex min-h-11 items-center gap-3 rounded px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-                    'bg-blue-50 font-semibold text-brand' => $item['active'],
-                    'font-medium text-muted hover:bg-canvas hover:text-ink' => ! $item['active'],
+                    'group flex min-h-11 items-center gap-3 rounded px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-white',
+                    'bg-white/10 font-semibold text-white' => $item['active'],
+                    'font-medium text-slate-300 hover:bg-white/5 hover:text-white' => ! $item['active'],
                 ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
                     <svg @class([
                         'size-[18px] shrink-0',
-                        'text-brand' => $item['active'],
-                        'text-slate-400 group-hover:text-ink' => ! $item['active'],
+                        'text-[#8db6ff]' => $item['active'],
+                        'text-slate-400 group-hover:text-white' => ! $item['active'],
                     ]) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         @switch($item['icon'])
                             @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break

@@ -194,6 +194,7 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
             await expect(page.getByRole('heading', { name: 'Quick actions' })).toBeVisible();
             await page.screenshot({ path: testInfo.outputPath('overview-reference-size.png') });
             const sidebar = page.getByRole('complementary', { name: 'Seller Center sidebar' });
+            expect(await sidebar.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(17, 28, 50)');
             await page.getByRole('button', { name: 'Toggle Seller Center sidebar' }).click();
             await expect(sidebar).toBeHidden();
             await page.getByRole('button', { name: 'Toggle Seller Center sidebar' }).click();
@@ -205,6 +206,8 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
             await page.getByRole('button', { name: 'Open navigation menu' }).click();
             const drawer = page.getByRole('dialog', { name: 'Seller Center navigation' });
             await expect(drawer).toBeVisible();
+            expect(await drawer.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(17, 28, 50)');
+            await drawer.screenshot({ path: testInfo.outputPath('seller-navigation-mobile.png') });
             await drawer.getByRole('link', { name: 'Reviews' }).click();
             await expect(page).toHaveURL(/\/seller\/reviews$/);
             await expect(page.getByRole('heading', { name: 'Reviews & conversations' })).toBeVisible();

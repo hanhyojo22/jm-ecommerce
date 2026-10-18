@@ -576,10 +576,6 @@
     display: none;
 }
 
-[data-workspace-header='seller'] a[aria-current='page'] {
-    box-shadow: inset 2px 0 0 var(--color-accent);
-}
-
 /* Swiss seller center: one radius scale for the whole workspace.
    Containers and panels take 6px, controls and tags take 4px; shadows are
    removed so surfaces read as hairlines instead of floating cards. */

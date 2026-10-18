@@ -7,19 +7,16 @@
 }
 .seller-workspace[data-workspace='seller'] > .workspace-main { background: #f7f9fc; }
 .seller-workspace[data-workspace='seller'] > [data-workspace-header='seller'] {
-    border-color: var(--seller-line);
     padding: 12px 6px;
 }
 .seller-workspace[data-workspace='seller'] > [data-workspace-header='seller'] > div:first-child { padding: 16px 12px 22px; }
 .seller-workspace[data-workspace='seller'] > [data-workspace-header='seller'] > div:nth-child(2) {
-    background: #f8faff;
     border-radius: 9px;
     padding: 11px;
     margin-bottom: 14px;
 }
 .seller-workspace[data-workspace='seller'] > [data-workspace-header='seller'] nav { padding: 8px 12px 24px; }
 .seller-workspace[data-workspace='seller'] > [data-workspace-header='seller'] nav a { border-radius: 7px; gap: 12px; }
-.seller-workspace[data-workspace='seller'] > [data-workspace-header='seller'] a[aria-current='page'] { background: #eaf0ff; box-shadow: none; }
 .seller-workspace[data-workspace='seller'] > [data-workspace-header='seller'] > div:last-child { margin-top: auto; }
 .seller-workspace[data-workspace='seller'] .workspace-main > header:not([data-header-design]) {
     border: 0;
