@@ -691,6 +691,10 @@ test('conversation search and unread filter update the seller inbox', async ({ b
 });
 
 test('incoming message event refreshes the inbox preview and unread badge without navigation', async ({ browser }) => {
+    // Two accounts, two live round trips: this one runs within a few seconds of the default
+    // budget and tips over it whenever the machine is busy.
+    test.setTimeout(90_000);
+
     const customer = await openAsRole(browser, 'customer');
     const seller = await openAsRole(browser, 'seller');
 
