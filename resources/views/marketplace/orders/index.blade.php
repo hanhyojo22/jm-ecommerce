@@ -118,10 +118,11 @@
                                 <p class="mr-1 w-full text-sm text-muted sm:w-auto">Store total <strong class="ml-1 text-lg tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</strong></p>
                                 <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}">@csrf<button type="submit" class="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Message seller</button></form>
                                 <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View order</a>
-                                @if ($tab === 'returns' && $returnIssue)
-                                    <a href="{{ route('orders.show', $order) }}#order-help" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View return</a>
-                                @elseif ($reviewableItemId)
+                                @if ($reviewableItemId)
                                     <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Write review</a>
+                                @endif
+                                @if ($returnIssue && ($tab === 'returns' || $returnIssue->status === 'open'))
+                                    <a href="{{ route('orders.show', $order) }}#order-help" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View return</a>
                                 @elseif ($sellerOrder->status === 'delivered' && ! $sellerOrder->issues->contains('status', 'open'))
                                     <a href="{{ route('orders.show', ['order' => $order, 'help' => 'return_refund', 'seller_order_id' => $sellerOrder->id]) }}#order-help" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Request return</a>
                                 @endif

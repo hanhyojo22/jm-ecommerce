@@ -109,6 +109,32 @@ class PurchaseIndexTest extends TestCase
         $this->assertSame('delivered', $reviewable->fresh()->status);
     }
 
+    public function test_delivered_purchase_shows_review_and_return_actions_together(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer, 'BOTH-001', '10.00');
+        $sellerOrder = $this->sellerOrder($order, 'Both Actions', 'delivered', '10.00');
+
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'delivered']))
+            ->assertSee('Write review')->assertSee('Request return')->assertDontSee('View return');
+
+        $issue = OrderIssue::create([
+            'seller_order_id' => $sellerOrder->id,
+            'buyer_id' => $buyer->id,
+            'type' => 'return_refund',
+            'details' => 'The item arrived damaged.',
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'delivered']))
+            ->assertSee('Write review')->assertSee('View return')->assertDontSee('Request return');
+
+        $issue->update(['status' => 'resolved']);
+
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'delivered']))
+            ->assertSee('Write review')->assertSee('Request return');
+    }
+
     public function test_search_and_counts_exclude_another_buyers_purchases(): void
     {
         $buyer = User::factory()->create();

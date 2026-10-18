@@ -51,6 +51,8 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(filters.getByRole('link', { name: /^Delivered/ })).toHaveAttribute('aria-current', 'page');
         await expect(purchase).toBeVisible();
         await expect(rowsOrder).toBeVisible();
+        await expect(rowsOrder.getByRole('link', { name: 'Write review' })).toBeVisible();
+        await expect(rowsOrder.getByRole('link', { name: 'Request return' })).toBeVisible();
         await filters.getByRole('link', { name: /^To Review/ }).click();
         await expect(rowsOrder).toBeVisible();
         await expect(purchase).toHaveCount(0);
