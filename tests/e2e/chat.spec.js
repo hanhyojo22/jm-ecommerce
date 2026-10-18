@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
-test('seller conversation fills the available desktop height without horizontal overflow', async ({ browser }) => {
+test('seller conversation fills the account layout at desktop and mobile widths', async ({ browser }, testInfo) => {
     const buyer = await openAsRole(browser, 'customer');
     const seller = await openAsRole(browser, 'seller', { viewport: { width: 1440, height: 900 } });
 
@@ -9,8 +9,9 @@ test('seller conversation fills the available desktop height without horizontal 
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await buyer.page.getByRole('button', { name: 'Message seller' }).click();
         await seller.page.goto('/messages');
-        const inboxBottom = await seller.page.locator('[data-conversation-inbox] > .page-shell > .page-container > .grid').evaluate((panel) => panel.getBoundingClientRect().bottom);
-        expect(900 - inboxBottom).toBeLessThanOrEqual(32);
+        const inboxBottom = await seller.page.locator('[data-conversation-inbox] .account-messages-shell .account-shell-content > .grid').evaluate((panel) => panel.getBoundingClientRect().bottom);
+        expect(900 - inboxBottom).toBeLessThanOrEqual(40);
+        await expect(seller.page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Seller Center');
         await seller.page.locator('[data-conversation-list] a').first().click();
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         const dimensions = await seller.page.evaluate(() => ({
@@ -19,8 +20,22 @@ test('seller conversation fills the available desktop height without horizontal 
             documentWidth: document.documentElement.scrollWidth,
             viewportWidth: document.documentElement.clientWidth,
         }));
-        expect(dimensions.viewportHeight - dimensions.composerBottom).toBeLessThanOrEqual(32);
+        expect(dimensions.viewportHeight - dimensions.composerBottom).toBeLessThanOrEqual(40);
         expect(dimensions.documentWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+        await seller.page.setViewportSize({ width: 390, height: 844 });
+        await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        expect(await seller.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+        await seller.page.getByRole('button', { name: 'Reject Optional' }).click();
+        await expect(seller.page.locator('[data-cookie-banner]')).toBeHidden();
+        const mobileComposer = await seller.page.getByRole('textbox', { name: 'Write a message' }).boundingBox();
+        expect(mobileComposer.y + mobileComposer.height).toBeLessThanOrEqual(844);
+        await seller.page.screenshot({ path: testInfo.outputPath('seller-messages-mobile.png') });
+        await seller.page.getByRole('link', { name: 'Back to messages' }).click();
+        await expect(seller.page).toHaveURL(/\/messages(?:\?context=selling)?$/);
+        await expect(seller.page.locator('[data-conversation-inbox]')).toBeVisible();
+        await expect(seller.page.getByRole('heading', { name: 'Messages', level: 1 })).toBeVisible();
+        expect(await seller.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+        await seller.page.screenshot({ path: testInfo.outputPath('seller-inbox-mobile.png') });
     } finally {
         await buyer.context.close();
         await seller.context.close();

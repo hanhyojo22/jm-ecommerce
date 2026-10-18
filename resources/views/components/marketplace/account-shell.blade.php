@@ -1,5 +1,5 @@
-@props(['active' => 'settings', 'title' => 'My account', 'subtitle' => null])
-@php($isSellerAccount = $active === 'settings' && auth()->user()?->account_type === 'seller' && auth()->user()?->preferred_workspace === 'seller' && auth()->user()?->sellerTenant() !== null)
+@props(['active' => 'settings', 'title' => 'My account', 'subtitle' => null, 'workspace' => null])
+@php($isSellerAccount = $workspace === 'seller' || ($active === 'settings' && auth()->user()?->account_type === 'seller' && auth()->user()?->preferred_workspace === 'seller' && auth()->user()?->sellerTenant() !== null))
 {{-- Each account page reads at its own measure; the width itself lives in app.css next to the other workspace measures. --}}
 @php($measure = match ($active) {
     'orders' => 'account-measure-orders',

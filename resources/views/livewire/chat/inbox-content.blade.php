@@ -1,6 +1,6 @@
 <section data-conversation-list class="relative flex h-full min-h-0 min-w-0 flex-col bg-surface" aria-label="Your conversations">
     <header class="shrink-0 border-b border-line px-4 pb-3 pt-4 sm:px-5">
-        @if ($isBuyerMessages)<h1 class="text-xl font-semibold tracking-tight text-ink">Messages</h1>@else<h2 class="text-base font-semibold tracking-tight text-ink">Inbox</h2>@endif
+        <h1 class="text-xl font-semibold tracking-tight text-ink">Messages</h1>
         <p class="mt-0.5 text-xs text-muted">{{ $isBuyerMessages ? 'Contact stores about products and orders.' : 'Your customer conversations.' }}</p>
         <label for="conversation-search" class="mt-4 flex min-h-11 items-center gap-2.5 rounded-[10px] border border-line bg-canvas px-3 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-2 focus-within:ring-brand/15">
             <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.75" cy="10.75" r="6.75"/><path stroke-linecap="round" d="m16 16 4.5 4.5"/></svg>

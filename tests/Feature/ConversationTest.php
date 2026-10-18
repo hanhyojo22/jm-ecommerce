@@ -139,7 +139,7 @@ class ConversationTest extends TestCase
 
         $this->actingAs($seller)
             ->get(route('messages.index'))
-            ->assertSee('Respond to customers about your products and orders.');
+            ->assertSee('Your customer conversations.');
     }
 
     public function test_seller_buying_and_selling_conversations_stay_in_their_respective_inboxes(): void
@@ -161,7 +161,7 @@ class ConversationTest extends TestCase
             ->assertOk()->assertSee(route('messages.show', $sale), false)
             ->assertDontSee(route('messages.show', $purchase), false);
         $this->actingAs($seller)->get(route('messages.show', $purchase))
-            ->assertOk()->assertSee($otherProduct->store->name)->assertDontSee('Respond to customers about your products and orders.');
+            ->assertOk()->assertSee($otherProduct->store->name)->assertDontSee('Your customer conversations.');
     }
 
     public function test_seller_cannot_start_a_customer_conversation_with_their_own_store(): void

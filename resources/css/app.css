@@ -287,12 +287,8 @@
     padding-bottom: 32px;
 }
 
-.customer-workspace .page-shell.account-messages-shell {
+:is(.customer-workspace, .seller-workspace) .page-shell.account-messages-shell {
     padding-block: 24px;
-}
-
-.seller-workspace .seller-messages-page {
-    padding-block: 20px 24px;
 }
 
 .seller-workspace :where(.section-card, .content-card) {
@@ -435,8 +431,7 @@
     }
 }
 
-[data-conversation-thread] h1,
-.seller-workspace [data-conversation-thread] h2 {
+[data-conversation-thread] h1 {
     font-size: 0.875rem;
     font-weight: 600;
     letter-spacing: normal;
@@ -466,8 +461,7 @@
 }
 
 @media (min-width: 640px) {
-    [data-conversation-thread] h1,
-    .seller-workspace [data-conversation-thread] h2 {
+    [data-conversation-thread] h1 {
         font-size: 1rem;
         line-height: 1.5rem;
     }
