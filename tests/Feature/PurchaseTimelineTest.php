@@ -20,13 +20,11 @@ class PurchaseTimelineTest extends TestCase
         $order = $this->order($buyer, 'shipped');
         $this->storeOrder($order, 'Franil Store', 'Tp Link - 300Mbps', 'shipped');
 
-        $response = $this->actingAs($buyer)->get(route('orders.index'));
+        $response = $this->actingAs($buyer)->get(route('orders.show', $order));
 
         $response->assertOk()
-            ->assertSee('aria-label="Franil Store progress"', false)
-            // Shipped is where the order is, so it keeps its step number while the steps
-            // behind it are ticked off, and Delivered is still ahead of it.
-            ->assertSeeInOrder(['aria-label="Franil Store progress"', '>✓</span>', 'Processing', 'aria-current="step"', '>4</span>', 'Shipped', '>5</span>', 'Delivered'], false);
+            ->assertSee('aria-label="Order progress"', false)
+            ->assertSeeInOrder(['aria-label="Order progress"', 'Placed', 'Confirmed', 'Shipped', 'Delivered'], false);
     }
 
     public function test_a_cancelled_store_order_shows_no_timeline(): void
@@ -36,9 +34,9 @@ class PurchaseTimelineTest extends TestCase
         $this->storeOrder($order, 'Trail & Tide', 'Bike Handlebar Bag', 'cancelled');
 
         // A cancelled order left the line rather than stopping on it, so there is no step to mark.
-        $this->actingAs($buyer)->get(route('orders.index'))
+        $this->actingAs($buyer)->get(route('orders.show', $order))
             ->assertOk()
-            ->assertDontSee('aria-label="Trail &amp; Tide progress"', false);
+            ->assertDontSee('aria-label="Order progress"', false);
     }
 
     private function order(User $buyer, string $status): Order
