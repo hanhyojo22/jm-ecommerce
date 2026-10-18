@@ -50,8 +50,8 @@
             <section class="space-y-4" aria-labelledby="purchase-results-heading">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 id="purchase-results-heading" class="text-base font-semibold text-ink">{{ $tab === 'all' ? 'All purchases' : $tabs[$tab] }} <span class="ml-1 text-sm font-normal tabular-nums text-muted">({{ $sellerOrders->total() }})</span></h2>
-                    @if ($tab !== 'all' || $hasFilters)
-                        <a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-hover hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $hasFilters ? 'Reset filters' : 'All purchases' }}</a>
+                    @if ($hasFilters)
+                        <a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-hover hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reset filters</a>
                     @endif
                 </div>
 
@@ -133,7 +133,9 @@
                         <div class="mx-auto grid size-14 place-items-center rounded-xl bg-blue-50 text-brand" aria-hidden="true"><svg viewBox="0 0 24 24" class="size-7" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="m12 3 9 5v8l-9 5-9-5V8l9-5Zm0 10v8M3 8l9 5 9-5" /></svg></div>
                         <h3 class="mt-4 text-lg font-semibold text-ink">{{ $hasFilters ? 'No purchases match those filters' : ($tab === 'all' ? 'Your first purchase starts here' : 'Nothing here yet') }}</h3>
                         <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">{{ $hasFilters ? 'Try another product, store, or order number.' : ($tab === 'all' ? 'Your orders and delivery updates will appear here.' : 'Orders at this stage will appear here when their status changes.') }}</p>
-                        <a href="{{ $tab === 'all' && ! $hasFilters ? route('catalog.index') : route('orders.index') }}" class="mt-5 inline-flex min-h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $tab === 'all' && ! $hasFilters ? 'Browse products' : 'All purchases' }}</a>
+                        @if ($tab === 'all' && ! $hasFilters)
+                            <a href="{{ route('catalog.index') }}" class="mt-5 inline-flex min-h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Browse products</a>
+                        @endif
                     </div>
                 @endforelse
             </section>

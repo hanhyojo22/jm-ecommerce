@@ -17,7 +17,7 @@ class OrderController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:pending,confirmed,processing,shipped,delivered,cancelled'],
-            'tab' => ['nullable', 'in:all,awaiting_confirmation,to_dispatch,to_receive,to_review,returns'],
+            'tab' => ['nullable', 'in:all,awaiting_confirmation,to_dispatch,to_receive,delivered,to_review,returns'],
         ]);
         $search = trim($filters['search'] ?? '');
         $searchTerm = '%'.mb_strtolower($search).'%';
@@ -26,9 +26,11 @@ class OrderController extends Controller
             ->whereIn('role', ['owner', 'manager', 'staff'])
             ->pluck('tenant_id')->all();
         $tabs = [
+            'all' => 'All',
             'awaiting_confirmation' => 'Awaiting Confirmation',
             'to_dispatch' => 'To Dispatch',
             'to_receive' => 'To Receive',
+            'delivered' => 'Delivered',
             'to_review' => 'To Review',
             'returns' => 'Returns',
         ];
@@ -91,6 +93,7 @@ class OrderController extends Controller
             'awaiting_confirmation' => $query->where('status', 'pending'),
             'to_dispatch' => $query->whereIn('status', ['confirmed', 'processing']),
             'to_receive' => $query->where('status', 'shipped'),
+            'delivered' => $query->where('status', 'delivered'),
             'to_review' => $query->where('status', 'delivered')
                 ->whereNotIn('tenant_id', $ownedTenantIds)
                 ->whereHas('items', fn (Builder $itemQuery) => $itemQuery->whereNotNull('product_id')->whereDoesntHave('review')),

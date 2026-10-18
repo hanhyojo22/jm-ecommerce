@@ -18,7 +18,16 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(purchase).toContainText('QA Canvas Tote');
         await expect(purchase).toContainText('Cash on delivery');
         const filters = page.getByRole('navigation', { name: 'Purchase status filters' });
-        await expect(filters.getByRole('link')).toHaveCount(5);
+        await expect(filters.getByRole('link')).toHaveText([
+            /^\s*All\s+\d+\s*$/,
+            /^\s*Awaiting Confirmation\s+\d+\s*$/,
+            /^\s*To Dispatch\s+\d+\s*$/,
+            /^\s*To Receive\s+\d+\s*$/,
+            /^\s*Delivered\s+\d+\s*$/,
+            /^\s*To Review\s+\d+\s*$/,
+            /^\s*Returns\s+\d+\s*$/,
+        ]);
+        await expect(filters.getByRole('link', { name: /^All/ })).toHaveAttribute('aria-current', 'page');
         const rowsOrder = page.getByRole('article').filter({ hasText: 'QA-ROWS-001' });
         const items = rowsOrder.locator('[id^="purchase-items-"]');
         const chatRow = items.locator(':scope > div').filter({ hasText: 'QA Chat Sample' });
@@ -30,19 +39,25 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(items.locator(':scope > div').filter({ hasText: 'QA Retired Pouch' }).getByText('Product image unavailable')).toHaveCount(1);
         if (testInfo.project.name === 'mobile-chromium') {
             await expect(chatRow.getByText('Amount ₱49.98')).toBeVisible();
+        }
+        if (testInfo.project.name !== 'desktop-chromium') {
             expect(await filters.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
         }
         await page.screenshot({ path: testInfo.outputPath('my-purchases.png'), fullPage: true });
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
         expect((await new AxeBuilder({ page }).include('[data-purchases]').analyze()).violations).toEqual([]);
 
+        await filters.getByRole('link', { name: /^Delivered/ }).click();
+        await expect(filters.getByRole('link', { name: /^Delivered/ })).toHaveAttribute('aria-current', 'page');
+        await expect(purchase).toBeVisible();
+        await expect(rowsOrder).toBeVisible();
         await filters.getByRole('link', { name: /^To Review/ }).click();
         await expect(rowsOrder).toBeVisible();
         await expect(purchase).toHaveCount(0);
         await expect(rowsOrder.getByRole('link', { name: 'Write review' })).toBeVisible();
         await filters.getByRole('link', { name: /^Returns/ }).click();
         await expect(page.getByRole('heading', { name: 'Nothing here yet' })).toBeVisible();
-        await page.getByRole('link', { name: 'All purchases', exact: true }).first().click();
+        await filters.getByRole('link', { name: /^All/ }).click();
         await expect(rowsOrder).toBeVisible();
         await page.getByRole('searchbox', { name: 'Search purchases', exact: true }).fill('QA-REVIEW-001');
         await page.locator('[data-purchases]').getByRole('button', { name: 'Search', exact: true }).click();

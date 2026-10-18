@@ -40,9 +40,11 @@ class PurchaseIndexTest extends TestCase
             ->assertSee('Checkout total ₱65.00')
             ->assertSee('Cash on delivery')
             ->assertDontSee('Pay Now')
-            ->assertViewHas('tabCounts', fn (array $counts): bool => $counts['awaiting_confirmation'] === 1
+            ->assertViewHas('tabCounts', fn (array $counts): bool => $counts['all'] === 4
+                && $counts['awaiting_confirmation'] === 1
                 && $counts['to_dispatch'] === 1
                 && $counts['to_receive'] === 1
+                && $counts['delivered'] === 1
                 && $counts['to_review'] === 1
                 && $counts['returns'] === 0);
 
@@ -52,6 +54,8 @@ class PurchaseIndexTest extends TestCase
             ->assertSee('East')->assertDontSee('North')->assertDontSee('West');
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'to_dispatch']))
             ->assertSee('South')->assertDontSee('North')->assertDontSee('West');
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'delivered']))
+            ->assertSee('West')->assertDontSee('North')->assertDontSee('East')->assertDontSee('South');
         $this->assertSame('pending', $order->payment->fresh()->status);
         $this->assertSame('pending', $pending->fresh()->status);
         $this->assertSame('shipped', $shipped->fresh()->status);
@@ -80,13 +84,26 @@ class PurchaseIndexTest extends TestCase
             'details' => 'The item was damaged on arrival.',
             'status' => 'open',
         ]);
+        OrderIssue::create([
+            'seller_order_id' => $reviewable->id,
+            'buyer_id' => $buyer->id,
+            'type' => 'return_refund',
+            'details' => 'The item arrived damaged.',
+            'status' => 'open',
+        ]);
 
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'to_review']))
             ->assertOk()->assertSee('Reviewable')->assertSee('Write review')
-            ->assertDontSee('Reviewed')->assertDontSee('Own Store');
+            ->assertDontSee('Reviewed')->assertDontSee('Own Store')
+            ->assertViewHas('tabCounts', fn (array $counts): bool => $counts['all'] === 3
+                && $counts['delivered'] === 3
+                && $counts['to_review'] === 1
+                && $counts['returns'] === 2);
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'returns']))
-            ->assertOk()->assertSee('Reviewed')->assertSee('Return request open')
-            ->assertSee('View return')->assertDontSee('Reviewable');
+            ->assertOk()->assertSee('Reviewed')->assertSee('Reviewable')->assertSee('Return request open')
+            ->assertSee('View return')->assertDontSee('Own Store');
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'delivered']))
+            ->assertOk()->assertSee('Reviewed')->assertSee('Reviewable')->assertSee('Own Store');
         $this->actingAs($buyer)->get(route('orders.index'))
             ->assertSee('Reviewable')->assertSee('Reviewed')->assertSee('Own Store');
         $this->assertSame('delivered', $reviewable->fresh()->status);
@@ -100,12 +117,17 @@ class PurchaseIndexTest extends TestCase
         $otherOrder = $this->order($other, 'OTHER-001', '10.00');
         $this->sellerOrder($ownOrder, 'Oak Store', 'confirmed', '10.00');
         $this->sellerOrder($otherOrder, 'Secret Store', 'confirmed', '10.00');
+        $this->sellerOrder($otherOrder, 'Secret Delivery', 'delivered', '10.00');
 
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'to_dispatch', 'search' => 'Oak']))
             ->assertOk()->assertSee('Oak Store')->assertDontSee('Secret Store')
-            ->assertViewHas('tabCounts', fn (array $counts): bool => $counts['to_dispatch'] === 1);
+            ->assertViewHas('tabCounts', fn (array $counts): bool => $counts['all'] === 1
+                && $counts['delivered'] === 0
+                && $counts['to_dispatch'] === 1);
         $this->actingAs($buyer)->get(route('orders.index', ['search' => 'Secret']))
-            ->assertOk()->assertSee('No purchases match those filters')->assertDontSee('Secret Store');
+            ->assertOk()->assertSee('No purchases match those filters')->assertDontSee('Secret Store')->assertDontSee('Secret Delivery');
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'delivered']))
+            ->assertOk()->assertSee('Nothing here yet')->assertDontSee('Secret Delivery');
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'unknown']))
             ->assertSessionHasErrors('tab');
         $this->actingAs($buyer)->get(route('orders.show', $otherOrder))->assertNotFound();
