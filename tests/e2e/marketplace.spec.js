@@ -742,6 +742,7 @@ test('seller quick reply fills the message draft without a server request', asyn
 
     try {
         await seller.page.goto('/messages');
+        await rejectOptionalCookies(seller.page);
         await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await expect.poll(() => seller.page.evaluate(() => window.Echo?.connector.pusher.connection.state)).toBe('connected');
@@ -785,6 +786,7 @@ test('a quick reply that wraps stays fully visible in the composer on a phone', 
         await seller.page.goto('/messages');
         const conversationUrl = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).first().getAttribute('href');
         await seller.page.goto(conversationUrl, { waitUntil: 'domcontentloaded' });
+        await rejectOptionalCookies(seller.page);
         const composer = seller.page.getByRole('textbox', { name: 'Write a message' });
         await expect(composer).toBeVisible();
 
@@ -923,7 +925,7 @@ for (const attachment of [
             await rerender;
 
             await seller.page.getByRole('button', { name: 'Add attachment' }).click();
-            await seller.page.getByLabel(attachment.label === 'photo' ? 'Image' : 'PDF document').setInputFiles({
+            await seller.page.getByLabel('Image or PDF document').setInputFiles({
                 name: attachment.filename,
                 mimeType: attachment.mimeType,
                 buffer: typeof attachment.contents === 'string' ? Buffer.from(attachment.contents, 'base64') : attachment.contents,
@@ -940,7 +942,7 @@ for (const attachment of [
                 await seller.page.getByRole('button', { name: 'Remove attachment' }).click();
                 await expect(seller.page.getByRole('button', { name: 'Send message' })).toBeVisible();
                 await seller.page.getByRole('button', { name: 'Add attachment' }).click();
-                await seller.page.getByLabel('Image').setInputFiles({
+                await seller.page.getByLabel('Image or PDF document').setInputFiles({
                     name: attachment.filename,
                     mimeType: attachment.mimeType,
                     buffer: Buffer.from(attachment.contents, 'base64'),
@@ -981,22 +983,31 @@ test('an invalid chat file shows an error and can be replaced and retried', asyn
         await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
         await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Here is the receipt.');
         await seller.page.getByRole('button', { name: 'Add attachment' }).click();
-        await seller.page.getByLabel('PDF document').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a PDF') });
+
+        // A kind the server would never take is refused in the dialog, before anything is sent.
+        await seller.page.getByLabel('Image or PDF document').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a PDF') });
+        await expect(seller.page.getByRole('dialog')).toBeVisible();
+        await expect(seller.page.getByRole('dialog').getByRole('alert')).toContainText('Choose a JPG, PNG, WebP or PDF file.');
+        await expect(seller.page.getByRole('status').filter({ hasText: 'notes.txt' })).toHaveCount(0);
+
+        // One the server alone can see through — an image header over contents that are not an
+        // image — still has to come back as a refusal the composer can recover from.
+        await seller.page.getByLabel('Image or PDF document').setInputFiles({ name: 'disguised.png', mimeType: 'image/png', buffer: Buffer.from('not an image') });
 
         await seller.page.route(/\/messages\/[^/]+\/attachments$/, async (route) => {
             await new Promise((resolve) => setTimeout(resolve, 500));
             await route.continue();
         }, { times: 1 });
         const rejected = seller.page.waitForResponse((response) => response.url().includes('/attachments') && response.request().method() === 'POST');
-        await seller.page.getByRole('button', { name: 'Send document' }).click();
+        await seller.page.getByRole('button', { name: 'Send photo' }).click();
         await expect(seller.page.getByRole('progressbar', { name: 'Attachment upload progress' })).toBeVisible();
         expect((await rejected).status()).toBe(422);
         await expect(seller.page.getByRole('alert')).toContainText('attachment');
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue('Here is the receipt.');
-        await expect(seller.page.getByRole('button', { name: 'Send document' })).toBeEnabled();
+        await expect(seller.page.getByRole('button', { name: 'Send photo' })).toBeEnabled();
 
         await seller.page.getByRole('button', { name: 'Add attachment' }).click();
-        await seller.page.getByLabel('PDF document').setInputFiles({ name: 'receipt.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF') });
+        await seller.page.getByLabel('Image or PDF document').setInputFiles({ name: 'receipt.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF') });
         await expect(seller.page.getByRole('status').filter({ hasText: 'receipt.pdf' })).toContainText('B');
         await seller.page.getByRole('button', { name: 'Send document' }).click();
         const message = seller.page.locator('#conversation-messages article').filter({ hasText: 'receipt.pdf' }).last();

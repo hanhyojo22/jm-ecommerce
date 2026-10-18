@@ -39,7 +39,7 @@ window.chatThread = (conversationId, userId) => ({
     fileName: '',
     fileSize: '',
     previewUrl: null,
-    attachmentMenuOpen: false,
+    dragging: false,
     uploading: false,
     uploadProgress: 0,
     uploadError: '',
@@ -248,29 +248,53 @@ window.chatThread = (conversationId, userId) => ({
         });
     },
 
-    selectFile(type, event) {
-        const file = event.target.files[0];
+    /**
+     * Takes the file the person chose, from the picker or from a drop, and readies it to send.
+     *
+     * The kind is read from the file rather than asked for up front. A file the server would
+     * refuse is refused here instead, inside the dialog, where the message is next to the thing
+     * it is about; the dialog stays open so another file can be chosen straight away.
+     */
+    chooseFile(file) {
+        if (!file) return;
+
+        const type = file.type === 'application/pdf'
+            ? 'document'
+            : (['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ? 'photo' : null);
+
+        if (!type) {
+            this.$refs.attachmentInput.value = '';
+            this.uploadError = 'Choose a JPG, PNG, WebP or PDF file.';
+            return;
+        }
+
         const replaced = this.pending.filter((item) => item.file && item.status === 'Failed');
         for (const item of replaced) {
             if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
         }
         this.pending = this.pending.filter((item) => !replaced.includes(item));
         if (this.previewUrl && !this.pending.some((item) => item.previewUrl === this.previewUrl)) URL.revokeObjectURL(this.previewUrl);
-        this.$refs[type === 'photo' ? 'documentInput' : 'photoInput'].value = '';
-        this.selectedType = file ? type : null;
-        this.fileName = file?.name ?? '';
-        this.fileSize = file ? (file.size < 1024 ? `${file.size} B` : `${(file.size / 1024).toFixed(1)} KB`) : '';
-        this.previewUrl = file && type === 'photo' ? URL.createObjectURL(file) : null;
-        this.attachmentMenuOpen = false;
+
+        // A dropped file never reaches the input on its own; the form posts whatever the input holds.
+        if (this.$refs.attachmentInput.files[0] !== file) {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            this.$refs.attachmentInput.files = transfer.files;
+        }
+
+        this.selectedType = type;
+        this.fileName = file.name;
+        this.fileSize = file.size < 1024 ? `${file.size} B` : `${(file.size / 1024).toFixed(1)} KB`;
+        this.previewUrl = type === 'photo' ? URL.createObjectURL(file) : null;
         this.uploadError = '';
+        this.$refs.attachmentDialog.close();
     },
 
     clearFile(keepPreview = false) {
         if (this.previewUrl && !keepPreview && !this.pending.some((item) => item.previewUrl === this.previewUrl)) {
             URL.revokeObjectURL(this.previewUrl);
         }
-        this.$refs.photoInput.value = '';
-        this.$refs.documentInput.value = '';
+        this.$refs.attachmentInput.value = '';
         this.selectedType = null;
         this.fileName = '';
         this.fileSize = '';
@@ -286,7 +310,7 @@ window.chatThread = (conversationId, userId) => ({
         }
 
         const type = this.selectedType;
-        const file = type ? this.$refs[type === 'photo' ? 'photoInput' : 'documentInput'].files[0] : null;
+        const file = type ? this.$refs.attachmentInput.files[0] : null;
         if (type && !file) {
             this.uploadError = 'Choose a file before sending.';
             return;
@@ -356,13 +380,13 @@ window.chatThread = (conversationId, userId) => ({
         this.activeUploadId = item.id;
         item.status = 'Sending';
         item.progress = 0;
-        const input = this.$refs[item.fileType === 'photo' ? 'photoInput' : 'documentInput'];
+        const input = this.$refs.attachmentInput;
         if (input.files[0] !== item.file && item.file) {
             const transfer = new DataTransfer();
             transfer.items.add(item.file);
             input.files = transfer.files;
         }
-        const form = this.$refs[item.fileType === 'photo' ? 'photoForm' : 'documentForm'];
+        const form = this.$refs.attachmentForm;
         form.querySelector('[name="client_message_id"]').value = item.id;
         form.querySelector('[name="body"]').value = item.body;
         form.requestSubmit();

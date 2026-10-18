@@ -145,30 +145,59 @@
                         <button type="button" x-on:click="clearFile()" x-bind:disabled="uploading" class="grid size-10 shrink-0 place-items-center rounded-lg text-muted hover:bg-line hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50" aria-label="Remove attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg></button>
                     </div>
                 @endif
-                <label for="message-body" class="mb-2 block text-xs font-semibold text-ink {{ $canSend ? 'ml-14' : '' }}">Write a message</label>
+                {{-- The placeholder carries the prompt; the label stays as the field's name. --}}
+                <label for="message-body" class="sr-only">Write a message</label>
                 <form x-ref="messageForm" x-on:submit.prevent="submitMessage()">
                 <div class="flex min-w-0 items-end gap-2">
                     @if ($canSend)
-                        <div class="relative shrink-0" x-on:click.outside="attachmentMenuOpen = false" x-on:keydown.escape.window="attachmentMenuOpen = false">
-                            <button type="button" x-on:click="attachmentMenuOpen = ! attachmentMenuOpen" x-bind:aria-expanded="attachmentMenuOpen" aria-haspopup="true" aria-label="Add attachment" class="grid size-12 place-items-center rounded-[10px] border border-line bg-white text-ink transition hover:border-blue-300 hover:bg-blue-50 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 10.5 12 18.5a5 5 0 0 1-7-7L13 3.5a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7.5-7.5"/></svg></button>
-                            <div x-cloak x-show="attachmentMenuOpen" class="absolute bottom-14 left-0 z-20 w-64 rounded-[14px] border border-line bg-white p-1.5 shadow-lg" aria-label="Attach a file">
-                                <label for="chat-photo" class="flex min-h-12 cursor-pointer items-center gap-3 rounded-[10px] px-3 text-sm text-ink transition hover:bg-blue-50 focus-within:ring-2 focus-within:ring-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5 shrink-0 text-brand-hover" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="9.5" r="1.4"/><path stroke-linecap="round" stroke-linejoin="round" d="m5 17 5-4.5 3 2.5 2.5-2 3.5 3"/></svg><span class="font-medium">Image</span><input id="chat-photo" x-ref="photoInput" form="chat-photo-form" name="attachment" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Image" required class="sr-only" x-on:change="selectFile('photo', $event)"></label>
-                                <label for="chat-document" class="flex min-h-12 cursor-pointer items-center gap-3 rounded-[10px] px-3 text-sm text-ink transition hover:bg-blue-50 focus-within:ring-2 focus-within:ring-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5 shrink-0 text-brand-hover" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 3.5h8l4 4v13H6a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 3.5v4h4M8 12h7M8 15h7M8 18h5"/></svg><span class="font-medium">PDF document</span><input id="chat-document" x-ref="documentInput" form="chat-document-form" name="attachment" type="file" accept="application/pdf,.pdf" aria-label="PDF document" required class="sr-only" x-on:change="selectFile('document', $event)"></label>
-                            </div>
+                        <div class="shrink-0">
+                            <button type="button" x-ref="attachmentTrigger" x-on:click="$refs.attachmentDialog.showModal()" aria-haspopup="dialog" aria-label="Add attachment" class="grid size-11 place-items-center rounded-[10px] border border-line bg-white text-ink transition hover:border-blue-300 hover:bg-blue-50 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M20 10.5 12 18.5a5 5 0 0 1-7-7L13 3.5a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7.5-7.5"/></svg></button>
+                            {{--
+                             - A file is chosen in a modal rather than a dropdown: there is room to drop one, and
+                             - the kind of file is read from the file itself. The server takes images and PDFs
+                             - through the same field, so one input carries either (ConversationAttachmentController).
+                             --}}
+                            <dialog
+                                x-ref="attachmentDialog"
+                                wire:ignore
+                                x-on:close="dragging = false; $refs.attachmentTrigger?.focus()"
+                                aria-labelledby="attachment-dialog-title"
+                                class="w-[calc(100%-2rem)] max-w-md rounded-[14px] border-0 p-0 shadow-2xl backdrop:bg-slate-950/40"
+                            >
+                                <div class="bg-white p-6">
+                                    <h2 id="attachment-dialog-title" class="text-lg font-semibold text-ink">Attach a file</h2>
+                                    <div
+                                        x-on:dragover.prevent="dragging = true"
+                                        x-on:dragleave.prevent="dragging = false"
+                                        x-on:drop.prevent="dragging = false; chooseFile($event.dataTransfer.files[0])"
+                                        x-bind:class="dragging ? 'border-brand bg-blue-50' : 'border-line bg-canvas'"
+                                        class="mt-4 rounded-[12px] border-2 border-dashed px-6 py-8 text-center transition"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="mx-auto size-8 text-muted" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+                                        <p class="mt-3 text-sm text-muted">Drop a file here, or</p>
+                                        <label for="chat-attachment" class="mt-2 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand">Browse</label>
+                                        <input id="chat-attachment" x-ref="attachmentInput" form="chat-attachment-form" name="attachment" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Image or PDF document" required class="sr-only" x-on:change="chooseFile($event.target.files[0])">
+                                        <p class="mt-3 text-xs text-muted">JPG, PNG, WebP or PDF &middot; up to 5 MB</p>
+                                    </div>
+                                    <p x-cloak x-show="uploadError" x-text="uploadError" role="alert" class="mt-3 text-sm font-medium text-red-700"></p>
+                                    <div class="mt-6 flex justify-end">
+                                        <button type="button" x-on:click="$refs.attachmentDialog.close()" class="min-h-11 rounded-[10px] px-4 text-sm font-semibold text-muted transition hover:bg-canvas hover:text-ink focus:outline-none focus:ring-2 focus:ring-brand">Cancel</button>
+                                    </div>
+                                </div>
+                            </dialog>
                         </div>
                     @endif
-                    <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; fitComposer()" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="1" maxlength="2000" class="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-line bg-canvas text-sm leading-6 text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! $canSend)></textarea>
-                    <button type="submit" x-bind:aria-label="selectedType === 'photo' ? 'Send photo' : selectedType === 'document' ? 'Send document' : 'Send message'" x-bind:disabled="!online || uploading" class="grid size-12 shrink-0 place-items-center rounded-[10px] bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" @disabled(! $canSend)><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg></button>
+                    <textarea wire:model="body" x-ref="messageBody" x-on:input="$wire.body = $el.value; fitComposer()" x-on:input.debounce.500ms="$wire.startTyping()" x-on:keydown.enter="if (! $event.shiftKey) { $event.preventDefault(); $refs.messageForm.requestSubmit(); }" id="message-body" rows="1" maxlength="2000" class="min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-[10px] border-line bg-canvas px-3 py-2 text-sm leading-6 text-ink placeholder:text-muted focus:border-brand focus:bg-white focus:ring-brand" placeholder="Type your message..." aria-describedby="message-help" @disabled(! $canSend)></textarea>
+                    <button type="submit" x-bind:aria-label="selectedType === 'photo' ? 'Send photo' : selectedType === 'document' ? 'Send document' : 'Send message'" x-bind:disabled="!online || uploading" class="grid size-11 shrink-0 place-items-center rounded-[10px] bg-brand text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50" @disabled(! $canSend)><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m4 11 16-7-7 16-2-7-7-2ZM11 13l4-4"/></svg></button>
                 </div>
-                <div id="message-help" class="mt-2 flex items-center justify-between gap-3 text-xs text-muted {{ $canSend ? 'pl-14' : '' }}"><span class="hidden sm:inline">Enter to send · Shift + Enter for a new line</span><span x-cloak x-show="Array.from($wire.body).length > 1800" class="ml-auto tabular-nums" x-text="Array.from($wire.body).length + '/2000'"></span></div>
+                <div id="message-help" class="flex items-center justify-end text-xs text-muted"><span x-cloak x-show="Array.from($wire.body).length > 1800" class="mt-1 tabular-nums" x-text="Array.from($wire.body).length + '/2000'"></span></div>
                 @error('body')<p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ $message }}</p>@enderror
                 @error('attachment')<p class="mt-2 text-sm font-medium text-red-700" role="alert">{{ $message }}</p>@enderror
                 <div x-cloak x-show="uploading" class="mt-2 text-xs text-muted" role="status"><span>Uploading attachment</span><span class="ml-1 tabular-nums" x-text="uploadProgress + '%'">0%</span><div class="mt-1 h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-label="Attachment upload progress" aria-valuemin="0" aria-valuemax="100" x-bind:aria-valuenow="uploadProgress"><div class="h-full rounded-full bg-brand transition-[width]" x-bind:style="'width: ' + uploadProgress + '%'"></div></div></div>
                 <p x-cloak x-show="uploadError" x-text="uploadError" class="mt-2 text-sm font-medium text-red-700" role="alert"></p>
                 </form>
                 @if ($canSend)
-                    <form id="chat-photo-form" x-ref="photoForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
-                    <form id="chat-document-form" x-ref="documentForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
+                    <form id="chat-attachment-form" x-ref="attachmentForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
                 @endif
             </div>
         </section>

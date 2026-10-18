@@ -188,6 +188,41 @@ test('offline composer explains why sending is paused', async ({ browser }) => {
     }
 });
 
+test('a file dropped on the attachment dialog is the one that sends', async ({ browser }) => {
+    const buyer = await openAsRole(browser, 'customer');
+
+    try {
+        await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
+        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
+        await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();
+        await buyer.page.getByRole('button', { name: 'Add attachment' }).click();
+
+        const dialog = buyer.page.getByRole('dialog');
+        await expect(dialog).toBeVisible();
+
+        /*
+         * A drop carries its file in the event, never through the input, so the composer has to
+         * move it there itself — that is the whole of what this covers.
+         */
+        await dialog.getByText('Drop a file here').evaluate((zone) => {
+            const transfer = new DataTransfer();
+            transfer.items.add(new File(['%PDF-1.4 1 0 obj<</Type/Catalog>>endobj %%EOF'], 'dropped.pdf', { type: 'application/pdf' }));
+            zone.closest('[class*="border-dashed"]').dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true }));
+        });
+
+        await expect(dialog).toBeHidden();
+        await expect(buyer.page.getByRole('status').filter({ hasText: 'dropped.pdf' })).toBeVisible();
+
+        await buyer.page.getByRole('button', { name: 'Send document' }).click();
+        const message = buyer.page.locator('#conversation-messages article').filter({ hasText: 'dropped.pdf' }).last();
+        await expect(message.getByRole('link', { name: 'Download' })).toBeVisible();
+    } finally {
+        await buyer.context.close();
+    }
+});
+
 test('failed attachment upload retries with one confirmed bubble', async ({ browser }) => {
     const buyer = await openAsRole(browser, 'customer');
 
@@ -198,7 +233,7 @@ test('failed attachment upload retries with one confirmed bubble', async ({ brow
         await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
         await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();
         await buyer.page.getByRole('button', { name: 'Add attachment' }).click();
-        await buyer.page.getByLabel('PDF document').setInputFiles({
+        await buyer.page.getByLabel('Image or PDF document').setInputFiles({
             name: 'qa-retry.pdf',
             mimeType: 'application/pdf',
             buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF'),
