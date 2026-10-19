@@ -17,14 +17,43 @@ use Illuminate\Validation\ValidationException;
 
 class ReturnCaseWorkflow
 {
+    /**
+     * What each notified case action means to the buyer and the seller. A type that is absent
+     * here changes nothing either side has to act on, so it is recorded without an email.
+     *
+     * @var array<string, string>
+     */
+    private const NOTICES = [
+        'submitted' => 'A buyer opened a return request.',
+        'admin_opened' => 'JMMart opened a return case for this order.',
+        'offer' => 'The seller offered a remedy. The buyer can accept it or appeal to JMMart.',
+        'reject' => 'The seller rejected the request. The buyer can appeal to JMMart.',
+        'accept' => 'The buyer accepted the offer.',
+        'appeal' => 'The case was appealed to JMMart.',
+        'handoff' => 'The buyer handed the goods over for return.',
+        'receive' => 'The seller recorded the returned goods as received.',
+        'refund' => 'The seller recorded a refund payment. The buyer should confirm receipt.',
+        'ship' => 'The seller recorded a replacement shipment. The buyer should confirm receipt.',
+        'decide' => 'JMMart decided the appeal.',
+        'takeover' => 'JMMart took the overdue case over for review.',
+        'reopen' => 'JMMart set the recorded outcome aside. The seller must fulfil the remedy again.',
+        'confirm' => 'The buyer confirmed the outcome and the case is complete.',
+        'verify' => 'JMMart verified the outcome and closed the case.',
+        'close' => 'JMMart closed the case because its deadline passed without a response.',
+    ];
+
     /** @param array<string, mixed> $data */
     public function open(SellerOrder $order, User $actor, array $data, bool $admin = false): ReturnCase
     {
         return DB::transaction(function () use ($order, $actor, $data, $admin): ReturnCase {
             $order = SellerOrder::query()->with('order')->lockForUpdate()->findOrFail($order->id);
             abort_unless($admin || $order->order->user_id === $actor->id, 404);
-            if ($order->status !== 'delivered' || (! $admin && ($order->delivered_at === null || now()->greaterThan($order->delivered_at->copy()->addDays(7))))) {
-                throw ValidationException::withMessages(['items' => 'The seven-day request window has ended or delivery cannot be verified. Contact support for a later claim.']);
+            if ($admin
+                ? $order->status === 'cancelled'
+                : ($order->status !== 'delivered' || $order->delivered_at === null || now()->greaterThan($order->delivered_at->copy()->addDays(7)))) {
+                throw ValidationException::withMessages(['items' => $admin
+                    ? 'A cancelled store order cannot have a return case.'
+                    : 'The seven-day request window has ended or delivery cannot be verified. Contact support for a later claim.']);
             }
             $issue = null;
             if ($admin && isset($data['order_issue_id'])) {
@@ -46,9 +75,9 @@ class ReturnCaseWorkflow
                 if ($item === null) {
                     throw ValidationException::withMessages(['items' => 'An item does not belong to this store order.']);
                 }
-                $claimed = ReturnCaseItem::query()->where('order_item_id', $item->id)->whereHas('returnCase', fn ($query) => $query->where('status', '!=', 'denied'))->sum('quantity');
-                if ($claimed + $line['quantity'] > $item->quantity) {
-                    throw ValidationException::withMessages(['items' => 'The requested quantity exceeds the unclaimed purchased quantity.']);
+                $claimed = ReturnCaseItem::query()->where('order_item_id', $item->id)->sum('quantity');
+                if (! $admin && $claimed + $line['quantity'] > $item->quantity) {
+                    throw ValidationException::withMessages(['items' => 'Every unit of this item is already covered by a return case. Contact support to revisit a decided case.']);
                 }
             }
             $case = ReturnCase::query()->create([
@@ -74,7 +103,7 @@ class ReturnCaseWorkflow
     public function act(ReturnCase $case, User $actor, string $action, array $data = []): ReturnCase
     {
         return DB::transaction(function () use ($case, $actor, $action, $data): ReturnCase {
-            $case = ReturnCase::query()->with('items.orderItem', 'outcome')->lockForUpdate()->findOrFail($case->id);
+            $case = ReturnCase::query()->with('items.orderItem', 'outcome', 'sellerOrder')->lockForUpdate()->findOrFail($case->id);
             $status = $case->status;
             $changes = [];
             $eventData = [];
@@ -94,8 +123,11 @@ class ReturnCaseWorkflow
                     $changes = $this->startRemedy($case);
                     break;
                 case 'appeal':
-                    $this->requireStatus($status, ['rejected', 'offered', 'awaiting_confirmation']);
-                    if ($status !== 'awaiting_confirmation') {
+                    $this->requireStatus($status, ['awaiting_seller', 'rejected', 'offered', 'awaiting_confirmation']);
+                    if ($status === 'awaiting_seller' && ! $case->isOverdue()) {
+                        throw ValidationException::withMessages(['action' => 'The seller still has time to respond.']);
+                    }
+                    if (in_array($status, ['rejected', 'offered'], true)) {
                         $this->requireBuyerDeadline($case);
                     }
                     $changes = ['status' => 'appealed'];
@@ -103,7 +135,7 @@ class ReturnCaseWorkflow
                 case 'handoff':
                     $this->requireStatus($status, ['awaiting_return']);
                     $this->evidence($case, $actor, 'handoff', $data['proof']);
-                    $changes = ['status' => 'awaiting_receipt', 'handed_off_at' => now()];
+                    $changes = ['status' => 'awaiting_receipt', 'handed_off_at' => now(), 'return_by' => now()->addWeekdays(10)];
                     break;
                 case 'receive':
                     $this->requireStatus($status, ['awaiting_receipt']);
@@ -112,6 +144,9 @@ class ReturnCaseWorkflow
                 case 'refund':
                     $this->requireStatus($status, ['awaiting_fulfillment']);
                     $this->requireRemedy($case, 'refund');
+                    if ($case->sellerOrder->cod_collected_at === null) {
+                        throw ValidationException::withMessages(['action' => 'No cash has been collected for this store order, so there is nothing to refund. Record the collection first, or ask support to change the remedy.']);
+                    }
                     $amount = $case->items->reduce(fn (string $sum, ReturnCaseItem $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
                     $proof = $this->evidence($case, $actor, 'refund', $data['proof']);
                     $case->outcome()->create(['recorded_by' => $actor->id, 'kind' => 'refund', 'amount' => $amount, 'paid_at' => $data['paid_at'], 'proof_evidence_id' => $proof->id, 'created_at' => now()]);
@@ -131,12 +166,31 @@ class ReturnCaseWorkflow
                     $changes = ['status' => 'completed', 'completed_at' => now()];
                     break;
                 case 'takeover':
-                    $this->requireStatus($status, ['awaiting_seller', 'awaiting_fulfillment', 'awaiting_confirmation']);
-                    $deadline = $status === 'awaiting_seller' ? $case->respond_by : ($status === 'awaiting_fulfillment' ? $case->fulfill_by : $case->buyer_respond_by);
-                    if ($deadline === null || now()->lessThanOrEqualTo($deadline)) {
+                    $this->requireStatus($status, ['awaiting_seller', 'awaiting_receipt', 'awaiting_fulfillment', 'awaiting_confirmation']);
+                    if (! $case->isOverdue()) {
                         throw ValidationException::withMessages(['action' => 'This case is not overdue.']);
                     }
                     $changes = ['status' => 'appealed'];
+                    break;
+                case 'close':
+                    $this->requireStatus($status, ['offered', 'rejected', 'awaiting_return']);
+                    if (! $case->isOverdue()) {
+                        throw ValidationException::withMessages(['action' => 'Wait for the buyer to act or for their deadline to pass.']);
+                    }
+                    $changes = ['status' => 'closed', 'response_note' => $note, 'completed_at' => now()];
+                    break;
+                case 'reopen':
+                    $this->requireStatus($status, ['appealed']);
+                    if ($case->outcome === null) {
+                        throw ValidationException::withMessages(['action' => 'There is no recorded outcome to set aside.']);
+                    }
+                    if ($case->outcome->kind === 'replacement') {
+                        $this->replacementStock($case, $actor, restore: true);
+                    }
+                    $eventData = ['voided_outcome' => $case->outcome->only(['kind', 'amount', 'paid_at', 'shipment_reference'])];
+                    $case->outcome->delete();
+                    $case->unsetRelation('outcome');
+                    $changes = ['status' => 'awaiting_fulfillment', 'fulfill_by' => now()->addWeekdays(5)];
                     break;
                 case 'decide':
                     $this->requireStatus($status, ['appealed']);
@@ -212,11 +266,19 @@ class ReturnCaseWorkflow
         return ['remedy' => $data['decision'] ?? $data['remedy'], 'return_waived' => (bool) ($data['return_waived'] ?? false), 'return_instructions' => $data['return_instructions'] ?? null, 'return_method' => $data['return_method'] ?? null];
     }
 
+    /**
+     * Pick the remedy up where the goods already are: a waived or completed return goes
+     * straight to fulfilment, and goods already in transit wait on the seller's receipt.
+     */
     private function startRemedy(ReturnCase $case): array
     {
-        return $case->return_waived
-            ? ['status' => 'awaiting_fulfillment', 'fulfill_by' => now()->addWeekdays(5)]
-            : ['status' => 'awaiting_return'];
+        if ($case->return_waived || $case->received_at !== null) {
+            return ['status' => 'awaiting_fulfillment', 'fulfill_by' => now()->addWeekdays(5)];
+        }
+
+        return $case->handed_off_at !== null
+            ? ['status' => 'awaiting_receipt', 'return_by' => now()->addWeekdays(10)]
+            : ['status' => 'awaiting_return', 'return_by' => now()->addDays(7)];
     }
 
     private function evidence(ReturnCase $case, User $actor, string $kind, UploadedFile $file): ReturnCaseEvidence
@@ -231,12 +293,19 @@ class ReturnCaseWorkflow
         return $evidence;
     }
 
-    private function replacementStock(ReturnCase $case, User $actor): void
+    private function replacementStock(ReturnCase $case, User $actor, bool $restore = false): void
     {
         foreach ($case->items as $line) {
             $item = $line->orderItem;
             $product = Product::withTrashed()->lockForUpdate()->find($item->product_id);
             $variant = $item->product_variant_id ? $product?->variants()->whereKey($item->product_variant_id)->lockForUpdate()->first() : null;
+            if ($restore) {
+                $product?->increment('stock_quantity', $line->quantity);
+                $variant?->increment('stock_quantity', $line->quantity);
+                $this->event($case, $actor, 'replacement_stock_restored', null, ['order_item_id' => $item->id, 'quantity' => $line->quantity]);
+
+                continue;
+            }
             if ($product === null || $product->stock_quantity < $line->quantity || ($item->product_variant_id && ($variant === null || $variant->stock_quantity < $line->quantity))) {
                 throw ValidationException::withMessages(['action' => 'Replacement stock is unavailable. Ask support to change the remedy.']);
             }
@@ -268,14 +337,18 @@ class ReturnCaseWorkflow
     {
         $case->events()->create(['actor_id' => $actor->id, 'type' => $type, 'note' => $note, 'data' => $data, 'created_at' => now()]);
         AuditLog::query()->create(['actor_user_id' => $actor->id, 'action' => 'return_case.'.$type, 'entity_type' => ReturnCase::class, 'entity_id' => $case->id, 'new_values' => $data + ['status' => $case->status], 'ip_address' => request()->ip()]);
-        if (in_array($type, ['submitted', 'admin_opened', 'offer', 'reject', 'appeal', 'handoff', 'decide', 'refund', 'ship'], true)) {
+        if (isset(self::NOTICES[$type])) {
             DB::afterCommit(function () use ($case, $type): void {
                 try {
-                    $case->load('buyer', 'sellerOrder.store.tenant.members.user');
+                    $case->load('buyer', 'sellerOrder.order', 'sellerOrder.store.tenant.members.user');
+                    $deadline = $case->deadline();
+                    $body = self::NOTICES[$type]
+                        ."\n\nOrder {$case->sellerOrder->order->number} · {$case->sellerOrder->store->name}."
+                        .($deadline !== null ? "\nThe next step is due by {$deadline->format('M j, Y g:i A')}." : '');
                     $recipients = collect([$case->buyer])->merge($case->sellerOrder->store->tenant->members->pluck('user'))->filter()->unique('id');
                     foreach ($recipients as $recipient) {
                         $url = $recipient->id === $case->buyer_id ? route('returns.show', $case) : route('seller.returns.show', $case);
-                        app(GmailOrderMailer::class)->send($recipient, 'JMMart return case update', "Return case {$case->id}: {$type}.\n\nView the case: {$url}");
+                        app(GmailOrderMailer::class)->send($recipient, 'JMMart return case update', $body."\n\nView the case: {$url}");
                     }
                 } catch (\Throwable $exception) {
                     report($exception);

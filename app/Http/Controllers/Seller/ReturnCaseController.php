@@ -14,20 +14,24 @@ class ReturnCaseController extends Controller
     public function index(Request $request): View
     {
         $tenant = $request->user()->sellerTenant() ?? abort(403);
-        $cases = ReturnCase::query()->whereHas('sellerOrder', fn ($query) => $query->where('tenant_id', $tenant->id))
-            ->with('sellerOrder.order', 'sellerOrder.store')->latest()->paginate(20);
+        $forTenant = fn ($query) => $query->whereHas('sellerOrder', fn ($sellerOrder) => $sellerOrder->where('tenant_id', $tenant->id));
+        $cases = ReturnCase::query()->tap($forTenant)
+            ->when($request->boolean('needs_action'), fn ($query) => $query->whereIn('status', ['awaiting_seller', 'awaiting_receipt', 'awaiting_fulfillment']))
+            ->with('sellerOrder.order', 'sellerOrder.store', 'buyer')->orderByDeadline()->latest()->paginate(20)->withQueryString();
 
-        $needsActionCount = ReturnCase::query()->whereHas('sellerOrder', fn ($query) => $query->where('tenant_id', $tenant->id))
-            ->whereIn('status', ['awaiting_seller', 'awaiting_receipt', 'awaiting_fulfillment'])->count();
-
-        return view('returns.index', ['cases' => $cases, 'role' => 'seller', 'needsActionCount' => $needsActionCount]);
+        return view('returns.index', [
+            'cases' => $cases,
+            'role' => 'seller',
+            'needsActionCount' => ReturnCase::query()->tap($forTenant)->whereIn('status', ['awaiting_seller', 'awaiting_receipt', 'awaiting_fulfillment'])->count(),
+            'needsActionOnly' => $request->boolean('needs_action'),
+        ]);
     }
 
     public function show(Request $request, ReturnCase $returnCase): View
     {
         $tenant = $request->user()->sellerTenant() ?? abort(403);
         $case = ReturnCase::query()->whereKey($returnCase)->whereHas('sellerOrder', fn ($query) => $query->where('tenant_id', $tenant->id))
-            ->with('sellerOrder.order', 'sellerOrder.store', 'items.orderItem', 'events.actor', 'evidence', 'outcome')->firstOrFail();
+            ->with('sellerOrder.order', 'sellerOrder.store', 'buyer', 'items.orderItem', 'events.actor', 'evidence.uploader', 'outcome')->firstOrFail();
 
         return view('returns.show', ['case' => $case, 'role' => 'seller']);
     }

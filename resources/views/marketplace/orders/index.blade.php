@@ -59,7 +59,7 @@
                     @php
                         $order = $sellerOrder->order;
                         $returnIssue = $sellerOrder->issues->firstWhere('type', 'return_refund');
-                        $returnCase = $sellerOrder->returnCases->first();
+                        $returnCases = $sellerOrder->returnCases;
                         $reviewableItemId = $reviewableItemIds[$sellerOrder->id] ?? null;
                     @endphp
                     <article class="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm" aria-labelledby="purchase-{{ $sellerOrder->id }}">
@@ -76,8 +76,8 @@
 
                         <div class="px-4 sm:px-5">
                             <div class="flex justify-end pt-3">
-                                @if ($returnCase && $tab === 'returns')
-                                    <span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700">Return case {{ str($returnCase->status)->replace('_', ' ') }}</span>
+                                @if ($returnCases->isNotEmpty() && $tab === 'returns')
+                                    @foreach ($returnCases as $returnCase)<span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700">Return case {{ str($returnCase->status)->replace('_', ' ') }}</span>@endforeach
                                 @elseif ($returnIssue && $tab === 'returns')
                                     <span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700">Return request {{ str($returnIssue->status)->replace('_', ' ') }}</span>
                                 @else
@@ -124,8 +124,8 @@
                                 @if ($reviewableItemId)
                                     <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Write review</a>
                                 @endif
-                                @if ($returnCase)
-                                    <a href="{{ route('returns.show', $returnCase) }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white">View return</a>
+                                @if ($returnCases->isNotEmpty())
+                                    @foreach ($returnCases as $returnCase)<a href="{{ route('returns.show', $returnCase) }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white">View return{{ $returnCases->count() > 1 ? ' · '.$loop->iteration : '' }}</a>@endforeach
                                 @elseif ($returnIssue && ($tab === 'returns' || $returnIssue->status === 'open'))
                                     <a href="{{ route('orders.show', $order) }}#order-help" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View return</a>
                                 @elseif ($sellerOrder->status === 'delivered')

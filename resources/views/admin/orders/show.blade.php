@@ -71,8 +71,12 @@
                         </form>
                     @endif
                 </div>
+                @if ($sellerOrder->status === 'cancelled')
+                    <p class="mt-5 border-t border-line pt-4 text-sm text-muted">{{ $sellerOrder->store->name }}: a cancelled store order cannot have a return case.</p>
+                @else
                 <form method="POST" action="{{ route('admin.returns.store', $sellerOrder) }}" class="mt-5 grid gap-3 border-t border-line pt-4">@csrf
                     <h3 class="font-semibold">{{ $sellerOrder->store->name }}</h3>
+                    <p class="text-sm text-muted">Support can open a case on this store order at any time, including after the buyer's seven-day window.</p>
                     @if ($sellerOrder->issues->contains('status', 'open'))
                         <label>Convert an open support claim<select name="order_issue_id" class="field-control"><option value="">Open separate case</option>@foreach ($sellerOrder->issues->where('status', 'open') as $issue)<option value="{{ $issue->id }}">{{ str($issue->type)->replace('_', ' ')->headline() }} · {{ Str::limit($issue->details, 70) }}</option>@endforeach</select></label>
                     @endif
@@ -84,6 +88,7 @@
                     <label>Claim details<textarea name="details" required minlength="10" maxlength="2000" class="field-control"></textarea></label>
                     <button class="min-h-11 justify-self-start rounded-lg bg-brand px-4 text-white">Open return case</button>
                 </form>
+                @endif
             @endforeach
         </section>
     </div>

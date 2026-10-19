@@ -36,7 +36,7 @@ class ReturnCaseController extends Controller
     public function show(Request $request, ReturnCase $returnCase): View
     {
         abort_unless($returnCase->buyer_id === $request->user()->id, 404);
-        $returnCase->load('sellerOrder.order', 'sellerOrder.store', 'items.orderItem', 'events.actor', 'evidence', 'outcome');
+        $returnCase->load('sellerOrder.order', 'sellerOrder.store', 'buyer', 'items.orderItem', 'events.actor', 'evidence.uploader', 'outcome');
 
         return view('returns.show', ['case' => $returnCase, 'role' => 'buyer']);
     }

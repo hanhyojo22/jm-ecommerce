@@ -71,6 +71,9 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($seller)->patch(route('seller.returns.update', $case), ['action' => 'restock', 'case_item_id' => $caseItem->id, 'quantity' => 1])->assertSessionHas('status');
         $this->actingAs($seller)->patch(route('seller.returns.update', $case), ['action' => 'restock', 'case_item_id' => $caseItem->id, 'quantity' => 2])->assertSessionHasErrors('quantity');
         $this->assertSame(6, Product::findOrFail($item->product_id)->stock_quantity);
+        $this->actingAs($seller)->patch(route('seller.returns.update', $case), ['action' => 'refund', 'paid_at' => now()->toDateString(), 'proof' => UploadedFile::fake()->image('refund.jpg')])->assertSessionHasErrors('action');
+        $this->assertDatabaseCount('return_case_outcomes', 0);
+        $this->actingAs($seller)->patch(route('seller.orders.cod-collection', $sellerOrder))->assertSessionHas('status');
         $this->actingAs($seller)->patch(route('seller.returns.update', $case), ['action' => 'refund', 'paid_at' => now()->toDateString(), 'proof' => UploadedFile::fake()->image('refund.jpg')])->assertSessionHas('status');
         $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'awaiting_confirmation']);
         $this->assertDatabaseHas('return_case_outcomes', ['return_case_id' => $case->id, 'kind' => 'refund', 'amount' => '500.00']);
@@ -171,6 +174,137 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($admin)->patch(route('admin.orders.seller-cod-collection', $second))->assertSessionHas('status');
         $this->assertSame($firstCollectedAt->toDateTimeString(), $first->fresh()->cod_collected_at->toDateTimeString());
         $this->assertDatabaseHas('payments', ['order_id' => $first->order_id, 'status' => 'paid']);
+    }
+
+    public function test_support_closes_a_return_the_buyer_abandons(): void
+    {
+        [$buyer, $seller, $sellerOrder, $item] = $this->deliveredOrder();
+        $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $case = ReturnCase::query()->sole();
+        $this->actingAs($seller)->patch(route('seller.returns.update', $case), [
+            'action' => 'offer', 'remedy' => 'refund', 'note' => 'Send the unit back for a refund.',
+            'return_instructions' => 'Pack the unit for pickup.', 'return_method' => 'Seller-paid pickup',
+        ]);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'accept']);
+
+        $this->assertSame('awaiting_return', $case->fresh()->status);
+        $this->assertNotNull($case->fresh()->return_by);
+
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'close', 'note' => 'The buyer never sent the unit back.'])->assertSessionHasErrors('action');
+
+        $this->travel(8)->days();
+        $this->actingAs($admin)->get(route('admin.returns.index', ['needs_action' => 1]))->assertSee('1 need support review');
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'close', 'note' => 'The buyer never sent the unit back.'])->assertSessionHas('status');
+
+        $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'closed']);
+        $this->assertNotNull($case->fresh()->completed_at);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'handoff', 'proof' => UploadedFile::fake()->image('late.jpg')])->assertSessionHasErrors('action');
+    }
+
+    public function test_support_takes_over_a_return_leg_the_seller_leaves_open(): void
+    {
+        Storage::fake('chat_attachments');
+        [$buyer, $seller, $sellerOrder, $item] = $this->deliveredOrder();
+        $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $case = ReturnCase::query()->sole();
+        $this->actingAs($seller)->patch(route('seller.returns.update', $case), [
+            'action' => 'offer', 'remedy' => 'refund', 'note' => 'Send the unit back for a refund.',
+            'return_instructions' => 'Pack the unit for pickup.', 'return_method' => 'Seller-paid pickup',
+        ]);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'accept']);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'handoff', 'proof' => UploadedFile::fake()->image('handoff.jpg')]);
+
+        $this->assertSame('awaiting_receipt', $case->fresh()->status);
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover'])->assertSessionHasErrors('action');
+
+        $this->travel(21)->days();
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover'])->assertSessionHas('status');
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), [
+            'action' => 'decide', 'decision' => 'refund', 'note' => 'The seller never recorded the parcel.',
+            'return_instructions' => 'Already in transit.', 'return_method' => 'Seller-paid pickup',
+        ])->assertSessionHas('status');
+
+        $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'awaiting_receipt']);
+    }
+
+    public function test_a_remedy_decided_after_receipt_does_not_ask_for_the_goods_again(): void
+    {
+        Storage::fake('chat_attachments');
+        [$buyer, $seller, $sellerOrder, $item] = $this->deliveredOrder();
+        $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $case = ReturnCase::query()->sole();
+        $this->actingAs($seller)->patch(route('seller.returns.update', $case), [
+            'action' => 'offer', 'remedy' => 'refund', 'note' => 'Send the unit back for a refund.',
+            'return_instructions' => 'Pack the unit for pickup.', 'return_method' => 'Seller-paid pickup',
+        ]);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'accept']);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'handoff', 'proof' => UploadedFile::fake()->image('handoff.jpg')]);
+        $this->actingAs($seller)->patch(route('seller.returns.update', $case), ['action' => 'receive']);
+
+        $this->travel(14)->days();
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover'])->assertSessionHas('status');
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), [
+            'action' => 'decide', 'decision' => 'replacement', 'note' => 'A replacement is the fair outcome here.',
+            'return_instructions' => 'The seller already holds the unit.', 'return_method' => 'Seller-paid pickup',
+        ])->assertSessionHas('status');
+
+        $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'awaiting_fulfillment', 'remedy' => 'replacement']);
+    }
+
+    public function test_support_sets_an_unsupported_outcome_aside_and_returns_its_stock(): void
+    {
+        [$buyer, $seller, $sellerOrder, $item, $product] = $this->deliveredOrder();
+        $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $case = ReturnCase::query()->sole();
+        $this->actingAs($seller)->patch(route('seller.returns.update', $case), [
+            'action' => 'offer', 'remedy' => 'replacement', 'note' => 'We will ship a replacement unit.', 'return_waived' => 1,
+        ]);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'accept']);
+        $this->actingAs($seller)->patch(route('seller.returns.update', $case), ['action' => 'ship', 'reference' => 'TRACK-1']);
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'appeal', 'note' => 'That tracking number was never scanned.']);
+        $this->assertSame(4, $product->fresh()->stock_quantity);
+
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'decide', 'decision' => 'refund', 'note' => 'Switching the remedy to a refund.', 'return_waived' => 1])->assertSessionHasErrors('action');
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'reopen', 'note' => 'The tracking reference does not resolve to a shipment.'])->assertSessionHas('status');
+
+        $this->assertDatabaseCount('return_case_outcomes', 0);
+        $this->assertSame(5, $product->fresh()->stock_quantity);
+        $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'awaiting_fulfillment']);
+    }
+
+    public function test_the_reminder_command_nudges_overdue_cases_once(): void
+    {
+        [$buyer, , $sellerOrder, $item] = $this->deliveredOrder();
+        [$otherBuyer, , $otherSellerOrder, $otherItem] = $this->deliveredOrder();
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $overdue = ReturnCase::query()->sole();
+        $this->travel(49)->hours();
+        $this->actingAs($otherBuyer)->post(route('returns.store', $otherSellerOrder), $this->requestData($otherItem->id, 1));
+        $onTime = ReturnCase::query()->whereKeyNot($overdue->id)->sole();
+
+        $this->artisan('returns:remind')->assertSuccessful();
+        $this->artisan('returns:remind')->assertSuccessful();
+
+        $this->assertSame(1, $overdue->events()->where('type', 'reminder')->count());
+        $this->assertSame(0, $onTime->events()->where('type', 'reminder')->count());
+    }
+
+    public function test_a_buyer_escalates_a_seller_who_misses_the_response_window(): void
+    {
+        [$buyer, , $sellerOrder, $item] = $this->deliveredOrder();
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $case = ReturnCase::query()->sole();
+
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'appeal', 'note' => 'The seller has not replied at all.'])->assertSessionHasErrors('action');
+
+        $this->travel(49)->hours();
+        $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'appeal', 'note' => 'The seller has not replied at all.'])->assertSessionHas('status');
+
+        $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'appealed']);
     }
 
     private function requestData(string $itemId, int $quantity): array

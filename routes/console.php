@@ -1,8 +1,51 @@
 <?php
 
+use App\Models\ReturnCase;
+use App\Models\User;
+use App\Services\GmailOrderMailer;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('returns:remind', function (GmailOrderMailer $mailer): void {
+    $cases = ReturnCase::query()->overdue()
+        ->whereDoesntHave('events', fn ($query) => $query->where('type', 'reminder')->where('created_at', '>=', now()->subDays(3)))
+        ->with('buyer', 'sellerOrder.order', 'sellerOrder.store.tenant.members.user')
+        ->get();
+
+    foreach ($cases as $case) {
+        $sellerTurn = in_array($case->status, ['awaiting_seller', 'awaiting_receipt', 'awaiting_fulfillment'], true);
+        $recipients = $sellerTurn
+            ? $case->sellerOrder->store->tenant->members->pluck('user')->filter()
+            : collect([$case->buyer])->filter();
+
+        foreach ($recipients as $recipient) {
+            $mailer->send(
+                $recipient,
+                'JMMart return case is overdue',
+                "The return case for order {$case->sellerOrder->order->number} passed its {$case->deadline()->format('M j, Y g:i A')} deadline and is waiting on you. JMMart can take the case over while it stays unanswered."
+                ."\n\nView the case: ".route($sellerTurn ? 'seller.returns.show' : 'returns.show', $case),
+            );
+        }
+
+        $case->events()->create(['type' => 'reminder', 'data' => ['status' => $case->status], 'created_at' => now()]);
+    }
+
+    $overdue = ReturnCase::query()->overdue()->count();
+
+    if ($overdue > 0) {
+        foreach (User::query()->where('account_type', 'admin')->whereIn('platform_role', ['super_admin', 'admin'])->get() as $administrator) {
+            $mailer->send(
+                $administrator,
+                'JMMart return cases need support review',
+                "{$overdue} return case(s) are past their deadline and need support to take them over or close them."
+                ."\n\nOpen the queue: ".route('admin.returns.index', ['needs_action' => 1]),
+            );
+        }
+    }
+
+    $this->info("Reminded {$cases->count()} case(s); {$overdue} overdue in total.");
+})->purpose('Remind the waiting party about overdue return cases and alert support')->daily();

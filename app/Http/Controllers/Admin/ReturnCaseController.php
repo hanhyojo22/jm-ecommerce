@@ -15,21 +15,22 @@ class ReturnCaseController extends Controller
     public function index(Request $request): View
     {
         abort_unless($request->user()->isPlatformAdministrator(), 403);
-        $cases = ReturnCase::query()->with('sellerOrder.order', 'sellerOrder.store')->latest()->paginate(20);
+        $needsAction = fn ($query) => $query->where(fn ($review) => $review->where('status', 'appealed')->orWhere(fn ($stalled) => $stalled->overdue()));
+        $cases = ReturnCase::query()->with('sellerOrder.order', 'sellerOrder.store', 'buyer')
+            ->when($request->boolean('needs_action'), $needsAction)->orderByDeadline()->latest()->paginate(20)->withQueryString();
 
-        // shortcut: overdue cases surface when a queue is opened; schedule escalation if exact deadline alerts become necessary.
-        $needsActionCount = ReturnCase::query()->where('status', 'appealed')
-            ->orWhere(fn ($query) => $query->where('status', 'awaiting_seller')->where('respond_by', '<', now()))
-            ->orWhere(fn ($query) => $query->where('status', 'awaiting_fulfillment')->where('fulfill_by', '<', now()))
-            ->orWhere(fn ($query) => $query->where('status', 'awaiting_confirmation')->where('buyer_respond_by', '<', now()))->count();
-
-        return view('returns.index', ['cases' => $cases, 'role' => 'admin', 'needsActionCount' => $needsActionCount]);
+        return view('returns.index', [
+            'cases' => $cases,
+            'role' => 'admin',
+            'needsActionCount' => ReturnCase::query()->tap($needsAction)->count(),
+            'needsActionOnly' => $request->boolean('needs_action'),
+        ]);
     }
 
     public function show(Request $request, ReturnCase $returnCase): View
     {
         abort_unless($request->user()->isPlatformAdministrator(), 403);
-        $returnCase->load('sellerOrder.order', 'sellerOrder.store', 'items.orderItem', 'events.actor', 'evidence', 'outcome');
+        $returnCase->load('sellerOrder.order', 'sellerOrder.store', 'buyer', 'items.orderItem', 'events.actor', 'evidence.uploader', 'outcome');
 
         return view('returns.show', ['case' => $returnCase, 'role' => 'admin']);
     }
@@ -56,9 +57,9 @@ class ReturnCaseController extends Controller
     {
         abort_unless($request->user()->isPlatformAdministrator(), 403);
         $data = $request->validate([
-            'action' => ['required', 'in:takeover,decide,verify'],
+            'action' => ['required', 'in:takeover,decide,verify,close,reopen'],
             'decision' => ['required_if:action,decide', 'nullable', 'in:deny,refund,replacement'],
-            'note' => ['required_if:action,decide,verify', 'nullable', 'string', 'min:10', 'max:2000'],
+            'note' => ['required_if:action,decide,verify,close,reopen', 'nullable', 'string', 'min:10', 'max:2000'],
             'return_waived' => ['nullable', 'boolean'],
             'return_instructions' => ['nullable', 'string', 'max:2000'],
             'return_method' => ['nullable', 'string', 'max:500'],
