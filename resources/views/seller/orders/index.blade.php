@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 class="text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.3]">Orders</h1><p class="mt-2 text-sm text-muted">Review, prepare, and fulfil orders for your store.</p></div><p class="text-sm text-muted">{{ $orders->total() }} {{ Str::plural('order', $orders->total()) }}</p></div>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h1 class="text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.3]">Orders</h1></div><p class="text-sm text-muted">{{ $orders->total() }} {{ Str::plural('order', $orders->total()) }}</p></div>
     </x-slot>
 
     @php

@@ -20,7 +20,6 @@
             <div class="grid gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand">Almost there</p>
                 <h1 class="text-[30px] font-bold leading-[1.2] tracking-[-1px] text-ink min-[601px]:text-[27px] min-[801px]:text-[33px]">Checkout</h1>
-                <p class="text-sm leading-6 text-muted">Delivery, payment, and your total in one place.</p>
             </div>
 
             <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="placing = true" class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

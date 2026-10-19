@@ -2,7 +2,6 @@
     <x-slot name="header">
         <div>
             <h1 class="text-[30px] font-bold leading-tight tracking-[-0.03em] text-ink">Store settings</h1>
-            <p class="mt-1 max-w-2xl text-sm text-muted">Update your storefront profile and saved contact details.</p>
         </div>
     </x-slot>
 

@@ -2,7 +2,6 @@
     <x-slot name="header">
         <div>
             <h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Marketplace orders</h1>
-            <p class="mt-2 text-sm text-muted">Monitor and manage orders across all seller stores.</p>
         </div>
     </x-slot>
 

@@ -3,7 +3,6 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
                 <h1 class="text-[28px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Reviews &amp; conversations</h1>
-                <p class="mt-2 text-sm text-muted">Read buyer feedback and answer questions about your products.</p>
             </div>
             <p class="pt-2 text-xs text-muted">{{ number_format($reviewCount + $discussionCount) }} {{ Str::plural('conversation', $reviewCount + $discussionCount) }}</p>
         </div>

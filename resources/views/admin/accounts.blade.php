@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Admin management</h1><p class="mt-2 text-sm text-muted">Create and review accounts that can manage the marketplace.</p></div></x-slot>
+    <x-slot name="header"><div><h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Admin management</h1></div></x-slot>
     <div class="page-shell"><div class="page-container space-y-6">
         @if (session('status'))<div class="rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
         <section class="section-card"><h2 class="text-lg font-semibold text-ink">Invite an administrator</h2><p class="mt-1 max-w-2xl text-sm leading-6 text-muted">Clerk sends the invitation and manages the administrator's sign-in methods. Admin accounts cannot be created publicly.</p>

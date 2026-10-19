@@ -4,7 +4,6 @@
             <div>
                 <a href="{{ route('admin.stores.index') }}" class="text-sm font-semibold text-brand underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-brand">Seller Stores</a>
                 <h1 class="mt-2 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">{{ $store->name }}</h1>
-                <p class="mt-2 text-sm text-muted">Store profile, verification record, listings, orders, and moderation history.</p>
             </div>
             <span class="inline-flex h-fit rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset {{ ['active' => 'bg-success/10 text-success ring-success/20', 'inactive' => 'bg-canvas text-muted ring-line', 'suspended' => 'bg-danger/10 text-danger ring-danger/20'][$store->status] }}">{{ ucfirst($store->status) }} store</span>
         </div>

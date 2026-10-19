@@ -2,7 +2,6 @@
     <x-slot name="header">
         <div>
             <h1 class="text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Audit log</h1>
-            <p class="mt-2 text-sm text-muted">Review the administrator, action, target, time, and source address for recorded activity.</p>
         </div>
     </x-slot>
 

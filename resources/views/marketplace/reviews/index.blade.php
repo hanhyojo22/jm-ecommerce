@@ -4,7 +4,6 @@
             <div>
                 <p class="text-xs font-bold uppercase tracking-[0.14em] text-brand">Your feedback</p>
                 <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">My Reviews</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-muted">See what you shared about your purchases and return to an order when you want to update a review.</p>
             </div>
             @if ($reviews->total() > 0)
                 <p class="rounded-full border border-line bg-white px-3 py-2 text-sm font-semibold text-ink">{{ $reviews->total() }} {{ Str::plural('review', $reviews->total()) }} shared</p>

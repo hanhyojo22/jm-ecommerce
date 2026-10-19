@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Marketplace Products</h1><p class="mt-2 text-sm text-muted">{{ number_format($totalProducts) }} {{ Str::plural('product', $totalProducts) }} across all seller stores.</p></div></x-slot>
+    <x-slot name="header"><div><h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Marketplace Products</h1></div></x-slot>
     <div class="py-8 sm:py-10"><div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
         @if($errors->any())<div class="mb-6 rounded-[14px] border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not apply those filters. {{ $errors->first() }}</div>@endif
         <nav class="flex gap-1 overflow-x-auto border-b border-line" aria-label="Product status filters">

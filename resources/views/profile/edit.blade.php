@@ -4,7 +4,6 @@
             <div class="page-container">
                 <div class="max-w-[880px]">
                     <h1 class="customer-page-title text-2xl font-bold tracking-tight text-ink">Account settings</h1>
-                    <p class="mt-2 text-sm leading-6 text-muted">Manage your JMMart identity, sign-in details, and security.</p>
                     <x-marketplace.account-profile />
                 </div>
             </div>
@@ -13,7 +12,6 @@
         <x-marketplace.account-shell active="settings" title="Account settings">
             <div>
                 <h1 class="text-3xl font-semibold tracking-[-0.03em] text-ink">Account settings</h1>
-                <p class="mt-2 text-sm leading-6 text-muted">Manage your JMMart identity, sign-in details, and security.</p>
                 <x-marketplace.account-profile />
             </div>
         </x-marketplace.account-shell>

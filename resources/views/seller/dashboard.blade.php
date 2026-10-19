@@ -16,7 +16,6 @@
                     <h1 class="text-[32px] font-bold tracking-tight text-ink">Overview</h1>
                     <span @class(['rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset', 'bg-emerald-50 text-emerald-800 ring-emerald-200' => $store->status === 'active', 'bg-rose-50 text-rose-800 ring-rose-200' => $store->status === 'suspended', 'bg-slate-100 text-muted ring-line' => ! in_array($store->status, ['active', 'suspended'], true)])>{{ ucfirst($store->status) }} store</span>
                 </div>
-                <p class="mt-1 text-sm text-muted">Here&rsquo;s what&rsquo;s happening at {{ $store->name }} today.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $store->name }} storefront in a new tab">View storefront <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>

@@ -3,7 +3,6 @@
     <div class="min-w-0 space-y-6 px-[18px] pb-12 pt-6 sm:px-8 lg:pt-8">
         <div>
             <h1 class="text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Marketplace overview</h1>
-            <p class="mt-2 text-sm text-muted">Sales, orders, and the work that needs attention.</p>
         </div>
 
         <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Marketplace key figures">

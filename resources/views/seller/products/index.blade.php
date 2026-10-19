@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="seller-products-header flex flex-wrap items-center justify-between gap-4">
-            <div><h1 class="text-[28px] font-bold leading-tight tracking-[-0.03em] text-ink">Your products</h1><p class="mt-1 text-sm text-muted">A little care for every listing goes a long way.</p></div>
+            <div><h1 class="text-[28px] font-bold leading-tight tracking-[-0.03em] text-ink">Your products</h1></div>
             @if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="seller-primary-button inline-flex min-h-11 items-center gap-2 px-4 text-sm"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add product</a>@endif
         </div>
     </x-slot>

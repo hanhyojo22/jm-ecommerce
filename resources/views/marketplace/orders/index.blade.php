@@ -16,7 +16,6 @@
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <h1 class="text-3xl font-bold tracking-tight text-ink">My purchases</h1>
-                    <p class="mt-1.5 text-sm text-muted">Track orders and manage your purchases.</p>
                 </div>
                 <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-hover hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Continue shopping <span aria-hidden="true" class="ml-1">→</span></a>
             </header>

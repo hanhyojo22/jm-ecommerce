@@ -29,7 +29,6 @@
             <div class="flex flex-col gap-5 pt-2 sm:flex-row sm:items-end sm:justify-between">
                 <div class="max-w-2xl">
                     <h1 class="text-[28px] font-bold leading-[1.55] tracking-[-0.02em] text-ink">Discover stores</h1>
-                    <p class="mt-1 text-sm text-muted">Browse active JMMart sellers and the products they offer.</p>
                 </div>
                 <form method="GET" action="{{ route('catalog.stores') }}" class="flex w-full gap-2 sm:max-w-md">
                     <label for="store-search" class="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[10px] border border-line bg-surface px-3 text-muted focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
