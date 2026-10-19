@@ -58,7 +58,8 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(purchase).toHaveCount(0);
         await expect(rowsOrder.getByRole('link', { name: 'Write review' })).toBeVisible();
         await filters.getByRole('link', { name: /^Returns/ }).click();
-        await expect(page.getByRole('heading', { name: 'Nothing here yet' })).toBeVisible();
+        await expect(filters.getByRole('link', { name: /^Returns/ })).toHaveAttribute('aria-current', 'page');
+        await expect(rowsOrder).toHaveCount(0);
         await filters.getByRole('link', { name: /^All/ }).click();
         await expect(rowsOrder).toBeVisible();
         await page.getByRole('searchbox', { name: 'Search purchases', exact: true }).fill('QA-REVIEW-001');
