@@ -19,12 +19,12 @@ class SellerPayoutController extends Controller
 
         return view('admin.payouts.index', [
             'availableEarnings' => SellerEarning::query()
-                ->where('status', 'available')
+                ->where('status', 'available')->whereNull('voided_at')->whereHas('sellerOrder.order.payment', fn ($query) => $query->where('method', '!=', 'cod'))
                 ->with(['store', 'sellerOrder.order'])
                 ->latest('available_at')
                 ->orderByDesc('id')
                 ->paginate(25),
-            'availableTotal' => SellerEarning::query()->where('status', 'available')->sum('net_amount'),
+            'availableTotal' => SellerEarning::query()->where('status', 'available')->whereNull('voided_at')->whereHas('sellerOrder.order.payment', fn ($query) => $query->where('method', '!=', 'cod'))->sum('net_amount'),
             'recentPayouts' => SellerPayout::query()
                 ->with(['store', 'recordedBy'])
                 ->latest('recorded_at')

@@ -72,8 +72,8 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await purchase.getByRole('link', { name: 'View order', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'Order details', exact: true })).toBeVisible();
         await page.goto('/orders');
-        await purchase.getByRole('link', { name: 'Request return' }).click();
-        await expect(page.locator('#order-help select[name="type"]')).toHaveValue('return_refund');
+        await rowsOrder.getByRole('link', { name: 'Request return' }).click();
+        await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
         await page.goto('/orders');
         await purchase.getByRole('button', { name: 'Message seller', exact: true }).click();
         await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();

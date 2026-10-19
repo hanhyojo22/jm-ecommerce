@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\OrderIssueController as AdminOrderIssueController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReviewModerationController;
+use App\Http\Controllers\Admin\ReturnCaseController as AdminReturnCaseController;
 use App\Http\Controllers\Admin\SellerApplicationController as AdminSellerApplicationController;
 use App\Http\Controllers\Admin\SellerPayoutController;
 use App\Http\Controllers\Admin\StoreModerationController;
@@ -23,11 +24,13 @@ use App\Http\Controllers\Marketplace\OrderController;
 use App\Http\Controllers\Marketplace\OrderIssueController;
 use App\Http\Controllers\Marketplace\ProductDiscussionController;
 use App\Http\Controllers\Marketplace\ProductReviewController as MarketplaceProductReviewController;
+use App\Http\Controllers\Marketplace\ReturnCaseController as BuyerReturnCaseController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
+use App\Http\Controllers\Seller\ReturnCaseController as SellerReturnCaseController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\StoreSettingsController;
 use App\Http\Controllers\SellerApplicationController;
@@ -65,6 +68,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/store-orders/{sellerOrder}/issues', [OrderIssueController::class, 'store'])->middleware('throttle:10,1')->name('order-issues.store');
+    Route::post('/orders/store-orders/{sellerOrder}/returns', [BuyerReturnCaseController::class, 'store'])->middleware('throttle:10,1')->name('returns.store');
+    Route::get('/orders/returns/{returnCase}', [BuyerReturnCaseController::class, 'show'])->name('returns.show');
+    Route::patch('/orders/returns/{returnCase}', [BuyerReturnCaseController::class, 'update'])->middleware('throttle:10,1')->name('returns.update');
     Route::get('/my-reviews', [MarketplaceProductReviewController::class, 'index'])->name('reviews.index');
     Route::get('/delivery-addresses', [DeliveryAddressController::class, 'index'])->name('delivery-addresses.index');
     Route::post('/delivery-addresses', [DeliveryAddressController::class, 'store'])->middleware('throttle:10,1')->name('delivery-addresses.store');
@@ -89,6 +95,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::post('/messages/{conversation}/attachments', [ConversationAttachmentController::class, 'store'])->middleware('throttle:10,1')->name('messages.attachments.store');
     Route::get('/messages/attachments/{attachment}', [ConversationAttachmentController::class, 'show'])->name('messages.attachments.show');
 });
+
+Route::get('/returns/cases/{returnCase}/evidence/{evidence}', [BuyerReturnCaseController::class, 'evidence'])
+    ->middleware(['auth', 'clerk.verified', 'account:buyer,seller,admin'])->name('returns.evidence');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'clerk.verified', 'account:admin'])->name('dashboard');
 Route::get('/admin/moderation', [DashboardController::class, 'moderation'])->middleware(['auth', 'clerk.verified', 'account:admin'])->name('admin.moderation');
@@ -121,9 +130,13 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::patch('/seller/products/{product}', [ProductController::class, 'update'])->middleware('throttle:10,1')->name('seller.products.update');
     Route::post('/seller/products/{product}/submit', [ProductController::class, 'submit'])->middleware('throttle:10,1')->name('seller.products.submit');
     Route::get('/seller/orders', [SellerOrderController::class, 'index'])->name('seller.orders.index');
+    Route::get('/seller/returns', [SellerReturnCaseController::class, 'index'])->name('seller.returns.index');
+    Route::get('/seller/returns/{returnCase}', [SellerReturnCaseController::class, 'show'])->name('seller.returns.show');
+    Route::patch('/seller/returns/{returnCase}', [SellerReturnCaseController::class, 'update'])->middleware('throttle:10,1')->name('seller.returns.update');
     Route::post('/seller/orders/bulk-confirm', [SellerOrderController::class, 'bulkConfirm'])->middleware('throttle:10,1')->name('seller.orders.bulk-confirm');
     Route::get('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'show'])->name('seller.orders.show');
     Route::patch('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.update');
+    Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
     Route::get('/seller/earnings', [EarningController::class, 'index'])->name('seller.earnings.index');
     Route::get('/seller/reviews', [SellerProductReviewController::class, 'index'])->name('seller.reviews.index');
     Route::post('/seller/reviews/{review}/response', [SellerProductReviewController::class, 'respond'])->middleware('throttle:10,1')->name('seller.reviews.respond');
@@ -149,8 +162,13 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (
     Route::get('/admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
     Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
     Route::get('/admin/order-issues', [AdminOrderIssueController::class, 'index'])->name('admin.order-issues.index');
+    Route::get('/admin/returns', [AdminReturnCaseController::class, 'index'])->name('admin.returns.index');
+    Route::get('/admin/returns/{returnCase}', [AdminReturnCaseController::class, 'show'])->name('admin.returns.show');
+    Route::post('/admin/seller-orders/{sellerOrder}/returns', [AdminReturnCaseController::class, 'store'])->middleware('throttle:admin-mutations')->name('admin.returns.store');
+    Route::patch('/admin/returns/{returnCase}', [AdminReturnCaseController::class, 'update'])->middleware('throttle:admin-mutations')->name('admin.returns.update');
     Route::patch('/admin/order-issues/{orderIssue}', [AdminOrderIssueController::class, 'update'])->middleware('throttle:admin-mutations')->name('admin.order-issues.update');
     Route::patch('/admin/orders/{order}/payment/mark-paid', [AdminOrderController::class, 'markCodPaymentPaid'])->middleware('throttle:admin-mutations')->name('admin.orders.payment.mark-paid');
+    Route::patch('/admin/seller-orders/{sellerOrder}/cod-collection', [AdminOrderController::class, 'markSellerCodCollected'])->middleware('throttle:admin-mutations')->name('admin.orders.seller-cod-collection');
     Route::get('/admin/payouts', [SellerPayoutController::class, 'index'])->name('admin.payouts.index');
     Route::post('/admin/payouts', [SellerPayoutController::class, 'store'])->middleware('throttle:admin-mutations')->name('admin.payouts.store');
     Route::get('/admin/products', [AdminProductController::class, 'index'])->name('admin.products.index');

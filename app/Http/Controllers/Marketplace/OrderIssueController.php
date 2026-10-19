@@ -17,7 +17,7 @@ class OrderIssueController extends Controller
         abort_unless($sellerOrder->order()->where('user_id', $request->user()->id)->exists(), 404);
 
         $data = $request->validate([
-            'type' => ['required', 'in:cancellation,return_refund,delivery,other'],
+            'type' => ['required', 'in:cancellation,delivery,other'],
             'details' => ['required', 'string', 'min:10', 'max:2000'],
         ]);
 
@@ -27,10 +27,6 @@ class OrderIssueController extends Controller
 
             if ($data['type'] === 'cancellation' && ! in_array($sellerOrder->status, ['pending', 'confirmed'], true)) {
                 throw ValidationException::withMessages(['type' => 'This order is already being prepared or delivered. Ask for order help instead.']);
-            }
-
-            if ($data['type'] === 'return_refund' && $sellerOrder->status !== 'delivered') {
-                throw ValidationException::withMessages(['type' => 'Return and refund requests are available after delivery.']);
             }
 
             if ($sellerOrder->issues()->where('status', 'open')->exists()) {

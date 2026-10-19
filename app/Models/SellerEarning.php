@@ -22,6 +22,7 @@ class SellerEarning extends Model
             'commission_amount' => 'decimal:2',
             'net_amount' => 'decimal:2',
             'available_at' => 'datetime',
+            'voided_at' => 'datetime',
         ];
     }
 

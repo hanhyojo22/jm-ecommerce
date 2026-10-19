@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Actions\MarkCodPaymentPaid;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\SellerOrder;
@@ -56,7 +57,7 @@ class SellerOrderController extends Controller
 
         $sellerOrder = $tenant->sellerOrders()
             ->whereKey($sellerOrder)
-            ->with(['items.product.images', 'order.payment', 'issues'])
+            ->with(['items.product.images', 'order.payment', 'issues', 'returnCases'])
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',
@@ -79,6 +80,19 @@ class SellerOrderController extends Controller
         $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip());
 
         return back()->with('status', "Order {$sellerOrder->order->number} was marked as {$data['status']}.");
+    }
+
+    public function collectCod(Request $request, SellerOrder $sellerOrder, MarkCodPaymentPaid $action): RedirectResponse
+    {
+        $tenant = $this->activeTenant($request, ['owner', 'manager']);
+        $sellerOrder = $tenant->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
+        try {
+            $action->collectSellerOrder($request->user(), $sellerOrder, $request->ip());
+        } catch (\LogicException $exception) {
+            return back()->withErrors(['payment' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', 'COD collection recorded for this store order.');
     }
 
     public function bulkConfirm(Request $request, UpdateSellerOrderStatus $updateStatus): RedirectResponse
@@ -127,7 +141,11 @@ class SellerOrderController extends Controller
             })
             ->when($filters['status'] ?? null, fn (Builder $query, string $status): Builder => $query->where('status', $status))
             ->when($filters['payment_status'] ?? null, function (Builder $query, string $paymentStatus): void {
-                $query->whereHas('order.payment', fn (Builder $paymentQuery): Builder => $paymentQuery->where('status', $paymentStatus));
+                if (in_array($paymentStatus, ['pending', 'paid'], true)) {
+                    $paymentStatus === 'paid' ? $query->whereNotNull('cod_collected_at') : $query->whereNull('cod_collected_at');
+                } else {
+                    $query->whereHas('order.payment', fn (Builder $paymentQuery): Builder => $paymentQuery->where('status', $paymentStatus));
+                }
             })
             ->when($filters['from'] ?? null, fn (Builder $query, string $from): Builder => $query->whereDate('created_at', '>=', $from))
             ->when($filters['to'] ?? null, fn (Builder $query, string $to): Builder => $query->whereDate('created_at', '<=', $to))

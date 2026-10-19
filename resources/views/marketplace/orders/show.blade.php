@@ -88,6 +88,7 @@
                         <div><h3 class="text-xs font-bold uppercase tracking-[0.1em] text-muted">Payment method</h3><p class="mt-3 text-sm font-semibold text-ink">Cash on delivery</p><p class="mt-1 text-sm leading-6 text-muted">Payment is due when the order arrives. Shipping is free.</p></div>
                     </div>
                 </section>
+                @include('marketplace.orders._returns')
                 @include('marketplace.orders._issues')
             </div>
             <aside class="lg:sticky lg:top-24">
@@ -102,6 +103,7 @@
                         <p class="text-sm font-semibold text-ink">Payment</p>
                         @if($order->payment)
                             <div class="mt-2 flex items-center justify-between gap-3"><span class="text-sm text-muted">{{ str($order->payment->method)->upper() }}</span><span class="status-badge {{ $paymentStyles[$order->payment->status] }}">{{ ucfirst($order->payment->status) }}</span></div>
+                            <ul class="mt-3 space-y-1 text-xs text-muted">@foreach ($order->sellerOrders as $sellerOrder)<li>{{ $sellerOrder->store->name }}: {{ $sellerOrder->cod_collected_at ? 'COD collected' : 'COD collection not recorded' }}</li>@endforeach</ul>
                         @else
                             <p class="mt-2 text-sm text-muted">Payment details unavailable.</p>
                         @endif

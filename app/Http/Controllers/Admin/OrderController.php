@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\SellerOrder;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -85,6 +86,7 @@ class OrderController extends Controller
                 'payment:id,order_id,method,status,amount',
                 'sellerOrders.store.tenant.members.user',
                 'sellerOrders.items.product.images',
+                'sellerOrders.issues',
             ])
             ->whereKey($order)
             ->firstOrFail();
@@ -115,5 +117,17 @@ class OrderController extends Controller
         }
 
         return to_route('admin.orders.show', $order)->with('status', 'COD payment marked as paid.');
+    }
+
+    public function markSellerCodCollected(Request $request, SellerOrder $sellerOrder, MarkCodPaymentPaid $action): RedirectResponse
+    {
+        abort_unless($request->user()->isPlatformAdministrator(), 403);
+        try {
+            $action->collectSellerOrder($request->user(), $sellerOrder, $request->ip());
+        } catch (LogicException $exception) {
+            return back()->withErrors(['payment' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', 'COD collection corrected for this seller order.');
     }
 }

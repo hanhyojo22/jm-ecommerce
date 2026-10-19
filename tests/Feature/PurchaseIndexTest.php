@@ -184,7 +184,7 @@ class PurchaseIndexTest extends TestCase
         $tenant = Tenant::create(['name' => $name, 'slug' => $slug, 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => $name, 'slug' => $slug, 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         $product = Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => $name.' Product', 'slug' => $slug, 'sku' => $slug, 'price' => $total, 'stock_quantity' => 5, 'status' => 'active']);
-        $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => $status, 'subtotal' => $total, 'shipping_amount' => '0.00', 'total' => $total]);
+        $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => $status, 'delivered_at' => $status === 'delivered' ? now() : null, 'subtotal' => $total, 'shipping_amount' => '0.00', 'total' => $total]);
         $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => $total, 'quantity' => 1, 'line_total' => $total]);
 
         return $sellerOrder->load('items');

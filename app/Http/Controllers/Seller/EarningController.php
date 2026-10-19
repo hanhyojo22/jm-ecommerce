@@ -27,6 +27,8 @@ class EarningController extends Controller
             'availableBalance' => SellerEarning::query()
                 ->where('tenant_id', $tenant->id)
                 ->where('status', 'available')
+                ->whereNull('voided_at')
+                ->whereHas('sellerOrder.order.payment', fn ($query) => $query->where('method', '!=', 'cod'))
                 ->sum('net_amount'),
             'paidOutTotal' => SellerEarning::query()
                 ->where('tenant_id', $tenant->id)

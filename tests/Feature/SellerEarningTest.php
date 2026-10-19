@@ -132,6 +132,19 @@ class SellerEarningTest extends TestCase
         $this->assertDatabaseHas('seller_earnings', ['id' => $earning->id, 'status' => 'available']);
     }
 
+    public function test_cod_earning_cannot_be_paid_out_even_if_legacy_row_is_available(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        [$store] = $this->storeWithSeller('Legacy Store');
+        $earning = $this->earningFor($store, 'JM-LEGACY-COD', '125.00');
+        $earning->sellerOrder->order->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '125.00']);
+
+        $this->actingAs($administrator)->post(route('admin.payouts.store'), ['earning_ids' => [$earning->id]])
+            ->assertSessionHasErrors('payout');
+        $this->assertDatabaseCount('seller_payouts', 0);
+        $this->assertDatabaseHas('seller_earnings', ['id' => $earning->id, 'status' => 'available']);
+    }
+
     /**
      * @return array{0: Store, 1: User}
      */

@@ -19,7 +19,14 @@ class SellerOrder extends Model
         'shipping_amount',
         'total',
         'status',
+        'delivered_at',
+        'cod_collected_at',
     ];
+
+    protected function casts(): array
+    {
+        return ['delivered_at' => 'datetime', 'cod_collected_at' => 'datetime'];
+    }
 
     public function items(): HasMany
     {
@@ -29,6 +36,11 @@ class SellerOrder extends Model
     public function issues(): HasMany
     {
         return $this->hasMany(OrderIssue::class);
+    }
+
+    public function returnCases(): HasMany
+    {
+        return $this->hasMany(ReturnCase::class);
     }
 
     public function order(): BelongsTo

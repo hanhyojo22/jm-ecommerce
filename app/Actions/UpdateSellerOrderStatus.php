@@ -51,7 +51,7 @@ class UpdateSellerOrderStatus
                 $this->restoreStock($sellerOrder);
             }
 
-            $sellerOrder->update(['status' => $status]);
+            $sellerOrder->update(['status' => $status, 'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at]);
 
             $activeSellerOrders = $sellerOrders->reject(
                 fn (SellerOrder $order): bool => $order->status === 'cancelled',

@@ -19,12 +19,13 @@ class RecordSellerPayout
     {
         return DB::transaction(function () use ($administrator, $earningIds, $note, $ipAddress): SellerPayout {
             $earnings = SellerEarning::query()
+                ->with('sellerOrder.order.payment')
                 ->whereIn('id', array_values(array_unique($earningIds)))
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
 
-            if ($earnings->count() !== count(array_unique($earningIds)) || $earnings->contains(fn (SellerEarning $earning): bool => $earning->status !== 'available' || $earning->seller_payout_id !== null)) {
+            if ($earnings->count() !== count(array_unique($earningIds)) || $earnings->contains(fn (SellerEarning $earning): bool => $earning->status !== 'available' || $earning->seller_payout_id !== null || $earning->voided_at !== null || $earning->sellerOrder->order->payment?->method === 'cod')) {
                 throw new LogicException('One or more selected earnings are no longer available for payout.');
             }
 

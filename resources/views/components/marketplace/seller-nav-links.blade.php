@@ -17,6 +17,7 @@
             'label' => 'Manage',
             'items' => [
                 ['label' => 'Orders', 'href' => route('seller.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('seller.orders.*')],
+                ['label' => 'Returns', 'href' => route('seller.returns.index'), 'icon' => 'orders', 'active' => request()->routeIs('seller.returns.*')],
                 ['label' => 'Products', 'href' => route('seller.products.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.products.*')],
             ],
         ],

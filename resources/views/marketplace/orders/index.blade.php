@@ -59,6 +59,7 @@
                     @php
                         $order = $sellerOrder->order;
                         $returnIssue = $sellerOrder->issues->firstWhere('type', 'return_refund');
+                        $returnCase = $sellerOrder->returnCases->first();
                         $reviewableItemId = $reviewableItemIds[$sellerOrder->id] ?? null;
                     @endphp
                     <article class="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm" aria-labelledby="purchase-{{ $sellerOrder->id }}">
@@ -75,7 +76,9 @@
 
                         <div class="px-4 sm:px-5">
                             <div class="flex justify-end pt-3">
-                                @if ($returnIssue && $tab === 'returns')
+                                @if ($returnCase && $tab === 'returns')
+                                    <span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700">Return case {{ str($returnCase->status)->replace('_', ' ') }}</span>
+                                @elseif ($returnIssue && $tab === 'returns')
                                     <span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700">Return request {{ str($returnIssue->status)->replace('_', ' ') }}</span>
                                 @else
                                     <span class="rounded-lg px-3 py-1.5 text-xs font-bold {{ $statusStyles[$sellerOrder->status][1] }}">{{ $statusStyles[$sellerOrder->status][0] }}</span>
@@ -121,10 +124,12 @@
                                 @if ($reviewableItemId)
                                     <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Write review</a>
                                 @endif
-                                @if ($returnIssue && ($tab === 'returns' || $returnIssue->status === 'open'))
+                                @if ($returnCase)
+                                    <a href="{{ route('returns.show', $returnCase) }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white">View return</a>
+                                @elseif ($returnIssue && ($tab === 'returns' || $returnIssue->status === 'open'))
                                     <a href="{{ route('orders.show', $order) }}#order-help" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View return</a>
-                                @elseif ($sellerOrder->status === 'delivered' && ! $sellerOrder->issues->contains('status', 'open'))
-                                    <a href="{{ route('orders.show', ['order' => $order, 'help' => 'return_refund', 'seller_order_id' => $sellerOrder->id]) }}#order-help" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Request return</a>
+                                @elseif ($sellerOrder->status === 'delivered')
+                                    <a href="{{ route('orders.show', $order) }}#returns" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->delivered_at && now()->lessThanOrEqualTo($sellerOrder->delivered_at->copy()->addDays(7)) ? 'Request return' : 'Contact support' }}</a>
                                 @endif
                             </div>
                         </footer>

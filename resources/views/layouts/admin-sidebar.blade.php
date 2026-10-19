@@ -11,6 +11,7 @@
             'items' => [
                 ['label' => 'Orders', 'href' => route('admin.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('admin.orders.*')],
                 ['label' => 'Order requests', 'href' => route('admin.order-issues.index'), 'icon' => 'reports', 'active' => request()->routeIs('admin.order-issues.*')],
+                ['label' => 'Returns', 'href' => route('admin.returns.index'), 'icon' => 'reports', 'active' => request()->routeIs('admin.returns.*')],
                 ['label' => 'Products', 'href' => route('admin.products.index'), 'icon' => 'products', 'active' => request()->routeIs('admin.products.*')],
                 ['label' => 'Stores', 'href' => route('admin.stores.index'), 'icon' => 'stores', 'active' => request()->routeIs('admin.stores.*')],
             ],

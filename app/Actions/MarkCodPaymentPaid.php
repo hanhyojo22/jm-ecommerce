@@ -5,14 +5,13 @@ namespace App\Actions;
 use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\SellerOrder;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use LogicException;
 
 class MarkCodPaymentPaid
 {
-    public function __construct(private CreateSellerEarningsForPaidOrder $createSellerEarnings) {}
-
     public function handle(User $administrator, Order $order, ?string $ipAddress = null): Payment
     {
         return DB::transaction(function () use ($administrator, $order, $ipAddress): Payment {
@@ -25,7 +24,7 @@ class MarkCodPaymentPaid
 
             $sellerOrders = $order->sellerOrders()
                 ->lockForUpdate()
-                ->get(['id', 'status']);
+                ->get(['id', 'status', 'cod_collected_at']);
 
             $fulfillableSellerOrders = $sellerOrders->reject(fn ($sellerOrder): bool => $sellerOrder->status === 'cancelled');
 
@@ -37,8 +36,12 @@ class MarkCodPaymentPaid
                 throw new LogicException('This payment cannot be marked as paid.');
             }
 
+            foreach ($fulfillableSellerOrders as $sellerOrder) {
+                if ($sellerOrder->cod_collected_at === null) {
+                    SellerOrder::query()->whereKey($sellerOrder->id)->update(['cod_collected_at' => now()]);
+                }
+            }
             $payment->update(['status' => 'paid']);
-            $this->createSellerEarnings->handle($order);
 
             AuditLog::query()->create([
                 'actor_user_id' => $administrator->id,
@@ -46,11 +49,31 @@ class MarkCodPaymentPaid
                 'entity_type' => Payment::class,
                 'entity_id' => $payment->id,
                 'old_values' => ['status' => 'pending'],
-                'new_values' => ['status' => 'paid', 'order_id' => $order->id],
+                'new_values' => ['status' => 'paid', 'order_id' => $order->id, 'seller_order_ids' => $fulfillableSellerOrders->pluck('id')->all()],
                 'ip_address' => $ipAddress,
             ]);
 
             return $payment;
+        });
+    }
+
+    public function collectSellerOrder(User $actor, SellerOrder $sellerOrder, ?string $ipAddress = null): void
+    {
+        DB::transaction(function () use ($actor, $sellerOrder, $ipAddress): void {
+            $order = Order::query()->lockForUpdate()->findOrFail($sellerOrder->order_id);
+            $payment = $order->payment()->lockForUpdate()->firstOrFail();
+            $sellerOrder = $order->sellerOrders()->lockForUpdate()->findOrFail($sellerOrder->id);
+            if ($payment->method !== 'cod' || ! in_array($payment->status, ['pending', 'paid'], true) || $sellerOrder->status !== 'delivered' || $sellerOrder->cod_collected_at !== null) {
+                throw new LogicException('This seller order is not awaiting COD collection.');
+            }
+            $sellerOrder->update(['cod_collected_at' => now()]);
+            if (! $order->sellerOrders()->where('status', '!=', 'cancelled')->whereNull('cod_collected_at')->exists()) {
+                $payment->update(['status' => 'paid']);
+            }
+            AuditLog::query()->create([
+                'actor_user_id' => $actor->id, 'action' => 'seller_order.cod_collected', 'entity_type' => SellerOrder::class,
+                'entity_id' => $sellerOrder->id, 'new_values' => ['cod_collected_at' => $sellerOrder->cod_collected_at, 'payment_status' => $payment->fresh()->status], 'ip_address' => $ipAddress,
+            ]);
         });
     }
 }

@@ -34,7 +34,7 @@ class OrderIssueTest extends TestCase
         $this->actingAs($buyer)->post(route('order-issues.store', $sellerOrder), ['type' => 'return_refund', 'details' => 'The item is damaged.'])->assertSessionHasErrors('type');
         $sellerOrder->update(['status' => 'delivered']);
         $this->actingAs($buyer)->post(route('order-issues.store', $sellerOrder), ['type' => 'cancellation', 'details' => 'Please cancel this order.'])->assertSessionHasErrors('type');
-        $this->actingAs($buyer)->post(route('order-issues.store', $sellerOrder), ['type' => 'return_refund', 'details' => 'The item is damaged.'])->assertSessionHasNoErrors();
+        $this->actingAs($buyer)->post(route('order-issues.store', $sellerOrder), ['type' => 'return_refund', 'details' => 'The item is damaged.'])->assertSessionHasErrors('type');
     }
 
     public function test_open_cancellation_request_pauses_seller_fulfilment(): void

@@ -29,13 +29,8 @@ class AdminOrderControllerTest extends TestCase
             ->assertSessionHas('status', 'COD payment marked as paid.');
 
         $this->assertDatabaseHas('payments', ['id' => $order->payment->id, 'status' => 'paid']);
-        $this->assertDatabaseHas('seller_earnings', [
-            'seller_order_id' => $order->sellerOrders()->sole()->id,
-            'gross_amount' => '500.00',
-            'commission_amount' => '0.00',
-            'net_amount' => '500.00',
-            'status' => 'available',
-        ]);
+        $this->assertNotNull($order->sellerOrders()->sole()->cod_collected_at);
+        $this->assertDatabaseCount('seller_earnings', 0);
 
         $auditLog = AuditLog::query()->where('action', 'payment.cod_marked_paid')->firstOrFail();
         $this->assertSame($administrator->id, $auditLog->actor_user_id);
@@ -73,8 +68,9 @@ class AdminOrderControllerTest extends TestCase
         $this->assertDatabaseHas('payments', ['id' => $order->payment->id, 'status' => 'paid']);
         $deliveredSellerOrder = $order->sellerOrders()->where('store_id', $deliveredStore->id)->firstOrFail();
         $cancelledSellerOrder = $order->sellerOrders()->where('store_id', $cancelledStore->id)->firstOrFail();
-        $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $deliveredSellerOrder->id, 'net_amount' => '500.00']);
-        $this->assertDatabaseMissing('seller_earnings', ['seller_order_id' => $cancelledSellerOrder->id]);
+        $this->assertNotNull($deliveredSellerOrder->cod_collected_at);
+        $this->assertNull($cancelledSellerOrder->cod_collected_at);
+        $this->assertDatabaseCount('seller_earnings', 0);
         $this->assertDatabaseCount('audit_logs', 1);
     }
 

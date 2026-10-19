@@ -100,13 +100,13 @@ class PlaywrightQaSeeder extends Seeder
 
         $order = Order::query()->create(['user_id' => $customer->id, 'number' => 'QA-REVIEW-001', 'status' => 'delivered', 'recipient_name' => $customer->name, 'phone' => '+639171234567', 'address_line' => '10 QA Street', 'city' => 'Manila', 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
         $order->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '19.99']);
-        $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
+        $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'delivered_at' => now(), 'cod_collected_at' => now(), 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
         $item = $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => '19.99', 'quantity' => 1, 'line_total' => '19.99']);
         $item->review()->create(['product_id' => $product->id, 'user_id' => $customer->id, 'rating' => 5, 'body' => 'Great tote.', 'status' => 'published']);
 
         $rowOrder = Order::query()->create(['user_id' => $customer->id, 'number' => 'QA-ROWS-001', 'status' => 'delivered', 'recipient_name' => $customer->name, 'phone' => '+639171234567', 'address_line' => '10 QA Street', 'city' => 'Manila', 'subtotal' => '80.97', 'shipping_amount' => '0', 'total' => '80.97']);
         $rowOrder->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '80.97']);
-        $rowSellerOrder = $rowOrder->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'subtotal' => '80.97', 'shipping_amount' => '0', 'total' => '80.97']);
+        $rowSellerOrder = $rowOrder->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'delivered_at' => now(), 'cod_collected_at' => now(), 'subtotal' => '80.97', 'shipping_amount' => '0', 'total' => '80.97']);
         $rowSellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => '19.99', 'quantity' => 1, 'line_total' => '19.99']);
         $rowSellerOrder->items()->create(['product_id' => $chatProduct->id, 'product_name' => $chatProduct->name, 'sku' => $chatProduct->sku, 'variant_label' => 'Blue / Medium', 'unit_price' => '24.99', 'quantity' => 2, 'line_total' => '49.98']);
         $rowSellerOrder->items()->create(['product_name' => 'QA Archived Accessory', 'sku' => 'QA-ARCHIVE-001', 'unit_price' => '5.00', 'quantity' => 1, 'line_total' => '5.00']);

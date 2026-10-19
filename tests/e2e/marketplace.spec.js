@@ -2,30 +2,64 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { openAsRole } from './support/role-page.js';
 
-test('buyer requests a return and admin resolves it', async ({ browser }) => {
+test('buyer, seller, and support complete a return case', async ({ browser }) => {
+    test.setTimeout(90_000);
     const buyer = await openAsRole(browser, 'customer');
-
     try {
         await buyer.page.goto('/orders');
         await buyer.page.locator('article').filter({ hasText: 'QA-REVIEW-001' }).getByRole('link', { name: 'View order' }).click();
-        await expect(buyer.page.getByRole('heading', { name: 'Need help with this order?' })).toBeVisible();
-        await buyer.page.getByLabel('Request type').selectOption('return_refund');
-        await buyer.page.getByLabel('Details').fill('The item arrived damaged and I need help.');
-        await buyer.page.getByRole('button', { name: 'Send request' }).click();
-        await expect(buyer.page.getByText('The item arrived damaged and I need help.')).toBeVisible();
-        await expect(buyer.page.getByText('Return Refund · Open')).toBeVisible();
+        const returns = buyer.page.locator('#returns');
+        await returns.getByRole('spinbutton').fill('1');
+        await returns.getByLabel('Details').fill('The item arrived damaged and I need help.');
+        await returns.getByRole('button', { name: 'Request seller review' }).click();
+        await expect(buyer.page.getByRole('heading', { name: 'Return case' })).toBeVisible();
+
+        const seller = await openAsRole(browser, 'seller');
+        try {
+            await seller.page.goto('/seller/returns');
+            await seller.page.getByRole('link', { name: /QA-REVIEW-001/ }).click();
+            await seller.page.getByLabel('Response with reasons').fill('I cannot approve this without support review.');
+            await seller.page.getByRole('button', { name: 'Reject with reason' }).click();
+            await expect(seller.page.getByText('Rejected')).toBeVisible();
+        } finally {
+            await seller.context.close();
+        }
+
+        await buyer.page.reload();
+        await buyer.page.getByLabel('Why should support review this?').fill('The damage is visible and the item cannot be used.');
+        await buyer.page.getByRole('button', { name: 'Appeal to JMMart' }).click();
 
         const admin = await openAsRole(browser, 'admin');
         try {
-            await admin.page.goto('/admin/order-issues');
-            await expect(admin.page.getByText('The item arrived damaged and I need help.')).toBeVisible();
-            await admin.page.getByLabel('Response to buyer').fill('We will contact you to arrange a return.');
-            await admin.page.getByLabel('Decision').selectOption('resolved');
-            await admin.page.getByRole('button', { name: 'Save decision' }).click();
-            await expect(admin.page.getByRole('status').getByText('Order request updated.')).toBeVisible();
+            await admin.page.goto('/admin/returns');
+            await admin.page.getByRole('link', { name: /QA-REVIEW-001/ }).click();
+            await admin.page.getByLabel('Reasoned decision').fill('The product arrived damaged. A full refund is appropriate.');
+            await admin.page.getByLabel('Waive physical return').check();
+            await admin.page.getByRole('button', { name: 'Record final decision' }).click();
+            await expect(admin.page.getByText('Awaiting Fulfillment')).toBeVisible();
         } finally {
             await admin.context.close();
         }
+
+        const fulfillingSeller = await openAsRole(browser, 'seller');
+        try {
+            await fulfillingSeller.page.goto('/seller/returns');
+            await fulfillingSeller.page.getByRole('link', { name: /QA-REVIEW-001/ }).click();
+            await fulfillingSeller.page.getByLabel('Payment date').fill(new Date().toISOString().slice(0, 10));
+            await fulfillingSeller.page.getByLabel('Payment proof').setInputFiles({
+                name: 'refund.png',
+                mimeType: 'image/png',
+                buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=', 'base64'),
+            });
+            await fulfillingSeller.page.getByRole('button', { name: 'Record seller-paid refund' }).click();
+            await expect(fulfillingSeller.page.getByText('Awaiting Confirmation')).toBeVisible();
+        } finally {
+            await fulfillingSeller.context.close();
+        }
+
+        await buyer.page.reload();
+        await buyer.page.getByRole('button', { name: 'Confirm receipt' }).click();
+        await expect(buyer.page.getByText('Completed')).toBeVisible();
     } finally {
         await buyer.context.close();
     }

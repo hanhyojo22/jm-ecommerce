@@ -61,6 +61,7 @@ class OrderController extends Controller
                 'items.product.store:id,slug',
                 'items.review:id,order_item_id',
                 'issues' => fn ($query) => $query->latest(),
+                'returnCases' => fn ($query) => $query->latest(),
             ])
             ->latest()
             ->paginate(10)
@@ -97,7 +98,7 @@ class OrderController extends Controller
             'to_review' => $query->where('status', 'delivered')
                 ->whereNotIn('tenant_id', $ownedTenantIds)
                 ->whereHas('items', fn (Builder $itemQuery) => $itemQuery->whereNotNull('product_id')->whereDoesntHave('review')),
-            'returns' => $query->whereHas('issues', fn (Builder $issueQuery) => $issueQuery->where('type', 'return_refund')),
+            'returns' => $query->where(fn (Builder $returnQuery) => $returnQuery->whereHas('returnCases')->orWhereHas('issues', fn (Builder $issueQuery) => $issueQuery->where('type', 'return_refund'))),
             default => $query,
         };
     }
@@ -106,6 +107,6 @@ class OrderController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 404);
 
-        return view('marketplace.orders.show', ['order' => $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment')]);
+        return view('marketplace.orders.show', ['order' => $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment')]);
     }
 }

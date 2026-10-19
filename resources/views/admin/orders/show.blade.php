@@ -1,4 +1,4 @@
-﻿<x-app-layout>
+<x-app-layout>
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -49,9 +49,9 @@
 
                 <aside class="space-y-6">
                     <section class="rounded-[14px] border border-line bg-surface p-5 ">
-                        <h2 class="font-semibold text-ink">Payment</h2><p class="mt-1 text-sm text-muted">Cash on delivery is confirmed only after delivery.</p>
+                        <h2 class="font-semibold text-ink">Payment</h2><p class="mt-1 text-sm text-muted">The parent COD payment summarizes collection across seller orders. Verify each store before a bulk correction.</p>
                         <dl class="mt-5 space-y-4 text-sm"><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Method</dt><dd class="mt-1 font-medium text-ink">Cash on delivery</dd></div><div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Status</dt><dd class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$order->payment->status] }}">{{ ucfirst($order->payment->status) }}</dd></div></dl>
-                        @if ($order->status === 'delivered' && $order->sellerOrders->isNotEmpty() && $order->sellerOrders->every(fn ($sellerOrder): bool => $sellerOrder->status === 'delivered') && $order->payment->method === 'cod' && $order->payment->status === 'pending')<form method="POST" action="{{ route('admin.orders.payment.mark-paid', $order) }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-6 border-t border-line pt-5">@csrf @method('PATCH')<button type="submit" :disabled="submitting" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"><span x-show="!submitting">Mark COD as paid</span><span x-cloak x-show="submitting">Recording payment…</span></button></form>@endif
+                        @if ($order->status === 'delivered' && $order->sellerOrders->isNotEmpty() && $order->sellerOrders->every(fn ($sellerOrder): bool => $sellerOrder->status === 'delivered') && $order->payment->method === 'cod' && $order->payment->status === 'pending')<form method="POST" action="{{ route('admin.orders.payment.mark-paid', $order) }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-6 border-t border-line pt-5">@csrf @method('PATCH')<button type="submit" :disabled="submitting" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"><span x-show="!submitting">Confirm all stores collected COD</span><span x-cloak x-show="submitting">Recording payment…</span></button></form>@endif
                     </section>
 
                     <section class="rounded-[14px] border border-line bg-surface p-5 ">
@@ -59,5 +59,32 @@
                 </aside>
             </div>
         </div>
+    </div>
+    <div class="mx-auto max-w-[1320px] px-[18px] pb-10 sm:px-8">
+        <section class="rounded-lg border border-line bg-surface p-5"><h2 class="font-semibold text-ink">Later return or warranty claims</h2><p class="mt-1 text-sm text-muted">Support may open a case when the seven-day interface window has ended or delivery timing is uncertain.</p>
+            @foreach ($order->sellerOrders as $sellerOrder)
+                <div class="mt-5 border-t border-line pt-4 text-sm">
+                    <strong>{{ $sellerOrder->store->name }} COD:</strong> {{ $sellerOrder->cod_collected_at ? 'Collected '.$sellerOrder->cod_collected_at->format('M j, Y g:i A') : 'Not recorded' }}
+                    @if ($sellerOrder->status === 'delivered' && ! $sellerOrder->cod_collected_at)
+                        <form method="POST" action="{{ route('admin.orders.seller-cod-collection', $sellerOrder) }}" class="mt-2">@csrf @method('PATCH')
+                            <button class="min-h-11 rounded-lg border border-line px-4 font-semibold">Record this store's collection</button>
+                        </form>
+                    @endif
+                </div>
+                <form method="POST" action="{{ route('admin.returns.store', $sellerOrder) }}" class="mt-5 grid gap-3 border-t border-line pt-4">@csrf
+                    <h3 class="font-semibold">{{ $sellerOrder->store->name }}</h3>
+                    @if ($sellerOrder->issues->contains('status', 'open'))
+                        <label>Convert an open support claim<select name="order_issue_id" class="field-control"><option value="">Open separate case</option>@foreach ($sellerOrder->issues->where('status', 'open') as $issue)<option value="{{ $issue->id }}">{{ str($issue->type)->replace('_', ' ')->headline() }} · {{ Str::limit($issue->details, 70) }}</option>@endforeach</select></label>
+                    @endif
+                    @foreach ($sellerOrder->items as $item)
+                        <label class="text-sm">{{ $item->product_name }} (purchased {{ $item->quantity }})<input type="hidden" name="items[{{ $loop->index }}][order_item_id]" value="{{ $item->id }}"><input type="number" name="items[{{ $loop->index }}][quantity]" value="0" min="0" max="{{ $item->quantity }}" class="field-control w-24"></label>
+                    @endforeach
+                    <label>Reason<select name="reason" class="field-control"><option value="damaged">Damaged</option><option value="defective">Defective</option><option value="wrong_item">Wrong item</option><option value="misdescribed">Materially misdescribed</option></select></label>
+                    <label>Preferred remedy<select name="requested_remedy" class="field-control"><option value="refund">Refund</option><option value="replacement">Replacement</option></select></label>
+                    <label>Claim details<textarea name="details" required minlength="10" maxlength="2000" class="field-control"></textarea></label>
+                    <button class="min-h-11 justify-self-start rounded-lg bg-brand px-4 text-white">Open return case</button>
+                </form>
+            @endforeach
+        </section>
     </div>
 </x-app-layout>
