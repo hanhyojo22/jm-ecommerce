@@ -74,10 +74,11 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
 
             for (const section of sections) {
                 await page.goto(section);
-                await expect(page.locator('.seller-workspace-page')).toBeVisible();
+                const containerSelector = section.startsWith('/messages') ? '.account-measure-messages' : '.seller-workspace-page';
+                await expect(page.locator(containerSelector)).toBeVisible();
 
-                const layout = await page.evaluate(() => {
-                    const element = document.querySelector('.seller-workspace-page');
+                const layout = await page.evaluate((selector) => {
+                    const element = document.querySelector(selector);
                     const style = getComputedStyle(element);
                     const container = element.getBoundingClientRect();
                     const workspace = document.querySelector('.workspace-main').getBoundingClientRect();
@@ -91,7 +92,7 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
                         headerLeft: header ? header.getBoundingClientRect().left + parseFloat(getComputedStyle(header).paddingLeft) : null,
                         contentLeft: container.left + parseFloat(style.paddingLeft),
                     };
-                });
+                }, containerSelector);
 
                 // Centred in the content column at the workspace measure, with the prototype gutters.
                 expect(layout.leftSlack, section).toBe(layout.rightSlack);

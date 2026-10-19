@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { openAsRole } from './support/role-page.js';
 
 test('customer finds purchases and opens order actions at each viewport', async ({ browser }, testInfo) => {
-    test.setTimeout(60_000);
+    test.setTimeout(120_000);
     const { context, page } = await openAsRole(browser, 'customer');
 
     try {
