@@ -1,27 +1,151 @@
 <x-app-layout>
-    <div class="page-shell"><div class="page-container py-8">
-        <h1 class="text-3xl font-bold text-ink">{{ $role === 'seller' ? 'Seller returns' : 'Return cases' }}</h1>
-        <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} need {{ $role === 'seller' ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ $needsActionOnly ? 'shown' : 'total' }}. Review each case and its next action.</p>
-        <p class="mt-3">
-            <a href="{{ route($role === 'seller' ? 'seller.returns.index' : 'admin.returns.index', $needsActionOnly ? [] : ['needs_action' => 1]) }}" class="inline-flex min-h-10 items-center rounded-lg border border-line px-3 text-sm font-semibold text-brand">
-                {{ $needsActionOnly ? 'Show all cases' : 'Show only cases needing action' }}
-            </a>
-        </p>
-        <div class="mt-6 overflow-hidden rounded-lg border border-line bg-surface">
-            @forelse ($cases as $case)
-                @php($deadline = $case->deadline())
-                <a href="{{ route($role === 'seller' ? 'seller.returns.show' : 'admin.returns.show', $case) }}" class="block border-b border-line p-4 hover:bg-canvas">
-                    <span class="font-semibold text-brand">{{ $case->sellerOrder->order->number }} · {{ $case->sellerOrder->store->name }}</span>
-                    <span class="ml-2 text-sm text-ink">{{ str($case->status)->replace('_', ' ')->headline() }}</span>
-                    @if ($case->isOverdue())<span class="ml-2 text-sm font-semibold text-danger">Overdue</span>@endif
-                    <p class="mt-1 text-sm text-muted">
-                        {{ ucfirst(str_replace('_', ' ', $case->reason)) }} · {{ $case->buyer->name }} · opened {{ $case->created_at->format('M j, Y') }}@if ($deadline) · due {{ $deadline->format('M j, g:i A') }}@endif
-                    </p>
-                </a>
-            @empty
-                <p class="p-6 text-muted">{{ $needsActionOnly ? 'No cases are waiting on you.' : 'No return cases yet.' }}</p>
-            @endforelse
+    @php
+        $isSeller = $role === 'seller';
+        $routeName = $isSeller ? 'seller.returns.index' : 'admin.returns.index';
+        $showRoute = $isSeller ? 'seller.returns.show' : 'admin.returns.show';
+
+        $statusOptions = $isSeller
+            ? [
+                '' => 'All cases',
+                'needs_action' => 'Needs my action',
+                'awaiting_seller' => 'Awaiting my response',
+                'awaiting_receipt' => 'Returns arriving',
+                'awaiting_fulfillment' => 'Remedies due',
+                'awaiting_buyer' => 'Waiting on buyer',
+                'with_support' => 'With JMMart',
+                'closed' => 'Closed',
+            ]
+            : [
+                '' => 'All cases',
+                'needs_action' => 'Needs review',
+                'appealed' => 'Appeals to decide',
+                'open' => 'In progress',
+                'closed' => 'Closed',
+            ];
+
+        $kpis = $isSeller
+            ? [
+                ['label' => 'Awaiting my response', 'count' => $counts['awaiting_seller'], 'hint' => 'Reply to the buyer within 48 hours.', 'href' => route($routeName, ['status' => 'awaiting_seller']), 'active' => $filters['status'] === 'awaiting_seller'],
+                ['label' => 'Returns arriving', 'count' => $counts['awaiting_receipt'], 'hint' => 'Inspect the parcel and confirm receipt.', 'href' => route($routeName, ['status' => 'awaiting_receipt']), 'active' => $filters['status'] === 'awaiting_receipt'],
+                ['label' => 'Remedies due', 'count' => $counts['awaiting_fulfillment'], 'hint' => 'Refund or ship within 5 business days.', 'href' => route($routeName, ['status' => 'awaiting_fulfillment']), 'active' => $filters['status'] === 'awaiting_fulfillment'],
+                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'JMMart can step in at any time.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true],
+            ]
+            : [
+                ['label' => 'Needs review', 'count' => $counts['needs_review'], 'hint' => 'Appeals and stalled cases.', 'href' => route($routeName, ['needs_action' => 1]), 'active' => $filters['needs_action'], 'danger' => $counts['needs_review'] > 0],
+                ['label' => 'Appeals to decide', 'count' => $counts['appealed'], 'hint' => 'Waiting on a support decision.', 'href' => route($routeName, ['status' => 'appealed']), 'active' => $filters['status'] === 'appealed'],
+                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'Deadlines that already passed.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true],
+                ['label' => 'Open cases', 'count' => $counts['open'], 'hint' => 'Still moving through the workflow.', 'href' => route($routeName, ['status' => 'open']), 'active' => $filters['status'] === 'open'],
+            ];
+
+        $hasFilters = $filters['search'] !== null || $filters['status'] !== '' || $filters['overdue'] || $filters['needs_action'];
+    @endphp
+
+    <x-slot name="header">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 class="text-[28px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">{{ $isSeller ? 'Returns' : 'Return cases' }}</h1>
+                <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} need {{ $isSeller ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ Str::plural('case', $cases->total()) }} in view</p>
+            </div>
+            <a href="{{ route('returns') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">Return policy</a>
         </div>
-        <div class="mt-5">{{ $cases->links() }}</div>
+    </x-slot>
+
+    <div class="page-shell"><div class="page-container">
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Case summary">
+            @foreach ($kpis as $kpi)
+                <a href="{{ $kpi['href'] }}" aria-label="{{ $kpi['label'] }}: {{ $kpi['count'] }} {{ Str::plural('case', $kpi['count']) }}" @class([
+                    'group rounded-[14px] border bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2',
+                    'border-blue-600 ring-1 ring-blue-600' => $kpi['active'],
+                    'border-line' => ! $kpi['active'],
+                ])>
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-medium text-muted">{{ $kpi['label'] }}</span>
+                        <span @class([
+                            'rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
+                            'bg-red-50 text-danger' => $kpi['danger'] ?? false,
+                            'bg-slate-100 text-muted group-hover:bg-blue-50 group-hover:text-brand' => ! ($kpi['danger'] ?? false),
+                        ])>{{ $kpi['count'] }}</span>
+                    </div>
+                    <p class="mt-4 text-xs text-muted">{{ $kpi['hint'] }}</p>
+                </a>
+            @endforeach
+        </div>
+
+        <section class="mt-6 rounded-[14px] border border-line bg-white p-4 shadow-sm sm:p-5" aria-label="Case filters">
+            <form method="GET" action="{{ route($routeName) }}" class="grid gap-3 lg:grid-cols-12 lg:items-end">
+                <div class="lg:col-span-5">
+                    <label for="search" class="mb-1.5 block text-sm font-medium text-muted">Search cases</label>
+                    <div class="relative">
+                        <svg class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
+                        <input id="search" name="search" value="{{ $filters['search'] }}" type="search" placeholder="{{ $isSeller ? 'Order number or buyer' : 'Order number, buyer, or store' }}" class="block h-11 w-full rounded-[10px] border-line pl-10 text-sm shadow-sm placeholder:text-muted focus:border-brand focus:ring-brand">
+                    </div>
+                </div>
+                <div class="lg:col-span-3">
+                    <label for="status" class="mb-1.5 block text-sm font-medium text-muted">Case status</label>
+                    <select id="status" name="status" class="block h-11 w-full rounded-[10px] border-line text-sm shadow-sm focus:border-brand focus:ring-brand">
+                        @foreach ($statusOptions as $value => $label)
+                            <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-medium text-muted">
+                        <input type="checkbox" name="overdue" value="1" @checked($filters['overdue']) class="rounded border-line text-brand focus:ring-brand">
+                        Overdue only
+                    </label>
+                </div>
+                <div class="flex items-center gap-3 lg:col-span-2">
+                    <button type="submit" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Apply</button>
+                    @if ($hasFilters)
+                        <a href="{{ route($routeName) }}" class="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-muted underline decoration-slate-300 underline-offset-4 hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand">Clear</a>
+                    @endif
+                </div>
+            </form>
+        </section>
+
+        <section class="mt-6" aria-label="Return cases">
+            <div class="content-card">
+                @forelse ($cases as $case)
+                    @php
+                        $amount = $case->items->reduce(fn (string $sum, $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
+                    @endphp
+                    <a href="{{ route($showRoute, $case) }}" class="block border-b border-line p-4 transition last:border-b-0 hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand sm:p-5">
+                        <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                            <div class="min-w-0 flex-1">
+                                <p class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                    <span class="font-semibold text-ink">{{ $case->sellerOrder->order->number }}</span>
+                                    <span class="text-sm text-muted">{{ $case->sellerOrder->store->name }}</span>
+                                </p>
+                                <p class="mt-1 text-sm text-muted">
+                                    {{ ucfirst(str_replace('_', ' ', $case->reason)) }} requested by {{ $case->buyer->name }} · opened <time datetime="{{ $case->created_at->toIso8601String() }}">{{ $case->created_at->format('M j, Y') }}</time>
+                                </p>
+                                <p class="mt-1.5 text-sm text-ink">
+                                    {{ $case->items->sum('quantity') }} {{ Str::plural('unit', $case->items->sum('quantity')) }} · <span class="tabular-nums">₱{{ number_format((float) $amount, 2) }}</span> at stake
+                                </p>
+                            </div>
+                            <div class="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                                <x-returns.status-badge :status="$case->status" />
+                                <x-returns.deadline :case="$case" />
+                            </div>
+                        </div>
+                    </a>
+                @empty
+                    <div class="empty-state">
+                        <span class="mx-auto grid size-12 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true">
+                            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6" /></svg>
+                        </span>
+                        @if ($hasFilters)
+                            <h2 class="mt-4 text-lg font-semibold text-ink">No cases match these filters</h2>
+                            <p class="mx-auto mt-1 max-w-md text-sm text-muted">Try a different status or clear the filters to see every case.</p>
+                            <a href="{{ route($routeName) }}" class="mt-4 inline-flex min-h-11 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Clear filters</a>
+                        @else
+                            <h2 class="mt-4 text-lg font-semibold text-ink">{{ $isSeller ? 'No return cases yet' : 'Nothing to review' }}</h2>
+                            <p class="mx-auto mt-1 max-w-md text-sm text-muted">{{ $isSeller ? 'When a buyer opens a return request, it lands here and JMMart emails you.' : 'Appeals and overdue cases land here. New cases appear as buyers and sellers work through them.' }}</p>
+                        @endif
+                    </div>
+                @endforelse
+            </div>
+            <div class="mt-5">{{ $cases->links() }}</div>
+        </section>
     </div></div>
 </x-app-layout>

@@ -307,6 +307,68 @@ class ReturnCaseTest extends TestCase
         $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'appealed']);
     }
 
+    public function test_return_queues_filter_by_status_search_and_overdue(): void
+    {
+        [$buyer, $seller, $sellerOrder, $item] = $this->deliveredOrder();
+        [$otherBuyer, , $otherSellerOrder, $otherItem] = $this->deliveredOrder();
+        $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $this->actingAs($otherBuyer)->post(route('returns.store', $otherSellerOrder), $this->requestData($otherItem->id, 1));
+        $waiting = ReturnCase::query()->where('seller_order_id', $sellerOrder->id)->sole();
+        $appealed = ReturnCase::query()->where('seller_order_id', $otherSellerOrder->id)->sole();
+        $appealed->update(['status' => 'appealed']);
+
+        $this->actingAs($seller)->get(route('seller.returns.index', ['status' => 'needs_action']))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 1 && $cases->first()->id === $waiting->id)
+            ->assertViewHas('counts', fn (array $counts): bool => $counts['awaiting_seller'] === 1 && $counts['overdue'] === 0);
+
+        $this->actingAs($seller)->get(route('seller.returns.index', ['status' => 'awaiting_buyer']))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 0);
+
+        $this->actingAs($seller)->get(route('seller.returns.index', ['search' => $sellerOrder->order->number]))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 1 && $cases->first()->id === $waiting->id);
+
+        $this->actingAs($seller)->get(route('seller.returns.index', ['search' => $otherSellerOrder->order->number]))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 0);
+
+        $this->actingAs($seller)->get(route('seller.returns.index', ['status' => 'not-a-status']))
+            ->assertOk()
+            ->assertViewHas('filters', fn (array $filters): bool => $filters['status'] === '');
+
+        $this->actingAs($admin)->get(route('admin.returns.index', ['status' => 'appealed']))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 1 && $cases->first()->id === $appealed->id)
+            ->assertViewHas('counts', fn (array $counts): bool => $counts['needs_review'] === 1 && $counts['appealed'] === 1 && $counts['overdue'] === 0 && $counts['open'] === 2);
+
+        $this->actingAs($admin)->get(route('admin.returns.index', ['needs_action' => 1]))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 1 && $cases->first()->id === $appealed->id);
+
+        $this->actingAs($admin)->get(route('admin.returns.index', ['search' => $otherSellerOrder->store->name]))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 1 && $cases->first()->id === $appealed->id);
+
+        $this->travel(49)->hours();
+
+        $this->actingAs($admin)->get(route('admin.returns.index', ['overdue' => 1]))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 1 && $cases->first()->id === $waiting->id);
+
+        $this->actingAs($admin)->get(route('admin.returns.index', ['needs_action' => 1]))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 2);
+
+        $this->actingAs($seller)->get(route('seller.returns.index', ['overdue' => 1]))
+            ->assertOk()
+            ->assertViewHas('cases', fn ($cases): bool => $cases->total() === 1 && $cases->first()->id === $waiting->id)
+            ->assertViewHas('counts', fn (array $counts): bool => $counts['overdue'] === 1);
+    }
+
     private function requestData(string $itemId, int $quantity): array
     {
         return ['reason' => 'damaged', 'requested_remedy' => 'refund', 'details' => 'The product arrived badly damaged.', 'items' => [['order_item_id' => $itemId, 'quantity' => $quantity]]];

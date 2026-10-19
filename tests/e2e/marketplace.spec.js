@@ -7,20 +7,24 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
     const buyer = await openAsRole(browser, 'customer');
     try {
         await buyer.page.goto('/orders');
+        await rejectOptionalCookies(buyer.page);
         await buyer.page.locator('article').filter({ hasText: 'QA-REVIEW-001' }).getByRole('link', { name: 'View order' }).click();
         const returns = buyer.page.locator('#returns');
         await returns.getByRole('spinbutton').fill('1');
         await returns.getByLabel('Details').fill('The item arrived damaged and I need help.');
         await returns.getByRole('button', { name: 'Request seller review' }).click();
-        await expect(buyer.page.getByRole('heading', { name: 'Return case' })).toBeVisible();
+        await expect(buyer.page.getByRole('heading', { name: 'Order QA-REVIEW-001' })).toBeVisible();
 
         const seller = await openAsRole(browser, 'seller');
         try {
+            // Rejecting a case asks the seller to confirm, and Playwright dismisses dialogs by default.
+            seller.page.on('dialog', (dialog) => dialog.accept());
             await seller.page.goto('/seller/returns');
+            await rejectOptionalCookies(seller.page);
             await seller.page.getByRole('link', { name: /QA-REVIEW-001/ }).click();
             await seller.page.getByLabel('Response with reasons').fill('I cannot approve this without support review.');
             await seller.page.getByRole('button', { name: 'Reject with reason' }).click();
-            await expect(seller.page.getByText('Rejected')).toBeVisible();
+            await expect(seller.page.getByText('Rejection awaiting buyer')).toBeVisible();
         } finally {
             await seller.context.close();
         }
@@ -32,11 +36,12 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
         const admin = await openAsRole(browser, 'admin');
         try {
             await admin.page.goto('/admin/returns');
+            await rejectOptionalCookies(admin.page);
             await admin.page.getByRole('link', { name: /QA-REVIEW-001/ }).click();
             await admin.page.getByLabel('Reasoned decision').fill('The product arrived damaged. A full refund is appropriate.');
-            await admin.page.getByLabel('Waive physical return').check();
+            await admin.page.getByLabel('Waive the physical return').check();
             await admin.page.getByRole('button', { name: 'Record final decision' }).click();
-            await expect(admin.page.getByText('Awaiting Fulfillment')).toBeVisible();
+            await expect(admin.page.getByText('Remedy in progress')).toBeVisible();
         } finally {
             await admin.context.close();
         }
@@ -44,6 +49,7 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
         const fulfillingSeller = await openAsRole(browser, 'seller');
         try {
             await fulfillingSeller.page.goto('/seller/returns');
+            await rejectOptionalCookies(fulfillingSeller.page);
             await fulfillingSeller.page.getByRole('link', { name: /QA-REVIEW-001/ }).click();
             await fulfillingSeller.page.getByLabel('Payment date').fill(new Date().toISOString().slice(0, 10));
             await fulfillingSeller.page.getByLabel('Payment proof').setInputFiles({
@@ -52,7 +58,7 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
                 buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=', 'base64'),
             });
             await fulfillingSeller.page.getByRole('button', { name: 'Record seller-paid refund' }).click();
-            await expect(fulfillingSeller.page.getByText('Awaiting Confirmation')).toBeVisible();
+            await expect(fulfillingSeller.page.getByText('Awaiting buyer confirmation')).toBeVisible();
         } finally {
             await fulfillingSeller.context.close();
         }
