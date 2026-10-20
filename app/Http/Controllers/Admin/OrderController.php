@@ -87,6 +87,8 @@ class OrderController extends Controller
                 'sellerOrders.store.tenant.members.user',
                 'sellerOrders.items.product.images',
                 'sellerOrders.issues',
+                'sellerOrders.returnCases.items.orderItem',
+                'sellerOrders.returnCases.buyer',
             ])
             ->whereKey($order)
             ->firstOrFail();

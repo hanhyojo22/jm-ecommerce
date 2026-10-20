@@ -9,6 +9,11 @@
     $deadline = $case->deadline();
     $overdue = $case->isOverdue();
     $dueSoon = $deadline !== null && ! $overdue && $deadline->lessThan(now()->addDay());
+    $relative = $deadline?->diffForHumans(now(), [
+        'parts' => 1,
+        'short' => true,
+        'syntax' => \Carbon\CarbonInterface::DIFF_ABSOLUTE,
+    ]);
 @endphp
 
 @if ($deadline === null)
@@ -24,16 +29,16 @@
         'bg-slate-100 text-muted ring-line' => ! $overdue && ! $dueSoon,
     ]) }}>
         @if ($overdue)
-            <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
+            <x-returns.icon name="alert" class="size-3.5 shrink-0" />
         @else
-            <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            <x-returns.icon name="clock" class="size-3.5 shrink-0" />
         @endif
         @if ($overdue)
-            Overdue · was due <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('M j, g:i A') }}</time>
+            Overdue by {{ $relative }} · was due <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('M j, g:i A') }}</time>
         @elseif ($dueSoon)
-            Due soon · <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('M j, g:i A') }}</time>
+            Due in {{ $relative }} · <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('M j, g:i A') }}</time>
         @else
-            Due <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('M j, g:i A') }}</time>
+            Due in {{ $relative }} · <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('M j, g:i A') }}</time>
         @endif
     </span>
 @endif

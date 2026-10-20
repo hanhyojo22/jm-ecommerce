@@ -42,18 +42,70 @@
             <span aria-current="page" class="font-semibold text-ink">Return case</span>
         </nav>
 
-        <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <p class="text-xs font-bold uppercase tracking-[0.14em] text-brand">Return case</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-[-0.03em] text-ink">Order {{ $case->sellerOrder->order->number }}</h1>
-                <p class="mt-2 text-sm text-muted">
-                    {{ $case->sellerOrder->store->name }}
-                    @if ($role !== 'buyer') · buyer {{ $case->buyer->name }} @endif
-                    · opened {{ $case->created_at->format('M j, Y') }}
-                </p>
+        @php
+            $storeInitials = Str::upper(Str::substr($case->sellerOrder->store->name, 0, 2));
+        @endphp
+
+        <section class="returns-hero mt-4" aria-labelledby="case-title">
+            <div class="returns-hero-content">
+                <div class="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="flex min-w-0 items-start gap-4">
+                        <span class="returns-monogram" aria-hidden="true">{{ $storeInitials }}</span>
+                        <div class="min-w-0">
+                            <p class="returns-eyebrow">Return case · {{ $case->sellerOrder->store->name }}</p>
+                            <h1 id="case-title" class="mt-1.5 break-words text-3xl font-bold tracking-[-0.03em] text-ink">Order {{ $case->sellerOrder->order->number }}</h1>
+                            <p class="mt-2 text-sm leading-6 text-muted">
+                                @if ($role !== 'buyer')
+                                    Buyer {{ $case->buyer->name }} ·
+                                @endif
+                                opened {{ $case->created_at->format('M j, Y') }}
+                                @if ($case->opened_by !== $case->buyer_id)
+                                    by JMMart support
+                                @endif
+                            </p>
+                            <div class="mt-3 flex flex-wrap items-center gap-2">
+                                <x-returns.status-badge :status="$case->status" />
+                                @if ($role !== 'buyer')
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-xs font-semibold text-muted ring-1 ring-inset ring-line">
+                                        <x-returns.icon name="store" class="size-3.5" />
+                                        {{ $case->sellerOrder->store->name }}
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex shrink-0 flex-col items-start gap-2 lg:items-end">
+                        <x-returns.deadline :case="$case" />
+                        <p class="text-xs text-muted">{{ $unitsInCase }} {{ Str::plural('unit', $unitsInCase) }} in this case</p>
+                    </div>
+                </div>
+
+                <dl class="returns-hero-stats">
+                    <div class="returns-hero-stat">
+                        <dt>Amount at stake</dt>
+                        <dd class="tabular-nums">₱{{ number_format((float) $amountAtStake, 2) }}</dd>
+                    </div>
+                    <div class="returns-hero-stat">
+                        <dt>Items in case</dt>
+                        <dd>{{ $unitsInCase }} {{ Str::plural('unit', $unitsInCase) }}</dd>
+                    </div>
+                    <div class="returns-hero-stat">
+                        <dt>Buyer asked for</dt>
+                        <dd>{{ ucfirst($case->requested_remedy) }}</dd>
+                    </div>
+                    <div class="returns-hero-stat">
+                        <dt>Current deadline</dt>
+                        <dd>
+                            @if ($deadline)
+                                <time datetime="{{ $deadline->toIso8601String() }}">{{ $deadline->format('M j, Y · g:i A') }}</time>
+                            @else
+                                No fixed deadline
+                            @endif
+                        </dd>
+                    </div>
+                </dl>
             </div>
-            <x-returns.status-badge :status="$case->status" class="mt-1" />
-        </div>
+        </section>
 
         @if (session('status'))
             <p class="mt-5 flex items-start gap-2.5 rounded-[10px] border border-green-200 bg-green-50 px-3.5 py-3 text-sm font-semibold text-success" role="status">
@@ -94,7 +146,7 @@
 
                 {{-- One action panel per role and case leg: the fields and button names match the
                      same routes and validation the case workflow always used. --}}
-                <section class="section-card" id="next-step" aria-labelledby="next-step-heading">
+                <section class="section-card returns-action-panel" id="next-step" aria-labelledby="next-step-heading">
                     @if ($role === 'seller' && $case->status === 'awaiting_seller')
                         <h2 id="next-step-heading" class="text-base font-semibold text-ink">Your turn: respond to the request</h2>
                         <p class="mt-1.5 text-sm leading-6 text-muted">Approve with a remedy or reject with reasons. The buyer sees your response and can appeal it to JMMart, so explain the decision clearly.</p>

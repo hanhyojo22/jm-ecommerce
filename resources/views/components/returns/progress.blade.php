@@ -64,20 +64,23 @@
 @endphp
 
 <div {{ $attributes }}>
-    <ol class="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-4" aria-label="Case progress">
+    <ol class="returns-stepper" aria-label="Case progress">
         @foreach ($steps as $progressStep)
-            <li class="min-w-0" @if ($progressStep['state'] === 'current') aria-current="step" @endif>
-                <div class="h-1.5 rounded-full {{ $progressStep['state'] === 'upcoming' ? 'bg-slate-200' : 'bg-brand' }}"></div>
-                <p class="mt-3 flex items-center gap-1.5 text-xs font-semibold {{ $progressStep['state'] === 'upcoming' ? 'text-muted' : 'text-brand-hover' }}">
+            <li @class([
+                'returns-step',
+                'is-done' => $progressStep['state'] === 'done',
+                'is-current' => $progressStep['state'] === 'current',
+            ]) @if ($progressStep['state'] === 'current') aria-current="step" @endif>
+                <span class="returns-step-marker" aria-hidden="true">
                     @if ($progressStep['state'] === 'done')
-                        <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
-                    @elseif ($progressStep['state'] === 'current')
-                        <span class="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true"></span>
+                        <x-returns.icon name="check-plain" class="size-3.5" />
+                    @else
+                        {{ $loop->iteration }}
                     @endif
-                    {{ $progressStep['label'] }}
-                </p>
+                </span>
+                <p class="returns-step-title">{{ $progressStep['label'] }}</p>
                 @if ($progressStep['copy'])
-                    <p class="mt-1 text-[11px] leading-4 text-muted">{{ $progressStep['copy'] }}</p>
+                    <p class="returns-step-copy">{{ $progressStep['copy'] }}</p>
                 @endif
             </li>
         @endforeach

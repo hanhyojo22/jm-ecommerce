@@ -43,7 +43,7 @@ class ReturnCaseController extends Controller
                     ->whereHas('sellerOrder.order', fn ($order) => $order->whereRaw('LOWER(number) LIKE ?', [$term]))
                     ->orWhereHas('buyer', fn ($buyer) => $buyer->whereRaw('LOWER(name) LIKE ?', [$term])));
             })
-            ->with('sellerOrder.order', 'sellerOrder.store', 'buyer', 'items')
+            ->with('sellerOrder.order', 'sellerOrder.store', 'buyer', 'items.orderItem')
             ->orderByDeadline()->latest()->paginate(20)->withQueryString();
 
         $counts = [];

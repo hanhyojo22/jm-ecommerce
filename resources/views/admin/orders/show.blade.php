@@ -61,35 +61,139 @@
         </div>
     </div>
     <div class="mx-auto max-w-[1320px] px-[18px] pb-10 sm:px-8">
-        <section class="rounded-lg border border-line bg-surface p-5"><h2 class="font-semibold text-ink">Later return or warranty claims</h2><p class="mt-1 text-sm text-muted">Support may open a case when the seven-day interface window has ended or delivery timing is uncertain.</p>
-            @foreach ($order->sellerOrders as $sellerOrder)
-                <div class="mt-5 border-t border-line pt-4 text-sm">
-                    <strong>{{ $sellerOrder->store->name }} COD:</strong> {{ $sellerOrder->cod_collected_at ? 'Collected '.$sellerOrder->cod_collected_at->format('M j, Y g:i A') : 'Not recorded' }}
-                    @if ($sellerOrder->status === 'delivered' && ! $sellerOrder->cod_collected_at)
-                        <form method="POST" action="{{ route('admin.orders.seller-cod-collection', $sellerOrder) }}" class="mt-2">@csrf @method('PATCH')
-                            <button class="min-h-11 rounded-lg border border-line px-4 font-semibold">Record this store's collection</button>
-                        </form>
-                    @endif
+        <section class="overflow-hidden rounded-[14px] border border-line bg-surface" aria-labelledby="late-claims-heading">
+            <div class="flex flex-wrap items-start gap-3 border-b border-line bg-canvas/60 px-5 py-5 sm:px-6">
+                <span class="grid size-10 shrink-0 place-items-center rounded-[10px] bg-blue-50 text-brand-hover" aria-hidden="true">
+                    <x-returns.icon name="shield" class="size-5" />
+                </span>
+                <div class="min-w-0">
+                    <h2 id="late-claims-heading" class="font-semibold text-ink">Later return or warranty claims</h2>
+                    <p class="mt-1 max-w-3xl text-sm leading-6 text-muted">Support may open a case when the seven-day interface window has ended or delivery timing is uncertain.</p>
                 </div>
-                @if ($sellerOrder->status === 'cancelled')
-                    <p class="mt-5 border-t border-line pt-4 text-sm text-muted">{{ $sellerOrder->store->name }}: a cancelled store order cannot have a return case.</p>
-                @else
-                <form method="POST" action="{{ route('admin.returns.store', $sellerOrder) }}" class="mt-5 grid gap-3 border-t border-line pt-4">@csrf
-                    <h3 class="font-semibold">{{ $sellerOrder->store->name }}</h3>
-                    <p class="text-sm text-muted">Support can open a case on this store order at any time, including after the buyer's seven-day window.</p>
-                    @if ($sellerOrder->issues->contains('status', 'open'))
-                        <label>Convert an open support claim<select name="order_issue_id" class="field-control"><option value="">Open separate case</option>@foreach ($sellerOrder->issues->where('status', 'open') as $issue)<option value="{{ $issue->id }}">{{ str($issue->type)->replace('_', ' ')->headline() }} · {{ Str::limit($issue->details, 70) }}</option>@endforeach</select></label>
-                    @endif
-                    @foreach ($sellerOrder->items as $item)
-                        <label class="text-sm">{{ $item->product_name }} (purchased {{ $item->quantity }})<input type="hidden" name="items[{{ $loop->index }}][order_item_id]" value="{{ $item->id }}"><input type="number" name="items[{{ $loop->index }}][quantity]" value="0" min="0" max="{{ $item->quantity }}" class="field-control w-24"></label>
-                    @endforeach
-                    <label>Reason<select name="reason" class="field-control"><option value="damaged">Damaged</option><option value="defective">Defective</option><option value="wrong_item">Wrong item</option><option value="misdescribed">Materially misdescribed</option></select></label>
-                    <label>Preferred remedy<select name="requested_remedy" class="field-control"><option value="refund">Refund</option><option value="replacement">Replacement</option></select></label>
-                    <label>Claim details<textarea name="details" required minlength="10" maxlength="2000" class="field-control"></textarea></label>
-                    <button class="min-h-11 justify-self-start rounded-lg bg-brand px-4 text-white">Open return case</button>
-                </form>
-                @endif
-            @endforeach
+            </div>
+
+            <div class="space-y-4 p-4 sm:p-5">
+                @foreach ($order->sellerOrders as $sellerOrder)
+                    <div class="returns-late-store overflow-hidden">
+                        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3.5">
+                            <div class="min-w-0">
+                                <h3 class="font-semibold text-ink">{{ $sellerOrder->store->name }}</h3>
+                                <p class="mt-0.5 text-xs text-muted">Store order · {{ ucfirst($sellerOrder->status) }}</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span @class([
+                                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
+                                    'bg-green-50 text-success ring-green-200' => $sellerOrder->cod_collected_at,
+                                    'bg-amber-50 text-warning-text ring-amber-200' => ! $sellerOrder->cod_collected_at,
+                                ])>
+                                    <x-returns.icon :name="$sellerOrder->cod_collected_at ? 'check' : 'clock'" class="size-3.5" />
+                                    COD {{ $sellerOrder->cod_collected_at ? 'collected '.$sellerOrder->cod_collected_at->format('M j, Y') : 'not recorded' }}
+                                </span>
+                                @if ($sellerOrder->status === 'delivered' && ! $sellerOrder->cod_collected_at)
+                                    <form method="POST" action="{{ route('admin.orders.seller-cod-collection', $sellerOrder) }}">@csrf @method('PATCH')
+                                        <button class="min-h-9 rounded-[8px] border border-line bg-white px-3 text-xs font-semibold text-ink transition hover:border-brand hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Record this store's collection</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+
+                        @if ($sellerOrder->returnCases->isNotEmpty())
+                            <div>
+                                <p class="px-4 pt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Existing cases</p>
+                                @foreach ($sellerOrder->returnCases as $case)
+                                    <a href="{{ route('admin.returns.show', $case) }}" class="returns-late-case group transition hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <x-returns.status-badge :status="$case->status" />
+                                                <x-returns.deadline :case="$case" />
+                                            </div>
+                                            <p class="mt-1.5 text-sm text-ink">
+                                                {{ ucfirst(str_replace('_', ' ', $case->reason)) }} · {{ $case->items->sum('quantity') }} {{ Str::plural('unit', $case->items->sum('quantity')) }} · opened {{ $case->created_at->format('M j, Y') }}
+                                            </p>
+                                        </div>
+                                        <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
+                                            Review case
+                                            <x-returns.icon name="chevron-right" class="size-4 transition group-hover:translate-x-0.5" />
+                                        </span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if ($sellerOrder->status === 'cancelled')
+                            <p class="border-t border-line px-4 py-3.5 text-sm text-muted">A cancelled store order cannot have a return case.</p>
+                        @else
+                            <details class="group border-t border-line" @if ($sellerOrder->returnCases->isEmpty()) open @endif>
+                                <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+                                    <span class="flex items-center gap-2">
+                                        <x-returns.icon name="plus" class="size-4" />
+                                        Open a late return case
+                                    </span>
+                                    <x-returns.icon name="chevron-down" class="size-4 transition group-open:rotate-180" />
+                                </summary>
+                                <form method="POST" action="{{ route('admin.returns.store', $sellerOrder) }}" class="grid gap-4 border-t border-line bg-canvas/40 px-4 py-4 sm:px-5">@csrf
+                                    <p class="text-sm leading-6 text-muted">Support can open a case on this store order at any time, including after the buyer's seven-day window.</p>
+
+                                    @if ($sellerOrder->issues->contains('status', 'open'))
+                                        <div>
+                                            <label for="late-issue-{{ $sellerOrder->id }}" class="field-label">Convert an open support claim</label>
+                                            <select id="late-issue-{{ $sellerOrder->id }}" name="order_issue_id" class="field-control">
+                                                <option value="">Open separate case</option>
+                                                @foreach ($sellerOrder->issues->where('status', 'open') as $issue)
+                                                    <option value="{{ $issue->id }}">{{ str($issue->type)->replace('_', ' ')->headline() }} · {{ Str::limit($issue->details, 70) }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    @endif
+
+                                    <fieldset>
+                                        <legend class="field-label">Items in this claim</legend>
+                                        <p class="-mt-1 mb-2 text-xs text-muted">Set a quantity for every item the buyer says is affected.</p>
+                                        <div class="grid gap-2 sm:grid-cols-2">
+                                            @foreach ($sellerOrder->items as $item)
+                                                <label for="late-qty-{{ $sellerOrder->id }}-{{ $item->id }}" class="flex items-center justify-between gap-3 rounded-[10px] border border-line bg-white px-3 py-2.5 text-sm">
+                                                    <span class="min-w-0">
+                                                        <span class="block font-medium text-ink">{{ $item->product_name }}</span>
+                                                        <span class="mt-0.5 block text-xs text-muted">Purchased {{ $item->quantity }}</span>
+                                                    </span>
+                                                    <input type="hidden" name="items[{{ $loop->index }}][order_item_id]" value="{{ $item->id }}">
+                                                    <input id="late-qty-{{ $sellerOrder->id }}-{{ $item->id }}" type="number" name="items[{{ $loop->index }}][quantity]" value="0" min="0" max="{{ $item->quantity }}" class="h-10 w-16 rounded-[8px] border-line p-0 text-center text-sm font-semibold tabular-nums text-ink focus:border-brand focus:ring-brand">
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </fieldset>
+
+                                    <div class="grid gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <label for="late-reason-{{ $sellerOrder->id }}" class="field-label">Reason</label>
+                                            <select id="late-reason-{{ $sellerOrder->id }}" name="reason" class="field-control">
+                                                <option value="damaged">Damaged</option>
+                                                <option value="defective">Defective</option>
+                                                <option value="wrong_item">Wrong item</option>
+                                                <option value="misdescribed">Materially misdescribed</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="late-remedy-{{ $sellerOrder->id }}" class="field-label">Preferred remedy</label>
+                                            <select id="late-remedy-{{ $sellerOrder->id }}" name="requested_remedy" class="field-control">
+                                                <option value="refund">Refund</option>
+                                                <option value="replacement">Replacement</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="late-details-{{ $sellerOrder->id }}" class="field-label">Claim details</label>
+                                        <textarea id="late-details-{{ $sellerOrder->id }}" name="details" required minlength="10" maxlength="2000" rows="3" class="field-control" placeholder="Record what the buyer reported and what support verified."></textarea>
+                                    </div>
+
+                                    <button class="inline-flex min-h-11 justify-self-start items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Open return case</button>
+                                </form>
+                            </details>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
         </section>
     </div>
 </x-app-layout>

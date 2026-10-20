@@ -1,12 +1,51 @@
 <x-app-layout>
     <x-slot name="header"><div class="flex min-w-0 items-center gap-3"><a href="{{ route('seller.orders.index') }}" class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[10px] border border-line bg-white text-muted shadow-sm transition hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand" aria-label="Back to orders"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></a><div class="min-w-0"><h1 class="text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.3]">Order details</h1><p class="mt-1 break-all text-sm text-muted">Order #{{ $sellerOrder->order->number }}</p></div></div></x-slot>
-    @php($styles = ['pending' => 'bg-amber-50 text-amber-800 ring-amber-200', 'confirmed' => 'bg-success/10 text-success ring-success/20', 'processing' => 'bg-blue-50 text-blue-800 ring-blue-200', 'shipped' => 'bg-blue-50 text-blue-800 ring-blue-200', 'delivered' => 'bg-success/10 text-success ring-success/20', 'cancelled' => 'bg-rose-50 text-rose-800 ring-rose-200', 'paid' => 'bg-success/10 text-success ring-success/20', 'failed' => 'bg-rose-50 text-rose-800 ring-rose-200', 'refunded' => 'bg-slate-100 text-muted ring-line'])
+    @php
+        $styles = ['pending' => 'bg-amber-50 text-amber-800 ring-amber-200', 'confirmed' => 'bg-success/10 text-success ring-success/20', 'processing' => 'bg-blue-50 text-blue-800 ring-blue-200', 'shipped' => 'bg-blue-50 text-blue-800 ring-blue-200', 'delivered' => 'bg-success/10 text-success ring-success/20', 'cancelled' => 'bg-rose-50 text-rose-800 ring-rose-200', 'paid' => 'bg-success/10 text-success ring-success/20', 'failed' => 'bg-rose-50 text-rose-800 ring-rose-200', 'refunded' => 'bg-slate-100 text-muted ring-line'];
+    @endphp
     <div class="page-shell"><div class="page-container seller-workspace-page">
         @if (session('status'))<div class="mb-6 rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm text-success" role="status">{{ session('status') }}</div>@endif
         @if ($errors->any())<div class="mb-6 rounded-[14px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert">{{ $errors->first() }}</div>@endif
         @if($sellerOrder->returnCases->isNotEmpty())
-            <section class="mb-6 rounded-[14px] border border-line bg-surface p-5"><h2 class="font-semibold text-ink">Returns</h2>
-                @foreach($sellerOrder->returnCases as $case)<a class="mt-2 block text-sm font-semibold text-brand underline" href="{{ route('seller.returns.show', $case) }}">{{ str($case->status)->replace('_', ' ')->headline() }} · view case</a>@endforeach
+            <section class="mb-6 overflow-hidden rounded-[14px] border border-line bg-surface" aria-labelledby="returns-heading">
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4">
+                    <div class="flex min-w-0 items-start gap-3">
+                        <span class="grid size-9 shrink-0 place-items-center rounded-[9px] bg-blue-50 text-brand-hover" aria-hidden="true"><x-returns.icon name="return" class="size-[18px]" /></span>
+                        <div class="min-w-0">
+                            <h2 id="returns-heading" class="font-semibold text-ink">Returns</h2>
+                            <p class="mt-1 text-sm leading-6 text-muted">{{ $sellerOrder->returnCases->count() }} {{ Str::plural('case', $sellerOrder->returnCases->count()) }} on this store order. Respond before the deadline to keep the resolution on your side.</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('seller.returns.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">All returns</a>
+                </div>
+                <div class="divide-y divide-line">
+                    @foreach($sellerOrder->returnCases as $case)
+                        @php
+                            $caseAmount = $case->items->reduce(fn (string $sum, $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
+                            $firstItem = $case->items->first()?->orderItem?->product_name;
+                            $otherItems = max(0, $case->items->count() - 1);
+                        @endphp
+                        <a href="{{ route('seller.returns.show', $case) }}" class="flex flex-wrap items-start justify-between gap-4 px-5 py-4 transition hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <x-returns.status-badge :status="$case->status" />
+                                    <x-returns.deadline :case="$case" />
+                                </div>
+                                <p class="mt-2 text-sm font-semibold text-ink">
+                                    {{ $case->items->sum('quantity') }} {{ Str::plural('unit', $case->items->sum('quantity')) }}
+                                    @if ($firstItem)
+                                        · {{ $firstItem }}@if ($otherItems > 0) <span class="font-normal text-muted">+{{ $otherItems }} more</span>@endif
+                                    @endif
+                                </p>
+                                <p class="mt-1 text-xs text-muted">Opened {{ $case->created_at->format('M j, Y') }} · <span class="font-semibold tabular-nums text-ink">₱{{ number_format((float) $caseAmount, 2) }}</span> at stake</p>
+                            </div>
+                            <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
+                                View case
+                                <x-returns.icon name="chevron-right" class="size-4" />
+                            </span>
+                        </a>
+                    @endforeach
+                </div>
             </section>
         @endif
         @if($sellerOrder->issues->isNotEmpty())

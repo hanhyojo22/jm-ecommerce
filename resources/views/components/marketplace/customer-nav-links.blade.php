@@ -3,7 +3,7 @@
 @php
     $user = auth()->user();
     $items = [
-        ['label' => 'My Purchases', 'href' => route('orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('orders.*')],
+        ['label' => 'My Purchases', 'href' => route('orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('orders.*', 'returns.show')],
         ['label' => 'My Reviews', 'href' => route('reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('reviews.index')],
         ['label' => 'Delivery Addresses', 'href' => route('delivery-addresses.index'), 'icon' => 'addresses', 'active' => request()->routeIs('delivery-addresses.*')],
         ['label' => 'Messages', 'href' => $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index'), 'icon' => 'messages', 'active' => request()->routeIs('messages.*')],

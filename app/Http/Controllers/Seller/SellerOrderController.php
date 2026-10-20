@@ -57,7 +57,7 @@ class SellerOrderController extends Controller
 
         $sellerOrder = $tenant->sellerOrders()
             ->whereKey($sellerOrder)
-            ->with(['items.product.images', 'order.payment', 'issues', 'returnCases'])
+            ->with(['items.product.images', 'order.payment', 'issues', 'returnCases.items.orderItem'])
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',

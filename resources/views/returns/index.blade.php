@@ -25,16 +25,16 @@
 
         $kpis = $isSeller
             ? [
-                ['label' => 'Awaiting my response', 'count' => $counts['awaiting_seller'], 'hint' => 'Reply to the buyer within 48 hours.', 'href' => route($routeName, ['status' => 'awaiting_seller']), 'active' => $filters['status'] === 'awaiting_seller'],
-                ['label' => 'Returns arriving', 'count' => $counts['awaiting_receipt'], 'hint' => 'Inspect the parcel and confirm receipt.', 'href' => route($routeName, ['status' => 'awaiting_receipt']), 'active' => $filters['status'] === 'awaiting_receipt'],
-                ['label' => 'Remedies due', 'count' => $counts['awaiting_fulfillment'], 'hint' => 'Refund or ship within 5 business days.', 'href' => route($routeName, ['status' => 'awaiting_fulfillment']), 'active' => $filters['status'] === 'awaiting_fulfillment'],
-                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'JMMart can step in at any time.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true],
+                ['label' => 'Awaiting my response', 'count' => $counts['awaiting_seller'], 'hint' => 'Reply to the buyer within 48 hours.', 'href' => route($routeName, ['status' => 'awaiting_seller']), 'active' => $filters['status'] === 'awaiting_seller', 'icon' => 'chat'],
+                ['label' => 'Returns arriving', 'count' => $counts['awaiting_receipt'], 'hint' => 'Inspect the parcel and confirm receipt.', 'href' => route($routeName, ['status' => 'awaiting_receipt']), 'active' => $filters['status'] === 'awaiting_receipt', 'icon' => 'package'],
+                ['label' => 'Remedies due', 'count' => $counts['awaiting_fulfillment'], 'hint' => 'Refund or ship within 5 business days.', 'href' => route($routeName, ['status' => 'awaiting_fulfillment']), 'active' => $filters['status'] === 'awaiting_fulfillment', 'icon' => 'refund'],
+                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'JMMart can step in at any time.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true, 'icon' => 'alert'],
             ]
             : [
-                ['label' => 'Needs review', 'count' => $counts['needs_review'], 'hint' => 'Appeals and stalled cases.', 'href' => route($routeName, ['needs_action' => 1]), 'active' => $filters['needs_action'], 'danger' => $counts['needs_review'] > 0],
-                ['label' => 'Appeals to decide', 'count' => $counts['appealed'], 'hint' => 'Waiting on a support decision.', 'href' => route($routeName, ['status' => 'appealed']), 'active' => $filters['status'] === 'appealed'],
-                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'Deadlines that already passed.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true],
-                ['label' => 'Open cases', 'count' => $counts['open'], 'hint' => 'Still moving through the workflow.', 'href' => route($routeName, ['status' => 'open']), 'active' => $filters['status'] === 'open'],
+                ['label' => 'Needs review', 'count' => $counts['needs_review'], 'hint' => 'Appeals and stalled cases.', 'href' => route($routeName, ['needs_action' => 1]), 'active' => $filters['needs_action'], 'danger' => $counts['needs_review'] > 0, 'icon' => 'shield'],
+                ['label' => 'Appeals to decide', 'count' => $counts['appealed'], 'hint' => 'Waiting on a support decision.', 'href' => route($routeName, ['status' => 'appealed']), 'active' => $filters['status'] === 'appealed', 'icon' => 'scale'],
+                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'Deadlines that already passed.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true, 'icon' => 'alert'],
+                ['label' => 'Open cases', 'count' => $counts['open'], 'hint' => 'Still moving through the workflow.', 'href' => route($routeName, ['status' => 'open']), 'active' => $filters['status'] === 'open', 'icon' => 'return'],
             ];
 
         $hasFilters = $filters['search'] !== null || $filters['status'] !== '' || $filters['overdue'] || $filters['needs_action'];
@@ -46,27 +46,26 @@
                 <h1 class="text-[28px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">{{ $isSeller ? 'Returns' : 'Return cases' }}</h1>
                 <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} need {{ $isSeller ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ Str::plural('case', $cases->total()) }} in view</p>
             </div>
-            <a href="{{ route('returns') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">Return policy</a>
+            <a href="{{ route('returns') }}" class="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-hover">
+                <x-returns.icon name="shield" class="size-4" />
+                Return policy
+            </a>
         </div>
     </x-slot>
 
     <div class="page-shell"><div class="page-container">
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Case summary">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Case summary">
             @foreach ($kpis as $kpi)
                 <a href="{{ $kpi['href'] }}" aria-label="{{ $kpi['label'] }}: {{ $kpi['count'] }} {{ Str::plural('case', $kpi['count']) }}" @class([
-                    'group rounded-[14px] border bg-white p-4 transition hover:border-blue-300 hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2',
-                    'border-blue-600 ring-1 ring-blue-600' => $kpi['active'],
-                    'border-line' => ! $kpi['active'],
+                    'returns-kpi group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+                    'is-active' => $kpi['active'],
+                    'is-danger' => $kpi['danger'] ?? false,
                 ])>
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-sm font-medium text-muted">{{ $kpi['label'] }}</span>
-                        <span @class([
-                            'rounded-full px-2 py-0.5 text-xs font-bold tabular-nums',
-                            'bg-red-50 text-danger' => $kpi['danger'] ?? false,
-                            'bg-slate-100 text-muted group-hover:bg-blue-50 group-hover:text-brand' => ! ($kpi['danger'] ?? false),
-                        ])>{{ $kpi['count'] }}</span>
-                    </div>
-                    <p class="mt-4 text-xs text-muted">{{ $kpi['hint'] }}</p>
+                    <span class="returns-kpi-icon"><x-returns.icon :name="$kpi['icon']" class="size-[18px]" /></span>
+                    <span class="returns-kpi-count">{{ $kpi['count'] }}</span>
+                    <span class="returns-kpi-label">{{ $kpi['label'] }}</span>
+                    <x-returns.icon name="chevron-right" class="returns-kpi-arrow size-4" />
+                    <span class="returns-kpi-hint">{{ $kpi['hint'] }}</span>
                 </a>
             @endforeach
         </div>
@@ -76,7 +75,7 @@
                 <div class="lg:col-span-5">
                     <label for="search" class="mb-1.5 block text-sm font-medium text-muted">Search cases</label>
                     <div class="relative">
-                        <svg class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
+                        <x-returns.icon name="search" class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted" />
                         <input id="search" name="search" value="{{ $filters['search'] }}" type="search" placeholder="{{ $isSeller ? 'Order number or buyer' : 'Order number, buyer, or store' }}" class="block h-11 w-full rounded-[10px] border-line pl-10 text-sm shadow-sm placeholder:text-muted focus:border-brand focus:ring-brand">
                     </div>
                 </div>
@@ -108,8 +107,10 @@
                 @forelse ($cases as $case)
                     @php
                         $amount = $case->items->reduce(fn (string $sum, $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
+                        $previewItems = $case->items->take(2);
+                        $remainingItems = $case->items->count() - $previewItems->count();
                     @endphp
-                    <a href="{{ route($showRoute, $case) }}" class="block border-b border-line p-4 transition last:border-b-0 hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand sm:p-5">
+                    <a href="{{ route($showRoute, $case) }}" data-status="{{ $case->status }}" class="returns-queue-card group focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand">
                         <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
                             <div class="min-w-0 flex-1">
                                 <p class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -119,20 +120,39 @@
                                 <p class="mt-1 text-sm text-muted">
                                     {{ ucfirst(str_replace('_', ' ', $case->reason)) }} requested by {{ $case->buyer->name }} · opened <time datetime="{{ $case->created_at->toIso8601String() }}">{{ $case->created_at->format('M j, Y') }}</time>
                                 </p>
-                                <p class="mt-1.5 text-sm text-ink">
-                                    {{ $case->items->sum('quantity') }} {{ Str::plural('unit', $case->items->sum('quantity')) }} · <span class="tabular-nums">₱{{ number_format((float) $amount, 2) }}</span> at stake
-                                </p>
                             </div>
                             <div class="flex shrink-0 flex-col items-start gap-2 sm:items-end">
                                 <x-returns.status-badge :status="$case->status" />
                                 <x-returns.deadline :case="$case" />
                             </div>
                         </div>
+
+                        <div class="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+                            <div class="min-w-0">
+                                @if ($previewItems->isNotEmpty())
+                                    <div class="returns-queue-items">
+                                        @foreach ($previewItems as $item)
+                                            <span class="returns-queue-item">{{ $item->orderItem?->product_name ?? 'Item' }}</span>
+                                        @endforeach
+                                        @if ($remainingItems > 0)
+                                            <span class="returns-queue-item">+{{ $remainingItems }} more</span>
+                                        @endif
+                                    </div>
+                                @endif
+                                <p class="mt-2 text-sm text-ink">
+                                    {{ $case->items->sum('quantity') }} {{ Str::plural('unit', $case->items->sum('quantity')) }} · <span class="font-semibold tabular-nums">₱{{ number_format((float) $amount, 2) }}</span> at stake
+                                </p>
+                            </div>
+                            <span class="flex items-center gap-1.5 text-xs font-semibold text-brand">
+                                Open case
+                                <x-returns.icon name="chevron-right" class="returns-queue-arrow size-4" />
+                            </span>
+                        </div>
                     </a>
                 @empty
                     <div class="empty-state">
                         <span class="mx-auto grid size-12 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true">
-                            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6" /></svg>
+                            <x-returns.icon name="check" class="size-6" />
                         </span>
                         @if ($hasFilters)
                             <h2 class="mt-4 text-lg font-semibold text-ink">No cases match these filters</h2>
