@@ -35,7 +35,7 @@
         };
     @endphp
 
-    <div class="page-shell"><div class="page-container max-w-4xl py-8">
+    <div class="page-shell"><div class="page-container max-w-5xl py-8">
         <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm text-muted">
             <a href="{{ $backUrl }}" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">{{ $backLabel }}</a>
             <span aria-hidden="true">/</span>

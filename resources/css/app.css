@@ -221,6 +221,10 @@
     max-width: 56rem;
 }
 
+:is(.seller-workspace, .customer-workspace) .page-container.max-w-5xl {
+    max-width: 64rem;
+}
+
 :is(.seller-workspace, .customer-workspace) .page-container.max-w-6xl {
     max-width: 72rem;
 }

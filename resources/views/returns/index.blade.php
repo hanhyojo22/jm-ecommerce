@@ -44,7 +44,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <h1 class="text-[28px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">{{ $isSeller ? 'Returns' : 'Return cases' }}</h1>
-                <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} need {{ $isSeller ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ Str::plural('case', $cases->total()) }} in view</p>
+                <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} {{ $needsActionCount === 1 ? 'needs' : 'need' }} {{ $isSeller ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ Str::plural('case', $cases->total()) }} in view</p>
             </div>
             <a href="{{ route('returns') }}" class="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-hover">
                 <x-returns.icon name="shield" class="size-4" />
@@ -54,7 +54,7 @@
     </x-slot>
 
     <div class="page-shell"><div class="page-container">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Case summary">
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Case summary">
             @foreach ($kpis as $kpi)
                 <a href="{{ $kpi['href'] }}" aria-label="{{ $kpi['label'] }}: {{ $kpi['count'] }} {{ Str::plural('case', $kpi['count']) }}" @class([
                     'returns-kpi group focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
@@ -64,15 +64,15 @@
                     <span class="returns-kpi-icon"><x-returns.icon :name="$kpi['icon']" class="size-[18px]" /></span>
                     <span class="returns-kpi-count">{{ $kpi['count'] }}</span>
                     <span class="returns-kpi-label">{{ $kpi['label'] }}</span>
-                    <x-returns.icon name="chevron-right" class="returns-kpi-arrow size-4" />
-                    <span class="returns-kpi-hint">{{ $kpi['hint'] }}</span>
+                    <x-returns.icon name="chevron-right" class="returns-kpi-arrow hidden size-4 sm:block" />
+                    <span class="returns-kpi-hint hidden sm:block">{{ $kpi['hint'] }}</span>
                 </a>
             @endforeach
         </div>
 
         <section class="mt-6 rounded-[14px] border border-line bg-white p-4 shadow-sm sm:p-5" aria-label="Case filters">
-            <form method="GET" action="{{ route($routeName) }}" class="grid gap-3 lg:grid-cols-12 lg:items-end">
-                <div class="lg:col-span-5">
+            <form method="GET" action="{{ route($routeName) }}" class="grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-12">
+                <div class="sm:col-span-2 lg:col-span-5">
                     <label for="search" class="mb-1.5 block text-sm font-medium text-muted">Search cases</label>
                     <div class="relative">
                         <x-returns.icon name="search" class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted" />
@@ -93,7 +93,7 @@
                         Overdue only
                     </label>
                 </div>
-                <div class="flex items-center gap-3 lg:col-span-2">
+                <div class="flex items-center gap-3 sm:col-span-2 lg:col-span-2">
                     <button type="submit" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Apply</button>
                     @if ($hasFilters)
                         <a href="{{ route($routeName) }}" class="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-muted underline decoration-slate-300 underline-offset-4 hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand">Clear</a>
@@ -111,7 +111,7 @@
                         $remainingItems = $case->items->count() - $previewItems->count();
                     @endphp
                     <a href="{{ route($showRoute, $case) }}" data-status="{{ $case->status }}" class="returns-queue-card group focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand">
-                        <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-x-4">
                             <div class="min-w-0 flex-1">
                                 <p class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                                     <span class="font-semibold text-ink">{{ $case->sellerOrder->order->number }}</span>
@@ -121,7 +121,7 @@
                                     {{ ucfirst(str_replace('_', ' ', $case->reason)) }} requested by {{ $case->buyer->name }} · opened <time datetime="{{ $case->created_at->toIso8601String() }}">{{ $case->created_at->format('M j, Y') }}</time>
                                 </p>
                             </div>
-                            <div class="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+                            <div class="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-end">
                                 <x-returns.status-badge :status="$case->status" />
                                 <x-returns.deadline :case="$case" />
                             </div>

@@ -1,4 +1,4 @@
-<section id="returns" class="overflow-hidden rounded-[18px] border border-line bg-surface shadow-sm">
+<section id="returns" class="scroll-mt-24 overflow-hidden rounded-[18px] border border-line bg-surface shadow-sm">
     <div class="flex flex-wrap items-start justify-between gap-4 border-b border-line bg-gradient-to-br from-white via-white to-blue-50/50 px-5 py-5 sm:px-6">
         <div class="flex min-w-0 items-start gap-3">
             <span class="grid size-10 shrink-0 place-items-center rounded-[10px] border border-blue-100 bg-blue-50 text-brand-hover" aria-hidden="true">
