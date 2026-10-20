@@ -17,16 +17,16 @@
 @endphp
 
 @if ($deadline === null)
-    <span {{ $attributes->class(['inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-muted ring-1 ring-inset ring-line']) }}>
+    <span {{ $attributes->class(['inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-muted ring-1 ring-inset ring-line']) }}>
         <svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg>
         No fixed deadline
     </span>
 @else
     <span {{ $attributes->class([
-        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset',
         'bg-red-50 text-danger ring-red-200' => $overdue,
         'bg-amber-50 text-warning-text ring-amber-200' => $dueSoon,
-        'bg-slate-100 text-muted ring-line' => ! $overdue && ! $dueSoon,
+        'bg-white text-muted ring-line' => ! $overdue && ! $dueSoon,
     ]) }}>
         @if ($overdue)
             <x-returns.icon name="alert" class="size-3.5 shrink-0" />

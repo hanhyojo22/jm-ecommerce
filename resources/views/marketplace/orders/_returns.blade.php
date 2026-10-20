@@ -1,16 +1,16 @@
-<section id="returns" class="scroll-mt-24 overflow-hidden rounded-[18px] border border-line bg-surface shadow-sm">
-    <div class="flex flex-wrap items-start justify-between gap-4 border-b border-line bg-gradient-to-br from-white via-white to-blue-50/50 px-5 py-5 sm:px-6">
-        <div class="flex min-w-0 items-start gap-3">
-            <span class="grid size-10 shrink-0 place-items-center rounded-[10px] border border-blue-100 bg-blue-50 text-brand-hover" aria-hidden="true">
+<section id="returns" class="returns-request scroll-mt-24">
+    <div class="returns-request-header flex flex-wrap items-start justify-between gap-4">
+        <div class="flex min-w-0 flex-1 items-start gap-3">
+            <span class="returns-request-mark" aria-hidden="true">
                 <x-returns.icon name="return" class="size-5" />
             </span>
             <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-[0.12em] text-brand">Buyer protection</p>
-                <h2 class="mt-1 text-lg font-semibold text-ink">Returns and replacements</h2>
-                <p class="mt-1 max-w-2xl text-sm leading-6 text-muted">For damaged, defective, wrong, or materially misdescribed goods, ask the seller to help within seven days of delivery. Later warranty and statutory claims can still go to support.</p>
+                <p class="returns-eyebrow">Buyer protection</p>
+                <h2 class="mt-1">Returns and replacements</h2>
+                <p class="mt-1.5 max-w-2xl text-sm leading-6 text-muted">For damaged, defective, wrong, or materially misdescribed goods, ask the seller to help within seven days of delivery. Later warranty and statutory claims can still go to support.</p>
             </div>
         </div>
-        <a href="{{ route('returns') }}" class="inline-flex min-h-11 shrink-0 items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-hover">
+        <a href="{{ route('returns') }}" class="button-quiet shrink-0">
             Read the policy
             <x-returns.icon name="chevron-right" class="size-4" />
         </a>
@@ -30,7 +30,7 @@
                 <div class="p-5 sm:p-6">
                     <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                         <div class="flex min-w-0 items-center gap-3">
-                            <span class="grid size-10 shrink-0 place-items-center rounded-[10px] bg-canvas text-sm font-bold text-muted ring-1 ring-inset ring-line" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
+                            <span class="grid size-10 shrink-0 place-items-center rounded-[9px] border border-line bg-[#fbf8f2] font-display text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
                             <div class="min-w-0">
                                 <h3 class="truncate font-semibold text-ink">{{ $sellerOrder->store->name }}</h3>
                                 @if ($sellerOrder->delivered_at)
@@ -39,16 +39,12 @@
                             </div>
                         </div>
                         @if ($windowOpen)
-                            <span @class([
-                                'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset',
-                                'bg-amber-50 text-warning-text ring-amber-200' => $windowClosingSoon,
-                                'bg-green-50 text-success ring-green-200' => ! $windowClosingSoon,
-                            ])>
+                            <span @class(['returns-window-chip', 'is-soon' => $windowClosingSoon, 'is-open' => ! $windowClosingSoon])>
                                 <x-returns.icon name="clock" class="size-3.5 shrink-0" />
                                 {{ $windowClosingSoon ? 'Closing soon' : 'Window open' }} · until {{ $windowEndsAt->format('M j, g:i A') }}
                             </span>
                         @else
-                            <span class="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-muted ring-1 ring-inset ring-line">
+                            <span class="returns-window-chip is-closed">
                                 <x-returns.icon name="lock" class="size-3.5 shrink-0" />
                                 Request window closed
                             </span>
@@ -57,11 +53,11 @@
 
                     @if ($sellerOrder->returnCases->isNotEmpty())
                         <div class="mt-4">
-                            <p class="text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Your cases</p>
+                            <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">Your cases</p>
                             <ul class="mt-2 grid gap-2" aria-label="Return cases for {{ $sellerOrder->store->name }}">
                                 @foreach ($sellerOrder->returnCases as $case)
                                     <li>
-                                        <a href="{{ route('returns.show', $case) }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border border-line bg-white px-3.5 py-3 transition hover:border-blue-300 hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
+                                        <a href="{{ route('returns.show', $case) }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border border-line bg-white px-3.5 py-3 transition hover:border-[#cfb992] hover:bg-[#fbf8f2] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold text-ink">Return case · opened {{ $case->created_at->format('M j, Y') }}</span>
                                                 <span class="mt-0.5 block text-xs text-muted">View the case history and your next step.</span>
@@ -79,10 +75,10 @@
                     @endif
 
                     @if ($windowOpen)
-                        <details class="group mt-4 overflow-hidden rounded-[14px] border border-line bg-canvas" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
-                            <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-blue-50/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+                        <details class="group mt-4 overflow-hidden rounded-[14px] border border-line bg-[#fbf8f2]" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
+                            <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-[#f5ebd9] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
                                 <span class="flex min-w-0 items-center gap-2">
-                                    <span class="grid size-6 shrink-0 place-items-center rounded-full bg-blue-100 text-brand-hover" aria-hidden="true"><x-returns.icon name="plus" class="size-3.5" /></span>
+                                    <span class="grid size-6 shrink-0 place-items-center rounded-[5px] border border-[#dfd2bd] bg-white text-brand" aria-hidden="true"><x-returns.icon name="plus" class="size-3.5" /></span>
                                     <span class="min-w-0 text-left leading-5">Request a return from {{ $sellerOrder->store->name }}</span>
                                 </span>
                                 <x-returns.icon name="chevron-down" class="size-4 shrink-0 transition group-open:rotate-180" />
@@ -192,8 +188,8 @@
 
                                     <div>
                                         <label for="return-photos-{{ $sellerOrder->id }}" class="field-label flex items-center gap-2"><span class="returns-form-step" aria-hidden="true">5</span> Photos <span class="font-normal text-muted">(optional, up to three, 5 MB each)</span></label>
-                                        <label for="return-photos-{{ $sellerOrder->id }}" class="flex cursor-pointer items-center gap-3 rounded-[12px] border border-dashed border-slate-300 bg-canvas px-4 py-3.5 transition hover:border-brand hover:bg-blue-50/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand has-[:focus-visible]:ring-offset-2">
-                                            <span class="grid size-9 shrink-0 place-items-center rounded-[9px] bg-white text-brand-hover ring-1 ring-inset ring-line" aria-hidden="true"><x-returns.icon name="camera" class="size-4" /></span>
+                                        <label for="return-photos-{{ $sellerOrder->id }}" class="flex cursor-pointer items-center gap-3 rounded-[12px] border border-dashed border-[#d4cec1] bg-canvas px-4 py-3.5 transition hover:border-brand hover:bg-[#fbf6ed] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand has-[:focus-visible]:ring-offset-2">
+                                            <span class="grid size-9 shrink-0 place-items-center rounded-[8px] border border-line bg-white text-brand" aria-hidden="true"><x-returns.icon name="camera" class="size-4" /></span>
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold text-ink">Add photos of the problem</span>
                                                 <span class="mt-0.5 block text-xs text-muted">JPEG, PNG, or WebP · up to three files</span>
@@ -211,14 +207,26 @@
                                         <x-input-error :messages="$errors->get('photos')" class="mt-2" />
                                     </div>
 
-                                    <ol class="grid gap-2 rounded-[12px] border border-line bg-canvas px-4 py-3.5 text-xs leading-5 text-muted">
-                                        <li><span class="font-semibold text-ink">1 · Seller review.</span> The seller approves with a remedy or rejects with reasons within 48 hours.</li>
-                                        <li><span class="font-semibold text-ink">2 · Return, if needed.</span> Approved returns use a no-cost method, or the seller waives the return entirely.</li>
-                                        <li><span class="font-semibold text-ink">3 · Remedy.</span> Refund or replacement, then you confirm the outcome to close the case.</li>
+                                    <ol class="returns-process">
+                                        <li>
+                                            <span class="returns-process-step" aria-hidden="true">01</span>
+                                            <strong>Seller review</strong>
+                                            <p>The seller approves with a remedy or rejects with reasons within 48 hours.</p>
+                                        </li>
+                                        <li>
+                                            <span class="returns-process-step" aria-hidden="true">02</span>
+                                            <strong>Return, if needed</strong>
+                                            <p>Approved returns use a no-cost method, or the seller waives the return entirely.</p>
+                                        </li>
+                                        <li>
+                                            <span class="returns-process-step" aria-hidden="true">03</span>
+                                            <strong>Remedy</strong>
+                                            <p>Refund or replacement, then you confirm the outcome to close the case.</p>
+                                        </li>
                                     </ol>
 
                                     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4">
-                                        <button type="submit" x-bind:disabled="units < 1" class="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Request seller review</button>
+                                        <button type="submit" x-bind:disabled="units < 1" class="button-primary">Request seller review</button>
                                         <p x-show="units < 1" x-cloak class="text-sm text-muted">Set a quantity above zero for at least one item.</p>
                                         <p x-show="units > 0" x-cloak class="text-sm text-muted"><span class="font-semibold tabular-nums text-ink" x-text="units"></span> <span x-text="units === 1 ? 'unit' : 'units'"></span> selected for return.</p>
                                     </div>
@@ -228,7 +236,7 @@
                     @else
                         <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line bg-canvas px-4 py-3.5">
                             <p class="text-sm leading-6 text-muted">The seven-day online request window {{ $windowEndsAt ? 'closed on '.$windowEndsAt->format('M j, Y · g:i A').'.' : 'cannot be applied because the delivery date is uncertain.' }} Your legal rights may continue.</p>
-                            <a href="mailto:itservices@jmsolutionitservices.com?subject=Later%20return%20claim%20{{ urlencode($order->number) }}" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-brand transition hover:border-brand hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Contact support</a>
+                            <a href="mailto:itservices@jmsolutionitservices.com?subject=Later%20return%20claim%20{{ urlencode($order->number) }}" class="button-secondary shrink-0">Contact support</a>
                         </div>
                     @endif
                 </div>

@@ -33,7 +33,7 @@ class ReturnCaseTest extends TestCase
         $case = ReturnCase::query()->sole();
         $this->actingAs($buyer)->get(route('returns.show', $case))->assertOk()->assertSee('Case history');
         $this->actingAs($buyer)->get(route('orders.show', $order->order))->assertOk()->assertSee('Returns and replacements');
-        $this->actingAs($seller)->get(route('seller.returns.index'))->assertOk()->assertSee('1 need seller action');
+        $this->actingAs($seller)->get(route('seller.returns.index'))->assertOk()->assertSee('1 case needs seller action');
         $this->actingAs($seller)->get(route('seller.returns.show', $case))->assertOk()->assertSee('Send offer');
         $this->actingAs($otherBuyer)->get(route('returns.show', $case))->assertNotFound();
         $this->actingAs($buyer)->post(route('returns.store', $order), $this->requestData($item->id, 2))->assertSessionHasErrors('items');
@@ -194,7 +194,7 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'close', 'note' => 'The buyer never sent the unit back.'])->assertSessionHasErrors('action');
 
         $this->travel(8)->days();
-        $this->actingAs($admin)->get(route('admin.returns.index', ['needs_action' => 1]))->assertSee('1 need support review');
+        $this->actingAs($admin)->get(route('admin.returns.index', ['needs_action' => 1]))->assertSee('1 case needs support review');
         $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'close', 'note' => 'The buyer never sent the unit back.'])->assertSessionHas('status');
 
         $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'closed']);

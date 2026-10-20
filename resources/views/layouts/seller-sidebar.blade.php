@@ -1,4 +1,4 @@
-<aside data-workspace-header="seller" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r border-slate-800 bg-[#111c32] text-slate-300 lg:flex" aria-label="Seller Center sidebar">
+<aside data-workspace-header="seller" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r border-white/10 bg-[#1c1917] text-slate-300 lg:flex" aria-label="Seller Center sidebar">
     <div class="px-4 pb-4 pt-5">
         <a href="{{ route('seller.dashboard') }}" class="inline-flex items-center gap-3 rounded focus-visible:ring-2 focus-visible:ring-white" aria-label="JMMart Seller Center overview">
             <span class="grid size-9 place-items-center rounded bg-brand text-lg font-bold text-white">J</span>

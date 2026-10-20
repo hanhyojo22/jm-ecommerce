@@ -43,8 +43,8 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="text-[28px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">{{ $isSeller ? 'Returns' : 'Return cases' }}</h1>
-                <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} {{ $needsActionCount === 1 ? 'needs' : 'need' }} {{ $isSeller ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ Str::plural('case', $cases->total()) }} in view</p>
+                <h1 class="font-display text-[30px] font-semibold leading-[1.15] tracking-[-0.03em] text-ink">{{ $isSeller ? 'Returns' : 'Return cases' }}</h1>
+                <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} {{ Str::plural('case', $needsActionCount) }} {{ $needsActionCount === 1 ? 'needs' : 'need' }} {{ $isSeller ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ Str::plural('case', $cases->total()) }} in view</p>
             </div>
             <a href="{{ route('returns') }}" class="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-hover">
                 <x-returns.icon name="shield" class="size-4" />
@@ -70,18 +70,18 @@
             @endforeach
         </div>
 
-        <section class="mt-6 rounded-[14px] border border-line bg-white p-4 shadow-sm sm:p-5" aria-label="Case filters">
+        <section class="mt-6 rounded-[16px] border border-line bg-surface p-4 sm:p-5" aria-label="Case filters">
             <form method="GET" action="{{ route($routeName) }}" class="grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-12">
                 <div class="sm:col-span-2 lg:col-span-5">
-                    <label for="search" class="mb-1.5 block text-sm font-medium text-muted">Search cases</label>
+                    <label for="search" class="field-label">Search cases</label>
                     <div class="relative">
                         <x-returns.icon name="search" class="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-muted" />
-                        <input id="search" name="search" value="{{ $filters['search'] }}" type="search" placeholder="{{ $isSeller ? 'Order number or buyer' : 'Order number, buyer, or store' }}" class="block h-11 w-full rounded-[10px] border-line pl-10 text-sm shadow-sm placeholder:text-muted focus:border-brand focus:ring-brand">
+                        <input id="search" name="search" value="{{ $filters['search'] }}" type="search" placeholder="{{ $isSeller ? 'Order number or buyer' : 'Order number, buyer, or store' }}" class="field-control h-11 pl-10">
                     </div>
                 </div>
                 <div class="lg:col-span-3">
-                    <label for="status" class="mb-1.5 block text-sm font-medium text-muted">Case status</label>
-                    <select id="status" name="status" class="block h-11 w-full rounded-[10px] border-line text-sm shadow-sm focus:border-brand focus:ring-brand">
+                    <label for="status" class="field-label">Case status</label>
+                    <select id="status" name="status" class="field-control h-11">
                         @foreach ($statusOptions as $value => $label)
                             <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
                         @endforeach
@@ -94,9 +94,9 @@
                     </label>
                 </div>
                 <div class="flex items-center gap-3 sm:col-span-2 lg:col-span-2">
-                    <button type="submit" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Apply</button>
+                    <button type="submit" class="button-primary flex-1">Apply</button>
                     @if ($hasFilters)
-                        <a href="{{ route($routeName) }}" class="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-muted underline decoration-slate-300 underline-offset-4 hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand">Clear</a>
+                        <a href="{{ route($routeName) }}" class="button-quiet px-2 text-muted">Clear</a>
                     @endif
                 </div>
             </form>
@@ -114,7 +114,7 @@
                         <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-x-4">
                             <div class="min-w-0 flex-1">
                                 <p class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                                    <span class="font-semibold text-ink">{{ $case->sellerOrder->order->number }}</span>
+                                    <span class="font-display text-base font-semibold text-ink">{{ $case->sellerOrder->order->number }}</span>
                                     <span class="text-sm text-muted">{{ $case->sellerOrder->store->name }}</span>
                                 </p>
                                 <p class="mt-1 text-sm text-muted">
@@ -140,7 +140,7 @@
                                     </div>
                                 @endif
                                 <p class="mt-2 text-sm text-ink">
-                                    {{ $case->items->sum('quantity') }} {{ Str::plural('unit', $case->items->sum('quantity')) }} · <span class="font-semibold tabular-nums">₱{{ number_format((float) $amount, 2) }}</span> at stake
+                                    {{ $case->items->sum('quantity') }} {{ Str::plural('unit', $case->items->sum('quantity')) }} · <span class="font-display text-base font-semibold tabular-nums">₱{{ number_format((float) $amount, 2) }}</span> at stake
                                 </p>
                             </div>
                             <span class="flex items-center gap-1.5 text-xs font-semibold text-brand">
@@ -155,11 +155,11 @@
                             <x-returns.icon name="check" class="size-6" />
                         </span>
                         @if ($hasFilters)
-                            <h2 class="mt-4 text-lg font-semibold text-ink">No cases match these filters</h2>
+                            <h2 class="mt-4 font-display text-xl font-semibold text-ink">No cases match these filters</h2>
                             <p class="mx-auto mt-1 max-w-md text-sm text-muted">Try a different status or clear the filters to see every case.</p>
-                            <a href="{{ route($routeName) }}" class="mt-4 inline-flex min-h-11 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Clear filters</a>
+                            <a href="{{ route($routeName) }}" class="button-secondary mt-4">Clear filters</a>
                         @else
-                            <h2 class="mt-4 text-lg font-semibold text-ink">{{ $isSeller ? 'No return cases yet' : 'Nothing to review' }}</h2>
+                            <h2 class="mt-4 font-display text-xl font-semibold text-ink">{{ $isSeller ? 'No return cases yet' : 'Nothing to review' }}</h2>
                             <p class="mx-auto mt-1 max-w-md text-sm text-muted">{{ $isSeller ? 'When a buyer opens a return request, it lands here and JMMart emails you.' : 'Appeals and overdue cases land here. New cases appear as buyers and sellers work through them.' }}</p>
                         @endif
                     </div>

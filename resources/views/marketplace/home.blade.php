@@ -108,7 +108,7 @@
                         <a href="{{ route('login', ['redirect' => '/start-selling']) }}" class="mt-5 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Start selling</a>
                     @endauth
                 </div>
-                <div class="grid min-h-56 place-items-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6"><div class="w-full max-w-[300px] rounded-2xl bg-white p-5 shadow-[0_20px_44px_rgba(15,23,42,.12)]"><p class="text-sm font-semibold text-ink">Your seller workspace</p><p class="mt-1 text-xs text-muted">Products · Orders · Store settings</p><div class="mt-5 grid grid-cols-3 gap-2"><span class="h-12 rounded-lg bg-blue-100"></span><span class="h-12 rounded-lg bg-blue-200"></span><span class="h-12 rounded-lg bg-brand"></span></div></div></div>
+                <div class="grid min-h-56 place-items-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6"><div class="w-full max-w-[300px] rounded-2xl bg-white p-5 shadow-[0_20px_44px_rgba(28,25,23,.12)]"><p class="text-sm font-semibold text-ink">Your seller workspace</p><p class="mt-1 text-xs text-muted">Products · Orders · Store settings</p><div class="mt-5 grid grid-cols-3 gap-2"><span class="h-12 rounded-lg bg-blue-100"></span><span class="h-12 rounded-lg bg-blue-200"></span><span class="h-12 rounded-lg bg-brand"></span></div></div></div>
             </section>
         @endif
 
@@ -119,7 +119,7 @@
                 <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-stores-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Popular stores</h2><p class="mt-1 text-sm text-muted">Meet the independent sellers behind the products.</p></div><a href="{{ route('catalog.stores') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">Browse stores <span aria-hidden="true">→</span></a></div>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ($stores as $store)
-                        <a href="{{ route('catalog.store', $store->slug) }}" class="rounded-[14px] border border-line bg-white p-4 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
+                        <a href="{{ route('catalog.store', $store->slug) }}" class="rounded-[14px] border border-line bg-white p-4 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(28,25,23,.10)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
                             <span class="flex items-center gap-3">
                                 <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-blue-50 text-lg font-bold text-brand">@if ($store->logo_path)<img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-full object-cover">@else{{ Str::upper(Str::substr($store->name, 0, 1)) }}@endif</span>
                                 <span class="min-w-0"><span class="block truncate text-sm font-semibold text-ink">{{ $store->name }}</span><span class="mt-1 block text-xs text-muted">{{ number_format($store->public_products_count) }} {{ Str::plural('product', $store->public_products_count) }}</span></span>
