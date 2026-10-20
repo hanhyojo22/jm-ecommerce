@@ -1,4 +1,4 @@
-<aside data-workspace-header="customer" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r border-white/10 bg-[#1c1917] text-slate-300 lg:flex" aria-label="Customer account sidebar">
+<aside data-workspace-header="customer" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r border-slate-800 bg-[#111c32] text-slate-300 lg:flex" aria-label="Customer account sidebar">
     <div class="px-5 pb-5 pt-6">
         <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-3 rounded-lg focus-visible:outline-white" aria-label="JMMart My account">
             <span class="grid size-9 place-items-center rounded-xl bg-brand text-lg font-bold text-white">J</span>

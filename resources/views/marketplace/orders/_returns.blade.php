@@ -30,7 +30,7 @@
                 <div class="p-5 sm:p-6">
                     <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                         <div class="flex min-w-0 items-center gap-3">
-                            <span class="grid size-10 shrink-0 place-items-center rounded-[9px] border border-line bg-[#fbf8f2] font-display text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
+                            <span class="grid size-10 shrink-0 place-items-center rounded-[9px] border border-line bg-canvas font-display text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
                             <div class="min-w-0">
                                 <h3 class="truncate font-semibold text-ink">{{ $sellerOrder->store->name }}</h3>
                                 @if ($sellerOrder->delivered_at)
@@ -57,7 +57,7 @@
                             <ul class="mt-2 grid gap-2" aria-label="Return cases for {{ $sellerOrder->store->name }}">
                                 @foreach ($sellerOrder->returnCases as $case)
                                     <li>
-                                        <a href="{{ route('returns.show', $case) }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border border-line bg-white px-3.5 py-3 transition hover:border-[#cfb992] hover:bg-[#fbf8f2] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
+                                        <a href="{{ route('returns.show', $case) }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border border-line bg-white px-3.5 py-3 transition hover:border-blue-300 hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold text-ink">Return case · opened {{ $case->created_at->format('M j, Y') }}</span>
                                                 <span class="mt-0.5 block text-xs text-muted">View the case history and your next step.</span>
@@ -75,10 +75,10 @@
                     @endif
 
                     @if ($windowOpen)
-                        <details class="group mt-4 overflow-hidden rounded-[14px] border border-line bg-[#fbf8f2]" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
-                            <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-[#f5ebd9] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
+                        <details class="group mt-4 overflow-hidden rounded-[14px] border border-line bg-canvas" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
+                            <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-blue-50/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
                                 <span class="flex min-w-0 items-center gap-2">
-                                    <span class="grid size-6 shrink-0 place-items-center rounded-[5px] border border-[#dfd2bd] bg-white text-brand" aria-hidden="true"><x-returns.icon name="plus" class="size-3.5" /></span>
+                                    <span class="grid size-6 shrink-0 place-items-center rounded-[5px] border border-blue-200 bg-white text-brand" aria-hidden="true"><x-returns.icon name="plus" class="size-3.5" /></span>
                                     <span class="min-w-0 text-left leading-5">Request a return from {{ $sellerOrder->store->name }}</span>
                                 </span>
                                 <x-returns.icon name="chevron-down" class="size-4 shrink-0 transition group-open:rotate-180" />
@@ -188,7 +188,7 @@
 
                                     <div>
                                         <label for="return-photos-{{ $sellerOrder->id }}" class="field-label flex items-center gap-2"><span class="returns-form-step" aria-hidden="true">5</span> Photos <span class="font-normal text-muted">(optional, up to three, 5 MB each)</span></label>
-                                        <label for="return-photos-{{ $sellerOrder->id }}" class="flex cursor-pointer items-center gap-3 rounded-[12px] border border-dashed border-[#d4cec1] bg-canvas px-4 py-3.5 transition hover:border-brand hover:bg-[#fbf6ed] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand has-[:focus-visible]:ring-offset-2">
+                                        <label for="return-photos-{{ $sellerOrder->id }}" class="flex cursor-pointer items-center gap-3 rounded-[12px] border border-dashed border-slate-300 bg-canvas px-4 py-3.5 transition hover:border-brand hover:bg-blue-50/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand has-[:focus-visible]:ring-offset-2">
                                             <span class="grid size-9 shrink-0 place-items-center rounded-[8px] border border-line bg-white text-brand" aria-hidden="true"><x-returns.icon name="camera" class="size-4" /></span>
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold text-ink">Add photos of the problem</span>

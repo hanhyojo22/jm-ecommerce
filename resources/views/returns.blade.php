@@ -26,7 +26,7 @@
                     </div>
 
                     <div class="returns-policy-summary">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-[#c9a46a]">One record, start to finish</p>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200">One record, start to finish</p>
                         <h2 class="mt-2">The short version</h2>
                         <ul class="mt-5">
                             <li>
@@ -190,7 +190,7 @@
                             </div>
                         </div>
                         <div class="returns-contact-card mt-6">
-                            <p class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#c9a46a]">
+                            <p class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200">
                                 <x-returns.icon name="chat" class="size-4" />
                                 JMMart support
                             </p>

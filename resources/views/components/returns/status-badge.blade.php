@@ -3,9 +3,8 @@
 @php
     /*
      * One label and tone per case status, shared by the queues and the case page so both
-     * read the same. Brass marks work in progress, ochre a decision owed by one side,
-     * plum JMMart review, sage a granted remedy, brick a denial, and stone a closed case.
-     * The scales themselves live in tailwind.config.js, so the tones stay on-system.
+     * read the same. Blue marks work in progress, amber a decision owed by one side,
+     * violet JMMart review, green a granted remedy, red a denial, and slate a closed case.
      */
     $styles = [
         'awaiting_seller' => ['Awaiting seller response', 'bg-blue-50 text-brand-hover ring-blue-200', 'bg-brand-hover'],
