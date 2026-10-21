@@ -22,7 +22,7 @@
             @if ($formMethod === 'PATCH') @method('PATCH') @endif
 
             <div class="min-w-0 space-y-6">
-                <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-details-heading">
+                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-details-heading">
                     <div class="flex items-start gap-3">
                         <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">1</span>
                         <div><h2 id="product-details-heading" class="text-lg font-semibold text-ink">Product details</h2><p class="mt-1 text-sm text-muted">Describe the item customers will receive.</p></div>
@@ -38,7 +38,7 @@
                     </div>
                 </section>
 
-                <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-photos-heading">
+                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-photos-heading">
                     <div class="flex items-start gap-3">
                         <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">2</span>
                         <div><h2 id="product-photos-heading" class="text-lg font-semibold text-ink">Product photos</h2><p class="mt-1 text-sm text-muted">Show the front, back, details, and available colors.</p></div>
@@ -46,7 +46,7 @@
                     @if ($editing && $product->images->whereNull('product_variant_id')->isNotEmpty())
                         <div class="mt-5"><p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Current photos</p><div class="flex gap-3 overflow-x-auto">@foreach ($product->images->whereNull('product_variant_id') as $image)<img src="{{ Storage::disk('product_images')->url($image->path) }}" alt="Existing product image {{ $loop->iteration }}" class="size-20 shrink-0 rounded-[10px] border border-line object-cover">@endforeach</div></div>
                     @endif
-                    <div class="mt-5 rounded-[14px] border-2 border-dashed border-line bg-canvas p-5 text-center transition focus-within:border-brand">
+                    <div class="mt-5 rounded-2xl border-2 border-dashed border-line bg-canvas p-5 text-center transition focus-within:border-brand">
                         <label for="images" class="block cursor-pointer text-sm font-semibold text-brand">Choose product photos</label>
                         <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple
                             @change="dirty = true; previews.forEach(url => URL.revokeObjectURL(url)); previews = [...$event.target.files].map(file => URL.createObjectURL(file))"
@@ -59,7 +59,7 @@
                     @foreach ($errors->get('images.*') as $messages) @foreach ($messages as $message)<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@endforeach @endforeach
                 </section>
 
-                <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-pricing-heading">
+                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-pricing-heading">
                     <div class="flex items-start gap-3">
                         <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">3</span>
                         <div><h2 id="product-pricing-heading" class="text-lg font-semibold text-ink">Price and inventory</h2><p class="mt-1 text-sm text-muted">Set the base price. Each variant can use a different price and its own photos.</p></div>
@@ -72,7 +72,7 @@
                     </div>
                 </section>
 
-                <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-variants-heading">
+                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-variants-heading">
                     <div class="flex flex-wrap items-start justify-between gap-4">
                         <div class="flex items-start gap-3"><span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">4</span><div><h2 id="product-variants-heading" class="text-lg font-semibold text-ink">Color and size options</h2><p class="mt-1 max-w-xl text-sm text-muted">Add one row for each combination customers can buy. Each needs its own SKU and stock count.</p></div></div>
                         <button type="button" @click="addVariant()" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-brand px-4 text-sm font-semibold text-brand transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-brand">+ Add option</button>
@@ -105,7 +105,7 @@
             </div>
 
             <aside class="space-y-6 lg:sticky lg:top-6 lg:h-fit">
-                <section class="rounded-[14px] border border-line bg-white p-5 shadow-sm">
+                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm">
                     <h2 class="font-semibold text-ink">Listing settings</h2>
                     <p class="mt-1 text-sm leading-6 text-muted">Save your draft, then submit it for review from Products. Add a category, description, and photo before submitting. Saving changes to a published listing returns it to Draft for a fresh review.</p>
                     <div class="mt-4 space-y-2">
@@ -117,7 +117,7 @@
                     </div>
                     <x-input-error :messages="$errors->get('status')" class="mt-2" />
                 </section>
-                <div class="rounded-[14px] border border-line bg-white p-4 shadow-sm">
+                <div class="rounded-2xl border border-line bg-white p-4 shadow-sm">
                     <a href="{{ route('seller.products.index') }}" class="mb-3 flex min-h-11 items-center justify-center rounded-[10px] text-sm font-semibold text-muted hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand">Cancel</a>
                     <button :disabled="saving" class="flex min-h-11 w-full items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-70"><span x-show="!saving">{{ $submitLabel }}</span><span x-show="saving" x-cloak>Saving…</span></button>
                 </div>

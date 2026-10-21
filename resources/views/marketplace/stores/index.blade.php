@@ -13,22 +13,23 @@
         <meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">
     @endauth
     <title>Stores · JMMart</title>
+    @include('partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-dvh bg-canvas font-sans text-ink antialiased">
     <x-marketplace.header :search="$search" />
 
-    <main class="mx-auto min-h-[calc(100dvh-4.5rem)] max-w-[1320px] px-[18px] pb-16 sm:px-8">
+    <main class="marketplace-container min-h-[calc(100dvh-4.5rem)] pb-16">
         <div>
-            <nav aria-label="Breadcrumb" class="mb-2 mt-5 flex items-center gap-2 text-[13px] text-muted">
-                <a href="{{ route('catalog.index') }}" class="font-medium transition hover:text-brand-hover">Marketplace</a>
+            <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
+                <a href="{{ route('home') }}">Home</a>
                 <span aria-hidden="true">/</span>
-                <span aria-current="page" class="font-semibold text-ink">Stores</span>
+                <span aria-current="page">Stores</span>
             </nav>
 
-            <div class="flex flex-col gap-5 pt-2 sm:flex-row sm:items-end sm:justify-between">
+            <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div class="max-w-2xl">
-                    <h1 class="text-[28px] font-bold leading-[1.55] tracking-[-0.02em] text-ink">Discover stores</h1>
+                    <h1 class="marketplace-page-title text-ink">Discover stores</h1>
                 </div>
                 <form method="GET" action="{{ route('catalog.stores') }}" class="flex w-full gap-2 sm:max-w-md">
                     <label for="store-search" class="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[10px] border border-line bg-surface px-3 text-muted focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
@@ -46,7 +47,7 @@
 
             <section class="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Marketplace stores">
                 @forelse ($stores as $store)
-                    <a href="{{ route('catalog.store', $store->slug) }}" class="group min-w-0 rounded-[14px] border border-line bg-surface p-5 transition hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
+                    <a href="{{ route('catalog.store', $store->slug) }}" class="marketplace-surface group min-w-0 p-5 transition hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                         <div class="flex items-center gap-3">
                             <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-blue-50 text-sm font-bold text-brand-hover">
                                 @if ($store->logo_path)
@@ -66,7 +67,7 @@
                         </div>
                     </a>
                 @empty
-                    <div class="col-span-full rounded-[14px] border border-dashed border-line bg-surface px-6 py-16 text-center">
+                    <div class="col-span-full rounded-[var(--radius-surface)] border border-dashed border-line bg-surface px-6 py-16 text-center">
                         <h2 class="font-semibold text-ink">No stores found</h2>
                         @if ($search)
                             <p class="mt-2 text-sm text-muted">Try another store or seller name.</p>

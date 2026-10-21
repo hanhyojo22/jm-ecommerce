@@ -1,7 +1,7 @@
 @props(['user'])
 
 <header data-header-design="bold-modular" data-header-role="admin" class="sticky top-0 z-40 border-b border-line bg-surface">
-    <div class="mx-auto flex min-h-[72px] max-w-[1320px] flex-wrap items-center gap-3 px-[18px] py-3 sm:h-[72px] sm:flex-nowrap sm:gap-4 sm:px-8 sm:py-0">
+    <div class="marketplace-container flex min-h-[72px] flex-wrap items-center gap-3 py-3 sm:h-[72px] sm:flex-nowrap sm:gap-4 sm:py-0">
         <button type="button" x-data="{ visible: window.innerWidth >= 1024 }" @click="visible = !visible; $dispatch('admin-navigation-toggle', { visible, trigger: $event.currentTarget })" @admin-navigation-close.window="visible = false" @resize.window="visible = window.innerWidth >= 1024" :aria-expanded="visible.toString()" aria-controls="admin-workspace-nav" :aria-label="visible ? 'Hide admin navigation' : 'Show admin navigation'" class="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 lg:hidden">
             <svg x-show="!visible" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
             <svg x-cloak x-show="visible" class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>

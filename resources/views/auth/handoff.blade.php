@@ -6,7 +6,7 @@
         data-sign-in-url="{{ $signInUrl ?? route('login') }}"
         role="status"
         aria-live="polite"
-        class="space-y-3 rounded-[14px] border border-line bg-surface p-6 text-center"
+        class="space-y-3 rounded-2xl border border-line bg-surface p-6 text-center"
     >
         <span class="mx-auto block size-8 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden="true"></span>
         <p class="font-semibold text-ink">Finishing your sign-in</p>
@@ -17,7 +17,7 @@
         data-clerk-handoff-error
         hidden
         role="alert"
-        class="space-y-3 rounded-[14px] border border-danger/20 bg-danger/10 p-6 text-center"
+        class="space-y-3 rounded-2xl border border-danger/20 bg-danger/10 p-6 text-center"
     >
         <p data-clerk-handoff-error-title class="font-semibold text-ink">We could not finish signing you in.</p>
         <p class="text-sm text-danger">The hand-off did not complete. Check your connection, then try again — nothing has been changed yet.</p>

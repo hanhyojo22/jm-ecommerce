@@ -1,15 +1,15 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Seller payouts</h1>
+            <h1 class="mt-1 marketplace-page-title">Seller payouts</h1>
             <p class="mt-2 text-sm text-muted">Record manual settlements for paid, delivered seller orders.</p>
         </div>
     </x-slot>
 
     <div class="page-shell">
         <div class="page-container">
-            @if (session('status'))<div class="mb-5 rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
-            @if ($errors->any())<div class="mb-5 rounded-[14px] border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">{{ $errors->first() }}</div>@endif
+            @if (session('status'))<div class="mb-5 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
+            @if ($errors->any())<div class="mb-5 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">{{ $errors->first() }}</div>@endif
 
             <section class="grid gap-4 sm:grid-cols-2" aria-label="Payout summary"><article class="section-card"><p class="text-sm font-medium text-muted">Available balance</p><p class="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format((float) $availableTotal, 2) }}</p><p class="mt-2 text-sm text-muted">Across seller orders that are delivered and paid.</p></article><article class="section-card"><p class="text-sm font-medium text-muted">Commission policy</p><p class="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-ink">₱0.00</p><p class="mt-2 text-sm text-muted">Marketplace commission is zero for this MVP.</p></article></section>
 

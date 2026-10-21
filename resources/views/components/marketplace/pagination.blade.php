@@ -1,8 +1,23 @@
 @if ($paginator->hasPages())
     <nav role="navigation" aria-label="{{ __('Pagination Navigation') }}">
-        <div class="flex flex-wrap items-center justify-center gap-2">
+        {{-- Phones get one compact row: previous, position, next. Pagers do not wrap. --}}
+        <div class="flex items-center justify-center gap-3 sm:hidden">
             @if ($paginator->onFirstPage())
-                <span aria-disabled="true" aria-label="{{ __('pagination.previous') }}" class="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-sm font-medium text-muted">‹</span>
+                <span role="link" aria-disabled="true" aria-label="{{ __('pagination.previous') }}" class="inline-flex size-11 items-center justify-center rounded-[10px] border border-line bg-white text-base text-muted">‹</span>
+            @else
+                <a href="{{ $paginator->previousPageUrl() }}" rel="prev" aria-label="{{ __('pagination.previous') }}" class="inline-flex size-11 items-center justify-center rounded-[10px] border border-line bg-white text-base text-ink transition hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">‹</a>
+            @endif
+            <span class="text-sm font-medium text-muted">Page {{ $paginator->currentPage() }} of {{ $paginator->lastPage() }}</span>
+            @if ($paginator->hasMorePages())
+                <a href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="{{ __('pagination.next') }}" class="inline-flex size-11 items-center justify-center rounded-[10px] border border-line bg-white text-base text-ink transition hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">›</a>
+            @else
+                <span role="link" aria-disabled="true" aria-label="{{ __('pagination.next') }}" class="inline-flex size-11 items-center justify-center rounded-[10px] border border-line bg-white text-base text-muted">›</span>
+            @endif
+        </div>
+
+        <div class="hidden flex-wrap items-center justify-center gap-2 sm:flex">
+            @if ($paginator->onFirstPage())
+                <span role="link" aria-disabled="true" aria-label="{{ __('pagination.previous') }}" class="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-sm font-medium text-muted">‹</span>
             @else
                 <a href="{{ $paginator->previousPageUrl() }}" rel="prev" aria-label="{{ __('pagination.previous') }}" class="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-sm font-medium text-ink transition hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">‹</a>
             @endif
@@ -24,7 +39,7 @@
             @if ($paginator->hasMorePages())
                 <a href="{{ $paginator->nextPageUrl() }}" rel="next" aria-label="{{ __('pagination.next') }}" class="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-sm font-medium text-ink transition hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">›</a>
             @else
-                <span aria-disabled="true" aria-label="{{ __('pagination.next') }}" class="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-sm font-medium text-muted">›</span>
+                <span role="link" aria-disabled="true" aria-label="{{ __('pagination.next') }}" class="inline-flex size-10 items-center justify-center rounded-[10px] border border-line bg-white text-sm font-medium text-muted">›</span>
             @endif
         </div>
     </nav>

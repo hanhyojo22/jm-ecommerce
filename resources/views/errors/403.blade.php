@@ -9,7 +9,7 @@
 </head>
 <body class="bg-canvas font-sans text-ink antialiased">
     <main class="mx-auto flex min-h-screen w-[92%] max-w-xl items-center px-[18px] py-16 sm:px-8">
-        <div class="w-full rounded-[14px] border border-line bg-surface p-6 text-center sm:p-10">
+        <div class="w-full rounded-2xl border border-line bg-surface p-6 text-center sm:p-10">
             <span class="mx-auto grid size-14 place-items-center rounded-full bg-canvas text-muted" aria-hidden="true">
                 <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
             </span>

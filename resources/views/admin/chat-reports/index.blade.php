@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><div><h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">{{ ($filters['status'] ?? null) === 'pending' ? 'Pending chat reports' : 'Chat reports' }}</h1></div></x-slot>
+    <x-slot name="header"><div><h1 class="mt-1 marketplace-page-title">{{ ($filters['status'] ?? null) === 'pending' ? 'Pending chat reports' : 'Chat reports' }}</h1></div></x-slot>
     <div class="page-shell"><div class="page-container space-y-4">
         @forelse ($reports as $report)
             <article id="chat-report-{{ $report->id }}" class="section-card scroll-mt-24">

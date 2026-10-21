@@ -3,7 +3,7 @@
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <a href="{{ route('admin.seller-applications.index') }}" class="text-sm font-semibold text-brand underline decoration-brand/30 underline-offset-4 focus:outline-none focus:ring-2 focus:ring-brand">Seller applications</a>
-                <h1 class="mt-2 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Review application</h1>
+                <h1 class="mt-2 marketplace-page-title">Review application</h1>
             </div>
             <span class="inline-flex h-fit w-fit rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset bg-canvas text-ink ring-line">{{ str_replace('_', ' ', ucfirst($application->status)) }}</span>
         </div>
@@ -12,15 +12,15 @@
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-5xl px-[18px] sm:px-8">
             @if (session('status'))
-                <div class="mb-5 rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-5 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
             @endif
             @if ($errors->has('application'))
-                <div class="mb-5 rounded-[14px] border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ $errors->first('application') }}</div>
+                <div class="mb-5 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ $errors->first('application') }}</div>
             @endif
 
             <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                 <div class="space-y-6">
-                    <section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6" aria-labelledby="applicant-details-heading">
+                    <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6" aria-labelledby="applicant-details-heading">
                         <div class="flex items-center gap-3">
                             <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($application->user->name, 0, 1)) }}</div>
                             <div class="min-w-0">
@@ -46,7 +46,7 @@
                         </dl>
                     </section>
 
-                    <section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6" aria-labelledby="store-details-heading">
+                    <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6" aria-labelledby="store-details-heading">
                         <h2 id="store-details-heading" class="font-semibold text-ink">Proposed store</h2>
                         <dl class="mt-5 grid gap-5 border-t border-line pt-5 sm:grid-cols-2">
                             @if (filled($application->store_name))
@@ -65,10 +65,10 @@
                     </section>
 
                     @if ($application->logo_path)
-                        <section class="rounded-[14px] border border-line bg-surface p-5 sm:p-6" aria-labelledby="submitted-documents-heading">
+                        <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6" aria-labelledby="submitted-documents-heading">
                             <h2 id="submitted-documents-heading" class="font-semibold text-ink">Submitted documents</h2>
                             <div class="mt-5 flex items-center gap-4 border-t border-line pt-5">
-                                <img src="{{ Storage::disk('public')->url($application->logo_path) }}" alt="Submitted logo for {{ $application->store_name }}" class="h-16 w-16 rounded-[14px] border border-line object-cover">
+                                <img src="{{ Storage::disk('public')->url($application->logo_path) }}" alt="Submitted logo for {{ $application->store_name }}" class="h-16 w-16 rounded-2xl border border-line object-cover">
                                 <div><p class="font-medium text-ink">Store logo</p><a href="{{ Storage::disk('public')->url($application->logo_path) }}" target="_blank" rel="noopener" class="mt-1 inline-flex text-sm font-semibold text-brand underline decoration-brand/30 underline-offset-4 focus:outline-none focus:ring-2 focus:ring-brand">Open image</a></div>
                             </div>
                         </section>
@@ -76,7 +76,7 @@
                 </div>
 
                 <aside class="space-y-6 lg:sticky lg:top-6 lg:h-fit">
-                    <section class="rounded-[14px] border border-line bg-surface p-5 " aria-labelledby="application-summary-heading">
+                    <section class="rounded-2xl border border-line bg-surface p-5 " aria-labelledby="application-summary-heading">
                         <h2 id="application-summary-heading" class="font-semibold text-ink">Application summary</h2>
                         <dl class="mt-4 space-y-4 border-t border-line pt-4 text-sm">
                             <div><dt class="text-xs font-medium uppercase tracking-[0.1em] text-muted">Submitted</dt><dd class="mt-1 font-medium text-ink">{{ $application->submitted_at?->format('M j, Y, g:i A') ?? 'Not submitted' }}</dd></div>
@@ -90,7 +90,7 @@
                     </section>
 
                     @if (in_array($application->status, ['pending', 'submitted', 'under_review'], true))
-                        <section class="rounded-[14px] border border-success/20 bg-surface p-5 " aria-labelledby="decision-heading">
+                        <section class="rounded-2xl border border-success/20 bg-surface p-5 " aria-labelledby="decision-heading">
                             <h2 id="decision-heading" class="font-semibold text-ink">Make a decision</h2>
                             <p class="mt-2 text-sm leading-6 text-muted">Approving creates an active store and an owner membership for this applicant. It will then appear in Stores.</p>
                             <form method="POST" action="{{ route('admin.seller-applications.approve', $application) }}" class="mt-4" onsubmit="return confirm('Approve this seller application? This will create an active store and owner membership.');">

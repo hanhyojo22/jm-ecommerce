@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-slot name="header"><h1 class="text-2xl font-bold text-ink">Order requests</h1></x-slot>
+    <x-slot name="header"><h1 class="marketplace-page-title">Order requests</h1></x-slot>
     <div class="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-8">
         @if(session('status'))<p role="status" class="rounded-lg bg-blue-50 p-4 text-sm text-brand-hover">{{ session('status') }}</p>@endif
         @if($errors->any())<div role="alert" class="rounded-lg bg-red-50 p-4 text-sm text-danger">{{ $errors->first() }}</div>@endif
@@ -9,7 +9,7 @@
             @endforeach
         </nav>
         @forelse($issues as $issue)
-            <article class="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
+            <article class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div><h2 class="font-semibold text-ink">{{ str($issue->type)->replace('_', ' ')->title() }} · {{ $issue->sellerOrder->store->name }}</h2><p class="mt-1 text-sm text-muted"><a class="text-brand-hover underline" href="{{ route('admin.orders.show', $issue->sellerOrder->order) }}">Order #{{ $issue->sellerOrder->order->number }}</a> · {{ $issue->buyer->name }} ({{ $issue->buyer->email }}) · {{ $issue->created_at->format('M j, Y') }}</p></div>
                     <span class="rounded-full bg-canvas px-3 py-1 text-xs font-semibold text-muted">{{ ucfirst($issue->status) }}</span>

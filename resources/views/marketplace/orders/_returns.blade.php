@@ -75,7 +75,7 @@
                     @endif
 
                     @if ($windowOpen)
-                        <details class="group mt-4 overflow-hidden rounded-[14px] border border-line bg-canvas" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
+                        <details class="group mt-4 overflow-hidden rounded-2xl border border-line bg-canvas" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
                             <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-blue-50/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
                                 <span class="flex min-w-0 items-center gap-2">
                                     <span class="grid size-6 shrink-0 place-items-center rounded-[5px] border border-blue-200 bg-white text-brand" aria-hidden="true"><x-returns.icon name="plus" class="size-3.5" /></span>

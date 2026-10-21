@@ -15,6 +15,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
@@ -64,6 +65,10 @@ class AppServiceProvider extends ServiceProvider
         }
 
         Auth::viaRequest('clerk', fn ($request) => app(ClerkUserResolver::class)->resolve($request));
+
+        // One responsive pager everywhere: marketplace cards and workspace tables share it.
+        Paginator::defaultView('components.marketplace.pagination');
+        Paginator::defaultSimpleView('components.marketplace.pagination');
 
         RateLimiter::for('cart', fn (Request $request): Limit => Limit::perMinute(30)->by(
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),

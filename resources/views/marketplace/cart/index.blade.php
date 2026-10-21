@@ -19,13 +19,13 @@
         <div class="page-container">
             <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <h1 class="customer-page-title text-3xl font-bold tracking-[-0.03em] text-ink">Shopping cart</h1>
+                    <h1 class="customer-page-title">Shopping cart</h1>
                     <p class="mt-1 text-sm text-muted">{{ $items->sum('quantity') }} {{ Str::plural('item', $items->sum('quantity')) }} · Grouped by seller</p>
                 </div>
                 <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Continue shopping</a>
             </div>
             @if (session('status'))
-                <div class="mb-6 flex flex-wrap items-center gap-3 rounded-[14px] border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-ink" role="status">
+                <div class="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-ink" role="status">
                     <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-success text-white" aria-hidden="true">✓</span>
                     <span class="flex-1">{{ session('status') }}</span>
                     @if (session('removed_cart_item'))
@@ -43,7 +43,7 @@
                         <section aria-labelledby="cart-items">
                             <h2 id="cart-items" class="sr-only">Cart items grouped by seller</h2>
 
-                            <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[14px] border border-line bg-surface px-4 py-3 sm:px-5">
+                            <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--radius-surface)] border border-line bg-surface px-4 py-3 sm:px-5">
                                 <label class="inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-ink">
                                     <input type="checkbox" data-select-all @checked($allSelected) x-bind:checked="allSelected" x-on:change="toggleAll()" @disabled($availableItems->isEmpty()) class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
                                     Select all
@@ -66,7 +66,7 @@
                                             && $storeSelectable->where('selected', true)->count() === $storeSelectable->count();
                                     @endphp
 
-                                    <section class="overflow-hidden rounded-[14px] border border-line bg-surface" aria-labelledby="store-{{ $store->id }}">
+                                    <section class="overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface" aria-labelledby="store-{{ $store->id }}">
                                         <div class="flex items-center justify-between gap-4 border-b border-line bg-canvas/70 px-4 py-3 sm:px-5">
                                             <div class="flex min-w-0 items-center gap-3">
                                                 <input type="checkbox" data-store-checkbox="{{ $storeId }}" @checked($storeAllSelected) x-on:change="toggleStore('{{ $storeId }}')" @disabled($storeSelectable->isEmpty()) aria-label="Select all items from {{ $store->name }}" class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
@@ -87,7 +87,7 @@
                                                         <input type="checkbox" id="select-{{ $item->id }}" @checked($item->selected) x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
                                                     </div>
 
-                                                    <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-xl bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $isUnavailable ? 'opacity-60' : '' }}">
+                                                    <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-[12px] bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $isUnavailable ? 'opacity-60' : '' }}">
                                                         @if ($item->imagePath())
                                                             <img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="{{ $item->product->name }}" width="96" height="96" loading="lazy" class="h-full w-full object-cover">
                                                         @else
@@ -152,7 +152,7 @@
                         </section>
 
                         <aside class="hidden lg:sticky lg:top-24 lg:block lg:self-start">
-                            <div class="rounded-[14px] border border-line bg-surface p-5 sm:p-6">
+                            <div class="rounded-[var(--radius-surface)] border border-line bg-surface p-5 sm:p-6">
                                 <h3 class="text-lg font-semibold tracking-[-0.02em] text-ink">Order summary</h3>
                                 <div class="mt-5 space-y-3 border-b border-line pb-5 text-sm">
                                     @php($selectedQuantity = $items->where('selected', true)->sum('quantity'))
@@ -188,7 +188,7 @@
                     </div>
                 </div>
             @else
-                <div class="mx-auto max-w-md rounded-[14px] border border-dashed border-line bg-surface px-6 py-16 text-center">
+                <div class="mx-auto max-w-md rounded-2xl border border-dashed border-line bg-surface px-6 py-16 text-center">
                     <div class="mx-auto grid h-14 w-14 place-items-center rounded-[10px] bg-blue-50 text-brand" aria-hidden="true"><svg viewBox="0 0 24 24" class="size-6" fill="none" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg></div>
                     <h3 class="mt-5 text-xl font-semibold tracking-[-0.02em] text-ink">Your cart is waiting.</h3>
                     <p class="mt-2 text-sm leading-6 text-muted">Choose something from an independent store and it will appear here.</p>

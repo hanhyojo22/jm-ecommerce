@@ -20,7 +20,7 @@
                 <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-hover hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Continue shopping <span aria-hidden="true" class="ml-1">→</span></a>
             </header>
 
-            <nav class="flex min-w-0 gap-1 overflow-x-auto border-b border-line" aria-label="Purchase status filters" tabindex="0">
+            <nav class="marketplace-nav-scroll flex min-w-0 gap-1 overflow-x-auto border-b border-line" aria-label="Purchase status filters" tabindex="0">
                 @foreach ($tabs as $key => $label)
                     <a href="{{ route('orders.index', [...request()->except('tab', 'page'), 'tab' => $key]) }}" @class([
                         'relative inline-flex min-h-12 shrink-0 items-center gap-2 whitespace-nowrap px-3 pb-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:px-4',
@@ -118,17 +118,17 @@
                             </div>
                             <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                                 <p class="mr-1 w-full text-sm text-muted sm:w-auto">Store total <strong class="ml-1 text-lg tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</strong></p>
-                                <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}">@csrf<button type="submit" class="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Message seller</button></form>
-                                <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-10 items-center rounded-lg border border-line bg-surface px-3 text-xs font-semibold text-ink hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View order</a>
+                                <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}">@csrf<button type="submit" class="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface px-4 text-sm font-semibold text-ink hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Message seller</button></form>
+                                <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface px-4 text-sm font-semibold text-ink hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View order</a>
                                 @if ($reviewableItemId)
-                                    <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Write review</a>
+                                    <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Write review</a>
                                 @endif
                                 @if ($returnCases->isNotEmpty())
-                                    @foreach ($returnCases as $returnCase)<a href="{{ route('returns.show', $returnCase) }}" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white">View return{{ $returnCases->count() > 1 ? ' · '.$loop->iteration : '' }}</a>@endforeach
+                                    @foreach ($returnCases as $returnCase)<a href="{{ route('returns.show', $returnCase) }}" class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white">View return{{ $returnCases->count() > 1 ? ' · '.$loop->iteration : '' }}</a>@endforeach
                                 @elseif ($returnIssue && ($tab === 'returns' || $returnIssue->status === 'open'))
-                                    <a href="{{ route('orders.show', $order) }}#order-help" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View return</a>
+                                    <a href="{{ route('orders.show', $order) }}#order-help" class="inline-flex min-h-11 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View return</a>
                                 @elseif ($sellerOrder->status === 'delivered')
-                                    <a href="{{ route('orders.show', $order) }}#returns" class="inline-flex min-h-10 items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->delivered_at && now()->lessThanOrEqualTo($sellerOrder->delivered_at->copy()->addDays(7)) ? 'Request return' : 'Contact support' }}</a>
+                                    <a href="{{ route('orders.show', $order) }}#returns" class="inline-flex min-h-11 items-center rounded-lg border border-line bg-surface px-4 text-sm font-semibold text-ink hover:border-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->delivered_at && now()->lessThanOrEqualTo($sellerOrder->delivered_at->copy()->addDays(7)) ? 'Request return' : 'Contact support' }}</a>
                                 @endif
                             </div>
                         </footer>

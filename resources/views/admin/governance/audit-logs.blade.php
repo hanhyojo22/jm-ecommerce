@@ -1,13 +1,13 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <h1 class="text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Audit log</h1>
+            <h1 class="marketplace-page-title">Audit log</h1>
         </div>
     </x-slot>
 
     <div class="page-shell">
         <div class="page-container">
-            <section class="overflow-hidden rounded-[14px] border border-line bg-surface" aria-label="Administrative activity log">
+            <section class="overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Administrative activity log">
                 <div class="table-scroll hidden lg:block">
                     <table class="min-w-[900px] divide-y divide-line text-sm">
                         <thead class="bg-canvas text-left text-xs font-semibold uppercase tracking-[0.1em] text-muted">

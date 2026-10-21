@@ -28,7 +28,7 @@
                 </div>
 
                 <div class="table-scroll hidden md:block">
-                    <table class="min-w-[760px] divide-y divide-line text-sm">
+                    <table class="w-full min-w-[760px] divide-y divide-line text-sm">
                         <thead class="bg-canvas text-left text-xs font-semibold uppercase tracking-[0.1em] text-muted">
                             <tr><th class="px-5 py-3.5">Order</th><th class="px-5 py-3.5">Available</th><th class="px-5 py-3.5 text-right">Gross sales</th><th class="px-5 py-3.5 text-right">Commission</th><th class="px-5 py-3.5 text-right">Net payable</th><th class="px-5 py-3.5">Status</th></tr>
                         </thead>

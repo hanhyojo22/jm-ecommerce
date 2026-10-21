@@ -1,7 +1,7 @@
 <x-app-layout>
     <div class="mx-auto max-w-3xl px-[18px] py-10 text-ink sm:px-8 sm:py-14">
         <p class="text-sm font-semibold uppercase tracking-wider text-brand">JMMart · Privacy</p>
-        <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Privacy Policy</h1>
+        <h1 class="marketplace-page-title mt-2">Privacy Policy</h1>
         <p class="mt-4 leading-7 text-muted">This page explains how JMMart uses information to operate the marketplace. Last updated October 12, 2026.</p>
 
         <div class="mt-9 space-y-8 leading-7">

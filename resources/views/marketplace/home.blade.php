@@ -7,7 +7,7 @@
             <div class="marketplace-hero">
                 <div class="marketplace-hero-copy">
                     <p class="text-xs font-bold uppercase tracking-[.15em] text-brand">Your local marketplace, reimagined</p>
-                    <h1 id="marketplace-home-heading" class="mt-5 text-4xl font-bold leading-[1.08] tracking-[-.045em] sm:text-5xl">Good finds.<br>Closer to <span class="text-brand">home.</span></h1>
+                    <h1 id="marketplace-home-heading" class="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-[-.03em] sm:text-5xl">Good finds.<br>Closer to <span class="text-brand">home.</span></h1>
                     <p class="mt-5 max-w-sm text-sm leading-7 text-muted">Discover everyday favorites from stores you'll love. Thoughtfully picked, locally connected.</p>
                     <a href="{{ route('catalog.index') }}" class="mt-6 inline-flex min-h-12 items-center gap-4 rounded-xl bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Explore the marketplace <span aria-hidden="true">&rarr;</span></a>
                 </div>
@@ -28,8 +28,8 @@
         </section>
 
         @if ($categories->isNotEmpty())
-            <section id="shop-by-category" class="scroll-mt-[168px] border-t border-line py-10 min-[641px]:scroll-mt-[118px] sm:py-12" aria-labelledby="home-categories-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-categories-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Find your kind of good.</h2><p class="mt-1 text-sm text-muted">A little of everything. Something for you.</p></div><a href="{{ route('catalog.index') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">View all <span aria-hidden="true">→</span></a></div>
+            <section id="shop-by-category" class="marketplace-section scroll-mt-[136px]" aria-labelledby="home-categories-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-categories-heading" class="marketplace-section-title">Find your kind of good.</h2><p class="marketplace-section-subtitle">A little of everything. Something for you.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">View all <span aria-hidden="true">→</span></a></div>
                 <div class="grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
                     @foreach ($categories as $category)
                         <x-marketplace.category-card :category="$category" :show-count="true" :href="route('catalog.index', ['category' => $category->slug])" />
@@ -39,9 +39,9 @@
         @endif
 
         @if ($bestSellers->isNotEmpty())
-            <section class="border-t border-line py-10 sm:py-12" aria-labelledby="home-trending-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-trending-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Trending products</h2><p class="mt-1 text-sm text-muted">Popular with buyers across the marketplace.</p></div><a href="{{ route('catalog.top-products') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">View all <span aria-hidden="true">→</span></a></div>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            <section class="marketplace-section" aria-labelledby="home-trending-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-trending-heading" class="marketplace-section-title">Trending products</h2><p class="marketplace-section-subtitle">Popular with buyers across the marketplace.</p></div><a href="{{ route('catalog.top-products') }}" class="marketplace-section-link">View all <span aria-hidden="true">→</span></a></div>
+                <div class="marketplace-product-grid">
                     @foreach ($bestSellers->take(4) as $product)
                         <x-marketplace.top-product-card :product="$product" />
                     @endforeach
@@ -50,9 +50,9 @@
         @endif
 
         @if ($newProducts->isNotEmpty())
-            <section id="new-arrivals" data-new-arrivals data-next-url="{{ $newProducts->nextPageUrl() ?? '' }}" class="scroll-mt-24 border-t border-line py-10 sm:py-12" aria-labelledby="home-new-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-new-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">New arrivals</h2><p class="mt-1 text-sm text-muted">Recently added by marketplace sellers.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">View all <span aria-hidden="true">→</span></a></div>
-                <div id="new-arrivals-products" data-new-arrivals-grid class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            <section id="new-arrivals" data-new-arrivals data-next-url="{{ $newProducts->nextPageUrl() ?? '' }}" class="marketplace-section scroll-mt-24" aria-labelledby="home-new-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-new-heading" class="marketplace-section-title">New arrivals</h2><p class="marketplace-section-subtitle">Recently added by marketplace sellers.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="marketplace-section-link">View all <span aria-hidden="true">→</span></a></div>
+                <div id="new-arrivals-products" data-new-arrivals-grid class="marketplace-product-grid">
                     @include('marketplace.catalog._new-arrival-cards', ['products' => $newProducts])
                 </div>
                 @if ($newProducts->hasMorePages())
@@ -65,9 +65,9 @@
         @endif
 
         @if ($flashDeals->isNotEmpty())
-            <section id="flash-deals" class="scroll-mt-[168px] py-8 min-[641px]:scroll-mt-[118px] sm:py-10" aria-labelledby="home-deals-heading">
-                <div class="grid gap-6 rounded-[20px] bg-ink p-5 text-white sm:p-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-7">
-                    <div class="flex flex-col items-start justify-center"><p class="text-xs font-semibold uppercase tracking-[.12em] text-blue-300">Flash deals</p><h2 id="home-deals-heading" class="mt-2 text-[25px] font-bold leading-tight tracking-[-.03em] text-white">A good find at a better price.</h2><p class="mt-2 text-sm leading-6 text-slate-300">Browse products currently discounted by their sellers.</p><a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center rounded-[10px] bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100">View all deals <span class="ml-2" aria-hidden="true">→</span></a></div>
+            <section id="flash-deals" class="scroll-mt-[136px] py-8 sm:py-10" aria-labelledby="home-deals-heading">
+                <div class="grid gap-6 rounded-[var(--radius-surface)] bg-ink p-5 text-white sm:p-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-7">
+                    <div class="flex flex-col items-start justify-center"><p class="text-xs font-semibold uppercase tracking-[.12em] text-blue-300">Flash deals</p><h2 id="home-deals-heading" class="marketplace-section-title mt-2 text-white">A good find at a better price.</h2><p class="mt-2 text-sm leading-6 text-slate-300">Browse products currently discounted by their sellers.</p><a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center rounded-[10px] bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100">View all deals <span class="ml-2" aria-hidden="true">→</span></a></div>
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         @foreach ($flashDeals as $product)
                             <x-marketplace.top-product-card :product="$product" />
@@ -78,9 +78,9 @@
         @endif
 
         @if ($recentlyViewed->isNotEmpty() && $recommendedProducts->isNotEmpty())
-            <section class="border-t border-line py-10 sm:py-12" aria-labelledby="home-recommended-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-recommended-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Recommended for you</h2><p class="mt-1 text-sm text-muted">More to explore from categories you recently viewed.</p></div><a href="{{ route('catalog.index') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">Explore marketplace <span aria-hidden="true">→</span></a></div>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            <section class="marketplace-section" aria-labelledby="home-recommended-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-recommended-heading" class="marketplace-section-title">Recommended for you</h2><p class="marketplace-section-subtitle">More to explore from categories you recently viewed.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">Explore marketplace <span aria-hidden="true">→</span></a></div>
+                <div class="marketplace-product-grid">
                     @foreach ($recommendedProducts as $product)
                         <x-marketplace.top-product-card :product="$product" />
                     @endforeach
@@ -89,9 +89,9 @@
         @endif
 
         @if ($recentlyViewed->isNotEmpty())
-            <section class="border-t border-line py-10 sm:py-12" aria-labelledby="home-recent-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-recent-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Recently viewed</h2><p class="mt-1 text-sm text-muted">Pick up where you left off.</p></div><form method="POST" action="{{ route('catalog.recently-viewed.clear') }}">@csrf @method('DELETE')<button type="submit" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Clear history</button></form></div>
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+            <section class="marketplace-section" aria-labelledby="home-recent-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-recent-heading" class="marketplace-section-title">Recently viewed</h2><p class="marketplace-section-subtitle">Pick up where you left off.</p></div><form method="POST" action="{{ route('catalog.recently-viewed.clear') }}">@csrf @method('DELETE')<button type="submit" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Clear history</button></form></div>
+                <div class="marketplace-product-grid">
                     @foreach ($recentlyViewed->take(4) as $product)
                         <x-marketplace.top-product-card :product="$product" />
                     @endforeach
@@ -100,8 +100,8 @@
         @endif
 
         @if (! auth()->user()?->isPlatformAdministrator() && ! (auth()->user()?->account_type === 'seller' && auth()->user()->sellerTenant()))
-            <section class="my-8 grid overflow-hidden rounded-[20px] border border-line bg-white sm:grid-cols-[1.1fr_.9fr]" aria-labelledby="home-seller-heading">
-                <div class="p-6 sm:p-9"><p class="text-xs font-semibold uppercase tracking-[.12em] text-brand">Sell on JMMart</p><h2 id="home-seller-heading" class="mt-2 max-w-[20ch] text-2xl font-bold leading-tight tracking-[-.03em] text-ink">Open a storefront and grow your business.</h2><p class="mt-3 max-w-xl text-sm leading-6 text-muted">Reach shoppers and manage your products and orders from Seller Center.</p>
+            <section class="my-8 grid overflow-hidden rounded-[var(--radius-surface)] border border-line bg-white sm:grid-cols-[1.1fr_.9fr]" aria-labelledby="home-seller-heading">
+                <div class="p-6 sm:p-9"><p class="text-xs font-semibold uppercase tracking-[.12em] text-brand">Sell on JMMart</p><h2 id="home-seller-heading" class="marketplace-section-title mt-2 max-w-[20ch]">Open a storefront and grow your business.</h2><p class="mt-3 max-w-xl text-sm leading-6 text-muted">Reach shoppers and manage your products and orders from Seller Center.</p>
                     @auth
                         <a href="{{ route('seller-application.create') }}" class="mt-5 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Start selling</a>
                     @else
@@ -115,11 +115,11 @@
 
 
         @if ($stores->isNotEmpty())
-            <section class="border-t border-line py-10 sm:py-12" aria-labelledby="home-stores-heading">
-                <div class="mb-5 flex items-end justify-between gap-4"><div><h2 id="home-stores-heading" class="text-2xl font-bold tracking-[-.03em] text-ink">Popular stores</h2><p class="mt-1 text-sm text-muted">Meet the independent sellers behind the products.</p></div><a href="{{ route('catalog.stores') }}" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover">Browse stores <span aria-hidden="true">→</span></a></div>
+            <section class="marketplace-section" aria-labelledby="home-stores-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-stores-heading" class="marketplace-section-title">Popular stores</h2><p class="marketplace-section-subtitle">Meet the independent sellers behind the products.</p></div><a href="{{ route('catalog.stores') }}" class="marketplace-section-link">Browse stores <span aria-hidden="true">→</span></a></div>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ($stores as $store)
-                        <a href="{{ route('catalog.store', $store->slug) }}" class="rounded-[14px] border border-line bg-white p-4 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
+                        <a href="{{ route('catalog.store', $store->slug) }}" class="marketplace-surface p-5 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
                             <span class="flex items-center gap-3">
                                 <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-blue-50 text-lg font-bold text-brand">@if ($store->logo_path)<img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-full object-cover">@else{{ Str::upper(Str::substr($store->name, 0, 1)) }}@endif</span>
                                 <span class="min-w-0"><span class="block truncate text-sm font-semibold text-ink">{{ $store->name }}</span><span class="mt-1 block text-xs text-muted">{{ number_format($store->public_products_count) }} {{ Str::plural('product', $store->public_products_count) }}</span></span>

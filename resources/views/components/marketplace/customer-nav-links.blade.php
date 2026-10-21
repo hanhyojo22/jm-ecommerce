@@ -12,7 +12,7 @@
 @endphp
 
 <nav class="flex-1 space-y-1 {{ $mode === 'mobile' ? 'overflow-y-auto p-4' : 'px-3 py-4' }}" aria-label="Customer account navigation" data-role-navigation="customer">
-    <p class="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.16em] text-slate-400">My account</p>
+    <p class="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[.14em] text-slate-400">My account</p>
     @foreach ($items as $item)
         <a href="{{ $item['href'] }}" @class([
             'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-white',

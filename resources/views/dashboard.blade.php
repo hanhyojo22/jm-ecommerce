@@ -62,7 +62,7 @@
                         @endif
                     </div>
 
-                    <nav class="mt-5 flex gap-1 overflow-x-auto border-b border-line" aria-label="Moderation queue categories" aria-describedby="queue-guidance">
+                    <nav class="marketplace-nav-scroll mt-5 flex gap-1 overflow-x-auto border-b border-line" aria-label="Moderation queue categories" aria-describedby="queue-guidance">
                         @foreach ($queueTabs as $key => $tab)
                             <?php $isCurrentTab = $activeType === $key; ?>
                             <a href="{{ $key === 'all' ? route('admin.moderation') : route('admin.moderation', ['type' => $key]) }}" @class([
@@ -73,7 +73,7 @@
                                 {{ $tab['label'] }}
                                 <span @class([
                                     'rounded-full px-2 py-0.5 text-xs tabular-nums',
-                                    'bg-brand/10 text-brand' => $isCurrentTab,
+                                    'bg-brand/10 text-brand-hover' => $isCurrentTab,
                                     'bg-canvas text-muted' => ! $isCurrentTab,
                                 ])>{{ number_format($tab['count']) }}</span>
                             </a>
@@ -127,9 +127,9 @@
                         <?php foreach ($queueItems as $item): ?>
                             @php
                                 $type = match ($item['type']) {
-                                    'application' => ['label' => 'Seller application', 'style' => 'bg-brand/10 text-brand'],
+                                    'application' => ['label' => 'Seller application', 'style' => 'bg-brand/10 text-brand-hover'],
                                     'appeal' => ['label' => 'Store appeal', 'style' => 'bg-warning/10 text-warning-text'],
-                                    'product_report' => ['label' => 'Reported review', 'style' => 'bg-danger/10 text-danger'],
+                                    'product_report' => ['label' => 'Reported review', 'style' => 'bg-danger/10 text-danger-text'],
                                     'chat_report' => ['label' => 'Chat report', 'style' => 'bg-canvas text-muted'],
                                 };
                                 $receivedAt = $item['received_at'];
@@ -177,7 +177,7 @@
                     <p class="mt-1 text-sm leading-5 text-muted">Review suspended stores, pending applications, and recent decisions.</p>
                     <div class="mt-2 divide-y divide-line">
                         <a href="{{ route('admin.stores.index', ['status' => 'suspended']) }}" class="group flex min-h-[5.25rem] items-center gap-3 py-3 focus-visible:ring-2 focus-visible:ring-brand">
-                            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-danger/10 text-danger">
+                            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-danger/10 text-danger-text">
                                 <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
                             </span>
                             <span class="min-w-0 flex-1"><span class="block text-sm font-medium text-ink">Suspended stores</span><span class="mt-0.5 block text-xl font-semibold tabular-nums text-ink">{{ number_format($counts['suspendedStores']) }}</span></span>
@@ -185,7 +185,7 @@
                         </a>
 
                         <a href="{{ route('admin.seller-applications.index', ['status' => 'pending']) }}" class="group flex min-h-[5.25rem] items-center gap-3 py-3 focus-visible:ring-2 focus-visible:ring-brand">
-                            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand">
+                            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand-hover">
                                 <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h7l4 4v14H5V3z" /><path d="M15 3v5h5M8 12h8M8 16h8" /></svg>
                             </span>
                             <span class="min-w-0 flex-1"><span class="block text-sm font-medium text-ink">Pending applications</span><span class="mt-0.5 block text-xl font-semibold tabular-nums text-ink">{{ number_format($counts['applications']) }}</span></span>

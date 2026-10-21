@@ -601,7 +601,7 @@ class CatalogTest extends TestCase
             ->assertSee('x-on:change="$el.form.requestSubmit()"', false)
             ->assertSee('Marketplace')
             ->assertDontSee('Everything you love, from stores you can trust.')
-            ->assertSee('min-[1021px]:grid-cols-4', false);
+            ->assertSee('marketplace-product-grid', false);
     }
 
     public function test_catalog_shows_purchased_units_and_excludes_cancelled_seller_orders(): void

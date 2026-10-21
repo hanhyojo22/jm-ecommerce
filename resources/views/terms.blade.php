@@ -1,7 +1,7 @@
 <x-app-layout>
     <div class="mx-auto max-w-3xl px-[18px] py-10 text-ink sm:px-8 sm:py-14">
         <p class="text-sm font-semibold uppercase tracking-wider text-brand">JMMart · Marketplace</p>
-        <h1 class="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Terms of Use</h1>
+        <h1 class="marketplace-page-title mt-2">Terms of Use</h1>
         <p class="mt-4 leading-7 text-muted">Last updated October 12, 2026. These terms describe how buyers and sellers use JMMart.</p>
         <div class="mt-9 space-y-8 leading-7">
             <section><h2 class="text-xl font-bold">Accounts</h2><p class="mt-2">Provide accurate account and delivery details, keep your sign-in secure, and use the marketplace lawfully. Sellers are responsible for their shop information and listings. JMMart may moderate listings and accounts to keep the marketplace safe.</p></section>

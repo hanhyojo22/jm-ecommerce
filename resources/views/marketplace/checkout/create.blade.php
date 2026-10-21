@@ -2,8 +2,8 @@
     @php($itemsByStore = $cart->items->groupBy(fn ($item) => $item->product->store_id))
 
     {{-- Room at the foot so the fixed phone action bar never covers the last of the summary. --}}
-    <div class="min-h-[calc(100dvh-4.5rem)] bg-canvas py-6 max-lg:pb-28">
-        <div class="mx-auto flex w-full max-w-[1220px] flex-col gap-6 px-6" x-data="{
+    <div class="page-shell min-h-[calc(100dvh-4.5rem)] max-lg:pb-28">
+        <div class="page-container flex flex-col gap-6" x-data="{
             placing: false,
             addresses: @js($addresses->map(fn ($address) => $address->only(['id', 'recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']))),
             chooseAddress(event) {
@@ -13,13 +13,13 @@
                 }
             },
         }">
-            <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted">
+            <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
                 <a href="{{ route('cart.index') }}" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">Cart</a>
                 <span aria-hidden="true">/</span><span aria-current="page" class="font-semibold text-ink">Checkout</span>
             </nav>
             <div class="grid gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand">Almost there</p>
-                <h1 class="text-[30px] font-bold leading-[1.2] tracking-[-1px] text-ink min-[601px]:text-[27px] min-[801px]:text-[33px]">Checkout</h1>
+                <h1 class="marketplace-page-title">Checkout</h1>
             </div>
 
             <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="placing = true" class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -40,10 +40,10 @@
                             </ul>
                         </div>
                     @endif
-                    <section class="rounded-[18px] border border-line bg-surface p-6 shadow-sm" aria-labelledby="delivery-heading">
+                    <section class="marketplace-surface p-6" aria-labelledby="delivery-heading">
                         <div class="grid gap-2"><h2 id="delivery-heading" class="text-lg font-semibold text-ink">Delivery address</h2><p class="text-sm text-muted">Where should your order be delivered?</p></div>
                         @if ($addresses->isNotEmpty())
-                            <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50/40 p-4">
+                            <div class="mt-6 rounded-[10px] border border-blue-200 bg-blue-50/40 p-4">
                                 <label for="saved-address" class="text-sm font-semibold text-ink">Use a saved address</label>
                                 <select id="saved-address" @change="chooseAddress($event)" class="mt-2 min-h-12 w-full rounded-[10px] border-line text-sm text-ink focus:border-brand focus:ring-brand">
                                     <option value="">Enter a new address</option>
@@ -95,7 +95,7 @@
                             </div>
                         </div>
                     </section>
-                    <section class="rounded-[18px] border border-line bg-surface p-6 shadow-sm" aria-labelledby="store-delivery-heading">
+                    <section class="marketplace-surface p-6" aria-labelledby="store-delivery-heading">
                         <h2 id="store-delivery-heading" class="text-lg font-semibold text-ink">Delivery by store</h2>
                         <div class="mt-6 grid gap-4">
                             @foreach ($itemsByStore as $storeItems)
@@ -103,15 +103,15 @@
                             @endforeach
                         </div>
                     </section>
-                    <section class="rounded-[18px] border border-line bg-surface p-6 shadow-sm" aria-labelledby="payment-heading">
+                    <section class="marketplace-surface p-6" aria-labelledby="payment-heading">
                         <div class="grid gap-2"><h2 id="payment-heading" class="text-lg font-semibold text-ink">Payment method</h2><p class="text-sm text-muted">Pay when your items arrive.</p></div>
-                        <div class="mt-6 flex items-start gap-4 rounded-xl border border-blue-200 p-4"><span class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-[5px] border-brand" aria-hidden="true"></span><div class="grid gap-2"><p class="text-sm font-semibold text-ink">Cash on delivery</p><p class="text-sm leading-6 text-muted">Pay ₱{{ number_format($subtotal, 2) }} on delivery. No online payment is required.</p></div></div>
+                        <div class="mt-6 flex items-start gap-4 rounded-[10px] border border-blue-200 p-4"><span class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-[5px] border-brand" aria-hidden="true"></span><div class="grid gap-2"><p class="text-sm font-semibold text-ink">Cash on delivery</p><p class="text-sm leading-6 text-muted">Pay ₱{{ number_format($subtotal, 2) }} on delivery. No online payment is required.</p></div></div>
                     </section>
-                    <p class="rounded-xl bg-blue-50 p-6 text-sm leading-6 text-muted">Each store confirms delivery availability and timing after receiving your order. Shipping is free.</p>
+                    <p class="rounded-[10px] bg-blue-50 p-6 text-sm leading-6 text-muted">Each store confirms delivery availability and timing after receiving your order. Shipping is free.</p>
                 </div>
 
                 <aside class="min-w-0 lg:sticky lg:top-24 lg:self-start" aria-labelledby="checkout-summary-heading">
-                    <div class="rounded-[18px] border border-line bg-surface p-6 shadow-sm">
+                    <div class="marketplace-surface p-6">
                         <h2 id="checkout-summary-heading" class="text-lg font-semibold text-ink">Your order <span class="font-normal text-muted">({{ $cart->items->sum('quantity') }} {{ Str::plural('item', $cart->items->sum('quantity')) }})</span></h2>
                         <div class="mt-6 grid gap-6">
                             @foreach ($itemsByStore as $storeItems)
@@ -141,7 +141,7 @@
                     total and the way to act on it stay in reach instead of being scrolled to.
                 --}}
                 <div class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-2px_12px_rgb(15_23_42/8%)] backdrop-blur lg:hidden">
-                    <div class="mx-auto flex w-full max-w-[1220px] items-center gap-4">
+                    <div class="marketplace-container flex items-center gap-4">
                         <div class="min-w-0">
                             <p class="text-xs text-muted">Total to pay</p>
                             <p class="truncate text-lg font-bold tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</p>

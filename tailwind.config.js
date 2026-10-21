@@ -30,7 +30,10 @@ export default {
                     DEFAULT: '#F59E0B',
                     text: '#B45309',
                 },
-                danger: '#DC2626',
+                danger: {
+                    DEFAULT: '#DC2626',
+                    text: '#B91C1C',
+                },
             },
         },
     },

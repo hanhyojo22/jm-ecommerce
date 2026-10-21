@@ -2,39 +2,39 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">{{ ($filters['queue'] ?? null) === 'pending_appeals' ? 'Stores with pending appeals' : 'Stores overview' }}</h1>
+                <h1 class="mt-1 marketplace-page-title">{{ ($filters['queue'] ?? null) === 'pending_appeals' ? 'Stores with pending appeals' : 'Stores overview' }}</h1>
             </div>
             <a href="#seller-stores" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Manage stores</a>
         </div>
     </x-slot>
 
-    @php($statusStyles = ['active' => 'bg-success/10 text-success ring-success/20', 'inactive' => 'bg-canvas text-muted ring-line', 'suspended' => 'bg-danger/10 text-danger ring-danger/20'])
+    @php($statusStyles = ['active' => 'bg-success/10 text-success ring-success/20', 'inactive' => 'bg-canvas text-muted ring-line', 'suspended' => 'bg-danger/10 text-danger-text ring-danger/20'])
     @php($hasFilters = filled($filters['search'] ?? null) || filled($filters['status'] ?? null) || filled($filters['joined'] ?? null) || filled($filters['category_id'] ?? null) || filled($filters['sort'] ?? null))
 
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
             @if (session('status'))
-                <div class="mb-5 rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-5 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
             @endif
             @if ($errors->any())
-                <div class="mb-5 rounded-[14px] border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not apply those filters. {{ $errors->first() }}</div>
+                <div class="mb-5 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not apply those filters. {{ $errors->first() }}</div>
             @endif
 
             @if ($pendingReviewCount > 0)
-                <div class="mb-5 flex flex-col gap-2 rounded-[14px] border border-brand/20 bg-surface px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between" role="status">
+                <div class="mb-5 flex flex-col gap-2 rounded-2xl border border-brand/20 bg-surface px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between" role="status">
                     <p class="font-medium text-ink">{{ number_format($pendingReviewCount) }} {{ Str::plural('seller application', $pendingReviewCount) }} awaiting review</p>
                     <a href="{{ route('admin.seller-applications.index') }}" class="w-fit font-semibold text-brand underline decoration-brand/30 underline-offset-4 transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Review application</a>
                 </div>
             @endif
 
-            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Store summaries">
+            <section class="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Store summaries">
                 @foreach ([
                     ['label' => 'Total stores', 'count' => $totalStores, 'valueClass' => 'text-ink'],
                     ['label' => 'Active', 'count' => $statusCounts['active'] ?? 0, 'valueClass' => 'text-success'],
                     ['label' => 'Inactive', 'count' => $statusCounts['inactive'] ?? 0, 'valueClass' => 'text-ink'],
                     ['label' => 'Suspended', 'count' => $statusCounts['suspended'] ?? 0, 'valueClass' => 'text-danger'],
                 ] as $summary)
-                    <div class="rounded-[14px] border border-line bg-surface px-5 py-4 ">
+                    <div class="rounded-2xl border border-line bg-surface px-5 py-4 ">
                         <p class="text-2xl font-semibold tabular-nums tracking-tight {{ $summary['valueClass'] }}">{{ number_format($summary['count']) }}</p>
                         <p class="mt-1 text-sm font-medium text-muted">{{ $summary['label'] }}</p>
                     </div>
@@ -70,14 +70,14 @@
                                 'border-brand text-brand' => $selected,
                                 'border-transparent text-muted hover:border-line hover:text-ink' => ! $selected,
                             ]) @if ($selected) aria-current="page" @endif>
-                                {{ $label }} <span @class(['rounded-full px-2 py-0.5 text-xs tabular-nums', 'bg-brand/10 text-brand' => $selected, 'bg-canvas text-muted' => ! $selected])>{{ number_format($value ? ($statusCounts[$value] ?? 0) : $totalStores) }}</span>
+                                {{ $label }} <span @class(['rounded-full px-2 py-0.5 text-xs tabular-nums', 'bg-brand/10 text-brand-hover' => $selected, 'bg-canvas text-muted' => ! $selected])>{{ number_format($value ? ($statusCounts[$value] ?? 0) : $totalStores) }}</span>
                             </a>
                         @endforeach
                     </nav>
 
                     <details class="relative shrink-0">
                         <summary class="flex min-h-11 cursor-pointer list-none items-center rounded-lg px-3 text-sm font-semibold text-muted transition hover:bg-surface hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">More filters <span class="ml-1.5 text-xs" aria-hidden="true">⌄</span></summary>
-                        <form method="GET" action="{{ route('admin.stores.index') }}" class="absolute right-0 z-10 mt-2 w-72 rounded-[14px] border border-line bg-surface p-4 shadow-lg">
+                        <form method="GET" action="{{ route('admin.stores.index') }}" class="absolute right-0 z-10 mt-2 w-72 rounded-2xl border border-line bg-surface p-4 shadow-lg">
                             @if (filled($filters['search'] ?? null))
                                 <input type="hidden" name="search" value="{{ $filters['search'] }}">
                             @endif
@@ -117,7 +117,7 @@
                     </details>
                 </div>
 
-                <div class="mt-5 overflow-hidden rounded-[14px] border border-line bg-surface" aria-label="Seller stores">
+                <div class="mt-5 overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Seller stores">
                     <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_6rem_6rem_7rem_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted md:grid">
                         <span>Store</span><span>Owner</span><span>Products</span><span>Orders</span><span>Status</span><span>Next step</span>
                     </div>
@@ -157,7 +157,7 @@
                 </div>
 
                 @if ($stores->hasPages())
-                    <div class="mt-6 rounded-[14px] border border-line bg-surface px-4 py-4 ">{{ $stores->links() }}</div>
+                    <div class="mt-6 rounded-2xl border border-line bg-surface px-4 py-4 ">{{ $stores->links() }}</div>
                 @endif
             </section>
         </div>

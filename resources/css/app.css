@@ -24,6 +24,14 @@
         --color-danger: #dc2626;
         --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
         --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+
+        /* Marketplace measures. One column width, one gutter scale, one rhythm. */
+        --page-max: 1320px;
+        --gutter: 18px;
+        --gutter-wide: 32px;
+        --radius-surface: 16px;
+        --radius-control: 10px;
+        --section-space: 2.5rem;
     }
 
     html {
@@ -436,6 +444,9 @@
     .seller-kpi-icon svg { width: 1.3rem; height: 1.3rem; }
     .seller-kpi-value { font-size: 1.3rem; }
     .seller-action { min-height: 4rem; }
+    /* Two quick-action columns are narrow on a phone: let the helper line wrap
+       instead of ending in an ellipsis the reader cannot recover. */
+    .seller-action small { overflow: visible; white-space: normal; }
 }
 
 @media (min-width: 640px) {
@@ -631,25 +642,19 @@
     display: none;
 }
 
-/* Swiss seller center: one radius scale for the whole workspace.
-   Containers and panels take 6px, controls and tags take 4px; shadows are
-   removed so surfaces read as hairlines instead of floating cards. */
-.seller-workspace .rounded-\[14px\],
-.seller-workspace .rounded-\[12px\],
-.seller-workspace .rounded-xl,
-.seller-workspace .rounded-2xl {
-    border-radius: 12px;
+/* One radius scale for every workspace (seller, customer, admin).
+   Surfaces take the shared 16px token, controls and badges take 10px.
+   Seller surfaces stay flat so panels read as hairlines, not floating cards. */
+.workspace-main :where(.rounded-xl, .rounded-2xl) {
+    border-radius: var(--radius-surface);
 }
 
-.seller-workspace .rounded-\[10px\],
-.seller-workspace .rounded-lg,
-.seller-workspace :where(.field-control) {
-    border-radius: 8px;
+.workspace-main :where(.rounded-\[10px\], .rounded-lg) {
+    border-radius: var(--radius-control);
 }
 
-.seller-workspace [class*='ring-1'][class*='ring-inset'],
-.seller-workspace .status-badge {
-    border-radius: 6px;
+.workspace-main :where([class*='ring-1'][class*='ring-inset'], .status-badge) {
+    border-radius: var(--radius-control);
 }
 
 .seller-workspace :where(.shadow-sm, .shadow-md) {
@@ -721,3 +726,192 @@ body:has(footer) [data-cookie-floating] {
     .marketplace-hero-photo-1 { top: 20%; height: 65%; }
     .marketplace-hero-note { bottom: 5%; padding: 10px 12px; }
 }
+
+/*
+ * Shared marketplace foundation.
+ *
+ * Every visitor-facing page (home, catalog, storefront, product, stores, cart,
+ * checkout) draws its measure from these classes so the header, footer, page
+ * title and section rhythm never drift between templates.
+ */
+.marketplace-container {
+    width: 100%;
+    max-width: var(--page-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+}
+
+@media (min-width: 641px) {
+    .marketplace-container { padding-inline: var(--gutter-wide); }
+}
+
+.marketplace-page-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.875rem, 1.6rem + 1.05vw, 2.5rem);
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+}
+
+.marketplace-page-subtitle {
+    margin-top: 0.375rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--color-muted);
+}
+
+.marketplace-section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+}
+
+.marketplace-section-subtitle {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--color-muted);
+}
+
+.marketplace-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.marketplace-section-link {
+    flex: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    transition: color 150ms ease;
+}
+
+.marketplace-section-link:hover { color: var(--color-accent-hover); }
+
+.marketplace-section {
+    border-top: 1px solid var(--color-border);
+    padding-block: var(--section-space);
+}
+
+@media (min-width: 640px) {
+    .marketplace-section { padding-block: 3rem; }
+}
+
+.marketplace-breadcrumb {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-muted);
+    margin-block: 1.25rem 1rem;
+    scrollbar-width: none;
+}
+
+.marketplace-breadcrumb::-webkit-scrollbar { display: none; }
+
+.marketplace-breadcrumb a {
+    flex: none;
+    font-weight: 500;
+    transition: color 150ms ease;
+}
+
+.marketplace-breadcrumb a:hover { color: var(--color-accent); }
+
+.marketplace-breadcrumb [aria-current='page'] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+    color: var(--color-fg);
+}
+
+/* Horizontal category rails keep their edge readable: no scrollbar, and the last
+   item fades into the gutter instead of being sliced in half. */
+.marketplace-nav-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 26px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 26px), transparent 100%);
+}
+
+.marketplace-nav-scroll::-webkit-scrollbar { display: none; }
+
+@media (min-width: 641px) {
+    .marketplace-nav-scroll {
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+}
+
+.marketplace-surface {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-surface);
+    background: var(--color-surface);
+}
+
+.marketplace-product-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem;
+}
+
+@media (min-width: 640px) {
+    .marketplace-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+}
+
+@media (min-width: 1021px) {
+    .marketplace-product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.25rem; }
+}
+
+/* Catalog toolbar: one control height at every width, and room for the sort label. */
+.marketplace-toolbar-control {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-fg);
+}
+
+.marketplace-toolbar-control:hover { border-color: var(--color-accent); color: var(--color-accent); }
+
+.marketplace-sort {
+    min-height: 2.75rem;
+    width: 100%;
+    max-width: 13.5rem;
+    border-radius: var(--radius-control);
+    border-color: var(--color-border);
+    background-color: var(--color-surface);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-fg);
+}
+
+@media (max-width: 639px) {
+    .marketplace-sort { max-width: none; }
+}
+
+.marketplace-filter-heading {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+}
+

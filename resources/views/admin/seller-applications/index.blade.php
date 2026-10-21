@@ -1,30 +1,30 @@
 <x-app-layout>
     <x-slot name="header">
         <div>
-            <h1 class="mt-1 text-[28px] font-bold tracking-[-0.02em] text-ink leading-[1.55]">Seller applications</h1>
+            <h1 class="mt-1 marketplace-page-title">Seller applications</h1>
         </div>
     </x-slot>
 
-    @php($statusStyles = ['draft' => 'bg-canvas text-muted ring-line', 'pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'submitted' => 'bg-warning/10 text-warning-text ring-warning/20', 'under_review' => 'bg-warning/10 text-warning-text ring-warning/20', 'more_information_required' => 'bg-warning/10 text-warning-text ring-warning/20', 'approved' => 'bg-success/10 text-success ring-success/20', 'rejected' => 'bg-danger/10 text-danger ring-danger/20', 'suspended' => 'bg-danger/10 text-danger ring-danger/20'])
+    @php($statusStyles = ['draft' => 'bg-canvas text-muted ring-line', 'pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'submitted' => 'bg-warning/10 text-warning-text ring-warning/20', 'under_review' => 'bg-warning/10 text-warning-text ring-warning/20', 'more_information_required' => 'bg-warning/10 text-warning-text ring-warning/20', 'approved' => 'bg-success/10 text-success ring-success/20', 'rejected' => 'bg-danger/10 text-danger-text ring-danger/20', 'suspended' => 'bg-danger/10 text-danger-text ring-danger/20'])
     @php($hasFilters = collect($filters)->filter()->isNotEmpty())
 
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
             @if (session('status'))
-                <div class="mb-5 rounded-[14px] border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-5 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
             @endif
 
             @if ($errors->has('application'))
-                <div class="mb-5 rounded-[14px] border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ $errors->first('application') }}</div>
+                <div class="mb-5 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ $errors->first('application') }}</div>
             @endif
 
-            <section class="grid gap-3 sm:grid-cols-3" aria-label="Seller application summaries">
+            <section class="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Seller application summaries">
                 @foreach ([
                     ['label' => 'Awaiting review', 'count' => ($statusCounts['pending'] ?? 0) + ($statusCounts['submitted'] ?? 0) + ($statusCounts['under_review'] ?? 0), 'valueClass' => 'text-warning-text'],
                     ['label' => 'Approved', 'count' => $statusCounts['approved'] ?? 0, 'valueClass' => 'text-success'],
                     ['label' => 'Rejected', 'count' => $statusCounts['rejected'] ?? 0, 'valueClass' => 'text-danger'],
                 ] as $summary)
-                    <div class="rounded-[14px] border border-line bg-surface px-5 py-4 ">
+                    <div class="rounded-2xl border border-line bg-surface px-5 py-4 ">
                         <p class="text-2xl font-semibold tabular-nums tracking-tight {{ $summary['valueClass'] }}">{{ number_format($summary['count']) }}</p>
                         <p class="mt-1 text-sm font-medium text-muted">{{ $summary['label'] }}</p>
                     </div>
@@ -53,7 +53,7 @@
                     </form>
                 </div>
 
-                <nav class="mt-4 flex gap-1 overflow-x-auto border-b border-line" aria-label="Application status filters">
+                <nav class="marketplace-nav-scroll mt-4 flex gap-1 overflow-x-auto border-b border-line" aria-label="Application status filters">
                     @foreach (['' => 'All', 'draft' => 'Draft', 'pending' => 'Legacy pending', 'submitted' => 'Submitted', 'under_review' => 'Under review', 'more_information_required' => 'More info', 'approved' => 'Approved', 'rejected' => 'Rejected', 'suspended' => 'Suspended'] as $value => $label)
                         @php($selected = ($filters['status'] ?? '') === $value)
                         <a href="{{ route('admin.seller-applications.index', [...request()->except('status', 'page'), ...($value ? ['status' => $value] : [])]) }}" @class([
@@ -61,12 +61,12 @@
                             'border-brand text-brand' => $selected,
                             'border-transparent text-muted hover:border-line hover:text-ink' => ! $selected,
                         ]) @if ($selected) aria-current="page" @endif>
-                            {{ $label }} <span @class(['rounded-full px-2 py-0.5 text-xs tabular-nums', 'bg-brand/10 text-brand' => $selected, 'bg-canvas text-muted' => ! $selected])>{{ number_format($value ? ($statusCounts[$value] ?? 0) : $statusCounts->sum()) }}</span>
+                            {{ $label }} <span @class(['rounded-full px-2 py-0.5 text-xs tabular-nums', 'bg-brand/10 text-brand-hover' => $selected, 'bg-canvas text-muted' => ! $selected])>{{ number_format($value ? ($statusCounts[$value] ?? 0) : $statusCounts->sum()) }}</span>
                         </a>
                     @endforeach
                 </nav>
 
-                <div class="mt-5 overflow-hidden rounded-[14px] border border-line bg-surface" aria-label="Seller applications">
+                <div class="mt-5 overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Seller applications">
                     <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(8rem,.8fr)_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted md:grid">
                         <span>Applicant</span><span>Proposed store</span><span>Status / submitted</span><span>Next step</span>
                     </div>
@@ -100,7 +100,7 @@
                 </div>
 
                 @if ($applications->hasPages())
-                    <div class="mt-6 rounded-[14px] border border-line bg-surface px-4 py-4 ">{{ $applications->links() }}</div>
+                    <div class="mt-6 rounded-2xl border border-line bg-surface px-4 py-4 ">{{ $applications->links() }}</div>
                 @endif
             </section>
         </div>

@@ -12,9 +12,7 @@
              session cookie before it opens a protected page, and it keeps guests untouched. --}}
         <meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">
     @endauth
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    @include('partials.fonts')
     <title>{{ $sellerStore ? $sellerStore->name.' storefront' : 'Marketplace' }} · JMMart</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>[x-cloak] { display: none !important; }</style>
@@ -97,13 +95,13 @@
 
         @if ($isSellerPreview)
             <div class="bg-[#111c32] px-4 py-3 text-white">
-                <div class="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-3 text-sm">
+                <div class="marketplace-container flex flex-wrap items-center justify-between gap-3 text-sm">
                     <p class="font-semibold">Storefront preview <span class="ml-2 font-normal text-slate-300">This is what customers see.</span></p>
                 </div>
             </div>
         @endif
 
-        <main class="mx-auto max-w-[1320px] px-[18px] pb-16 min-[1021px]:px-8">
+        <main class="marketplace-container pb-16">
             @if ($errors->any())
                 <div role="alert" class="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">
                     {{ $errors->first() }}
@@ -113,23 +111,23 @@
 
             @if ($sellerStore)
                 {{-- Storefront (storefront.html): banner + snav + featured + best sellers + about --}}
-                <nav aria-label="Breadcrumb" class="mb-2 mt-5 flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] text-muted">
-                    <a href="{{ route('catalog.index') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Marketplace</a>
+                <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
+                    <a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Home</a>
                     <span aria-hidden="true">/</span>
                     <a href="{{ route('catalog.stores') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Stores</a>
                     <span aria-hidden="true">/</span>
-                    <span aria-current="page" class="min-w-0 truncate font-semibold text-ink">{{ $sellerStore->name }}</span>
+                    <span aria-current="page" class="min-w-0 truncate">{{ $sellerStore->name }}</span>
                 </nav>
 
-                <section class="overflow-hidden rounded-[14px] border border-line bg-white" aria-labelledby="store-heading" data-od-id="store-header">
+                <section class="marketplace-surface overflow-hidden" aria-labelledby="store-heading" data-od-id="store-header">
                     <div class="flex flex-col gap-5 p-6 sm:p-8 lg:flex-row lg:items-center">
                         <div class="flex min-w-0 flex-1 flex-col items-start gap-4 sm:flex-row sm:items-center">
-                            <span class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-blue-50 text-2xl font-bold text-brand">
+                            <span class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-surface)] bg-blue-50 text-2xl font-bold text-brand">
                                 @if ($sellerStore->logo_path)<img src="{{ Storage::disk('public')->url($sellerStore->logo_path) }}" alt="{{ $sellerStore->name }} logo" class="h-full w-full object-cover">@else{{ Str::upper(Str::substr($sellerStore->name, 0, 1)) }}@endif
                             </span>
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h1 id="store-heading" class="break-words text-2xl font-bold tracking-[-0.02em] sm:text-3xl">{{ $sellerStore->name }}</h1>
+                                    <h1 id="store-heading" class="marketplace-page-title break-words">{{ $sellerStore->name }}</h1>
                                     <span class="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-success ring-1 ring-inset ring-green-200"><span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>Open</span>
                                     <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-brand-hover ring-1 ring-inset ring-blue-200">✔ Verified</span>
                                 </div>
@@ -150,7 +148,7 @@
                     </div>
                 </section>
 
-                <nav class="mt-4 flex gap-6 overflow-x-auto border-b border-line text-sm font-medium" aria-label="Store sections">
+                <nav class="marketplace-nav-scroll mt-4 flex gap-6 overflow-x-auto border-b border-line text-sm font-medium" aria-label="Store sections">
                     <a href="#store-heading" class="inline-flex min-h-11 shrink-0 items-center border-b-2 border-brand font-semibold text-ink" aria-current="page">Home</a>
                     <a href="#product-results" class="inline-flex min-h-11 shrink-0 items-center border-b-2 border-transparent text-muted transition hover:border-blue-200 hover:text-brand">Products ({{ number_format($sellerStore->public_products_count) }})</a>
                     <a href="#store-about" class="inline-flex min-h-11 shrink-0 items-center border-b-2 border-transparent text-muted transition hover:border-blue-200 hover:text-brand">About</a>
@@ -162,7 +160,7 @@
                             <h2 id="store-featured-heading" class="text-xl font-bold tracking-[-0.02em]">Featured</h2>
                             <a href="#product-results" class="text-sm font-semibold text-brand hover:text-brand-hover">View all →</a>
                         </div>
-                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+                        <div class="mt-4 marketplace-product-grid">
                             @foreach ($storeFeatured as $product)
                                 <x-marketplace.top-product-card :product="$product" />
                             @endforeach
@@ -175,13 +173,13 @@
                         <h2 id="store-best-heading" class="text-xl font-bold tracking-[-0.02em]">Best sellers</h2>
                         <ol class="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                             @foreach ($storeBestSellers as $product)
-                                <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-[14px] border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}@if ($product->stock_quantity < 1)<span class="mt-1 block font-semibold text-danger">Sold out</span>@endif</span></a></li>
+                                <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-2xl border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}@if ($product->stock_quantity < 1)<span class="mt-1 block font-semibold text-danger">Sold out</span>@endif</span></a></li>
                             @endforeach
                         </ol>
                     </section>
                 @endif
 
-                <section id="store-about" class="mt-10 scroll-mt-24 rounded-[14px] border border-line bg-white p-5 sm:p-6" aria-labelledby="store-about-heading">
+                <section id="store-about" class="marketplace-surface mt-10 scroll-mt-24 p-5 sm:p-6" aria-labelledby="store-about-heading">
                     <h2 id="store-about-heading" class="text-lg font-semibold">About {{ $sellerStore->name }}</h2>
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-muted">{{ filled($sellerStore->description) ? $sellerStore->description : 'No description added yet.' }}</p>
                     <dl class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
@@ -192,10 +190,10 @@
                 </section>
             @else
                 {{-- Listing header for search / filtered results (marketplace.html) --}}
-                <nav aria-label="Breadcrumb" class="mb-1 mt-0 flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[13px] text-muted min-[641px]:mb-2 min-[641px]:pt-[18px] min-[641px]:pb-1">
-                    <a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Home</a>
+                <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
+                    <a href="{{ route('home') }}">Home</a>
                     <span aria-hidden="true">/</span>
-                    <span aria-current="page" class="min-w-0 truncate font-semibold text-ink">{{ filled($search) ? 'Search results' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Category') : 'Marketplace') }}</span>
+                    <span aria-current="page" class="min-w-0 truncate">{{ filled($search) ? 'Search results' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Category') : 'Marketplace') }}</span>
                 </nav>
             @endif
 
@@ -203,7 +201,7 @@
             <section id="product-results" class="scroll-mt-24 {{ $sellerStore || ! $isListing ? 'pt-12' : 'pt-1 min-[641px]:pt-0' }}" aria-labelledby="product-results-heading" data-od-id="results">
                 @if ($sellerStore)
                     <div class="flex flex-wrap items-center justify-between gap-3">
-                        <div class="min-w-0"><h2 id="product-results-heading" class="text-2xl font-bold tracking-[-0.02em]">{{ $sellerStore ? 'All products' : 'Products' }}</h2><p class="mt-1 text-sm text-muted">{{ number_format($products->total()) }} {{ Str::plural('product', $products->total()) }}@if ($search) matching “{{ Str::limit($search, 32) }}”@endif</p></div>
+                        <div class="min-w-0"><h2 id="product-results-heading" class="marketplace-section-title">{{ $sellerStore ? 'All products' : 'Products' }}</h2><p class="marketplace-section-subtitle">{{ number_format($products->total()) }} {{ Str::plural('product', $products->total()) }}@if ($search) matching “{{ Str::limit($search, 32) }}”@endif</p></div>
                         <button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold transition hover:border-brand lg:hidden">
                             <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4" /></svg>
                             Filters
@@ -221,12 +219,12 @@
                 @endif
 
                 @php($showFiltersSidebar = $sellerStore || $isListing)
-                <div class="{{ $isListing && ! $sellerStore ? 'mt-0 gap-7' : 'mt-6 gap-6' }} grid grid-cols-[minmax(min(354px,calc(100vw-36px)),1fr)] items-start {{ $showFiltersSidebar ? ($isListing ? 'min-[1021px]:grid-cols-[272px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]') : '' }}">
+                <div class="{{ $isListing && ! $sellerStore ? 'mt-0 gap-7' : 'mt-6 gap-6' }} grid grid-cols-1 items-start {{ $showFiltersSidebar ? ($isListing ? 'min-[1021px]:grid-cols-[272px_minmax(0,1fr)]' : 'lg:grid-cols-[272px_minmax(0,1fr)]') : '' }}">
                     {{-- Filters sidebar for marketplace listings and storefronts --}}
                     @if ($showFiltersSidebar)
-                    <aside id="catalog-filters" x-ref="filtersPanel" tabindex="-1" x-cloak x-show="filtersOpen" x-on:keydown.escape.stop="closeFilters()" class="scroll-mt-4 rounded-[14px] border border-line bg-white p-5 {{ $isListing ? 'min-[1021px]:!block min-[1021px]:mt-[9.5px] min-[1021px]:sticky min-[1021px]:top-[130px]' : 'lg:sticky lg:top-[130px] lg:!block' }}" aria-label="Product filters">
+                    <aside id="catalog-filters" x-ref="filtersPanel" tabindex="-1" x-cloak x-show="filtersOpen" x-on:keydown.escape.stop="closeFilters()" class="marketplace-surface scroll-mt-4 p-5 {{ $isListing ? 'min-[1021px]:!block min-[1021px]:mt-[9.5px] min-[1021px]:sticky min-[1021px]:top-[130px]' : 'lg:sticky lg:top-[130px] lg:!block' }}" aria-label="Product filters">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-[15px] font-bold leading-[1.55]">Filters</h3>
+                            <h3 class="text-base font-semibold leading-[1.5]">Filters</h3>
                             <div class="flex items-center gap-3">
                                 <a href="{{ $clearAllUrl }}" class="inline-flex min-h-6 items-center text-[13px] leading-[1.55] font-medium text-brand hover:text-brand-hover">Clear all</a>
                                 <button type="button" @click="closeFilters()" class="inline-flex size-11 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-ink {{ $isListing ? 'min-[1021px]:hidden' : 'lg:hidden' }}" aria-label="Close filters">×</button>
@@ -235,7 +233,7 @@
                         @if ($categories->count() > 1)
                             <div class="border-t border-line py-[14px]">
                                 <div class="flex items-center justify-between">
-                                    <h3 class="text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Category</h3>
+                                    <h3 class="marketplace-filter-heading">Category</h3>
                                     @if ($categories->count() > 5)
                                         <details class="relative text-xs" @if ($categories->skip(5)->contains('slug', request('category'))) open @endif>
                                             <summary class="cursor-pointer list-none font-medium text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">More</summary>
@@ -260,7 +258,7 @@
                             @if (! $sellerStore && filled(request('seller')))<input type="hidden" name="seller" value="{{ request('seller') }}">@endif
                             @if (filled(request('sort')))<input type="hidden" name="sort" value="{{ request('sort') }}">@endif
                             <div role="group" aria-labelledby="catalog-price-heading" class="border-t border-line py-[14px]">
-                                <h3 id="catalog-price-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Price</h3>
+                                <h3 id="catalog-price-heading" class="mb-2.5 marketplace-filter-heading">Price</h3>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div><label for="minimum-price" class="sr-only">Minimum price in pesos</label><input id="minimum-price" x-ref="minPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="min_price" min="0" step="0.01" value="{{ $activeFilters['min_price'] ?? '' }}" placeholder="Min ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
                                     <div><label for="maximum-price" class="sr-only">Maximum price in pesos</label><input id="maximum-price" x-ref="maxPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="max_price" min="0" step="0.01" value="{{ $activeFilters['max_price'] ?? '' }}" placeholder="Max ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
@@ -268,7 +266,7 @@
                             </div>
 
                             <div role="group" aria-labelledby="catalog-rating-heading" class="border-t border-line py-[14px]">
-                                <h3 id="catalog-rating-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Rating</h3>
+                                <h3 id="catalog-rating-heading" class="mb-2.5 marketplace-filter-heading">Rating</h3>
                                 <div class="space-y-0">
                                     @foreach ([4 => '4★ & up'] as $value => $label)
                                     <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
@@ -285,7 +283,7 @@
 
                             @if ($brands->isNotEmpty())
                                 <div role="group" aria-labelledby="catalog-brand-heading" class="border-t border-line py-[14px]">
-                                    <h3 id="catalog-brand-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Brand</h3>
+                                    <h3 id="catalog-brand-heading" class="mb-2.5 marketplace-filter-heading">Brand</h3>
                                     <div class="space-y-0">
                                         @foreach ($brands as $brand)
                                         <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
@@ -298,7 +296,7 @@
                             @endif
 
                             <div role="group" aria-labelledby="catalog-availability-heading" class="border-t border-line py-[14px]">
-                                <h3 id="catalog-availability-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Availability</h3>
+                                <h3 id="catalog-availability-heading" class="mb-2.5 marketplace-filter-heading">Availability</h3>
                                 <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
                                     <input type="checkbox" name="in_stock" value="1" @checked(! empty($activeFilters['in_stock'])) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
                                     <span>In stock only</span>
@@ -310,7 +308,7 @@
                             </div>
 
                             <div role="group" aria-labelledby="catalog-condition-heading" class="border-t border-line py-[14px]">
-                                <h3 id="catalog-condition-heading" class="mb-2.5 text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Condition</h3>
+                                <h3 id="catalog-condition-heading" class="mb-2.5 marketplace-filter-heading">Condition</h3>
                                 <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
                                     <input type="checkbox" name="conditions[]" value="new" @checked(in_array('new', $activeFilters['conditions'] ?? [], true)) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
                                     <span>New</span>
@@ -323,7 +321,7 @@
 
                             @if (! $sellerStore && $filterStores->isNotEmpty())
                                 <div class="border-t border-line py-[14px]">
-                                    <h3 class="text-xs font-semibold uppercase leading-[1.55] tracking-[0.06em] text-muted">Stores</h3>
+                                    <h3 class="marketplace-filter-heading">Stores</h3>
                                     <ul class="mt-2 space-y-0.5">
                                         @foreach ($filterStores->take(5) as $filterStore)
                                             <x-marketplace.filter-option :item="$filterStore" :href="route('catalog.index', [...request()->except(['seller', 'page']), 'seller' => $filterStore->slug])" :clear-href="route('catalog.index', request()->except(['seller', 'page']))" :selected="request('seller') === $filterStore->slug" />
@@ -352,20 +350,20 @@
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             @if ($isListing && ! $sellerStore)
                                 <div>
-                                    <h1 id="product-results-heading" class="text-[28px] font-bold leading-[1.55] tracking-[-0.02em]">{{ filled($search) ? 'Results for “'.Str::limit($search, 40).'”' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Marketplace') : 'Marketplace') }}</h1>
-                                    <p class="text-sm leading-[1.55] text-muted">Discover products from trusted sellers · {{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
+                                    <h1 id="product-results-heading" class="marketplace-page-title">{{ filled($search) ? 'Results for “'.Str::limit($search, 40).'”' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Marketplace') : 'Marketplace') }}</h1>
+                                    <p class="marketplace-page-subtitle">Discover products from trusted sellers · {{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
                                 </div>
                             @else
                                 <p class="self-center text-sm text-muted" role="status">{{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
                             @endif
-                            <div class="flex flex-wrap items-center gap-3 sm:ml-auto">
-                                @if ($showFiltersSidebar)<button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold {{ $isListing ? 'min-[1021px]:hidden' : 'lg:hidden' }}">Filters</button>@endif
+                            <div class="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:gap-3">
+                                @if ($showFiltersSidebar)<button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="marketplace-toolbar-control px-4 {{ $isListing ? 'min-[1021px]:hidden' : 'lg:hidden' }}">Filters</button>@endif
                                 @if ($sellerStore && $categories->count() > 1)
-                                    <button id="categories" type="button" @click="openCategories($event)" class="inline-flex min-h-11 scroll-mt-40 items-center rounded-[10px] border border-line bg-white px-4 text-sm font-semibold lg:hidden">Categories</button>
+                                    <button id="categories" type="button" @click="openCategories($event)" class="marketplace-toolbar-control scroll-mt-40 px-4 lg:hidden">Categories</button>
                                 @endif
-                                <form method="GET" action="{{ $catalogUrl }}" @submit="loading = true" class="flex items-center gap-2">
+                                <form method="GET" action="{{ $catalogUrl }}" @submit="loading = true" class="flex min-w-0 flex-1 items-center sm:flex-none">
                                     @foreach (request()->except(['sort', 'page']) as $name => $value) @if (is_scalar($value) && filled($value))<input type="hidden" name="{{ $name }}" value="{{ $value }}">@endif @endforeach
-                                    <select id="sort" name="sort" aria-label="Sort products" onchange="this.form.submit()" class="h-[39px] w-[172px] rounded-[10px] border-line bg-white text-sm font-medium focus:border-brand focus:ring-brand">
+                                    <select id="sort" name="sort" aria-label="Sort products" onchange="this.form.submit()" class="marketplace-sort">
                                         <option value="relevance" @selected(request('sort', 'relevance') === 'relevance')>Sort: Most relevant</option>
                                         <option value="price_asc" @selected(request('sort') === 'price_asc')>Price: low to high</option>
                                         <option value="price_desc" @selected(request('sort') === 'price_desc')>Price: high to low</option>
@@ -373,9 +371,9 @@
                                         <option value="newest" @selected(request('sort') === 'newest')>Newest</option>
                                     </select>
                                 </form>
-                                <div class="flex items-center gap-3" role="group" aria-label="Product view">
-                                    <button type="button" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'" aria-label="Grid view" :class="viewMode === 'grid' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-[38px] place-items-center rounded-[9px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
-                                    <button type="button" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'" aria-label="List view" :class="viewMode === 'list' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-[38px] place-items-center rounded-[9px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h12M9 12h12M9 19h12"/><path d="M3 5h2M3 12h2M3 19h2"/></svg></button>
+                                <div class="flex shrink-0 items-center gap-2" role="group" aria-label="Product view">
+                                    <button type="button" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'" aria-label="Grid view" :class="viewMode === 'grid' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-11 place-items-center rounded-[10px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+                                    <button type="button" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'" aria-label="List view" :class="viewMode === 'list' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-11 place-items-center rounded-[10px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h12M9 12h12M9 19h12"/><path d="M3 5h2M3 12h2M3 19h2"/></svg></button>
                                 </div>
                             </div>
                         </div>
@@ -387,16 +385,16 @@
 
                             </div>
                         @endif
-                        <div x-show="loading" x-cloak class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-[14px]' }} grid grid-cols-2 gap-[14px] min-[641px]:grid-cols-3 min-[1021px]:grid-cols-4" aria-hidden="true">
+                        <div x-show="loading" x-cloak class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-4' }} marketplace-product-grid" aria-hidden="true">
                             @for ($i = 0; $i < 8; $i++)
-                                <div class="overflow-hidden rounded-[14px] border border-line bg-white"><div class="aspect-square animate-pulse bg-slate-200"></div><div class="space-y-2 p-[13px]"><div class="h-4 animate-pulse rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div></div></div>
+                                <div class="marketplace-surface overflow-hidden"><div class="aspect-square animate-pulse bg-slate-200"></div><div class="space-y-2 p-4"><div class="h-4 animate-pulse rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div></div></div>
                             @endfor
                         </div>
                         <p x-show="loading" x-cloak class="mt-3 text-[13px] text-muted" role="status" aria-live="polite">Loading curated results&hellip;</p>
 
-                        <div x-show="!loading" class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-[14px]' }}">
+                        <div x-show="!loading" class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-4' }}">
                             @if ($products->isNotEmpty())
-                                <div id="catalog-products" :data-view="viewMode" class="grid grid-cols-2 gap-[14px] min-[641px]:grid-cols-3 min-[1021px]:grid-cols-4">
+                                <div id="catalog-products" :data-view="viewMode" class="marketplace-product-grid">
                                     @foreach ($products as $product)
                                         <x-marketplace.top-product-card :product="$product" />
                                     @endforeach
@@ -404,7 +402,7 @@
                                 <div class="mt-10">{{ $products->onEachSide(1)->links('components.marketplace.pagination') }}</div>
                             @else
                                 @php($hasActiveFilters = ! empty($activeFilters) || filled(request('category')) || filled(request('seller')))
-                                <div class="rounded-[14px] border border-dashed border-line bg-white p-12 text-center">
+                                <div class="rounded-[var(--radius-surface)] border border-dashed border-line bg-white p-10 text-center sm:p-12">
                                     <h3 class="text-lg font-semibold text-ink">@if (filled($search))No results for &ldquo;{{ Str::limit($search, 60) }}&rdquo;@elseif ($hasActiveFilters)Nothing matched these filters.@else No products yet.@endif</h3>
                                     <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">@if (filled($search))Try fewer filters, check spelling, or browse trending categories.@elseif ($hasActiveFilters)Try removing a filter or browse available products.@else Products from approved sellers will appear here.@endif</p>
                                     <a href="{{ $clearAllUrl }}" class="mt-6 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">{{ filled($search) || $hasActiveFilters ? 'Clear filters' : 'Browse marketplace' }}</a>
