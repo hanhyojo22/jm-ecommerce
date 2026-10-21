@@ -17,12 +17,20 @@ RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --opti
 
 FROM php:8.4-apache-bookworm
 
+ARG REDIS_VERSION=6.3.0
+
 WORKDIR /var/www/html
 
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends libonig-dev libpq-dev libxml2-dev libzip-dev unzip \
+RUN apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 update \
+    && apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 install --yes --no-install-recommends libonig-dev libpq-dev libxml2-dev libzip-dev unzip \
     && docker-php-ext-install bcmath mbstring pcntl pdo_pgsql xml zip \
-    && pecl install redis \
+    && curl --fail --show-error --location --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 15 \
+        --output /tmp/phpredis.tar.gz \
+        "https://github.com/phpredis/phpredis/archive/refs/tags/${REDIS_VERSION}.tar.gz" \
+    && mkdir -p /tmp/phpredis \
+    && tar -xzf /tmp/phpredis.tar.gz -C /tmp/phpredis --strip-components=1 \
+    && (cd /tmp/phpredis && phpize && ./configure && make -j"$(nproc)" && make install) \
+    && rm -rf /tmp/phpredis /tmp/phpredis.tar.gz \
     && docker-php-ext-enable opcache redis \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
