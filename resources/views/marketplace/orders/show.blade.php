@@ -47,7 +47,7 @@
     <div class="page-shell min-h-[calc(100dvh-4.5rem)]">
     {{-- The drill-down of the purchases list keeps that list's measure; the width lives in app.css. --}}
     <div class="page-container account-measure-orders">
-        <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-muted"><a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">My purchases</a><span aria-hidden="true">/</span><span aria-current="page" class="font-semibold text-ink">Order details</span></nav>
+        <a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">← My purchases</a>
         @if($errors->any())<div class="mb-6 rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm text-rose-800" role="alert"><p class="font-semibold">We could not save your request.</p><ul class="mt-1 list-inside list-disc">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
         @if(session('status'))<div class="mb-6 rounded-[10px] border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-brand-hover" role="status">{{ session('status') }}</div>@endif
         @if(session('order_placed'))
@@ -58,7 +58,7 @@
             </section>
         @endif
         <div class="mt-7 flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0"><p class="text-xs font-bold uppercase tracking-[0.14em] text-brand">My purchases / Order details</p><h1 class="mt-2 text-3xl font-bold tracking-[-0.04em] text-ink sm:text-4xl">Order details</h1><div x-data="{ copied:false, copy() { navigator.clipboard?.writeText('{{ $order->number }}'); this.copied=true; setTimeout(() => this.copied=false, 1800) } }" class="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted"><p class="break-words">Order #{{ $order->number }} · Placed {{ $order->created_at->format('M j, Y · g:i A') }}</p><button type="button" @click="copy" class="inline-flex min-h-11 items-center text-xs font-semibold text-brand hover:text-brand-hover" :aria-label="copied ? 'Order number copied' : 'Copy order number'" x-text="copied ? 'Copied' : 'Copy number'"></button></div></div>
+            <div class="min-w-0"><h1 class="text-3xl font-bold tracking-[-0.04em] text-ink sm:text-4xl">Order details</h1><div x-data="{ copied:false, copy() { navigator.clipboard?.writeText('{{ $order->number }}'); this.copied=true; setTimeout(() => this.copied=false, 1800) } }" class="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted"><p class="break-words">Order #{{ $order->number }} · Placed {{ $order->created_at->format('M j, Y · g:i A') }}</p><button type="button" @click="copy" class="inline-flex min-h-11 items-center text-xs font-semibold text-brand hover:text-brand-hover" :aria-label="copied ? 'Order number copied' : 'Copy order number'" x-text="copied ? 'Copied' : 'Copy number'"></button></div></div>
             {{-- With several stores the order has no single status, so the badge says how far it is as a whole. --}}
             <span class="status-badge {{ $statusStyles[$order->status] }}">{{ $isMultiStore ? $multiStoreHeadline : ($order->status === 'pending' ? 'Awaiting seller confirmation' : ucfirst($order->status)) }}</span>
         </div>

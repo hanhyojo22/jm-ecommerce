@@ -11,7 +11,8 @@ test('seller conversation fills the account layout at desktop and mobile widths'
         await seller.page.goto('/messages');
         const inboxBottom = await seller.page.locator('[data-conversation-inbox] .account-messages-shell .account-shell-content > .grid').evaluate((panel) => panel.getBoundingClientRect().bottom);
         expect(900 - inboxBottom).toBeLessThanOrEqual(40);
-        await expect(seller.page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Seller Center');
+        await expect(seller.page.getByRole('heading', { name: 'Messages', level: 1 })).toBeVisible();
+        await expect(seller.page.getByRole('navigation', { name: 'Seller workspace navigation' })).toContainText('Messages');
         await seller.page.locator('[data-conversation-list] a').first().click();
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         const dimensions = await seller.page.evaluate(() => ({

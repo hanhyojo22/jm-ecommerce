@@ -20,13 +20,7 @@
     <x-marketplace.header />
 
     <main class="marketplace-container min-h-[calc(100dvh-4.5rem)] pb-16">
-        <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
-            <a href="{{ route('home') }}">Home</a>
-            <span aria-hidden="true">/</span>
-            <span aria-current="page">Top products</span>
-        </nav>
-
-        <div x-data="{ filtersOpen: false, viewMode: 'grid' }" class="grid items-start gap-7 pt-2 lg:grid-cols-[272px_minmax(0,1fr)]">
+        <div x-data="{ filtersOpen: false, viewMode: 'grid' }" class="grid items-start gap-7 pt-8 lg:grid-cols-[272px_minmax(0,1fr)]">
             <aside id="top-product-filters" x-cloak x-show="filtersOpen" class="marketplace-surface lg:sticky lg:top-24 lg:!block lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto" aria-label="Product filters">
                 <div class="mx-5 flex items-center justify-between border-b border-line py-4">
                     <h2 class="font-semibold">Filters</h2>

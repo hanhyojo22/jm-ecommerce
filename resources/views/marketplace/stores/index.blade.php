@@ -20,13 +20,7 @@
     <x-marketplace.header :search="$search" />
 
     <main class="marketplace-container min-h-[calc(100dvh-4.5rem)] pb-16">
-        <div>
-            <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
-                <a href="{{ route('home') }}">Home</a>
-                <span aria-hidden="true">/</span>
-                <span aria-current="page">Stores</span>
-            </nav>
-
+        <div class="pt-9">
             <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div class="max-w-2xl">
                     <h1 class="marketplace-page-title text-ink">Discover stores</h1>

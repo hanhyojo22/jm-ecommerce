@@ -36,11 +36,7 @@
     @endphp
 
     <div class="page-shell"><div class="page-container returns-case-shell">
-        <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm text-muted">
-            <a href="{{ $backUrl }}" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">{{ $backLabel }}</a>
-            <span aria-hidden="true">/</span>
-            <span aria-current="page" class="font-semibold text-ink">Return case</span>
-        </nav>
+        <a href="{{ $backUrl }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">← {{ $backLabel }}</a>
 
         @php
             $storeInitials = Str::upper(Str::substr($case->sellerOrder->store->name, 0, 2));

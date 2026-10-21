@@ -115,8 +115,6 @@
                     <a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Home</a>
                     <span aria-hidden="true">/</span>
                     <a href="{{ route('catalog.stores') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Stores</a>
-                    <span aria-hidden="true">/</span>
-                    <span aria-current="page" class="min-w-0 truncate">{{ $sellerStore->name }}</span>
                 </nav>
 
                 <section class="marketplace-surface overflow-hidden" aria-labelledby="store-heading" data-od-id="store-header">
@@ -188,17 +186,10 @@
                         @if ($sellerStore->created_at)<div><dt class="sr-only">Joined</dt><dd>Joined {{ $sellerStore->created_at->format('M Y') }}</dd></div>@endif
                     </dl>
                 </section>
-            @else
-                {{-- Listing header for search / filtered results (marketplace.html) --}}
-                <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
-                    <a href="{{ route('home') }}">Home</a>
-                    <span aria-hidden="true">/</span>
-                    <span aria-current="page" class="min-w-0 truncate">{{ filled($search) ? 'Search results' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Category') : 'Marketplace') }}</span>
-                </nav>
             @endif
 
             {{-- Catalog results with filters (marketplace.html layout) --}}
-            <section id="product-results" class="scroll-mt-24 {{ $sellerStore || ! $isListing ? 'pt-12' : 'pt-1 min-[641px]:pt-0' }}" aria-labelledby="product-results-heading" data-od-id="results">
+            <section id="product-results" class="scroll-mt-24 {{ $sellerStore || ! $isListing ? 'pt-12' : 'pt-8' }}" aria-labelledby="product-results-heading" data-od-id="results">
                 @if ($sellerStore)
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="min-w-0"><h2 id="product-results-heading" class="marketplace-section-title">{{ $sellerStore ? 'All products' : 'Products' }}</h2><p class="marketplace-section-subtitle">{{ number_format($products->total()) }} {{ Str::plural('product', $products->total()) }}@if ($search) matching “{{ Str::limit($search, 32) }}”@endif</p></div>

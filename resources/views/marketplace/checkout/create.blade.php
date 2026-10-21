@@ -13,10 +13,7 @@
                 }
             },
         }">
-            <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
-                <a href="{{ route('cart.index') }}" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">Cart</a>
-                <span aria-hidden="true">/</span><span aria-current="page" class="font-semibold text-ink">Checkout</span>
-            </nav>
+            <a href="{{ route('cart.index') }}" class="inline-flex min-h-11 items-center self-start text-sm font-semibold text-brand hover:text-brand-hover">← Back to cart</a>
             <div class="grid gap-2">
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand">Almost there</p>
                 <h1 class="marketplace-page-title">Checkout</h1>
