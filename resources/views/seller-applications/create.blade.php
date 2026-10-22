@@ -126,8 +126,11 @@
                         <div><dt class="font-semibold">Payout</dt><dd>{{ $application?->payoutProfile?->provider ?? 'Not completed' }} {{ $application?->payoutProfile?->maskedAccountNumber() }}</dd></div>
                     </dl>
                     <form method="POST" action="{{ route('seller-application.store') }}" class="mt-6 space-y-4">@csrf
-                        @foreach (['seller_agreement' => 'Seller Agreement', 'terms' => 'Terms and Conditions', 'privacy' => 'Privacy Policy', 'prohibited_products' => 'Prohibited Products Policy', 'returns_refunds' => 'Returns and Refunds Policy', 'fees' => 'Marketplace fees and commission policy'] as $key => $label)
-                            <label class="flex items-start gap-3 text-sm"><input type="checkbox" name="agreements[{{ $key }}]" value="1" required class="mt-1 rounded border-line text-brand focus:ring-brand"> <span>I accept the {{ $label }} (version 1.0).</span></label>
+                        @foreach (['seller_agreement' => 'Seller Agreement', 'terms' => 'Terms and Conditions', 'privacy' => 'Privacy Policy', 'prohibited_products' => 'Prohibited Products Policy', 'returns_refunds' => 'Returns and Refunds Policy', 'fees' => 'Marketplace Fee Policy'] as $key => $label)
+                            <label class="flex items-start gap-3 text-sm"><input type="checkbox" name="agreements[{{ $key }}]" value="1" required class="mt-1 rounded border-line text-brand focus:ring-brand"> <span>I accept the {{ $label }} (version {{ $key === 'fees' ? config('marketplace.platform_fee.policy_version') : '1.0' }}).</span></label>
+                            @if ($key === 'fees')
+                                @include('partials.platform-fee-terms', ['class' => 'ml-6'])
+                            @endif
                             @if (in_array($key, ['terms', 'privacy', 'returns_refunds'], true))<a href="{{ route(['terms' => 'terms', 'privacy' => 'privacy-policy', 'returns_refunds' => 'returns'][$key]) }}" target="_blank" rel="noopener" class="ml-6 text-xs font-semibold text-brand underline">Read {{ $label }}</a>@endif
                         @endforeach
                         <button type="submit" class="inline-flex min-h-12 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Submit application</button>

@@ -13,7 +13,12 @@ class Tenant extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'status'];
+    protected $fillable = ['name', 'slug', 'status', 'platform_fee_accepted_at'];
+
+    protected function casts(): array
+    {
+        return ['platform_fee_accepted_at' => 'datetime'];
+    }
 
     public function members(): HasMany
     {
@@ -38,5 +43,10 @@ class Tenant extends Model
     public function sellerPayouts(): HasMany
     {
         return $this->hasMany(SellerPayout::class);
+    }
+
+    public function platformFeeStatements(): HasMany
+    {
+        return $this->hasMany(PlatformFeeStatement::class);
     }
 }

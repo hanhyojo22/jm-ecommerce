@@ -159,6 +159,77 @@ services:
       - key: LOG_CHANNEL
         value: stderr
 
+  # Runs routes/console.php. Every task there is daily or monthly on the
+  # hour, so an hourly tick is enough; make this "* * * * *" if a task ever
+  # needs minute precision.
+  - type: cron
+    name: jmmart-scheduler
+    runtime: docker
+    dockerCommand: php artisan schedule:run
+    schedule: "0 * * * *"
+    region: singapore
+    branch: master
+    envVars:
+      - key: APP_NAME
+        value: JMMart
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: APP_KEY
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: APP_KEY
+      - key: RUN_MIGRATIONS
+        value: "false"
+      - key: RUN_OPTIMIZATIONS
+        value: "false"
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: DB_URL
+      - key: DB_SSLMODE
+        value: require
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: BROADCAST_CONNECTION
+        value: log
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: MAIL_MAILER
+        value: log
+      - key: GMAIL_CLIENT_ID
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: GMAIL_CLIENT_ID
+      - key: GMAIL_CLIENT_SECRET
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: GMAIL_CLIENT_SECRET
+      - key: GMAIL_REFRESH_TOKEN
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: GMAIL_REFRESH_TOKEN
+      - key: GMAIL_FROM_ADDRESS
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: GMAIL_FROM_ADDRESS
+
   # ----------------------------------------------------------------------
   # Staging — deploys from the staging branch.
   # APP_ENV stays "production" so staging mirrors production exactly;

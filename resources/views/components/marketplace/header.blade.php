@@ -13,7 +13,7 @@
         default => 'Start selling',
     };
     $isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== $user?->id);
-    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
+    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
     $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit');
     $isAccountWorkspace = $isSellerWorkspace || $isCustomerWorkspace;
     $customerPageTitle = match (true) {
@@ -32,6 +32,7 @@
         request()->routeIs('messages.*') => 'Messages',
         request()->routeIs('seller.reviews.*') => 'Reviews',
         request()->routeIs('seller.earnings.*') => 'Earnings',
+        request()->routeIs('seller.platform-fees.*') => 'Platform fees',
         request()->routeIs('seller.store-settings.*') => 'Store settings',
         request()->routeIs('profile.edit') => 'Account settings',
         default => 'Seller Center',

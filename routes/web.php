@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GovernanceController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\OrderIssueController as AdminOrderIssueController;
+use App\Http\Controllers\Admin\PlatformFeeController as AdminPlatformFeeController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReviewModerationController;
 use App\Http\Controllers\Admin\ReturnCaseController as AdminReturnCaseController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Marketplace\ReturnCaseController as BuyerReturnCaseCont
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\EarningController;
+use App\Http\Controllers\Seller\PlatformFeeController as SellerPlatformFeeController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
 use App\Http\Controllers\Seller\ReturnCaseController as SellerReturnCaseController;
@@ -138,6 +140,10 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::patch('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.update');
     Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
     Route::get('/seller/earnings', [EarningController::class, 'index'])->name('seller.earnings.index');
+    Route::get('/seller/platform-fees', [SellerPlatformFeeController::class, 'index'])->name('seller.platform-fees.index');
+    Route::post('/seller/platform-fees/accept', [SellerPlatformFeeController::class, 'accept'])->middleware('throttle:10,1')->name('seller.platform-fees.accept');
+    Route::post('/seller/platform-fees/{statement}/payment', [SellerPlatformFeeController::class, 'pay'])->middleware('throttle:10,1')->name('seller.platform-fees.pay');
+    Route::get('/seller/platform-fees/{statement}/proof', [SellerPlatformFeeController::class, 'proof'])->name('seller.platform-fees.proof');
     Route::get('/seller/reviews', [SellerProductReviewController::class, 'index'])->name('seller.reviews.index');
     Route::post('/seller/reviews/{review}/response', [SellerProductReviewController::class, 'respond'])->middleware('throttle:10,1')->name('seller.reviews.respond');
 
@@ -171,6 +177,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (
     Route::patch('/admin/seller-orders/{sellerOrder}/cod-collection', [AdminOrderController::class, 'markSellerCodCollected'])->middleware('throttle:admin-mutations')->name('admin.orders.seller-cod-collection');
     Route::get('/admin/payouts', [SellerPayoutController::class, 'index'])->name('admin.payouts.index');
     Route::post('/admin/payouts', [SellerPayoutController::class, 'store'])->middleware('throttle:admin-mutations')->name('admin.payouts.store');
+    Route::get('/admin/platform-fees', [AdminPlatformFeeController::class, 'index'])->name('admin.platform-fees.index');
+    Route::patch('/admin/platform-fees/{statement}', [AdminPlatformFeeController::class, 'update'])->middleware('throttle:admin-mutations')->name('admin.platform-fees.update');
+    Route::get('/admin/platform-fees/{statement}/proof', [AdminPlatformFeeController::class, 'proof'])->name('admin.platform-fees.proof');
     Route::get('/admin/products', [AdminProductController::class, 'index'])->name('admin.products.index');
     Route::get('/admin/products/{product}', [AdminProductController::class, 'show'])->name('admin.products.show');
     Route::patch('/admin/products/{product}', [AdminProductController::class, 'moderate'])->middleware('throttle:admin-mutations')->name('admin.products.moderate');

@@ -52,6 +52,7 @@ class DashboardController extends Controller
 
             return response()->view('seller.dashboard', [
                 'store' => $store,
+                'needsFeeTerms' => $tenant->platform_fee_accepted_at === null,
                 'totalProducts' => (int) $productMetrics->total_products,
                 'activeProducts' => (int) $productMetrics->active_products,
                 'pendingOrderCount' => (int) $orderMetrics->pending_orders,

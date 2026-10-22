@@ -21,6 +21,8 @@ class UpdateSellerOrderStatus
         'shipped' => ['delivered'],
     ];
 
+    public function __construct(private RecordSellerEarning $recordSellerEarning) {}
+
     public function handle(SellerOrder $sellerOrder, string $status, User $actor, ?string $ipAddress = null): SellerOrder
     {
         $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress): SellerOrder {
@@ -52,6 +54,10 @@ class UpdateSellerOrderStatus
             }
 
             $sellerOrder->update(['status' => $status, 'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at]);
+
+            if ($status === 'delivered') {
+                $this->recordSellerEarning->handle($sellerOrder);
+            }
 
             $activeSellerOrders = $sellerOrders->reject(
                 fn (SellerOrder $order): bool => $order->status === 'cancelled',

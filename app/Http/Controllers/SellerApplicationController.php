@@ -171,7 +171,8 @@ class SellerApplicationController extends Controller
                 if (($request->input('agreements.'.$policy)) !== '1') {
                     throw ValidationException::withMessages(['agreements.'.$policy => 'You must accept this policy.']);
                 }
-                $application->policyAcceptances()->firstOrCreate(['policy_type' => $policy, 'version' => '1.0'], ['user_id' => $user->id, 'ip_address' => $request->ip(), 'user_agent' => substr($request->userAgent() ?? '', 0, 500), 'accepted_at' => now()]);
+                $version = $policy === 'fees' ? (string) config('marketplace.platform_fee.policy_version') : '1.0';
+                $application->policyAcceptances()->firstOrCreate(['policy_type' => $policy, 'version' => $version], ['user_id' => $user->id, 'ip_address' => $request->ip(), 'user_agent' => substr($request->userAgent() ?? '', 0, 500), 'accepted_at' => now()]);
             }
             $old = $application->status;
             $application->update(['status' => 'submitted', 'submitted_at' => now(), 'correction_steps' => null]);

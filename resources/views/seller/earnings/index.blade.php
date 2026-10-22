@@ -24,7 +24,7 @@
             <section class="mt-6 content-card" aria-labelledby="earnings-history">
                 <div class="border-b border-line px-5 py-4 sm:px-6">
                     <h2 id="earnings-history" class="text-lg font-semibold text-ink">Earnings history</h2>
-                    <p class="mt-1 text-sm text-muted">Commission is ₱0.00 for this MVP, so gross sales and net payable are equal.</p>
+                    <p class="mt-1 text-sm text-muted">Commission is JMMart's platform fee on each delivered order. You collect COD cash yourself, so it is billed on your monthly <a href="{{ route('seller.platform-fees.index') }}" class="font-semibold text-brand underline">platform fee statement</a>.</p>
                 </div>
 
                 <div class="table-scroll hidden md:block">
@@ -43,7 +43,7 @@
                                     <td class="px-5 py-4"><span class="status-badge {{ $earning->status === 'available' && ! $earning->voided_at ? 'bg-success/10 text-success ring-success/20' : 'bg-slate-100 text-muted ring-line' }}">{{ $earning->voided_at ? 'Voided COD' : ($earning->status === 'available' ? 'Available' : 'Paid out') }}</span>@if ($earning->payout)<p class="mt-1 text-xs text-muted">{{ $earning->payout->reference }}</p>@endif</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="6" class="empty-state"><p class="font-semibold text-ink">No earnings available yet</p><p class="mt-2 text-sm text-muted">An earning is created after a delivered COD order is confirmed as paid.</p></td></tr>
+                                <tr><td colspan="6" class="empty-state"><p class="font-semibold text-ink">No earnings available yet</p><p class="mt-2 text-sm text-muted">An earning is recorded when you mark an order as delivered.</p></td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -53,7 +53,7 @@
                     @forelse ($earnings as $earning)
                         <article class="p-5"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><a href="{{ route('seller.orders.show', $earning->sellerOrder) }}" class="break-all font-semibold text-ink">{{ $earning->sellerOrder->order->number }}</a><p class="mt-1 text-sm text-muted">Available {{ $earning->available_at->format('M j, Y') }}</p></div><span class="status-badge shrink-0 {{ $earning->status === 'available' && ! $earning->voided_at ? 'bg-success/10 text-success ring-success/20' : 'bg-slate-100 text-muted ring-line' }}">{{ $earning->voided_at ? 'Voided COD' : ($earning->status === 'available' ? 'Available' : 'Paid out') }}</span></div><dl class="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 text-sm"><div><dt class="text-muted">Gross sales</dt><dd class="mt-1 font-semibold tabular-nums text-ink">₱{{ number_format((float) $earning->gross_amount, 2) }}</dd></div><div><dt class="text-muted">Net payable</dt><dd class="mt-1 font-semibold tabular-nums text-ink">₱{{ number_format((float) $earning->net_amount, 2) }}</dd></div></dl></article>
                     @empty
-                        <div class="empty-state"><p class="font-semibold text-ink">No earnings available yet</p><p class="mt-2 text-sm text-muted">Delivered COD orders will appear here once payment is confirmed.</p></div>
+                        <div class="empty-state"><p class="font-semibold text-ink">No earnings available yet</p><p class="mt-2 text-sm text-muted">Orders appear here once you mark them as delivered.</p></div>
                     @endforelse
                 </div>
 

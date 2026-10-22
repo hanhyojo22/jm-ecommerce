@@ -36,6 +36,7 @@
             'label' => 'Operations',
             'items' => [
                 ['label' => 'Payouts', 'href' => route('admin.payouts.index'), 'icon' => 'payouts', 'active' => request()->routeIs('admin.payouts.*')],
+                ['label' => 'Platform fees', 'href' => route('admin.platform-fees.index'), 'icon' => 'fees', 'active' => request()->routeIs('admin.platform-fees.*')],
                 ['label' => 'Audit log', 'href' => route('admin.audit-logs.index'), 'icon' => 'audit', 'active' => request()->routeIs('admin.audit-logs.*')],
             ],
         ],
@@ -94,6 +95,7 @@
                                                 @case('accounts')<path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6z" /><circle cx="12" cy="10" r="2" /><path d="M8.5 16a3.5 3.5 0 0 1 7 0" />@break
                                                 @case('reviews')<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />@break
                                                 @case('reports')<path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-9.5A7.5 7.5 0 0 1 10.5 4h2A7.5 7.5 0 0 1 20 11.5Z" />@break
+                                                @case('fees')<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6M9 16h3" />@break
                                                 @case('payouts')<path d="M12 2v20M17 6.5c-.7-1.2-2.1-2-4.2-2-2.4 0-4 1.2-4 3s1.6 2.7 4.2 3.3 4.2 1.4 4.2 3.4-1.8 3.6-4.5 3.6c-2.2 0-3.8-.8-4.8-2.2" />@break
                                                 @case('audit')<circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />@break
                                             @endswitch

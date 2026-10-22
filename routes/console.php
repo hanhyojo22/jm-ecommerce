@@ -1,8 +1,11 @@
 <?php
 
+use App\Actions\IssuePlatformFeeStatements;
+use App\Models\PlatformFeeStatement;
 use App\Models\ReturnCase;
 use App\Models\User;
 use App\Services\GmailOrderMailer;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
@@ -49,3 +52,63 @@ Artisan::command('returns:remind', function (GmailOrderMailer $mailer): void {
 
     $this->info("Reminded {$cases->count()} case(s); {$overdue} overdue in total.");
 })->purpose('Remind the waiting party about overdue return cases and alert support')->daily();
+
+Artisan::command('platform-fees:bill {month? : The month to bill as YYYY-MM; defaults to last month}', function (IssuePlatformFeeStatements $issue, GmailOrderMailer $mailer): int {
+    $requested = $this->argument('month');
+    if ($requested !== null && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $requested) !== 1) {
+        $this->error('The month must look like 2026-09.');
+
+        return 1;
+    }
+    $month = $requested !== null ? CarbonImmutable::createFromFormat('!Y-m', $requested) : CarbonImmutable::now()->subMonthNoOverflow();
+
+    $statements = $issue->handle($month);
+
+    foreach ($statements->filter(fn (PlatformFeeStatement $statement): bool => $statement->status === 'unpaid')->load('tenant.members.user') as $statement) {
+        foreach ($statement->tenant->members->pluck('user')->filter() as $recipient) {
+            $mailer->send(
+                $recipient,
+                "JMMart platform fee statement for {$month->format('F Y')}",
+                'Your platform fee for '.$month->format('F Y').' is ₱'.number_format((float) $statement->amount_due, 2).", due {$statement->due_at->format('M j, Y')}."
+                ."\n\nPay by bank or GCash transfer, then upload the reference number and receipt: ".route('seller.platform-fees.index'),
+            );
+        }
+    }
+
+    $this->info("Issued {$statements->count()} statement(s) for {$month->format('F Y')}.");
+
+    return 0;
+})->purpose('Issue each store its monthly platform fee statement')->monthlyOn(1, '01:00')->withoutOverlapping();
+
+Artisan::command('platform-fees:remind', function (GmailOrderMailer $mailer): void {
+    $statements = PlatformFeeStatement::query()->overdue()
+        ->where(fn ($query) => $query->whereNull('last_reminded_at')->orWhere('last_reminded_at', '<', now()->subDays(3)))
+        ->with('tenant.members.user', 'tenant.store')
+        ->get();
+
+    foreach ($statements as $statement) {
+        foreach ($statement->tenant->members->pluck('user')->filter() as $recipient) {
+            $mailer->send(
+                $recipient,
+                'JMMart platform fee is overdue',
+                'Your platform fee of ₱'.number_format((float) $statement->amount_due, 2)." for {$statement->period_start->format('F Y')} was due {$statement->due_at->format('M j, Y')}. JMMart may suspend stores with unpaid fees."
+                ."\n\nPay and upload your receipt: ".route('seller.platform-fees.index'),
+            );
+        }
+
+        $statement->update(['last_reminded_at' => now()]);
+    }
+
+    if ($statements->isNotEmpty()) {
+        foreach (User::query()->where('account_type', 'admin')->whereIn('platform_role', ['super_admin', 'admin'])->get() as $administrator) {
+            $mailer->send(
+                $administrator,
+                'JMMart platform fees are overdue',
+                "{$statements->count()} store(s) have overdue platform fees: ".$statements->map(fn (PlatformFeeStatement $statement): string => $statement->tenant->store?->name ?? $statement->tenant->name)->implode(', ').'.'
+                ."\n\nReview them: ".route('admin.platform-fees.index', ['status' => 'overdue']),
+            );
+        }
+    }
+
+    $this->info("Reminded {$statements->count()} overdue statement(s).");
+})->purpose('Remind stores with overdue platform fees and alert support')->daily();

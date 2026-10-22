@@ -31,4 +31,4 @@ All money is calculated as exact two-decimal strings and stored in PostgreSQL `n
 
 ## Deliberate MVP boundaries
 
-Products publish automatically after seller approval. Shipping is a zero-Peso value at checkout. There are no online gateways, payouts, commissions, coupons, variants, warehouse stock, or deployment configuration in this phase.
+Products publish automatically after seller approval. Shipping is a zero-Peso value at checkout. Stores collect COD cash themselves, so JMMart's 1% platform fee on each delivered order is billed to them on a monthly statement rather than deducted. There are no online gateways, coupons, variants, warehouse stock, or deployment configuration in this phase.

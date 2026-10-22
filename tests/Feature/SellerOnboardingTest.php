@@ -43,7 +43,8 @@ class SellerOnboardingTest extends TestCase
         $policies = array_fill_keys(['seller_agreement', 'terms', 'privacy', 'prohibited_products', 'returns_refunds', 'fees'], '1');
         $this->actingAs($buyer)->post(route('seller-application.store'), ['agreements' => $policies])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('seller_applications', ['id' => $application->id, 'status' => 'submitted']);
-        $this->assertSame(6, $application->policyAcceptances()->where('version', '1.0')->count());
+        $this->assertSame(5, $application->policyAcceptances()->where('version', '1.0')->count());
+        $this->assertTrue($application->policyAcceptances()->where('policy_type', 'fees')->where('version', '2.0')->exists());
         $this->assertStringNotContainsString('123456789012', json_encode(AuditLog::query()->firstOrFail()->toArray()));
         $this->actingAs($buyer)->post(route('seller-application.store'), ['agreements' => $policies])->assertForbidden();
     }
@@ -139,6 +140,30 @@ class SellerOnboardingTest extends TestCase
         $this->assertDatabaseCount('stores', 0);
         $this->assertDatabaseCount('tenant_members', 0);
         $this->assertSame('submitted', $application->fresh()->status);
+    }
+
+    public function test_approval_starts_platform_fees_when_the_applicant_accepted_the_current_fee_terms(): void
+    {
+        $admin = User::factory()->administrator()->create();
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $application = $buyer->sellerApplications()->create(['store_name' => 'Fee Goods', 'seller_name' => 'Ava', 'phone' => '+639171234567', 'address_line' => '10 Main St', 'city' => 'Manila', 'status' => 'submitted']);
+        $application->policyAcceptances()->create(['user_id' => $buyer->id, 'policy_type' => 'fees', 'version' => '2.0', 'accepted_at' => now()]);
+
+        $tenant = app(ApproveSellerApplication::class)->handle($admin, $application);
+
+        $this->assertNotNull($tenant->fresh()->platform_fee_accepted_at);
+    }
+
+    public function test_approval_leaves_platform_fees_off_when_the_applicant_accepted_older_fee_terms(): void
+    {
+        $admin = User::factory()->administrator()->create();
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $application = $buyer->sellerApplications()->create(['store_name' => 'Old Terms Goods', 'seller_name' => 'Ava', 'phone' => '+639171234567', 'address_line' => '10 Main St', 'city' => 'Manila', 'status' => 'submitted']);
+        $application->policyAcceptances()->create(['user_id' => $buyer->id, 'policy_type' => 'fees', 'version' => '1.0', 'accepted_at' => now()]);
+
+        $tenant = app(ApproveSellerApplication::class)->handle($admin, $application);
+
+        $this->assertNull($tenant->fresh()->platform_fee_accepted_at);
     }
 
     public function test_suspension_blocks_product_creation_and_preserves_records(): void

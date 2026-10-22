@@ -33,10 +33,18 @@ class ApproveSellerApplication
                 throw new LogicException('This seller already has a store.');
             }
 
+            // Applications submitted before the fee terms existed accepted an older version;
+            // those stores accept the terms from their dashboard before they are charged.
+            $acceptedFeeTerms = $application->policyAcceptances()
+                ->where('policy_type', 'fees')
+                ->where('version', (string) config('marketplace.platform_fee.policy_version'))
+                ->exists();
+
             $tenant = Tenant::query()->create([
                 'name' => $application->store_name,
                 'slug' => $this->uniqueSlug($application->store_slug ?? $application->store_name, Tenant::class),
                 'status' => 'active',
+                'platform_fee_accepted_at' => $acceptedFeeTerms ? now() : null,
             ]);
 
             TenantMember::query()->create([

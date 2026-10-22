@@ -27,6 +27,7 @@
     <div class="page-shell" data-seller-dashboard data-dashboard-key="{{ $store->id }}"><div class="page-container">
         <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm"><p class="max-w-xl text-blue-950"><strong>Seller Center</strong> tracks your store sales. You can also shop with this account; your personal purchases are kept separately.</p><div class="flex flex-wrap gap-3"><a href="{{ route('home') }}" class="inline-flex min-h-11 items-center font-semibold text-brand">Shop the marketplace</a><a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center font-semibold text-brand">My purchases</a></div></div>
         @if (session('status'))<div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">{{ session('status') }}</div>@endif
+        @if ($needsFeeTerms)<div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status"><p><strong>New:</strong> review and accept the Marketplace Fee Policy.</p><a href="{{ route('seller.platform-fees.index') }}" class="inline-flex min-h-11 items-center font-semibold underline">Review terms</a></div>@endif
 
         <section aria-label="Store summary">
             <dl class="grid grid-cols-2 gap-3 xl:grid-cols-4">

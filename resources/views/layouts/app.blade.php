@@ -3,7 +3,7 @@
     <head>
         {{-- The workspace a request belongs to decides the chrome below and the stylesheet in the head. --}}
         @php($isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== auth()->id()))
-        @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && auth()->user()->preferred_workspace === 'seller' && auth()->user()->sellerTenant() !== null)))
+        @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && auth()->user()->preferred_workspace === 'seller' && auth()->user()->sellerTenant() !== null)))
         @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
         @php($isCustomerWorkspace = in_array(auth()->user()?->account_type, ['buyer', 'seller'], true) && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit'))
         <meta charset="utf-8">
