@@ -98,7 +98,7 @@ test('a quantity change shows it is busy while the session renews and still subm
         const startingQuantity = Number(await form.locator('span').first().innerText());
 
         // Force the renewal the click has to wait for, and hold it open.
-        await page.evaluate(() => window.localStorage.removeItem('clerk_session_expires_at'));
+        await context.clearCookies({ name: '__session' });
         await page.route('**/auth/session', async (route) => {
             await heldSession;
             await route.continue();

@@ -873,7 +873,9 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
         await firstTyping;
         await seller.context.clearCookies({ name: '__session' });
         await seller.context.setExtraHTTPHeaders({});
-        await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() - 1000)));
+
+        // A future legacy deadline must not suppress the refresh once the cookie is gone.
+        await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() + 60_000)));
 
         const refresh = seller.page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
         await seller.page.getByRole('textbox', { name: 'Write a message' }).press('Enter');
@@ -887,7 +889,6 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
         await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Please check your order details.');
         await secondTyping;
         await seller.context.clearCookies({ name: '__session' });
-        await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() - 1000)));
         await seller.page.route('**/auth/session', (route) => route.fulfill({ status: 401, body: '{}' }));
         await seller.page.getByRole('button', { name: 'Send message' }).click();
 
@@ -997,7 +998,6 @@ for (const attachment of [
             }
             await seller.context.clearCookies({ name: '__session' });
             await seller.context.setExtraHTTPHeaders({});
-            await seller.page.evaluate(() => localStorage.setItem('clerk_session_expires_at', String(Date.now() - 1000)));
 
             const refresh = seller.page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
             await seller.page.getByRole('button', { name: `Send ${attachment.label}` }).click();

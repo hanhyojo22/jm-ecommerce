@@ -382,8 +382,13 @@
                     @elseif ($role === 'admin' && $overdue && in_array($case->status, ['awaiting_seller', 'awaiting_receipt', 'awaiting_fulfillment', 'awaiting_confirmation'], true))
                         <h2 id="next-step-heading" class="returns-section-title">Take over this overdue case</h2>
                         <p class="mt-1.5 text-sm leading-6 text-muted">This case passed its deadline. Take it over to decide it yourself, or verify the recorded outcome if there is one.</p>
-                        <form method="POST" action="{{ $actionRoute }}" class="mt-5">@csrf @method('PATCH')
-                            <button type="submit" name="action" value="takeover" class="button-primary">Take over overdue case</button>
+                        <form method="POST" action="{{ $actionRoute }}" class="mt-5 grid gap-4" x-data>@csrf @method('PATCH')
+                            <div>
+                                <label for="admin-takeover-note" class="field-label">Reason for taking over</label>
+                                <textarea id="admin-takeover-note" name="note" required minlength="10" maxlength="2000" rows="3" class="field-control" placeholder="Record what the seller or buyer missed and when.">{{ old('note') }}</textarea>
+                                <x-input-error :messages="$errors->get('note')" class="mt-2" />
+                            </div>
+                            <button type="submit" name="action" value="takeover" class="button-primary w-fit" @click="if (! window.confirm('Take over this overdue case? You will decide it as JMMart support.')) $event.preventDefault()">Take over overdue case</button>
                         </form>
                         @if ($case->status === 'awaiting_confirmation' && $case->outcome)
                             <form method="POST" action="{{ $actionRoute }}" class="mt-5 grid gap-3 border-t border-line pt-5">@csrf @method('PATCH')

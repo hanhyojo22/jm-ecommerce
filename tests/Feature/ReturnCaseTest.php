@@ -217,16 +217,54 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'handoff', 'proof' => UploadedFile::fake()->image('handoff.jpg')]);
 
         $this->assertSame('awaiting_receipt', $case->fresh()->status);
-        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover'])->assertSessionHasErrors('action');
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover', 'note' => 'The case is not overdue yet.'])->assertSessionHasErrors('action');
 
         $this->travel(21)->days();
-        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover'])->assertSessionHas('status');
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover', 'note' => 'The seller never recorded the parcel.'])->assertSessionHas('status');
         $this->actingAs($admin)->patch(route('admin.returns.update', $case), [
             'action' => 'decide', 'decision' => 'refund', 'note' => 'The seller never recorded the parcel.',
             'return_instructions' => 'Already in transit.', 'return_method' => 'Seller-paid pickup',
         ])->assertSessionHas('status');
 
         $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'awaiting_receipt']);
+    }
+
+    public function test_support_takes_over_an_overdue_seller_response_with_a_recorded_reason(): void
+    {
+        [$buyer, , $sellerOrder, $item] = $this->deliveredOrder();
+        $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
+        $case = ReturnCase::query()->sole();
+        $note = 'The seller did not respond within 48 hours, so support is deciding the claim.';
+
+        $this->travel(49)->hours();
+
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover'])
+            ->assertSessionHasErrors('note');
+
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), [
+            'action' => 'takeover',
+            'note' => $note,
+        ])->assertSessionHas('status');
+
+        $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'appealed']);
+        $this->assertDatabaseHas('return_case_events', [
+            'return_case_id' => $case->id,
+            'actor_id' => $admin->id,
+            'type' => 'takeover',
+            'note' => $note,
+        ]);
+
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), [
+            'action' => 'decide', 'decision' => 'refund', 'note' => 'The seller missed the response deadline. Refund approved.',
+            'return_instructions' => 'Pack the unit for pickup.', 'return_method' => 'Seller-paid pickup',
+        ])->assertSessionHas('status');
+
+        $this->assertDatabaseHas('return_cases', [
+            'id' => $case->id,
+            'status' => 'awaiting_return',
+            'remedy' => 'refund',
+        ]);
     }
 
     public function test_a_remedy_decided_after_receipt_does_not_ask_for_the_goods_again(): void
@@ -245,7 +283,7 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($seller)->patch(route('seller.returns.update', $case), ['action' => 'receive']);
 
         $this->travel(14)->days();
-        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover'])->assertSessionHas('status');
+        $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'takeover', 'note' => 'The seller did not fulfil the approved remedy.'])->assertSessionHas('status');
         $this->actingAs($admin)->patch(route('admin.returns.update', $case), [
             'action' => 'decide', 'decision' => 'replacement', 'note' => 'A replacement is the fair outcome here.',
             'return_instructions' => 'The seller already holds the unit.', 'return_method' => 'Seller-paid pickup',

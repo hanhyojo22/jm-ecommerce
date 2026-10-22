@@ -133,6 +133,32 @@ class ClerkSessionRefreshTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
+    public function test_an_unsafe_request_returns_to_the_same_origin_page_after_sign_in(): void
+    {
+        $path = '/admin/reviews/01J00000000000000000000000';
+
+        $this->withHeader('Referer', url($path))
+            ->patch($path, ['status' => 'hidden', 'reason' => 'Report'])
+            ->assertRedirect(route('login', ['redirect' => $path]));
+    }
+
+    public function test_an_unsafe_request_does_not_follow_an_external_referer(): void
+    {
+        $this->withHeader('Referer', 'https://evil.example/phish')
+            ->patch('/admin/reviews/01J00000000000000000000000', ['status' => 'hidden', 'reason' => 'Report'])
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_signing_out_expires_the_backend_session_cookie(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($user, 'clerk')
+            ->post(route('logout'))
+            ->assertOk()
+            ->assertCookieExpired('__session');
+    }
+
     public function test_every_protected_route_refuses_an_expired_session_without_replaying_writes(): void
     {
         foreach (Route::getRoutes() as $route) {

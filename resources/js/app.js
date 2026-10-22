@@ -279,8 +279,6 @@ const completeClerkHandoff = async (clerk) => {
         throw new Error('Clerk did not provide a session token for the sign-in handoff.');
     }
 
-    rememberClerkSessionDeadline(sessionToken);
-
     window.clerkHandoffState?.extend(clerkHandoffPostTimeout + clerkHandoffDeadlineSlack);
 
     const abort = new AbortController();
@@ -339,6 +337,12 @@ const clerkDomainFromPublishableKey = (publishableKey) => {
     return url.hostname ? url.host : null;
 };
 
+const clearClerkSessionCookie = () => {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+
+    document.cookie = `__session=; Max-Age=0; path=/${secure}; SameSite=Lax`;
+};
+
 let clerkLoadPromise;
 
 /*
@@ -392,6 +396,12 @@ const loadClerk = () => {
             ui: { ClerkUI: window.__internal_ClerkUICtor },
         }), clerkLoadTimeout, 'Clerk did not finish loading.');
 
+        clerk.addListener(({ session }) => {
+            if (! session) {
+                clearClerkSessionCookie();
+            }
+        });
+
         window.clerk = clerk;
 
         return clerk;
@@ -403,10 +413,10 @@ const loadClerk = () => {
 /*
  * Clerk session tokens are valid for about 60 seconds and the backend cookie is minted to
  * match, so a protected page opened after that window carries no verifiable credential and
- * Laravel refuses it. The deadline below only decides *when to ask Clerk for another token*;
- * it is never proof of identity. The server verifies every request on its own.
+ * Laravel refuses it. The check below only decides *when to ask Clerk for another token*;
+ * it is never proof of identity. A missing or unreadable cookie always asks, and the server
+ * verifies every request on its own.
  */
-const clerkSessionDeadlineKey = 'clerk_session_expires_at';
 const clerkSessionRefreshLeeway = 15_000;
 
 const clerkSessionExpiryFromToken = (token) => {
@@ -432,44 +442,13 @@ const readClerkSessionToken = () => document.cookie
     ?.slice('__session='.length) || null;
 
 /*
- * The browser deletes the cookie the moment it lapses, so the cookie on its own cannot tell a
- * fresh session from one that has already gone. The remembered deadline is what still answers
- * that question once the cookie is gone.
+ * The backend only accepts the __session cookie. A remembered deadline cannot stand in for
+ * a cookie that is gone, so a missing or unreadable cookie always asks Clerk for another.
  */
-const clerkSessionDeadline = () => {
-    const remembered = Number(window.localStorage.getItem(clerkSessionDeadlineKey));
-    const fromCookie = clerkSessionExpiryFromToken(readClerkSessionToken() ?? '');
-
-    return Math.max(Number.isFinite(remembered) ? remembered : 0, fromCookie ?? 0) || null;
-};
-
-const rememberClerkSessionDeadline = (token) => {
-    const expiresAt = clerkSessionExpiryFromToken(token);
-
-    if (!expiresAt) {
-        return;
-    }
-
-    try {
-        window.localStorage.setItem(clerkSessionDeadlineKey, String(expiresAt));
-    } catch {
-        // Without storage the cookie's own expiry is still read on the next page.
-    }
-};
-
-const forgetClerkSessionDeadline = () => {
-    try {
-        window.localStorage.removeItem(clerkSessionDeadlineKey);
-    } catch {
-        // There is nothing to forget when storage is unavailable.
-    }
-};
-
 const clerkSessionNeedsRefresh = () => {
-    const deadline = clerkSessionDeadline();
+    const expiresAt = clerkSessionExpiryFromToken(readClerkSessionToken() ?? '');
 
-    // A signed-in visitor whose deadline cannot be measured refreshes rather than guess.
-    return deadline === null || deadline - Date.now() <= clerkSessionRefreshLeeway;
+    return expiresAt === null || expiresAt - Date.now() <= clerkSessionRefreshLeeway;
 };
 
 const refreshClerkSession = async (endpoint) => {
@@ -501,7 +480,15 @@ const refreshClerkSession = async (endpoint) => {
                     throw new Error(`Laravel rejected the Clerk session refresh (${response.status}).`);
                 }
 
-                rememberClerkSessionDeadline(sessionToken);
+                const result = await response.json().catch(() => null);
+
+                if (result?.refreshed !== true) {
+                    throw new Error('Laravel did not confirm the Clerk session refresh.');
+                }
+
+                if (!readClerkSessionToken()) {
+                    throw new Error('The refreshed Clerk session cookie was not stored.');
+                }
             })(),
             new Promise((_, reject) => {
                 timer = setTimeout(() => {
@@ -1061,8 +1048,8 @@ document.querySelector('[data-seller-reviews]')?.addEventListener('submit', asyn
 const signOut = async () => {
     try {
         const clerk = await loadClerk();
+        clearClerkSessionCookie();
         await clerk.signOut();
-        forgetClerkSessionDeadline();
         window.location.assign('/');
     } catch (error) {
         console.error(error);

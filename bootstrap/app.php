@@ -25,11 +25,29 @@ return Application::configure(basePath: dirname(__DIR__))
          * bridge, which re-runs the existing token handoff and returns the visitor to the
          * page they asked for. Unsafe verbs keep going straight to sign-in so a
          * state-changing request is never replayed, and the bridge grants nothing on its
-         * own: the token it hands off is verified exactly as before.
+         * own: the token it hands off is verified exactly as before. When the browser sent
+         * a same-origin referer, sign-in returns to the page that submitted the form.
          */
-        $middleware->redirectGuestsTo(fn (Request $request): string => $request->isMethodSafe() && ! $request->expectsJson()
-            ? route('clerk.refresh', ['redirect' => $request->getRequestUri()])
-            : route('login', $request->isMethod('GET') ? ['redirect' => $request->getRequestUri()] : []));
+        $middleware->redirectGuestsTo(function (Request $request): string {
+            if ($request->isMethodSafe() && ! $request->expectsJson()) {
+                return route('clerk.refresh', ['redirect' => $request->getRequestUri()]);
+            }
+
+            $referer = $request->headers->get('referer');
+            $refererHost = is_string($referer) ? parse_url($referer, PHP_URL_HOST) : null;
+            $path = is_string($refererHost) && strcasecmp($refererHost, $request->getHost()) === 0
+                ? parse_url($referer, PHP_URL_PATH)
+                : null;
+            $redirect = is_string($path)
+                && str_starts_with($path, '/')
+                && ! str_starts_with($path, '//')
+                && ! str_contains($path, '\\')
+                && ! preg_match('/[\x00-\x1F\x7F]/', $path)
+                    ? $path
+                    : null;
+
+            return route('login', $redirect !== null ? ['redirect' => $redirect] : []);
+        });
 
         $middleware->redirectUsersTo(fn (Request $request): string => route($request->user()->landingRouteName()));
 

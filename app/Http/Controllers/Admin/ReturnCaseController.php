@@ -95,7 +95,7 @@ class ReturnCaseController extends Controller
         $data = $request->validate([
             'action' => ['required', 'in:takeover,decide,verify,close,reopen'],
             'decision' => ['required_if:action,decide', 'nullable', 'in:deny,refund,replacement'],
-            'note' => ['required_if:action,decide,verify,close,reopen', 'nullable', 'string', 'min:10', 'max:2000'],
+            'note' => ['required_if:action,takeover,decide,verify,close,reopen', 'nullable', 'string', 'min:10', 'max:2000'],
             'return_waived' => ['nullable', 'boolean'],
             'return_instructions' => ['nullable', 'string', 'max:2000'],
             'return_method' => ['nullable', 'string', 'max:500'],
