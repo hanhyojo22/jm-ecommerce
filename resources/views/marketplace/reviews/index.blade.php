@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-marketplace.account-shell active="reviews" title="My Reviews">
+    <x-marketplace.account-shell active="reviews">
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
                 <p class="text-xs font-bold uppercase tracking-[0.14em] text-brand">Your feedback</p>

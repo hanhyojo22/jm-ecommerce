@@ -17,7 +17,7 @@
     $formatCount = static fn (int $count): string => $count < 1000 ? number_format($count) : number_format($count / 1000, $count % 1000 === 0 ? 0 : 1).'k';
 @endphp
 
-<article class="marketplace-product-card group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface shadow-[0_1px_2px_rgba(24,44,72,.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,.10)]">
+<article class="group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface shadow-[0_1px_2px_rgba(24,44,72,.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,.10)]">
     <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" @if ($product->stock_quantity < 1) aria-label="{{ $product->name }}, sold out" @endif class="relative block aspect-[1.15] overflow-hidden bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]">
         @if ($product->thumbnail)
             <img src="{{ Storage::disk('product_images')->url($product->thumbnail->path) }}" alt="{{ $product->name }}" width="320" height="320" loading="lazy" class="h-full w-full object-cover" />

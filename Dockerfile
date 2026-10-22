@@ -18,7 +18,8 @@ RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --opti
 # Pinned to a patched patch release; 8.4.27 fixes CVE-2026-109618 and CVE-2026-109619.
 FROM php:8.4.27-apache-bookworm
 
-ARG REDIS_VERSION=6.3.0
+# phpredis 6.3.0, pinned to that tag's commit so a moved tag cannot change what gets compiled.
+ARG REDIS_COMMIT=df4fab2de7fc327c54c94a13af2b9542e4fbd720
 
 WORKDIR /var/www/html
 
@@ -27,7 +28,7 @@ RUN apt-get -o Acquire::Retries=5 -o Acquire::http::Timeout=30 update \
     && docker-php-ext-install bcmath mbstring pcntl pdo_pgsql xml zip \
     && curl --fail --show-error --location --retry 5 --retry-all-errors --retry-delay 5 --connect-timeout 15 \
         --output /tmp/phpredis.tar.gz \
-        "https://github.com/phpredis/phpredis/archive/refs/tags/${REDIS_VERSION}.tar.gz" \
+        "https://github.com/phpredis/phpredis/archive/${REDIS_COMMIT}.tar.gz" \
     && mkdir -p /tmp/phpredis \
     && tar -xzf /tmp/phpredis.tar.gz -C /tmp/phpredis --strip-components=1 \
     && (cd /tmp/phpredis && phpize && ./configure && make -j"$(nproc)" && make install) \

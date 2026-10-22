@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-wrap items-start justify-between gap-4">
-            <div><a href="{{ route('seller.products.index') }}" class="inline-flex min-h-10 items-center text-sm font-semibold text-brand">← Back to products</a><h1 class="mt-1 text-[28px] font-bold leading-tight text-ink">{{ $product->name }}</h1><p class="mt-1 text-sm text-muted">Listing details and approval status</p></div>
+            <div><a href="{{ route('seller.products.index') }}" class="inline-flex min-h-10 items-center text-sm font-semibold text-brand"><span aria-hidden="true">←</span> Back to products</a><h1 class="mt-1 text-[28px] font-bold leading-tight text-ink">{{ $product->name }}</h1><p class="mt-1 text-sm text-muted">Listing details and approval status</p></div>
             @if ($canManageProducts && ! in_array($product->status, ['pending', 'inactive'], true))<a href="{{ route('seller.products.edit', $product) }}" class="seller-primary-button inline-flex min-h-11 items-center px-4 text-sm">Edit listing</a>@endif
         </div>
     </x-slot>

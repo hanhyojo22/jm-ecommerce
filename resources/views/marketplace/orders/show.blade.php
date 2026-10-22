@@ -47,7 +47,7 @@
     <div class="page-shell min-h-[calc(100dvh-4.5rem)]">
     {{-- The drill-down of the purchases list keeps that list's measure; the width lives in app.css. --}}
     <div class="page-container account-measure-orders">
-        <a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">← My purchases</a>
+        <a href="{{ route('orders.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover"><span aria-hidden="true">←</span> My purchases</a>
         @if($errors->any())<div class="mb-6 rounded-[10px] border border-red-200 bg-red-50 p-4 text-sm text-rose-800" role="alert"><p class="font-semibold">We could not save your request.</p><ul class="mt-1 list-inside list-disc">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
         @if(session('status'))<div class="mb-6 rounded-[10px] border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-brand-hover" role="status">{{ session('status') }}</div>@endif
         @if(session('order_placed'))

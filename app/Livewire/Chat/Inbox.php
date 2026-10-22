@@ -27,6 +27,15 @@ class Inbox extends Component
 
     public ?string $activeConversationId = null;
 
+    /**
+     * Livewire overrides the application's default pagination views for the duration of a
+     * component render, so the shared marketplace pager has to be named here as well.
+     */
+    public function paginationSimpleView(): string
+    {
+        return 'components.marketplace.pagination';
+    }
+
     public function updatedFilter(): void
     {
         $this->resetPage();

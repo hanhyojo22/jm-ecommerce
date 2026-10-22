@@ -1,5 +1,5 @@
 <x-app-layout>
-    <x-marketplace.account-shell active="addresses" title="Delivery Addresses">
+    <x-marketplace.account-shell active="addresses">
         <div class="space-y-5">
             <div><h1 class="text-2xl font-semibold tracking-[-0.02em] text-ink">Delivery Addresses</h1><p class="mt-1 text-sm text-muted">Save addresses for faster checkout. Past orders keep their original delivery details.</p></div>
             @if (session('status'))<p class="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ session('status') }}</p>@endif

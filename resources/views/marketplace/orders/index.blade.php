@@ -11,7 +11,7 @@
         $hasFilters = filled($filters['search'] ?? null) || filled($filters['status'] ?? null);
     @endphp
 
-    <x-marketplace.account-shell active="orders" title="My purchases">
+    <x-marketplace.account-shell active="orders">
         <div data-purchases class="min-w-0 space-y-5 sm:space-y-6">
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>

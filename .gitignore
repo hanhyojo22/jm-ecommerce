@@ -31,3 +31,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 .neon
+
+/.agents
+/.claude/settings.local.json
+/.impeccable

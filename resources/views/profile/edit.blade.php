@@ -9,7 +9,7 @@
             </div>
         </div>
     @else
-        <x-marketplace.account-shell active="settings" title="Account settings">
+        <x-marketplace.account-shell active="settings">
             <div>
                 <h1 class="text-3xl font-semibold tracking-[-0.03em] text-ink">Account settings</h1>
                 <x-marketplace.account-profile />

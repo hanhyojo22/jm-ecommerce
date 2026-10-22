@@ -784,6 +784,27 @@ class ConversationTest extends TestCase
         $sendMessage->handle($otherConversation, $buyer, 'Is this available?', $clientMessageId);
     }
 
+    public function test_inbox_pager_renders_past_the_first_page_of_conversations(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+
+        for ($index = 0; $index < 21; $index++) {
+            $product = $this->product();
+            Conversation::create([
+                'buyer_id' => $buyer->id,
+                'store_id' => $product->store_id,
+                'product_id' => $product->id,
+                'latest_message_at' => now()->subMinutes($index),
+            ]);
+        }
+
+        Livewire::actingAs($buyer)->test(Inbox::class)
+            ->assertOk()
+            ->assertSee('Pagination Navigation')
+            ->assertSee('Page 1')
+            ->assertDontSee('Showing');
+    }
+
     private function product(): Product
     {
         $suffix = str()->lower(str()->random(8));

@@ -36,7 +36,7 @@
     @endphp
 
     <div class="page-shell"><div class="page-container returns-case-shell">
-        <a href="{{ $backUrl }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">← {{ $backLabel }}</a>
+        <a href="{{ $backUrl }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover"><span aria-hidden="true">←</span> {{ $backLabel }}</a>
 
         @php
             $storeInitials = Str::upper(Str::substr($case->sellerOrder->store->name, 0, 2));

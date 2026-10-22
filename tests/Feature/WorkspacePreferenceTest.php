@@ -96,6 +96,21 @@ class WorkspacePreferenceTest extends TestCase
             ->assertJsonPath('redirect', '/');
     }
 
+    public function test_seller_center_stylesheet_ships_only_inside_the_seller_workspace(): void
+    {
+        $seller = $this->sellerWithStore();
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('data-workspace="seller"', false)
+            ->assertSee('seller-center', false);
+
+        $this->actingAs($seller)->get(route('home'))
+            ->assertOk()
+            ->assertDontSee('data-workspace="seller"', false)
+            ->assertDontSee('seller-center', false);
+    }
+
     private function sellerWithStore(): User
     {
         $seller = User::factory()->seller()->create();
