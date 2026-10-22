@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\SellerEarning;
+use App\Models\SellerOrder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -15,6 +16,22 @@ class EarningController extends Controller
 
         abort_unless($tenant !== null, 403);
 
+        $deliveredOrders = SellerOrder::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('status', 'delivered');
+
+        $deliveredSales = (string) (clone $deliveredOrders)->sum('total');
+        $codSales = (string) (clone $deliveredOrders)
+            ->whereHas('order.payment', fn ($query) => $query->where('method', 'cod'))
+            ->sum('total');
+        $codCollected = (string) (clone $deliveredOrders)
+            ->whereNotNull('cod_collected_at')
+            ->sum('total');
+        $commissionTotal = (string) SellerEarning::query()
+            ->where('tenant_id', $tenant->id)
+            ->whereHas('sellerOrder', fn ($query) => $query->where('status', 'delivered'))
+            ->sum('commission_amount');
+
         $earnings = SellerEarning::query()
             ->where('tenant_id', $tenant->id)
             ->with(['sellerOrder.order', 'payout'])
@@ -24,16 +41,11 @@ class EarningController extends Controller
 
         return view('seller.earnings.index', [
             'earnings' => $earnings,
-            'availableBalance' => SellerEarning::query()
-                ->where('tenant_id', $tenant->id)
-                ->where('status', 'available')
-                ->whereNull('voided_at')
-                ->whereHas('sellerOrder.order.payment', fn ($query) => $query->where('method', '!=', 'cod'))
-                ->sum('net_amount'),
-            'paidOutTotal' => SellerEarning::query()
-                ->where('tenant_id', $tenant->id)
-                ->where('status', 'paid_out')
-                ->sum('net_amount'),
+            'deliveredSales' => $deliveredSales,
+            'codCollected' => $codCollected,
+            'awaitingCollection' => bccomp($codSales, $codCollected, 2) === 1 ? bcsub($codSales, $codCollected, 2) : '0.00',
+            'commissionTotal' => $commissionTotal,
+            'netEarnings' => bcsub($deliveredSales, $commissionTotal, 2),
         ]);
     }
 }

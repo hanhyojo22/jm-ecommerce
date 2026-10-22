@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecordSellerEarning;
 use App\Models\Order;
 use App\Models\SellerEarning;
+use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -28,6 +30,61 @@ class SellerEarningTest extends TestCase
             ->assertSee($firstEarning->sellerOrder->order->number)
             ->assertDontSee($secondEarning->sellerOrder->order->number)
             ->assertSee('125.00');
+    }
+
+    public function test_earnings_page_summarises_delivered_sales_commission_and_cod_collection(): void
+    {
+        [$store, $seller] = $this->storeWithSeller('Northwind Goods');
+        $store->tenant->update(['platform_fee_accepted_at' => now()->subDay()]);
+
+        $collected = $this->deliveredSellerOrderFor($store, 'JM-SUMMARY-001', '125.00', collected: true);
+        $uncollected = $this->deliveredSellerOrderFor($store, 'JM-SUMMARY-002', '75.00', collected: false);
+        $this->sellerOrderFor($store, 'JM-SUMMARY-PENDING', '999.00', 'pending');
+
+        $action = app(RecordSellerEarning::class);
+        $action->handle($collected->fresh());
+        $action->handle($uncollected->fresh());
+
+        $this->actingAs($seller)
+            ->get(route('seller.earnings.index'))
+            ->assertOk()
+            ->assertViewHas('deliveredSales', fn ($value) => bccomp((string) $value, '200.00', 2) === 0)
+            ->assertViewHas('commissionTotal', fn ($value) => bccomp((string) $value, '2.00', 2) === 0)
+            ->assertViewHas('netEarnings', fn ($value) => bccomp((string) $value, '198.00', 2) === 0)
+            ->assertViewHas('codCollected', fn ($value) => bccomp((string) $value, '125.00', 2) === 0)
+            ->assertViewHas('awaitingCollection', fn ($value) => bccomp((string) $value, '75.00', 2) === 0)
+            ->assertSee('Net earnings')
+            ->assertSee('Delivered sales')
+            ->assertSee('Paid directly')
+            ->assertDontSee('999.00');
+    }
+
+    public function test_backfill_migration_records_missing_earnings_for_delivered_orders(): void
+    {
+        [$store] = $this->storeWithSeller('Northwind Goods');
+        $store->tenant->update(['platform_fee_accepted_at' => now()->subDay()]);
+
+        $collected = $this->deliveredSellerOrderFor($store, 'JM-BACKFILL-001', '125.00', collected: true);
+        $uncollected = $this->deliveredSellerOrderFor($store, 'JM-BACKFILL-002', '75.00', collected: false);
+        $pending = $this->sellerOrderFor($store, 'JM-BACKFILL-PENDING', '999.00', 'pending');
+
+        $migration = require database_path('migrations/2026_10_22_040426_backfill_delivered_seller_earnings.php');
+        $migration->up();
+        $migration->up();
+
+        $this->assertSame(2, SellerEarning::query()->count());
+        $this->assertDatabaseMissing('seller_earnings', ['seller_order_id' => $pending->id]);
+
+        $collectedEarning = $collected->fresh()->earning()->sole();
+        $this->assertSame('0.0100', $collectedEarning->commission_rate);
+        $this->assertSame('1.25', number_format((float) $collectedEarning->commission_amount, 2));
+        $this->assertSame('123.75', number_format((float) $collectedEarning->net_amount, 2));
+        $this->assertNotNull($collectedEarning->voided_at);
+
+        $uncollectedEarning = $uncollected->fresh()->earning()->sole();
+        $this->assertSame('0.75', number_format((float) $uncollectedEarning->commission_amount, 2));
+        $this->assertSame('74.25', number_format((float) $uncollectedEarning->net_amount, 2));
+        $this->assertNotNull($uncollectedEarning->voided_at);
     }
 
     public function test_administrator_can_record_a_payout_for_available_earnings_from_one_store(): void
@@ -201,5 +258,44 @@ class SellerEarningTest extends TestCase
             'status' => 'available',
             'available_at' => now(),
         ])->load('sellerOrder.order');
+    }
+
+    private function deliveredSellerOrderFor(Store $store, string $number, string $amount, bool $collected): SellerOrder
+    {
+        $sellerOrder = $this->sellerOrderFor($store, $number, $amount, 'delivered');
+
+        if ($collected) {
+            $sellerOrder->update(['cod_collected_at' => now()]);
+        }
+
+        return $sellerOrder;
+    }
+
+    private function sellerOrderFor(Store $store, string $number, string $amount, string $status): SellerOrder
+    {
+        $buyer = User::factory()->create();
+        $order = Order::create([
+            'user_id' => $buyer->id,
+            'number' => $number,
+            'status' => $status,
+            'recipient_name' => $buyer->name,
+            'phone' => '+639171234567',
+            'address_line' => '100 Market Street',
+            'city' => 'Manila',
+            'subtotal' => $amount,
+            'shipping_amount' => '0.00',
+            'total' => $amount,
+        ]);
+        $order->payment()->create(['method' => 'cod', 'status' => 'pending', 'amount' => $amount]);
+
+        return $order->sellerOrders()->create([
+            'tenant_id' => $store->tenant_id,
+            'store_id' => $store->id,
+            'status' => $status,
+            'subtotal' => $amount,
+            'shipping_amount' => '0.00',
+            'total' => $amount,
+            'delivered_at' => $status === 'delivered' ? now()->subHour() : null,
+        ]);
     }
 }
