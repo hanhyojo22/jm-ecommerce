@@ -15,7 +15,8 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist --optimize-autoloader
 
-FROM php:8.4-apache-bookworm
+# Pinned to a patched patch release; 8.4.27 fixes CVE-2026-109618 and CVE-2026-109619.
+FROM php:8.4.27-apache-bookworm
 
 ARG REDIS_VERSION=6.3.0
 

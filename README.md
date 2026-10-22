@@ -11,7 +11,7 @@ JMMart is a local-first multi-vendor marketplace MVP built as a Laravel modular 
 
 ## Local setup
 
-1. Install PHP 8.3+, Composer, PostgreSQL 17+, Node.js, and Redis.
+1. Install a patched PHP release: 8.3.36+, 8.4.27+, or 8.5.12+ (earlier patches are affected by CVE-2026-109618 and CVE-2026-109619). Also install Composer, PostgreSQL 17+, Node.js, and Redis.
 2. Create a PostgreSQL database and user, then copy `.env.example` to `.env` and set the `DB_*` values.
 3. Run `php artisan key:generate`, `php artisan migrate --seed`, and `php artisan storage:link`.
 4. Run `npm install`, then `npm run dev`.
