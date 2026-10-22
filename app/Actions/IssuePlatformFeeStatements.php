@@ -5,7 +5,6 @@ namespace App\Actions;
 use App\Models\PlatformFeeStatement;
 use App\Models\ReturnCaseOutcome;
 use App\Models\SellerEarning;
-use App\Support\PlatformFee;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -60,7 +59,7 @@ class IssuePlatformFeeStatements
 
             $grossTotal = $this->sum($earnings->pluck('gross_amount'));
             $commissionTotal = $this->sum($earnings->pluck('commission_amount'));
-            $refundCredit = $this->sum($refunds->map(fn (ReturnCaseOutcome $refund): string => $this->creditFor($refund)));
+            $refundCredit = $this->sum($refunds->pluck('commission_credit'));
 
             if (bccomp($commissionTotal, '0', 2) === 0 && bccomp($refundCredit, '0', 2) === 0) {
                 return null;
@@ -117,19 +116,8 @@ class IssuePlatformFeeStatements
             ->where('kind', 'refund')
             ->where('created_at', '>=', $periodStart)
             ->where('created_at', '<', $periodEnd)
-            ->whereHas('returnCase.sellerOrder.earning', fn ($query) => $query->where('commission_amount', '>', 0))
-            ->with('returnCase.sellerOrder.earning');
-    }
-
-    /**
-     * The refunded share of the commission, never more than was charged on the order.
-     */
-    private function creditFor(ReturnCaseOutcome $refund): string
-    {
-        $earning = $refund->returnCase->sellerOrder->earning;
-        $credit = PlatformFee::on((string) $refund->amount, (string) $earning->commission_rate);
-
-        return bccomp($credit, (string) $earning->commission_amount, 2) > 0 ? (string) $earning->commission_amount : $credit;
+            ->where('commission_credit', '>', 0)
+            ->with('returnCase.sellerOrder');
     }
 
     /**

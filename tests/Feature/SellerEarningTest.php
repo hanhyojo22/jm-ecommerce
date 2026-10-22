@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\RecordSellerEarning;
 use App\Models\Order;
+use App\Models\ReturnCase;
 use App\Models\SellerEarning;
 use App\Models\SellerOrder;
 use App\Models\Store;
@@ -55,8 +56,33 @@ class SellerEarningTest extends TestCase
             ->assertViewHas('awaitingCollection', fn ($value) => bccomp((string) $value, '75.00', 2) === 0)
             ->assertSee('Net earnings')
             ->assertSee('Delivered sales')
-            ->assertSee('Paid directly')
+            ->assertSee('Cash collected')
+            ->assertSee('Awaiting cash')
             ->assertDontSee('999.00');
+    }
+
+    public function test_earnings_summary_deducts_refunds_and_their_commission_credit(): void
+    {
+        [$store, $seller] = $this->storeWithSeller('Northwind Goods');
+        $store->tenant->update(['platform_fee_accepted_at' => now()->subDay()]);
+
+        $collected = $this->deliveredSellerOrderFor($store, 'JM-REFUND-001', '125.00', collected: true);
+        $uncollected = $this->deliveredSellerOrderFor($store, 'JM-REFUND-002', '75.00', collected: false);
+
+        $action = app(RecordSellerEarning::class);
+        $action->handle($collected->fresh());
+        $action->handle($uncollected->fresh());
+
+        $buyer = $collected->order()->firstOrFail()->user()->firstOrFail();
+        $case = ReturnCase::create(['seller_order_id' => $collected->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'awaiting_confirmation', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The item arrived broken.']);
+        $case->outcome()->create(['recorded_by' => $seller->id, 'kind' => 'refund', 'amount' => '25.00', 'paid_at' => now(), 'created_at' => now()]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.earnings.index'))
+            ->assertOk()
+            ->assertViewHas('deliveredSales', fn ($value) => bccomp((string) $value, '175.00', 2) === 0)
+            ->assertViewHas('commissionTotal', fn ($value) => bccomp((string) $value, '1.75', 2) === 0)
+            ->assertViewHas('netEarnings', fn ($value) => bccomp((string) $value, '173.25', 2) === 0);
     }
 
     public function test_backfill_migration_records_missing_earnings_for_delivered_orders(): void

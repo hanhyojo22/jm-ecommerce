@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Models\ReturnCaseOutcome;
 use App\Models\SellerEarning;
 use App\Models\SellerOrder;
 use Illuminate\Http\Request;
@@ -31,6 +32,13 @@ class EarningController extends Controller
             ->where('tenant_id', $tenant->id)
             ->whereHas('sellerOrder', fn ($query) => $query->where('status', 'delivered'))
             ->sum('commission_amount');
+
+        $refunds = ReturnCaseOutcome::query()
+            ->where('kind', 'refund')
+            ->whereHas('returnCase.sellerOrder', fn ($query) => $query->where('tenant_id', $tenant->id)->where('status', 'delivered'));
+
+        $deliveredSales = bcsub($deliveredSales, (string) (clone $refunds)->sum('amount'), 2);
+        $commissionTotal = bcsub($commissionTotal, (string) $refunds->sum('commission_credit'), 2);
 
         $earnings = SellerEarning::query()
             ->where('tenant_id', $tenant->id)
