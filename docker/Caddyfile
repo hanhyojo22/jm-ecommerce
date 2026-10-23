@@ -7,7 +7,7 @@
 
     header {
         -Server
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Strict-Transport-Security "max-age=31536000"
         Content-Security-Policy "base-uri 'self'; frame-ancestors 'none'; object-src 'none'"
         X-Frame-Options "DENY"
         X-Content-Type-Options nosniff
