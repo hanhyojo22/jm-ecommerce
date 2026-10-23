@@ -101,8 +101,8 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
 Route::get('/returns/cases/{returnCase}/evidence/{evidence}', [BuyerReturnCaseController::class, 'evidence'])
     ->middleware(['auth', 'clerk.verified', 'account:buyer,seller,admin'])->name('returns.evidence');
 
-Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'clerk.verified', 'account:admin'])->name('dashboard');
-Route::get('/admin/moderation', [DashboardController::class, 'moderation'])->middleware(['auth', 'clerk.verified', 'account:admin'])->name('admin.moderation');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])->name('dashboard');
+Route::get('/admin/moderation', [DashboardController::class, 'moderation'])->middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])->name('admin.moderation');
 
 Route::middleware(['auth', 'account:buyer,seller,admin'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -153,7 +153,7 @@ Route::post('/seller/suspension-appeals', [SellerSuspensionAppealController::cla
     ->middleware(['auth', 'clerk.verified', 'account:seller', 'throttle:5,1'])
     ->name('seller.suspension-appeals.store');
 
-Route::middleware(['auth', 'clerk.verified', 'account:admin'])->group(function (): void {
+Route::middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])->group(function (): void {
     Route::get('/admin/chat-reports', [ChatReportController::class, 'index'])->name('admin.chat-reports.index');
     Route::patch('/admin/chat-reports/{report}', [ChatReportController::class, 'update'])->middleware('throttle:admin-mutations')->name('admin.chat-reports.update');
     Route::get('/admin/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('admin.seller-applications.index');

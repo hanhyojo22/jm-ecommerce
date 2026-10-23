@@ -21,10 +21,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewInstance;
-use Tests\Support\PlaywrightClerkSessionVerifier;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,17 +31,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $playwrightAuthKey = config('services.playwright.auth_key');
-
-        if ($this->app->environment('testing') && is_string($playwrightAuthKey) && $playwrightAuthKey !== '') {
-            $this->app->bind(
-                ClerkSessionVerifier::class,
-                fn (): PlaywrightClerkSessionVerifier => new PlaywrightClerkSessionVerifier($playwrightAuthKey),
-            );
-
-            return;
-        }
-
         $this->app->bind(ClerkSessionVerifier::class, ClerkBackendSessionVerifier::class);
     }
 
@@ -52,10 +39,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->environment('testing') && config('services.playwright.auth_key')) {
-            Vite::useHotFile(storage_path('framework/playwright-vite.hot'));
-        }
-
         if (str_starts_with(config('app.url'), 'https://')) {
             URL::forceHttps();
         }

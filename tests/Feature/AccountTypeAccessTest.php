@@ -67,6 +67,8 @@ class AccountTypeAccessTest extends TestCase
             'is_active' => true,
         ]);
         $invitedAdmin = User::query()->where('email', 'operations@example.com')->firstOrFail();
+        $this->assertNotNull($invitedAdmin->admin_invited_at);
+        $this->assertNull($invitedAdmin->clerk_user_id);
         $this->assertDatabaseHas('audit_logs', [
             'actor_user_id' => $owner->id,
             'action' => 'admin_account.invited',

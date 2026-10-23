@@ -94,7 +94,7 @@ class AdminDashboardTest extends TestCase
 
         $this->actingAs($administrator)->get(route('dashboard'))
             ->assertOk()
-            ->assertViewHas('marketplaceStats', fn (array $stats): bool => $stats['gmv'] === 100.0 && $stats['orders'] === 1);
+            ->assertViewHas('marketplaceStats', fn (array $stats): bool => $stats['gmv'] === '100.00' && $stats['orders'] === 1);
 
         $this->assertCount(1, array_filter($queries, fn (string $sql): bool => str_contains($sql, 'from "orders"') && str_contains($sql, '"status" !=') && ! str_contains($sql, 'created_at')));
     }

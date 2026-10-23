@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\AuditLog;
 use App\Models\Order;
+use App\Models\PaymentAdjustment;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\User;
@@ -62,15 +63,39 @@ class UpdateSellerOrderStatus
             $activeSellerOrders = $sellerOrders->reject(
                 fn (SellerOrder $order): bool => $order->status === 'cancelled',
             );
-            $remainingTotal = $this->sumTotals($activeSellerOrders->pluck('total')->all());
+            $remainingTotal = $order->total;
 
-            $order->update([
-                'status' => $this->aggregateStatus($sellerOrders->pluck('status')->all()),
-                'subtotal' => $remainingTotal,
-                'shipping_amount' => '0.00',
-                'total' => $remainingTotal,
-            ]);
-            $order->payment()->lockForUpdate()->firstOrFail()->update(['amount' => $remainingTotal]);
+            if ($status === 'cancelled') {
+                $remainingSubtotal = $this->sumTotals($activeSellerOrders->pluck('subtotal')->all());
+                $remainingShipping = $this->sumTotals($activeSellerOrders->pluck('shipping_amount')->all());
+                $remainingTotal = bcadd($remainingSubtotal, $remainingShipping, 2);
+
+                $order->update([
+                    'status' => $this->aggregateStatus($sellerOrders->pluck('status')->all()),
+                    'subtotal' => $remainingSubtotal,
+                    'shipping_amount' => $remainingShipping,
+                    'total' => $remainingTotal,
+                ]);
+
+                $payment = $order->payment()->lockForUpdate()->firstOrFail();
+                $previousPaymentAmount = $payment->amount;
+
+                if (bccomp($previousPaymentAmount, $remainingTotal, 2) !== 0) {
+                    $payment->update(['amount' => $remainingTotal]);
+
+                    PaymentAdjustment::query()->create([
+                        'payment_id' => $payment->id,
+                        'actor_user_id' => $actor->id,
+                        'reason' => 'seller_order.cancelled',
+                        'amount' => bcsub($remainingTotal, $previousPaymentAmount, 2),
+                        'resulting_amount' => $remainingTotal,
+                    ]);
+                }
+            } else {
+                $order->update([
+                    'status' => $this->aggregateStatus($sellerOrders->pluck('status')->all()),
+                ]);
+            }
 
             AuditLog::query()->create([
                 'actor_user_id' => $actor->id,

@@ -64,16 +64,29 @@ class SellerDashboardTest extends TestCase
     public function test_dashboard_query_failure_offers_a_safe_retry(): void
     {
         [$seller] = $this->seller();
-        Schema::drop('seller_orders');
 
-        $this->actingAs($seller)->get(route('seller.dashboard'))
-            ->assertServiceUnavailable()
-            ->assertSee('We couldn’t load your overview')
-            ->assertSee('Your listings and orders haven’t been changed.')
-            ->assertSee('Open products')
-            ->assertSee(route('seller.products.index'), false)
-            ->assertSee(route('seller.dashboard'), false)
-            ->assertSee('Try again');
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement('DROP TABLE seller_orders CASCADE');
+        } else {
+            Schema::drop('seller_orders');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $this->actingAs($seller)->get(route('seller.dashboard'))
+                ->assertServiceUnavailable()
+                ->assertSee('We couldn’t load your overview')
+                ->assertSee('Your listings and orders haven’t been changed.')
+                ->assertSee('Open products')
+                ->assertSee(route('seller.products.index'), false)
+                ->assertSee(route('seller.dashboard'), false)
+                ->assertSee('Try again');
+        } finally {
+            // PostgreSQL aborts the whole transaction after a failed statement.
+            // Rolling back to this savepoint lets the follow-up request run.
+            DB::rollBack();
+        }
 
         $this->actingAs($seller)->get(route('seller.products.index'))
             ->assertOk();

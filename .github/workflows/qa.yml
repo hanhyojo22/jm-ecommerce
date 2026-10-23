@@ -22,13 +22,19 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5'
+          php-version: '8.4'
           extensions: pdo_sqlite, sqlite3
           coverage: pcov
           tools: composer:v2
 
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist
+
+      - name: Audit PHP dependencies
+        run: composer audit --locked --no-interaction
+
+      - name: Check PHP formatting
+        run: vendor/bin/pint --test --format agent
 
       - uses: actions/setup-node@v6
         with:
@@ -37,6 +43,9 @@ jobs:
 
       - name: Build frontend assets for view tests
         run: npm ci && npm run build
+
+      - name: Audit production JavaScript dependencies
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Run PHPUnit with coverage and JUnit reports
         run: |
@@ -64,7 +73,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.5'
+          php-version: '8.4'
           extensions: pdo_sqlite, sqlite3
           tools: composer:v2
 
@@ -95,10 +104,62 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  postgres:
+    name: Backend / PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: jmmart_test
+          POSTGRES_USER: jmmart
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jmmart -d jmmart_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: jmmart_test
+      DB_USERNAME: jmmart
+      DB_PASSWORD: secret
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql
+          tools: composer:v2
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build frontend assets for view tests
+        run: npm ci && npm run build
+
+      # phpunit.xml forces SQLite so a stray DB_* env can never point tests at a real
+      # database; this job derives a config that lets the service container's env through.
+      - name: Run PostgreSQL-backed test suite
+        run: |
+          sed -E '/name="DB_(CONNECTION|DATABASE)"/s/ force="true"//' phpunit.xml > phpunit.pgsql.xml
+          php artisan test --compact --configuration=phpunit.pgsql.xml
+
   required-check:
     name: required-check
     if: always()
-    needs: [backend, browser]
+    needs: [backend, browser, postgres]
     runs-on: ubuntu-latest
     steps:
       - name: Add QA results to the workflow summary
@@ -108,7 +169,8 @@ jobs:
           echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
           echo "| PHPUnit backend | ${{ needs.backend.result }} |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Playwright browser | ${{ needs.browser.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| PostgreSQL feature tests | ${{ needs.postgres.result }} |" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail the required check when a critical suite fails
-        if: needs.backend.result != 'success' || needs.browser.result != 'success'
+        if: needs.backend.result != 'success' || needs.browser.result != 'success' || needs.postgres.result != 'success'
         run: exit 1

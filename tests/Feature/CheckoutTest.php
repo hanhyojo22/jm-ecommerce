@@ -461,6 +461,12 @@ class CheckoutTest extends TestCase
 
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '30.00', 'total' => '30.00']);
         $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'amount' => '30.00']);
+        $this->assertDatabaseHas('payment_adjustments', [
+            'payment_id' => $order->payment()->firstOrFail()->id,
+            'reason' => 'seller_order.cancelled',
+            'amount' => '-20.00',
+            'resulting_amount' => '30.00',
+        ]);
         $this->assertSame(5, $firstProduct->refresh()->stock_quantity);
 
         $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'confirmed']);
@@ -469,6 +475,8 @@ class CheckoutTest extends TestCase
         $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'delivered']);
 
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'delivered', 'total' => '30.00']);
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'amount' => '30.00']);
+        $this->assertDatabaseCount('payment_adjustments', 1);
     }
 
     public function test_customer_can_search_purchases_by_product_or_store_name(): void

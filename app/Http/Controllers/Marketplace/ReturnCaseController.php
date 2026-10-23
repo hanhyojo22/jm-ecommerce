@@ -57,7 +57,17 @@ class ReturnCaseController extends Controller
     public function evidence(Request $request, ReturnCase $returnCase, ReturnCaseEvidence $evidence)
     {
         abort_unless($evidence->return_case_id === $returnCase->id, 404);
-        abort_unless($returnCase->buyer_id === $request->user()->id || $request->user()->isPlatformAdministrator() || ($request->user()->account_type === 'seller' && $request->user()->isMemberOfTenant($returnCase->sellerOrder->tenant_id)), 404);
+
+        $sellerTenant = $request->user()->account_type === 'seller'
+            ? $request->user()->sellerTenant()
+            : null;
+
+        abort_unless(
+            $returnCase->buyer_id === $request->user()->id
+            || $request->user()->isPlatformAdministrator()
+            || ($sellerTenant !== null && $sellerTenant->id === $returnCase->sellerOrder->tenant_id),
+            404,
+        );
 
         return Storage::disk('chat_attachments')->download($evidence->path, $evidence->original_name);
     }

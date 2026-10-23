@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'is_active', 'preferred_workspace'])]
+#[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'admin_invited_at', 'is_active', 'preferred_workspace'])]
 #[Hidden(['password', 'remember_token', 'clerk_user_id'])]
 class User extends Authenticatable
 {
@@ -30,6 +30,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'admin_invited_at' => 'datetime',
         ];
     }
 
@@ -90,8 +91,12 @@ class User extends Authenticatable
 
     public function landingRouteName(): string
     {
-        if ($this->account_type === 'admin') {
+        if ($this->isPlatformAdministrator()) {
             return 'dashboard';
+        }
+
+        if ($this->account_type === 'admin') {
+            return 'catalog.index';
         }
 
         if ($this->account_type === 'seller') {

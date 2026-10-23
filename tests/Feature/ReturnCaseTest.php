@@ -83,12 +83,16 @@ class ReturnCaseTest extends TestCase
         Storage::disk('chat_attachments')->assertExists($evidence->path);
         $this->actingAs($otherSeller)->get(route('returns.evidence', [$case, $evidence]))->assertNotFound();
         $this->actingAs(User::factory()->create(['email_verified_at' => now()]))->get(route('returns.evidence', [$case, $evidence]))->assertNotFound();
+        $this->actingAs($seller)->get(route('returns.evidence', [$case, $evidence]))->assertOk();
         $this->actingAs($buyer)->get(route('returns.evidence', [$case, $evidence]))->assertOk();
         $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
         $this->actingAs($admin)->patch(route('admin.returns.update', $case), ['action' => 'verify', 'note' => 'The seller supplied a payment receipt.'])->assertSessionHasErrors('action');
         $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'confirm'])->assertSessionHas('status');
         $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'confirm'])->assertSessionHasErrors('action');
         $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'completed']);
+
+        Store::query()->whereKey($sellerOrder->store_id)->update(['status' => 'suspended']);
+        $this->actingAs($seller)->get(route('returns.evidence', [$case, $evidence]))->assertNotFound();
     }
 
     public function test_appeal_admin_decision_and_replacement_reduce_stock_once(): void

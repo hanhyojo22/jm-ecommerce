@@ -38,7 +38,7 @@
                     </div>
 
                     <dl class="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Marketplace key figures">
-                        <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Gross merchandise value</dt><dd class="mt-1 whitespace-nowrap text-base font-semibold tabular-nums tracking-tight text-ink xl:text-xl">₱{{ number_format($marketplaceStats['gmv'], 2) }}</dd></div>
+                        <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Gross merchandise value</dt><dd class="mt-1 whitespace-nowrap text-base font-semibold tabular-nums tracking-tight text-ink xl:text-xl">₱{{ $marketplaceStats['gmv'] }}</dd></div>
                         <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Orders</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['orders']) }}</dd></div>
                         <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Customers</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['customers']) }}</dd></div>
                         <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Active sellers</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['activeSellers']) }}</dd></div>

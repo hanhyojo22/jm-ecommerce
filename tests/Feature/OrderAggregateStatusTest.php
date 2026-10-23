@@ -69,6 +69,18 @@ class OrderAggregateStatusTest extends TestCase
         $this->assertSame('cancelled', $order->refresh()->status);
     }
 
+    public function test_a_status_transition_does_not_rewrite_order_or_payment_totals(): void
+    {
+        [$order, $first] = $this->twoStoreOrder();
+        $first->update(['subtotal' => '250.00', 'total' => '250.00']);
+
+        $this->advance($first, ['confirmed']);
+
+        $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '598.00', 'total' => '598.00']);
+        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'amount' => '598.00']);
+        $this->assertDatabaseCount('payment_adjustments', 0);
+    }
+
     /**
      * @param  array<int, string>  $statuses
      */

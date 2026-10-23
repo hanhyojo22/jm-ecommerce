@@ -2,6 +2,8 @@
 
 use App\Http\Middleware\EnsureAccountType;
 use App\Http\Middleware\EnsureClerkEmailIsVerified;
+use App\Http\Middleware\EnsurePlatformAdministrator;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['__session']);
         $middleware->validateCsrfTokens(except: ['clerk/webhook']);
+        $middleware->append(SecurityHeaders::class);
 
         /*
          * Clerk session tokens expire 60 seconds after they are minted, so the `__session`
@@ -54,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'account' => EnsureAccountType::class,
             'clerk.verified' => EnsureClerkEmailIsVerified::class,
+            'platform-admin' => EnsurePlatformAdministrator::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

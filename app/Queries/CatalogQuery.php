@@ -35,7 +35,9 @@ class CatalogQuery
         $escaped = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search);
         $prefix = $escaped.'%';
         $postgres = DB::connection()->getDriverName() === 'pgsql';
-        if ($postgres) {
+        $useFullText = $postgres && ! preg_match('/[%_!]/', $search);
+
+        if ($useFullText) {
             preg_match_all('/[\pL\pN]+/u', $search, $matches);
             $wordQuery = implode(' & ', array_map(fn (string $word): string => $word.':*', $matches[0]));
             $wordMatch = "to_tsvector('simple', products.name) @@ to_tsquery('simple', ?)";
@@ -50,10 +52,10 @@ class CatalogQuery
             ->with('thumbnail')
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
-            ->where(function (Builder $query) use ($prefix, $wordMatch, $wordBindings, $postgres, $search): void {
+            ->where(function (Builder $query) use ($prefix, $wordMatch, $wordBindings, $useFullText, $search): void {
                 $query->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$prefix])
                     ->orWhereRaw($wordMatch, $wordBindings);
-                if ($postgres && Str::length($search) >= 3) {
+                if ($useFullText && Str::length($search) >= 3) {
                     $query->orWhereRaw('LOWER(products.name) %>> ?', [$search]);
                 }
             });

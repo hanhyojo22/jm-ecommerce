@@ -37,6 +37,7 @@ class AdminAccountController extends Controller
                 'password' => str()->random(64),
                 'account_type' => 'admin',
                 'platform_role' => 'admin',
+                'admin_invited_at' => now(),
                 'is_active' => true,
             ]);
 

@@ -1,9 +1,17 @@
 name: jmmart
 
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
     image: caddy:2.10-alpine
-    env_file: ${ENV_FILE:-.env.production}
+    environment:
+      CADDY_SITE_ADDRESS: ${CADDY_SITE_ADDRESS}
+      ACME_EMAIL: ${ACME_EMAIL}
     ports:
       - "80:80"
       - "443:443"
@@ -17,6 +25,7 @@ services:
       reverb:
         condition: service_started
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - frontend
 
@@ -30,6 +39,9 @@ services:
         VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME}
     image: ${APP_IMAGE:-jmmart:latest}
     env_file: ${ENV_FILE:-.env.production}
+    environment:
+      # Apache listens on this port; Caddy and the healthcheck both use port 80.
+      PORT: "80"
     volumes:
       - app-storage:/var/www/html/storage
     depends_on:
@@ -44,6 +56,7 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - frontend
       - backend
@@ -59,6 +72,7 @@ services:
       app:
         condition: service_healthy
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - frontend
       - backend
@@ -74,6 +88,7 @@ services:
       app:
         condition: service_healthy
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - backend
 
@@ -88,13 +103,13 @@ services:
       app:
         condition: service_healthy
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - frontend
       - backend
 
   database:
     image: postgres:17-alpine
-    env_file: ${ENV_FILE:-.env.production}
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -107,12 +122,14 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - backend
 
   redis:
     image: redis:7-alpine
-    env_file: ${ENV_FILE:-.env.production}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     command: >-
       sh -c 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
     healthcheck:
@@ -123,6 +140,7 @@ services:
     volumes:
       - redis-data:/data
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - backend
 

@@ -49,6 +49,90 @@ class ClerkUserResolverTest extends TestCase
         $this->assertTrue($resolver->resolve(Request::create('/'))?->is($user));
         $this->assertSame('user_new', $user->refresh()->clerk_user_id);
         $this->assertNotNull($user->email_verified_at);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'user.clerk_linked',
+            'entity_type' => User::class,
+            'entity_id' => $user->id,
+        ]);
+    }
+
+    public function test_verified_email_matching_is_case_insensitive(): void
+    {
+        $user = User::factory()->create(['email' => 'buyer@example.com', 'clerk_user_id' => null]);
+        $resolver = new ClerkUserResolver(new FakeClerkSessionVerifier(
+            new ClerkIdentity('user_new'),
+            new ClerkIdentity('user_new', 'Buyer@Example.com', true, 'Buyer Example'),
+        ));
+
+        $this->assertTrue($resolver->resolve(Request::create('/'))?->is($user));
+        $this->assertSame('user_new', $user->refresh()->clerk_user_id);
+    }
+
+    public function test_an_administrator_without_an_invitation_cannot_be_linked_by_email(): void
+    {
+        $administrator = User::factory()->administrator()->create([
+            'email' => 'admin@example.com',
+            'clerk_user_id' => null,
+            'admin_invited_at' => null,
+        ]);
+        $resolver = new ClerkUserResolver(new FakeClerkSessionVerifier(
+            new ClerkIdentity('user_attacker'),
+            new ClerkIdentity('user_attacker', 'admin@example.com', true, 'Attacker'),
+        ));
+
+        $this->assertNull($resolver->resolve(Request::create('/')));
+        $this->assertNull($administrator->refresh()->clerk_user_id);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'user.clerk_link_blocked',
+            'entity_type' => User::class,
+            'entity_id' => $administrator->id,
+        ]);
+    }
+
+    public function test_an_invited_administrator_is_linked_and_the_link_is_audited(): void
+    {
+        $administrator = User::factory()->administrator()->create([
+            'email' => 'admin@example.com',
+            'clerk_user_id' => null,
+            'admin_invited_at' => now(),
+        ]);
+        $resolver = new ClerkUserResolver(new FakeClerkSessionVerifier(
+            new ClerkIdentity('user_admin'),
+            new ClerkIdentity('user_admin', 'ADMIN@example.com', true, 'Admin'),
+        ));
+
+        $this->assertTrue($resolver->resolve(Request::create('/'))?->is($administrator));
+        $this->assertSame('user_admin', $administrator->refresh()->clerk_user_id);
+        $this->assertNull($administrator->admin_invited_at);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'user.clerk_linked',
+            'entity_type' => User::class,
+            'entity_id' => $administrator->id,
+        ]);
+    }
+
+    public function test_an_inactive_linked_user_is_not_resolved(): void
+    {
+        User::factory()->create(['clerk_user_id' => 'user_linked', 'is_active' => false]);
+        $resolver = new ClerkUserResolver(new FakeClerkSessionVerifier(new ClerkIdentity('user_linked')));
+
+        $this->assertNull($resolver->resolve(Request::create('/')));
+    }
+
+    public function test_an_inactive_local_user_is_not_linked_by_email(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'inactive@example.com',
+            'clerk_user_id' => null,
+            'is_active' => false,
+        ]);
+        $resolver = new ClerkUserResolver(new FakeClerkSessionVerifier(
+            new ClerkIdentity('user_inactive'),
+            new ClerkIdentity('user_inactive', 'inactive@example.com', true, 'Inactive User'),
+        ));
+
+        $this->assertNull($resolver->resolve(Request::create('/')));
+        $this->assertNull($user->refresh()->clerk_user_id);
     }
 
     public function test_an_unverified_clerk_email_cannot_link_or_create_a_marketplace_user(): void

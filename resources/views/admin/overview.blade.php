@@ -6,7 +6,7 @@
         </div>
 
         <dl class="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Marketplace key figures">
-            <div class="rounded-2xl border border-line bg-surface p-4"><dt class="text-sm text-muted">Gross merchandise value</dt><dd class="mt-1 text-2xl font-bold tabular-nums text-ink">₱{{ number_format($marketplaceStats['gmv'], 2) }}</dd></div>
+            <div class="rounded-2xl border border-line bg-surface p-4"><dt class="text-sm text-muted">Gross merchandise value</dt><dd class="mt-1 text-2xl font-bold tabular-nums text-ink">₱{{ $marketplaceStats['gmv'] }}</dd></div>
             <div class="rounded-2xl border border-line bg-surface p-4"><dt class="text-sm text-muted">Orders</dt><dd class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($marketplaceStats['orders']) }}</dd></div>
             <div class="rounded-2xl border border-line bg-surface p-4"><dt class="text-sm text-muted">Customers</dt><dd class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($marketplaceStats['customers']) }}</dd></div>
             <div class="rounded-2xl border border-line bg-surface p-4"><dt class="text-sm text-muted">Active sellers</dt><dd class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($marketplaceStats['activeSellers']) }}</dd></div>

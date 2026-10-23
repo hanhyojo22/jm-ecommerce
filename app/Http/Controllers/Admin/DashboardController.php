@@ -81,7 +81,7 @@ class DashboardController extends Controller
         return view('dashboard', compact('activeSort', 'activeType', 'counts', 'dataCheckedAt', 'queueItems', 'marketplaceStats'));
     }
 
-    /** @return array{gmv:float, orders:int, customers:int, activeSellers:int} */
+    /** @return array{gmv:string, orders:int, customers:int, activeSellers:int} */
     private function marketplaceStats(): array
     {
         $orders = Order::query()
@@ -90,10 +90,17 @@ class DashboardController extends Controller
             ->first();
 
         return [
-            'gmv' => (float) $orders->gmv,
+            'gmv' => $this->formatMoney((string) $orders->gmv),
             'orders' => (int) $orders->total_orders,
             'customers' => User::query()->where('account_type', 'buyer')->count(),
             'activeSellers' => Tenant::query()->where('status', 'active')->count(),
         ];
+    }
+
+    private function formatMoney(string $amount): string
+    {
+        [$whole, $fraction] = explode('.', bcadd($amount, '0', 2));
+
+        return preg_replace('/\B(?=(\d{3})+(?!\d))/', ',', $whole).'.'.$fraction;
     }
 }
