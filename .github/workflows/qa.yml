@@ -154,7 +154,7 @@ jobs:
       - name: Run PostgreSQL-backed test suite
         run: |
           sed -E '/name="DB_(CONNECTION|DATABASE)"/s/ force="true"//' phpunit.xml > phpunit.pgsql.xml
-          php artisan test --compact --configuration=phpunit.pgsql.xml
+          vendor/bin/phpunit --configuration=phpunit.pgsql.xml --display-warnings
 
   required-check:
     name: required-check
