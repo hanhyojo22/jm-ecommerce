@@ -377,3 +377,52 @@ test('seller order modal renews the session, preloads neighbours and recovers fr
         await context.close();
     }
 });
+
+test('seller order actions confirm in an in-page dialog instead of the browser prompt', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+    const nativeDialogs = [];
+    page.on('dialog', (dialog) => {
+        nativeDialogs.push(dialog.message());
+        dialog.dismiss();
+    });
+
+    try {
+        await page.setViewportSize({ width: 1280, height: 900 });
+        await page.goto('/seller/orders');
+        await page.locator('table tbody th a').first().click();
+        const orderModal = page.locator('dialog.sc-modal');
+        await expect(orderModal.locator('.sc-modal-foot')).toBeVisible();
+        // The seeded orders are all settled, so add the action form the modal shows for an unpaid delivery.
+        await orderModal.locator('.sc-modal-foot').evaluate((foot) => foot.insertAdjacentHTML('beforeend', '<form method="POST" action="/seller/orders/qa/cod-collection" data-confirm-title="Record cash collected?" data-confirm="Record only cash you actually have." data-confirm-action="Record cash"><button type="submit">Record cash collected</button></form>'));
+        const recordCash = orderModal.getByRole('button', { name: 'Record cash collected' });
+
+        const submits = [];
+        await page.route(/\/seller\/orders\/[^/]+\/cod-collection$/, (route) => {
+            submits.push(route.request().method());
+            return route.fulfill({ status: 302, headers: { location: '/seller/orders' } });
+        });
+
+        await recordCash.click();
+        const confirmation = page.getByRole('dialog', { name: 'Record cash collected?' });
+        await expect(confirmation).toBeVisible();
+        await expect(confirmation.getByRole('button', { name: 'Record cash' })).toBeFocused();
+        await confirmation.getByRole('button', { name: 'Cancel' }).click();
+        await expect(confirmation).toBeHidden();
+        await expect(orderModal).toBeVisible();
+        expect(submits).toEqual([]);
+
+        await recordCash.click();
+        await expect(confirmation).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(confirmation).toBeHidden();
+        await expect(orderModal).toBeVisible();
+        expect(submits).toEqual([]);
+
+        await recordCash.click();
+        await confirmation.getByRole('button', { name: 'Record cash' }).click();
+        await expect.poll(() => submits.length).toBe(1);
+        expect(nativeDialogs).toEqual([]);
+    } finally {
+        await context.close();
+    }
+});

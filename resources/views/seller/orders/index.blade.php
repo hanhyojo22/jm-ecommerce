@@ -119,7 +119,7 @@
                  action accepts. Orders the buyer asked to cancel are left for support to decide. --}}
             @php($confirmableIds = $orders->filter(fn ($sellerOrder) => $sellerOrder->status === 'pending' && ! $sellerOrder->has_open_cancellation)->pluck('id')->take(20))
             @if ($canManageOrders && $activeStatus === 'pending' && $confirmableIds->isNotEmpty())
-                <form method="POST" action="{{ route('seller.orders.bulk-confirm') }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[#eef1f5] bg-[#f8fafc] px-5 py-2.5 max-sm:px-4" x-data @submit="if (! confirm(@js('Confirm '.$confirmableIds->count().' pending '.Str::plural('order', $confirmableIds->count()).'? They move to confirmed and the buyers are notified.'))) $event.preventDefault()">
+                <form method="POST" action="{{ route('seller.orders.bulk-confirm') }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[#eef1f5] bg-[#f8fafc] px-5 py-2.5 max-sm:px-4" data-confirm-title="Confirm {{ $confirmableIds->count() }} pending {{ Str::plural('order', $confirmableIds->count()) }}?" data-confirm="They move to confirmed and the buyers are notified." data-confirm-action="Confirm {{ Str::plural('order', $confirmableIds->count()) }}">
                     @csrf
                     @foreach ($confirmableIds as $confirmableId)<input type="hidden" name="seller_order_ids[]" value="{{ $confirmableId }}">@endforeach
                     <p class="text-sm text-muted">{{ $confirmableIds->count() }} {{ Str::plural('order', $confirmableIds->count()) }} waiting for you to confirm.</p>

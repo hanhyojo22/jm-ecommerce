@@ -76,15 +76,15 @@
 
 <div class="sc-modal-foot">
     @if ($canCancel)
-        <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" x-data @submit="if (! confirm('Cancel this order? This cancels only your store’s part of the checkout and restores its item stock. This cannot be undone.')) $event.preventDefault()">@csrf @method('PATCH')<input type="hidden" name="status" value="cancelled"><button type="submit" class="sc-btn sc-btn-danger !border-transparent">Cancel order</button></form>
+        <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" data-confirm-title="Cancel this order?" data-confirm="Only your store’s part of the checkout is cancelled and its item stock is restored. This can’t be undone." data-confirm-action="Cancel order" data-confirm-dismiss="Keep order" data-confirm-tone="danger">@csrf @method('PATCH')<input type="hidden" name="status" value="cancelled"><button type="submit" class="sc-btn sc-btn-danger !border-transparent">Cancel order</button></form>
     @endif
     <span class="flex-1 max-sm:hidden"></span>
     <span class="text-xs text-muted max-lg:hidden">Esc to close · ← → to switch orders</span>
     <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="seller-outline-button">Full page</a>
     @if ($conversation)<a href="{{ route('messages.show', $conversation) }}" class="seller-outline-button">Message buyer</a>@endif
     @if ($canManageOrders && $nextTransition)
-        <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" class="max-sm:flex-1" @if ($nextTransition === 'shipped') x-data @submit="if (! confirm('Mark this order as shipped? Your customer is told it has left your store.')) $event.preventDefault()" @endif>@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $nextTransition }}"><button type="submit" class="seller-primary-button w-full">{{ $transitionLabels[$nextTransition] }}</button></form>
+        <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" class="max-sm:flex-1" @if ($nextTransition === 'shipped') data-confirm-title="Mark this order as shipped?" data-confirm="Your customer is told the parcel has left your store. Do this only once it’s with your courier." data-confirm-action="Mark as shipped" @endif>@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $nextTransition }}"><button type="submit" class="seller-primary-button w-full">{{ $transitionLabels[$nextTransition] }}</button></form>
     @elseif ($canRecordCash)
-        <form method="POST" action="{{ route('seller.orders.cod-collection', $sellerOrder) }}" class="max-sm:flex-1" x-data @submit="if (! confirm('Record that your store collected the cash for this order?')) $event.preventDefault()">@csrf @method('PATCH')<button type="submit" class="seller-primary-button w-full">Record cash collected</button></form>
+        <form method="POST" action="{{ route('seller.orders.cod-collection', $sellerOrder) }}" class="max-sm:flex-1" data-confirm-title="Record cash collected?" data-confirm="Confirm your store received ₱{{ number_format($sellerOrder->total, 2) }} in cash for this order. Record only cash you actually have." data-confirm-action="Record cash">@csrf @method('PATCH')<button type="submit" class="seller-primary-button w-full">Record cash collected</button></form>
     @endif
 </div>

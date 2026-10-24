@@ -171,6 +171,90 @@ document.querySelectorAll('form[data-confirm-message]').forEach((form) => {
     });
 });
 
+/*
+ * An in-page confirmation in place of the browser's own confirm() box. A form opts in with
+ * data-confirm (the explanation) and optionally data-confirm-title, data-confirm-action,
+ * data-confirm-dismiss and data-confirm-tone="danger". One dialog is built on first use.
+ */
+let confirmDialog;
+
+const confirmIcons = {
+    danger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>',
+    default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
+};
+
+const askToConfirm = ({ confirm: message, confirmTitle, confirmAction, confirmDismiss, confirmTone }) => {
+    if (!confirmDialog) {
+        confirmDialog = document.createElement('dialog');
+        confirmDialog.className = 'confirm-dialog';
+        confirmDialog.setAttribute('aria-labelledby', 'confirm-dialog-title');
+        confirmDialog.setAttribute('aria-describedby', 'confirm-dialog-message');
+        confirmDialog.innerHTML = '<form method="dialog"><span class="confirm-dialog-icon" aria-hidden="true"></span><h2 id="confirm-dialog-title" class="confirm-dialog-title"></h2><p id="confirm-dialog-message" class="confirm-dialog-message"></p><div class="confirm-dialog-actions"><button type="submit" value="cancel" class="confirm-dialog-dismiss"></button><button type="submit" value="confirm" class="confirm-dialog-confirm"></button></div></form>';
+        confirmDialog.addEventListener('click', (event) => {
+            if (event.target === confirmDialog) {
+                confirmDialog.close('cancel');
+            }
+        });
+        document.body.append(confirmDialog);
+    }
+
+    const tone = confirmTone === 'danger' ? 'danger' : 'default';
+    confirmDialog.dataset.tone = tone;
+    confirmDialog.querySelector('.confirm-dialog-icon').innerHTML = confirmIcons[tone];
+    confirmDialog.querySelector('.confirm-dialog-title').textContent = confirmTitle || 'Are you sure?';
+    confirmDialog.querySelector('.confirm-dialog-message').textContent = message;
+    confirmDialog.querySelector('.confirm-dialog-dismiss').textContent = confirmDismiss || 'Cancel';
+    confirmDialog.querySelector('.confirm-dialog-confirm').textContent = confirmAction || 'Continue';
+    confirmDialog.returnValue = '';
+    confirmDialog.showModal();
+    // A destructive action starts on the safe choice, so Enter alone never commits it.
+    confirmDialog.querySelector(tone === 'danger' ? '.confirm-dialog-dismiss' : '.confirm-dialog-confirm').focus();
+
+    return new Promise((resolve) => {
+        confirmDialog.addEventListener('close', () => resolve(confirmDialog.returnValue === 'confirm'), { once: true });
+    });
+};
+
+/*
+ * Capture phase, so the session refresh below never sees an unconfirmed submit. Its own
+ * resubmit after renewing the cookie is already confirmed and passes straight through.
+ */
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement) || !form.dataset.confirm) {
+        return;
+    }
+
+    if (form.dataset.confirmed === 'true' || form.dataset.clerkSessionRefreshed === 'true') {
+        delete form.dataset.confirmed;
+
+        return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    if (confirmDialog?.open) {
+        return;
+    }
+
+    const submitter = event.submitter;
+
+    askToConfirm(form.dataset).then((confirmed) => {
+        if (!confirmed) {
+            return;
+        }
+
+        form.dataset.confirmed = 'true';
+        if (submitter) {
+            form.requestSubmit(submitter);
+        } else {
+            form.requestSubmit();
+        }
+    });
+}, true);
+
 const clerkAuthAppearance = {
     ...clerkComponentAppearance,
     elements: {
