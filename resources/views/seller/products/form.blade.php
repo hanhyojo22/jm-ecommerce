@@ -152,7 +152,7 @@
                 </section>
 
                 <section class="ps-card" aria-labelledby="product-photos-heading">
-                    <div class="ps-card-head"><h2 id="product-photos-heading">Photos</h2><p class="pe-count" x-text="photoCount + ' of ' + maxPhotos">{{ count($existingPhotos) }} of 8</p></div>
+                    <div class="ps-card-head"><div><h2 id="product-photos-heading">Photos</h2><p>The first photo is the cover buyers see in search.</p></div><p class="pe-count" x-text="photoCount + ' of ' + maxPhotos">{{ count($existingPhotos) }} of 8</p></div>
 
                     <ul class="sc-photo-grid is-main mt-3" aria-label="Product photos" x-show="photos.length || previews.length">
                         <template x-for="(photo, index) in photos" :key="photo.id">
@@ -183,8 +183,9 @@
                     <template x-for="id in removed" :key="id"><input type="hidden" name="remove_images[]" :value="id"></template>
 
                     <label for="images" class="sc-dropzone mt-3" x-data="{ over: false }" :class="over && 'is-over'" x-show="photoCount < maxPhotos" @dragover.prevent="over = true" @dragleave.prevent="over = false" @drop.prevent="over = false; addFiles($event.dataTransfer.files)">
+                        <span class="ps-drop-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
                         <span class="ps-upload">Upload photos</span>
-                        <span class="text-xs text-muted">or drag them here. JPEG, PNG or WebP, up to 5 MB each. The first photo is the cover.</span>
+                        <span class="ps-drop-hint">or drag them here. JPEG, PNG or WebP, up to 5 MB each.</span>
                         <input id="images" x-ref="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple class="sr-only" @change="const picked = [...$event.target.files]; $event.target.value = ''; addFiles(picked)">
                     </label>
                     <p x-show="photoCount >= maxPhotos" x-cloak class="mt-3 text-sm text-muted">You’ve reached 8 photos. Remove one to add another.</p>
@@ -194,7 +195,7 @@
                 </section>
 
                 <section class="ps-card" aria-labelledby="product-pricing-heading">
-                    <div class="ps-card-head"><h2 id="product-pricing-heading">Pricing</h2></div>
+                    <div class="ps-card-head"><div><h2 id="product-pricing-heading">Pricing</h2><p>What buyers pay, in pesos.</p></div></div>
                     <div class="pe-grid mt-4">
                         <div><label for="price" class="pe-label">Price</label><div class="pe-affix"><span aria-hidden="true">₱</span><input id="price" name="price" type="number" min="0.01" step="0.01" x-model="price" value="{{ $listing['price'] }}" required placeholder="0.00" class="pe-input"></div><x-input-error :messages="$errors->get('price')" class="mt-2" /></div>
                         <div><label for="compare_at_price" class="pe-label">Compare-at price</label><div class="pe-affix"><span aria-hidden="true">₱</span><input id="compare_at_price" name="compare_at_price" type="number" min="0.01" step="0.01" x-model="comparePrice" value="{{ $listing['comparePrice'] }}" placeholder="0.00" aria-describedby="compare-price-hint" class="pe-input"></div><x-input-error :messages="$errors->get('compare_at_price')" class="mt-2" /></div>
@@ -203,7 +204,7 @@
                 </section>
 
                 <section class="ps-card" aria-labelledby="product-inventory-heading">
-                    <div class="ps-card-head"><h2 id="product-inventory-heading">Inventory</h2></div>
+                    <div class="ps-card-head"><div><h2 id="product-inventory-heading">Inventory</h2><p>How you identify and count this product.</p></div></div>
                     <div class="pe-grid mt-4">
                         <div><label for="sku" class="pe-label">SKU (Stock Keeping Unit)</label><input id="sku" name="sku" x-model="sku" value="{{ $listing['sku'] }}" required maxlength="100" placeholder="TSHIRT-BASIC" class="pe-input"><x-input-error :messages="$errors->get('sku')" class="mt-2" /></div>
                         <div x-show="variantCount === 0"><label for="stock_quantity" class="pe-label">Stock quantity</label><input id="stock_quantity" name="stock_quantity" type="number" min="0" x-model="stock" value="{{ $listing['stock'] }}" :disabled="variantCount > 0" :required="variantCount === 0" aria-describedby="stock-hint" class="pe-input"><p id="stock-hint" class="pe-hint">Use 0 when unavailable.</p><x-input-error :messages="$errors->get('stock_quantity')" class="mt-2" /></div>
@@ -212,7 +213,7 @@
                 </section>
 
                 <section class="ps-card is-flush" aria-labelledby="product-variants-heading">
-                    <div class="ps-card-head ps-card-pad"><h2 id="product-variants-heading">Variants</h2></div>
+                    <div class="ps-card-head ps-card-pad"><div><h2 id="product-variants-heading">Variants</h2><p>Sell the same product in different colors or sizes.</p></div></div>
 
                     <button type="button" x-show="options.length === 0" @click="addOption()" class="ps-add-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add options like size or color</button>
 
@@ -306,13 +307,22 @@
                         @endforeach
                     </div>
                 </section>
+                <div class="ps-footer">
+                    <a href="{{ route('seller.products.index') }}" class="seller-outline-button">Cancel</a>
+                    <button :disabled="saving" class="seller-primary-button disabled:opacity-70"><span x-show="!saving">{{ $submitLabel }}</span><span x-show="saving" x-cloak>Saving…</span></button>
+                </div>
             </div>
 
             <aside class="ps-side" aria-label="Status and organization">
                 <section class="ps-card" aria-labelledby="status-heading">
                     <div class="ps-card-head"><h2 id="status-heading">Status</h2><x-marketplace.product-status :status="$editing ? $product->status : 'draft'" /></div>
                     <p class="pe-hint">{{ $editing && $product->status === 'active' ? 'Saving changes moves this listing back to draft until it is reviewed again.' : 'Saved as a draft. Submit it for review from Products when it’s ready.' }}</p>
-                    <p class="ps-side-label">Needed for review</p>
+                    {{-- Fills one segment per review requirement met. --}}
+                    <div class="ps-meter">
+                        <p x-show="! checks.every(check => check.done)"><span x-text="checks.filter(check => check.done).length + ' of ' + checks.length"></span> requirements met</p>
+                        <p x-show="checks.every(check => check.done)" x-cloak><span>Ready for review</span></p>
+                        <div class="ps-meter-track" aria-hidden="true"><template x-for="(check, index) in checks" :key="check.label"><span :class="index < checks.filter(check => check.done).length && 'is-done'"></span></template></div>
+                    </div>
                     <ul class="ps-checks">
                         <template x-for="check in checks" :key="check.label">
                             <li :class="check.done && 'is-done'"><span class="pe-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><span x-text="check.label"></span><span class="sr-only" x-text="check.done ? ', done' : ', missing'"></span></li>
@@ -322,7 +332,7 @@
                 </section>
 
                 <section class="ps-card" aria-labelledby="organization-heading">
-                    <div class="ps-card-head"><h2 id="organization-heading">Product organization</h2></div>
+                    <div class="ps-card-head"><div><h2 id="organization-heading">Product organization</h2><p>Helps buyers find it in the marketplace.</p></div></div>
                     <div class="mt-4 grid gap-4">
                         <div><label for="category_id" class="pe-label">Category</label><select id="category_id" name="category_id" x-model="categoryId" class="pe-input"><option value="">Uncategorized</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected($listing['categoryId'] === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
                         <div><label for="brand" class="pe-label">Brand</label><input id="brand" name="brand" maxlength="100" value="{{ old('brand', $product?->brand) }}" class="pe-input"><x-input-error :messages="$errors->get('brand')" class="mt-2" /></div>
@@ -339,10 +349,6 @@
                 </section>
             </aside>
 
-            <div class="ps-footer">
-                <a href="{{ route('seller.products.index') }}" class="seller-outline-button">Cancel</a>
-                <button :disabled="saving" class="seller-primary-button disabled:opacity-70"><span x-show="!saving">{{ $submitLabel }}</span><span x-show="saving" x-cloak>Saving…</span></button>
-            </div>
         </form>
         @endif
     </div>
