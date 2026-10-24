@@ -172,48 +172,60 @@ document.querySelectorAll('form[data-confirm-message]').forEach((form) => {
 });
 
 /*
- * An in-page confirmation in place of the browser's own confirm() box. A form opts in with
- * data-confirm (the explanation) and optionally data-confirm-title, data-confirm-context (what
- * the action touches, such as an order number), data-confirm-action, data-confirm-dismiss and
+ * An in-page confirmation in place of the browser's own confirm() box, laid out as a claim slip:
+ * the question on top, and on the tear-off stub what the action touches and what it changes.
+ * A form opts in with data-confirm (the explanation) and optionally data-confirm-title,
+ * data-confirm-reference (such as "Order JM-…"), data-confirm-amount, data-confirm-from and
+ * data-confirm-to (the status before and after), data-confirm-action, data-confirm-dismiss and
  * data-confirm-tone="danger". One dialog is built on first use.
  */
 let confirmDialog;
 
-const confirmIcons = {
-    danger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>',
-    default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
-};
-
-const askToConfirm = ({ confirm: message, confirmTitle, confirmContext, confirmAction, confirmDismiss, confirmTone }) => {
+const askToConfirm = ({ confirm: message, confirmTitle, confirmReference, confirmAmount, confirmFrom, confirmTo, confirmAction, confirmDismiss, confirmTone }) => {
     if (!confirmDialog) {
         confirmDialog = document.createElement('dialog');
         confirmDialog.className = 'confirm-dialog';
         confirmDialog.setAttribute('aria-labelledby', 'confirm-dialog-title');
         confirmDialog.setAttribute('aria-describedby', 'confirm-dialog-message');
-        confirmDialog.innerHTML = '<form method="dialog"><div class="confirm-dialog-body"><span class="confirm-dialog-icon" aria-hidden="true"></span><div class="confirm-dialog-text"><h2 id="confirm-dialog-title" class="confirm-dialog-title"></h2><p id="confirm-dialog-message" class="confirm-dialog-message"></p><p class="confirm-dialog-context"></p></div></div><div class="confirm-dialog-actions"><button type="submit" value="cancel" class="confirm-dialog-dismiss"></button><button type="submit" value="confirm" class="confirm-dialog-confirm"></button></div></form>';
+        confirmDialog.innerHTML = '<form method="dialog">'
+            + '<div class="confirm-slip"><h2 id="confirm-dialog-title" class="confirm-slip-title"></h2><p id="confirm-dialog-message" class="confirm-slip-message"></p></div>'
+            + '<div class="confirm-stub">'
+            + '<div class="confirm-stub-line"><p class="confirm-stub-reference"></p><p class="confirm-stub-change"><span class="confirm-stub-from"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 12h15m-5-5 5 5-5 5"/></svg><span class="sr-only"> to </span><span class="confirm-stub-to"></span></p></div>'
+            + '<p class="confirm-stub-amount"></p>'
+            + '<div class="confirm-stub-actions"><button type="submit" value="cancel" class="confirm-dismiss"></button><button type="submit" value="confirm" class="confirm-commit"></button></div>'
+            + '</div></form>';
         confirmDialog.addEventListener('click', (event) => {
             if (event.target === confirmDialog) {
                 confirmDialog.close('cancel');
             }
         });
         document.body.append(confirmDialog);
+        // The edge notches sit on the tear line, which moves with the length of the question.
+        const slip = confirmDialog.querySelector('.confirm-slip');
+        new ResizeObserver(() => confirmDialog.style.setProperty('--slip-tear', `${slip.offsetHeight}px`)).observe(slip);
     }
 
+    const fill = (selector, text) => {
+        const element = confirmDialog.querySelector(selector);
+        element.textContent = text || '';
+        element.hidden = !text;
+    };
     const tone = confirmTone === 'danger' ? 'danger' : 'default';
-    const context = confirmDialog.querySelector('.confirm-dialog-context');
     confirmDialog.dataset.tone = tone;
-    confirmDialog.querySelector('.confirm-dialog-icon').innerHTML = confirmIcons[tone];
-    confirmDialog.querySelector('.confirm-dialog-title').textContent = confirmTitle || 'Are you sure?';
-    confirmDialog.querySelector('.confirm-dialog-message').textContent = message;
-    // "Order JM-… · ₱1,200.00" reads as the item on the left and its amount on the right.
-    context.replaceChildren(...(confirmContext || '').split(' · ').map((part) => Object.assign(document.createElement('span'), { textContent: part })));
-    context.hidden = !confirmContext;
-    confirmDialog.querySelector('.confirm-dialog-dismiss').textContent = confirmDismiss || 'Cancel';
-    confirmDialog.querySelector('.confirm-dialog-confirm').textContent = confirmAction || 'Continue';
+    fill('.confirm-slip-title', confirmTitle || 'Are you sure?');
+    fill('.confirm-slip-message', message);
+    fill('.confirm-stub-reference', confirmReference);
+    fill('.confirm-stub-amount', confirmAmount);
+    fill('.confirm-stub-from', confirmFrom);
+    fill('.confirm-stub-to', confirmTo);
+    confirmDialog.querySelector('.confirm-stub-change').hidden = !confirmTo;
+    confirmDialog.querySelector('.confirm-stub-line').hidden = !confirmReference && !confirmTo;
+    fill('.confirm-dismiss', confirmDismiss || 'Cancel');
+    fill('.confirm-commit', confirmAction || 'Continue');
     confirmDialog.returnValue = '';
     confirmDialog.showModal();
     // A destructive action starts on the safe choice, so Enter alone never commits it.
-    confirmDialog.querySelector(tone === 'danger' ? '.confirm-dialog-dismiss' : '.confirm-dialog-confirm').focus();
+    confirmDialog.querySelector(tone === 'danger' ? '.confirm-dismiss' : '.confirm-commit').focus();
 
     return new Promise((resolve) => {
         confirmDialog.addEventListener('close', () => resolve(confirmDialog.returnValue === 'confirm'), { once: true });

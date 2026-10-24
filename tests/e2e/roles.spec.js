@@ -393,7 +393,7 @@ test('seller order actions confirm in an in-page dialog instead of the browser p
         const orderModal = page.locator('dialog.sc-modal');
         await expect(orderModal.locator('.sc-modal-foot')).toBeVisible();
         // The seeded orders are all settled, so add the action form the modal shows for an unpaid delivery.
-        await orderModal.locator('.sc-modal-foot').evaluate((foot) => foot.insertAdjacentHTML('beforeend', '<form method="POST" action="/seller/orders/qa/cod-collection" data-confirm-title="Record cash collected?" data-confirm="Record only cash you actually have." data-confirm-context="Order QA-1 · ₱19.99" data-confirm-action="Record cash"><button type="submit">Record cash collected</button></form>'));
+        await orderModal.locator('.sc-modal-foot').evaluate((foot) => foot.insertAdjacentHTML('beforeend', '<form method="POST" action="/seller/orders/qa/cod-collection" data-confirm-title="Record cash collected?" data-confirm="Record only cash you actually have." data-confirm-reference="Order QA-1" data-confirm-amount="₱19.99" data-confirm-from="Unpaid" data-confirm-to="Paid" data-confirm-action="Record cash"><button type="submit">Record cash collected</button></form>'));
         const recordCash = orderModal.getByRole('button', { name: 'Record cash collected' });
 
         const submits = [];
@@ -408,6 +408,7 @@ test('seller order actions confirm in an in-page dialog instead of the browser p
         await expect(confirmation.getByRole('button', { name: 'Record cash' })).toBeFocused();
         await expect(confirmation.getByText('Order QA-1', { exact: true })).toBeVisible();
         await expect(confirmation.getByText('₱19.99', { exact: true })).toBeVisible();
+        await expect(confirmation.getByText('Paid', { exact: true })).toBeVisible();
         await confirmation.getByRole('button', { name: 'Cancel' }).click();
         await expect(confirmation).toBeHidden();
         await expect(orderModal).toBeVisible();
