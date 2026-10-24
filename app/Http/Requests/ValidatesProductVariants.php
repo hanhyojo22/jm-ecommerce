@@ -23,10 +23,10 @@ trait ValidatesProductVariants
                 continue;
             }
 
-            $combination = mb_strtolower(trim($variant['color'])).'|'.mb_strtolower(trim($variant['size']));
+            $combination = mb_strtolower(trim((string) ($variant['color'] ?? ''))).'|'.mb_strtolower(trim((string) ($variant['size'] ?? '')));
             $sku = mb_strtolower(trim($variant['sku']));
             if (isset($combinations[$combination])) {
-                $validator->errors()->add("variants.$index.color", 'Each color and size combination must be unique.');
+                $validator->errors()->add("variants.$index.color", 'Each variant needs a different combination of options.');
             }
             if (isset($skus[$sku]) || $sku === mb_strtolower(trim((string) $this->input('sku')))) {
                 $validator->errors()->add("variants.$index.sku", 'Each variant needs a unique SKU.');

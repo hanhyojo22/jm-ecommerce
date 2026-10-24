@@ -429,3 +429,43 @@ test('seller order actions confirm in an in-page dialog instead of the browser p
         await context.close();
     }
 });
+
+test('seller adds a size option to a saved product without changing its saved variants', async ({ browser }) => {
+    const seller = await openAsRole(browser, 'seller');
+    const page = seller.page;
+
+    try {
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.goto('/seller/products/create');
+        await page.getByRole('button', { name: 'Reject Optional' }).click();
+        await page.reload();
+        await page.locator('#name').fill('Edit QA Socks');
+        await page.locator('#sku').fill('EQS');
+        await page.locator('#price').fill('99');
+        await page.getByRole('button', { name: 'Add options like size or color' }).click();
+        await page.locator('#option-name-0').selectOption('Size');
+        await page.getByLabel('Size value 1').fill('S');
+        await page.getByLabel('Size value 2').fill('M');
+        await page.getByRole('button', { name: 'Done' }).click();
+        await page.getByLabel('Available for S').fill('2');
+        await page.getByRole('button', { name: 'Save product' }).click();
+        await expect(page).toHaveURL(/\/seller\/products$/);
+        await page.goto('/seller/products?search=Edit%20QA%20Socks');
+        await page.locator('a[href*="/edit"]:visible').first().click();
+        await expect(page.locator('.ps-pill')).toHaveText(['S', 'M']);
+        await page.getByRole('button', { name: 'Edit Size option' }).click();
+        await expect(page.getByLabel('Size value 1')).toHaveJSProperty('readOnly', true);
+        await expect(page.getByRole('button', { name: 'Add another option' })).toBeHidden();
+        await page.getByLabel('Size value 3').fill('L');
+        await page.getByRole('button', { name: 'Done' }).click();
+        await page.getByLabel('Available for L').fill('4');
+        await page.getByRole('button', { name: 'Save changes', exact: true }).click();
+        await expect(page).toHaveURL(/\/seller\/products$/);
+        await page.goto('/seller/products?search=Edit%20QA%20Socks');
+        await page.locator('a[href*="/seller/products/"]:visible').filter({ hasText: 'Details' }).first().click();
+        await expect(page.getByRole('cell', { name: 'EQS-L' })).toBeVisible();
+        await expect(page.getByRole('rowheader', { name: 'S', exact: true })).toBeVisible();
+    } finally {
+        await seller.context.close();
+    }
+});

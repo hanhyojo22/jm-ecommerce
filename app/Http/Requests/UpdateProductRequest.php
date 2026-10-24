@@ -50,8 +50,8 @@ class UpdateProductRequest extends FormRequest
             'variants.*.images' => ['nullable', 'array', 'max:4'],
             'variants.*.images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'variants.*.id' => ['nullable', 'ulid'],
-            'variants.*.color' => ['required', 'string', 'max:60'],
-            'variants.*.size' => ['required', 'string', 'max:60'],
+            'variants.*.color' => ['nullable', 'required_without:variants.*.size', 'string', 'max:60'],
+            'variants.*.size' => ['nullable', 'required_without:variants.*.color', 'string', 'max:60'],
             'variants.*.sku' => ['required', 'string', 'max:100'],
             'variants.*.stock_quantity' => ['required', 'integer', 'min:0', 'max:2147483647'],
         ];

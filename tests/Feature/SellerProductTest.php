@@ -62,6 +62,33 @@ class SellerProductTest extends TestCase
             ->assertSee('Choose a variant');
     }
 
+    public function test_seller_can_create_variants_with_only_one_option(): void
+    {
+        [$owner] = $this->seller();
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Running socks', 'sku' => 'SOCK', 'price' => '149.00',
+            'variants' => [
+                ['size' => 'S', 'sku' => 'SOCK-S', 'stock_quantity' => 3],
+                ['size' => 'M', 'sku' => 'SOCK-M', 'stock_quantity' => 2],
+            ],
+        ])->assertRedirect(route('seller.products.index'));
+
+        $variants = Product::query()->sole()->variants;
+        $this->assertEqualsCanonicalizing(['S', 'M'], $variants->map->label()->all());
+        $this->assertSame('', $variants->first()->color);
+    }
+
+    public function test_variant_needs_a_color_or_a_size(): void
+    {
+        [$owner] = $this->seller();
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Running socks', 'sku' => 'SOCK', 'price' => '149.00',
+            'variants' => [['sku' => 'SOCK-1', 'stock_quantity' => 3]],
+        ])->assertSessionHasErrors(['variants.0.color', 'variants.0.size']);
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
     public function test_seller_cannot_save_duplicate_color_and_size_options(): void
     {
         [$owner] = $this->seller();
