@@ -444,7 +444,11 @@ test('seller order detail and product editor remain usable at each viewport', as
                 }));
                 expect(listWidth.document, 'populated orders list').toBeLessThanOrEqual(listWidth.viewport);
             }
-            await seller.page.getByRole('link', { name: action, exact: true }).first().click();
+            // On a wide screen the order number is the row's only link.
+            const actionLink = name === 'order-detail'
+                ? seller.page.locator('.sc-table-wrap th a:visible, .sc-list a.sc-link:visible').first()
+                : seller.page.getByRole('link', { name: action, exact: true }).first();
+            await actionLink.click();
             // Orders open in a modal over the list; products still go to their edit page.
             await expect(seller.page).toHaveURL(name === 'order-detail' ? /\/seller\/orders\?order=[^&]+/ : /\/seller\/products\/[^/]+\/edit$/);
             if (name === 'order-detail') {
