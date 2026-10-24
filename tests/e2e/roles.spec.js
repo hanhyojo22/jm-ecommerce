@@ -459,6 +459,7 @@ test('seller adds a size option to a saved product without changing its saved va
         await page.getByLabel('Size value 3').fill('L');
         await page.getByRole('button', { name: 'Done' }).click();
         await page.getByLabel('Available for L').fill('4');
+        await expect(page.getByRole('region', { name: 'Unsaved changes' })).toBeVisible();
         await page.getByRole('button', { name: 'Save changes', exact: true }).click();
         await expect(page).toHaveURL(/\/seller\/products$/);
         await page.goto('/seller/products?search=Edit%20QA%20Socks');

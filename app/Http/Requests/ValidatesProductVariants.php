@@ -7,6 +7,35 @@ use Illuminate\Validation\Validator;
 
 trait ValidatesProductVariants
 {
+    /**
+     * Names variant fields by their row, so errors read "SKU for variant 2" instead of "variants.1.sku".
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'variants.*.color' => 'color for variant :position',
+            'variants.*.size' => 'size for variant :position',
+            'variants.*.sku' => 'SKU for variant :position',
+            'variants.*.stock_quantity' => 'stock for variant :position',
+            'variants.*.price' => 'price for variant :position',
+            'variants.*.images' => 'photos for variant :position',
+            'variants.*.images.*' => 'photo for variant :position',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'variants.*.color.required_without' => 'Variant :position needs a color or a size.',
+            'variants.*.size.required_without' => 'Variant :position needs a color or a size.',
+        ];
+    }
+
     protected function validateVariants(Validator $validator): void
     {
         $variants = $this->input('variants', []);

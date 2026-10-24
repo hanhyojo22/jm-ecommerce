@@ -126,20 +126,23 @@
             }"
             @submit="saving = true; dirty = false"
             @input="dirty = true" @change="dirty = true"
+            @invalid.capture="if (collapsed.length) { collapsed = []; $nextTick(() => $el.reportValidity()) }"
             class="ps-layout">
             @csrf
             @if ($formMethod === 'PATCH') @method('PATCH') @endif
             {{-- Saving any edit returns the listing to draft for a fresh review. --}}
             @if ($editing)<input type="hidden" name="status" value="draft">@endif
 
-            {{-- Contextual save bar, shown once anything changes. --}}
+            {{-- Save bar for a saved product once it changes; a new product saves from the button at the end of the form. --}}
+            @if ($editing)
             <div class="ps-savebar" x-show="dirty" x-cloak x-transition.opacity.duration.150ms role="region" aria-label="Unsaved changes">
-                <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>{{ $editing ? 'Unsaved changes' : 'Unsaved product' }}</p>
+                <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Unsaved changes</p>
                 <div>
                     <button type="button" class="ps-savebar-discard" @click="dirty = false; window.location.reload()">Discard</button>
                     <button type="submit" class="ps-savebar-save" :disabled="saving">Save</button>
                 </div>
             </div>
+            @endif
 
             <div class="ps-main">
                 <section class="ps-card" aria-label="Title and description">
@@ -300,11 +303,7 @@
                     <p x-show="variantCount > maxVariants" x-cloak class="ps-card-pad pt-3 text-sm text-danger" role="alert" x-text="'Products can have up to ' + maxVariants + ' variants. Remove some values or variants.'"></p>
                     <div class="ps-card-pad ps-card-errors">
                         <x-input-error :messages="$errors->get('variants')" class="mt-3" />
-                        @foreach ($errors->getMessages() as $field => $messages)
-                            @if (str_starts_with($field, 'variants.'))
-                                @foreach ($messages as $message)<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@endforeach
-                            @endif
-                        @endforeach
+                        @foreach (collect($errors->getMessages())->filter(fn ($messages, $field) => str_starts_with($field, 'variants.'))->flatten()->unique() as $message)<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@endforeach
                     </div>
                 </section>
                 <div class="ps-footer">

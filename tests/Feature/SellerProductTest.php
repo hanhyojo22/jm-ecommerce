@@ -83,8 +83,11 @@ class SellerProductTest extends TestCase
         [$owner] = $this->seller();
         $this->actingAs($owner)->post(route('seller.products.store'), [
             'name' => 'Running socks', 'sku' => 'SOCK', 'price' => '149.00',
-            'variants' => [['sku' => 'SOCK-1', 'stock_quantity' => 3]],
-        ])->assertSessionHasErrors(['variants.0.color', 'variants.0.size']);
+            'variants' => [['size' => 'S', 'sku' => 'SOCK-S', 'stock_quantity' => 1], ['stock_quantity' => 3]],
+        ])->assertSessionHasErrors([
+            'variants.1.color' => 'Variant 2 needs a color or a size.',
+            'variants.1.sku' => 'The SKU for variant 2 field is required.',
+        ]);
 
         $this->assertDatabaseCount('products', 0);
     }

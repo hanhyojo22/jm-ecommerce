@@ -155,6 +155,15 @@ test('seller adds color and size options in the product form at each viewport', 
         await page.getByRole('button', { name: 'Remove Navy / Large' }).click();
         await page.getByLabel('Available for Navy / Medium').fill('3');
         await expect(page.locator('input[name="variants[1][sku]"]')).toHaveCount(0);
+        await expect(page.getByRole('region', { name: 'Unsaved changes' })).toHaveCount(0);
+        // Saving opens a collapsed group so the browser can point at its empty required field.
+        const variantSku = page.getByLabel('SKU for Navy / Medium');
+        await variantSku.fill('');
+        await page.getByRole('button', { name: /^Navy/ }).click();
+        await expect(variantSku).toBeHidden();
+        await page.getByRole('button', { name: 'Save product' }).click();
+        await expect(variantSku).toBeFocused();
+        await variantSku.fill(`VARIANT-QA-N-M-${testInfo.project.name}`);
         await expect(page.locator('#stock_quantity')).toBeDisabled();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
         await page.screenshot({ path: testInfo.outputPath('product-variant-form.png'), fullPage: true });
