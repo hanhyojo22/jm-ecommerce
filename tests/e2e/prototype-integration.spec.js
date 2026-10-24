@@ -29,13 +29,13 @@ test('variant gallery, prices, and sold-out states work on phone, tablet, and de
             await expect(gallery.locator('button:visible img').first()).toHaveAttribute('src', /variant-black\.jpg/);
             await gallery.getByRole('button', { name: 'Show image 2', exact: true }).click();
             await expect(gallery.getByRole('button', { name: 'Zoom image 2 of 2', exact: true }).locator('img')).toHaveAttribute('src', /variant-white\.jpg/);
-            await page.getByRole('radio', { name: /White \/ Standard/ }).check();
+            await page.getByRole('radio', { name: /^White/ }).check();
             await expect(page.locator('[data-selected-price]:visible')).toHaveText('₱13.50');
             await expect(gallery.locator('button:visible img').first()).toHaveAttribute('src', /variant-white\.jpg/);
             await expect(page.locator('#purchase').getByRole('button', { name: 'Sold out', exact: true })).toBeDisabled();
-            await page.getByRole('radio', { name: /Navy \/ Standard/ }).check();
+            await page.getByRole('radio', { name: /^Navy/ }).check();
             await expect(page.locator('[data-selected-price]:visible')).toHaveText('₱10.00');
-            await expect(page.locator('[data-selected-stock]')).toContainText('3 available in this option');
+            await expect(page.locator('[data-selected-stock]')).toContainText('Only 3 left in Navy / Standard');
             const galleryBox = await gallery.boundingBox();
             const informationBox = await page.locator('.pd-info').boundingBox();
             if (width === 375) {
@@ -68,7 +68,7 @@ test('prototype Buy now uses the real selected variant and opens checkout', asyn
     try {
         await page.goto(speakerPath);
         await dismissCookies(page);
-        await page.getByRole('radio', { name: /Navy \/ Standard/ }).check();
+        await page.getByRole('radio', { name: /^Navy/ }).check();
         await page.locator('#purchase').getByRole('button', { name: 'Buy now', exact: true }).click();
         await expect(page).toHaveURL(/\/checkout$/);
         await expect(page.locator('form#checkout-form')).toContainText('QA Variant Speaker');

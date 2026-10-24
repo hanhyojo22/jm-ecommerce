@@ -60,7 +60,7 @@ class SellerProductTest extends TestCase
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
             ->assertSee('Choose a product image')
-            ->assertSee('Choose a variant');
+            ->assertSeeInOrder(['Color:', 'Size:']);
     }
 
     public function test_seller_can_create_variants_with_only_one_option(): void
