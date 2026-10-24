@@ -6,6 +6,15 @@
         ->values()
         ->map(fn ($variant, $index) => ['key' => $index, ...$variant])
         ->all();
+    $listing = [
+        'name' => (string) old('name', $product?->name),
+        'categoryId' => (string) old('category_id', $product?->category_id),
+        'condition' => (string) old('condition', $product?->condition ?? 'new'),
+        'description' => (string) old('description', $product?->description),
+        'price' => (string) old('price', $product?->price),
+        'comparePrice' => (string) old('compare_at_price', $product?->compare_at_price),
+        'stock' => (string) old('stock_quantity', $product?->stock_quantity ?? 0),
+    ];
 @endphp
 
 <div class="page-shell">
@@ -17,11 +26,25 @@
         <form method="POST" enctype="multipart/form-data" action="{{ $formAction }}"
             x-data="{
                 dirty: false, saving: false, variants: @js($variantRows), nextKey: {{ count($variantRows) }},
+                ...@js($listing), categories: @js($categories->pluck('name', 'id')),
                 addVariant() { this.variants.push({ key: this.nextKey++, color: '', size: '', sku: '', stock_quantity: 0, price: '' }); this.dirty = true },
                 {{-- Photo manager: saved photos can be reordered, removed (undoable until save) and set as cover; new files can be dropped, previewed and removed before upload. --}}
                 photos: @js($existingPhotos), removed: [], newFiles: [], previews: [], maxPhotos: 8, photoNotice: '',
                 get keptPhotos() { return this.photos.filter(photo => ! this.removed.includes(photo.id)) },
                 get photoCount() { return this.keptPhotos.length + this.newFiles.length },
+                get coverUrl() { return this.keptPhotos[0]?.url ?? this.previews[0] ?? null },
+                get onSale() { return Number(this.comparePrice) > Number(this.price) && Number(this.price) > 0 },
+                get discount() { return Math.round((1 - Number(this.price) / Number(this.comparePrice)) * 100) },
+                get stockTotal() { return this.variants.length ? this.variants.reduce((sum, variant) => sum + (Number(variant.stock_quantity) || 0), 0) : Number(this.stock) || 0 },
+                peso(amount) { return '₱' + Number(amount).toLocaleString('en-PH', { minimumFractionDigits: Number(amount) % 1 ? 2 : 0, maximumFractionDigits: 2 }) },
+                {{-- The same requirements the review submission checks, so the seller sees them before saving. --}}
+                get checks() { return [
+                    { label: 'At least one photo', done: this.photoCount > 0 },
+                    { label: 'Product name', done: this.name.trim() !== '' },
+                    { label: 'Category', done: this.categoryId !== '' },
+                    { label: 'Description', done: this.description.trim() !== '' },
+                    { label: 'Price', done: Number(this.price) > 0 },
+                ] },
                 move(index, offset) { const target = index + offset; if (target < 0 || target >= this.photos.length) return; const list = [...this.photos]; [list[index], list[target]] = [list[target], list[index]]; this.photos = list; this.dirty = true },
                 makeCover(index) { const list = [...this.photos]; list.unshift(list.splice(index, 1)[0]); this.photos = list; this.dirty = true; this.photoNotice = 'Cover photo updated.' },
                 toggleRemove(id) { this.removed = this.removed.includes(id) ? this.removed.filter(other => other !== id) : [...this.removed, id]; this.dirty = true },
@@ -40,37 +63,23 @@
             }"
             x-init="window.addEventListener('beforeunload', e => { if (dirty && !saving) { e.preventDefault(); e.returnValue = ''; } })"
             @submit="saving = true; dirty = false"
-            class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            @input="dirty = true" @change="dirty = true"
+            class="pe-layout">
             @csrf
             @if ($formMethod === 'PATCH') @method('PATCH') @endif
+            {{-- Saving any edit returns the listing to draft for a fresh review. --}}
+            @if ($editing)<input type="hidden" name="status" value="draft">@endif
 
-            <div class="min-w-0 space-y-6">
-                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-details-heading">
-                    <div class="flex items-start gap-3">
-                        <span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">1</span>
-                        <div><h2 id="product-details-heading" class="text-lg font-semibold text-ink">Product details</h2><p class="mt-1 text-sm text-muted">Describe the item customers will receive.</p></div>
+            <div class="pe-sheet">
+                <section class="pe-section" aria-labelledby="product-photos-heading">
+                    <div class="pe-section-head">
+                        <div><h2 id="product-photos-heading">Photos</h2><p>The first photo is the cover buyers see in search and on your storefront.</p></div>
+                        <p class="pe-count" x-text="photoCount + ' of ' + maxPhotos">{{ count($existingPhotos) }} of 8</p>
                     </div>
-                    <div class="mt-6 space-y-5">
-                        <div><label for="name" class="text-sm font-semibold">Product name <span class="text-rose-700">*</span></label><input id="name" name="name" value="{{ old('name', $product?->name) }}" required autofocus @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
-                        <div class="grid gap-5 sm:grid-cols-2">
-                            <div><label for="category_id" class="text-sm font-semibold">Category</label><select id="category_id" name="category_id" @change="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><option value="">Uncategorized</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected(old('category_id', $product?->category_id) === $category->id)>{{ $category->name }}</option>@endforeach</select></div>
-                            <div><label for="brand" class="text-sm font-semibold">Brand <span class="font-normal text-muted">(optional)</span></label><input id="brand" name="brand" maxlength="100" value="{{ old('brand', $product?->brand) }}" @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><x-input-error :messages="$errors->get('brand')" class="mt-2" /></div>
-                        </div>
-                        <div><label for="condition" class="text-sm font-semibold">Condition</label><select id="condition" name="condition" @change="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><option value="new" @selected(old('condition', $product?->condition ?? 'new') === 'new')>New</option><option value="refurbished" @selected(old('condition', $product?->condition ?? 'new') === 'refurbished')>Refurbished</option></select><x-input-error :messages="$errors->get('condition')" class="mt-2" /></div>
-                        <div><label for="description" class="text-sm font-semibold">Description</label><textarea id="description" name="description" rows="5" maxlength="5000" @input="dirty = true" placeholder="Describe the materials, fit, and what is included." class="mt-1.5 block w-full rounded-[10px] border-line focus:border-brand focus:ring-brand">{{ old('description', $product?->description) }}</textarea><p class="mt-1 text-xs text-muted">Up to 5,000 characters.</p><x-input-error :messages="$errors->get('description')" class="mt-2" /></div>
-                    </div>
-                </section>
 
-                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-photos-heading">
-                    <div class="flex items-start gap-3">
-                        <span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">2</span>
-                        <div><h2 id="product-photos-heading" class="text-lg font-semibold text-ink">Product photos</h2><p class="mt-1 text-sm text-muted">Show the front, back, details, and available colors.</p></div>
-                    </div>
-                    <div class="mt-5 flex items-baseline justify-between gap-3"><p class="text-sm text-muted">The first photo is the cover buyers see in search and on your storefront.</p><p class="shrink-0 text-sm font-semibold tabular-nums text-ink" x-text="photoCount + ' of ' + maxPhotos">{{ count($existingPhotos) }} of 8</p></div>
-
-                    <ul class="sc-photo-grid mt-3" aria-label="Product photos" x-show="photos.length || previews.length">
+                    <ul class="sc-photo-grid is-main mt-5" aria-label="Product photos" x-show="photos.length || previews.length">
                         <template x-for="(photo, index) in photos" :key="photo.id">
-                            <li class="sc-photo" :class="removed.includes(photo.id) && 'is-removed'">
+                            <li class="sc-photo" :class="{ 'is-removed': removed.includes(photo.id), 'is-cover': keptPhotos[0]?.id === photo.id }">
                                 <img :src="photo.url" :alt="'Product photo ' + (index + 1)">
                                 <span class="sc-photo-cover" x-show="! removed.includes(photo.id) && keptPhotos[0]?.id === photo.id">Cover</span>
                                 <span class="sc-photo-removed" x-show="removed.includes(photo.id)">Will be removed</span>
@@ -86,7 +95,7 @@
                             </li>
                         </template>
                         <template x-for="(url, index) in previews" :key="url">
-                            <li class="sc-photo is-new">
+                            <li class="sc-photo is-new" :class="keptPhotos.length === 0 && index === 0 && 'is-cover'">
                                 <img :src="url" :alt="'New photo ' + (index + 1)">
                                 <span class="sc-photo-cover" x-show="keptPhotos.length === 0 && index === 0">Cover</span>
                                 <span class="sc-photo-new">New</span>
@@ -99,51 +108,77 @@
                     <label for="images" class="sc-dropzone mt-4" x-data="{ over: false }" :class="over && 'is-over'" x-show="photoCount < maxPhotos" @dragover.prevent="over = true" @dragleave.prevent="over = false" @drop.prevent="over = false; addFiles($event.dataTransfer.files)">
                         <svg class="size-6 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/><path d="M17 2v5M14.5 4.5h5"/></svg>
                         <span class="text-sm font-semibold text-brand">Choose product photos</span>
-                        <span class="text-xs text-muted">or drag them here · up to 8 photos, 5 MB each · JPEG, PNG or WebP · square, well-lit shots work best</span>
+                        <span class="text-xs text-muted">or drag them here. JPEG, PNG or WebP, up to 5 MB each. Square, well-lit shots work best.</span>
                         <input id="images" x-ref="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple class="sr-only" @change="const picked = [...$event.target.files]; $event.target.value = ''; addFiles(picked)">
                     </label>
                     <p x-show="photoCount >= maxPhotos" x-cloak class="mt-3 text-sm text-muted">You’ve reached 8 photos. Remove one to add another.</p>
                     <p class="mt-2 text-sm text-muted" x-show="photoNotice" x-text="photoNotice" role="status" aria-live="polite"></p>
-                    @if ($editing)<p class="mt-2 text-xs text-muted">Photo changes are saved with the rest of the listing.</p>@endif
                     <x-input-error :messages="$errors->get('images')" class="mt-2" />
                     @foreach ($errors->get('images.*') as $messages) @foreach ($messages as $message)<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@endforeach @endforeach
                 </section>
 
-                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-pricing-heading">
-                    <div class="flex items-start gap-3">
-                        <span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">3</span>
-                        <div><h2 id="product-pricing-heading" class="text-lg font-semibold text-ink">Price and inventory</h2><p class="mt-1 text-sm text-muted">Set the base price. Each variant can use a different price and its own photos.</p></div>
-                    </div>
-                    <div class="mt-6 grid gap-5 sm:grid-cols-2">
-                        <div><label for="price" class="text-sm font-semibold">Price (PHP) *</label><input id="price" name="price" type="number" min="0.01" step="0.01" value="{{ old('price', $product?->price) }}" required @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><x-input-error :messages="$errors->get('price')" class="mt-2" /></div>
-                        <div><label for="compare_at_price" class="text-sm font-semibold">Regular price <span class="font-normal text-muted">(optional)</span></label><input id="compare_at_price" name="compare_at_price" type="number" min="0.01" step="0.01" value="{{ old('compare_at_price', $product?->compare_at_price) }}" @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><p class="mt-1 text-xs text-muted">Set above the selling price to show a sale.</p><x-input-error :messages="$errors->get('compare_at_price')" class="mt-2" /></div>
-                        <div><label for="sku" class="text-sm font-semibold">Product SKU *</label><input id="sku" name="sku" value="{{ old('sku', $product?->sku) }}" required @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><x-input-error :messages="$errors->get('sku')" class="mt-2" /></div>
-                        <div x-show="variants.length === 0"><label for="stock_quantity" class="text-sm font-semibold">Stock quantity *</label><input id="stock_quantity" name="stock_quantity" type="number" min="0" value="{{ old('stock_quantity', $product?->stock_quantity ?? 0) }}" :disabled="variants.length > 0" :required="variants.length === 0" @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"><p class="mt-1 text-xs text-muted">Use 0 when unavailable.</p><x-input-error :messages="$errors->get('stock_quantity')" class="mt-2" /></div>
+                <section class="pe-section" aria-labelledby="product-details-heading">
+                    <div class="pe-section-head"><div><h2 id="product-details-heading">Details</h2><p>Describe the item customers will receive.</p></div></div>
+                    <div class="pe-fields">
+                        <div><label for="name" class="pe-label">Product name</label><input id="name" name="name" x-model="name" value="{{ $listing['name'] }}" required autofocus maxlength="255" placeholder="e.g. Canvas tote bag, navy" class="pe-input is-title"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
+                        <div class="pe-grid">
+                            <div><label for="category_id" class="pe-label">Category</label><select id="category_id" name="category_id" x-model="categoryId" class="pe-input"><option value="">Uncategorized</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected($listing['categoryId'] === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
+                            <div><label for="brand" class="pe-label">Brand <span class="pe-optional">optional</span></label><input id="brand" name="brand" maxlength="100" value="{{ old('brand', $product?->brand) }}" class="pe-input"><x-input-error :messages="$errors->get('brand')" class="mt-2" /></div>
+                        </div>
+                        <fieldset>
+                            <legend class="pe-label">Condition</legend>
+                            <div class="pe-segmented">
+                                @foreach (['new' => 'New', 'refurbished' => 'Refurbished'] as $value => $label)
+                                    <label><input type="radio" name="condition" value="{{ $value }}" x-model="condition" @checked($listing['condition'] === $value)><span>{{ $label }}</span></label>
+                                @endforeach
+                            </div>
+                            <x-input-error :messages="$errors->get('condition')" class="mt-2" />
+                        </fieldset>
+                        <div>
+                            <div class="flex items-baseline justify-between gap-3"><label for="description" class="pe-label">Description</label><span class="pe-count" x-text="description.length.toLocaleString() + ' / 5,000'"></span></div>
+                            <textarea id="description" name="description" rows="6" maxlength="5000" x-model="description" placeholder="Materials, size and fit, and what is in the box." class="pe-input">{{ $listing['description'] }}</textarea>
+                            <x-input-error :messages="$errors->get('description')" class="mt-2" />
+                        </div>
                     </div>
                 </section>
 
-                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-variants-heading">
-                    <div class="flex flex-wrap items-start justify-between gap-4">
-                        <div class="flex items-start gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">4</span><div><h2 id="product-variants-heading" class="text-lg font-semibold text-ink">Color and size options</h2><p class="mt-1 max-w-xl text-sm text-muted">Add one row for each combination customers can buy. Each needs its own SKU and stock count.</p></div></div>
-                        <button type="button" @click="addVariant()" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-brand px-4 text-sm font-semibold text-brand transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-brand">+ Add option</button>
+                <section class="pe-section" aria-labelledby="product-pricing-heading">
+                    <div class="pe-section-head"><div><h2 id="product-pricing-heading">Price and stock</h2><p>Options below can have their own price and stock.</p></div></div>
+                    <div class="pe-fields pe-grid">
+                        <div><label for="price" class="pe-label">Price</label><div class="pe-affix"><span aria-hidden="true">₱</span><input id="price" name="price" type="number" min="0.01" step="0.01" x-model="price" value="{{ $listing['price'] }}" required placeholder="0.00" class="pe-input"></div><x-input-error :messages="$errors->get('price')" class="mt-2" /></div>
+                        <div><label for="compare_at_price" class="pe-label">Regular price <span class="pe-optional">optional</span></label><div class="pe-affix"><span aria-hidden="true">₱</span><input id="compare_at_price" name="compare_at_price" type="number" min="0.01" step="0.01" x-model="comparePrice" value="{{ $listing['comparePrice'] }}" placeholder="0.00" aria-describedby="compare-price-hint" class="pe-input"></div><p id="compare-price-hint" class="pe-hint">Higher than the price to show it as a sale.</p><x-input-error :messages="$errors->get('compare_at_price')" class="mt-2" /></div>
+                        <div><label for="sku" class="pe-label">SKU</label><input id="sku" name="sku" value="{{ old('sku', $product?->sku) }}" required placeholder="e.g. TOTE-NAVY" class="pe-input"><x-input-error :messages="$errors->get('sku')" class="mt-2" /></div>
+                        <div x-show="variants.length === 0"><label for="stock_quantity" class="pe-label">Stock quantity</label><input id="stock_quantity" name="stock_quantity" type="number" min="0" x-model="stock" value="{{ $listing['stock'] }}" :disabled="variants.length > 0" :required="variants.length === 0" aria-describedby="stock-hint" class="pe-input"><p id="stock-hint" class="pe-hint">Use 0 when unavailable.</p><x-input-error :messages="$errors->get('stock_quantity')" class="mt-2" /></div>
                     </div>
-                    <p x-show="variants.length === 0" class="mt-5 rounded-[10px] bg-canvas p-4 text-sm text-muted">No options added. Customers will buy this product using the single stock quantity above.</p>
-                    <div class="mt-5 space-y-3">
+                </section>
+
+                <section class="pe-section" aria-labelledby="product-variants-heading">
+                    <div class="pe-section-head">
+                        <div><h2 id="product-variants-heading">Color and size options</h2><p>One row for each combination customers can buy, each with its own SKU and stock.</p></div>
+                        <button type="button" @click="addVariant()" class="seller-outline-button shrink-0"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add option</button>
+                    </div>
+                    <p x-show="variants.length === 0" class="pe-empty">No options. Buyers order this product from the single stock quantity above.</p>
+                    <div class="mt-5 space-y-3" x-show="variants.length">
                         <template x-for="(variant, index) in variants" :key="variant.key">
-                            <div class="rounded-[12px] border border-line bg-canvas p-4">
-                                <div class="mb-4 flex items-center justify-between gap-3"><h3 class="text-sm font-semibold text-ink" x-text="'Option ' + (index + 1)"></h3><button x-show="!variant.id" type="button" @click="variants.splice(index, 1); dirty = true" class="min-h-11 rounded-lg px-3 text-sm font-semibold text-rose-700 hover:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-700">Remove</button><span x-show="variant.id" class="text-xs text-muted">Set stock to 0 to stop selling</span></div>
-                                <input x-show="variant.id" :disabled="!variant.id" type="hidden" :name="'variants[' + index + '][id]'" :value="variant.id">
-                                <div class="grid gap-4 sm:grid-cols-2">
-                                    <label class="text-sm font-semibold text-ink">Color *<input :name="'variants[' + index + '][color]'" x-model="variant.color" required maxlength="60" @input="dirty = true" placeholder="e.g. Navy" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"></label>
-                                    <label class="text-sm font-semibold text-ink">Size *<input :name="'variants[' + index + '][size]'" x-model="variant.size" required maxlength="60" @input="dirty = true" placeholder="e.g. Medium" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"></label>
-                                    <label class="text-sm font-semibold text-ink">Option SKU *<input :name="'variants[' + index + '][sku]'" x-model="variant.sku" required maxlength="100" @input="dirty = true" placeholder="e.g. TOTE-NAVY-M" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"></label>
-                                    <label class="text-sm font-semibold text-ink">Stock *<input :name="'variants[' + index + '][stock_quantity]'" x-model="variant.stock_quantity" required type="number" min="0" @input="dirty = true" class="mt-1.5 block h-11 w-full rounded-[10px] border-line focus:border-brand focus:ring-brand"></label>
-                                    <label class="text-sm font-semibold text-ink">Option price (PHP)<input :name="'variants[' + index + '][price]'" x-model="variant.price" type="number" min="0.01" step="0.01" @input="dirty = true" placeholder="Use base price" class="field-control mt-1.5"><span class="mt-1 block text-xs font-normal text-muted">Leave empty to use the base price.</span></label>
-                                    <label class="min-w-0 text-sm font-semibold text-ink">Option photos<input :name="'variants[' + index + '][images][]'" type="file" multiple accept="image/jpeg,image/png,image/webp" @change="dirty = true" class="mt-2 block w-full text-xs"><span class="mt-2 block text-xs font-normal text-muted">Up to 4 photos per option, 5 MB each. Shared product photos are used when no option photo is uploaded.</span></label>
+                            <div class="pe-option">
+                                <div class="pe-option-head">
+                                    <h3 x-text="[variant.color, variant.size].filter(Boolean).join(' / ') || 'Option ' + (index + 1)"></h3>
+                                    <button x-show="!variant.id" type="button" @click="variants.splice(index, 1); dirty = true" class="pe-remove">Remove</button>
+                                    <span x-show="variant.id" class="pe-hint !mt-0">Set stock to 0 to stop selling</span>
+                                </div>
+                                <input x-show="false" :disabled="!variant.id" type="hidden" :name="'variants[' + index + '][id]'" :value="variant.id">
+                                <div class="pe-option-grid">
+                                    <label><span class="pe-label">Color</span><input :name="'variants[' + index + '][color]'" x-model="variant.color" required maxlength="60" placeholder="e.g. Navy" class="pe-input"></label>
+                                    <label><span class="pe-label">Size</span><input :name="'variants[' + index + '][size]'" x-model="variant.size" required maxlength="60" placeholder="e.g. Medium" class="pe-input"></label>
+                                    <label><span class="pe-label">SKU</span><input :name="'variants[' + index + '][sku]'" x-model="variant.sku" required maxlength="100" placeholder="e.g. TOTE-NAVY-M" class="pe-input"></label>
+                                    <label><span class="pe-label">Stock</span><input :name="'variants[' + index + '][stock_quantity]'" x-model="variant.stock_quantity" required type="number" min="0" class="pe-input"></label>
+                                    <label><span class="pe-label">Price <span class="pe-optional">optional</span></span><span class="pe-affix"><span aria-hidden="true">₱</span><input :name="'variants[' + index + '][price]'" x-model="variant.price" type="number" min="0.01" step="0.01" :placeholder="price || 'Base price'" class="pe-input"></span></label>
+                                    <label class="min-w-0"><span class="pe-label">Photos <span class="pe-optional">up to 4</span></span><input :name="'variants[' + index + '][images][]'" type="file" multiple accept="image/jpeg,image/png,image/webp" class="pe-file"></label>
                                 </div>
                                 <ul x-show="variant.photos?.length" class="sc-photo-grid is-small mt-3" :aria-label="'Photos for option ' + (index + 1)"><template x-for="(photo, photoIndex) in (variant.photos || [])" :key="photo.id"><li class="sc-photo" :class="removed.includes(photo.id) && 'is-removed'"><img :src="photo.url" :alt="'Option ' + (index + 1) + ' photo ' + (photoIndex + 1)"><span class="sc-photo-removed" x-show="removed.includes(photo.id)">Removed</span><div class="sc-photo-tools"><button type="button" @click="toggleRemove(photo.id)" :aria-label="(removed.includes(photo.id) ? 'Keep' : 'Remove') + ' option ' + (index + 1) + ' photo ' + (photoIndex + 1)" :class="removed.includes(photo.id) ? 'is-undo' : 'is-remove'"><span x-text="removed.includes(photo.id) ? 'Undo' : ''"></span><svg x-show="! removed.includes(photo.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></li></template></ul>
                             </div>
                         </template>
+                        <p class="pe-hint">Options without their own photos use the product photos.</p>
                     </div>
                     <x-input-error :messages="$errors->get('variants')" class="mt-3" />
                     @foreach ($errors->getMessages() as $field => $messages)
@@ -154,21 +189,37 @@
                 </section>
             </div>
 
-            <aside class="space-y-6 lg:sticky lg:top-6 lg:h-fit">
-                <section class="seller-form-card p-5">
-                    <h2 class="font-semibold text-ink">Listing settings</h2>
-                    <p class="mt-1 text-sm leading-6 text-muted">Save your draft, then submit it for review from Products. Add a category, description, and photo before submitting. Saving changes to a published listing returns it to Draft for a fresh review.</p>
-                    <div class="mt-4 space-y-2">
-                        @foreach (['draft' => 'Save as draft'] as $value => $label)
-                            @if ($editing && ($value !== 'active' || $product->status === 'active'))
-                                <label class="flex min-h-11 items-center gap-3 rounded-[10px] border p-3 has-[:checked]:border-brand has-[:checked]:bg-blue-50"><input type="radio" name="status" value="{{ $value }}" checked @change="dirty = true" class="text-brand focus:ring-brand"><span class="text-sm font-semibold">{{ $label }}</span></label>
-                            @endif
-                        @endforeach
+            <aside class="pe-rail" aria-label="Listing summary">
+                {{-- A live copy of the card buyers see in search, built from what is typed so far. --}}
+                <section class="pe-preview" aria-labelledby="preview-heading">
+                    <h2 id="preview-heading">How buyers see it</h2>
+                    <div class="pe-card" aria-hidden="true">
+                        <div class="pe-card-media">
+                            <img x-show="coverUrl" :src="coverUrl" alt="">
+                            <svg x-show="! coverUrl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>
+                            <span class="pe-card-sale" x-show="onSale" x-text="'-' + discount + '%'"></span>
+                        </div>
+                        <div class="pe-card-body">
+                            <p class="pe-card-store">{{ $store->name }}</p>
+                            <p class="pe-card-name" :class="! name.trim() && 'is-placeholder'" x-text="name.trim() || 'Your product name'"></p>
+                            <p class="pe-card-price" :class="Number(price) > 0 ? '' : 'is-placeholder'"><span x-text="Number(price) > 0 ? peso(price) : '₱0'"></span><s x-show="onSale" x-text="peso(comparePrice)"></s></p>
+                            <p class="pe-card-meta"><span x-text="categories[categoryId] ?? 'Uncategorized'"></span><span x-show="condition === 'refurbished'">Refurbished</span><span x-text="stockTotal.toLocaleString() + ' in stock'"></span></p>
+                        </div>
                     </div>
+                </section>
+
+                <section class="pe-ready" aria-labelledby="ready-heading">
+                    <h2 id="ready-heading" x-text="checks.every(check => check.done) ? 'Ready for review' : 'Needed for review'">Needed for review</h2>
+                    <ul>
+                        <template x-for="check in checks" :key="check.label">
+                            <li :class="check.done && 'is-done'"><span class="pe-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><span x-text="check.label"></span><span class="sr-only" x-text="check.done ? ', done' : ', missing'"></span></li>
+                        </template>
+                    </ul>
+                    <p class="pe-note">{{ $editing && $product->status === 'active' ? 'Saving changes moves this listing back to draft until it is reviewed again.' : 'Save as a draft, then submit it for review from Products.' }}</p>
                     <x-input-error :messages="$errors->get('status')" class="mt-2" />
-                    <div class="mt-5 grid gap-2 border-t border-line pt-5">
-                        <button :disabled="saving" class="seller-primary-button min-h-11 w-full disabled:opacity-70"><span x-show="!saving">{{ $submitLabel }}</span><span x-show="saving" x-cloak>Saving…</span></button>
-                        <a href="{{ route('seller.products.index') }}" class="seller-outline-button min-h-11 w-full">Cancel</a>
+                    <div class="pe-actions">
+                        <button :disabled="saving" class="seller-primary-button w-full disabled:opacity-70"><span x-show="!saving">{{ $submitLabel }}</span><span x-show="saving" x-cloak>Saving…</span></button>
+                        <a href="{{ route('seller.products.index') }}" class="seller-outline-button w-full">Cancel</a>
                     </div>
                 </section>
             </aside>
