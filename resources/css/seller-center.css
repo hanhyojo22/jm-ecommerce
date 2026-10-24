@@ -195,7 +195,7 @@
 
 .sc-items { display: flex; min-width: 0; align-items: center; gap: 10px; color: var(--sc-ink); font-size: 14px; }
 .sc-thumb-stack { display: flex; flex-shrink: 0; }
-.sc-thumb-stack .sc-thumb { width: 34px; height: 34px; border: 2px solid #fff; }
+.sc-thumb-stack .sc-thumb { width: 34px; height: 34px; border: 2px solid #fff; background: #eef2f7; box-shadow: 0 0 0 1px #dfe5ee; }
 .sc-thumb-stack .sc-thumb + .sc-thumb { margin-left: -12px; }
 
 .sc-popover { position: absolute; top: calc(100% + 6px); right: 12px; z-index: 30; display: grid; width: 300px; gap: 12px; border: 1px solid var(--sc-line); border-radius: var(--sc-radius); background: #fff; padding: 16px; box-shadow: 0 12px 32px rgb(24 44 72 / 12%); }
