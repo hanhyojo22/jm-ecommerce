@@ -173,8 +173,9 @@ document.querySelectorAll('form[data-confirm-message]').forEach((form) => {
 
 /*
  * An in-page confirmation in place of the browser's own confirm() box. A form opts in with
- * data-confirm (the explanation) and optionally data-confirm-title, data-confirm-action,
- * data-confirm-dismiss and data-confirm-tone="danger". One dialog is built on first use.
+ * data-confirm (the explanation) and optionally data-confirm-title, data-confirm-context (what
+ * the action touches, such as an order number), data-confirm-action, data-confirm-dismiss and
+ * data-confirm-tone="danger". One dialog is built on first use.
  */
 let confirmDialog;
 
@@ -183,13 +184,13 @@ const confirmIcons = {
     default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
 };
 
-const askToConfirm = ({ confirm: message, confirmTitle, confirmAction, confirmDismiss, confirmTone }) => {
+const askToConfirm = ({ confirm: message, confirmTitle, confirmContext, confirmAction, confirmDismiss, confirmTone }) => {
     if (!confirmDialog) {
         confirmDialog = document.createElement('dialog');
         confirmDialog.className = 'confirm-dialog';
         confirmDialog.setAttribute('aria-labelledby', 'confirm-dialog-title');
         confirmDialog.setAttribute('aria-describedby', 'confirm-dialog-message');
-        confirmDialog.innerHTML = '<form method="dialog"><span class="confirm-dialog-icon" aria-hidden="true"></span><h2 id="confirm-dialog-title" class="confirm-dialog-title"></h2><p id="confirm-dialog-message" class="confirm-dialog-message"></p><div class="confirm-dialog-actions"><button type="submit" value="cancel" class="confirm-dialog-dismiss"></button><button type="submit" value="confirm" class="confirm-dialog-confirm"></button></div></form>';
+        confirmDialog.innerHTML = '<form method="dialog"><div class="confirm-dialog-body"><span class="confirm-dialog-icon" aria-hidden="true"></span><div class="confirm-dialog-text"><h2 id="confirm-dialog-title" class="confirm-dialog-title"></h2><p id="confirm-dialog-message" class="confirm-dialog-message"></p><p class="confirm-dialog-context"></p></div></div><div class="confirm-dialog-actions"><button type="submit" value="cancel" class="confirm-dialog-dismiss"></button><button type="submit" value="confirm" class="confirm-dialog-confirm"></button></div></form>';
         confirmDialog.addEventListener('click', (event) => {
             if (event.target === confirmDialog) {
                 confirmDialog.close('cancel');
@@ -199,10 +200,14 @@ const askToConfirm = ({ confirm: message, confirmTitle, confirmAction, confirmDi
     }
 
     const tone = confirmTone === 'danger' ? 'danger' : 'default';
+    const context = confirmDialog.querySelector('.confirm-dialog-context');
     confirmDialog.dataset.tone = tone;
     confirmDialog.querySelector('.confirm-dialog-icon').innerHTML = confirmIcons[tone];
     confirmDialog.querySelector('.confirm-dialog-title').textContent = confirmTitle || 'Are you sure?';
     confirmDialog.querySelector('.confirm-dialog-message').textContent = message;
+    // "Order JM-… · ₱1,200.00" reads as the item on the left and its amount on the right.
+    context.replaceChildren(...(confirmContext || '').split(' · ').map((part) => Object.assign(document.createElement('span'), { textContent: part })));
+    context.hidden = !confirmContext;
     confirmDialog.querySelector('.confirm-dialog-dismiss').textContent = confirmDismiss || 'Cancel';
     confirmDialog.querySelector('.confirm-dialog-confirm').textContent = confirmAction || 'Continue';
     confirmDialog.returnValue = '';
@@ -218,6 +223,7 @@ const askToConfirm = ({ confirm: message, confirmTitle, confirmAction, confirmDi
 /*
  * Capture phase, so the session refresh below never sees an unconfirmed submit. Its own
  * resubmit after renewing the cookie is already confirmed and passes straight through.
+ * Once sent, the button shows it is working and a second press cannot send the form twice.
  */
 document.addEventListener('submit', (event) => {
     const form = event.target;
@@ -235,7 +241,7 @@ document.addEventListener('submit', (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
 
-    if (confirmDialog?.open) {
+    if (confirmDialog?.open || form.hasAttribute('data-submitting')) {
         return;
     }
 
@@ -252,8 +258,18 @@ document.addEventListener('submit', (event) => {
         } else {
             form.requestSubmit();
         }
+        form.setAttribute('data-submitting', '');
+        submitter?.setAttribute('aria-busy', 'true');
     });
 }, true);
+
+// A page restored with the back button must not keep its buttons stuck in the sending state.
+window.addEventListener('pageshow', () => {
+    document.querySelectorAll('form[data-submitting]').forEach((form) => {
+        form.removeAttribute('data-submitting');
+        form.querySelector('[aria-busy="true"]')?.removeAttribute('aria-busy');
+    });
+});
 
 const clerkAuthAppearance = {
     ...clerkComponentAppearance,

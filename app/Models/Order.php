@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -27,6 +28,15 @@ class Order extends Model
         'total',
         'status',
     ];
+
+    /**
+     * Order numbers carry a 26-character ULID. Lists show the prefix and the last eight
+     * characters, which are what tells orders apart.
+     */
+    public static function shortNumber(string $number): string
+    {
+        return mb_strlen($number) > 16 ? Str::before($number, '-').'-…'.Str::substr($number, -8) : $number;
+    }
 
     public function sellerOrders(): HasMany
     {
