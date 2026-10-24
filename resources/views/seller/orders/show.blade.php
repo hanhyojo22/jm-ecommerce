@@ -1,7 +1,4 @@
 @php
-    $steps = ['pending' => 'Placed', 'confirmed' => 'Confirmed', 'processing' => 'Preparing', 'shipped' => 'Shipped', 'delivered' => 'Delivered'];
-    $stepKeys = array_keys($steps);
-    $currentStep = array_search($sellerOrder->status, $stepKeys, true);
     $guidance = match ($sellerOrder->status) {
         'pending' => 'Confirm this order to begin preparing it.',
         'confirmed' => 'Move the order to processing when preparation has started.',
@@ -68,14 +65,7 @@
                     <p class="break-all sc-meta">Order #{{ $sellerOrder->order->number }} · placed {{ $sellerOrder->created_at->format('M j, Y · g:i A') }}</p>
                     <h2 id="order-status-heading" class="mt-1 sc-card-title">Seller order status</h2>
                     <p class="mt-1 sc-card-note">{{ $guidance }}</p>
-                    @if ($currentStep !== false)
-                        <ol class="sc-steps" aria-label="Order progress">
-                            @foreach ($steps as $key => $label)
-                                @php($index = $loop->index)
-                                <li @class(['sc-step', 'is-done' => $index < $currentStep || $sellerOrder->status === 'delivered', 'is-current' => $index === $currentStep && $sellerOrder->status !== 'delivered']) @if ($index === $currentStep) aria-current="step" @endif><span class="sc-step-bar"></span><span class="sc-step-label">{{ $label }}</span></li>
-                            @endforeach
-                        </ol>
-                    @endif
+                    @include('seller.orders._steps', ['sellerOrder' => $sellerOrder])
                 </section>
 
                 <section class="sc-card" aria-labelledby="items-heading">

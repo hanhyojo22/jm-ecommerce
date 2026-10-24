@@ -337,3 +337,43 @@ test('seller remains signed in when Account and the workspace switch are opened 
         await context.close();
     }
 });
+
+test('seller order modal renews the session, preloads neighbours and recovers from a failed load', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+    const modalRequests = [];
+    page.on('request', (request) => {
+        if (request.headers()['x-order-modal'] === '1') {
+            modalRequests.push(request);
+        }
+    });
+
+    try {
+        await page.setViewportSize({ width: 1682, height: 800 });
+        await page.goto('/seller/orders');
+        const orderLinks = page.locator('table tbody th a');
+        const [firstNumber, secondNumber] = await orderLinks.evaluateAll((links) => links.slice(0, 2).map((link) => link.textContent.trim()));
+
+        await orderLinks.first().hover();
+        await expect.poll(() => modalRequests.length, 'resting on an order preloads it').toBeGreaterThan(0);
+        await orderLinks.first().click();
+        await expect(page.getByRole('dialog', { name: firstNumber })).toBeVisible();
+        await expect.poll(() => new Set(modalRequests.map((request) => request.url())).size, 'the next order is preloaded').toBeGreaterThan(1);
+        expect(modalRequests.every((request) => request.headers()['x-requires-session'] === '1')).toBe(true);
+
+        await page.keyboard.press('ArrowRight');
+        await expect(page.getByRole('dialog', { name: secondNumber })).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('dialog')).toBeHidden();
+
+        await page.reload();
+        await page.route(/\/seller\/orders\/[^/?]+$/, (route) => (route.request().headers()['x-order-modal'] === '1' ? route.fulfill({ status: 500, body: '' }) : route.continue()));
+        await orderLinks.first().click();
+        await expect(page.getByText('We couldn’t load this order.')).toBeVisible();
+        await page.unrouteAll();
+        await page.getByRole('button', { name: 'Try again' }).click();
+        await expect(page.getByRole('dialog', { name: firstNumber })).toBeVisible();
+        await expect(page.getByText('We couldn’t load this order.')).toBeHidden();
+    } finally {
+        await context.close();
+    }
+});

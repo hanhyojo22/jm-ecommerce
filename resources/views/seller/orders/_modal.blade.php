@@ -1,6 +1,4 @@
 @php
-    $steps = ['pending' => 'Placed', 'confirmed' => 'Confirmed', 'processing' => 'Preparing', 'shipped' => 'Shipped', 'delivered' => 'Delivered'];
-    $currentStep = array_search($sellerOrder->status, array_keys($steps), true);
     $guidance = match ($sellerOrder->status) {
         'pending' => 'Confirm this order to begin preparing it.',
         'confirmed' => 'Move the order to processing when preparation has started.',
@@ -29,14 +27,8 @@
 </div>
 
 <div class="sc-modal-body">
-    @if ($currentStep !== false)
-        <ol class="sc-steps !mt-0" aria-label="Order progress">
-            @foreach ($steps as $label)
-                <li @class(['sc-step', 'is-done' => $loop->index < $currentStep || $sellerOrder->status === 'delivered', 'is-current' => $loop->index === $currentStep && $sellerOrder->status !== 'delivered']) @if ($loop->index === $currentStep) aria-current="step" @endif><span class="sc-step-bar"></span><span class="sc-step-label">{{ $label }}</span></li>
-            @endforeach
-        </ol>
-    @endif
-    <p class="mt-4 rounded-lg bg-[#f8fafc] px-3 py-2.5 sc-meta">{{ $guidance }}</p>
+    @include('seller.orders._steps', ['sellerOrder' => $sellerOrder, 'class' => '!mt-0'])
+    <p class="sc-guidance mt-4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>@if ($nextTransition || $canRecordCash)<span class="font-semibold">Next step:</span> @endif{{ $guidance }}</span></p>
 
     @foreach ($sellerOrder->issues as $issue)
         <div class="sc-notice !block mt-4" data-tone="warning"><p class="font-semibold">{{ str($issue->type)->replace('_', ' ')->title() }} request · {{ ucfirst($issue->status) }}</p><p class="mt-1 whitespace-pre-wrap">{{ $issue->details }}</p>@if ($issue->status === 'open')<p class="mt-1">JMMart support reviews this request. Wait for the decision before preparing this order.</p>@endif</div>
@@ -58,7 +50,7 @@
             @endforeach
         </ul>
         <dl class="sc-sum mt-2 border-t border-[#eef1f5] pt-3">
-            <div><dt>Items</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div>
+            <div><dt>Subtotal</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div>
             <div><dt>Shipping</dt><dd>₱{{ number_format($sellerOrder->shipping_amount, 2) }}</dd></div>
             <div class="is-total"><dt>Your total</dt><dd>₱{{ number_format($sellerOrder->total, 2) }}</dd></div>
         </dl>

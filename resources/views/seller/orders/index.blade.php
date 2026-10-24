@@ -39,27 +39,48 @@
         {{-- Orders open in a modal over the list. The open order lives in ?order= so a refresh, a shared
              link or the redirect after an action reopens it, and the browser back button closes it. --}}
         <section class="sc-card" aria-label="Orders list" @keydown.window="if ($refs.modal.open && ['ArrowLeft', 'ArrowRight'].includes($event.key) && ! $event.target.closest('input, textarea, select')) step($event.key === 'ArrowRight' ? 1 : -1)" x-data="{
-            filtersOpen: false, current: null, html: '', loading: false, failed: false, pushed: false,
+            filtersOpen: false, current: null, shown: null, html: '', loading: false, failed: false, pushed: false, cache: {}, pending: {}, warmTimer: null,
             ids: @js($orders->pluck('id')), showUrl: @js(route('seller.orders.show', '__ORDER__')),
             init() {
                 const id = new URLSearchParams(location.search).get('order');
                 if (id) { this.open(id, 'replace') }
                 window.addEventListener('popstate', () => { const id = new URLSearchParams(location.search).get('order'); this.pushed = false; id ? this.open(id, 'none') : this.close() });
             },
+            {{-- X-Requires-Session lets app.js renew the 60-second Clerk cookie first; without it a lapsed
+                 cookie redirects this fetch to the sign-in bridge page and the order fails to load.
+                 A preload and a click on the same order share one request. --}}
+            load(id) {
+                return this.pending[id] ??= fetch(this.showUrl.replace('__ORDER__', id), { headers: { 'X-Order-Modal': '1', 'X-Requires-Session': '1', Accept: 'text/html' } })
+                    .then(async (response) => { if (! response.ok || response.redirected) { throw new Error('Order unavailable') } return this.cache[id] = await response.text() })
+                    .finally(() => delete this.pending[id]);
+            },
+            preload(id) { if (id && ! this.cache[id]) { this.load(id).catch(() => {}) } },
+            {{-- Resting the pointer on an order starts loading it, so the click usually finds it ready. --}}
+            warm(id) { clearTimeout(this.warmTimer); this.warmTimer = setTimeout(() => this.preload(id), 100) },
+            {{-- A cached order shows at once and is refreshed underneath; the orders either side are fetched ahead so stepping is instant. --}}
             async open(id, history = 'push') {
+                clearTimeout(this.warmTimer);
                 this.current = id; this.loading = true; this.failed = false;
+                if (this.cache[id]) { this.html = this.cache[id]; this.shown = id }
                 if (! this.$refs.modal.open) { this.$refs.modal.showModal() }
                 const url = new URL(location.href); url.searchParams.set('order', id);
                 if (history === 'push' && ! this.pushed) { window.history.pushState({ order: id }, '', url); this.pushed = true } else if (history !== 'none') { window.history.replaceState({ order: id }, '', url) }
                 try {
-                    const response = await fetch(this.showUrl.replace('__ORDER__', id), { headers: { 'X-Order-Modal': '1', Accept: 'text/html' } });
-                    if (! response.ok || response.redirected) { throw new Error('Order unavailable') }
-                    if (this.current === id) { this.html = await response.text() }
-                } catch (error) { this.failed = true; this.html = '' } finally { this.loading = false; this.$nextTick(() => this.$refs.modal.querySelector('[data-modal-focus]')?.focus()) }
+                    const html = await this.load(id);
+                    if (this.current !== id) { return }
+                    if (html !== this.html) { this.html = html }
+                    this.shown = id;
+                    const index = this.ids.indexOf(id);
+                    if (index !== -1) { this.preload(this.ids[index + 1]); this.preload(this.ids[index - 1]) }
+                } catch (error) {
+                    if (this.current === id && this.shown !== id) { this.failed = true; this.html = '' }
+                } finally {
+                    if (this.current === id) { this.loading = false; this.$nextTick(() => { if (! this.$refs.modal.contains(document.activeElement)) { this.$refs.modal.querySelector('[data-modal-focus]')?.focus() } }) }
+                }
             },
             close() { if (this.$refs.modal.open) { this.$refs.modal.close() } },
             closed() {
-                this.current = null; this.html = '';
+                this.loading = false; this.current = null; this.shown = null; this.html = '';
                 const url = new URL(location.href);
                 if (! url.searchParams.has('order')) { return }
                 if (this.pushed) { this.pushed = false; window.history.back(); return }
@@ -117,13 +138,13 @@
                                 <tr class="cursor-pointer" @click="if (! $event.target.closest('a, button, input, label')) open(@js($sellerOrder->id))">
                                     {{-- Who and when sit under the order number: number · time, then customer · city. --}}
                                     <th scope="row" class="max-w-[280px]">
-                                        <p class="whitespace-nowrap"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" class="font-semibold text-ink hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a> <span class="sc-meta" title="{{ $sellerOrder->created_at->format('M j, Y · g:i A') }}">· {{ $sellerOrder->created_at->diffForHumans(short: true) }}</span></p>
+                                        <p class="whitespace-nowrap"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="font-semibold text-ink hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a> <span class="sc-meta" title="{{ $sellerOrder->created_at->format('M j, Y · g:i A') }}">· {{ $sellerOrder->created_at->diffForHumans(short: true) }}</span></p>
                                         <p class="truncate sc-meta" title="{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}">{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}</p>
                                     </th>
                                     <td>@include('seller.orders._items', ['sellerOrder' => $sellerOrder, 'otherItems' => $otherItems])</td>
                                     <td class="is-num font-semibold">₱{{ number_format($sellerOrder->total, 2) }}</td>
                                     <td><x-marketplace.order-status :status="$sellerOrder->status" /><span class="mt-0.5 block whitespace-nowrap text-xs text-muted">{{ $nextStep($sellerOrder) }}</span></td>
-                                    <td class="is-tight"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" class="grid size-8 place-items-center rounded-lg text-[#a3b1c4] hover:bg-[#eef1f5] hover:text-ink"><span class="sr-only">View order</span><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></td>
+                                    <td class="is-tight"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="grid size-8 place-items-center rounded-lg text-[#a3b1c4] hover:bg-[#eef1f5] hover:text-ink"><span class="sr-only">View order</span><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -135,7 +156,7 @@
                         @php($otherItems = max(0, $sellerOrder->items->count() - 1))
                         <article class="sc-list-item">
                             <div class="sc-row">
-                                <p class="sc-grow"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" class="sc-strong hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a> <span class="sc-meta">· {{ $sellerOrder->created_at->diffForHumans(short: true) }}</span></p>
+                                <p class="sc-grow"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="sc-strong hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a> <span class="sc-meta">· {{ $sellerOrder->created_at->diffForHumans(short: true) }}</span></p>
                                 <x-marketplace.order-status :status="$sellerOrder->status" />
                             </div>
                             <div class="sc-row mt-3">
@@ -144,7 +165,7 @@
                             </div>
                             <div class="sc-row mt-2">
                                 <span class="sc-grow truncate text-xs text-muted">{{ $nextStep($sellerOrder) }}</span>
-                                <a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" class="sc-link min-h-10">View order <span aria-hidden="true">&rsaquo;</span></a>
+                                <a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="sc-link min-h-10">View order <span aria-hidden="true">&rsaquo;</span></a>
                             </div>
                         </article>
                     @endforeach
@@ -169,8 +190,9 @@
             @endif
             <dialog x-ref="modal" class="sc-modal" aria-labelledby="order-modal-title" @close="closed()" @click="if ($event.target === $refs.modal) close()">
                 <div x-show="loading && ! html" class="sc-modal-body" role="status"><span class="sr-only">Loading order</span><div class="animate-pulse space-y-4"><div class="h-5 w-48 rounded bg-[#eef1f5]"></div><div class="h-1 w-full rounded bg-[#eef1f5]"></div><div class="h-24 rounded-lg bg-[#f5f7fa]"></div><div class="grid gap-4 sm:grid-cols-2"><div class="h-28 rounded-lg bg-[#f5f7fa]"></div><div class="h-28 rounded-lg bg-[#f5f7fa]"></div></div></div></div>
-                <div x-show="failed" x-cloak class="sc-modal-body text-center" role="alert"><p class="font-semibold text-ink">We couldn’t load this order.</p><p class="mt-1 sc-meta">Check your connection and try again, or open the full order page.</p><div class="mt-4 flex justify-center gap-2"><button type="button" class="seller-outline-button" @click="close()">Close</button><a :href="showUrl.replace('__ORDER__', current)" class="seller-primary-button">Open full page</a></div></div>
-                <div x-show="html" x-html="html" class="contents" :class="loading && 'opacity-60'"></div>
+                <div x-show="failed" x-cloak class="sc-modal-body text-center" role="alert"><p class="font-semibold text-ink">We couldn’t load this order.</p><p class="mt-1 sc-meta">Check your connection and try again, or open the full order page.</p><div class="mt-4 flex justify-center gap-2"><button type="button" class="seller-outline-button" @click="close()">Close</button><button type="button" class="seller-outline-button" @click="open(current, 'none')">Try again</button><a :href="showUrl.replace('__ORDER__', current)" class="seller-primary-button">Open full page</a></div></div>
+                {{-- While the next order loads, the previous one stays visible but its body and actions are disabled so nothing is done to the wrong order. --}}
+                <div x-show="html" x-html="html" class="contents" :data-stale="String(shown !== current)"></div>
             </dialog>
         </section>
     </div></div>

@@ -60,10 +60,11 @@ class SellerOrderController extends Controller
     {
         $tenant = $this->activeTenant($request);
         $canManageOrders = $this->canManageOrders($request, $tenant);
+        $isModal = $request->header('X-Order-Modal') === '1';
 
         $sellerOrder = $tenant->sellerOrders()
             ->whereKey($sellerOrder)
-            ->with(['items.product.images', 'order.payment', 'issues', 'returnCases.items.orderItem'])
+            ->with($isModal ? ['items.product.images', 'order', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'issues', 'returnCases.items.orderItem'])
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',
@@ -72,7 +73,7 @@ class SellerOrderController extends Controller
 
         // The orders list opens an order in a modal and asks for just its body; a direct visit
         // (or a browser without JavaScript) still gets the full page.
-        if ($request->header('X-Order-Modal') === '1') {
+        if ($isModal) {
             return view('seller.orders._modal', [
                 'sellerOrder' => $sellerOrder,
                 'canManageOrders' => $canManageOrders,

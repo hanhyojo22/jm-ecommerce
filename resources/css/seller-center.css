@@ -213,6 +213,7 @@
 .sc-modal[open] { display: flex; flex-direction: column; animation: sc-modal-in .16s ease-out; }
 .sc-modal::backdrop { background: rgb(15 23 42 / 45%); }
 .sc-modal > .contents, .sc-modal > [x-html] { display: contents; }
+.sc-modal [data-stale="true"] > :is(.sc-modal-body, .sc-modal-foot) { pointer-events: none; opacity: .55; }
 .sc-modal-head { display: flex; flex-shrink: 0; align-items: flex-start; gap: 12px; padding: 20px 24px 16px; border-bottom: 1px solid var(--sc-line-soft); }
 .sc-modal-body { min-height: 0; flex: 1; overflow-y: auto; padding: 20px 24px 24px; }
 .sc-modal-foot { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 8px; padding: 14px 24px; border-top: 1px solid var(--sc-line-soft); background: #fff; }
@@ -296,10 +297,15 @@
 .sc-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 20px; }
 .sc-step { min-width: 0; }
 .sc-step-bar { display: block; height: 4px; border-radius: 999px; background: var(--sc-line-soft); }
-.sc-step.is-done .sc-step-bar { background: var(--sc-accent); }
-.sc-step.is-current .sc-step-bar { background: linear-gradient(to right, var(--sc-accent) 50%, #c7d6fb 50%); }
-.sc-step-label { display: block; margin-top: 8px; overflow: hidden; color: var(--sc-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.sc-step.is-done .sc-step-label, .sc-step.is-current .sc-step-label { color: var(--sc-ink); font-weight: 600; }
+.sc-step.is-done .sc-step-bar, .sc-step.is-current .sc-step-bar { background: var(--sc-accent); }
+.sc-step-label { display: flex; align-items: center; gap: 5px; margin-top: 8px; min-width: 0; color: var(--sc-muted); font-size: 12px; white-space: nowrap; }
+.sc-step-label svg { width: 12px; height: 12px; flex-shrink: 0; color: var(--sc-accent); }
+.sc-step-dot { width: 7px; height: 7px; flex-shrink: 0; border-radius: 999px; background: var(--sc-accent); box-shadow: 0 0 0 3px var(--sc-accent-soft); }
+@media (max-width: 639px) { .sc-step-label svg, .sc-step-dot { display: none; } }
+.sc-step.is-done .sc-step-label { color: var(--sc-ink); font-weight: 600; }
+.sc-step.is-current .sc-step-label { color: var(--sc-accent); font-weight: 700; }
+.sc-guidance { display: flex; align-items: flex-start; gap: 8px; border-radius: 10px; background: var(--sc-accent-soft); padding: 10px 12px; color: var(--sc-ink); font-size: 14px; line-height: 1.45; }
+.sc-guidance svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; color: var(--sc-accent); }
 
 /* ---- Product photo manager ---------------------------------------------- */
 
