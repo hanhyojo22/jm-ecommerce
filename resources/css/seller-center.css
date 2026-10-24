@@ -428,6 +428,43 @@ select.pe-input { padding-right: 36px; }
 }
 @media (prefers-reduced-motion: reduce) { .pe-tick, .pe-input, .pe-segmented span { transition: none; } }
 
+/* ---- Product details ---------------------------------------------------- */
+
+/* Shares the editor's sheet and rail. The top of the sheet shows the listing the way a buyer
+   meets it, gallery beside price; the rail tracks the listing's way through review. */
+.pd-hero { display: grid; gap: 28px; }
+@media (min-width: 768px) { .pd-hero { grid-template-columns: minmax(0, 360px) minmax(0, 1fr); align-items: start; } }
+.pd-stage { position: relative; display: grid; aspect-ratio: 1; overflow: hidden; place-items: center; border-radius: 12px; background: #eef2f7; }
+.pd-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.pd-stage-empty { display: grid; justify-items: center; gap: 8px; color: #a3b1c4; font-size: 13px; font-weight: 600; }
+.pd-stage-empty svg { width: 56px; height: 56px; }
+.pd-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pd-thumbs button { width: 56px; height: 56px; overflow: hidden; border: 2px solid transparent; border-radius: 9px; background: #eef2f7; padding: 0; transition: border-color .15s; }
+.pd-thumbs button img { width: 100%; height: 100%; object-fit: cover; }
+.pd-thumbs button:hover { border-color: #cbd4e0; }
+.pd-thumbs button[aria-current='true'] { border-color: var(--sc-accent); }
+.pd-thumbs button:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 2px; }
+.pd-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; color: var(--sc-ink); font-size: 32px; font-weight: 700; line-height: 1.15; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
+.pd-price s { color: #8a9ab3; font-size: 16px; font-weight: 500; letter-spacing: 0; }
+.pd-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; margin-top: 22px; border-top: 1px solid var(--sc-line-soft); }
+.pd-facts > div { border-bottom: 1px solid var(--sc-line-soft); padding: 14px 0; }
+.pd-facts dt { color: var(--sc-muted); font-size: 12.5px; }
+.pd-facts dd { margin-top: 3px; color: var(--sc-ink); font-size: 14.5px; font-weight: 600; }
+.pd-about { margin-top: 22px; }
+.seller-workspace .workspace-main .pd-about h2 { color: var(--sc-ink); font-size: 14px; font-weight: 650; }
+.pd-about .pe-empty { margin-top: 8px; }
+.pd-description { margin-top: 6px; max-width: 70ch; color: #3b4d66; font-size: 14.5px; line-height: 1.7; white-space: pre-line; }
+
+.pd-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 16px; }
+.pd-track li { display: block; }
+.pd-track-bar { display: block; height: 4px; border-radius: 999px; background: var(--sc-line-soft); }
+.pd-track .is-done .pd-track-bar, .pd-track .is-current .pd-track-bar { background: var(--sc-accent); }
+.pd-track-label { display: block; margin-top: 8px; color: var(--sc-muted); font-size: 12.5px; font-weight: 500; }
+.pd-track .is-done .pd-track-label { color: var(--sc-ink); }
+.pd-track .is-current .pd-track-label { color: var(--sc-accent); font-weight: 700; }
+.pd-stage-note { margin-top: 14px; border-radius: 10px; background: var(--sc-sunken); padding: 10px 12px; color: var(--sc-ink); font-size: 13px; line-height: 1.5; }
+@media (max-width: 479px) { .pd-facts { grid-template-columns: minmax(0, 1fr); } .pd-price { font-size: 28px; } }
+
 /* ---- Sidebar ------------------------------------------------------------ */
 
 .sc-nav-label { padding: 0 12px 4px; color: #8a9ab3; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
