@@ -1,6 +1,6 @@
 @php
     $editing = $product !== null;
-    $existingVariants = $product?->variants?->sortBy('id')->map(fn ($variant) => [...$variant->only(['id', 'color', 'size', 'sku', 'stock_quantity', 'price']), 'photos' => $variant->images->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all()])->all() ?? [];
+    $existingVariants = $product?->variants?->sortBy('id')->map(fn ($variant) => [...$variant->only(['id', 'color', 'color_hex', 'size', 'sku', 'stock_quantity', 'price']), 'photos' => $variant->images->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all()])->all() ?? [];
     $existingPhotos = $product?->images?->whereNull('product_variant_id')->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all() ?? [];
     $savedVariantPhotos = collect($existingVariants)->pluck('photos', 'id');
     $variantRows = collect(old('variants', $existingVariants))
@@ -34,10 +34,13 @@
                 get keptPhotos() { return this.photos.filter(photo => ! this.removed.includes(photo.id)) },
                 get photoCount() { return this.keptPhotos.length + this.newFiles.length },
                 {{-- Variants: up to two options (Color, Size). Every combination of their values becomes a row; rows are kept by combination so edits survive option changes. --}}
-                options: [], rows: {}, excluded: [], collapsed: [], expanded: [], rowPreviews: {}, maxVariants: 30,
+                options: [], rows: {}, swatches: {}, swatchGuesses: @js(\App\Models\ProductVariant::SWATCHES), excluded: [], collapsed: [], expanded: [], rowPreviews: {}, maxVariants: 30,
                 keyOf(color, size) { return (color || '').trim().toLowerCase() + '|' + (size || '').trim().toLowerCase() },
                 distinct(values) { const seen = new Set(); return values.map(value => (value ?? '').trim()).filter(value => value && ! seen.has(value.toLowerCase()) && seen.add(value.toLowerCase())) },
                 valuesOf(name) { return this.distinct(this.options.find(option => option.name === name)?.values ?? []) },
+                {{-- Each color value gets a swatch: the seller's pick, else a guess from its name. --}}
+                swatchFor(color) { const name = (color || '').trim().toLowerCase(); return this.swatches[name] || this.swatchGuesses[name.split(/\s+/).pop()] || '' },
+                setSwatch(color, hex) { this.swatches[color.trim().toLowerCase()] = hex; this.dirty = true },
                 get hasSavedVariants() { return Object.values(this.rows).some(row => row.id) },
                 combos() {
                     const colors = this.valuesOf('Color'), sizes = this.valuesOf('Size');
@@ -89,6 +92,7 @@
                 rowThumb(item) { return item.row.photos.find(photo => ! this.removed.includes(photo.id))?.url ?? this.rowPreviews[item.key]?.[0] ?? null },
                 rowPhotoCount(item) { return item.row.photos.filter(photo => ! this.removed.includes(photo.id)).length + (this.rowPreviews[item.key]?.length || 0) },
                 initVariants(list) {
+                    list.forEach(variant => { if (variant.color && variant.color_hex) this.swatches[variant.color.trim().toLowerCase()] = variant.color_hex });
                     list.forEach(variant => { this.rows[this.keyOf(variant.color, variant.size)] = { id: variant.id ?? null, color: variant.color ?? '', size: variant.size ?? '', sku: variant.sku ?? '', stock_quantity: variant.stock_quantity ?? 0, price: variant.price ?? '', photos: variant.photos ?? [] } });
                     ['Color', 'Size'].forEach(name => {
                         const values = this.distinct(list.map(variant => variant[name.toLowerCase()]));
@@ -234,6 +238,7 @@
                                             <template x-for="(value, valueIndex) in option.values" :key="optionIndex + '-' + valueIndex">
                                                 <div>
                                                     <div class="ps-value">
+                                                        <input type="color" x-show="option.name === 'Color' && value.trim()" :value="swatchFor(value) || '#97a0af'" @input="setSwatch(value, $event.target.value)" :aria-label="'Swatch for ' + value" class="ps-swatch-input">
                                                         <input x-model="option.values[valueIndex]" @input="typedValue(option, valueIndex)" @keydown.enter.prevent="$event.target.closest('.ps-values').querySelectorAll('input')[valueIndex + 1]?.focus()" :readonly="isLocked(option, value)" maxlength="60" :aria-label="option.name + ' value ' + (valueIndex + 1)" :aria-invalid="isDuplicate(option, valueIndex)" :placeholder="valueIndex === option.values.length - 1 ? (valueIndex === 0 ? (option.name === 'Color' ? 'Navy' : 'Medium') : 'Add another value') : ''" class="pe-input">
                                                         <button type="button" x-show="valueIndex < option.values.length - 1 && ! isLocked(option, value)" @click="removeValue(option, valueIndex)" :aria-label="'Delete ' + value" class="ps-icon-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
                                                     </div>
@@ -251,7 +256,7 @@
                                 <template x-if="! option.open">
                                     <button type="button" class="ps-option-summary" @click="option.open = true" :aria-label="'Edit ' + option.name + ' option'">
                                         <span class="ps-option-name" x-text="option.name"></span>
-                                        <span class="ps-pills"><template x-for="value in distinct(option.values)" :key="value"><span class="ps-pill" x-text="value"></span></template></span>
+                                        <span class="ps-pills"><template x-for="value in distinct(option.values)" :key="value"><span class="ps-pill"><i x-show="option.name === 'Color'" class="ps-swatch" :style="{ background: swatchFor(value) || '#97a0af' }" aria-hidden="true"></i><span x-text="value"></span></span></template></span>
                                     </button>
                                 </template>
                             </div>
@@ -265,7 +270,7 @@
                             <div>
                                 <template x-if="item.type === 'group'">
                                     <button type="button" class="ps-group" @click="collapsed = collapsed.includes(item.label) ? collapsed.filter(label => label !== item.label) : [...collapsed, item.label]" :aria-expanded="! collapsed.includes(item.label)">
-                                        <span class="ps-group-name"><span x-text="item.label"></span><span class="pe-count" x-text="item.count + (item.count === 1 ? ' variant' : ' variants')"></span></span>
+                                        <span class="ps-group-name"><i x-show="options[0]?.name === 'Color'" class="ps-swatch" :style="{ background: swatchFor(item.label) || '#97a0af' }" aria-hidden="true"></i><span x-text="item.label"></span><span class="pe-count" x-text="item.count + (item.count === 1 ? ' variant' : ' variants')"></span></span>
                                         <span class="ps-group-stock" x-text="item.stock.toLocaleString() + ' available'"></span>
                                         <svg :class="collapsed.includes(item.label) ? '' : 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                                     </button>
@@ -274,6 +279,7 @@
                                     <div class="ps-variant" :class="grouped && 'is-child'" x-show="! collapsed.includes(item.group)">
                                         <input type="hidden" :name="'variants[' + item.index + '][id]'" :value="item.row.id" :disabled="! item.row.id">
                                         <input type="hidden" :name="'variants[' + item.index + '][color]'" :value="item.row.color">
+                                        <input type="hidden" :name="'variants[' + item.index + '][color_hex]'" :value="swatchFor(item.row.color)" :disabled="! swatchFor(item.row.color)">
                                         <input type="hidden" :name="'variants[' + item.index + '][size]'" :value="item.row.size">
                                         <div class="ps-variant-line">
                                             <label class="ps-variant-media" :title="'Add photos for ' + item.fullLabel">
@@ -283,7 +289,7 @@
                                                 <span class="sr-only" x-text="'Add photos for ' + item.fullLabel"></span>
                                                 <input type="file" :name="'variants[' + item.index + '][images][]'" multiple accept="image/jpeg,image/png,image/webp" class="sr-only" @change="previewRow(item.key, $event)">
                                             </label>
-                                            <span class="ps-variant-name"><span x-text="item.label"></span><button type="button" x-show="item.row.photos.length" @click="expanded = expanded.includes(item.key) ? expanded.filter(key => key !== item.key) : [...expanded, item.key]" class="ps-link" x-text="expanded.includes(item.key) ? 'Hide photos' : 'Manage photos'"></button></span>
+                                            <span class="ps-variant-name"><span class="inline-flex items-center gap-2"><i x-show="! grouped && item.row.color" class="ps-swatch" :style="{ background: swatchFor(item.row.color) || '#97a0af' }" aria-hidden="true"></i><span x-text="item.label"></span></span><button type="button" x-show="item.row.photos.length" @click="expanded = expanded.includes(item.key) ? expanded.filter(key => key !== item.key) : [...expanded, item.key]" class="ps-link" x-text="expanded.includes(item.key) ? 'Hide photos' : 'Manage photos'"></button></span>
                                             <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">Price</span><span class="pe-affix"><span aria-hidden="true">₱</span><input type="number" :name="'variants[' + item.index + '][price]'" x-model="item.row.price" min="0.01" step="0.01" :placeholder="price || '0.00'" :aria-label="'Price for ' + item.fullLabel" class="pe-input"></span></label>
                                             <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">Available</span><input type="number" :name="'variants[' + item.index + '][stock_quantity]'" x-model="item.row.stock_quantity" required min="0" :aria-label="'Available for ' + item.fullLabel" class="pe-input"></label>
                                             <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">SKU</span><input :name="'variants[' + item.index + '][sku]'" x-model="item.row.sku" required maxlength="100" placeholder="SKU" :aria-label="'SKU for ' + item.fullLabel" class="pe-input"></label>

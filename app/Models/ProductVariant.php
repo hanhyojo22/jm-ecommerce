@@ -12,7 +12,19 @@ class ProductVariant extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['product_id', 'color', 'size', 'sku', 'stock_quantity', 'price'];
+    protected $fillable = ['product_id', 'color', 'color_hex', 'size', 'sku', 'stock_quantity', 'price'];
+
+    /**
+     * Swatches guessed from common color names until the seller picks one.
+     *
+     * @var array<string, string>
+     */
+    public const SWATCHES = [
+        'black' => '#292d34', 'white' => '#e8e4dc', 'gray' => '#8a919c', 'grey' => '#8a919c', 'silver' => '#c4c8ce',
+        'navy' => '#263b60', 'blue' => '#4d7fc4', 'red' => '#b74e57', 'green' => '#62856b', 'pink' => '#ddb2bf',
+        'yellow' => '#e5c24f', 'orange' => '#e08a3c', 'purple' => '#7b5ea7', 'brown' => '#7a5640', 'beige' => '#d9c8a9',
+        'gold' => '#c9a645', 'cream' => '#efe6d2', 'maroon' => '#6e2a33',
+    ];
 
     protected $attributes = ['color' => '', 'size' => ''];
 
@@ -42,6 +54,14 @@ class ProductVariant extends Model
     protected function size(): Attribute
     {
         return Attribute::set(fn (?string $value): string => trim((string) $value));
+    }
+
+    /**
+     * The swatch shown for this variant's color: the seller's pick, else a guess from the name.
+     */
+    public function swatch(): string
+    {
+        return $this->color_hex ?? self::SWATCHES[strtolower(last(explode(' ', $this->color)))] ?? '#97a0af';
     }
 
     public function label(): string

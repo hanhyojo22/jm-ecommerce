@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -76,6 +77,27 @@ class SellerProductTest extends TestCase
         $variants = Product::query()->sole()->variants;
         $this->assertEqualsCanonicalizing(['S', 'M'], $variants->map->label()->all());
         $this->assertSame('', $variants->first()->color);
+    }
+
+    public function test_seller_picks_a_swatch_for_a_color_variant(): void
+    {
+        [$owner] = $this->seller();
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00',
+            'variants' => [
+                ['color' => 'Sunset', 'color_hex' => '#ff6633', 'sku' => 'SHIRT-SUNSET', 'stock_quantity' => 3],
+                ['color' => 'Midnight Black', 'sku' => 'SHIRT-BLACK', 'stock_quantity' => 2],
+            ],
+        ])->assertRedirect(route('seller.products.index'));
+
+        $variants = Product::query()->sole()->variants->keyBy('color');
+        $this->assertSame('#ff6633', $variants['Sunset']->swatch());
+        $this->assertSame(ProductVariant::SWATCHES['black'], $variants['Midnight Black']->swatch());
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Cotton shirt', 'sku' => 'SHIRT-2', 'price' => '499.00',
+            'variants' => [['color' => 'Red', 'color_hex' => 'red', 'sku' => 'SHIRT-RED', 'stock_quantity' => 1]],
+        ])->assertSessionHasErrors('variants.0.color_hex');
     }
 
     public function test_variant_needs_a_color_or_a_size(): void

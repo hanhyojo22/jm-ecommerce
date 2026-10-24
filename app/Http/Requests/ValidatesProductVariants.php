@@ -16,6 +16,7 @@ trait ValidatesProductVariants
     {
         return [
             'variants.*.color' => 'color for variant :position',
+            'variants.*.color_hex' => 'swatch for variant :position',
             'variants.*.size' => 'size for variant :position',
             'variants.*.sku' => 'SKU for variant :position',
             'variants.*.stock_quantity' => 'stock for variant :position',
