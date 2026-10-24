@@ -13,7 +13,22 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Inter', ...defaultTheme.fontFamily.sans],
-                display: ['Fraunces', 'Iowan Old Style', 'Palatino Linotype', 'Georgia', 'serif'],
+                // Headings share the UI face so the whole app reads in one typeface.
+                display: ['Inter', ...defaultTheme.fontFamily.sans],
+            },
+            // One type scale for the whole app (the Seller Center scale): 12 small · 14 body ·
+            // 15 section title · 24 figure · 26 page title. Larger steps collapse onto the title.
+            fontSize: {
+                xs: ['12px', '16px'],
+                sm: ['14px', '20px'],
+                base: ['14px', '22px'],
+                lg: ['15px', '22px'],
+                xl: ['15px', '22px'],
+                '2xl': ['24px', '30px'],
+                '3xl': ['26px', '32px'],
+                '4xl': ['26px', '32px'],
+                '5xl': ['26px', '32px'],
+                '6xl': ['26px', '32px'],
             },
             colors: {
                 canvas: '#F6F8FC',

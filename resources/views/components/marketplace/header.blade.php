@@ -71,8 +71,8 @@
                 @if ($isSellerWorkspace)
                     <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-lg border border-line text-ink shadow-sm transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle Seller Center sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
                     <a href="{{ route('seller.dashboard') }}" class="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
-                        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>
-                        <span class="text-sm font-bold text-ink sm:text-base">Seller Center</span>
+                        <img src="{{ asset('favicon.svg') }}" alt="" class="size-8 shrink-0 rounded-lg" width="32" height="32">
+                        <span class="text-sm font-semibold text-ink sm:text-base">Seller Center</span>
                     </a>
                     <div class="hidden min-w-0 items-center gap-2 text-sm lg:flex">
                         <span class="font-medium text-muted">Seller Center</span>
@@ -82,8 +82,8 @@
                 @elseif ($isCustomerWorkspace)
                     <button type="button" @click="$dispatch('customer-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-lg border border-line text-ink shadow-sm transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle My account sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
                     <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart My account">
-                        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>
-                        <span class="text-sm font-bold text-ink sm:text-base">My account</span>
+                        <img src="{{ asset('favicon.svg') }}" alt="" class="size-8 shrink-0 rounded-lg" width="32" height="32">
+                        <span class="text-sm font-semibold text-ink sm:text-base">My account</span>
                     </a>
                     <div class="hidden min-w-0 items-center gap-2 text-sm lg:flex">
                         <span class="font-medium text-muted">My account</span>
@@ -92,8 +92,8 @@
                     </div>
                 @else
                     <a href="{{ route('home') }}" class="flex min-w-[140px] shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2" aria-label="JMMart marketplace home">
-                        <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-base font-bold leading-none text-white" aria-hidden="true">jm</span>
-                        <span class="text-2xl font-bold tracking-[-0.04em] text-ink">JM<span class="text-brand">Mart.</span></span>
+                        <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-base font-semibold leading-none text-white" aria-hidden="true">jm</span>
+                        <span class="text-2xl font-semibold tracking-[-0.04em] text-ink">JM<span class="text-brand">Mart.</span></span>
                     </a>
                 @endif
             </div>
@@ -116,7 +116,7 @@
                     <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
                         @if ($unreadConversationCount > 0)
-                            <span class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-white bg-brand px-[5px] text-[11px] font-bold leading-none text-white">{{ $messageBadge }}</span>
+                            <span class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-white bg-brand px-[5px] text-xs font-semibold leading-none text-white">{{ $messageBadge }}</span>
                         @endif
                     </a>
                 @endif
@@ -126,7 +126,7 @@
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
                         {{-- The link's own label already names the count, so the badge repeats it for the eye only. --}}
                         {{-- Anchored outside the icon's corner: a wide count grows leftward over empty padding, so the cart stays legible at any number. --}}
-                        <span data-cart-badge aria-hidden="true" class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[5px] text-[11px] font-bold leading-none tabular-nums text-white" @if ($cartItemCount === 0) style="display: none" @endif>{{ $cartBadge }}</span>
+                        <span data-cart-badge aria-hidden="true" class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[5px] text-xs font-semibold leading-none tabular-nums text-white" @if ($cartItemCount === 0) style="display: none" @endif>{{ $cartBadge }}</span>
                     </a>
                 @endif
 
@@ -138,7 +138,7 @@
                         </button>
                         <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-[16px] border border-line bg-white p-2 shadow-[0_16px_36px_rgba(15,23,42,.14)]">
                             <div class="flex min-w-0 items-center gap-3 px-2 py-3">
-                                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-bold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
+                                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
                                 <div class="min-w-0"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
                             </div>
                             <nav aria-label="Account links" class="border-t border-line py-1">
@@ -202,7 +202,7 @@
         <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden {{ $isAccountWorkspace ? 'bg-[#111c32] text-white' : 'bg-white text-ink' }}" role="dialog" aria-modal="true" aria-label="{{ $isSellerWorkspace ? 'Seller Center navigation' : ($isCustomerWorkspace ? 'My account navigation' : 'Marketplace navigation') }}">
             <div class="flex h-[56px] items-center justify-between border-b px-5 {{ $isAccountWorkspace ? 'border-white/10' : 'border-line' }}">
                 <a href="{{ $isSellerWorkspace ? route('seller.dashboard') : ($isCustomerWorkspace ? route('orders.index') : route('home')) }}" data-drawer-focus @click="closeDrawer" class="flex items-center gap-2 font-semibold">
-                    @if ($isSellerWorkspace || $isCustomerWorkspace)<span class="grid size-8 place-items-center rounded bg-brand text-lg font-bold text-white" aria-hidden="true">J</span>@else<x-application-logo class="size-8 fill-current text-brand" />@endif
+                    @if ($isSellerWorkspace || $isCustomerWorkspace)<img src="{{ asset('favicon.svg') }}" alt="" class="size-8 rounded-lg" width="32" height="32">@else<x-application-logo class="size-8 fill-current text-brand" />@endif
                     <span>{{ $isSellerWorkspace ? 'Seller Center' : ($isCustomerWorkspace ? 'My account' : 'JMMart') }}</span>
                 </a>
                 <button type="button" @click="closeDrawer" class="grid size-11 place-items-center rounded transition focus-visible:ring-2 focus-visible:ring-brand {{ $isAccountWorkspace ? 'text-slate-300 hover:bg-white/10 hover:text-white' : 'text-muted hover:bg-canvas hover:text-ink' }}" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
@@ -228,7 +228,7 @@
                             {{ Str::upper(Str::substr($sellerTenant?->name ?? 'S', 0, 1)) }}
                         @endif
                     </span>
-                    <div class="min-w-0"><p class="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Your store</p><p class="mt-1 truncate text-sm font-semibold text-white">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
+                    <div class="min-w-0"><p class="text-xs font-semibold uppercase tracking-[.14em] text-slate-400">Your store</p><p class="mt-1 truncate text-sm font-semibold text-white">{{ $sellerTenant?->name ?? 'Your store' }}</p></div>
                 </div>
                 <x-marketplace.seller-nav-links mode="mobile" />
                 <div class="space-y-1 border-t border-white/10 p-4">

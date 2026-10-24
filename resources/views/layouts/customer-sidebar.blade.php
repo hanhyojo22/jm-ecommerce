@@ -1,8 +1,8 @@
 <aside data-workspace-header="customer" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r border-slate-800 bg-[#111c32] text-slate-300 lg:flex" aria-label="Customer account sidebar">
     <div class="px-5 pb-5 pt-6">
         <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-3 rounded-lg focus-visible:outline-white" aria-label="JMMart My account">
-            <span class="grid size-9 place-items-center rounded-lg bg-brand text-lg font-bold text-white">J</span>
-            <span><strong class="block text-base leading-5 text-white">JMMart</strong><span class="block text-[10px] font-semibold uppercase tracking-[.16em] text-slate-400">My account</span></span>
+            <img src="{{ asset('favicon.svg') }}" alt="" class="size-9 rounded-lg" width="36" height="36">
+            <span><strong class="block text-base leading-5 text-white">JMMart</strong><span class="block text-xs font-semibold uppercase tracking-[.16em] text-slate-400">My account</span></span>
         </a>
     </div>
 

@@ -6,8 +6,8 @@
         <section class="py-6 sm:py-8" aria-labelledby="marketplace-home-heading">
             <div class="marketplace-hero">
                 <div class="marketplace-hero-copy">
-                    <p class="text-xs font-bold uppercase tracking-[.15em] text-brand">Your local marketplace, reimagined</p>
-                    <h1 id="marketplace-home-heading" class="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-[-.03em] sm:text-5xl">Good finds.<br>Closer to <span class="text-brand">home.</span></h1>
+                    <p class="text-xs font-semibold uppercase tracking-[.15em] text-brand">Your local marketplace, reimagined</p>
+                    <h1 id="marketplace-home-heading" class="mt-5 font-display text-[36px] font-semibold leading-[1.05] tracking-[-.03em] sm:text-[48px]">Good finds.<br>Closer to <span class="text-brand">home.</span></h1>
                     <p class="mt-5 max-w-sm text-sm leading-7 text-muted">Discover everyday favorites from stores you'll love. Thoughtfully picked, locally connected.</p>
                     <a href="{{ route('catalog.index') }}" class="mt-6 inline-flex min-h-12 items-center gap-4 rounded-xl bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Explore the marketplace <span aria-hidden="true">&rarr;</span></a>
                 </div>
@@ -121,7 +121,7 @@
                     @foreach ($stores as $store)
                         <a href="{{ route('catalog.store', $store->slug) }}" class="marketplace-surface p-5 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
                             <span class="flex items-center gap-3">
-                                <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-blue-50 text-lg font-bold text-brand">@if ($store->logo_path)<img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-full object-cover">@else{{ Str::upper(Str::substr($store->name, 0, 1)) }}@endif</span>
+                                <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-blue-50 text-lg font-semibold text-brand">@if ($store->logo_path)<img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-full object-cover">@else{{ Str::upper(Str::substr($store->name, 0, 1)) }}@endif</span>
                                 <span class="min-w-0"><span class="block truncate text-sm font-semibold text-ink">{{ $store->name }}</span><span class="mt-1 block text-xs text-muted">{{ number_format($store->public_products_count) }} {{ Str::plural('product', $store->public_products_count) }}</span></span>
                             </span>
                             <span class="mt-4 flex min-h-10 items-center justify-between border-t border-line pt-3 text-sm font-semibold text-ink">Visit store <span class="text-brand" aria-hidden="true">→</span></span>

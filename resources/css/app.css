@@ -20,7 +20,7 @@
         --color-warning: #f59e0b;
         --color-warning-text: #b45309;
         --color-danger: #dc2626;
-        --font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+        --font-display: var(--font-sans);
         --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
 
         /* Marketplace measures. One column width, one gutter scale, one rhythm. */
@@ -41,7 +41,17 @@
         background: var(--color-bg);
         color: var(--color-fg);
         font-family: var(--font-sans);
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.5;
         overflow-x: clip;
+    }
+
+    /* Phones zoom into any field under 16px when it is focused, so form text stays at 16px there. */
+    @media (max-width: 639px) {
+        :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+            font-size: 16px;
+        }
     }
 
     ::selection {
@@ -162,7 +172,7 @@
 .customer-page-title,
 [data-conversation-inbox] h1 {
     font-family: var(--font-display);
-    font-size: 2.5rem;
+    font-size: 26px;
     font-weight: 600;
     letter-spacing: -0.025em;
     line-height: 1.12;
@@ -196,7 +206,7 @@
 
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) > div:first-child { max-width: none; padding-block: .5rem; }
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) form label { height: 2.5rem; }
-:is([data-header-role='seller'], [data-header-role='customer-workspace']) form input { font-size: .8rem; }
+:is([data-header-role='seller'], [data-header-role='customer-workspace']) form input { font-size: 13px; }
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) form button[type='submit'] { height: 2rem; font-size: .75rem; }
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) [aria-label='Account menu'] { min-height: 2.5rem; }
 
@@ -325,7 +335,7 @@
  * label the other sidebars use, and its description, which just repeats the page subtitle.
  */
 [data-clerk-component='user-profile'] .cl-navbar h1 {
-    font-size: .6875rem;
+    font-size: .75rem;
     font-weight: 600;
     letter-spacing: .08em;
     line-height: 1.4;
@@ -361,91 +371,7 @@
 .seller-workspace .empty-state { padding-block: 2.5rem; }
 .seller-workspace :is(table td[class*='py-16'], table td[class*='py-14']) { padding-block: 2.5rem; }
 
-.seller-workspace .seller-panel,
-.seller-workspace .seller-kpi-card {
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: none;
-}
-
-.seller-workspace .seller-panel h2 {
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.3;
-}
-
-.seller-workspace .seller-kpi-card {
-    display: flex;
-    min-height: 134px;
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.seller-kpi-icon,
-.seller-action-icon {
-    display: grid;
-    width: 3.3rem;
-    height: 3.3rem;
-    flex: none;
-    place-items: center;
-    border-radius: 8px;
-    background: #f1f5f9;
-    color: #334155;
-}
-
-.seller-kpi-icon svg {
-    width: 1.7rem;
-    height: 1.7rem;
-}
-
-.seller-kpi-label,
-.seller-kpi-context,
-.seller-kpi-value {
-    display: block;
-}
-
-.seller-kpi-label { font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--color-muted); }
-.seller-kpi-value { margin-top: .25rem; font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-.seller-kpi-context { margin-top: .5rem; font-size: .7rem; line-height: 1.35; color: var(--color-muted); }
-
-.seller-overview-grid { display: grid; gap: .75rem; grid-template-columns: minmax(0, 1.85fr) minmax(280px, 1fr); }
-.seller-overview-grid-secondary { grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); }
-.seller-overview-grid-footer { grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); }
-
-.seller-period { border: 1px solid var(--color-border); border-radius: 4px; background: #fff; color: var(--color-muted); padding: .4rem .6rem; font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-.seller-panel-link { display: inline-flex; min-height: 1.5rem; align-items: center; color: var(--color-accent); font-size: .75rem; font-weight: 600; white-space: nowrap; }
-.seller-empty { display: flex; min-height: 154px; flex-direction: column; align-items: center; justify-content: center; border-top: 1px solid var(--color-border); margin-top: .65rem; padding: .75rem; text-align: center; }
-.seller-primary-button,
-.seller-outline-button { display: inline-flex; min-height: 2.5rem; align-items: center; justify-content: center; gap: .5rem; border-radius: 4px; padding: .5rem 1rem; font-size: .75rem; font-weight: 600; text-align: center; }
-.seller-primary-button { background: var(--color-accent); color: white; }
-.seller-primary-button:hover { background: var(--color-accent-hover); }
-.seller-outline-button { border: 1px solid var(--color-border); background: white; color: #101c38; }
-.seller-outline-button:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.seller-action { display: flex; min-width: 0; min-height: 3.8rem; align-items: center; gap: .65rem; border: 1px solid var(--color-border); border-radius: 4px; padding: .5rem; }
-.seller-action:hover { border-color: var(--color-accent); }
-.seller-action-icon { width: 2.5rem; height: 2.5rem; font-size: 1.4rem; font-weight: 700; }
-.seller-action strong,
-.seller-action small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.seller-action strong { font-size: .75rem; }
-.seller-action small { margin-top: .1rem; color: var(--color-muted); font-size: .65rem; }
-.seller-help-item { border-bottom: 1px solid var(--color-border); padding: .35rem 0; color: var(--color-muted); }
-.seller-help-item a:hover { color: var(--color-accent); text-decoration: underline; }
-
-@media (max-width: 1199px) {
-    .seller-overview-grid { grid-template-columns: minmax(0, 1fr); }
-}
-
-@media (max-width: 639px) {
-    .seller-workspace .seller-kpi-card { min-height: 116px; flex-direction: column; gap: .35rem; padding: .75rem; }
-    .seller-kpi-icon { width: 2.5rem; height: 2.5rem; }
-    .seller-kpi-icon svg { width: 1.3rem; height: 1.3rem; }
-    .seller-kpi-value { font-size: 1.3rem; }
-    .seller-action { min-height: 4rem; }
-    /* Two quick-action columns are narrow on a phone: let the helper line wrap
-       instead of ending in an ellipsis the reader cannot recover. */
-    .seller-action small { overflow: visible; white-space: normal; }
-}
+/* Seller Center components (cards, metrics, tabs, tables) live in seller-center.css. */
 
 @media (min-width: 640px) {
     :is(.seller-workspace, .customer-workspace) .page-container {
@@ -463,7 +389,7 @@
 .workspace-main h2,
 .account-shell-content h2,
 [data-conversation-inbox] h2 {
-    font-size: 1.25rem;
+    font-size: 15px;
     font-weight: 600;
     line-height: 1.35;
 }
@@ -491,7 +417,7 @@
     .account-shell-content h1,
     .customer-page-title,
     [data-conversation-inbox] h1 {
-        font-size: 1.75rem;
+        font-size: 22px;
     }
 }
 
@@ -526,7 +452,7 @@
 
 @media (min-width: 640px) {
     [data-conversation-thread] h1 {
-        font-size: 1rem;
+        font-size: 15px;
         line-height: 1.5rem;
     }
 }
@@ -745,7 +671,7 @@ body:has(footer) [data-cookie-floating] {
 
 .marketplace-page-title {
     font-family: var(--font-display);
-    font-size: clamp(1.875rem, 1.6rem + 1.05vw, 2.5rem);
+    font-size: clamp(22px, 1.1rem + 0.6vw, 26px);
     font-weight: 600;
     line-height: 1.12;
     letter-spacing: -0.025em;
@@ -905,7 +831,7 @@ body:has(footer) [data-cookie-floating] {
 }
 
 .marketplace-filter-heading {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.5;
     letter-spacing: 0.08em;

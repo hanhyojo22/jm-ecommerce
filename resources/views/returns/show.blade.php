@@ -62,7 +62,7 @@
                             <div class="mt-3 flex flex-wrap items-center gap-2">
                                 <x-returns.status-badge :status="$case->status" />
                                 @if ($role !== 'buyer')
-                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-muted ring-1 ring-inset ring-line">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-muted ring-1 ring-inset ring-line">
                                         <x-returns.icon name="store" class="size-3.5" />
                                         {{ $case->sellerOrder->store->name }}
                                     </span>
@@ -123,7 +123,7 @@
             <div class="mt-5 flex items-start gap-3 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3.5" role="alert">
                 <svg class="mt-0.5 size-5 shrink-0 text-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
                 <div>
-                    <p class="text-sm font-bold text-danger">This case is overdue</p>
+                    <p class="text-sm font-semibold text-danger">This case is overdue</p>
                     <p class="mt-1 text-sm leading-6 text-danger/90">{{ $overdueCopy }}</p>
                 </div>
             </div>
@@ -476,7 +476,7 @@
                     <div class="mt-4 table-scroll">
                         <table class="min-w-full text-sm">
                             <thead>
-                                <tr class="border-b border-line text-left text-[11px] uppercase tracking-[0.08em] text-muted">
+                                <tr class="border-b border-line text-left text-xs uppercase tracking-[0.08em] text-muted">
                                     <th scope="col" class="py-2 pr-3 font-semibold">Item</th>
                                     <th scope="col" class="py-2 pr-3 text-right font-semibold">Qty</th>
                                     <th scope="col" class="py-2 pr-3 text-right font-semibold">Unit price</th>
@@ -489,7 +489,7 @@
                                         <td class="py-2.5 pr-3">
                                             <span class="font-medium text-ink">{{ $item->orderItem->product_name }}</span>
                                             @if ($role === 'seller' && $item->restocked_quantity > 0)
-                                                <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-muted">{{ $item->restocked_quantity }} restocked</span>
+                                                <span class="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-muted">{{ $item->restocked_quantity }} restocked</span>
                                             @endif
                                         </td>
                                         <td class="py-2.5 pr-3 text-right tabular-nums text-ink">{{ $item->quantity }}</td>
@@ -509,7 +509,7 @@
 
                     @if ($case->response_note)
                         <div class="mt-4 rounded-[10px] border border-line bg-canvas px-3.5 py-3">
-                            <p class="text-xs font-bold uppercase tracking-[0.1em] text-muted">Latest response</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Latest response</p>
                             <p class="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-ink">{{ $case->response_note }}</p>
                         </div>
                     @endif
@@ -523,20 +523,20 @@
                         <p class="mt-3 text-sm text-muted">Physical return waived — no goods need to travel back.</p>
                     @elseif ($case->return_instructions)
                         <div class="mt-3 rounded-[10px] border border-line bg-canvas px-3.5 py-3">
-                            <p class="text-xs font-bold uppercase tracking-[0.1em] text-muted">Return instructions</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Return instructions</p>
                             <p class="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-ink">{{ $case->return_instructions }}</p>
                             <p class="mt-1 text-sm text-muted">No-cost method: {{ $case->return_method }}</p>
                         </div>
                     @endif
                     @if ($case->outcome?->kind === 'refund')
                         <div class="mt-3 rounded-[10px] border border-green-200 bg-green-50 px-3.5 py-3">
-                            <p class="text-xs font-bold uppercase tracking-[0.1em] text-success">Refund recorded</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-success">Refund recorded</p>
                             <p class="mt-1.5 text-sm text-ink">₱{{ number_format((float) $case->outcome->amount, 2) }} · paid {{ $case->outcome->paid_at?->format('M j, Y') }}. The seller's payment proof is in the evidence list.</p>
                         </div>
                     @endif
                     @if ($case->outcome?->kind === 'replacement')
                         <div class="mt-3 rounded-[10px] border border-green-200 bg-green-50 px-3.5 py-3">
-                            <p class="text-xs font-bold uppercase tracking-[0.1em] text-success">Replacement shipment</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-success">Replacement shipment</p>
                             <p class="mt-1.5 text-sm text-ink">Reference {{ $case->outcome->shipment_reference }} · shipped {{ $case->outcome->shipped_at?->format('M j, Y') }}.</p>
                         </div>
                     @endif

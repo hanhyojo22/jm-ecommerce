@@ -22,7 +22,7 @@
                 <div class="space-y-6">
                     <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6" aria-labelledby="applicant-details-heading">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($application->user->name, 0, 1)) }}</div>
+                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand/10 text-sm font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($application->user->name, 0, 1)) }}</div>
                             <div class="min-w-0">
                                 <h2 id="applicant-details-heading" class="font-semibold text-ink">Applicant details</h2>
                                 <p class="mt-0.5 text-sm text-muted">Submitted seller application</p>

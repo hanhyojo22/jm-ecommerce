@@ -3,7 +3,7 @@
         @if ($actingAsStore && $store->logo_path)
             <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-8 shrink-0 rounded-full object-cover">
         @else
-            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-bold text-muted" aria-hidden="true">{{ Str::upper(Str::substr($actingAsStore ? $store->name : auth()->user()?->name ?? '?', 0, 1)) }}</span>
+            <span class="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-muted" aria-hidden="true">{{ Str::upper(Str::substr($actingAsStore ? $store->name : auth()->user()?->name ?? '?', 0, 1)) }}</span>
         @endif
         <div class="min-w-0 flex-1">
             <label for="reply-body-{{ $review->id }}" class="sr-only">Seller response</label>

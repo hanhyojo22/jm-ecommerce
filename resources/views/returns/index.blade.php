@@ -43,7 +43,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="font-display text-[30px] font-semibold leading-[1.15] tracking-[-0.03em] text-ink">{{ $isSeller ? 'Returns' : 'Return cases' }}</h1>
+                <h1 class="font-display text-3xl font-semibold leading-[1.15] tracking-[-0.03em] text-ink">{{ $isSeller ? 'Returns' : 'Return cases' }}</h1>
                 <p class="mt-2 text-sm text-muted">{{ $needsActionCount }} {{ Str::plural('case', $needsActionCount) }} {{ $needsActionCount === 1 ? 'needs' : 'need' }} {{ $isSeller ? 'seller action' : 'support review' }} · {{ $cases->total() }} {{ Str::plural('case', $cases->total()) }} in view</p>
             </div>
             <a href="{{ route('returns') }}" class="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-hover">

@@ -93,6 +93,29 @@ class CatalogTest extends TestCase
             ->assertSee('InStock');
     }
 
+    public function test_product_page_only_promises_free_shipping_when_the_product_has_it(): void
+    {
+        $paidShipping = $this->product(['free_shipping' => false]);
+
+        $this->get(route('catalog.show', [$paidShipping->store->slug, $paidShipping->slug]))
+            ->assertSee('Shipping is added at checkout.')
+            ->assertSee('7-day returns')
+            ->assertDontSee('Free shipping on this item.');
+    }
+
+    public function test_product_page_suggests_the_stores_other_products_once(): void
+    {
+        $category = Category::create(['name' => 'Bags', 'slug' => 'bags', 'is_active' => true]);
+        $product = $this->product(['category_id' => $category->id]);
+        $sibling = Product::create(['tenant_id' => $product->tenant_id, 'store_id' => $product->store_id, 'category_id' => $category->id, 'name' => 'Sibling Tote', 'slug' => 'sibling-tote', 'sku' => 'SIB-1', 'price' => 150, 'stock_quantity' => 2, 'status' => 'active']);
+
+        $response = $this->get(route('catalog.show', [$product->store->slug, $product->slug]));
+
+        $response->assertSeeInOrder(['More from '.$product->store->name, 'Sibling Tote'])
+            ->assertDontSee('You might also like');
+        $this->assertSame(1, substr_count($response->getContent(), 'Sibling Tote</'));
+    }
+
     public function test_long_product_description_can_expand_without_a_generated_preview(): void
     {
         $longDescription = str_repeat('RGB lighting with tactile mechanical switches and aluminum housing. ', 6).'Includes a detachable wrist rest.';

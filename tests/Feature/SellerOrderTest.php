@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\OrderIssue;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -29,9 +30,8 @@ class SellerOrderTest extends TestCase
         ]))
             ->assertSee($visibleOrder->order->number)
             ->assertDontSee('OTHER-1001')
-            ->assertSee('Search: seller-1001')
-            ->assertSee('Status: Pending')
-            ->assertSee('Payment: Pending');
+            ->assertSee('value="seller-1001"', false)
+            ->assertSee('1 active filter');
     }
 
     public function test_buyer_account_with_a_tenant_membership_cannot_open_seller_orders(): void
@@ -98,8 +98,8 @@ class SellerOrderTest extends TestCase
             $this->sellerOrder($tenant, $store, 'SELLER-1002'),
         ]);
 
-        $this->actingAs($seller)->get(route('seller.orders.index'))
-            ->assertSee('Confirm pending orders')
+        $this->actingAs($seller)->get(route('seller.orders.index', ['status' => 'pending']))
+            ->assertSee('Confirm all pending (2)')
             ->assertSee('name="seller_order_ids[]"', false);
 
         $this->actingAs($seller)->post(route('seller.orders.bulk-confirm'), [
@@ -149,6 +149,119 @@ class SellerOrderTest extends TestCase
         ])->assertForbidden();
 
         $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'pending']);
+    }
+
+    public function test_orders_page_counts_only_this_stores_delivered_orders_with_cash_to_collect(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        [, $otherTenant, $otherStore] = $this->seller();
+        $this->sellerOrder($tenant, $store, 'COD-1001', 'delivered');
+        $this->sellerOrder($tenant, $store, 'COD-1002', 'delivered');
+        $this->sellerOrder($tenant, $store, 'DONE-1001', 'delivered')->update(['cod_collected_at' => now()]);
+        $this->sellerOrder($tenant, $store, 'SHIP-1001', 'shipped');
+        $this->sellerOrder($otherTenant, $otherStore, 'OTHER-1001', 'delivered');
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.index'));
+
+        $response->assertSee('2 delivered orders')
+            ->assertSee(route('seller.orders.index', ['status' => 'delivered', 'payment_status' => 'pending']));
+    }
+
+    public function test_confirm_all_pending_leaves_out_orders_the_buyer_asked_to_cancel(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $this->sellerOrder($tenant, $store, 'SELLER-1001');
+        $heldOrder = $this->sellerOrder($tenant, $store, 'SELLER-1002');
+        OrderIssue::query()->create(['seller_order_id' => $heldOrder->id, 'buyer_id' => $heldOrder->order->user_id, 'type' => 'cancellation', 'details' => 'Please cancel this order.']);
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.index', ['status' => 'pending']));
+
+        $response->assertSee('Confirm all pending (1)')
+            ->assertDontSee('name="seller_order_ids[]" value="'.$heldOrder->id.'"', false);
+    }
+
+    public function test_confirm_all_pending_is_only_offered_on_the_pending_tab(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $this->sellerOrder($tenant, $store, 'SELLER-1001');
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.index'));
+
+        $response->assertSee('SELLER-1001')
+            ->assertDontSee('Confirm all pending');
+    }
+
+    public function test_orders_list_shows_ten_orders_per_page_by_default(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        foreach (range(1, 12) as $number) {
+            $this->sellerOrder($tenant, $store, sprintf('SELLER-%04d', $number));
+        }
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.index'));
+
+        $response->assertSee('Showing 1–10 of 12 orders')
+            ->assertSee(route('seller.orders.index', ['page' => 2]));
+    }
+
+    public function test_orders_list_can_show_more_rows_per_page(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        foreach (range(1, 12) as $number) {
+            $this->sellerOrder($tenant, $store, sprintf('SELLER-%04d', $number));
+        }
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.index', ['per_page' => 20]));
+
+        $response->assertSee('Showing 1–12 of 12 orders');
+    }
+
+    public function test_orders_list_ignores_an_unsupported_rows_per_page_value(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        foreach (range(1, 12) as $number) {
+            $this->sellerOrder($tenant, $store, sprintf('SELLER-%04d', $number));
+        }
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.index', ['per_page' => 1000]));
+
+        $response->assertSee('Showing 1–10 of 12 orders');
+    }
+
+    public function test_order_modal_returns_the_order_body_with_its_next_action(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $sellerOrder = $this->sellerOrder($tenant, $store, 'SELLER-1001', 'processing');
+
+        $response = $this->actingAs($seller)
+            ->withHeader('X-Order-Modal', '1')
+            ->get(route('seller.orders.show', $sellerOrder));
+
+        $response->assertSee('SELLER-1001')
+            ->assertSee('Mark as shipped')
+            ->assertSee('100 Buyer Street')
+            ->assertDontSee('<html', false);
+    }
+
+    public function test_order_page_without_the_modal_header_renders_the_full_page(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $sellerOrder = $this->sellerOrder($tenant, $store, 'SELLER-1001');
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.show', $sellerOrder));
+
+        $response->assertSee('Order details')
+            ->assertSee('<html', false);
+    }
+
+    public function test_orders_page_has_no_cash_notice_when_every_delivery_is_collected(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $this->sellerOrder($tenant, $store, 'DONE-1001', 'delivered')->update(['cod_collected_at' => now()]);
+
+        $response = $this->actingAs($seller)->get(route('seller.orders.index'));
+
+        $response->assertDontSee('cash to collect');
     }
 
     /**

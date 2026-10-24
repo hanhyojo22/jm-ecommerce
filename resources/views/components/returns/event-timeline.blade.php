@@ -89,7 +89,7 @@
             <div class="min-w-0 flex-1 pt-0.5">
                 <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                     <p class="text-sm font-semibold text-ink">{{ $label }}</p>
-                    <span class="rounded-full bg-canvas px-2 py-0.5 text-[11px] font-semibold text-muted ring-1 ring-inset ring-line">{{ $actorRole }}</span>
+                    <span class="rounded-full bg-canvas px-2 py-0.5 text-xs font-semibold text-muted ring-1 ring-inset ring-line">{{ $actorRole }}</span>
                 </div>
                 <p class="mt-0.5 text-xs text-muted">
                     <time datetime="{{ $event->created_at->toIso8601String() }}">{{ $event->created_at->format('M j, Y · g:i A') }}</time>

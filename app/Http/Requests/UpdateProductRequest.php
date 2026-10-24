@@ -40,6 +40,10 @@ class UpdateProductRequest extends FormRequest
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'images' => ['nullable', 'array', 'max:8'],
             'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_images' => ['nullable', 'array', 'max:40'],
+            'remove_images.*' => ['string', 'ulid'],
+            'image_order' => ['nullable', 'array', 'max:8'],
+            'image_order.*' => ['string', 'ulid'],
             'variants' => ['nullable', 'array', 'max:30'],
             'variants.*' => ['array:id,color,size,sku,stock_quantity,price,images'],
             'variants.*.price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
@@ -59,8 +63,19 @@ class UpdateProductRequest extends FormRequest
             $product = $this->route('product');
 
             $this->validateVariants($validator);
-            if ($product instanceof Product && $product->images()->whereNull('product_variant_id')->count() + count((array) $this->file('images', [])) + ($this->hasFile('image') ? 1 : 0) > 8) {
-                $validator->errors()->add('images', 'A product can have no more than 8 photos.');
+            if ($product instanceof Product) {
+                $productImageIds = $product->images()->pluck('id')->all();
+                if (array_diff($this->removedImageIds(), $productImageIds) !== []) {
+                    $validator->errors()->add('remove_images', 'Only this product’s photos can be removed.');
+                }
+                $sharedImageIds = $product->images()->whereNull('product_variant_id')->pluck('id')->all();
+                if (array_diff(array_filter((array) $this->input('image_order', []), 'is_string'), $sharedImageIds) !== []) {
+                    $validator->errors()->add('image_order', 'Only this product’s photos can be reordered.');
+                }
+                $keptSharedPhotos = count(array_diff($sharedImageIds, $this->removedImageIds()));
+                if ($keptSharedPhotos + count((array) $this->file('images', [])) + ($this->hasFile('image') ? 1 : 0) > 8) {
+                    $validator->errors()->add('images', 'A product can have no more than 8 photos. Remove a photo to add another.');
+                }
             }
             $variants = $this->input('variants', []);
             if ($product instanceof Product && $product->variants()->exists() && (! is_array($variants) || $variants === [])) {

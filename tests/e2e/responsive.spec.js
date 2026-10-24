@@ -445,7 +445,11 @@ test('seller order detail and product editor remain usable at each viewport', as
                 expect(listWidth.document, 'populated orders list').toBeLessThanOrEqual(listWidth.viewport);
             }
             await seller.page.getByRole('link', { name: action, exact: true }).first().click();
-            await expect(seller.page).toHaveURL(name === 'order-detail' ? /\/seller\/orders\/[^/]+$/ : /\/seller\/products\/[^/]+\/edit$/);
+            // Orders open in a modal over the list; products still go to their edit page.
+            await expect(seller.page).toHaveURL(name === 'order-detail' ? /\/seller\/orders\?order=[^&]+/ : /\/seller\/products\/[^/]+\/edit$/);
+            if (name === 'order-detail') {
+                await expect(seller.page.getByRole('dialog')).toBeVisible();
+            }
             await expect(seller.page.locator('header[data-header-role="seller"]')).toBeVisible();
             await expect(seller.page.locator('main h1')).toBeVisible();
             const width = await seller.page.evaluate(() => ({

@@ -53,7 +53,7 @@
 
                     @if ($sellerOrder->returnCases->isNotEmpty())
                         <div class="mt-4">
-                            <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">Your cases</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Your cases</p>
                             <ul class="mt-2 grid gap-2" aria-label="Return cases for {{ $sellerOrder->store->name }}">
                                 @foreach ($sellerOrder->returnCases as $case)
                                     <li>

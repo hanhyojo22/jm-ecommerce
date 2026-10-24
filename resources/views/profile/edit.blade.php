@@ -3,7 +3,7 @@
         <div class="page-shell min-h-[calc(100dvh-4.5rem)]">
             <div class="page-container">
                 <div class="max-w-[880px]">
-                    <h1 class="customer-page-title text-2xl font-bold tracking-tight text-ink">Account settings</h1>
+                    <h1 class="customer-page-title text-2xl font-semibold tracking-tight text-ink">Account settings</h1>
                     <x-marketplace.account-profile />
                 </div>
             </div>

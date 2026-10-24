@@ -37,7 +37,7 @@
     margin: 0;
     color: var(--color-fg);
     font-family: var(--font-display);
-    font-size: 1.45rem;
+    font-size: 1.5rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.2;
@@ -47,7 +47,7 @@
 .returns-section-kicker {
     margin: 0 0 0.35rem;
     color: var(--color-accent);
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     line-height: 1.5;
@@ -110,7 +110,7 @@
 
 .returns-eyebrow {
     color: var(--color-accent);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.18em;
     line-height: 1.5;
@@ -128,7 +128,7 @@
     background: #ffffff;
     color: var(--color-accent);
     font-family: var(--font-display);
-    font-size: 1.15rem;
+    font-size: 0.9375rem;
     font-weight: 600;
     letter-spacing: 0.04em;
     box-shadow: inset 0 1px 0 #fff;
@@ -137,7 +137,7 @@
 .returns-hero .returns-hero-content h1 {
     color: var(--color-fg);
     font-family: var(--font-display);
-    font-size: clamp(2.15rem, 4vw, 3.25rem);
+    font-size: clamp(22px, 1.1rem + 0.6vw, 26px);
     font-weight: 600;
     letter-spacing: -0.035em;
     line-height: 1.04;
@@ -170,7 +170,7 @@
 
 .returns-hero-stat dt {
     color: var(--color-muted);
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.13em;
     line-height: 1.5;
@@ -241,7 +241,7 @@
     border-radius: 9999px;
     background: var(--color-surface);
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
@@ -293,7 +293,7 @@
 .returns-step-copy {
     margin-top: 0.15rem;
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     line-height: 1.55;
 }
 
@@ -355,7 +355,7 @@
 .returns-action-panel > h2,
 .returns-panel.returns-action-panel > .returns-section-title {
     font-family: var(--font-display);
-    font-size: 1.45rem;
+    font-size: 1.5rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.25;
@@ -372,7 +372,7 @@
     background: #eff6ff;
     color: var(--color-accent);
     font-family: var(--font-display);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
@@ -498,7 +498,7 @@
     display: block;
     color: #94a3b8;
     font-family: var(--font-display);
-    font-size: 1.2rem;
+    font-size: 0.9375rem;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     line-height: 1;
@@ -516,7 +516,7 @@
 .returns-process p {
     margin-top: 0.25rem;
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     line-height: 1.6;
 }
 
@@ -570,7 +570,7 @@
 .returns-request-header h2 {
     color: var(--color-fg);
     font-family: var(--font-display);
-    font-size: 1.6rem;
+    font-size: 1.625rem;
     font-weight: 600;
     letter-spacing: -0.025em;
     line-height: 1.2;
@@ -585,7 +585,7 @@
     background: #fff;
     padding: 0.25rem 0.65rem;
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.5;
     white-space: nowrap;
@@ -656,7 +656,7 @@
     align-self: end;
     color: var(--color-fg);
     font-family: var(--font-display);
-    font-size: 2rem;
+    font-size: 1.625rem;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     letter-spacing: -0.03em;
@@ -677,7 +677,7 @@
     grid-area: hint;
     margin-top: 0.55rem;
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     line-height: 1.55;
 }
 
@@ -701,7 +701,7 @@
     }
 
     .returns-kpi-count {
-        font-size: 1.7rem;
+        font-size: 1.625rem;
     }
 }
 
@@ -780,7 +780,7 @@
     background: #f8fafc;
     padding: 0.15rem 0.55rem;
     color: var(--color-muted);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.5;
 }
@@ -893,7 +893,7 @@
 .returns-policy-title {
     color: var(--color-fg);
     font-family: var(--font-display);
-    font-size: clamp(2.75rem, 6vw, 4.35rem);
+    font-size: clamp(22px, 1.1rem + 0.6vw, 26px);
     font-weight: 600;
     letter-spacing: -0.045em;
     line-height: 0.98;
@@ -920,7 +920,7 @@
 .returns-policy-summary h2 {
     color: #f8fafc;
     font-family: var(--font-display);
-    font-size: 1.45rem;
+    font-size: 1.5rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.2;
@@ -982,7 +982,7 @@
 .returns-fact-value {
     color: var(--color-fg);
     font-family: var(--font-display);
-    font-size: 1.35rem;
+    font-size: 0.9375rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.2;
@@ -1052,7 +1052,7 @@
 
 .returns-policy-link span {
     color: #5b6b82;
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -1094,7 +1094,7 @@
 
 .returns-policy-kicker {
     color: var(--color-accent);
-    font-size: 0.625rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.15em;
     line-height: 1.5;
@@ -1104,7 +1104,7 @@
 .returns-policy-number {
     color: var(--color-accent);
     font-family: var(--font-display);
-    font-size: 1.55rem;
+    font-size: 1.5rem;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     letter-spacing: -0.02em;
@@ -1115,7 +1115,7 @@
     margin-top: 0.25rem;
     color: var(--color-fg);
     font-family: var(--font-display);
-    font-size: 1.65rem;
+    font-size: 1.625rem;
     font-weight: 600;
     letter-spacing: -0.025em;
     line-height: 1.2;
@@ -1171,7 +1171,7 @@
 .returns-contact-card h3 {
     color: #f8fafc;
     font-family: var(--font-display);
-    font-size: 1.65rem;
+    font-size: 1.625rem;
     font-weight: 600;
     letter-spacing: -0.025em;
     line-height: 1.2;
@@ -1263,7 +1263,7 @@
     }
 
     .returns-policy-heading h2 {
-        font-size: 1.45rem;
+        font-size: 1.5rem;
     }
 
     .returns-fact {

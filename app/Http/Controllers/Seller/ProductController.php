@@ -8,7 +8,9 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Models\AuditLog;
 use App\Models\Category;
+use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -162,12 +164,15 @@ class ProductController extends Controller
         $product = $this->editableProduct($request, $product);
         $data = $request->validated();
         $variants = $data['variants'] ?? [];
-        unset($data['image'], $data['images'], $data['variants']);
+        $removedImageIds = $data['remove_images'] ?? [];
+        $imageOrder = $data['image_order'] ?? [];
+        unset($data['image'], $data['images'], $data['variants'], $data['remove_images'], $data['image_order']);
         if ($variants !== []) {
             $data['stock_quantity'] = array_sum(array_column($variants, 'stock_quantity'));
         }
         $imagePaths = [];
         $variantImagePaths = [];
+        $removedPaths = [];
 
         try {
             foreach (array_filter([$request->file('image'), ...($request->file('images') ?? [])]) as $image) {
@@ -181,7 +186,7 @@ class ProductController extends Controller
                 unset($variants[$index]['images']);
             }
 
-            DB::transaction(function () use ($request, $product, $data, $variants, $imagePaths, $variantImagePaths): void {
+            DB::transaction(function () use ($request, $product, $data, $variants, $imagePaths, $variantImagePaths, $removedImageIds, $imageOrder, &$removedPaths): void {
                 $product = Product::query()->lockForUpdate()->findOrFail($product->id);
 
                 if ($product->status !== 'active' && $data['status'] === 'active') {
@@ -201,7 +206,13 @@ class ProductController extends Controller
                 $data['status'] = $data['status'] === 'inactive' ? 'inactive' : 'draft';
                 $product->update($data);
 
-                $position = $product->images()->count();
+                if ($removedImageIds !== []) {
+                    $removedImages = $product->images()->whereIn('id', $removedImageIds)->get();
+                    $removedPaths = $removedImages->pluck('path')->all();
+                    $product->images()->whereIn('id', $removedImageIds)->delete();
+                }
+
+                $position = (int) $product->images()->max('position') + 1;
                 foreach ($imagePaths as $imagePath) {
                     $product->images()->create(['path' => $imagePath, 'position' => $position++]);
                 }
@@ -219,6 +230,8 @@ class ProductController extends Controller
                     }
                 }
 
+                $this->renumberImages($product, $imageOrder);
+
                 AuditLog::query()->create([
                     'actor_user_id' => $request->user()->id,
                     'action' => 'product.updated',
@@ -235,6 +248,13 @@ class ProductController extends Controller
             }
 
             throw $exception;
+        }
+
+        // Past orders keep a copy of the photo path, so a removed photo's file stays while an order shows it.
+        foreach ($removedPaths as $removedPath) {
+            if (! OrderItem::query()->where('image_path', $removedPath)->exists()) {
+                $this->deleteUploadedImage($removedPath);
+            }
         }
 
         return to_route('seller.products.index')->with('status', "{$product->name} was updated.");
@@ -325,6 +345,36 @@ class ProductController extends Controller
     private function canManageProducts(Request $request, Tenant $tenant): bool
     {
         return $request->user()->tenantMemberships()->where('tenant_id', $tenant->id)->whereIn('role', ['owner', 'manager'])->exists();
+    }
+
+    /**
+     * Shared photos come first in the seller's chosen order (the first is the cover everywhere),
+     * then any new uploads, then option photos, which keep their own order.
+     *
+     * @param  list<string>  $sharedOrder
+     */
+    private function renumberImages(Product $product, array $sharedOrder): void
+    {
+        $images = $product->images()->get();
+        $rank = array_flip($sharedOrder);
+        $shared = $images->whereNull('product_variant_id')
+            ->sortBy(fn (ProductImage $image): array => [$rank[$image->id] ?? PHP_INT_MAX, $image->position])
+            ->values();
+        $variantImages = $images->whereNotNull('product_variant_id')->sortBy('position')->values();
+
+        $ordered = $shared->concat($variantImages)->values();
+        if ($ordered->every(fn (ProductImage $image, int $position): bool => (int) $image->position === $position)) {
+            return;
+        }
+
+        // Positions are unique per product, so park every photo past the end before assigning the final order.
+        $parking = (int) $images->max('position') + 1;
+        foreach ($ordered as $position => $image) {
+            $image->update(['position' => $parking + $position]);
+        }
+        foreach ($ordered as $position => $image) {
+            $image->update(['position' => $position]);
+        }
     }
 
     private function deleteUploadedImage(?string $path): void

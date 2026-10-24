@@ -25,7 +25,7 @@
                             @if ($store->logo_path)
                                 <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="h-16 w-16 rounded-2xl object-cover">
                             @else
-                                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10 text-xl font-bold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
+                                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10 text-xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
                             @endif
                             <div class="min-w-0 flex-1">
                                 <h2 class="text-xl font-semibold text-ink">Store profile</h2>

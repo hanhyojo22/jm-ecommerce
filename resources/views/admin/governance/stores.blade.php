@@ -118,7 +118,7 @@
                 </div>
 
                 <div class="mt-5 overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Seller stores">
-                    <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_6rem_6rem_7rem_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted md:grid">
+                    <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_6rem_6rem_7rem_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted md:grid">
                         <span>Store</span><span>Owner</span><span>Products</span><span>Orders</span><span>Status</span><span>Next step</span>
                     </div>
                     @forelse ($stores as $store)
@@ -128,21 +128,21 @@
                                 @if ($store->logo_path)
                                     <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="size-11 shrink-0 rounded-[10px] border border-line object-cover">
                                 @else
-                                    <span class="grid size-11 shrink-0 place-items-center rounded-[10px] bg-brand text-sm font-bold text-white" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</span>
+                                    <span class="grid size-11 shrink-0 place-items-center rounded-[10px] bg-brand text-sm font-semibold text-white" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</span>
                                 @endif
                                 <div class="min-w-0">
-                                    <p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Store</p>
+                                    <p class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Store</p>
                                     <a id="store-{{ $store->id }}-name" href="{{ route('admin.stores.show', $store) }}" title="{{ $store->name }}" class="block truncate text-sm font-semibold text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $store->name }}</a>
                                 </div>
                             </div>
                             <div class="min-w-0">
-                                <p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Owner</p>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Owner</p>
                                 <p title="{{ $owner?->name ?? 'No owner on file' }}" class="truncate text-sm text-ink">{{ $owner?->name ?? 'No owner on file' }}</p>
                             </div>
-                            <p class="flex items-baseline gap-2 text-sm font-semibold tabular-nums text-ink"><span class="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Products</span>{{ number_format($store->products_count) }}</p>
-                            <p class="flex items-baseline gap-2 text-sm font-semibold tabular-nums text-ink"><span class="text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Orders</span>{{ number_format($store->seller_orders_count) }}</p>
+                            <p class="flex items-baseline gap-2 text-sm font-semibold tabular-nums text-ink"><span class="text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Products</span>{{ number_format($store->products_count) }}</p>
+                            <p class="flex items-baseline gap-2 text-sm font-semibold tabular-nums text-ink"><span class="text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Orders</span>{{ number_format($store->seller_orders_count) }}</p>
                             <div class="flex items-center justify-between gap-3 md:block">
-                                <p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Status</p>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Status</p>
                                 <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$store->status] }}">{{ ucfirst($store->status) }}</span>
                             </div>
                             <a href="{{ route('admin.stores.show', $store) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 md:justify-self-start">View store</a>

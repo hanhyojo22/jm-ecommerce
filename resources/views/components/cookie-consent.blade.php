@@ -22,7 +22,7 @@
     <dialog data-cookie-dialog aria-labelledby="cookie-dialog-title" class="w-[calc(100%-2rem)] max-w-md max-h-[85dvh] overflow-y-auto rounded-xl border border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-slate-950/50">
         <div class="border-b border-line px-4 py-3">
             <div class="flex items-center justify-between gap-3">
-                <h2 id="cookie-dialog-title" class="text-lg font-bold">Cookie preferences</h2>
+                <h2 id="cookie-dialog-title" class="text-lg font-semibold">Cookie preferences</h2>
                 <button type="button" data-cookie-action="close" aria-label="Close cookie preferences" class="grid size-11 shrink-0 place-items-center rounded-lg text-xl hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">×</button>
             </div>
             <p class="text-sm leading-5 text-muted">Choose what JMMart may remember. Essential services stay on.</p>

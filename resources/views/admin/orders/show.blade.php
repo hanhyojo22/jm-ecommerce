@@ -99,7 +99,7 @@
 
                         @if ($sellerOrder->returnCases->isNotEmpty())
                             <div>
-                                <p class="px-4 pt-3 text-[11px] font-bold uppercase tracking-[0.1em] text-muted">Existing cases</p>
+                                <p class="px-4 pt-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted">Existing cases</p>
                                 @foreach ($sellerOrder->returnCases as $case)
                                     <a href="{{ route('admin.returns.show', $case) }}" class="returns-late-case group transition hover:bg-canvas focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand">
                                         <div class="min-w-0">

@@ -120,7 +120,7 @@
                 <section class="marketplace-surface overflow-hidden" aria-labelledby="store-heading" data-od-id="store-header">
                     <div class="flex flex-col gap-5 p-6 sm:p-8 lg:flex-row lg:items-center">
                         <div class="flex min-w-0 flex-1 flex-col items-start gap-4 sm:flex-row sm:items-center">
-                            <span class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-surface)] bg-blue-50 text-2xl font-bold text-brand">
+                            <span class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-[var(--radius-surface)] bg-blue-50 text-2xl font-semibold text-brand">
                                 @if ($sellerStore->logo_path)<img src="{{ Storage::disk('public')->url($sellerStore->logo_path) }}" alt="{{ $sellerStore->name }} logo" class="h-full w-full object-cover">@else{{ Str::upper(Str::substr($sellerStore->name, 0, 1)) }}@endif
                             </span>
                             <div class="min-w-0">
@@ -155,7 +155,7 @@
                 @if ($storeFeatured->count() > 1)
                     <section id="store-featured" class="scroll-mt-24 pt-6" aria-labelledby="store-featured-heading">
                         <div class="flex flex-wrap items-end justify-between gap-3">
-                            <h2 id="store-featured-heading" class="text-xl font-bold tracking-[-0.02em]">Featured</h2>
+                            <h2 id="store-featured-heading" class="text-xl font-semibold tracking-[-0.02em]">Featured</h2>
                             <a href="#product-results" class="text-sm font-semibold text-brand hover:text-brand-hover">View all →</a>
                         </div>
                         <div class="mt-4 marketplace-product-grid">
@@ -168,7 +168,7 @@
 
                 @if ($storeBestSellers->count() > 1)
                     <section class="pt-7" aria-labelledby="store-best-heading">
-                        <h2 id="store-best-heading" class="text-xl font-bold tracking-[-0.02em]">Best sellers</h2>
+                        <h2 id="store-best-heading" class="text-xl font-semibold tracking-[-0.02em]">Best sellers</h2>
                         <ol class="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                             @foreach ($storeBestSellers as $product)
                                 <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-2xl border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}@if ($product->stock_quantity < 1)<span class="mt-1 block font-semibold text-danger">Sold out</span>@endif</span></a></li>
@@ -196,7 +196,7 @@
                         <button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold transition hover:border-brand lg:hidden">
                             <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4" /></svg>
                             Filters
-                            @if (! empty($filterChips))<span class="rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-white">{{ count($filterChips) }}</span>@endif
+                            @if (! empty($filterChips))<span class="rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white">{{ count($filterChips) }}</span>@endif
                         </button>
                     </div>
                     @if (! empty($filterChips))
@@ -410,7 +410,7 @@
                     <div @click="closeCategories()" class="absolute inset-0 bg-slate-950/35"></div>
                     <div x-ref="categoryDialog" class="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-[16px] bg-canvas p-5 shadow-[0_-18px_40px_-24px_rgba(15,23,42,0.45)] lg:inset-x-auto lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:max-h-[80vh] lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[16px] lg:p-7">
                         <div class="mx-auto mb-5 h-1.5 w-12 rounded-full bg-slate-300 lg:hidden"></div>
-                        <div class="flex items-start justify-between gap-4"><div><h2 id="all-categories-heading" class="text-2xl font-bold tracking-[-0.02em]">All categories</h2><p class="mt-1 text-sm text-muted">Browse products by category.</p></div><button type="button" data-category-focus @click="closeCategories()" class="inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-line bg-white text-muted transition hover:text-ink" aria-label="Close categories"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+                        <div class="flex items-start justify-between gap-4"><div><h2 id="all-categories-heading" class="text-2xl font-semibold tracking-[-0.02em]">All categories</h2><p class="mt-1 text-sm text-muted">Browse products by category.</p></div><button type="button" data-category-focus @click="closeCategories()" class="inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-line bg-white text-muted transition hover:text-ink" aria-label="Close categories"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
                         <div class="mt-7 space-y-7">
                             @foreach ($categoryGroups as $groupName => $groupCategories)
                                 <section aria-labelledby="category-group-{{ Str::slug($groupName) }}"><h3 id="category-group-{{ Str::slug($groupName) }}" class="text-sm font-semibold">{{ $groupName }}</h3><div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">@foreach ($groupCategories as $category)<x-marketplace.category-card :category="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...array_diff_key($catalogQueryParams, ['category' => true]), 'category' => $category->slug])" :selected="request('category') === $category->slug" />@endforeach</div></section>

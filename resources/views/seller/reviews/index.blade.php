@@ -1,25 +1,26 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="sc-page-head">
             <div>
-                <h1 class="text-[28px] font-bold leading-[1.3] tracking-[-0.02em] text-ink">Reviews &amp; conversations</h1>
-            </div>
-            <p class="pt-2 text-xs text-muted">{{ number_format($reviewCount + $discussionCount) }} {{ Str::plural('conversation', $reviewCount + $discussionCount) }}</p>
+                <h1 class="sc-title">Reviews &amp; conversations</h1>            </div>
         </div>
     </x-slot>
 
     <div class="page-shell" data-seller-reviews>
         <div class="page-container seller-workspace-page">
-            @if (session('status'))<p class="mb-5 rounded-lg bg-green-50 px-4 py-3 text-sm text-success" role="status">{{ session('status') }}</p>@endif
-            @if ($errors->any())<p class="mb-5 rounded-lg bg-rose-50 px-4 py-3 text-sm text-danger" role="alert">{{ $errors->first() }}</p>@endif
+            @if (session('status'))<p class="sc-notice mb-5" data-tone="success" role="status">{{ session('status') }}</p>@endif
+            @if ($errors->any())<p class="sc-notice mb-5" data-tone="danger" role="alert">{{ $errors->first() }}</p>@endif
             <section class="seller-reviews-board" aria-label="Store reviews and conversations">
                 <div class="seller-review-summary">
-                    <strong class="seller-review-score">{{ $averageRating === null ? '—' : number_format($averageRating, 1) }}</strong>
+                    @if ($averageRating === null)
+                        <div><p class="text-[15px] font-semibold text-ink">No ratings yet</p><p class="text-[13px] text-muted">{{ number_format($reviewCount) }} product {{ Str::plural('review', $reviewCount) }} · {{ number_format($reviewCount + $discussionCount) }} {{ Str::plural('conversation', $reviewCount + $discussionCount) }}</p></div>
+                    @else
+                    <strong class="seller-review-score">{{ number_format($averageRating, 1) }}</strong>
                     <div>
                         <div class="seller-review-stars" role="img" aria-label="{{ $averageRating === null ? 'No ratings yet' : number_format($averageRating, 1).' out of 5 stars' }}">
                             @foreach (range(1, 5) as $star)<span @class(['text-slate-300' => $star > round($averageRating ?? 0)])>&#9733;</span>@endforeach
                         </div>
-                        <p class="text-xs text-muted">{{ number_format($reviewCount) }} product {{ Str::plural('review', $reviewCount) }}</p>
+                        <p class="text-[13px] text-muted">{{ number_format($reviewCount) }} product {{ Str::plural('review', $reviewCount) }} · {{ number_format($reviewCount + $discussionCount) }} {{ Str::plural('conversation', $reviewCount + $discussionCount) }}</p>
                     </div>
                     <div class="seller-review-bars" role="group" aria-label="Review rating distribution">
                         @foreach (range(5, 1) as $star)
@@ -29,6 +30,7 @@
                             </div>
                         @endforeach
                     </div>
+                    @endif
                 </div>
 
                 <section aria-labelledby="seller-product-reviews-heading">

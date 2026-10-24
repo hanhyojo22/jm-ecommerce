@@ -1,8 +1,8 @@
 <footer class="border-t border-line bg-white text-[13px] leading-6 text-muted">
     <div class="marketplace-container flex flex-col gap-4 py-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <a href="{{ route('home') }}" class="inline-flex items-center text-xl font-extrabold tracking-[-0.05em] text-ink" aria-label="JMMart marketplace home">
-                <span class="mr-2 grid size-[27px] place-items-center rounded-lg bg-brand text-sm font-extrabold text-white" aria-hidden="true">jm</span>JM<span class="text-brand">Mart.</span>
+            <a href="{{ route('home') }}" class="inline-flex items-center text-xl font-bold tracking-[-0.05em] text-ink" aria-label="JMMart marketplace home">
+                <span class="mr-2 grid size-[27px] place-items-center rounded-lg bg-brand text-sm font-bold text-white" aria-hidden="true">jm</span>JM<span class="text-brand">Mart.</span>
             </a>
             <span>Good finds. Great local stores.</span>
         </div>

@@ -43,7 +43,7 @@
                 @forelse ($stores as $store)
                     <a href="{{ route('catalog.store', $store->slug) }}" class="marketplace-surface group min-w-0 p-5 transition hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                         <div class="flex items-center gap-3">
-                            <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-blue-50 text-sm font-bold text-brand-hover">
+                            <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-blue-50 text-sm font-semibold text-brand-hover">
                                 @if ($store->logo_path)
                                     <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="size-full object-cover">
                                 @else

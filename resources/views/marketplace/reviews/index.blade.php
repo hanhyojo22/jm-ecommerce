@@ -2,8 +2,8 @@
     <x-marketplace.account-shell active="reviews">
         <header class="flex flex-wrap items-end justify-between gap-4">
             <div>
-                <p class="text-xs font-bold uppercase tracking-[0.14em] text-brand">Your feedback</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">My Reviews</h1>
+                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Your feedback</p>
+                <h1 class="mt-2 text-3xl font-semibold tracking-tight text-ink">My Reviews</h1>
             </div>
             @if ($reviews->total() > 0)
                 <p class="rounded-full border border-line bg-white px-3 py-2 text-sm font-semibold text-ink">{{ $reviews->total() }} {{ Str::plural('review', $reviews->total()) }} shared</p>

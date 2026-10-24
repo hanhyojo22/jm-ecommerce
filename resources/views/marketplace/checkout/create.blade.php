@@ -15,7 +15,7 @@
         }">
             <a href="{{ route('cart.index') }}" class="inline-flex min-h-11 items-center self-start text-sm font-semibold text-brand hover:text-brand-hover"><span aria-hidden="true">←</span> Back to cart</a>
             <div class="grid gap-2">
-                <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand">Almost there</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand">Almost there</p>
                 <h1 class="marketplace-page-title">Checkout</h1>
             </div>
 
@@ -51,7 +51,7 @@
                                 <a href="{{ route('delivery-addresses.index') }}" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">Manage delivery addresses</a>
                             </div>
                         @endif
-                        <h3 class="mt-6 border-t border-line pt-6 text-xs font-bold uppercase tracking-[0.12em] text-muted">Delivery details</h3>
+                        <h3 class="mt-6 border-t border-line pt-6 text-xs font-semibold uppercase tracking-[0.12em] text-muted">Delivery details</h3>
                         <p class="mt-2 text-xs text-muted">We'll save this address for your next checkout. Fill in any missing details from an older saved address.</p>
                         <div class="mt-6 grid gap-6 sm:grid-cols-2">
                             <div>
@@ -127,7 +127,7 @@
                                 </section>
                             @endforeach
                         </div>
-                        <dl class="mt-6 grid gap-4 text-sm"><div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-muted"><dt>Subtotal</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div><div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-muted"><dt>Shipping</dt><dd class="text-right font-semibold text-success">Free</dd></div><div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 border-t border-line pt-6 font-semibold text-ink"><dt>Total to pay</dt><dd class="whitespace-nowrap text-right text-xl font-bold tabular-nums">₱{{ number_format($subtotal, 2) }}</dd></div></dl>
+                        <dl class="mt-6 grid gap-4 text-sm"><div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-muted"><dt>Subtotal</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div><div class="grid grid-cols-[minmax(0,1fr)_auto] gap-4 text-muted"><dt>Shipping</dt><dd class="text-right font-semibold text-success">Free</dd></div><div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 border-t border-line pt-6 font-semibold text-ink"><dt>Total to pay</dt><dd class="whitespace-nowrap text-right text-xl font-semibold tabular-nums">₱{{ number_format($subtotal, 2) }}</dd></div></dl>
                         <button type="submit" :disabled="placing" class="mt-6 flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:bg-slate-300 max-lg:hidden" x-text="placing ? 'Placing order…' : 'Place order · ₱{{ number_format($subtotal, 2) }}'">Place order · ₱{{ number_format($subtotal, 2) }}</button>
                         <p class="mt-3 text-center text-xs leading-5 text-muted max-lg:hidden">You will pay on delivery.</p>
                     </div>
@@ -141,7 +141,7 @@
                     <div class="marketplace-container flex items-center gap-4">
                         <div class="min-w-0">
                             <p class="text-xs text-muted">Total to pay</p>
-                            <p class="truncate text-lg font-bold tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</p>
+                            <p class="truncate text-lg font-semibold tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</p>
                         </div>
                         <button type="submit" :disabled="placing" class="ml-auto flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-6 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:bg-slate-300" x-text="placing ? 'Placing order…' : 'Place order'">Place order</button>
                     </div>

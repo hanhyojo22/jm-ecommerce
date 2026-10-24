@@ -109,6 +109,10 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
 
             await page.goto('/seller/orders');
             await page.getByRole('link', { name: 'QA-REVIEW-001' }).click();
+            const orderModal = page.getByRole('dialog', { name: 'QA-REVIEW-001' });
+            await expect(orderModal).toBeVisible();
+            await expect(page).toHaveURL(/\/seller\/orders\?order=/);
+            await orderModal.getByRole('link', { name: 'Full page' }).click();
             await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
             expect(await page.evaluate(() => {
                 const container = document.querySelector('.seller-workspace-page').getBoundingClientRect();

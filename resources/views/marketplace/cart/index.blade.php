@@ -71,7 +71,7 @@
                                             <div class="flex min-w-0 items-center gap-3">
                                                 <input type="checkbox" data-store-checkbox="{{ $storeId }}" @checked($storeAllSelected) x-on:change="toggleStore('{{ $storeId }}')" @disabled($storeSelectable->isEmpty()) aria-label="Select all items from {{ $store->name }}" class="size-5 shrink-0 rounded border-line text-brand focus:ring-brand disabled:opacity-40">
                                                 <div class="min-w-0">
-                                                    <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Sold by</p>
+                                                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Sold by</p>
                                                     <a id="store-{{ $store->id }}" href="{{ route('catalog.store', $store->slug) }}" class="mt-0.5 block truncate text-sm font-semibold text-brand transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $store->name }}</a>
                                                 </div>
                                             </div>
@@ -91,7 +91,7 @@
                                                         @if ($item->imagePath())
                                                             <img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="{{ $item->product->name }}" width="96" height="96" loading="lazy" class="h-full w-full object-cover">
                                                         @else
-                                                            <div class="grid h-full place-items-center text-lg font-bold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($store->name, 0, 1)) }}</div>
+                                                            <div class="grid h-full place-items-center text-lg font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($store->name, 0, 1)) }}</div>
                                                         @endif
                                                     </a>
 
@@ -113,7 +113,7 @@
                                                                 <span class="grid h-11 min-w-10 place-items-center border-x border-line text-sm font-semibold">{{ $item->quantity }}</span>
                                                                 <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
                                                             </form>
-                                                            <p class="ml-auto shrink-0 whitespace-nowrap text-sm font-bold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
+                                                            <p class="ml-auto shrink-0 whitespace-nowrap text-sm font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
                                                             <form method="POST" action="{{ route('cart.destroy', $item) }}">
                                                                 @csrf
                                                                 @method('DELETE')
@@ -125,7 +125,7 @@
                                                     </div>
 
                                                     <div class="hidden min-w-36 items-end justify-between gap-4 sm:flex sm:flex-col">
-                                                        <p class="text-right text-base font-bold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
+                                                        <p class="text-right text-base font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
                                                         <div class="flex items-center gap-1.5">
                                                         <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-[10px] border border-line bg-surface">
                                                             @csrf
@@ -159,7 +159,7 @@
                                     <div class="flex justify-between text-muted"><span>Subtotal (<span x-text="selectedQuantityLabel">{{ $selectedQuantity }} {{ Str::plural('item', $selectedQuantity) }}</span>)</span><span class="tabular-nums">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></span></div>
                                     <div class="flex justify-between text-muted"><span>Shipping</span><span class="font-semibold text-success">Free</span></div>
                                 </div>
-                                <div class="mt-5 flex items-end justify-between"><span class="font-semibold text-ink">Total</span><span class="text-2xl font-bold tabular-nums tracking-[-0.04em] text-ink">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></span></div>
+                                <div class="mt-5 flex items-end justify-between"><span class="font-semibold text-ink">Total</span><span class="text-2xl font-semibold tabular-nums tracking-[-0.04em] text-ink">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></span></div>
 
                                 <a href="{{ route('checkout.create') }}" x-bind:aria-disabled="checkoutReady ? 'false' : 'true'" x-bind:tabindex="checkoutReady ? '0' : '-1'" x-on:click="openCheckout($event)" x-bind:class="checkoutReady ? '' : 'pointer-events-none opacity-50'" class="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition duration-200 hover:bg-brand-hover active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Check out (<span x-text="selectedCount">{{ $selectedIds->count() }}</span>)</a>
                                 <p x-cloak x-show="selectedCount === 0" class="mt-3 text-center text-xs font-medium text-muted" role="status">Select an item to check out.</p>
@@ -180,8 +180,8 @@
                                 All
                             </label>
                             <div class="min-w-0 flex-1 text-right">
-                                <p class="text-[11px] font-medium text-muted">Total (<span x-text="selectedCount">{{ $selectedIds->count() }}</span>)</p>
-                                <p class="truncate text-lg font-bold tabular-nums tracking-[-0.03em] text-ink">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></p>
+                                <p class="text-xs font-medium text-muted">Total (<span x-text="selectedCount">{{ $selectedIds->count() }}</span>)</p>
+                                <p class="truncate text-lg font-semibold tabular-nums tracking-[-0.03em] text-ink">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></p>
                             </div>
                             <a href="{{ route('checkout.create') }}" x-bind:aria-disabled="checkoutReady ? 'false' : 'true'" x-bind:tabindex="checkoutReady ? '0' : '-1'" x-on:click="openCheckout($event)" x-bind:class="checkoutReady ? '' : 'pointer-events-none opacity-50'" class="inline-flex min-h-12 shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Check out</a>
                         </div>

@@ -26,7 +26,7 @@
                     </div>
 
                     <div class="returns-policy-summary">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200">One record, start to finish</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">One record, start to finish</p>
                         <h2 class="mt-2">The short version</h2>
                         <ul class="mt-5">
                             <li>
@@ -79,7 +79,7 @@
 
             <div class="mt-10 grid items-start gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
                 <aside class="returns-policy-toc" aria-label="On this page">
-                    <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-muted">On this page</p>
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-muted">On this page</p>
                     <nav class="grid gap-0.5">
                         <a href="#cancel" class="returns-policy-link"><span>01</span> Cancel before preparation</a>
                         <a href="#after-delivery" class="returns-policy-link"><span>02</span> Problems after delivery</a>
@@ -190,7 +190,7 @@
                             </div>
                         </div>
                         <div class="returns-contact-card mt-6">
-                            <p class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200">
+                            <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">
                                 <x-returns.icon name="chat" class="size-4" />
                                 JMMart support
                             </p>

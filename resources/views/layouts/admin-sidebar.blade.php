@@ -75,7 +75,7 @@
             <nav class="space-y-5" aria-label="Admin sections">
                 @foreach ($groups as $group)
                     <div>
-                        <h2 class="px-3 pb-2 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">{{ $group['label'] }}</h2>
+                        <h2 class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">{{ $group['label'] }}</h2>
                         <div class="space-y-1">
                             @foreach ($group['items'] as $item)
                                 @if ($item['icon'] !== 'accounts' || auth()->user()?->isOwner())

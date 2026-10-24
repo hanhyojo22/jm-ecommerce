@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Actions\MarkCodPaymentPaid;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Conversation;
 use App\Models\SellerOrder;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +18,9 @@ use Illuminate\View\View;
 
 class SellerOrderController extends Controller
 {
+    /** Rows-per-page choices on the orders list; the first one is the default. */
+    public const PER_PAGE_OPTIONS = [10, 20, 50];
+
     public function index(Request $request): View
     {
         $tenant = $this->activeTenant($request);
@@ -30,7 +34,8 @@ class SellerOrderController extends Controller
         $canManageOrders = $this->canManageOrders($request, $tenant);
 
         $ordersQuery = $this->filteredOrders($tenant, $filters);
-        $orders = $ordersQuery->paginate(20)->withQueryString();
+        $perPage = in_array((int) $request->query('per_page'), self::PER_PAGE_OPTIONS, true) ? (int) $request->query('per_page') : self::PER_PAGE_OPTIONS[0];
+        $orders = $ordersQuery->paginate($perPage)->onEachSide(1)->appends($request->except('order', 'page'));
 
         $orders->getCollection()->each(function (SellerOrder $sellerOrder) use ($canManageOrders): void {
             $sellerOrder->setAttribute(
@@ -42,6 +47,7 @@ class SellerOrderController extends Controller
         return view('seller.orders.index', [
             'orders' => $orders,
             'filters' => $filters,
+            'cashToCollectCount' => $tenant->sellerOrders()->where('status', 'delivered')->whereNull('cod_collected_at')->count(),
             'statusCounts' => $tenant->sellerOrders()
                 ->selectRaw('status, count(*) as aggregate')
                 ->groupBy('status')
@@ -63,6 +69,16 @@ class SellerOrderController extends Controller
             'available_transitions',
             $canManageOrders ? ($sellerOrder->issues->contains(fn ($issue) => $issue->status === 'open' && $issue->type === 'cancellation') ? ['cancelled'] : UpdateSellerOrderStatus::transitionsFor($sellerOrder->status)) : [],
         );
+
+        // The orders list opens an order in a modal and asks for just its body; a direct visit
+        // (or a browser without JavaScript) still gets the full page.
+        if ($request->header('X-Order-Modal') === '1') {
+            return view('seller.orders._modal', [
+                'sellerOrder' => $sellerOrder,
+                'canManageOrders' => $canManageOrders,
+                'conversation' => Conversation::query()->where('seller_order_id', $sellerOrder->id)->first(),
+            ]);
+        }
 
         return view('seller.orders.show', compact('sellerOrder', 'canManageOrders'));
     }
@@ -131,6 +147,8 @@ class SellerOrderController extends Controller
     {
         return $tenant->sellerOrders()
             ->with(['items.product.images', 'order.payment'])
+            // Bulk confirm skips orders the buyer asked to cancel; confirming one would fail the batch.
+            ->withExists(['issues as has_open_cancellation' => fn (Builder $query): Builder => $query->where('status', 'open')->where('type', 'cancellation')])
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 

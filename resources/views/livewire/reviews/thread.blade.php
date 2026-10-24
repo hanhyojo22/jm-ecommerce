@@ -54,11 +54,11 @@
                         @if ($official && $store->logo_path)
                             <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-8 shrink-0 rounded-full object-cover">
                         @else
-                            <span class="grid size-8 shrink-0 place-items-center rounded-full {{ $official ? 'bg-blue-50 text-brand' : 'bg-slate-100 text-slate-600' }} text-xs font-bold" aria-hidden="true">{{ Str::upper(Str::substr($official ? $store->name : $response->user->name, 0, 1)) }}</span>
+                            <span class="grid size-8 shrink-0 place-items-center rounded-full {{ $official ? 'bg-blue-50 text-brand' : 'bg-slate-100 text-slate-600' }} text-xs font-semibold" aria-hidden="true">{{ Str::upper(Str::substr($official ? $store->name : $response->user->name, 0, 1)) }}</span>
                         @endif
                         <div class="min-w-0 flex-1">
                             <div class="review-comment-body">
-                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"><span class="font-semibold text-ink">{{ $official ? $store->name : $response->user->name }}</span>@if ($official)<span class="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand">Seller</span>@endif</div>
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"><span class="font-semibold text-ink">{{ $official ? $store->name : $response->user->name }}</span>@if ($official)<span class="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-brand">Seller</span>@endif</div>
                                 <p class="mt-0.5 whitespace-pre-line break-words text-sm leading-6 text-ink">{{ $response->body }}</p>
                             </div>
                             <div class="review-actions">

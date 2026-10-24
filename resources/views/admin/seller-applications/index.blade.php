@@ -67,22 +67,22 @@
                 </nav>
 
                 <div class="mt-5 overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Seller applications">
-                    <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(8rem,.8fr)_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted md:grid">
+                    <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(8rem,.8fr)_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted md:grid">
                         <span>Applicant</span><span>Proposed store</span><span>Status / submitted</span><span>Next step</span>
                     </div>
                     @forelse ($applications as $application)
                         <article class="grid gap-3 border-b border-line px-4 py-4 last:border-0 sm:px-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(8rem,.8fr)_auto] md:items-center md:gap-4">
                             <div class="min-w-0">
-                                <p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Applicant</p>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Applicant</p>
                                 <p title="{{ $application->user->name }}" class="truncate text-sm font-semibold text-ink">{{ $application->user->name }}</p>
                                 <p title="{{ $application->user->email }}" class="mt-0.5 truncate text-xs text-muted">{{ $application->user->email }}</p>
                             </div>
                             <div class="min-w-0">
-                                <p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Proposed store</p>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Proposed store</p>
                                 <p title="{{ $application->store_name ?: 'Not provided' }}" class="truncate text-sm text-ink">{{ $application->store_name ?: 'Not provided' }}</p>
                             </div>
                             <div>
-                                <p class="mb-1 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Status / submitted</p>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Status / submitted</p>
                                 <div class="flex flex-wrap items-center justify-between gap-2 md:block">
                                     <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ $statusStyles[$application->status] ?? 'bg-canvas text-muted ring-line' }}">{{ str_replace('_', ' ', ucfirst($application->status)) }}</span>
                                     <time @if ($application->submitted_at) datetime="{{ $application->submitted_at->toIso8601String() }}" @endif class="text-xs text-muted md:mt-1 md:block">{{ $application->submitted_at?->format('M j, Y') ?? 'Not submitted' }}</time>

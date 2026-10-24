@@ -1,6 +1,7 @@
 @php
     $editing = $product !== null;
-    $existingVariants = $product?->variants?->map(fn ($variant) => [...$variant->only(['id', 'color', 'size', 'sku', 'stock_quantity', 'price']), 'image_urls' => $variant->images->map(fn ($image) => Storage::disk('product_images')->url($image->path))->all()])->all() ?? [];
+    $existingVariants = $product?->variants?->map(fn ($variant) => [...$variant->only(['id', 'color', 'size', 'sku', 'stock_quantity', 'price']), 'photos' => $variant->images->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all()])->all() ?? [];
+    $existingPhotos = $product?->images?->whereNull('product_variant_id')->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all() ?? [];
     $variantRows = collect(old('variants', $existingVariants))
         ->values()
         ->map(fn ($variant, $index) => ['key' => $index, ...$variant])
@@ -8,13 +9,35 @@
 @endphp
 
 <div class="page-shell">
-    <div class="page-container">
-        @if ($editing && $product->moderation_reason)<div class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong>Administrator feedback</strong><p class="mt-1 whitespace-pre-line">{{ $product->moderation_reason }}</p></div>@endif
+    <div class="page-container seller-workspace-page">
+        @if ($editing && $product->moderation_reason)<div class="sc-notice mb-5 !block" data-tone="warning"><strong>Administrator feedback</strong><p class="mt-1 whitespace-pre-line">{{ $product->moderation_reason }}</p></div>@endif
         @if ($editing && in_array($product->status, ['pending', 'inactive'], true))
-            <div class="mb-5 rounded-xl border border-line bg-white p-5"><x-marketplace.product-status :status="$product->status" /><p class="mt-3 text-sm text-muted">{{ $product->status === 'pending' ? 'Your submission is under review. Editing is paused until the administrator records a decision.' : 'This listing is suspended. Contact the platform administrator before making changes.' }}</p><a href="{{ route('seller.products.index') }}" class="mt-3 inline-flex min-h-11 items-center font-semibold text-brand">Back to products</a></div>
+            <div class="sc-card sc-card-pad mb-5"><x-marketplace.product-status :status="$product->status" /><p class="mt-3 text-sm text-muted">{{ $product->status === 'pending' ? 'Your submission is under review. Editing is paused until the administrator records a decision.' : 'This listing is suspended. Contact the platform administrator before making changes.' }}</p><a href="{{ route('seller.products.index') }}" class="mt-3 inline-flex min-h-11 items-center font-semibold text-brand">Back to products</a></div>
         @else
         <form method="POST" enctype="multipart/form-data" action="{{ $formAction }}"
-            x-data="{ dirty: false, saving: false, previews: [], variants: @js($variantRows), nextKey: {{ count($variantRows) }}, addVariant() { this.variants.push({ key: this.nextKey++, color: '', size: '', sku: '', stock_quantity: 0, price: '' }); this.dirty = true } }"
+            x-data="{
+                dirty: false, saving: false, variants: @js($variantRows), nextKey: {{ count($variantRows) }},
+                addVariant() { this.variants.push({ key: this.nextKey++, color: '', size: '', sku: '', stock_quantity: 0, price: '' }); this.dirty = true },
+                {{-- Photo manager: saved photos can be reordered, removed (undoable until save) and set as cover; new files can be dropped, previewed and removed before upload. --}}
+                photos: @js($existingPhotos), removed: [], newFiles: [], previews: [], maxPhotos: 8, photoNotice: '',
+                get keptPhotos() { return this.photos.filter(photo => ! this.removed.includes(photo.id)) },
+                get photoCount() { return this.keptPhotos.length + this.newFiles.length },
+                move(index, offset) { const target = index + offset; if (target < 0 || target >= this.photos.length) return; const list = [...this.photos]; [list[index], list[target]] = [list[target], list[index]]; this.photos = list; this.dirty = true },
+                makeCover(index) { const list = [...this.photos]; list.unshift(list.splice(index, 1)[0]); this.photos = list; this.dirty = true; this.photoNotice = 'Cover photo updated.' },
+                toggleRemove(id) { this.removed = this.removed.includes(id) ? this.removed.filter(other => other !== id) : [...this.removed, id]; this.dirty = true },
+                addFiles(fileList) {
+                    const room = this.maxPhotos - this.photoCount;
+                    const files = [...fileList].filter(file => ['image/jpeg', 'image/png', 'image/webp'].includes(file.type));
+                    this.newFiles = [...this.newFiles, ...files.slice(0, Math.max(0, room))];
+                    this.photoNotice = files.length > room ? `Only ${this.maxPhotos} photos fit. Remove one to add more.` : (files.length < fileList.length ? 'Only JPEG, PNG and WebP photos can be added.' : '');
+                    this.syncFiles();
+                },
+                removeNew(index) { this.newFiles.splice(index, 1); this.syncFiles() },
+                syncFiles() {
+                    const transfer = new DataTransfer(); this.newFiles.forEach(file => transfer.items.add(file)); this.$refs.images.files = transfer.files;
+                    this.previews.forEach(url => URL.revokeObjectURL(url)); this.previews = this.newFiles.map(file => URL.createObjectURL(file)); this.dirty = true;
+                },
+            }"
             x-init="window.addEventListener('beforeunload', e => { if (dirty && !saving) { e.preventDefault(); e.returnValue = ''; } })"
             @submit="saving = true; dirty = false"
             class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -22,9 +45,9 @@
             @if ($formMethod === 'PATCH') @method('PATCH') @endif
 
             <div class="min-w-0 space-y-6">
-                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-details-heading">
+                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-details-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">1</span>
+                        <span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">1</span>
                         <div><h2 id="product-details-heading" class="text-lg font-semibold text-ink">Product details</h2><p class="mt-1 text-sm text-muted">Describe the item customers will receive.</p></div>
                     </div>
                     <div class="mt-6 space-y-5">
@@ -38,30 +61,57 @@
                     </div>
                 </section>
 
-                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-photos-heading">
+                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-photos-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">2</span>
+                        <span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">2</span>
                         <div><h2 id="product-photos-heading" class="text-lg font-semibold text-ink">Product photos</h2><p class="mt-1 text-sm text-muted">Show the front, back, details, and available colors.</p></div>
                     </div>
-                    @if ($editing && $product->images->whereNull('product_variant_id')->isNotEmpty())
-                        <div class="mt-5"><p class="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Current photos</p><div class="flex gap-3 overflow-x-auto">@foreach ($product->images->whereNull('product_variant_id') as $image)<img src="{{ Storage::disk('product_images')->url($image->path) }}" alt="Existing product image {{ $loop->iteration }}" class="size-20 shrink-0 rounded-[10px] border border-line object-cover">@endforeach</div></div>
-                    @endif
-                    <div class="mt-5 rounded-2xl border-2 border-dashed border-line bg-canvas p-5 text-center transition focus-within:border-brand">
-                        <label for="images" class="block cursor-pointer text-sm font-semibold text-brand">Choose product photos</label>
-                        <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple
-                            @change="dirty = true; previews.forEach(url => URL.revokeObjectURL(url)); previews = [...$event.target.files].map(file => URL.createObjectURL(file))"
-                            class="mt-3 block w-full cursor-pointer rounded-lg text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:font-semibold file:text-brand focus-visible:outline-2 focus-visible:outline-brand">
-                        <p class="mt-2 text-xs text-muted">Up to 8 photos, 5 MB each · JPEG, PNG, or WebP.</p>
-                    </div>
-                    <div x-show="previews.length" x-cloak class="mt-4 flex gap-3 overflow-x-auto" aria-label="Selected photo previews"><template x-for="url in previews" :key="url"><img :src="url" alt="Selected product photo preview" class="size-20 shrink-0 rounded-[10px] border border-line object-cover"></template></div>
-                    @if ($editing)<p class="mt-3 text-xs text-muted">New photos are added after the current photos.</p>@endif
+                    <div class="mt-5 flex items-baseline justify-between gap-3"><p class="text-sm text-muted">The first photo is the cover buyers see in search and on your storefront.</p><p class="shrink-0 text-sm font-semibold tabular-nums text-ink" x-text="photoCount + ' of ' + maxPhotos">{{ count($existingPhotos) }} of 8</p></div>
+
+                    <ul class="sc-photo-grid mt-3" aria-label="Product photos" x-show="photos.length || previews.length">
+                        <template x-for="(photo, index) in photos" :key="photo.id">
+                            <li class="sc-photo" :class="removed.includes(photo.id) && 'is-removed'">
+                                <img :src="photo.url" :alt="'Product photo ' + (index + 1)">
+                                <span class="sc-photo-cover" x-show="! removed.includes(photo.id) && keptPhotos[0]?.id === photo.id">Cover</span>
+                                <span class="sc-photo-removed" x-show="removed.includes(photo.id)">Will be removed</span>
+                                <div class="sc-photo-tools">
+                                    <template x-if="! removed.includes(photo.id)"><span class="contents">
+                                        <button type="button" @click="move(index, -1)" :disabled="index === 0" :aria-label="'Move photo ' + (index + 1) + ' left'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+                                        <button type="button" @click="makeCover(index)" x-show="keptPhotos[0]?.id !== photo.id" :aria-label="'Make photo ' + (index + 1) + ' the cover'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></button>
+                                        <button type="button" @click="move(index, 1)" :disabled="index === photos.length - 1" :aria-label="'Move photo ' + (index + 1) + ' right'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+                                    </span></template>
+                                    <button type="button" @click="toggleRemove(photo.id)" :aria-label="(removed.includes(photo.id) ? 'Keep photo ' : 'Remove photo ') + (index + 1)" :class="removed.includes(photo.id) ? 'is-undo' : 'is-remove'"><span x-text="removed.includes(photo.id) ? 'Undo' : ''"></span><svg x-show="! removed.includes(photo.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+                                </div>
+                                <input x-show="false" x-bind:disabled="removed.includes(photo.id)" type="hidden" name="image_order[]" :value="photo.id">
+                            </li>
+                        </template>
+                        <template x-for="(url, index) in previews" :key="url">
+                            <li class="sc-photo is-new">
+                                <img :src="url" :alt="'New photo ' + (index + 1)">
+                                <span class="sc-photo-cover" x-show="keptPhotos.length === 0 && index === 0">Cover</span>
+                                <span class="sc-photo-new">New</span>
+                                <div class="sc-photo-tools"><button type="button" class="is-remove" @click="removeNew(index)" :aria-label="'Remove new photo ' + (index + 1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+                            </li>
+                        </template>
+                    </ul>
+                    <template x-for="id in removed" :key="id"><input type="hidden" name="remove_images[]" :value="id"></template>
+
+                    <label for="images" class="sc-dropzone mt-4" x-data="{ over: false }" :class="over && 'is-over'" x-show="photoCount < maxPhotos" @dragover.prevent="over = true" @dragleave.prevent="over = false" @drop.prevent="over = false; addFiles($event.dataTransfer.files)">
+                        <svg class="size-6 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/><path d="M17 2v5M14.5 4.5h5"/></svg>
+                        <span class="text-sm font-semibold text-brand">Choose product photos</span>
+                        <span class="text-xs text-muted">or drag them here · up to 8 photos, 5 MB each · JPEG, PNG or WebP · square, well-lit shots work best</span>
+                        <input id="images" x-ref="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple class="sr-only" @change="const picked = [...$event.target.files]; $event.target.value = ''; addFiles(picked)">
+                    </label>
+                    <p x-show="photoCount >= maxPhotos" x-cloak class="mt-3 text-sm text-muted">You’ve reached 8 photos. Remove one to add another.</p>
+                    <p class="mt-2 text-sm text-muted" x-show="photoNotice" x-text="photoNotice" role="status" aria-live="polite"></p>
+                    @if ($editing)<p class="mt-2 text-xs text-muted">Photo changes are saved with the rest of the listing.</p>@endif
                     <x-input-error :messages="$errors->get('images')" class="mt-2" />
                     @foreach ($errors->get('images.*') as $messages) @foreach ($messages as $message)<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@endforeach @endforeach
                 </section>
 
-                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-pricing-heading">
+                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-pricing-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">3</span>
+                        <span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">3</span>
                         <div><h2 id="product-pricing-heading" class="text-lg font-semibold text-ink">Price and inventory</h2><p class="mt-1 text-sm text-muted">Set the base price. Each variant can use a different price and its own photos.</p></div>
                     </div>
                     <div class="mt-6 grid gap-5 sm:grid-cols-2">
@@ -72,9 +122,9 @@
                     </div>
                 </section>
 
-                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="product-variants-heading">
+                <section class="seller-form-card p-5 sm:p-6" aria-labelledby="product-variants-heading">
                     <div class="flex flex-wrap items-start justify-between gap-4">
-                        <div class="flex items-start gap-3"><span class="grid size-8 shrink-0 place-items-center rounded bg-ink text-sm font-bold text-white" aria-hidden="true">4</span><div><h2 id="product-variants-heading" class="text-lg font-semibold text-ink">Color and size options</h2><p class="mt-1 max-w-xl text-sm text-muted">Add one row for each combination customers can buy. Each needs its own SKU and stock count.</p></div></div>
+                        <div class="flex items-start gap-3"><span class="grid size-7 shrink-0 place-items-center rounded-full border border-line text-[13px] font-semibold text-muted" aria-hidden="true">4</span><div><h2 id="product-variants-heading" class="text-lg font-semibold text-ink">Color and size options</h2><p class="mt-1 max-w-xl text-sm text-muted">Add one row for each combination customers can buy. Each needs its own SKU and stock count.</p></div></div>
                         <button type="button" @click="addVariant()" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-brand px-4 text-sm font-semibold text-brand transition hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-brand">+ Add option</button>
                     </div>
                     <p x-show="variants.length === 0" class="mt-5 rounded-[10px] bg-canvas p-4 text-sm text-muted">No options added. Customers will buy this product using the single stock quantity above.</p>
@@ -91,7 +141,7 @@
                                     <label class="text-sm font-semibold text-ink">Option price (PHP)<input :name="'variants[' + index + '][price]'" x-model="variant.price" type="number" min="0.01" step="0.01" @input="dirty = true" placeholder="Use base price" class="field-control mt-1.5"><span class="mt-1 block text-xs font-normal text-muted">Leave empty to use the base price.</span></label>
                                     <label class="min-w-0 text-sm font-semibold text-ink">Option photos<input :name="'variants[' + index + '][images][]'" type="file" multiple accept="image/jpeg,image/png,image/webp" @change="dirty = true" class="mt-2 block w-full text-xs"><span class="mt-2 block text-xs font-normal text-muted">Up to 4 photos per option, 5 MB each. Shared product photos are used when no option photo is uploaded.</span></label>
                                 </div>
-                                <div x-show="variant.image_urls?.length" class="mt-3 flex flex-wrap gap-2"><template x-for="url in (variant.image_urls || [])" :key="url"><img :src="url" alt="Existing option photo" class="size-16 rounded-lg border border-line object-cover"></template></div>
+                                <ul x-show="variant.photos?.length" class="sc-photo-grid is-small mt-3" :aria-label="'Photos for option ' + (index + 1)"><template x-for="(photo, photoIndex) in (variant.photos || [])" :key="photo.id"><li class="sc-photo" :class="removed.includes(photo.id) && 'is-removed'"><img :src="photo.url" :alt="'Option ' + (index + 1) + ' photo ' + (photoIndex + 1)"><span class="sc-photo-removed" x-show="removed.includes(photo.id)">Removed</span><div class="sc-photo-tools"><button type="button" @click="toggleRemove(photo.id)" :aria-label="(removed.includes(photo.id) ? 'Keep' : 'Remove') + ' option ' + (index + 1) + ' photo ' + (photoIndex + 1)" :class="removed.includes(photo.id) ? 'is-undo' : 'is-remove'"><span x-text="removed.includes(photo.id) ? 'Undo' : ''"></span><svg x-show="! removed.includes(photo.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></li></template></ul>
                             </div>
                         </template>
                     </div>
@@ -105,7 +155,7 @@
             </div>
 
             <aside class="space-y-6 lg:sticky lg:top-6 lg:h-fit">
-                <section class="rounded-2xl border border-line bg-white p-5 shadow-sm">
+                <section class="seller-form-card p-5">
                     <h2 class="font-semibold text-ink">Listing settings</h2>
                     <p class="mt-1 text-sm leading-6 text-muted">Save your draft, then submit it for review from Products. Add a category, description, and photo before submitting. Saving changes to a published listing returns it to Draft for a fresh review.</p>
                     <div class="mt-4 space-y-2">
@@ -116,11 +166,11 @@
                         @endforeach
                     </div>
                     <x-input-error :messages="$errors->get('status')" class="mt-2" />
+                    <div class="mt-5 grid gap-2 border-t border-line pt-5">
+                        <button :disabled="saving" class="seller-primary-button min-h-11 w-full disabled:opacity-70"><span x-show="!saving">{{ $submitLabel }}</span><span x-show="saving" x-cloak>Saving…</span></button>
+                        <a href="{{ route('seller.products.index') }}" class="seller-outline-button min-h-11 w-full">Cancel</a>
+                    </div>
                 </section>
-                <div class="rounded-2xl border border-line bg-white p-4 shadow-sm">
-                    <a href="{{ route('seller.products.index') }}" class="mb-3 flex min-h-11 items-center justify-center rounded-[10px] text-sm font-semibold text-muted hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand">Cancel</a>
-                    <button :disabled="saving" class="flex min-h-11 w-full items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-70"><span x-show="!saving">{{ $submitLabel }}</span><span x-show="saving" x-cloak>Saving…</span></button>
-                </div>
             </aside>
         </form>
         @endif

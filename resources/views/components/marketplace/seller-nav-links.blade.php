@@ -50,15 +50,15 @@
 @endphp
 
 <nav @class([
-    'flex-1 space-y-4' => $mode === 'desktop',
-    'flex-1 space-y-4 overflow-y-auto' => $mode === 'mobile',
-    'px-3 py-4' => $mode === 'desktop',
+    'flex-1 space-y-5' => $mode === 'desktop',
+    'flex-1 space-y-5 overflow-y-auto' => $mode === 'mobile',
+    'px-1 py-4' => $mode === 'desktop',
     'p-4' => $mode === 'mobile',
 ]) aria-label="Seller workspace navigation">
     @foreach ($groups as $group)
         <div class="space-y-1">
             @if ($group['label'])
-                <p class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[.14em] text-slate-400">{{ $group['label'] }}</p>
+                <p class="sc-nav-label">{{ $group['label'] }}</p>
             @endif
             @foreach ($group['items'] as $item)
                 <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @endif @class([

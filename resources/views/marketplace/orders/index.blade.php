@@ -15,7 +15,7 @@
         <div data-purchases class="min-w-0 space-y-5 sm:space-y-6">
             <header class="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-bold tracking-tight text-ink">My purchases</h1>
+                    <h1 class="text-3xl font-semibold tracking-tight text-ink">My purchases</h1>
                 </div>
                 <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-hover hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Continue shopping <span aria-hidden="true" class="ml-1">→</span></a>
             </header>
@@ -64,9 +64,9 @@
                     <article class="min-w-0 overflow-hidden rounded-2xl border border-line bg-surface shadow-sm" aria-labelledby="purchase-{{ $sellerOrder->id }}">
                         <header class="flex flex-wrap items-start justify-between gap-x-5 gap-y-2 border-b border-line px-4 py-3 sm:items-center sm:px-5">
                             <div class="flex min-w-0 items-center gap-3">
-                                <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-blue-50 font-bold text-brand-hover" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
+                                <span class="grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-blue-50 font-semibold text-brand-hover" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
                                 <div class="min-w-0">
-                                    <h3 id="purchase-{{ $sellerOrder->id }}" class="truncate text-sm font-bold text-ink"><a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->store->name }}</a></h3>
+                                    <h3 id="purchase-{{ $sellerOrder->id }}" class="truncate text-sm font-semibold text-ink"><a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $sellerOrder->store->name }}</a></h3>
                                     <p class="text-xs text-muted">{{ $sellerOrder->items->count() }} {{ Str::plural('item', $sellerOrder->items->count()) }}</p>
                                 </div>
                             </div>
@@ -76,11 +76,11 @@
                         <div class="px-4 sm:px-5">
                             <div class="flex justify-end pt-3">
                                 @if ($returnCases->isNotEmpty() && $tab === 'returns')
-                                    @foreach ($returnCases as $returnCase)<span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700">Return case {{ str($returnCase->status)->replace('_', ' ') }}</span>@endforeach
+                                    @foreach ($returnCases as $returnCase)<span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700">Return case {{ str($returnCase->status)->replace('_', ' ') }}</span>@endforeach
                                 @elseif ($returnIssue && $tab === 'returns')
-                                    <span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700">Return request {{ str($returnIssue->status)->replace('_', ' ') }}</span>
+                                    <span class="rounded-lg bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700">Return request {{ str($returnIssue->status)->replace('_', ' ') }}</span>
                                 @else
-                                    <span class="rounded-lg px-3 py-1.5 text-xs font-bold {{ $statusStyles[$sellerOrder->status][1] }}">{{ $statusStyles[$sellerOrder->status][0] }}</span>
+                                    <span class="rounded-lg px-3 py-1.5 text-xs font-semibold {{ $statusStyles[$sellerOrder->status][1] }}">{{ $statusStyles[$sellerOrder->status][0] }}</span>
                                 @endif
                             </div>
                             <div id="purchase-items-{{ $sellerOrder->id }}" class="divide-y divide-line">
@@ -96,9 +96,9 @@
                                         </div>
                                         <div class="flex min-w-0 flex-1 flex-col justify-center">
                                             @if ($item->product && $item->product->store)
-                                                <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="break-words text-sm font-bold leading-5 text-ink hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-base">{{ $item->product_name }}</a>
+                                                <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="break-words text-sm font-semibold leading-5 text-ink hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-base">{{ $item->product_name }}</a>
                                             @else
-                                                <p class="break-words text-sm font-bold leading-5 text-ink sm:text-base">{{ $item->product_name }}</p>
+                                                <p class="break-words text-sm font-semibold leading-5 text-ink sm:text-base">{{ $item->product_name }}</p>
                                             @endif
                                             @if ($item->variant_label)<p class="mt-1 text-xs text-muted">{{ $item->variant_label }}</p>@endif
                                             <p class="mt-2 text-xs text-muted sm:hidden">Qty <span class="font-semibold text-ink">{{ $item->quantity }}</span></p>

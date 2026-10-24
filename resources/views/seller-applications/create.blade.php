@@ -50,7 +50,7 @@
             <nav aria-label="Application progress" class="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
                 @foreach ($labels as $number => $label)
                     @php($allowed = $application?->status !== 'more_information_required' || $number === 7 || in_array($number, $application->correction_steps ?? [], true))
-                    <a href="{{ $allowed ? route('seller-application.create', ['step' => $number]) : '#' }}" @if ($number === $step) aria-current="step" @endif class="rounded-lg border px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand {{ $number === $step ? 'border-brand bg-brand text-white' : (in_array($number, $completed) ? 'border-success/30 bg-success/10 text-success' : 'border-line bg-white text-muted') }}"><span class="block text-[10px] uppercase">Step {{ $number }} @if (in_array($number, $completed)) · Done @endif</span>{{ $label }}</a>
+                    <a href="{{ $allowed ? route('seller-application.create', ['step' => $number]) : '#' }}" @if ($number === $step) aria-current="step" @endif class="rounded-lg border px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand {{ $number === $step ? 'border-brand bg-brand text-white' : (in_array($number, $completed) ? 'border-success/30 bg-success/10 text-success' : 'border-line bg-white text-muted') }}"><span class="block text-xs uppercase">Step {{ $number }} @if (in_array($number, $completed)) · Done @endif</span>{{ $label }}</a>
                 @endforeach
             </nav>
             <section class="rounded-xl border border-line bg-white p-5 shadow-sm sm:p-8" aria-labelledby="step-title">

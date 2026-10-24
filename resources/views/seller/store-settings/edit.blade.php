@@ -1,15 +1,16 @@
 <x-app-layout>
     <x-slot name="header">
-        <div>
-            <h1 class="text-[30px] font-bold leading-tight tracking-[-0.03em] text-ink">Store settings</h1>
+        <div class="sc-page-head">
+            <div>
+                <h1 class="sc-title">Store settings</h1>            </div>
         </div>
     </x-slot>
 
     <div class="page-shell">
         <div class="page-container seller-workspace-page">
             @if (session('status') || $canUndo)
-                <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/20 bg-success/10 px-4 py-3" role="status">
-                    <p class="text-sm font-medium text-success">{{ session('status', 'A recent text-only save can still be undone.') }}</p>
+                <div class="sc-notice mb-5" data-tone="success" role="status">
+                    <p class="font-medium">{{ session('status', 'A recent text-only save can still be undone.') }}</p>
                     @if ($canUndo)
                         <form method="POST" action="{{ route('seller.store-settings.undo') }}">
                             @csrf
@@ -32,12 +33,12 @@
                 <x-input-error :messages="$errors->get('settings')" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" />
                 <x-input-error :messages="$errors->get('undo')" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" />
                 <p class="mb-3 flex items-center gap-2 text-sm font-medium" :class="dirty ? 'text-warning-text' : 'text-muted'" role="status" aria-live="polite">
-                    <span class="grid size-4 shrink-0 place-items-center rounded-full text-[10px] font-bold text-white" :class="dirty ? 'bg-amber-600' : 'bg-emerald-600'" x-text="saving ? '…' : dirty ? '!' : '✓'" aria-hidden="true">{{ $errors->any() ? '!' : '✓' }}</span>
+                    <span class="grid size-4 shrink-0 place-items-center rounded-full text-xs font-semibold text-white" :class="dirty ? 'bg-amber-600' : 'bg-emerald-600'" x-text="saving ? '…' : dirty ? '!' : '✓'" aria-hidden="true">{{ $errors->any() ? '!' : '✓' }}</span>
                     <span x-text="saving ? 'Saving store settings…' : dirty ? 'Unsaved changes' : 'All changes saved'">{{ $errors->any() ? 'Unsaved changes' : 'All changes saved' }}</span>
                 </p>
                 <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div class="min-w-0 space-y-5">
-                <section class="min-w-0 rounded-xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="store-profile-heading">
+                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="store-profile-heading">
                     <div class="flex items-start gap-3">
                         <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5 5 4h14l2 5.5M4 10h16v10H4zM9 20v-6h6v6M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>
@@ -58,7 +59,7 @@
                                         <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="Current {{ $store->name }} logo" class="size-full object-cover" x-show="!logoPreview && !removeLogo">
                                         <span x-cloak x-show="removeLogo" class="text-center text-xs font-medium text-muted">No logo</span>
                                     @else
-                                        <span class="text-3xl font-bold text-muted" aria-hidden="true" x-show="!logoPreview">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</span>
+                                        <span class="text-3xl font-semibold text-muted" aria-hidden="true" x-show="!logoPreview">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</span>
                                     @endif
                                     <img x-cloak x-show="logoPreview" :src="logoPreview" alt="Selected store logo preview" class="size-full object-cover">
                                 </div>
@@ -100,7 +101,7 @@
                     </div>
                 </section>
 
-                <section class="min-w-0 rounded-xl border border-line bg-white p-5 shadow-sm sm:p-6" aria-labelledby="contact-details-heading">
+                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="contact-details-heading">
                     <div class="flex items-start gap-3">
                         <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.5 7-12a7 7 0 0 0-14 0c0 6.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
@@ -130,16 +131,17 @@
                     </div>
                 </section>
 
-                <div class="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-line bg-white p-3 shadow-sm">
-                    <a href="{{ route('seller.dashboard') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-line bg-white px-5 text-sm font-semibold text-ink transition hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Cancel</a>
-                    <button type="submit" :disabled="saving || !dirty" :aria-busy="saving" aria-label="Save store settings" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
+                <div class="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-[#f5f7fa]/95 px-1 py-3 backdrop-blur">
+                    <p class="mr-auto text-sm text-muted" x-show="dirty" x-cloak>You have unsaved changes.</p>
+                    <a href="{{ route('seller.dashboard') }}" class="seller-outline-button min-h-11">Cancel</a>
+                    <button type="submit" :disabled="saving || !dirty" :aria-busy="saving" aria-label="Save store settings" class="seller-primary-button min-h-11 disabled:cursor-not-allowed disabled:opacity-60">
                         <span x-show="!saving">Save changes</span>
                         <span x-cloak x-show="saving">Saving…</span>
                     </button>
                 </div>
                 </div>
                 <div class="min-w-0">
-                    <section class="min-w-0 overflow-hidden rounded-xl border border-line bg-white shadow-sm" aria-labelledby="store-preview-heading">
+                    <section class="seller-form-card min-w-0 overflow-hidden" aria-labelledby="store-preview-heading">
                         <div class="flex items-center justify-between gap-2 px-3 py-3">
                             <h2 id="store-preview-heading" class="flex min-w-0 items-center gap-1.5 text-base font-semibold leading-5 text-ink">
                                 <span class="grid size-6 shrink-0 place-items-center rounded bg-slate-100 text-slate-600" aria-hidden="true"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
@@ -153,13 +155,13 @@
                             <div class="relative flex min-w-0 items-center gap-4">
                                 @if ($store->logo_path)
                                     <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" x-show="!logoPreview && !removeLogo" class="size-16 shrink-0 rounded-xl border-2 border-white/60 bg-white object-cover">
-                                    <div x-cloak x-show="removeLogo" class="grid size-16 shrink-0 place-items-center rounded-xl bg-white text-2xl font-bold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
+                                    <div x-cloak x-show="removeLogo" class="grid size-16 shrink-0 place-items-center rounded-xl bg-white text-2xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
                                 @else
-                                    <div x-show="!logoPreview" class="grid size-16 shrink-0 place-items-center rounded-xl bg-white text-2xl font-bold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
+                                    <div x-show="!logoPreview" class="grid size-16 shrink-0 place-items-center rounded-xl bg-white text-2xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
                                 @endif
                                 <img x-cloak x-show="logoPreview" :src="logoPreview" alt="Selected storefront logo preview" class="size-16 shrink-0 rounded-xl border-2 border-white/60 bg-white object-cover">
                                 <div class="min-w-0">
-                                    <p class="truncate text-xl font-bold">{{ $store->name }}</p>
+                                    <p class="truncate text-xl font-semibold">{{ $store->name }}</p>
                                     <p class="mt-0.5 truncate text-xs text-slate-200">/stores/{{ $store->slug }}</p>
                                     <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-ink">
                                         Visit storefront

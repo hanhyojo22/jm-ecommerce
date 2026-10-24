@@ -24,14 +24,14 @@
     <title>{{ $isSignUp ? 'Create account' : 'Sign in' }} · JMMart</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="min-h-screen bg-surface font-sans text-ink antialiased">
     <div class="flex items-center gap-3 bg-[linear-gradient(120deg,#163a86,#10234d)] px-[18px] py-4 lg:hidden">
         <a href="{{ route('catalog.index') }}" class="flex shrink-0 items-center gap-2.5 font-display font-semibold tracking-[-0.02em] text-white" aria-label="JMMart marketplace home">
-            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-bold text-[#10234d]" aria-hidden="true">JM</span>
+            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-semibold text-[#10234d]" aria-hidden="true">JM</span>
             <span class="sr-only">JMMart</span>
         </a>
         <p class="min-w-0 text-[13px] leading-snug text-[#c3d4ef]"><strong class="font-semibold text-white">JMMart</strong> — protected checkout, order tracking, and direct seller chat.</p>
@@ -41,12 +41,12 @@
         <aside class="relative hidden flex-col overflow-hidden bg-[linear-gradient(158deg,#163a86_0%,#10234d_58%,#0b1a3c_100%)] px-12 py-10 text-white lg:flex">
             <span class="pointer-events-none absolute -right-36 top-10 size-[460px] rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(59,130,246,.4),transparent_62%)]" aria-hidden="true"></span>
             <a href="{{ route('catalog.index') }}" class="relative z-10 inline-flex items-center gap-2.5 self-start font-display text-lg font-semibold tracking-[-0.02em] text-white" aria-label="JMMart marketplace home">
-                <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-bold text-[#10234d]" aria-hidden="true">JM</span>
+                <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-semibold text-[#10234d]" aria-hidden="true">JM</span>
                 JMMart
             </a>
 
             <div class="relative z-10 my-auto max-w-[27rem] py-10">
-                <h2 class="font-display text-balance text-[32px] font-semibold leading-[1.18] tracking-[-0.035em]">Everything you need, from sellers you can check.</h2>
+                <h2 class="font-display text-balance text-3xl font-semibold leading-[1.18] tracking-[-0.035em]">Everything you need, from sellers you can check.</h2>
                 <p class="mt-2.5 text-[15px] leading-relaxed text-[#b9cbe8]">Your account keeps the cart, the orders, and the conversation in one place.</p>
 
                 <dl class="mt-7">
@@ -68,7 +68,7 @@
                 </dl>
             </div>
 
-            <p class="relative z-10 flex items-center gap-2.5 text-[12.5px] font-medium text-[#8fa6cb]">
+            <p class="relative z-10 flex items-center gap-2.5 text-xs font-medium text-[#8fa6cb]">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="size-[15px] shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9.2 12.2 2 2 3.6-3.8"/></svg>
                 Payments are processed on verified stores only
             </p>
@@ -81,7 +81,7 @@
                     <a href="{{ route('register', $redirectParams) }}" role="tab" @if ($isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => $isSignUp, 'text-muted hover:text-ink' => ! $isSignUp])>Create account</a>
                 </div>
 
-                <h1 id="auth-heading" class="mt-5 text-balance font-display text-[30px] font-semibold leading-tight tracking-[-0.03em]">{{ $heading }}</h1>
+                <h1 id="auth-heading" class="mt-5 text-balance font-display text-3xl font-semibold leading-tight tracking-[-0.03em]">{{ $heading }}</h1>
                 <p class="mt-1.5 text-sm leading-relaxed text-muted">{{ $subheading }}</p>
 
                 <div class="mt-5">

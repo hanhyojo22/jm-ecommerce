@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -287,6 +289,85 @@ class SellerProductTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 0);
     }
 
+    public function test_seller_can_remove_and_reorder_product_photos(): void
+    {
+        Storage::fake('product_images');
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->draftProduct($tenant, $store);
+        [$front, $side, $back] = collect(['front', 'side', 'back'])->map(fn (string $name, int $position) => $this->productPhoto($product, $name, $position))->all();
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            ...$this->productPayload(),
+            'remove_images' => [$side->id],
+            'image_order' => [$back->id, $front->id],
+        ])->assertRedirect(route('seller.products.index'));
+
+        $this->assertModelMissing($side);
+        Storage::disk('product_images')->assertMissing($side->path);
+        $this->assertSame([$back->id, $front->id], $product->images()->pluck('id')->all());
+        $this->assertSame($back->id, $product->fresh()->thumbnail->id);
+    }
+
+    public function test_removing_a_photo_keeps_the_file_while_a_past_order_shows_it(): void
+    {
+        Storage::fake('product_images');
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->draftProduct($tenant, $store);
+        $photo = $this->productPhoto($product, 'front', 0);
+        $buyer = User::factory()->create();
+        $order = Order::create(['user_id' => $buyer->id, 'number' => 'JM-1001', 'status' => 'delivered', 'recipient_name' => 'Casey Buyer', 'phone' => '+639171234567', 'address_line' => '100 Buyer Street', 'city' => 'Manila', 'subtotal' => '299.00', 'shipping_amount' => '0.00', 'total' => '299.00']);
+        $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'subtotal' => '299.00', 'shipping_amount' => '0.00', 'total' => '299.00'])
+            ->items()->create(['product_id' => $product->id, 'product_name' => 'Canvas Tote', 'sku' => 'TOTE-001', 'unit_price' => '299.00', 'quantity' => 1, 'line_total' => '299.00', 'image_path' => $photo->path]);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [...$this->productPayload(), 'remove_images' => [$photo->id]]);
+
+        $this->assertModelMissing($photo);
+        Storage::disk('product_images')->assertExists($photo->path);
+    }
+
+    public function test_seller_cannot_remove_another_products_photo(): void
+    {
+        Storage::fake('product_images');
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->draftProduct($tenant, $store);
+        [, $otherTenant, $otherStore] = $this->seller();
+        $otherPhoto = $this->productPhoto($this->draftProduct($otherTenant, $otherStore), 'front', 0);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [...$this->productPayload(), 'remove_images' => [$otherPhoto->id]])
+            ->assertSessionHasErrors('remove_images');
+
+        $this->assertModelExists($otherPhoto);
+    }
+
+    public function test_removing_a_photo_makes_room_under_the_eight_photo_limit(): void
+    {
+        Storage::fake('product_images');
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->draftProduct($tenant, $store);
+        $photos = collect(range(0, 7))->map(fn (int $position) => $this->productPhoto($product, "photo-$position", $position));
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            ...$this->productPayload(),
+            'remove_images' => [$photos->first()->id],
+            'images' => [UploadedFile::fake()->image('replacement.jpg')],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(8, $product->images()->count());
+    }
+
+    public function test_photo_uploads_cannot_push_a_product_past_eight_photos(): void
+    {
+        Storage::fake('product_images');
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->draftProduct($tenant, $store);
+        collect(range(0, 7))->each(fn (int $position) => $this->productPhoto($product, "photo-$position", $position));
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [...$this->productPayload(), 'images' => [UploadedFile::fake()->image('extra.jpg')]])
+            ->assertSessionHasErrors(['images' => 'A product can have no more than 8 photos. Remove a photo to add another.']);
+
+        $this->assertSame(8, $product->images()->count());
+    }
+
     public function test_product_creation_is_rate_limited_per_seller(): void
     {
         [$owner] = $this->seller();
@@ -556,6 +637,27 @@ class SellerProductTest extends TestCase
         $this->actingAs($staff)->post(route('seller.products.bulk-deactivate'), [
             'product_ids' => ['01J00000000000000000000000'],
         ])->assertForbidden();
+    }
+
+    private function draftProduct(Tenant $tenant, Store $store): Product
+    {
+        return $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote-'.str()->lower(str()->random(6)), 'sku' => 'TOTE-'.str()->upper(str()->random(6)), 'price' => '299.00', 'stock_quantity' => 1, 'status' => 'draft']);
+    }
+
+    private function productPhoto(Product $product, string $name, int $position): ProductImage
+    {
+        $path = "products/{$product->id}-{$name}.jpg";
+        Storage::disk('product_images')->put($path, 'photo');
+
+        return $product->images()->create(['path' => $path, 'position' => $position]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function productPayload(): array
+    {
+        return ['name' => 'Canvas Tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 1, 'status' => 'draft'];
     }
 
     private function seller(): array

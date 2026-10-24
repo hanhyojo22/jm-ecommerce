@@ -28,7 +28,7 @@
                 <section class="min-w-0" aria-labelledby="moderation-title">
                     <div class="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                            <h1 id="moderation-title" class="text-[28px] font-bold leading-[1.55] tracking-[-0.02em] text-ink">Moderation</h1>
+                            <h1 id="moderation-title" class="text-3xl font-semibold leading-[1.55] tracking-[-0.02em] text-ink">Moderation</h1>
                             <p class="mt-1.5 text-sm text-muted">Review seller and marketplace activity.</p>
                         </div>
                         <p class="mt-2 inline-flex items-center gap-2 text-xs font-medium text-muted">
@@ -111,7 +111,7 @@
                     @endif
 
                     <section id="review-queue" class="scroll-mt-24" aria-label="Moderation items needing review">
-                        <div class="hidden grid-cols-[minmax(7.8rem,1.15fr)_minmax(8rem,1.4fr)_minmax(7rem,1.2fr)_minmax(6.5rem,1fr)_minmax(7rem,1.15fr)] gap-3 border-b border-line px-3 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-muted md:grid">
+                        <div class="hidden grid-cols-[minmax(7.8rem,1.15fr)_minmax(8rem,1.4fr)_minmax(7rem,1.2fr)_minmax(6.5rem,1fr)_minmax(7rem,1.15fr)] gap-3 border-b border-line px-3 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted md:grid">
                             <span>Type</span><span>Subject / context</span><span>Reason</span><span>Received</span><span>Next step</span>
                         </div>
 
@@ -149,18 +149,18 @@
                                 </div>
 
                                 <div class="min-w-0 pl-[1.875rem] md:pl-0">
-                                    <p class="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Subject / context</p>
+                                    <p class="mb-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Subject / context</p>
                                     <p class="truncate text-sm font-semibold text-ink">{{ $item['title'] }}</p>
                                     <p class="mt-0.5 truncate text-xs text-muted">{{ $item['subtitle'] }}</p>
                                 </div>
 
                                 <div class="min-w-0 pl-[1.875rem] md:pl-0">
-                                    <p class="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Reason</p>
+                                    <p class="mb-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Reason</p>
                                     <p class="truncate text-sm text-ink">{{ $item['reason'] }}</p>
                                 </div>
 
                                 <div class="pl-[1.875rem] md:pl-0">
-                                    <p class="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Received</p>
+                                    <p class="mb-0.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Received</p>
                                     <time class="whitespace-nowrap text-sm text-muted" datetime="{{ $receivedAt->toIso8601String() }}" title="{{ $receivedAt->format('M j, Y g:i A T') }}">{{ $receivedLabel }}</time>
                                 </div>
 

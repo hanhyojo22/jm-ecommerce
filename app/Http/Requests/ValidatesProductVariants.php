@@ -38,7 +38,7 @@ trait ValidatesProductVariants
             if (isset($variant['id'])) {
                 $product = $this->route('product');
                 if ($product instanceof Product && $product->variants()->whereKey($variant['id'])->exists()
-                    && $product->images()->where('product_variant_id', $variant['id'])->count() + count((array) $this->file("variants.$index.images", [])) > 4) {
+                    && $product->images()->where('product_variant_id', $variant['id'])->whereNotIn('id', $this->removedImageIds())->count() + count((array) $this->file("variants.$index.images", [])) > 4) {
                     $validator->errors()->add("variants.$index.images", 'Each variant can have no more than 4 photos.');
                 }
             }
@@ -47,5 +47,15 @@ trait ValidatesProductVariants
         if ($totalStock > 2147483647) {
             $validator->errors()->add('variants', 'Total variant stock is too large.');
         }
+    }
+
+    /**
+     * Photo IDs the seller marked for removal in this save.
+     *
+     * @return list<string>
+     */
+    protected function removedImageIds(): array
+    {
+        return array_values(array_filter((array) $this->input('remove_images', []), 'is_string'));
     }
 }
