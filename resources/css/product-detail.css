@@ -53,13 +53,10 @@
 .prototype-product .pd-stock-dot { width:8px; height:8px; flex-shrink:0; border-radius:50%; background:currentColor; box-shadow:0 0 0 4px #e6f4ee; }
 .prototype-product .pd-stock.low { color:#a15c07; } .prototype-product .pd-stock.low .pd-stock-dot { background:#e08a1e; box-shadow:0 0 0 4px #fff6e6; }
 .prototype-product .pd-stock.sold { color:#a33c4b; } .prototype-product .pd-stock.sold .pd-stock-dot { box-shadow:0 0 0 4px #fbecee; }
-.prototype-product .pd-buy-row { display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px; }
-.prototype-product .pd-buy-row .pd-btn { min-height:52px; border-radius:12px; font-size:15px; }
-.prototype-product .pd-buy-row .pd-btn.secondary { grid-column:1 / -1; border-color:var(--pd-text); background:var(--pd-text); color:white; }
-.prototype-product .pd-buy-row .pd-btn.secondary:hover { background:#0c1728; }
-.prototype-product .pd-buy-row .pd-btn:disabled { border-color:transparent; background:#e7ebf1; color:#8792a3; opacity:1; }
-.prototype-product .pd-qty { display:inline-flex; align-items:center; border:1px solid #dfe4ec; border-radius:12px; overflow:hidden; background:white; flex-shrink:0; }
-.prototype-product .pd-qty button { width:42px; height:50px; background:white; font-size:15px; }
+.prototype-product .pd-buy-row { display:flex; align-items:center; gap:12px; margin-top:20px; }
+.prototype-product .pd-buy-row > .pd-btn { flex:1; }
+.prototype-product .pd-qty { display:inline-flex; align-items:center; border:1px solid #dfe4ec; border-radius:9px; overflow:hidden; background:white; flex-shrink:0; }
+.prototype-product .pd-qty button { width:34px; height:42px; background:white; font-size:15px; }
 .prototype-product .pd-qty output { width:30px; text-align:center; font-size:14px; }
 .prototype-product .pd-btn { display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:44px; padding:10px 19px; border:1px solid transparent; border-radius:10px; background:var(--pd-blue); color:white; font-size:14px; font-weight:600; white-space:nowrap; }
 .prototype-product .pd-btn:hover { background:#1749cb; }
