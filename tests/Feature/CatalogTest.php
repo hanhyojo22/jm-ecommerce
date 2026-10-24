@@ -425,17 +425,19 @@ class CatalogTest extends TestCase
             ->assertSee('aria-label="Enlarged product image"', false);
     }
 
-    public function test_variant_gallery_shows_its_own_photos_before_the_shared_ones(): void
+    public function test_product_gallery_holds_every_photo_and_opens_on_the_selected_variant(): void
     {
         $product = $this->product();
-        $variant = $product->variants()->create(['color' => 'Black', 'sku' => 'CARGO-BLACK', 'stock_quantity' => 5]);
+        $black = $product->variants()->create(['color' => 'Black', 'sku' => 'CARGO-BLACK', 'stock_quantity' => 5]);
+        $yellow = $product->variants()->create(['color' => 'Yellow', 'sku' => 'CARGO-YELLOW', 'stock_quantity' => 5]);
         $product->images()->create(['path' => 'products/cargo-shared.jpg', 'position' => 0]);
-        $product->images()->create(['path' => 'products/cargo-black.jpg', 'position' => 1, 'product_variant_id' => $variant->id]);
+        $product->images()->create(['path' => 'products/cargo-yellow.jpg', 'position' => 1, 'product_variant_id' => $yellow->id]);
+        $product->images()->create(['path' => 'products/cargo-black.jpg', 'position' => 2, 'product_variant_id' => $black->id]);
 
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
-            ->assertSee('aria-label="Zoom image 1 of 2"', false)
-            ->assertSee('cargo-black.jpg" :src="gallery[0]?.url"', false);
+            ->assertSee('aria-label="Zoom image 1 of 3"', false)
+            ->assertSee('<img :src="gallery[selected]?.url" src="'.Storage::disk('product_images')->url('products/cargo-black.jpg').'"', false);
     }
 
     public function test_verified_buyer_sees_add_to_cart_actions_in_the_catalog(): void

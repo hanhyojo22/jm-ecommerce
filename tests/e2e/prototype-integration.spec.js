@@ -28,7 +28,7 @@ test('variant gallery, prices, and sold-out states work on phone, tablet, and de
             const gallery = page.getByRole('region', { name: 'Product images' });
             await expect(gallery.locator('button:visible img').first()).toHaveAttribute('src', /variant-black\.jpg/);
             await gallery.getByRole('button', { name: 'Show image 2', exact: true }).click();
-            await expect(gallery.getByRole('button', { name: 'Zoom image 2 of 2', exact: true }).locator('img')).toHaveAttribute('src', /variant-white\.jpg/);
+            await expect(gallery.getByRole('button', { name: 'Zoom image 2 of 4', exact: true }).locator('img')).toHaveAttribute('src', /variant-white\.jpg/);
             await page.getByRole('radio', { name: /^White/ }).check();
             await expect(page.locator('[data-selected-price]:visible')).toHaveText('₱13.50');
             await expect(gallery.locator('button:visible img').first()).toHaveAttribute('src', /variant-white\.jpg/);

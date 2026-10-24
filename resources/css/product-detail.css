@@ -82,8 +82,9 @@
 .prototype-product .pd-sold-overlay > span > span:last-child { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
 .prototype-product .pd-expand { position:absolute; bottom:15px; right:15px; width:36px; height:36px; display:grid; place-items:center; background:white; border-radius:8px; pointer-events:none; }
 .prototype-product .pd-thumbs { display:flex; gap:10px; margin-top:13px; overflow-x:auto; padding:2px; }
-.prototype-product .pd-thumb { width:71px; height:65px; padding:0; border:2px solid transparent; border-radius:10px; opacity:.65; flex-shrink:0; overflow:hidden; background:white; }
+.prototype-product .pd-thumb { position:relative; width:71px; height:65px; padding:0; border:2px solid transparent; border-radius:10px; opacity:.65; flex-shrink:0; overflow:hidden; background:white; }
 .prototype-product .pd-thumb.active { border-color:var(--pd-blue); opacity:1; }
+.prototype-product .pd-thumb-swatch { position:absolute; right:5px; bottom:5px; width:12px; height:12px; border-radius:50%; box-shadow:0 0 0 2px white, 0 1px 3px #0000004d; }
 .prototype-product .pd-below { display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1fr); gap:26px; margin-top:42px; align-items:start; }
 .prototype-product .pd-panel { background:white; border:1px solid var(--pd-line); border-radius:16px; padding:24px; min-width:0; }
 .prototype-product .pd-panel h2,.prototype-product .pd-panel h3 { font-size:15px; font-weight:700; letter-spacing:-.35px; }
