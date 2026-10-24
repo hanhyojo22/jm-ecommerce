@@ -98,8 +98,8 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
                 expect(layout.leftSlack, section).toBe(layout.rightSlack);
                 expect(layout.paddingInline, section).toBe(expectedPadding);
                 if (width === 1682) {
-                    // Messages stretches across the whole content column; the rest take the 1400px measure.
-                    expect(layout.width, section).toBe(section === '/messages?context=selling' ? 1396 : 1336);
+                    // Messages and Orders stretch across the whole content column; the rest take the 1400px measure.
+                    expect(layout.width, section).toBe({ '/messages?context=selling': 1396, '/seller/orders': 1386 }[section] ?? 1336);
                 }
                 if (layout.headerLeft !== null) {
                     expect(layout.headerLeft, section).toBe(layout.contentLeft);

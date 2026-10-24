@@ -292,6 +292,10 @@
     max-width: 1400px;
 }
 
+/* Seller orders is a working table, so it takes a wider measure and its page header follows. */
+.seller-workspace .page-container.seller-measure-wide { max-width: 1800px; }
+.seller-workspace .workspace-main:has(.seller-measure-wide) > header:not([data-header-design]) { max-width: 1800px; }
+
 :is(.seller-workspace, .customer-workspace) .page-container.account-measure-messages {
     max-width: none;
 }

@@ -29,7 +29,7 @@
         </div>
     </x-slot>
 
-    <div class="page-shell"><div class="page-container seller-workspace-page sc-stack">
+    <div class="page-shell"><div class="page-container seller-workspace-page seller-measure-wide sc-stack">
         @if (session('status'))<div class="sc-notice" data-tone="success" role="status">{{ session('status') }}</div>@endif
 
         @if ($cashToCollectCount > 0)
@@ -131,17 +131,20 @@
             @if ($orders->isNotEmpty())
                 <div class="sc-table-wrap hidden lg:block">
                     <table class="sc-table">
-                        <thead><tr><th scope="col">Order</th><th scope="col">Items</th><th scope="col" class="is-num">Your total</th><th scope="col">Status</th><th scope="col" class="is-tight"><span class="sr-only">Open</span></th></tr></thead>
+                        <thead><tr><th scope="col">Order</th><th scope="col" class="hidden xl:table-cell">Placed</th><th scope="col" class="hidden xl:table-cell">Customer</th><th scope="col">Items</th><th scope="col" class="hidden xl:table-cell">Payment</th><th scope="col" class="is-num">Your total</th><th scope="col">Status</th><th scope="col" class="is-tight"><span class="sr-only">Open</span></th></tr></thead>
                         <tbody>
                             @foreach ($orders as $sellerOrder)
                                 @php($otherItems = max(0, $sellerOrder->items->count() - 1))
                                 <tr class="cursor-pointer" @click="if (! $event.target.closest('a, button, input, label')) open(@js($sellerOrder->id))">
-                                    {{-- Who and when sit under the order number: number · time, then customer · city. --}}
+                                    {{-- On a wide screen when and who get their own columns; narrower, they sit under the order number. --}}
                                     <th scope="row" class="max-w-[280px]">
-                                        <p class="whitespace-nowrap"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="font-semibold text-ink hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a> <span class="sc-meta" title="{{ $sellerOrder->created_at->format('M j, Y · g:i A') }}">· {{ $sellerOrder->created_at->diffForHumans(short: true) }}</span></p>
-                                        <p class="truncate sc-meta" title="{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}">{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}</p>
+                                        <p class="whitespace-nowrap"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="font-semibold text-ink hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a> <span class="sc-meta xl:hidden" title="{{ $sellerOrder->created_at->format('M j, Y · g:i A') }}">· {{ $sellerOrder->created_at->diffForHumans(short: true) }}</span></p>
+                                        <p class="truncate sc-meta xl:hidden" title="{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}">{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}</p>
                                     </th>
+                                    <td class="hidden whitespace-nowrap xl:table-cell" title="{{ $sellerOrder->created_at->diffForHumans() }}"><span class="block text-ink">{{ $sellerOrder->created_at->format('M j, Y') }}</span><span class="sc-meta">{{ $sellerOrder->created_at->format('g:i A') }}</span></td>
+                                    <td class="hidden max-w-[220px] xl:table-cell"><span class="block truncate text-ink" title="{{ $sellerOrder->order->recipient_name }}">{{ $sellerOrder->order->recipient_name }}</span>@if ($sellerOrder->order->city)<span class="block truncate sc-meta" title="{{ $sellerOrder->order->city }}">{{ $sellerOrder->order->city }}</span>@endif</td>
                                     <td>@include('seller.orders._items', ['sellerOrder' => $sellerOrder, 'otherItems' => $otherItems])</td>
+                                    <td class="hidden whitespace-nowrap xl:table-cell"><x-marketplace.order-status :status="$sellerOrder->cod_collected_at ? 'paid' : 'pending'" payment /><span class="mt-0.5 block text-xs text-muted">Cash on delivery</span></td>
                                     <td class="is-num font-semibold">₱{{ number_format($sellerOrder->total, 2) }}</td>
                                     <td><x-marketplace.order-status :status="$sellerOrder->status" /><span class="mt-0.5 block whitespace-nowrap text-xs text-muted">{{ $nextStep($sellerOrder) }}</span></td>
                                     <td class="is-tight"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="grid size-8 place-items-center rounded-lg text-[#a3b1c4] hover:bg-[#eef1f5] hover:text-ink"><span class="sr-only">View order</span><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a></td>
