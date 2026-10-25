@@ -34,7 +34,7 @@ class StoreProductRequest extends FormRequest
             'variants' => ['nullable', 'array', 'max:30'],
             'variants.*' => ['array:color,color_hex,size,sku,stock_quantity,price,images'],
             'variants.*.price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
-            'variants.*.images' => ['nullable', 'array', 'max:4'],
+            'variants.*.images' => ['nullable', 'array'],
             'variants.*.images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'variants.*.color' => ['nullable', 'required_without:variants.*.size', 'string', 'max:60'],
             'variants.*.color_hex' => ['nullable', 'hex_color', 'size:7'],

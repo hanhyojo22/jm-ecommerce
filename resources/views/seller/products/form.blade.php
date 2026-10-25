@@ -34,7 +34,7 @@
                 get keptPhotos() { return this.photos.filter(photo => ! this.removed.includes(photo.id)) },
                 get photoCount() { return this.keptPhotos.length + this.newFiles.length },
                 {{-- Variants: up to two options (Color, Size). Every combination of their values becomes a row; rows are kept by combination so edits survive option changes. --}}
-                options: [], rows: {}, swatches: {}, swatchGuesses: @js(\App\Models\ProductVariant::SWATCHES), excluded: [], collapsed: [], expanded: [], rowPreviews: {}, maxVariants: 30,
+                options: [], rows: {}, swatches: {}, swatchGuesses: @js(\App\Models\ProductVariant::SWATCHES), excluded: [], collapsed: [], expanded: [], rowPreviews: {}, variantPhotoNotice: '', maxVariants: 30,
                 keyOf(color, size) { return (color || '').trim().toLowerCase() + '|' + (size || '').trim().toLowerCase() },
                 distinct(values) { const seen = new Set(); return values.map(value => (value ?? '').trim()).filter(value => value && ! seen.has(value.toLowerCase()) && seen.add(value.toLowerCase())) },
                 valuesOf(name) { return this.distinct(this.options.find(option => option.name === name)?.values ?? []) },
@@ -92,7 +92,23 @@
                 colorKey(item) { return (item.row.color || '').trim().toLowerCase() },
                 isPhotoOwner(item) { return this.colorKey(item) !== '' && this.offered.find(combo => combo.color.trim().toLowerCase() === this.colorKey(item))?.key === item.key },
                 colorPhotos(item) { return Object.values(this.rows).find(row => (row.color || '').trim().toLowerCase() === this.colorKey(item) && row.photos.length)?.photos ?? [] },
-                previewColor(item, event) { const key = this.colorKey(item); (this.rowPreviews[key] || []).forEach(url => URL.revokeObjectURL(url)); this.rowPreviews[key] = [...event.target.files].slice(0, 4).map(file => URL.createObjectURL(file)) },
+                {{-- A color holds four photos in all, so files past what its saved photos leave room for are dropped from the input, not just from the preview. --}}
+                previewColor(item, event) {
+                    const key = this.colorKey(item), input = event.target, picked = [...input.files];
+                    const room = Math.max(0, 4 - this.colorPhotos(item).filter(photo => ! this.removed.includes(photo.id)).length);
+                    const files = picked.filter(file => ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)).slice(0, room);
+                    if (files.length < picked.length) {
+                        const transfer = new DataTransfer(); files.forEach(file => transfer.items.add(file)); input.files = transfer.files;
+                        this.variantPhotoNotice = `Each color can have up to 4 photos. ${files.length} ${files.length === 1 ? 'photo was' : 'photos were'} added for ${item.row.color}.`;
+                    } else {
+                        this.variantPhotoNotice = '';
+                    }
+                    (this.rowPreviews[key] || []).forEach(url => URL.revokeObjectURL(url));
+                    this.rowPreviews[key] = files.map(file => URL.createObjectURL(file));
+                    this.dirty = true;
+                },
+                {{-- Submission accepts a shared photo, or a photo for every variant's color. --}}
+                get photosCovered() { return this.photoCount > 0 || (this.offered.length > 0 && this.offered.every(combo => this.rowPhotoCount({ key: combo.key, row: this.rows[combo.key] }) > 0)) },
                 rowThumb(item) { return this.colorPhotos(item).find(photo => ! this.removed.includes(photo.id))?.url ?? this.rowPreviews[this.colorKey(item)]?.[0] ?? null },
                 rowPhotoCount(item) { return this.colorPhotos(item).filter(photo => ! this.removed.includes(photo.id)).length + (this.rowPreviews[this.colorKey(item)]?.length || 0) },
                 initVariants(list) {
@@ -106,7 +122,7 @@
                 },
                 {{-- The same requirements the review submission checks, so the seller sees them before saving. --}}
                 get checks() { return [
-                    { label: 'At least one photo', done: this.photoCount > 0 },
+                    { label: 'At least one photo', done: this.photosCovered },
                     { label: 'Title', done: this.name.trim() !== '' },
                     { label: 'Category', done: this.categoryId !== '' },
                     { label: 'Description', done: this.description.trim() !== '' },
@@ -321,6 +337,7 @@
                     </div>
                     <p x-show="variantCount > maxVariants" x-cloak class="ps-card-pad pt-3 text-sm text-danger" role="alert" x-text="'Products can have up to ' + maxVariants + ' variants. Remove some values or variants.'"></p>
                     <div class="ps-card-pad ps-card-errors">
+                        <p x-show="variantPhotoNotice" x-cloak x-text="variantPhotoNotice" class="mt-3 text-sm text-muted" role="status" aria-live="polite"></p>
                         <x-input-error :messages="$errors->get('variants')" class="mt-3" />
                         @foreach (collect($errors->getMessages())->filter(fn ($messages, $field) => str_starts_with($field, 'variants.'))->flatten()->unique() as $message)<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@endforeach
                     </div>
