@@ -24,7 +24,8 @@ class CartController extends Controller
             'items.product.tenant:id,status',
             'items.product.thumbnail',
             'items.product.variants',
-            'items.variant.images',
+            'items.product.images' => fn ($query) => $query->whereNotNull('color'),
+            'items.variant',
         ])->first();
 
         $cart?->items->each(function (CartItem $item): void {

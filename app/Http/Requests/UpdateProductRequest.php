@@ -69,7 +69,7 @@ class UpdateProductRequest extends FormRequest
                 if (array_diff($this->removedImageIds(), $productImageIds) !== []) {
                     $validator->errors()->add('remove_images', 'Only this product’s photos can be removed.');
                 }
-                $sharedImageIds = $product->images()->whereNull('product_variant_id')->pluck('id')->all();
+                $sharedImageIds = $product->images()->whereNull('color')->pluck('id')->all();
                 if (array_diff(array_filter((array) $this->input('image_order', []), 'is_string'), $sharedImageIds) !== []) {
                     $validator->errors()->add('image_order', 'Only this product’s photos can be reordered.');
                 }

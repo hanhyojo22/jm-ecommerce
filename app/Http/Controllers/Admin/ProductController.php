@@ -105,7 +105,7 @@ class ProductController extends Controller
             if ($data['status'] === 'active' && $oldStatus !== 'active' && (! filled($product->description) || $product->category_id === null || ! $product->images()->exists())) {
                 throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before activating this listing.']);
             }
-            if ($data['status'] === 'active' && ! $product->images()->whereNull('product_variant_id')->exists() && $product->variants()->whereDoesntHave('images')->exists()) {
+            if ($data['status'] === 'active' && $product->hasVariantsWithoutPhotos()) {
                 throw ValidationException::withMessages(['status' => 'Each variant needs photos or a shared product photo before publication.']);
             }
             if (! array_key_exists($data['status'], $product->moderationOptions())) {

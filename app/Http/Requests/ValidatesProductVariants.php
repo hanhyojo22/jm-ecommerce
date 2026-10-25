@@ -47,6 +47,8 @@ trait ValidatesProductVariants
         $combinations = [];
         $skus = [];
         $totalStock = 0;
+        $colorPhotoCounts = [];
+        $product = $this->route('product');
 
         foreach ($variants as $index => $variant) {
             if (! is_array($variant) || $validator->errors()->has("variants.$index.color") || $validator->errors()->has("variants.$index.size") || $validator->errors()->has("variants.$index.sku") || $validator->errors()->has("variants.$index.stock_quantity")) {
@@ -65,11 +67,21 @@ trait ValidatesProductVariants
             $skus[$sku] = true;
             $totalStock += (int) $variant['stock_quantity'];
 
-            if (isset($variant['id'])) {
-                $product = $this->route('product');
-                if ($product instanceof Product && $product->variants()->whereKey($variant['id'])->exists()
-                    && $product->images()->where('product_variant_id', $variant['id'])->whereNotIn('id', $this->removedImageIds())->count() + count((array) $this->file("variants.$index.images", [])) > 4) {
-                    $validator->errors()->add("variants.$index.images", 'Each variant can have no more than 4 photos.');
+            // Photos belong to the color, so every size of it counts toward the same four.
+            $newPhotos = count((array) $this->file("variants.$index.images", []));
+            if ($newPhotos > 0) {
+                $color = trim((string) ($variant['color'] ?? ''));
+                if ($color === '') {
+                    $validator->errors()->add("variants.$index.images", 'Only a variant with a color can have its own photos. Use the product photos instead.');
+
+                    continue;
+                }
+                $colorPhotoCounts[$color] ??= $product instanceof Product
+                    ? $product->images()->where('color', $color)->whereNotIn('id', $this->removedImageIds())->count()
+                    : 0;
+                $colorPhotoCounts[$color] += $newPhotos;
+                if ($colorPhotoCounts[$color] > 4) {
+                    $validator->errors()->add("variants.$index.images", "Each color can have no more than 4 photos. Remove a {$color} photo to add another.");
                 }
             }
         }

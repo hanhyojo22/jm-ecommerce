@@ -1,11 +1,11 @@
 @php
     $editing = $product !== null;
-    $existingVariants = $product?->variants?->sortBy('id')->map(fn ($variant) => [...$variant->only(['id', 'color', 'color_hex', 'size', 'sku', 'stock_quantity', 'price']), 'photos' => $variant->images->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all()])->all() ?? [];
-    $existingPhotos = $product?->images?->whereNull('product_variant_id')->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all() ?? [];
-    $savedVariantPhotos = collect($existingVariants)->pluck('photos', 'id');
+    $existingVariants = $product?->variants?->sortBy('id')->map(fn ($variant) => [...$variant->only(['id', 'color', 'color_hex', 'size', 'sku', 'stock_quantity', 'price']), 'photos' => $product->colorPhotos($variant->color)->map(fn ($image) =>['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all()])->all() ?? [];
+    $existingPhotos = $product?->images?->whereNull('color')->map(fn ($image) => ['id' => $image->id, 'url' => Storage::disk('product_images')->url($image->path)])->values()->all() ?? [];
+    $savedColorPhotos = collect($existingVariants)->pluck('photos', 'color');
     $variantRows = collect(old('variants', $existingVariants))
         ->values()
-        ->map(fn ($variant) => [...collect($variant)->except('images')->all(), 'photos' => $savedVariantPhotos[$variant['id'] ?? ''] ?? []])
+        ->map(fn ($variant) => [...collect($variant)->except('images')->all(), 'photos' => $savedColorPhotos[$variant['color'] ?? ''] ?? []])
         ->all();
     $listing = [
         'name' => (string) old('name', $product?->name),
@@ -88,9 +88,13 @@
                     if (option.values.length === 1) { this.removeOption(index); return }
                     option.open = false; this.syncRows();
                 },
-                previewRow(key, event) { (this.rowPreviews[key] || []).forEach(url => URL.revokeObjectURL(url)); this.rowPreviews[key] = [...event.target.files].slice(0, 4).map(file => URL.createObjectURL(file)) },
-                rowThumb(item) { return item.row.photos.find(photo => ! this.removed.includes(photo.id))?.url ?? this.rowPreviews[item.key]?.[0] ?? null },
-                rowPhotoCount(item) { return item.row.photos.filter(photo => ! this.removed.includes(photo.id)).length + (this.rowPreviews[item.key]?.length || 0) },
+                {{-- Variant photos belong to a color: the first row of each color takes the upload, and every size of it shows the same photos. --}}
+                colorKey(item) { return (item.row.color || '').trim().toLowerCase() },
+                isPhotoOwner(item) { return this.colorKey(item) !== '' && this.offered.find(combo => combo.color.trim().toLowerCase() === this.colorKey(item))?.key === item.key },
+                colorPhotos(item) { return Object.values(this.rows).find(row => (row.color || '').trim().toLowerCase() === this.colorKey(item) && row.photos.length)?.photos ?? [] },
+                previewColor(item, event) { const key = this.colorKey(item); (this.rowPreviews[key] || []).forEach(url => URL.revokeObjectURL(url)); this.rowPreviews[key] = [...event.target.files].slice(0, 4).map(file => URL.createObjectURL(file)) },
+                rowThumb(item) { return this.colorPhotos(item).find(photo => ! this.removed.includes(photo.id))?.url ?? this.rowPreviews[this.colorKey(item)]?.[0] ?? null },
+                rowPhotoCount(item) { return this.colorPhotos(item).filter(photo => ! this.removed.includes(photo.id)).length + (this.rowPreviews[this.colorKey(item)]?.length || 0) },
                 initVariants(list) {
                     list.forEach(variant => { if (variant.color && variant.color_hex) this.swatches[variant.color.trim().toLowerCase()] = variant.color_hex });
                     list.forEach(variant => { this.rows[this.keyOf(variant.color, variant.size)] = { id: variant.id ?? null, color: variant.color ?? '', size: variant.size ?? '', sku: variant.sku ?? '', stock_quantity: variant.stock_quantity ?? 0, price: variant.price ?? '', photos: variant.photos ?? [] } });
@@ -282,21 +286,30 @@
                                         <input type="hidden" :name="'variants[' + item.index + '][color_hex]'" :value="swatchFor(item.row.color)" :disabled="! swatchFor(item.row.color)">
                                         <input type="hidden" :name="'variants[' + item.index + '][size]'" :value="item.row.size">
                                         <div class="ps-variant-line">
-                                            <label class="ps-variant-media" :title="'Add photos for ' + item.fullLabel">
-                                                <img x-show="rowThumb(item)" :src="rowThumb(item)" alt="">
-                                                <svg x-show="! rowThumb(item)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>
-                                                <span class="ps-variant-media-count" x-show="rowPhotoCount(item) > 1" x-text="rowPhotoCount(item)"></span>
-                                                <span class="sr-only" x-text="'Add photos for ' + item.fullLabel"></span>
-                                                <input type="file" :name="'variants[' + item.index + '][images][]'" multiple accept="image/jpeg,image/png,image/webp" class="sr-only" @change="previewRow(item.key, $event)">
-                                            </label>
-                                            <span class="ps-variant-name"><span class="inline-flex items-center gap-2"><i x-show="! grouped && item.row.color" class="ps-swatch" :style="{ background: swatchFor(item.row.color) || '#97a0af' }" aria-hidden="true"></i><span x-text="item.label"></span></span><button type="button" x-show="item.row.photos.length" @click="expanded = expanded.includes(item.key) ? expanded.filter(key => key !== item.key) : [...expanded, item.key]" class="ps-link" x-text="expanded.includes(item.key) ? 'Hide photos' : 'Manage photos'"></button></span>
+                                            <template x-if="isPhotoOwner(item)">
+                                                <label class="ps-variant-media" :title="'Add photos for every ' + item.row.color + ' variant'">
+                                                    <img x-show="rowThumb(item)" :src="rowThumb(item)" alt="">
+                                                    <svg x-show="! rowThumb(item)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>
+                                                    <span class="ps-variant-media-count" x-show="rowPhotoCount(item) > 1" x-text="rowPhotoCount(item)"></span>
+                                                    <span class="sr-only" x-text="'Add photos for every ' + item.row.color + ' variant'"></span>
+                                                    <input type="file" :name="'variants[' + item.index + '][images][]'" multiple accept="image/jpeg,image/png,image/webp" class="sr-only" @change="previewColor(item, $event)">
+                                                </label>
+                                            </template>
+                                            <template x-if="! isPhotoOwner(item)">
+                                                <span class="ps-variant-media is-shared" :title="item.row.color ? 'Uses the ' + item.row.color + ' photos' : 'Uses the product photos'">
+                                                    <img x-show="rowThumb(item)" :src="rowThumb(item)" alt="">
+                                                    <svg x-show="! rowThumb(item)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>
+                                                    <span class="sr-only" x-text="item.row.color ? 'Uses the ' + item.row.color + ' photos' : 'Uses the product photos'"></span>
+                                                </span>
+                                            </template>
+                                            <span class="ps-variant-name"><span class="inline-flex items-center gap-2"><i x-show="! grouped && item.row.color" class="ps-swatch" :style="{ background: swatchFor(item.row.color) || '#97a0af' }" aria-hidden="true"></i><span x-text="item.label"></span></span><button type="button" x-show="isPhotoOwner(item) && colorPhotos(item).length" @click="expanded = expanded.includes(item.key) ? expanded.filter(key => key !== item.key) : [...expanded, item.key]" class="ps-link" x-text="expanded.includes(item.key) ? 'Hide photos' : 'Manage photos'"></button></span>
                                             <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">Price</span><span class="pe-affix"><span aria-hidden="true">₱</span><input type="number" :name="'variants[' + item.index + '][price]'" x-model="item.row.price" min="0.01" step="0.01" :placeholder="price || '0.00'" :aria-label="'Price for ' + item.fullLabel" class="pe-input"></span></label>
                                             <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">Available</span><input type="number" :name="'variants[' + item.index + '][stock_quantity]'" x-model="item.row.stock_quantity" required min="0" :aria-label="'Available for ' + item.fullLabel" class="pe-input"></label>
                                             <label class="ps-cell"><span class="ps-cell-label" aria-hidden="true">SKU</span><input :name="'variants[' + item.index + '][sku]'" x-model="item.row.sku" required maxlength="100" placeholder="SKU" :aria-label="'SKU for ' + item.fullLabel" class="pe-input"></label>
                                             <button type="button" x-show="! item.row.id" @click="excluded.push(item.key); dirty = true" :aria-label="'Remove ' + item.fullLabel" class="ps-icon-button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>
                                             <span x-show="item.row.id" class="ps-icon-spacer" aria-hidden="true"></span>
                                         </div>
-                                        <ul x-show="expanded.includes(item.key)" class="sc-photo-grid is-small ps-variant-photos" :aria-label="'Photos for ' + item.fullLabel"><template x-for="(photo, photoIndex) in item.row.photos" :key="photo.id"><li class="sc-photo" :class="removed.includes(photo.id) && 'is-removed'"><img :src="photo.url" :alt="item.fullLabel + ' photo ' + (photoIndex + 1)"><span class="sc-photo-removed" x-show="removed.includes(photo.id)">Removed</span><div class="sc-photo-tools"><button type="button" @click="toggleRemove(photo.id)" :aria-label="(removed.includes(photo.id) ? 'Keep ' : 'Remove ') + item.fullLabel + ' photo ' + (photoIndex + 1)" :class="removed.includes(photo.id) ? 'is-undo' : 'is-remove'"><span x-text="removed.includes(photo.id) ? 'Undo' : ''"></span><svg x-show="! removed.includes(photo.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></li></template></ul>
+                                        <ul x-show="expanded.includes(item.key)" class="sc-photo-grid is-small ps-variant-photos" :aria-label="'Photos for ' + item.row.color"><template x-for="(photo, photoIndex) in colorPhotos(item)" :key="photo.id"><li class="sc-photo" :class="removed.includes(photo.id) && 'is-removed'"><img :src="photo.url" :alt="item.fullLabel + ' photo ' + (photoIndex + 1)"><span class="sc-photo-removed" x-show="removed.includes(photo.id)">Removed</span><div class="sc-photo-tools"><button type="button" @click="toggleRemove(photo.id)" :aria-label="(removed.includes(photo.id) ? 'Keep ' : 'Remove ') + item.fullLabel + ' photo ' + (photoIndex + 1)" :class="removed.includes(photo.id) ? 'is-undo' : 'is-remove'"><span x-text="removed.includes(photo.id) ? 'Undo' : ''"></span><svg x-show="! removed.includes(photo.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div></li></template></ul>
                                     </div>
                                 </template>
                             </div>

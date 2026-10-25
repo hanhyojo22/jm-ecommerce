@@ -9,5 +9,6 @@ class ProductImage extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['product_id', 'product_variant_id', 'path', 'position'];
+    /** A photo with a color belongs to every variant of that color; one without is a shared product photo. */
+    protected $fillable = ['product_id', 'color', 'path', 'position'];
 }

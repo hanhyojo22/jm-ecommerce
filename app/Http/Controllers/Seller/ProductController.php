@@ -82,7 +82,7 @@ class ProductController extends Controller
         $this->authorize('view', $product);
 
         return view('seller.products.show', [
-            'product' => $product->load(['images', 'variants.images', 'category:id,name']),
+            'product' => $product->load(['images', 'variants', 'category:id,name']),
             'canManageProducts' => $this->canManageProducts($request, $tenant),
         ]);
     }
@@ -126,7 +126,7 @@ class ProductController extends Controller
                 foreach ($variants as $index => $variant) {
                     $savedVariant = $product->variants()->create($variant);
                     foreach ($variantImagePaths[$index] ?? [] as $path) {
-                        $product->images()->create(['path' => $path, 'position' => $position++, 'product_variant_id' => $savedVariant->id]);
+                        $product->images()->create(['path' => $path, 'position' => $position++, 'color' => $savedVariant->color]);
                     }
                 }
 
@@ -156,7 +156,7 @@ class ProductController extends Controller
     {
         $product = $this->editableProduct($request, $product);
 
-        return view('seller.products.edit', ['product' => $product->load(['images', 'variants.images']), 'store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
+        return view('seller.products.edit', ['product' => $product->load(['images', 'variants']), 'store' => $this->activeTenant($request)->store, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get()]);
     }
 
     public function update(UpdateProductRequest $request, Product $product, StorePublicImage $storePublicImage): RedirectResponse
@@ -226,7 +226,7 @@ class ProductController extends Controller
                         $savedVariant = $product->variants()->create($variant);
                     }
                     foreach ($variantImagePaths[$index] ?? [] as $path) {
-                        $product->images()->create(['path' => $path, 'position' => $position++, 'product_variant_id' => $savedVariant->id]);
+                        $product->images()->create(['path' => $path, 'position' => $position++, 'color' => $savedVariant->color]);
                     }
                 }
 
@@ -271,8 +271,8 @@ class ProductController extends Controller
             if (! filled($product->description) || $product->category_id === null || ! $product->images()->exists()) {
                 throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before submitting for review.']);
             }
-            if (! $product->images()->whereNull('product_variant_id')->exists() && $product->variants()->whereDoesntHave('images')->exists()) {
-                throw ValidationException::withMessages(['status' => 'Add photos for every variant or upload a shared product photo before submitting.']);
+            if ($product->hasVariantsWithoutPhotos()) {
+                throw ValidationException::withMessages(['status' => 'Add photos for every color or upload a shared product photo before submitting.']);
             }
             $oldStatus = $product->status;
             $product->update(['status' => 'pending', 'moderation_reason' => null]);
@@ -357,10 +357,10 @@ class ProductController extends Controller
     {
         $images = $product->images()->get();
         $rank = array_flip($sharedOrder);
-        $shared = $images->whereNull('product_variant_id')
+        $shared = $images->whereNull('color')
             ->sortBy(fn (ProductImage $image): array => [$rank[$image->id] ?? PHP_INT_MAX, $image->position])
             ->values();
-        $variantImages = $images->whereNotNull('product_variant_id')->sortBy('position')->values();
+        $variantImages = $images->whereNotNull('color')->sortBy('position')->values();
 
         $ordered = $shared->concat($variantImages)->values();
         if ($ordered->every(fn (ProductImage $image, int $position): bool => (int) $image->position === $position)) {

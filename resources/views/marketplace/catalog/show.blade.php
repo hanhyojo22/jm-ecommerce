@@ -1,13 +1,13 @@
 @php
-    // The gallery always holds every photo; picking a variant jumps to its first one. Variant photos carry their swatch so the thumbnails show which color they are.
+    // The gallery always holds every photo; picking a variant jumps to its color's first one. Color photos carry their swatch so the thumbnails show which color they are.
     $productImages = $product->images->values();
-    $gallery = $productImages->map(fn ($image) => ['url' => Storage::disk('product_images')->url($image->path), 'alt' => $product->name, 'swatch' => $image->product_variant_id ? $product->variants->firstWhere('id', $image->product_variant_id)?->swatch() : null])->all();
+    $gallery = $productImages->map(fn ($image) => ['url' => Storage::disk('product_images')->url($image->path), 'alt' => $product->name, 'swatch' => $image->color !== null ? $product->variants->firstWhere('color', $image->color)?->swatch() : null])->all();
     $sortedVariants = $product->variants->sortBy('id')->values();
     $optionValues = fn (string $field) => $sortedVariants->pluck($field)->filter(fn (string $value): bool => $value !== '')->unique()->values();
     $colorSwatches = $optionValues('color')->mapWithKeys(fn (string $color) => [$color => $sortedVariants->firstWhere('color', $color)->swatch()]);
     $sizeValues = $optionValues('size');
     $variantOptions = $sortedVariants->map(function ($variant) use ($product, $productImages) {
-        $imageIndex = $productImages->search(fn ($image) => $image->product_variant_id === $variant->id);
+        $imageIndex = $productImages->search(fn ($image) => $variant->color !== '' && $image->color === $variant->color);
         $price = $variant->price ?? $product->price;
         return ['id' => $variant->id, 'stock' => min($variant->stock_quantity, $product->stock_quantity), 'discount' => $product->compare_at_price ? max(0, (int) round((1 - (float) $price / (float) $product->compare_at_price) * 100)) : 0, 'label' => $variant->label(), 'color' => $variant->color, 'size' => $variant->size, 'sku' => $variant->sku, 'price' => '₱'.number_format($price, 2), 'onSale' => $product->compare_at_price !== null && bccomp((string) $product->compare_at_price, (string) $price, 2) > 0, 'imageIndex' => $imageIndex === false ? null : $imageIndex];
     });

@@ -41,7 +41,7 @@ class CartItem extends Model
 
     public function imagePath(): ?string
     {
-        return $this->variant?->images->first()?->path ?? $this->product->thumbnail?->path;
+        return $this->product->colorPhotos($this->variant?->color)->first()?->path ?? $this->product->thumbnail?->path;
     }
 
     public function cart(): BelongsTo

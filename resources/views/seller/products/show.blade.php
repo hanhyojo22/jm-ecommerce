@@ -84,7 +84,7 @@
                                 <tbody>
                                     @foreach ($product->variants as $variant)
                                         <tr>
-                                            <th scope="row"><span class="sc-items"><span class="sc-thumb-stack"><span class="sc-thumb">@if ($variant->images->first())<img src="{{ Storage::disk('product_images')->url($variant->images->first()->path) }}" alt="" loading="lazy">@endif</span></span><span class="font-semibold text-ink">{{ $variant->label() }}</span></span></th>
+                                            <th scope="row"><span class="sc-items"><span class="sc-thumb-stack"><span class="sc-thumb">@if ($colorPhoto = $product->colorPhotos($variant->color)->first())<img src="{{ Storage::disk('product_images')->url($colorPhoto->path) }}" alt="" loading="lazy">@endif</span></span><span class="font-semibold text-ink">{{ $variant->label() }}</span></span></th>
                                             <td class="break-all sc-meta">{{ $variant->sku }}</td>
                                             <td class="is-num">@if ($variant->price)₱{{ number_format($variant->price, 2) }}@else<span class="sc-meta">Base price</span>@endif</td>
                                             <td class="is-num">@if ($variant->stock_quantity > 0){{ number_format($variant->stock_quantity) }}@else<span class="font-semibold text-danger-text">Out of stock</span>@endif</td>

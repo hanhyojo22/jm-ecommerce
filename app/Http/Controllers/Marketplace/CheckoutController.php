@@ -26,7 +26,8 @@ class CheckoutController extends Controller
                 'items.product.tenant',
                 'items.product.thumbnail',
                 'items.product.variants',
-                'items.variant.images',
+                'items.product.images' => fn ($query) => $query->whereNotNull('color'),
+                'items.variant',
             ])
             ->first();
 

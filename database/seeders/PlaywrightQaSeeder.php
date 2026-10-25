@@ -80,9 +80,9 @@ class PlaywrightQaSeeder extends Seeder
         }
         foreach ([['Black', '12.35', 2], ['White', '13.50', 0], ['Navy', null, 3]] as [$color, $price, $stock]) {
             $variant = $variantProduct->variants()->create(['color' => $color, 'size' => 'Standard', 'sku' => 'QA-SPEAKER-'.strtoupper($color), 'price' => $price, 'stock_quantity' => $stock]);
-            $variantProduct->images()->create(['product_variant_id' => $variant->id, 'path' => 'qa/variant-'.($color === 'White' ? 'white' : 'black').'.jpg', 'position' => $variantProduct->images()->count()]);
+            $variantProduct->images()->create(['color' => $color, 'path' => 'qa/variant-'.($color === 'White' ? 'white' : 'black').'.jpg', 'position' => $variantProduct->images()->count()]);
         }
-        $variantProduct->images()->create(['product_variant_id' => $variantProduct->variants()->where('color', 'Black')->sole()->id, 'path' => 'qa/variant-white.jpg', 'position' => 3]);
+        $variantProduct->images()->create(['color' => 'Black', 'path' => 'qa/variant-white.jpg', 'position' => 3]);
         $draft = $this->product($tenant, $store, $category, 'QA Approval Draft', 'qa-approval-draft', 'QA-APPROVAL', '15.00', 3);
         $draft->update(['status' => 'draft']);
         $draft->images()->create(['path' => 'qa/variant-black.jpg', 'position' => 0]);

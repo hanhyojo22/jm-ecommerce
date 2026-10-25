@@ -54,7 +54,7 @@ class CheckoutCart
                 $product = $products->get($item->product_id);
 
                 $variant = $product !== null && $item->product_variant_id !== null
-                    ? $product->variants()->with('images')->lockForUpdate()->find($item->product_variant_id)
+                    ? $product->variants()->lockForUpdate()->find($item->product_variant_id)
                     : null;
 
                 if ($product !== null && in_array($product->tenant_id, $managedTenantIds, true)) {
@@ -83,7 +83,7 @@ class CheckoutCart
                     'variant' => $variant,
                     'quantity' => $item->quantity,
                     'unit_price' => $unitPrice,
-                    'image_path' => $variant?->images->first()?->path ?? $product->images()->orderBy('position')->value('path'),
+                    'image_path' => (filled($variant?->color) ? $product->images()->where('color', $variant->color)->value('path') : null) ?? $product->images()->value('path'),
                     'total' => bcmul($unitPrice, (string) $item->quantity, 2),
                 ];
             });

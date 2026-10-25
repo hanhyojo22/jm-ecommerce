@@ -428,16 +428,28 @@ class CatalogTest extends TestCase
     public function test_product_gallery_holds_every_photo_and_opens_on_the_selected_variant(): void
     {
         $product = $this->product();
-        $black = $product->variants()->create(['color' => 'Black', 'sku' => 'CARGO-BLACK', 'stock_quantity' => 5]);
-        $yellow = $product->variants()->create(['color' => 'Yellow', 'sku' => 'CARGO-YELLOW', 'stock_quantity' => 5]);
+        $product->variants()->create(['color' => 'Black', 'sku' => 'CARGO-BLACK', 'stock_quantity' => 5]);
+        $product->variants()->create(['color' => 'Yellow', 'sku' => 'CARGO-YELLOW', 'stock_quantity' => 5]);
         $product->images()->create(['path' => 'products/cargo-shared.jpg', 'position' => 0]);
-        $product->images()->create(['path' => 'products/cargo-yellow.jpg', 'position' => 1, 'product_variant_id' => $yellow->id]);
-        $product->images()->create(['path' => 'products/cargo-black.jpg', 'position' => 2, 'product_variant_id' => $black->id]);
+        $product->images()->create(['path' => 'products/cargo-yellow.jpg', 'position' => 1, 'color' => 'Yellow']);
+        $product->images()->create(['path' => 'products/cargo-black.jpg', 'position' => 2, 'color' => 'Black']);
 
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
             ->assertOk()
             ->assertSee('aria-label="Zoom image 1 of 3"', false)
             ->assertSee('<img :src="gallery[selected]?.url" src="'.Storage::disk('product_images')->url('products/cargo-black.jpg').'"', false);
+    }
+
+    public function test_every_size_of_a_color_opens_on_that_colors_photo(): void
+    {
+        $product = $this->product();
+        $product->variants()->create(['color' => 'White', 'size' => 'S', 'sku' => 'CARGO-WS', 'stock_quantity' => 0]);
+        $product->variants()->create(['color' => 'White', 'size' => 'M', 'sku' => 'CARGO-WM', 'stock_quantity' => 5]);
+        $product->images()->create(['path' => 'products/cargo-shared.jpg', 'position' => 0]);
+        $product->images()->create(['path' => 'products/cargo-white.jpg', 'position' => 1, 'color' => 'White']);
+
+        $this->get(route('catalog.show', [$product->store->slug, $product->slug]))
+            ->assertSee('<img :src="gallery[selected]?.url" src="'.Storage::disk('product_images')->url('products/cargo-white.jpg').'"', false);
     }
 
     public function test_verified_buyer_sees_add_to_cart_actions_in_the_catalog(): void

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -58,6 +59,28 @@ class Product extends Model
     public function variants(): HasMany
     {
         return $this->hasMany(ProductVariant::class)->orderBy('color')->orderBy('size');
+    }
+
+    /**
+     * Photos of one color, shared by every size of it, from the already loaded images.
+     *
+     * @return Collection<int, ProductImage>
+     */
+    public function colorPhotos(?string $color): Collection
+    {
+        return filled($color) ? $this->images->where('color', $color)->values() : new Collection;
+    }
+
+    /**
+     * Whether a buyer could pick a variant with no photo: nothing is shared, and some variant's color has no photos.
+     */
+    public function hasVariantsWithoutPhotos(): bool
+    {
+        if ($this->images()->whereNull('color')->exists()) {
+            return false;
+        }
+
+        return $this->variants()->whereNotIn('color', $this->images()->whereNotNull('color')->distinct()->pluck('color'))->exists();
     }
 
     public function thumbnail(): HasOne

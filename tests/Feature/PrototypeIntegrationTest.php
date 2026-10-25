@@ -30,12 +30,12 @@ class PrototypeIntegrationTest extends TestCase
                 ['color' => 'White', 'size' => 'Standard', 'sku' => 'CAMERA-W', 'price' => '130.50', 'stock_quantity' => 0, 'images' => [UploadedFile::fake()->image('white.jpg')]],
             ],
         ])->assertRedirect(route('seller.products.index'));
-        $listing = Product::query()->where('sku', 'CAMERA')->with('variants.images')->sole();
+        $listing = Product::query()->where('sku', 'CAMERA')->with(['variants', 'images'])->sole();
         $this->assertSame('draft', $listing->status);
         $this->assertSame(2, $listing->stock_quantity);
         $this->assertSame('120.35', $listing->variants[0]->price);
-        $this->assertCount(1, $listing->variants[0]->images);
-        Storage::disk('product_images')->assertExists($listing->variants[0]->images[0]->path);
+        $this->assertCount(1, $listing->colorPhotos('Black'));
+        Storage::disk('product_images')->assertExists($listing->colorPhotos('Black')[0]->path);
 
         $this->post(route('seller.products.submit', $listing))->assertRedirect(route('seller.products.index'));
         $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'pending']);
@@ -55,6 +55,68 @@ class PrototypeIntegrationTest extends TestCase
         ])->assertSessionHasErrors(['variants.0.price', 'variants.0.images.0']);
 
         $this->assertDatabaseMissing('products', ['sku' => 'INVALID-VARIANT']);
+    }
+
+    public function test_variant_photos_are_shared_by_every_size_of_their_color(): void
+    {
+        Storage::fake('product_images');
+        [$seller, $product] = $this->listing();
+
+        $this->actingAs($seller)->post(route('seller.products.store'), [
+            'name' => 'Shared shirt', 'sku' => 'SHIRT', 'description' => 'A cotton shirt.', 'category_id' => $product->category_id, 'price' => '100.00',
+            'variants' => [
+                ['color' => 'White', 'size' => 'S', 'sku' => 'SHIRT-WS', 'stock_quantity' => 2, 'images' => [UploadedFile::fake()->image('white.jpg')]],
+                ['color' => 'White', 'size' => 'M', 'sku' => 'SHIRT-WM', 'stock_quantity' => 2],
+                ['color' => 'Black', 'size' => 'S', 'sku' => 'SHIRT-BS', 'stock_quantity' => 2, 'images' => [UploadedFile::fake()->image('black.jpg')]],
+            ],
+        ])->assertRedirect(route('seller.products.index'));
+        $listing = Product::query()->where('sku', 'SHIRT')->with('images')->sole();
+        $this->post(route('seller.products.submit', $listing))->assertRedirect(route('seller.products.index'));
+
+        $this->assertCount(1, $listing->colorPhotos('White'));
+        $this->assertCount(1, $listing->colorPhotos('Black'));
+        $this->assertDatabaseMissing('product_images', ['product_id' => $listing->id, 'color' => null]);
+        $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'pending']);
+    }
+
+    public function test_listing_without_shared_photos_needs_photos_for_every_color(): void
+    {
+        Storage::fake('product_images');
+        [$seller, $product] = $this->listing();
+        $this->actingAs($seller)->post(route('seller.products.store'), [
+            'name' => 'Half shirt', 'sku' => 'HALF', 'description' => 'A cotton shirt.', 'category_id' => $product->category_id, 'price' => '100.00',
+            'variants' => [
+                ['color' => 'White', 'size' => 'S', 'sku' => 'HALF-WS', 'stock_quantity' => 2, 'images' => [UploadedFile::fake()->image('white.jpg')]],
+                ['color' => 'Black', 'size' => 'S', 'sku' => 'HALF-BS', 'stock_quantity' => 2],
+            ],
+        ]);
+        $listing = Product::query()->where('sku', 'HALF')->sole();
+
+        $this->post(route('seller.products.submit', $listing))
+            ->assertSessionHasErrors(['status' => 'Add photos for every color or upload a shared product photo before submitting.']);
+
+        $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'draft']);
+    }
+
+    public function test_variant_photos_are_limited_to_four_per_color_and_need_a_color(): void
+    {
+        Storage::fake('product_images');
+        [$seller] = $this->listing();
+        $photos = fn (int $count): array => array_map(fn (int $index) => UploadedFile::fake()->image("photo-$index.jpg"), range(1, $count));
+
+        $this->actingAs($seller)->post(route('seller.products.store'), [
+            'name' => 'Crowded shirt', 'sku' => 'CROWDED', 'price' => '10.00',
+            'variants' => [
+                ['color' => 'White', 'size' => 'S', 'sku' => 'CROWDED-WS', 'stock_quantity' => 1, 'images' => $photos(3)],
+                ['color' => 'White', 'size' => 'M', 'sku' => 'CROWDED-WM', 'stock_quantity' => 1, 'images' => $photos(2)],
+                ['size' => 'L', 'sku' => 'CROWDED-L', 'stock_quantity' => 1, 'images' => $photos(1)],
+            ],
+        ])->assertSessionHasErrors([
+            'variants.1.images' => 'Each color can have no more than 4 photos. Remove a White photo to add another.',
+            'variants.2.images' => 'Only a variant with a color can have its own photos. Use the product photos instead.',
+        ]);
+
+        $this->assertDatabaseMissing('products', ['sku' => 'CROWDED']);
     }
 
     #[TestWith(['changes_required'])]
@@ -103,7 +165,7 @@ class PrototypeIntegrationTest extends TestCase
         [, $first] = $this->listing();
         [, $second] = $this->listing();
         $variant = $first->variants()->create(['color' => 'Blue', 'size' => 'M', 'sku' => 'BLUE-M', 'stock_quantity' => 4, 'price' => '12.35']);
-        $first->images()->create(['product_variant_id' => $variant->id, 'position' => 1, 'path' => 'products/blue.jpg']);
+        $first->images()->create(['color' => 'Blue', 'position' => 1, 'path' => 'products/blue.jpg']);
         $second->update(['price' => '7.20']);
         $this->actingAs($shopper)->post(route('cart.store', $first), ['quantity' => 2, 'variant_id' => $variant->id])->assertRedirect();
         $this->post(route('cart.store', $second), ['quantity' => 1])->assertRedirect();
