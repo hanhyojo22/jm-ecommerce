@@ -14,10 +14,13 @@ class Product extends Model
 {
     use HasUlids, SoftDeletes;
 
-    public const STATUSES = ['draft' => 'Draft', 'pending' => 'Pending review', 'active' => 'Published', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'inactive' => 'Suspended'];
+    public const STATUSES = ['draft' => 'Draft', 'pending' => 'Pending review', 'active' => 'Published', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'inactive' => 'Suspended', 'unlisted' => 'Unlisted'];
+
+    /** Fields buyers read as the listing's claims; editing them on a live listing asks an administrator to re-check it. */
+    public const REVIEWED_FIELDS = ['name', 'description', 'category_id', 'brand', 'condition'];
 
     protected $fillable = [
-        'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason',
+        'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
     ];
 
     /** @return array<string, string> */
@@ -25,15 +28,24 @@ class Product extends Model
     {
         return match ($this->status) {
             'pending' => ['active' => 'Approve and publish', 'changes_required' => 'Request changes', 'rejected' => 'Reject listing'],
-            'active' => ['inactive' => 'Suspend listing'],
+            'active' => [...($this->content_changed_at ? ['active' => 'Approve edits'] : []), 'inactive' => 'Suspend listing'],
+            'unlisted' => [...($this->content_changed_at ? ['unlisted' => 'Approve edits'] : []), 'inactive' => 'Suspend listing'],
             'inactive' => ['active' => 'Restore publication'],
             default => [],
         };
     }
 
+    /**
+     * Whether the seller can change this listing. Only a listing waiting on an administrator is locked.
+     */
+    public function isEditableBySeller(): bool
+    {
+        return $this->status !== 'pending';
+    }
+
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean'];
+        return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean', 'content_changed_at' => 'datetime'];
     }
 
     public function tenant(): BelongsTo

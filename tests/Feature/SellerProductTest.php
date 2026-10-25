@@ -529,8 +529,81 @@ class SellerProductTest extends TestCase
             'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 7, 'status' => 'draft']);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 7, 'status' => 'active']);
+        $this->assertNotNull($product->refresh()->content_changed_at);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.updated', 'entity_id' => $product->id]);
+    }
+
+    public function test_stock_and_price_edits_keep_a_live_listing_on_sale_without_a_re_check(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->completeListing($tenant, $store, 'active');
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => $product->name, 'sku' => $product->sku, 'description' => $product->description, 'category_id' => $product->category_id,
+            'price' => '249.00', 'stock_quantity' => 9, 'status' => 'draft',
+        ])->assertRedirect(route('seller.products.index'));
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'active', 'price' => '249.00', 'stock_quantity' => 9, 'content_changed_at' => null]);
+    }
+
+    public function test_live_listing_cannot_lose_its_last_photo(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->completeListing($tenant, $store, 'active');
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => $product->name, 'sku' => $product->sku, 'description' => $product->description, 'category_id' => $product->category_id,
+            'price' => '299.00', 'stock_quantity' => 2, 'status' => 'draft', 'remove_images' => [$product->images()->value('id')],
+        ])->assertSessionHasErrors(['status' => 'A published listing needs a photo for every color, or a shared product photo.']);
+
+        $this->assertSame(1, $product->images()->count());
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'active']);
+    }
+
+    public function test_seller_withdraws_a_submission_to_keep_editing(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $pending = $this->completeListing($tenant, $store, 'pending');
+        $draft = $this->completeListing($tenant, $store, 'draft');
+
+        $this->actingAs($owner)->post(route('seller.products.withdraw', $pending))
+            ->assertSessionHas('status', 'Submission withdrawn. The listing is a draft again.');
+        $this->post(route('seller.products.withdraw', $draft))
+            ->assertSessionHasErrors(['status' => 'Only a listing under review can be withdrawn.']);
+
+        $this->assertDatabaseHas('products', ['id' => $pending->id, 'status' => 'draft']);
+        $this->assertDatabaseHas('audit_logs', ['entity_id' => $pending->id, 'action' => 'product.withdrawn']);
+    }
+
+    public function test_seller_relists_an_unlisted_listing_without_review(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $unlisted = $this->completeListing($tenant, $store, 'unlisted');
+        $draft = $this->completeListing($tenant, $store, 'draft');
+
+        $this->actingAs($owner)->post(route('seller.products.relist', $unlisted))->assertRedirect(route('seller.products.index'));
+        $this->post(route('seller.products.relist', $draft))
+            ->assertSessionHasErrors(['status' => 'Only an unlisted listing can be relisted.']);
+
+        $this->assertDatabaseHas('products', ['id' => $unlisted->id, 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['id' => $draft->id, 'status' => 'draft']);
+    }
+
+    public function test_seller_fixes_a_suspended_listing_and_submits_it_again(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $this->completeListing($tenant, $store, 'inactive');
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Canvas Tote, cotton', 'sku' => $product->sku, 'description' => $product->description, 'category_id' => $product->category_id,
+            'price' => '299.00', 'stock_quantity' => 2, 'status' => 'draft',
+        ])->assertRedirect(route('seller.products.index'));
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote, cotton', 'status' => 'inactive']);
+
+        $this->post(route('seller.products.submit', $product))->assertRedirect(route('seller.products.index'));
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'pending']);
     }
 
     public function test_seller_cannot_remove_required_details_from_a_complete_active_listing(): void
@@ -649,7 +722,7 @@ class SellerProductTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Private Item']);
     }
 
-    public function test_owner_can_deactivate_selected_active_products_from_their_store(): void
+    public function test_owner_can_unlist_selected_active_products_from_their_store(): void
     {
         [$owner, $tenant, $store] = $this->seller();
         $products = collect(['Canvas Tote', 'Leather Wallet'])->map(fn (string $name): Product => $store->products()->create([
@@ -663,17 +736,16 @@ class SellerProductTest extends TestCase
         ]));
 
         $this->actingAs($owner)->get(route('seller.products.index'))
-            ->assertSee('Deactivate active listings')
+            ->assertSee('Unlist selected')
             ->assertSee('name="product_ids[]"', false);
 
         $this->actingAs($owner)->post(route('seller.products.bulk-deactivate'), [
             'product_ids' => [...$products->pluck('id')->all(), ...$products->pluck('id')->all()],
         ])->assertRedirect(route('seller.products.index'))
-            ->assertSessionHas('status', '2 listings were deactivated.');
+            ->assertSessionHas('status', '2 listings were unlisted.');
 
-        $this->assertDatabaseMissing('products', ['id' => $products[0]->id, 'status' => 'active']);
-        $this->assertDatabaseHas('products', ['id' => $products[0]->id, 'status' => 'inactive']);
-        $this->assertDatabaseHas('products', ['id' => $products[1]->id, 'status' => 'inactive']);
+        $this->assertDatabaseHas('products', ['id' => $products[0]->id, 'status' => 'unlisted']);
+        $this->assertDatabaseHas('products', ['id' => $products[1]->id, 'status' => 'unlisted']);
         $this->assertDatabaseCount('audit_logs', 2);
     }
 
@@ -729,6 +801,15 @@ class SellerProductTest extends TestCase
     private function productPayload(): array
     {
         return ['name' => 'Canvas Tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 1, 'status' => 'draft'];
+    }
+
+    private function completeListing(Tenant $tenant, Store $store, string $status): Product
+    {
+        $category = Category::firstOrCreate(['slug' => 'bags'], ['name' => 'Bags', 'is_active' => true]);
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'category_id' => $category->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote-'.str()->lower(str()->random(6)), 'sku' => 'TOTE-'.str()->upper(str()->random(6)), 'description' => 'A durable tote.', 'price' => '299.00', 'stock_quantity' => 2, 'status' => $status]);
+        $product->images()->create(['path' => 'products/tote.jpg', 'position' => 0]);
+
+        return $product;
     }
 
     private function seller(): array

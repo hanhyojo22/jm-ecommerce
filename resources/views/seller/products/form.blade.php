@@ -22,8 +22,9 @@
 <div class="page-shell">
     <div class="page-container seller-workspace-page">
         @if ($editing && $product->moderation_reason)<div class="sc-notice mx-auto mb-5 max-w-[1120px] !block" data-tone="warning"><strong>Administrator feedback</strong><p class="mt-1 whitespace-pre-line">{{ $product->moderation_reason }}</p></div>@endif
-        @if ($editing && in_array($product->status, ['pending', 'inactive'], true))
-            <div class="sc-card sc-card-pad mb-5"><x-marketplace.product-status :status="$product->status" /><p class="mt-3 text-sm text-muted">{{ $product->status === 'pending' ? 'Your submission is under review. Editing is paused until the administrator records a decision.' : 'This listing is suspended. Contact the platform administrator before making changes.' }}</p><a href="{{ route('seller.products.index') }}" class="mt-3 inline-flex min-h-11 items-center font-semibold text-brand">Back to products</a></div>
+        @if ($editing && in_array($product->status, ['active', 'unlisted'], true))<div class="sc-notice mx-auto mb-5 max-w-[1120px] !block" data-tone="info"><strong>{{ $product->status === 'active' ? 'This listing stays on sale while you edit' : 'This listing stays unlisted while you edit' }}</strong><p class="mt-1">Changes apply as soon as you save. Edits to the title, description, category or photos are re-checked by an administrator.</p></div>@endif
+        @if ($editing && ! $product->isEditableBySeller())
+            <div class="sc-card sc-card-pad mb-5"><x-marketplace.product-status :status="$product->status" /><p class="mt-3 text-sm text-muted">Your submission is under review. Editing is paused until the administrator records a decision.</p><form method="POST" action="{{ route('seller.products.withdraw', $product) }}" class="mt-3 inline">@csrf<button type="submit" class="seller-outline-button">Withdraw submission to edit</button></form> <a href="{{ route('seller.products.index') }}" class="ml-3 inline-flex min-h-11 items-center font-semibold text-brand">Back to products</a></div>
         @else
         <form method="POST" enctype="multipart/form-data" action="{{ $formAction }}"
             x-data="{

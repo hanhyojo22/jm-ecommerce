@@ -77,6 +77,25 @@ class AdminProductControllerTest extends TestCase
         ]);
     }
 
+    public function test_administrator_approves_a_live_listings_edits_without_taking_it_offline(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $store = $this->store('Northwind Goods');
+        $edited = $this->product($store, 'Canvas Tote', 'TOTE-001', 'active');
+        $edited->update(['content_changed_at' => now()]);
+        $untouched = $this->product($store, 'Travel Mug', 'MUG-001', 'active');
+
+        $this->actingAs($administrator)->get(route('admin.products.index', ['edited' => 1]))
+            ->assertSee($edited->name)
+            ->assertDontSee($untouched->name);
+        $this->patch(route('admin.products.moderate', $edited), ['status' => 'active', 'reason' => 'The new title matches the photos.'])
+            ->assertRedirect(route('admin.products.show', $edited));
+
+        $this->assertDatabaseHas('products', ['id' => $edited->id, 'status' => 'active', 'content_changed_at' => null]);
+        $this->patch(route('admin.products.moderate', $untouched), ['status' => 'active', 'reason' => 'Nothing changed on this listing.'])
+            ->assertSessionHasErrors(['status' => 'This decision is not available for the current listing state.']);
+    }
+
     public function test_administrator_cannot_activate_an_incomplete_listing(): void
     {
         $administrator = User::factory()->administrator()->create();

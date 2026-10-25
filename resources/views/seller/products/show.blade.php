@@ -1,14 +1,15 @@
 @php
     $isOnSale = $product->compare_at_price !== null && (float) $product->compare_at_price > (float) $product->price;
-    $canSubmit = in_array($product->status, ['draft', 'changes_required', 'rejected'], true);
+    $canSubmit = in_array($product->status, ['draft', 'changes_required', 'rejected', 'inactive'], true);
     $stage = match ($product->status) { 'pending' => 1, 'active' => 2, default => 0 };
     $stageNote = match ($product->status) {
         'draft' => 'Only you can see this listing. Submit it when the checklist is complete.',
         'changes_required' => 'The administrator asked for changes. Edit the listing, then submit it again.',
         'rejected' => 'This listing was rejected. Edit it to address the feedback, then submit it again.',
-        'pending' => 'An administrator is reviewing this listing. Editing is paused until they decide.',
-        'active' => 'Buyers can find and order this listing. Saving changes sends it back for review.',
-        'inactive' => 'This listing is suspended. Contact the platform administrator before making changes.',
+        'pending' => 'An administrator is reviewing this listing. Editing is paused until they decide, or until you withdraw the submission.',
+        'active' => 'Buyers can find and order this listing. Changes go live right away; edits to the title, description, category or photos are re-checked by an administrator.',
+        'unlisted' => 'You unlisted this listing, so buyers cannot see it. Relist it from Products whenever you are ready.',
+        'inactive' => 'An administrator suspended this listing. Fix what the feedback asks for, then submit it for review again.',
         default => null,
     };
     $checks = [
@@ -27,7 +28,7 @@
             </div>
             <div class="sc-page-actions">
                 @if ($product->status === 'active')<a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $product->name }} in your store (opens in a new tab)">View in store <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>@endif
-                @if ($canManageProducts && ! in_array($product->status, ['pending', 'inactive'], true))<a href="{{ route('seller.products.edit', $product) }}" class="seller-primary-button">Edit listing</a>@endif
+                @if ($canManageProducts && $product->isEditableBySeller())<a href="{{ route('seller.products.edit', $product) }}" class="seller-primary-button">Edit listing</a>@endif
             </div>
         </div>
     </x-slot>

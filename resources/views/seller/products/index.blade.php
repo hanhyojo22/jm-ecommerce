@@ -9,7 +9,7 @@
         $totalProducts = array_sum($productCounts->all());
         $hasFilters = collect($filters)->filter()->isNotEmpty();
         $hasAdvancedFilters = filled($filters['category_id'] ?? null) || filled($filters['stock'] ?? null) || ($filters['sort'] ?? 'newest') !== 'newest';
-        $tabs = ['' => 'All', 'active' => 'Published', 'pending' => 'Pending review', 'draft' => 'Draft', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'inactive' => 'Suspended'];
+        $tabs = ['' => 'All', 'active' => 'Published', 'pending' => 'Pending review', 'draft' => 'Draft', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'unlisted' => 'Unlisted', 'inactive' => 'Suspended'];
     @endphp
     <div class="page-shell"><div class="page-container seller-products-page seller-workspace-page sc-stack">
         @if ($errors->has('status'))<div role="alert" class="sc-notice" data-tone="danger">{{ $errors->first('status') }}</div>@endif
@@ -32,9 +32,9 @@
                     <button type="submit" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted hover:text-brand" aria-label="Search products"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
                 </form>
                 @if ($hasAdvancedFilters)<p class="sc-meta">A saved product view is active. <a href="{{ route('seller.products.index') }}" class="font-semibold text-brand underline underline-offset-4">Show all products</a></p>@endif
-                @if ($canManageProducts)<button type="submit" form="bulk-product-deactivate" title="Deactivate active listings" class="sc-btn sc-btn-danger ml-auto">Deactivate selected</button>@endif
+                @if ($canManageProducts)<button type="submit" form="bulk-product-deactivate" title="Unlist the selected listings" class="sc-btn sc-btn-danger ml-auto">Unlist selected</button>@endif
             </div>
-            @if ($canManageProducts)<form id="bulk-product-deactivate" method="POST" action="{{ route('seller.products.bulk-deactivate') }}" data-confirm-message="Deactivate the selected active listings? They will no longer appear in your storefront.">@csrf</form><x-input-error :messages="$errors->get('product_ids')" class="mx-5 mb-3" />@endif
+            @if ($canManageProducts)<form id="bulk-product-deactivate" method="POST" action="{{ route('seller.products.bulk-deactivate') }}" data-confirm-message="Unlist the selected listings? Buyers will not see them until you relist them.">@csrf</form><x-input-error :messages="$errors->get('product_ids')" class="mx-5 mb-3" />@endif
 
             @if ($products->isNotEmpty())
                 <div class="sc-table-wrap hidden xl:block">

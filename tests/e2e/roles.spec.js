@@ -231,8 +231,8 @@ test('seller can cancel bulk listing deactivation before any change is submitted
             expect(dialog.type()).toBe('confirm');
             dialog.dismiss();
         });
-        await page.getByRole('button', { name: 'Deactivate selected' }).click();
-        await expect(page.getByRole('button', { name: 'Deactivate selected' })).toBeVisible();
+        await page.getByRole('button', { name: 'Unlist selected' }).click();
+        await expect(page.getByRole('button', { name: 'Unlist selected' })).toBeVisible();
         await expect(page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByText('Published', { exact: true })).toBeVisible();
     } finally {
         await context.close();
@@ -248,7 +248,7 @@ test('seller product selection fits and remains usable on mobile', async ({ brow
         await page.getByRole('button', { name: 'Reject Optional' }).click();
         await page.getByRole('checkbox', { name: 'Select listing QA Canvas Tote' }).last().check();
         page.once('dialog', (dialog) => dialog.dismiss());
-        await page.getByRole('button', { name: 'Deactivate selected' }).click();
+        await page.getByRole('button', { name: 'Unlist selected' }).click();
 
         const dimensions = await page.evaluate(() => ({
             viewport: document.documentElement.clientWidth,
@@ -455,7 +455,7 @@ test('seller adds a size option to a saved product without changing its saved va
         await expect(page.locator('.ps-pill')).toHaveText(['S', 'M']);
         await page.getByRole('button', { name: 'Edit Size option' }).click();
         await expect(page.getByLabel('Size value 1')).toHaveJSProperty('readOnly', true);
-        await expect(page.getByRole('button', { name: 'Add another option' })).toBeHidden();
+        await expect(page.getByRole('button', { name: 'Add another option' })).toBeVisible();
         await page.getByLabel('Size value 3').fill('L');
         await page.getByRole('button', { name: 'Done' }).click();
         await page.getByLabel('Available for L').fill('4');

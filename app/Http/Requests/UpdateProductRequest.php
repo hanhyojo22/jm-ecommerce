@@ -103,7 +103,7 @@ class UpdateProductRequest extends FormRequest
                 $validator->errors()->add('status', 'Only an administrator can activate a listing.');
             }
 
-            if ($product instanceof Product && (in_array($product->status, ['pending', 'inactive'], true) || ! in_array($this->input('status'), [$product->status, 'draft', ...($product->status === 'active' ? ['inactive'] : [])], true))) {
+            if ($product instanceof Product && ! $product->isEditableBySeller()) {
                 $validator->errors()->add('status', 'This listing cannot be edited in its current review state.');
             }
 

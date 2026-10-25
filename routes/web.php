@@ -131,6 +131,8 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::get('/seller/products/{product}/edit', [ProductController::class, 'edit'])->name('seller.products.edit');
     Route::patch('/seller/products/{product}', [ProductController::class, 'update'])->middleware('throttle:10,1')->name('seller.products.update');
     Route::post('/seller/products/{product}/submit', [ProductController::class, 'submit'])->middleware('throttle:10,1')->name('seller.products.submit');
+    Route::post('/seller/products/{product}/withdraw', [ProductController::class, 'withdraw'])->middleware('throttle:10,1')->name('seller.products.withdraw');
+    Route::post('/seller/products/{product}/relist', [ProductController::class, 'relist'])->middleware('throttle:10,1')->name('seller.products.relist');
     Route::get('/seller/orders', [SellerOrderController::class, 'index'])->name('seller.orders.index');
     Route::get('/seller/returns', [SellerReturnCaseController::class, 'index'])->name('seller.returns.index');
     Route::get('/seller/returns/{returnCase}', [SellerReturnCaseController::class, 'show'])->name('seller.returns.show');

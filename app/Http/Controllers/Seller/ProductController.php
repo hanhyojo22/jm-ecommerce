@@ -31,7 +31,7 @@ class ProductController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'status' => ['nullable', 'in:active,draft,inactive,pending,changes_required,rejected'],
+            'status' => ['nullable', 'in:active,draft,inactive,unlisted,pending,changes_required,rejected'],
             'stock' => ['nullable', 'in:in_stock,out_of_stock'],
             'sort' => ['nullable', 'in:newest,name,price,stock'],
         ]);
@@ -193,18 +193,25 @@ class ProductController extends Controller
                     abort(403, 'Only an administrator can activate a listing.');
                 }
 
-                if (in_array($product->status, ['pending', 'inactive'], true)) {
+                if (! $product->isEditableBySeller()) {
                     throw ValidationException::withMessages(['status' => 'This listing cannot be edited in its current review state.']);
                 }
 
-                $wasComplete = filled($product->description) && $product->category_id !== null && $product->images()->exists();
-                if ($data['status'] === 'active' && $wasComplete && (! filled($data['description'] ?? null) || empty($data['category_id']))) {
-                    throw ValidationException::withMessages(['status' => 'An active listing needs a category, description, and product photo.']);
+                // A listing buyers can reach (or that the seller can relist) stays where it is; edits do not take it offline,
+                // but they may not strip a detail it already had. Older listings that never had one can still be saved.
+                $isLive = in_array($product->status, ['active', 'unlisted'], true);
+                $detailsWereComplete = filled($product->description) && $product->category_id !== null;
+                $photosWereComplete = $product->images()->exists() && ! $product->hasVariantsWithoutPhotos();
+                if ($isLive && $detailsWereComplete && (! filled($data['description'] ?? null) || empty($data['category_id']))) {
+                    throw ValidationException::withMessages(['status' => 'A published listing needs a category, description, and product photo.']);
                 }
 
                 $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
-                $data['status'] = $data['status'] === 'inactive' ? 'inactive' : 'draft';
-                $product->update($data);
+                $sharedPhotoOrder = $product->images()->whereNull('color')->pluck('id')->all();
+                $data['status'] = in_array($product->status, ['active', 'unlisted', 'inactive'], true) ? $product->status : 'draft';
+                $product->fill($data);
+                $contentChanged = $product->isDirty(Product::REVIEWED_FIELDS);
+                $product->save();
 
                 if ($removedImageIds !== []) {
                     $removedImages = $product->images()->whereIn('id', $removedImageIds)->get();
@@ -231,6 +238,17 @@ class ProductController extends Controller
                 }
 
                 $this->renumberImages($product, $imageOrder);
+
+                if ($isLive) {
+                    if ($photosWereComplete && (! $product->images()->exists() || $product->hasVariantsWithoutPhotos())) {
+                        throw ValidationException::withMessages(['status' => 'A published listing needs a photo for every color, or a shared product photo.']);
+                    }
+                    $photosChanged = $imagePaths !== [] || $variantImagePaths !== [] || $removedImageIds !== []
+                        || $product->images()->whereNull('color')->pluck('id')->all() !== $sharedPhotoOrder;
+                    if ($contentChanged || $photosChanged) {
+                        $product->update(['content_changed_at' => now()]);
+                    }
+                }
 
                 AuditLog::query()->create([
                     'actor_user_id' => $request->user()->id,
@@ -265,8 +283,8 @@ class ProductController extends Controller
         $product = $this->editableProduct($request, $product);
         DB::transaction(function () use ($request, $product): void {
             $product = Product::query()->lockForUpdate()->findOrFail($product->id);
-            if (! in_array($product->status, ['draft', 'changes_required', 'rejected'], true)) {
-                throw ValidationException::withMessages(['status' => 'Only a draft or returned listing can be submitted for review.']);
+            if (! in_array($product->status, ['draft', 'changes_required', 'rejected', 'inactive'], true)) {
+                throw ValidationException::withMessages(['status' => 'Only a draft, returned or suspended listing can be submitted for review.']);
             }
             if (! filled($product->description) || $product->category_id === null || ! $product->images()->exists()) {
                 throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before submitting for review.']);
@@ -280,6 +298,42 @@ class ProductController extends Controller
         });
 
         return to_route('seller.products.index')->with('status', 'Listing submitted for administrator review.');
+    }
+
+    /**
+     * Takes a submission back before the administrator decides, so the seller can keep editing.
+     */
+    public function withdraw(Request $request, Product $product): RedirectResponse
+    {
+        $product = $this->editableProduct($request, $product);
+        DB::transaction(function () use ($request, $product): void {
+            $product = Product::query()->lockForUpdate()->findOrFail($product->id);
+            if ($product->status !== 'pending') {
+                throw ValidationException::withMessages(['status' => 'Only a listing under review can be withdrawn.']);
+            }
+            $product->update(['status' => 'draft']);
+            AuditLog::query()->create(['actor_user_id' => $request->user()->id, 'action' => 'product.withdrawn', 'entity_type' => Product::class, 'entity_id' => $product->id, 'old_values' => ['status' => 'pending'], 'new_values' => ['status' => 'draft'], 'ip_address' => $request->ip()]);
+        });
+
+        return to_route('seller.products.index')->with('status', 'Submission withdrawn. The listing is a draft again.');
+    }
+
+    /**
+     * Puts a listing the seller unlisted back on sale. It was approved before, so it needs no new review.
+     */
+    public function relist(Request $request, Product $product): RedirectResponse
+    {
+        $product = $this->editableProduct($request, $product);
+        DB::transaction(function () use ($request, $product): void {
+            $product = Product::query()->lockForUpdate()->findOrFail($product->id);
+            if ($product->status !== 'unlisted') {
+                throw ValidationException::withMessages(['status' => 'Only an unlisted listing can be relisted.']);
+            }
+            $product->update(['status' => 'active']);
+            AuditLog::query()->create(['actor_user_id' => $request->user()->id, 'action' => 'product.relisted', 'entity_type' => Product::class, 'entity_id' => $product->id, 'old_values' => ['status' => 'unlisted'], 'new_values' => ['status' => 'active'], 'ip_address' => $request->ip()]);
+        });
+
+        return to_route('seller.products.index')->with('status', "{$product->name} is back on sale.");
     }
 
     public function bulkDeactivate(Request $request): RedirectResponse
@@ -314,7 +368,7 @@ class ProductController extends Controller
 
             foreach ($products as $product) {
                 $oldStatus = $product->status;
-                $product->update(['status' => 'inactive']);
+                $product->update(['status' => 'unlisted']);
 
                 AuditLog::query()->create([
                     'actor_user_id' => $request->user()->id,
@@ -322,7 +376,7 @@ class ProductController extends Controller
                     'entity_type' => Product::class,
                     'entity_id' => $product->id,
                     'old_values' => ['status' => $oldStatus],
-                    'new_values' => ['status' => 'inactive'],
+                    'new_values' => ['status' => 'unlisted'],
                     'ip_address' => $request->ip(),
                 ]);
             }
@@ -330,7 +384,7 @@ class ProductController extends Controller
             return $products;
         });
 
-        return to_route('seller.products.index')->with('status', count($products).' '.Str::plural('listing', count($products)).' '.(count($products) === 1 ? 'was' : 'were').' deactivated.');
+        return to_route('seller.products.index')->with('status', count($products).' '.Str::plural('listing', count($products)).' '.(count($products) === 1 ? 'was' : 'were').' unlisted.');
     }
 
     private function editableProduct(Request $request, Product $product): Product

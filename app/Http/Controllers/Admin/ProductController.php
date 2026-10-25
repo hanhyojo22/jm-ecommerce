@@ -24,7 +24,8 @@ class ProductController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
             'store_id' => ['nullable', 'exists:stores,id'],
             'category_id' => ['nullable', 'exists:categories,id'],
-            'status' => ['nullable', 'in:active,draft,inactive,pending,changes_required,rejected'],
+            'status' => ['nullable', 'in:active,draft,inactive,unlisted,pending,changes_required,rejected'],
+            'edited' => ['nullable', 'boolean'],
             'added' => ['nullable', 'in:last_30_days,last_90_days,this_year'],
             'sort' => ['nullable', 'in:newest,oldest,recently_updated,name'],
         ]);
@@ -43,6 +44,7 @@ class ProductController extends Controller
             ->when($filters['store_id'] ?? null, fn (Builder $query, string $storeId): Builder => $query->where('store_id', $storeId))
             ->when($filters['category_id'] ?? null, fn (Builder $query, string $categoryId): Builder => $query->where('category_id', $categoryId))
             ->when($filters['status'] ?? null, fn (Builder $query, string $status): Builder => $query->where('status', $status))
+            ->when($filters['edited'] ?? false, fn (Builder $query): Builder => $query->whereNotNull('content_changed_at'))
             ->when($filters['added'] ?? null, function (Builder $query, string $added): void {
                 match ($added) {
                     'last_30_days' => $query->where('created_at', '>=', now()->subDays(30)),
@@ -62,6 +64,7 @@ class ProductController extends Controller
             'products' => $products->paginate(20)->withQueryString(),
             'filters' => $filters,
             'totalProducts' => Product::query()->count(),
+            'editedCount' => Product::query()->whereNotNull('content_changed_at')->count(),
             'statusCounts' => Product::query()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status'),
             'stores' => Store::query()->orderBy('name')->get(['id', 'name']),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
@@ -92,7 +95,7 @@ class ProductController extends Controller
     {
         $this->authorizeAdmin($request);
         $data = $request->validate([
-            'status' => ['required', 'in:active,inactive,changes_required,rejected'],
+            'status' => ['required', 'in:active,inactive,unlisted,changes_required,rejected'],
             'reason' => ['required', 'string', 'min:10', 'max:1000'],
         ]);
 
@@ -111,7 +114,7 @@ class ProductController extends Controller
             if (! array_key_exists($data['status'], $product->moderationOptions())) {
                 throw ValidationException::withMessages(['status' => 'This decision is not available for the current listing state.']);
             }
-            $product->update(['status' => $data['status'], 'moderation_reason' => $data['reason']]);
+            $product->update(['status' => $data['status'], 'moderation_reason' => $data['reason'], 'content_changed_at' => null]);
 
             AuditLog::query()->create([
                 'actor_user_id' => $request->user()->id,

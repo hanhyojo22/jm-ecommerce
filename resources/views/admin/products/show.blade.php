@@ -16,6 +16,7 @@
             </div>
             <aside class="space-y-5 lg:sticky lg:top-24">
                 <section class="section-card"><h2 class="text-lg font-semibold">Moderate listing</h2><p class="mt-2 text-sm leading-6 text-muted">Only approved stores can publish. Stock availability is separate from the review decision.</p>
+                    @if ($product->content_changed_at)<p class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status">The seller changed this listing’s title, description, category or photos on {{ $product->content_changed_at->format('M j, Y g:i A') }}. It stayed on sale; approve the edits or suspend it.</p>@endif
                     @if ($product->moderationOptions())
                         <form method="POST" action="{{ route('admin.products.moderate', $product) }}" class="mt-5 space-y-4" x-data="{ saving: false }" @submit="saving = true">@csrf @method('PATCH')
                             <div><label for="status" class="field-label">Decision</label><select id="status" name="status" required class="field-control">@foreach ($product->moderationOptions() as $value => $label)<option value="{{ $value }}" @selected(old('status') === $value)>{{ $label }}</option>@endforeach</select><x-input-error :messages="$errors->get('status')" class="mt-2" /></div>

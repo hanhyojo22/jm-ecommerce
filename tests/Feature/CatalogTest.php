@@ -47,7 +47,7 @@ class CatalogTest extends TestCase
     public function test_product_suggestions_only_include_approved_public_products_from_active_stores(): void
     {
         $visible = $this->product(['name' => 'Cedar Lamp']);
-        foreach (['draft', 'pending', 'changes_required', 'rejected', 'inactive'] as $status) {
+        foreach (['draft', 'pending', 'changes_required', 'rejected', 'inactive', 'unlisted'] as $status) {
             $this->product(['name' => "Cedar {$status} Lamp", 'status' => $status]);
         }
         $this->product(['name' => 'Cedar inactive store'], 'active', 'inactive');
