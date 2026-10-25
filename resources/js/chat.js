@@ -63,6 +63,7 @@ window.chatThread = (conversationId, userId) => ({
     onMessageScroll: null,
     unhook: null,
     typingTimer: null,
+    receiptTimer: null,
 
     init() {
         this.onOnline = () => {
@@ -119,6 +120,7 @@ window.chatThread = (conversationId, userId) => ({
         this.connection?.unbind('state_change', this.onStateChange);
         if (this.channel) window.Echo?.leave(`conversation.${conversationId}`);
         clearTimeout(this.typingTimer);
+        clearTimeout(this.receiptTimer);
         this.observer?.disconnect();
         for (const item of this.pending) {
             if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
@@ -133,11 +135,19 @@ window.chatThread = (conversationId, userId) => ({
 
         this.channel = window.Echo.private(`conversation.${conversationId}`);
         this.channel.listen('.message.created', (event) => {
+            // This tab already rendered its own send; other tabs of the same user still sync.
+            const clientId = event.message?.client_message_id;
+            if (clientId && this.$refs.messageList.querySelector(`article[data-client-message-id="${CSS.escape(clientId)}"]`)) return;
             this.$wire.syncLatestMessages();
             if (event.message?.sender_id !== userId) this.$wire.markRead();
         });
-        this.channel.listen('.message.read', () => this.$wire.$refresh());
-        this.channel.listen('.message.delivered', () => this.$wire.$refresh());
+        // Delivered and read arrive back to back; one refresh covers both.
+        const refreshReceipts = () => {
+            clearTimeout(this.receiptTimer);
+            this.receiptTimer = setTimeout(() => this.$wire.$refresh(), 150);
+        };
+        this.channel.listen('.message.read', refreshReceipts);
+        this.channel.listen('.message.delivered', refreshReceipts);
         this.channel.listen('.conversation.typing', (event) => {
             if (event.user_id === userId) return;
             const indicator = this.$refs.typingIndicator;

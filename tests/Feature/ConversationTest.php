@@ -18,6 +18,7 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use DomainException;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Broadcast;
@@ -32,6 +33,13 @@ use Tests\TestCase;
 class ConversationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_chat_events_broadcast_without_waiting_for_the_queue_worker(): void
+    {
+        foreach ([MessageSent::class, ConversationReceiptUpdated::class, ConversationInboxChanged::class, TypingStatusChanged::class] as $event) {
+            $this->assertContains(ShouldBroadcastNow::class, class_implements($event), $event.' would sit in the queue before reaching the other person.');
+        }
+    }
 
     public function test_new_conversation_and_message_notify_only_authorized_inbox_recipients(): void
     {

@@ -42,7 +42,12 @@
 
             <div x-cloak x-show="!online" class="mx-3 mt-2 shrink-0 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-5" role="status">You’re offline. Sending is paused until your connection returns.</div>
             <div x-cloak x-show="online && !liveConnected" class="mx-3 mt-2 shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-brand-hover sm:mx-5" role="status">Reconnecting live updates. You can still send messages.</div>
-            <div id="conversation-messages" x-ref="messageList" class="chat-message-list min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6 sm:py-6" role="log" aria-live="polite" aria-label="Conversation messages" tabindex="0">
+            <div wire:loading.flex wire:target="jumpToLatest" class="min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden px-3 py-5 sm:px-6 sm:py-6" role="status" aria-label="Loading latest messages">
+                @foreach (['w-2/3', 'ml-auto w-1/2', 'w-3/5', 'ml-auto w-2/5'] as $bubble)
+                    <div class="h-12 animate-pulse motion-reduce:animate-none rounded-2xl bg-slate-100 {{ $bubble }}" aria-hidden="true"></div>
+                @endforeach
+            </div>
+            <div wire:loading.remove wire:target="jumpToLatest" id="conversation-messages" x-ref="messageList" class="chat-message-list min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5 sm:px-6 sm:py-6" role="log" aria-live="polite" aria-label="Conversation messages" tabindex="0">
                 @if ($hasMoreMessages)<div class="mb-5 text-center"><button x-on:click="loadOlder()" x-bind:disabled="loadingOlder" type="button" class="inline-flex min-h-11 items-center rounded-[10px] bg-white px-4 text-sm font-semibold text-ink shadow-sm transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60">Load earlier messages</button><span x-show="loadingOlder" class="ml-2 text-xs text-muted" role="status">Loading messages…</span><p x-cloak x-show="historyError" x-text="historyError" class="mt-2 text-sm text-red-700" role="alert"></p></div>@endif
                 @php($previousDate = null)
                 @php($previousSenderId = null)
@@ -121,7 +126,7 @@
                 @if ($hasNewerMessages)
                     <div class="mt-4 flex justify-center gap-2">
                         <button wire:click="loadNewerMessages" wire:loading.attr="disabled" type="button" class="min-h-11 rounded-full bg-canvas px-4 text-sm font-semibold text-ink hover:bg-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Load newer messages</button>
-                        <button wire:click="jumpToLatest" wire:loading.attr="disabled" type="button" class="min-h-11 rounded-full bg-blue-50 px-4 text-sm font-semibold text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Jump to latest</button>
+                        <button wire:click="jumpToLatest" x-on:click="followLatestMessage = true" wire:loading.attr="disabled" type="button" class="min-h-11 rounded-full bg-blue-50 px-4 text-sm font-semibold text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Jump to latest</button>
                     </div>
                 @endif
             </div>
