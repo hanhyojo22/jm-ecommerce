@@ -160,6 +160,25 @@ class SellerProductTest extends TestCase
         $this->assertSame('499.00', $product->price);
     }
 
+    public function test_saved_color_variant_takes_a_size_when_sizes_are_added_later(): void
+    {
+        [$owner, $tenant, $store] = $this->seller();
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Cotton shirt', 'slug' => 'cotton-shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'stock_quantity' => 2, 'status' => 'draft']);
+        $black = $product->variants()->create(['color' => 'Black', 'sku' => 'SHIRT-B', 'stock_quantity' => 2]);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'status' => 'draft',
+            'variants' => [
+                ['id' => $black->id, 'color' => 'Black', 'size' => 'M', 'sku' => 'SHIRT-B', 'stock_quantity' => 2],
+                ['color' => 'Black', 'size' => 'L', 'sku' => 'SHIRT-B-L', 'stock_quantity' => 3],
+            ],
+        ])->assertRedirect(route('seller.products.index'));
+
+        $this->assertSame(['L', 'M'], $product->variants()->pluck('size')->all());
+        $this->assertSame('M', $black->refresh()->size);
+        $this->assertSame(5, $product->refresh()->stock_quantity);
+    }
+
     public function test_seller_cannot_view_another_tenants_product_listing(): void
     {
         [$owner] = $this->seller();

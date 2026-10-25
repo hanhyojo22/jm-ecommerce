@@ -108,6 +108,62 @@ test('variant photos are shared by every size of their color, from the seller fo
     }
 });
 
+async function createColorOnlyProduct(page, name, sku) {
+    await page.goto('/seller/products/create');
+    await dismissCookies(page);
+    await page.getByLabel('Title', { exact: true }).fill(name);
+    await page.getByLabel('Price', { exact: true }).fill('20');
+    await page.getByLabel('SKU (Stock Keeping Unit)').fill(sku);
+    await page.getByRole('button', { name: 'Add options like size or color' }).click();
+    await addOption(page, ['Black', 'White']);
+    await page.getByLabel('Available for Black', { exact: true }).fill('2');
+    await page.getByLabel('SKU for Black', { exact: true }).fill(`${sku}-BLACK`);
+    await page.locator('.ps-footer').getByRole('button').last().click();
+    await expect(page).toHaveURL(/\/seller\/products$/);
+    await page.goto(`/seller/products?search=${encodeURIComponent(name)}`);
+    await page.getByRole('link', { name: 'Edit listing', exact: true }).first().click();
+}
+
+test('sizes can be added to a saved color-only product, and saved variants keep their SKU and stock', async ({ browser }) => {
+    test.setTimeout(90_000);
+    const seller = await openAsRole(browser, 'seller');
+    const errors = [];
+    seller.page.on('pageerror', error => errors.push(error.message));
+    try {
+        // Pressing Done moves each saved color onto its first new size.
+        await createColorOnlyProduct(seller.page, 'QA Adopt Done', 'QA-DONE');
+        await seller.page.getByRole('button', { name: 'Add another option' }).click();
+        await expect(seller.page.getByText('Each saved variant becomes the first size you add')).toBeVisible();
+        await addOption(seller.page, ['M', 'L', 'XL']);
+        await expect(seller.page.getByLabel('SKU for Black / M', { exact: true })).toHaveValue('QA-DONE-BLACK');
+        await expect(seller.page.getByLabel('Available for Black / M', { exact: true })).toHaveValue('2');
+        await seller.page.getByRole('button', { name: 'Remove White / XL', exact: true }).click();
+        await seller.page.locator('.ps-footer').getByRole('button').last().click();
+        await expect(seller.page).toHaveURL(/\/seller\/products$/);
+        await seller.page.goto('/seller/products?search=QA%20Adopt%20Done');
+        await seller.page.getByRole('link', { name: 'Edit listing', exact: true }).first().click();
+        await expect(seller.page.locator('.ps-variant')).toHaveCount(5);
+        await expect(seller.page.getByLabel('SKU for Black / M', { exact: true })).toHaveValue('QA-DONE-BLACK');
+        await expect(seller.page.getByRole('button', { name: /^Remove / })).toHaveCount(0);
+
+        // Saving with the new option still open moves them too, instead of leaving a size-less variant behind.
+        await createColorOnlyProduct(seller.page, 'QA Adopt Open', 'QA-OPEN');
+        await seller.page.getByRole('button', { name: 'Add another option' }).click();
+        const sizes = seller.page.locator('.ps-option').last().locator('.ps-values input:not([type="color"])');
+        await sizes.nth(0).fill('S');
+        await sizes.nth(1).fill('M');
+        await seller.page.locator('.ps-footer').getByRole('button').last().click();
+        await expect(seller.page).toHaveURL(/\/seller\/products$/);
+        await seller.page.goto('/seller/products?search=QA%20Adopt%20Open');
+        await seller.page.getByRole('link', { name: 'Edit listing', exact: true }).first().click();
+        await expect(seller.page.locator('.ps-variant')).toHaveCount(4);
+        await expect(seller.page.getByLabel('SKU for Black / S', { exact: true })).toHaveValue('QA-OPEN-BLACK');
+        expect(errors).toEqual([]);
+    } finally {
+        await seller.context.close();
+    }
+});
+
 test('a color cannot take more than four photos across its sizes', async ({ browser }) => {
     const seller = await openAsRole(browser, 'seller');
     try {

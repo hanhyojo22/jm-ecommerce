@@ -82,11 +82,26 @@
                 typedValue(option, index) { if (index === option.values.length - 1 && option.values[index].trim()) option.values.push(''); this.syncRows() },
                 removeValue(option, index) { option.values.splice(index, 1); this.syncRows(); this.dirty = true },
                 removeOption(index) { this.options.splice(index, 1); this.syncRows(); this.dirty = true },
+                {{-- A saved variant left without a row by a newly added option (saved "Black" once Size exists) moves onto its first new combination, keeping its id, SKU, stock and photos, so carts and orders still point at it. --}}
+                adoptSavedRows() {
+                    const same = (first, second) => (first || '').trim().toLowerCase() === (second || '').trim().toLowerCase();
+                    const combos = this.combos(), keys = combos.map(combo => combo.key);
+                    let adopted = false;
+                    Object.entries(this.rows).forEach(([key, row]) => {
+                        if (! row.id || keys.includes(key)) return;
+                        const target = combos.find(combo => (! row.color || same(combo.color, row.color)) && (! row.size || same(combo.size, row.size)) && ! this.rows[combo.key]?.id && ! this.excluded.includes(combo.key));
+                        if (! target) return;
+                        this.rows[target.key] = { ...row, color: target.color, size: target.size };
+                        delete this.rows[key];
+                        adopted = true;
+                    });
+                    return adopted;
+                },
                 finishOption(index) {
                     const option = this.options[index];
                     option.values = [...this.distinct(option.values), ''];
                     if (option.values.length === 1) { this.removeOption(index); return }
-                    option.open = false; this.syncRows();
+                    option.open = false; this.syncRows(); this.adoptSavedRows();
                 },
                 {{-- Variant photos belong to a color: the first row of each color takes the upload, and every size of it shows the same photos. --}}
                 colorKey(item) { return (item.row.color || '').trim().toLowerCase() },
@@ -148,7 +163,7 @@
                     window.addEventListener('beforeunload', event => { if (this.dirty && ! this.saving) { event.preventDefault(); event.returnValue = '' } });
                 },
             }"
-            @submit="saving = true; dirty = false"
+            @submit="if (adoptSavedRows()) { $event.preventDefault(); $nextTick(() => $el.requestSubmit()); return } saving = true; dirty = false"
             @input="dirty = true" @change="dirty = true"
             @invalid.capture="if (collapsed.length) { collapsed = []; $nextTick(() => $el.reportValidity()) }"
             class="ps-layout">
@@ -267,6 +282,7 @@
                                             </template>
                                         </div>
                                         <p x-show="option.values.some(value => isLocked(option, value))" class="pe-hint">Values used by saved variants can’t be changed. Set their stock to 0 to stop selling them.</p>
+                                        <p x-show="hasSavedVariants && ! option.values.some(value => isLocked(option, value))" class="pe-hint" x-text="'Each saved variant becomes the first ' + option.name.toLowerCase() + ' you add, keeping its stock, SKU and photos. The other ' + option.name.toLowerCase() + 's are added as new variants.'"></p>
                                         <div class="ps-option-actions">
                                             <button type="button" x-show="! option.values.some(value => isLocked(option, value))" @click="removeOption(optionIndex)" class="pe-remove">Delete</button>
                                             <button type="button" @click="finishOption(optionIndex)" :disabled="option.values.some((value, valueIndex) => isDuplicate(option, valueIndex))" class="seller-outline-button !min-h-9">Done</button>
@@ -281,7 +297,7 @@
                                 </template>
                             </div>
                         </template>
-                        <button type="button" x-show="options.length < 2 && ! hasSavedVariants" @click="addOption()" class="ps-add-row is-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add another option</button>
+                        <button type="button" x-show="options.length < 2" @click="addOption()" class="ps-add-row is-inline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add another option</button>
                     </div>
 
                     <div class="ps-variants" x-show="variantCount > 0" x-cloak>
