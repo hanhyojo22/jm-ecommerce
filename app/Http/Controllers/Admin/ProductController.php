@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -96,8 +97,11 @@ class ProductController extends Controller
         $this->authorizeAdmin($request);
         $data = $request->validate([
             'status' => ['required', 'in:active,inactive,unlisted,changes_required,rejected'],
-            'reason' => ['required', 'string', 'min:10', 'max:1000'],
+            'reason' => ['nullable', Rule::requiredIf(in_array($request->input('status'), Product::DECISIONS_NEEDING_REASON, true)), 'string', 'min:10', 'max:1000'],
+        ], [
+            'reason.required' => 'Tell the seller why before you request changes, reject or suspend a listing.',
         ]);
+        $data['reason'] ??= null;
 
         DB::transaction(function () use ($request, $product, $data): void {
             $product = Product::query()->with('store.tenant')->lockForUpdate()->findOrFail($product->id);
@@ -114,7 +118,10 @@ class ProductController extends Controller
             if (! array_key_exists($data['status'], $product->moderationOptions())) {
                 throw ValidationException::withMessages(['status' => 'This decision is not available for the current listing state.']);
             }
-            $product->update(['status' => $data['status'], 'moderation_reason' => $data['reason'], 'content_changed_at' => null]);
+            // The seller sees moderation_reason as feedback to act on, so an approval clears it rather than leaving
+            // an old "please fix" note on screen. Any approval note stays in the audit log.
+            $feedback = in_array($data['status'], Product::DECISIONS_NEEDING_REASON, true) ? $data['reason'] : null;
+            $product->update(['status' => $data['status'], 'moderation_reason' => $feedback, 'content_changed_at' => null]);
 
             AuditLog::query()->create([
                 'actor_user_id' => $request->user()->id,

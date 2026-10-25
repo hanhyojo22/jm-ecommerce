@@ -23,6 +23,33 @@ class Product extends Model
         'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
     ];
 
+    /** Decisions that cost the seller something, so they must say why. Approvals need no reason. */
+    public const DECISIONS_NEEDING_REASON = ['changes_required', 'rejected', 'inactive'];
+
+    /**
+     * Common reasons an administrator can pick for each decision that needs one, then edit.
+     *
+     * @var array<string, list<string>>
+     */
+    public const QUICK_REASONS = [
+        'changes_required' => [
+            'Add clear photos that show the actual product.',
+            'Complete the description with size, material and what is included.',
+            'Move the listing to the correct category.',
+            'Make the title match the product in the photos.',
+        ],
+        'rejected' => [
+            'This item is not allowed on JMMart.',
+            'The photos or details are misleading.',
+            'This listing duplicates another listing from your store.',
+        ],
+        'inactive' => [
+            'Buyers reported this listing for a policy violation.',
+            'The edited listing no longer matches what was approved.',
+            'This item is not allowed on JMMart.',
+        ],
+    ];
+
     /** @return array<string, string> */
     public function moderationOptions(): array
     {

@@ -77,6 +77,34 @@ class AdminProductControllerTest extends TestCase
         ]);
     }
 
+    public function test_approval_needs_no_reason_and_clears_earlier_feedback(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $category = Category::create(['name' => 'Fashion', 'slug' => 'fashion', 'is_active' => true]);
+        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'pending', $category->id, 'A durable market tote.');
+        $product->images()->create(['path' => 'products/tote.jpg', 'position' => 0]);
+        $product->update(['moderation_reason' => 'Please add a photo of the inside pocket.']);
+
+        $this->actingAs($administrator)->patch(route('admin.products.moderate', $product), ['status' => 'active'])
+            ->assertRedirect(route('admin.products.show', $product));
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'active', 'moderation_reason' => null]);
+        $this->assertDatabaseHas('audit_logs', ['entity_id' => $product->id, 'action' => 'product.moderated', 'new_values->status' => 'active', 'new_values->reason' => null]);
+    }
+
+    public function test_rejection_needs_a_reason_the_seller_can_read(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $product = $this->product($this->store('Northwind Goods'), 'Canvas Tote', 'TOTE-001', 'pending');
+
+        $this->actingAs($administrator)->patch(route('admin.products.moderate', $product), ['status' => 'rejected', 'reason' => ''])
+            ->assertSessionHasErrors(['reason' => 'Tell the seller why before you request changes, reject or suspend a listing.']);
+        $this->patch(route('admin.products.moderate', $product), ['status' => 'rejected', 'reason' => 'This item is not allowed on JMMart.'])
+            ->assertRedirect(route('admin.products.show', $product));
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'rejected', 'moderation_reason' => 'This item is not allowed on JMMart.']);
+    }
+
     public function test_administrator_approves_a_live_listings_edits_without_taking_it_offline(): void
     {
         $administrator = User::factory()->administrator()->create();
