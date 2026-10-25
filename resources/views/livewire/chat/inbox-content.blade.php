@@ -16,7 +16,7 @@
 
     <div wire:loading.flex wire:target="search,filter" class="absolute inset-x-0 bottom-0 top-44 z-10 flex-col gap-4 bg-white/95 px-5 py-5" role="status" aria-label="Loading conversations">
         @for ($row = 0; $row < 3; $row++)
-            <div class="flex animate-pulse items-center gap-3" aria-hidden="true"><span class="size-11 shrink-0 rounded-full bg-slate-100"></span><span class="flex-1 space-y-2"><span class="block h-3 w-2/3 rounded-full bg-slate-100"></span><span class="block h-3 w-full rounded-full bg-slate-100"></span></span></div>
+            <div class="flex animate-pulse motion-reduce:animate-none items-center gap-3" aria-hidden="true"><span class="size-11 shrink-0 rounded-full bg-slate-100"></span><span class="flex-1 space-y-2"><span class="block h-3 w-2/3 rounded-full bg-slate-100"></span><span class="block h-3 w-full rounded-full bg-slate-100"></span></span></div>
         @endfor
     </div>
     <div class="chat-inbox-list min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain" aria-live="polite">

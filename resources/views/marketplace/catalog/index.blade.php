@@ -378,7 +378,7 @@
                         @endif
                         <div x-show="loading" x-cloak class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-4' }} marketplace-product-grid" aria-hidden="true">
                             @for ($i = 0; $i < 8; $i++)
-                                <div class="marketplace-surface overflow-hidden"><div class="aspect-square animate-pulse bg-slate-200"></div><div class="space-y-2 p-4"><div class="h-4 animate-pulse rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse rounded bg-slate-200"></div></div></div>
+                                <div class="marketplace-surface overflow-hidden"><div class="aspect-square animate-pulse motion-reduce:animate-none bg-slate-200"></div><div class="space-y-2 p-4"><div class="h-4 animate-pulse motion-reduce:animate-none rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse motion-reduce:animate-none rounded bg-slate-200"></div></div></div>
                             @endfor
                         </div>
                         <p x-show="loading" x-cloak class="mt-3 text-[13px] text-muted" role="status" aria-live="polite">Loading curated results&hellip;</p>
@@ -387,7 +387,7 @@
                             @if ($products->isNotEmpty())
                                 <div id="catalog-products" :data-view="viewMode" class="marketplace-product-grid">
                                     @foreach ($products as $product)
-                                        <x-marketplace.top-product-card :product="$product" />
+                                        <x-marketplace.top-product-card :product="$product" :eager="! $sellerStore && $loop->index < 4" />
                                     @endforeach
                                 </div>
                                 <div class="mt-10">{{ $products->onEachSide(1)->links('components.marketplace.pagination') }}</div>

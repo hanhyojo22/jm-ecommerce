@@ -55,6 +55,11 @@
                 <div id="new-arrivals-products" data-new-arrivals-grid class="marketplace-product-grid">
                     @include('marketplace.catalog._new-arrival-cards', ['products' => $newProducts])
                 </div>
+                <div data-new-arrivals-skeleton hidden class="mt-4 marketplace-product-grid" aria-hidden="true">
+                    @for ($i = 0; $i < 4; $i++)
+                        <div class="marketplace-surface overflow-hidden"><div class="aspect-[1.15] animate-pulse motion-reduce:animate-none bg-slate-200"></div><div class="space-y-2 p-4"><div class="h-4 animate-pulse motion-reduce:animate-none rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse motion-reduce:animate-none rounded bg-slate-200"></div></div></div>
+                    @endfor
+                </div>
                 @if ($newProducts->hasMorePages())
                     <div class="mt-7 flex flex-col items-center gap-3">
                         <a href="{{ $newProducts->nextPageUrl() }}" data-new-arrivals-more aria-controls="new-arrivals-products" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line bg-white px-6 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand aria-disabled:cursor-wait aria-disabled:opacity-60">Load More</a>

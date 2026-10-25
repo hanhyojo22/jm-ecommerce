@@ -865,6 +865,7 @@ newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener(
     const button = event.currentTarget;
     const grid = newArrivalsSection.querySelector('[data-new-arrivals-grid]');
     const status = newArrivalsSection.querySelector('[data-new-arrivals-status]');
+    const skeleton = newArrivalsSection.querySelector('[data-new-arrivals-skeleton]');
     if (button.getAttribute('aria-disabled') === 'true' || !newArrivalsSection.dataset.nextUrl) {
         return;
     }
@@ -872,6 +873,7 @@ newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener(
     button.setAttribute('aria-disabled', 'true');
     button.textContent = 'Loading…';
     grid.setAttribute('aria-busy', 'true');
+    skeleton.hidden = false;
     status.textContent = '';
 
     try {
@@ -908,6 +910,7 @@ newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener(
         status.textContent = error.message || 'Could not load more products. Please try again.';
     } finally {
         grid.removeAttribute('aria-busy');
+        skeleton.hidden = true;
         button.removeAttribute('aria-disabled');
         button.textContent = 'Load More';
     }
