@@ -22,7 +22,12 @@
             <form id="checkout-form" method="POST" action="{{ route('checkout.store') }}" @submit="placing = true" class="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 @csrf
                 <div class="grid min-w-0 gap-6">
-                    @if ($errors->has('cart'))
+                    @if ($orderLimitReached)
+                        <div class="rounded-[10px] border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-950" role="alert">
+                            <p class="font-semibold">You can place this order once your current one is delivered.</p>
+                            <p class="mt-1">Cash-on-delivery parcels on your account were refused recently, so you can have one order in progress at a time. <a href="{{ route('orders.index') }}" class="font-semibold underline">Track your current order</a>. If a refusal wasn't your fault, ask for order help on that order.</p>
+                        </div>
+                    @elseif ($errors->has('cart'))
                         <div class="rounded-[10px] border border-amber-200 bg-amber-50 p-6 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
                     @endif
                     @php($fieldErrors = collect(['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City', 'province' => 'Province', 'postal_code' => 'Postal code', 'delivery_note' => 'Delivery note'])->filter(fn ($label, $field) => $errors->has($field)))

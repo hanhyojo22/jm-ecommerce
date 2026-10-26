@@ -46,6 +46,27 @@ class PlatformFeeTest extends TestCase
         $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $sellerOrder->id, 'commission_amount' => '0.00', 'net_amount' => '150.50']);
     }
 
+    public function test_a_raised_rate_waits_for_the_store_to_accept_it_but_a_cut_applies_at_once(): void
+    {
+        [$store, $owner] = $this->storeWithOwner(acceptedFeeTerms: true);
+        config(['marketplace.platform_fee.rate' => '0.02', 'marketplace.platform_fee.policy_version' => '3.0']);
+
+        $beforeAccepting = $this->shippedSellerOrder($store, '100.00');
+        $this->actingAs($owner)->patch(route('seller.orders.update', $beforeAccepting), ['status' => 'delivered'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $beforeAccepting->id, 'commission_amount' => '1.00']);
+        $this->actingAs($owner)->get(route('seller.platform-fees.index'))->assertOk()->assertSee('The Marketplace Fee Policy has changed');
+
+        $this->actingAs($owner)->post(route('seller.platform-fees.accept'), ['accept' => '1'])->assertSessionHasNoErrors();
+        $afterAccepting = $this->shippedSellerOrder($store, '100.00');
+        $this->actingAs($owner)->patch(route('seller.orders.update', $afterAccepting), ['status' => 'delivered'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $afterAccepting->id, 'commission_amount' => '2.00']);
+
+        config(['marketplace.platform_fee.rate' => '0.005']);
+        $afterCut = $this->shippedSellerOrder($store, '100.00');
+        $this->actingAs($owner)->patch(route('seller.orders.update', $afterCut), ['status' => 'delivered'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $afterCut->id, 'commission_amount' => '0.50']);
+    }
+
     public function test_monthly_billing_charges_unbilled_fees_less_refund_credits_and_runs_only_once(): void
     {
         $this->travelTo('2026-09-20 10:00:00');
@@ -66,7 +87,7 @@ class PlatformFeeTest extends TestCase
         $this->assertSame('1.00', $statement->refund_credit);
         $this->assertSame('6.00', $statement->amount_due);
         $this->assertSame('unpaid', $statement->status);
-        $this->assertSame('2026-10-16', $statement->due_at->toDateString());
+        $this->assertSame('2026-10-15 23:59:59', $statement->due_at->toDateTimeString(), 'Due 15 days after September ends, through the end of that day.');
         $this->assertSame(2, $statement->earnings()->count());
         $this->assertNull($deliveredInOctober->fresh()->platform_fee_statement_id);
     }
@@ -99,6 +120,137 @@ class PlatformFeeTest extends TestCase
         $november = PlatformFeeStatement::query()->whereDate('period_start', '2026-11-01')->sole();
         $this->assertSame('3.00', $november->credit_carried_in);
         $this->assertSame('1.00', $november->amount_due);
+    }
+
+    public function test_a_refund_from_a_month_that_was_never_billed_is_credited_on_the_next_statement(): void
+    {
+        $this->travelTo('2026-08-10 10:00:00');
+        [$store] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $refunded = $this->earning($store, '500.00');
+        $this->travelTo('2026-09-01 01:00:00');
+        $this->artisan('platform-fees:bill')->assertSuccessful();
+
+        $this->travelTo('2026-09-15 10:00:00');
+        $this->refund($refunded->sellerOrder, '200.00');
+        $this->travelTo('2026-10-12 10:00:00');
+        $this->earning($store, '400.00');
+        $this->travelTo('2026-11-01 01:00:00');
+        $this->artisan('platform-fees:bill')->assertSuccessful();
+        $this->artisan('platform-fees:bill', ['month' => '2026-09'])->assertSuccessful();
+
+        $october = PlatformFeeStatement::query()->whereDate('period_start', '2026-10-01')->sole();
+        $this->assertSame('2.00', $october->refund_credit, 'September was skipped, so its refund lands on October.');
+        $this->assertSame('2.00', $october->amount_due);
+        $this->assertFalse(PlatformFeeStatement::query()->whereDate('period_start', '2026-09-01')->exists(), 'A late run for a month before the last statement issues nothing.');
+    }
+
+    public function test_one_failed_statement_email_does_not_stop_the_others(): void
+    {
+        $this->travelTo('2026-09-20 10:00:00');
+        [$firstStore] = $this->storeWithOwner(acceptedFeeTerms: true);
+        [$secondStore] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $this->earning($firstStore, '500.00');
+        $this->earning($secondStore, '500.00');
+        $mailer = $this->mock(GmailOrderMailer::class);
+        $mailer->shouldReceive('send')->once()->andThrow(new \RuntimeException('Gmail is down.'));
+        $mailer->shouldReceive('send')->once();
+        $this->travelTo('2026-10-01 01:00:00');
+
+        $this->artisan('platform-fees:bill')->assertSuccessful();
+
+        $this->assertSame(2, PlatformFeeStatement::query()->count());
+    }
+
+    public function test_the_fee_page_estimates_the_next_statement_net_of_refund_credit_and_lists_billed_orders(): void
+    {
+        $this->travelTo('2026-09-10 10:00:00');
+        [$store, $owner] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $billed = $this->earning($store, '500.00');
+        $this->travelTo('2026-10-01 01:00:00');
+        $this->artisan('platform-fees:bill')->assertSuccessful();
+        $this->travelTo('2026-10-12 10:00:00');
+        $this->earning($store, '300.00');
+        $this->refund($billed->sellerOrder, '100.00');
+
+        $this->actingAs($owner)->get(route('seller.platform-fees.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['Next statement so far', '₱3.00', 'Refund credit', '−₱1.00', 'Estimated amount due', '₱2.00'])
+            ->assertSee('1 order on this statement')
+            ->assertSee('₱5.00 open across 1 statement');
+    }
+
+    public function test_the_store_is_emailed_when_support_sends_its_payment_back(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        [$store, $owner] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $statement = PlatformFeeStatement::factory()->submitted()->create(['tenant_id' => $store->tenant_id]);
+        $this->mock(GmailOrderMailer::class)->shouldReceive('send')->once()
+            ->withArgs(fn (User $recipient, string $subject, string $body): bool => $recipient->is($owner) && str_contains($body, 'The receipt is unreadable.'));
+
+        $this->actingAs($administrator)->patch(route('admin.platform-fees.update', $statement), ['action' => 'reject', 'note' => 'The receipt is unreadable.'])->assertSessionHasNoErrors();
+    }
+
+    public function test_one_failed_overdue_reminder_does_not_stop_the_others(): void
+    {
+        [$firstStore] = $this->storeWithOwner(acceptedFeeTerms: true);
+        [$secondStore] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $first = PlatformFeeStatement::factory()->overdue()->create(['tenant_id' => $firstStore->tenant_id]);
+        $second = PlatformFeeStatement::factory()->overdue()->create(['tenant_id' => $secondStore->tenant_id]);
+        $mailer = $this->mock(GmailOrderMailer::class);
+        $mailer->shouldReceive('send')->once()->andThrow(new \RuntimeException('Mailbox does not exist.'));
+        $mailer->shouldReceive('send');
+
+        $this->artisan('platform-fees:remind')->assertSuccessful();
+
+        $this->assertNotNull($first->fresh()->last_reminded_at);
+        $this->assertNotNull($second->fresh()->last_reminded_at);
+    }
+
+    public function test_the_dashboard_tells_the_store_its_fee_is_due(): void
+    {
+        [$store, $owner] = $this->storeWithOwner(acceptedFeeTerms: true);
+        PlatformFeeStatement::factory()->overdue()->create(['tenant_id' => $store->tenant_id, 'amount_due' => '45.60']);
+
+        $this->actingAs($owner)->get(route('seller.dashboard'))->assertOk()->assertSee('Overdue: ₱45.60 platform fee')->assertSee('Pay fee');
+    }
+
+    public function test_support_marks_a_statement_paid_offline_with_a_reason(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        [$store, $owner] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $statement = PlatformFeeStatement::factory()->overdue()->create(['tenant_id' => $store->tenant_id]);
+
+        $this->actingAs($administrator)->patch(route('admin.platform-fees.update', $statement), ['action' => 'mark_paid'])->assertSessionHasErrors('note');
+        $this->actingAs($administrator)->patch(route('admin.platform-fees.update', $statement), ['action' => 'mark_paid', 'note' => 'Paid cash at the office, OR #1234'])->assertSessionHasNoErrors();
+
+        $statement->refresh();
+        $this->assertSame('paid', $statement->status);
+        $this->assertSame('Paid cash at the office, OR #1234', $statement->payment_reference);
+        $this->assertDatabaseHas('audit_logs', ['entity_id' => $statement->id, 'action' => 'platform_fee.marked_paid']);
+        $this->actingAs($owner)->get(route('seller.platform-fees.index'))->assertOk()->assertSee('Paid cash at the office')->assertDontSee('View receipt');
+    }
+
+    public function test_support_is_emailed_when_a_store_submits_a_payment(): void
+    {
+        Storage::fake('chat_attachments');
+        $administrator = User::factory()->administrator()->create();
+        [$store, $owner] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $statement = PlatformFeeStatement::factory()->create(['tenant_id' => $store->tenant_id]);
+        $this->mock(GmailOrderMailer::class)->shouldReceive('send')->once()
+            ->withArgs(fn (User $recipient, string $subject, string $body): bool => $recipient->is($administrator) && str_contains($body, 'GCASH-0003'));
+
+        $this->actingAs($owner)->post(route('seller.platform-fees.pay', $statement), ['reference' => 'GCASH-0003', 'proof' => UploadedFile::fake()->image('receipt.jpg')])->assertSessionHasNoErrors();
+    }
+
+    public function test_support_confirms_a_payment_without_writing_a_note(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        [$store] = $this->storeWithOwner(acceptedFeeTerms: true);
+        $statement = PlatformFeeStatement::factory()->submitted()->create(['tenant_id' => $store->tenant_id]);
+
+        $this->actingAs($administrator)->patch(route('admin.platform-fees.update', $statement), ['action' => 'confirm', 'note' => 'ok'])->assertSessionHasNoErrors();
+
+        $this->assertSame('paid', $statement->fresh()->status);
     }
 
     public function test_a_store_pays_its_statement_and_support_confirms_it(): void
@@ -198,7 +350,7 @@ class PlatformFeeTest extends TestCase
     private function storeWithOwner(bool $acceptedFeeTerms): array
     {
         $suffix = str()->lower(str()->random(8));
-        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active', 'platform_fee_accepted_at' => $acceptedFeeTerms ? now()->subYear() : null]);
+        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active', 'platform_fee_accepted_at' => $acceptedFeeTerms ? now()->subYear() : null, 'platform_fee_policy_version' => $acceptedFeeTerms ? '2.0' : null, 'platform_fee_rate' => $acceptedFeeTerms ? '0.01' : null]);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => "Store {$suffix}", 'slug' => "store-{$suffix}", 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         $owner = User::factory()->seller()->create();
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner']);

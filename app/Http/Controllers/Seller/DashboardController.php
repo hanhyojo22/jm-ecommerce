@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Models\PlatformFeeStatement;
 use App\Models\Tenant;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -52,7 +53,8 @@ class DashboardController extends Controller
 
             return response()->view('seller.dashboard', [
                 'store' => $store,
-                'needsFeeTerms' => $tenant->platform_fee_accepted_at === null,
+                'needsFeeTerms' => ! $tenant->hasAcceptedCurrentFeeTerms(),
+                'unpaidFeeStatement' => PlatformFeeStatement::query()->where('tenant_id', $tenant->id)->where('status', 'unpaid')->where('amount_due', '>', 0)->orderBy('due_at')->first(),
                 'totalProducts' => (int) $productMetrics->total_products,
                 'activeProducts' => (int) $productMetrics->active_products,
                 'pendingOrderCount' => (int) $orderMetrics->pending_orders,

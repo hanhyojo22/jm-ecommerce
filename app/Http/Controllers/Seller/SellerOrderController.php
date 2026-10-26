@@ -6,6 +6,7 @@ use App\Actions\MarkCodPaymentPaid;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
+use App\Models\OrderIssue;
 use App\Models\SellerOrder;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
@@ -81,7 +82,44 @@ class SellerOrderController extends Controller
             ]);
         }
 
-        return view('seller.orders.show', compact('sellerOrder', 'canManageOrders'));
+        // Only before it ships, while the store can still call the buyer to check they will accept it.
+        $buyerCodRefusals = in_array($sellerOrder->status, ['pending', 'confirmed', 'processing'], true)
+            ? (int) $sellerOrder->order->user()->first()?->codRefusalCount()
+            : 0;
+
+        return view('seller.orders.show', compact('sellerOrder', 'canManageOrders', 'buyerCodRefusals'));
+    }
+
+    /**
+     * The parcel never reached the buyer. Support reviews the report and cancels the order, so it
+     * is not marked delivered on its own and charged a fee on cash the store never collected.
+     */
+    public function reportFailedDelivery(Request $request, SellerOrder $sellerOrder): RedirectResponse
+    {
+        $tenant = $this->activeTenant($request, ['owner', 'manager']);
+        $sellerOrder = $tenant->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
+        $data = $request->validate(['details' => ['required', 'string', 'min:10', 'max:2000']]);
+
+        DB::transaction(function () use ($sellerOrder, $data): void {
+            $sellerOrder = SellerOrder::query()->with('order')->lockForUpdate()->findOrFail($sellerOrder->id);
+
+            if ($sellerOrder->status !== 'shipped') {
+                throw ValidationException::withMessages(['details' => 'Only a shipped order can be reported as not delivered.']);
+            }
+
+            if ($sellerOrder->issues()->where('status', 'open')->exists()) {
+                throw ValidationException::withMessages(['details' => 'A request for this order is already open with JMMart support.']);
+            }
+
+            OrderIssue::query()->create([
+                'seller_order_id' => $sellerOrder->id,
+                'buyer_id' => $sellerOrder->order->user_id,
+                'type' => 'failed_delivery',
+                'details' => $data['details'],
+            ]);
+        });
+
+        return back()->with('status', 'Failed delivery reported. JMMart support will review it and cancel the order if the parcel came back.');
     }
 
     public function update(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse

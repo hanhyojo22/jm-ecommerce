@@ -14,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Queries\AdminStoreQuery;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -234,6 +235,28 @@ class GovernanceController extends Controller
             'customer' => $customer,
             'orders' => $customer->orders()->with('payment')->latest()->paginate(10)->withQueryString(),
         ]);
+    }
+
+    /**
+     * Support gives a limited buyer a fresh start: refusals before now stop counting against them.
+     */
+    public function liftCodLimit(Request $request, User $customer): RedirectResponse
+    {
+        $this->authorizeAdmin($request);
+        $refusals = $customer->codRefusalCount();
+        $customer->forceFill(['cod_limit_lifted_at' => now()])->save();
+
+        AuditLog::query()->create([
+            'actor_user_id' => $request->user()->id,
+            'action' => 'customer.cod_limit_lifted',
+            'entity_type' => User::class,
+            'entity_id' => $customer->id,
+            'old_values' => ['cod_refusals' => $refusals],
+            'new_values' => ['cod_limit_lifted_at' => $customer->cod_limit_lifted_at->toIso8601String()],
+            'ip_address' => $request->ip(),
+        ]);
+
+        return back()->with('status', 'COD limit lifted. Earlier refusals no longer count.');
     }
 
     public function auditLogs(Request $request): View

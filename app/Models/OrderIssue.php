@@ -13,7 +13,12 @@ class OrderIssue extends Model
     /** @use HasFactory<OrderIssueFactory> */
     use HasFactory, HasUlids;
 
-    protected $fillable = ['seller_order_id', 'buyer_id', 'type', 'details', 'status', 'resolution_note', 'resolved_by'];
+    protected $fillable = ['seller_order_id', 'buyer_id', 'type', 'details', 'status', 'resolution_note', 'resolved_by', 'counts_as_refusal'];
+
+    protected function casts(): array
+    {
+        return ['counts_as_refusal' => 'boolean'];
+    }
 
     public function sellerOrder(): BelongsTo
     {

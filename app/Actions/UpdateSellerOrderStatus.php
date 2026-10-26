@@ -24,7 +24,10 @@ class UpdateSellerOrderStatus
 
     public function __construct(private RecordSellerEarning $recordSellerEarning) {}
 
-    public function handle(SellerOrder $sellerOrder, string $status, User $actor, ?string $ipAddress = null): SellerOrder
+    /**
+     * A null actor is JMMart itself, completing an order the buyer never confirmed.
+     */
+    public function handle(SellerOrder $sellerOrder, string $status, ?User $actor, ?string $ipAddress = null): SellerOrder
     {
         $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress): SellerOrder {
             $order = Order::query()
@@ -38,7 +41,14 @@ class UpdateSellerOrderStatus
 
             $sellerOrder = $sellerOrders->firstWhere('id', $sellerOrder->id);
 
-            if ($sellerOrder === null || ! in_array($status, self::transitionsFor($sellerOrder->status), true)) {
+            // Support cancels a shipped order only when its store reported the parcel came back.
+            $isReturnedParcel = $sellerOrder !== null
+                && $sellerOrder->status === 'shipped'
+                && $status === 'cancelled'
+                && $actor?->isPlatformAdministrator()
+                && $sellerOrder->issues()->where('status', 'open')->where('type', 'failed_delivery')->exists();
+
+            if ($sellerOrder === null || (! $isReturnedParcel && ! in_array($status, self::transitionsFor($sellerOrder->status), true))) {
                 throw ValidationException::withMessages([
                     'status' => 'This order cannot transition to that status.',
                 ]);
@@ -54,10 +64,17 @@ class UpdateSellerOrderStatus
                 $this->restoreStock($sellerOrder);
             }
 
-            $sellerOrder->update(['status' => $status, 'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at]);
+            $sellerOrder->update([
+                'status' => $status,
+                'shipped_at' => $status === 'shipped' ? now() : $sellerOrder->shipped_at,
+                'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at,
+            ]);
 
             if ($status === 'delivered') {
                 $this->recordSellerEarning->handle($sellerOrder);
+                // The parcel arrived after all, so a failed delivery report has nothing left to decide.
+                $sellerOrder->issues()->where('status', 'open')->where('type', 'failed_delivery')
+                    ->update(['status' => 'resolved', 'resolution_note' => 'Closed automatically: the order was marked delivered.', 'resolved_by' => $actor?->id]);
             }
 
             $activeSellerOrders = $sellerOrders->reject(
@@ -85,7 +102,7 @@ class UpdateSellerOrderStatus
 
                     PaymentAdjustment::query()->create([
                         'payment_id' => $payment->id,
-                        'actor_user_id' => $actor->id,
+                        'actor_user_id' => $actor?->id,
                         'reason' => 'seller_order.cancelled',
                         'amount' => bcsub($remainingTotal, $previousPaymentAmount, 2),
                         'resulting_amount' => $remainingTotal,
@@ -98,7 +115,7 @@ class UpdateSellerOrderStatus
             }
 
             AuditLog::query()->create([
-                'actor_user_id' => $actor->id,
+                'actor_user_id' => $actor?->id,
                 'action' => 'seller_order.status_updated',
                 'entity_type' => SellerOrder::class,
                 'entity_id' => $sellerOrder->id,
@@ -112,13 +129,21 @@ class UpdateSellerOrderStatus
 
         TopProductQuery::forgetCachedRankings();
 
-        DB::afterCommit(function () use ($updatedSellerOrder, $status): void {
+        DB::afterCommit(function () use ($updatedSellerOrder, $status, $actor): void {
             try {
                 $updatedSellerOrder->load('order.user', 'store');
+                if ($actor?->is($updatedSellerOrder->order->user)) {
+                    return;
+                }
+
+                $number = $updatedSellerOrder->order->number;
                 app(GmailOrderMailer::class)->send(
                     $updatedSellerOrder->order->user,
-                    "JMMart order {$updatedSellerOrder->order->number} update",
-                    "{$updatedSellerOrder->store->name} marked its part of order #{$updatedSellerOrder->order->number} as {$status}.\n\nView your order: ".route('orders.show', $updatedSellerOrder->order_id),
+                    "JMMart order {$number} update",
+                    ($actor === null
+                        ? "Your {$updatedSellerOrder->store->name} items from order #{$number} were marked delivered because they shipped ".config('marketplace.orders.auto_deliver_days').' days ago. If they never arrived, ask for order help.'
+                        : "{$updatedSellerOrder->store->name} marked its part of order #{$number} as {$status}.")
+                    ."\n\nView your order: ".route('orders.show', $updatedSellerOrder->order_id),
                 );
             } catch (\Throwable $exception) {
                 report($exception);

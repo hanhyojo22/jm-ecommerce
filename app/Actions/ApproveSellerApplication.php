@@ -45,6 +45,8 @@ class ApproveSellerApplication
                 'slug' => $this->uniqueSlug($application->store_slug ?? $application->store_name, Tenant::class),
                 'status' => 'active',
                 'platform_fee_accepted_at' => $acceptedFeeTerms ? now() : null,
+                'platform_fee_policy_version' => $acceptedFeeTerms ? (string) config('marketplace.platform_fee.policy_version') : null,
+                'platform_fee_rate' => $acceptedFeeTerms ? (string) config('marketplace.platform_fee.rate') : null,
             ]);
 
             TenantMember::query()->create([

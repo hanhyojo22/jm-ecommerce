@@ -17,9 +17,10 @@ class IssuePlatformFeeStatements
      * Bill every store for the given month and return the statements issued.
      *
      * A statement charges the commission on every not-yet-billed earning delivered before
-     * the month ended, less 1% of the refunds recorded during the month. When refunds
-     * outweigh the charges, nothing is due and the rest is credited to the next statement.
-     * A store with a statement for the month is skipped, so a second run issues nothing.
+     * the month ended, less the credit on refunds recorded since the store's last statement.
+     * When refunds outweigh the charges, nothing is due and the rest is credited to the next
+     * statement. A store already billed for this month or a later one is skipped, so a second
+     * run issues nothing and a late run for a skipped month cannot break the credit chain.
      *
      * @return EloquentCollection<int, PlatformFeeStatement>
      */
@@ -29,7 +30,7 @@ class IssuePlatformFeeStatements
         $periodEnd = $periodStart->addMonthNoOverflow();
 
         $tenantIds = $this->unbilledEarnings($periodEnd)->distinct()->pluck('tenant_id')
-            ->merge($this->refunds($periodStart, $periodEnd)->get()->pluck('returnCase.sellerOrder.tenant_id'))
+            ->merge($this->refunds($periodEnd)->where('created_at', '>=', $periodStart)->get()->pluck('returnCase.sellerOrder.tenant_id'))
             ->unique()
             ->values();
 
@@ -43,19 +44,14 @@ class IssuePlatformFeeStatements
     private function bill(string $tenantId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd): ?PlatformFeeStatement
     {
         return DB::transaction(function () use ($tenantId, $periodStart, $periodEnd): ?PlatformFeeStatement {
-            $alreadyBilled = PlatformFeeStatement::query()
-                ->where('tenant_id', $tenantId)
-                ->whereDate('period_start', $periodStart->toDateString())
-                ->exists();
+            $previous = $this->latestStatement($tenantId);
 
-            if ($alreadyBilled) {
+            if ($previous !== null && $previous->period_start->gte($periodStart)) {
                 return null;
             }
 
             $earnings = $this->unbilledEarnings($periodEnd)->where('tenant_id', $tenantId)->orderBy('id')->lockForUpdate()->get();
-            $refunds = $this->refunds($periodStart, $periodEnd)
-                ->whereHas('returnCase.sellerOrder', fn ($query) => $query->where('tenant_id', $tenantId))
-                ->get();
+            $refunds = $this->refundsSince($tenantId, $previous, $periodEnd)->get();
 
             $grossTotal = $this->sum($earnings->pluck('gross_amount'));
             $commissionTotal = $this->sum($earnings->pluck('commission_amount'));
@@ -65,11 +61,7 @@ class IssuePlatformFeeStatements
                 return null;
             }
 
-            $creditCarriedIn = (string) (PlatformFeeStatement::query()
-                ->where('tenant_id', $tenantId)
-                ->whereDate('period_start', '<', $periodStart->toDateString())
-                ->latest('period_start')
-                ->value('credit_carried_out') ?? '0.00');
+            $creditCarriedIn = (string) ($previous->credit_carried_out ?? '0.00');
             $balance = bcsub(bcsub($commissionTotal, $refundCredit, 2), $creditCarriedIn, 2);
             $owesSomething = bccomp($balance, '0', 2) > 0;
 
@@ -84,7 +76,8 @@ class IssuePlatformFeeStatements
                 'amount_due' => $owesSomething ? $balance : '0.00',
                 'status' => $owesSomething ? 'unpaid' : 'paid',
                 'paid_at' => $owesSomething ? null : now(),
-                'due_at' => $periodEnd->addDays((int) config('marketplace.platform_fee.due_days')),
+                // The last second of the due day, so a store paying on the date it was shown is not overdue.
+                'due_at' => $periodEnd->addDays((int) config('marketplace.platform_fee.due_days'))->subSecond(),
             ]);
 
             SellerEarning::query()->whereKey($earnings->modelKeys())->update(['platform_fee_statement_id' => $statement->id]);
@@ -105,16 +98,53 @@ class IssuePlatformFeeStatements
     }
 
     /**
-     * Refunds count in the month they were recorded, not the paid date the seller typed,
-     * which can be backdated into a month that was already billed.
+     * What the store's next statement looks like so far: fees on every delivered order not yet
+     * billed, less refund credits since the last statement and any credit carried from it.
+     *
+     * @return array{commission: string, refund_credit: string, credit_carried_in: string, amount_due: string}
+     */
+    public function preview(string $tenantId): array
+    {
+        $previous = $this->latestStatement($tenantId);
+        $commission = $this->sum(SellerEarning::query()->where('tenant_id', $tenantId)->whereNull('platform_fee_statement_id')->pluck('commission_amount'));
+        $refundCredit = $this->sum($this->refundsSince($tenantId, $previous, CarbonImmutable::now()->addSecond())->pluck('commission_credit'));
+        $creditCarriedIn = (string) ($previous->credit_carried_out ?? '0.00');
+        $balance = bcsub(bcsub($commission, $refundCredit, 2), $creditCarriedIn, 2);
+
+        return [
+            'commission' => $commission,
+            'refund_credit' => $refundCredit,
+            'credit_carried_in' => $creditCarriedIn,
+            'amount_due' => bccomp($balance, '0', 2) > 0 ? $balance : '0.00',
+        ];
+    }
+
+    private function latestStatement(string $tenantId): ?PlatformFeeStatement
+    {
+        return PlatformFeeStatement::query()->where('tenant_id', $tenantId)->latest('period_start')->first();
+    }
+
+    /**
+     * Refunds count by when they were recorded, not the paid date the seller typed, which can
+     * be backdated into a month that was already billed. Everything recorded after the month
+     * the last statement covered is credited, so a month that was never billed loses nothing.
      *
      * @return Builder<ReturnCaseOutcome>
      */
-    private function refunds(CarbonImmutable $periodStart, CarbonImmutable $periodEnd): Builder
+    private function refundsSince(string $tenantId, ?PlatformFeeStatement $previous, CarbonImmutable $periodEnd): Builder
+    {
+        return $this->refunds($periodEnd)
+            ->when($previous !== null, fn (Builder $query) => $query->where('created_at', '>=', $previous->period_start->addMonthNoOverflow()))
+            ->whereHas('returnCase.sellerOrder', fn ($query) => $query->where('tenant_id', $tenantId));
+    }
+
+    /**
+     * @return Builder<ReturnCaseOutcome>
+     */
+    private function refunds(CarbonImmutable $periodEnd): Builder
     {
         return ReturnCaseOutcome::query()
             ->where('kind', 'refund')
-            ->where('created_at', '>=', $periodStart)
             ->where('created_at', '<', $periodEnd)
             ->where('commission_credit', '>', 0)
             ->with('returnCase.sellerOrder');

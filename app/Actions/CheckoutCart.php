@@ -29,6 +29,11 @@ class CheckoutCart
                 throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
             }
 
+            // The cart lock above serializes this buyer's checkouts, so two tabs cannot both slip past.
+            if ($user->hasReachedCodOrderLimit()) {
+                throw ValidationException::withMessages(['cart' => 'Because cash-on-delivery parcels were refused recently, you can have one order in progress at a time. You can place this order once your current one is delivered.']);
+            }
+
             $items = $cart->items()
                 ->where('selected', true)
                 ->orderBy('product_id')

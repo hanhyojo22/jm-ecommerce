@@ -53,6 +53,23 @@ class PlatformFeePayment
     }
 
     /**
+     * Support settles a statement the store never submitted: a cash or offline payment, or a waived fee.
+     * The note says which, and becomes the statement's reference.
+     */
+    public function markPaid(User $administrator, PlatformFeeStatement $statement, string $note, ?string $ipAddress = null): PlatformFeeStatement
+    {
+        return DB::transaction(function () use ($administrator, $statement, $note, $ipAddress): PlatformFeeStatement {
+            $statement = PlatformFeeStatement::query()->lockForUpdate()->findOrFail($statement->id);
+            $this->requireStatus($statement, 'unpaid', 'Only an unpaid statement can be marked paid.');
+
+            $statement->update(['status' => 'paid', 'paid_at' => now(), 'confirmed_by' => $administrator->id, 'payment_reference' => $note, 'review_note' => null]);
+            $this->audit($administrator, $statement, 'platform_fee.marked_paid', ['status' => 'unpaid'], ['status' => 'paid', 'amount_due' => $statement->amount_due, 'note' => $note], $ipAddress);
+
+            return $statement;
+        });
+    }
+
+    /**
      * Send the statement back to the store, keeping the note so it knows what to fix.
      */
     public function reject(User $administrator, PlatformFeeStatement $statement, string $note, ?string $ipAddress = null): PlatformFeeStatement

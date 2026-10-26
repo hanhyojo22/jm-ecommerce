@@ -31,7 +31,36 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'admin_invited_at' => 'datetime',
+            'cod_limit_lifted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Parcels this buyer refused within the window, counted from when support confirmed each one
+     * and ignoring any before support last lifted their limit.
+     */
+    public function codRefusalCount(): int
+    {
+        $since = now()->subDays((int) config('marketplace.cod_refusals.window_days'));
+
+        if ($this->cod_limit_lifted_at?->gt($since)) {
+            $since = $this->cod_limit_lifted_at;
+        }
+
+        return OrderIssue::query()->where('buyer_id', $this->id)->where('counts_as_refusal', true)->where('updated_at', '>', $since)->count();
+    }
+
+    public function isCodLimited(): bool
+    {
+        return $this->codRefusalCount() >= (int) config('marketplace.cod_refusals.limit');
+    }
+
+    /**
+     * A limited buyer waits for their order in progress to be delivered or cancelled before placing another.
+     */
+    public function hasReachedCodOrderLimit(): bool
+    {
+        return $this->isCodLimited() && $this->orders()->whereNotIn('status', ['delivered', 'cancelled'])->exists();
     }
 
     public function tenantMemberships(): HasMany

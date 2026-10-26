@@ -20,9 +20,7 @@ class RecordSellerEarning
     {
         $tenant = Tenant::query()->findOrFail($sellerOrder->tenant_id);
         $deliveredAt = $sellerOrder->delivered_at ?? now();
-        $rate = $tenant->platform_fee_accepted_at?->lte($deliveredAt)
-            ? (string) config('marketplace.platform_fee.rate')
-            : '0';
+        $rate = $tenant->platformFeeRateAt($deliveredAt);
         $gross = (string) $sellerOrder->total;
         $commission = PlatformFee::on($gross, $rate);
 

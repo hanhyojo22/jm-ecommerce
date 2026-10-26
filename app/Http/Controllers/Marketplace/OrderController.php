@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\SellerOrder;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -108,5 +110,17 @@ class OrderController extends Controller
         abort_unless($order->user_id === $request->user()->id, 404);
 
         return view('marketplace.orders.show', ['order' => $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment')]);
+    }
+
+    /**
+     * The buyer confirms the parcel arrived, so the store order is delivered.
+     */
+    public function received(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
+    {
+        abort_unless($sellerOrder->order()->value('user_id') === $request->user()->id, 404);
+
+        $updateStatus->handle($sellerOrder, 'delivered', $request->user(), $request->ip());
+
+        return back()->with('status', 'Thanks for confirming. You can now review your items.');
     }
 }

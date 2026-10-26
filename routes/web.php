@@ -69,6 +69,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])->middleware('throttle:10,1')->name('orders.received');
     Route::post('/orders/store-orders/{sellerOrder}/issues', [OrderIssueController::class, 'store'])->middleware('throttle:10,1')->name('order-issues.store');
     Route::post('/orders/store-orders/{sellerOrder}/returns', [BuyerReturnCaseController::class, 'store'])->middleware('throttle:10,1')->name('returns.store');
     Route::get('/orders/returns/{returnCase}', [BuyerReturnCaseController::class, 'show'])->name('returns.show');
@@ -140,6 +141,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::post('/seller/orders/bulk-confirm', [SellerOrderController::class, 'bulkConfirm'])->middleware('throttle:10,1')->name('seller.orders.bulk-confirm');
     Route::get('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'show'])->name('seller.orders.show');
     Route::patch('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.update');
+    Route::post('/seller/orders/{sellerOrder}/failed-delivery', [SellerOrderController::class, 'reportFailedDelivery'])->middleware('throttle:10,1')->name('seller.orders.failed-delivery');
     Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
     Route::get('/seller/earnings', [EarningController::class, 'index'])->name('seller.earnings.index');
     Route::get('/seller/platform-fees', [SellerPlatformFeeController::class, 'index'])->name('seller.platform-fees.index');
@@ -199,6 +201,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])
         ->name('admin.stores.appeals.reopen');
     Route::get('/admin/customers', [GovernanceController::class, 'customers'])->name('admin.customers.index');
     Route::get('/admin/customers/{customer}', [GovernanceController::class, 'showCustomer'])->name('admin.customers.show');
+    Route::post('/admin/customers/{customer}/lift-cod-limit', [GovernanceController::class, 'liftCodLimit'])->middleware('throttle:admin-mutations')->name('admin.customers.lift-cod-limit');
     Route::get('/admin/audit-logs', [GovernanceController::class, 'auditLogs'])->name('admin.audit-logs.index');
     Route::get('/admin/accounts', [AdminAccountController::class, 'index'])->name('admin.accounts.index');
     Route::post('/admin/accounts', [AdminAccountController::class, 'store'])->middleware('throttle:admin-mutations')->name('admin.accounts.store');

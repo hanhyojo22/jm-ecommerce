@@ -56,6 +56,7 @@ class CheckoutController extends Controller
             ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
         return view('marketplace.checkout.create', [
+            'orderLimitReached' => $request->user()->hasReachedCodOrderLimit(),
             'cart' => $cart,
             'subtotal' => $subtotal,
             'addresses' => $addresses,

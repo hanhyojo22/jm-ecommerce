@@ -20,4 +20,35 @@ return [
         'payment_instructions' => env('PLATFORM_FEE_PAYMENT_INSTRUCTIONS'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Orders
+    |--------------------------------------------------------------------------
+    |
+    | A shipped store order the buyer never confirms is marked delivered after
+    | this many days, so it starts its return window and is billed its fee.
+    | Orders with an open help request wait for support instead.
+    |
+    */
+
+    'orders' => [
+        'auto_deliver_days' => 14,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cash on Delivery Refusals
+    |--------------------------------------------------------------------------
+    |
+    | COD is the only way to pay, so a buyer who keeps refusing parcels is not
+    | blocked: after this many refusals within the window they can have only
+    | one order in progress at a time, until support lifts the limit.
+    |
+    */
+
+    'cod_refusals' => [
+        'limit' => 2,
+        'window_days' => 180,
+    ],
+
 ];

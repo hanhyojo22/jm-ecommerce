@@ -1,8 +1,10 @@
 <?php
 
 use App\Actions\IssuePlatformFeeStatements;
+use App\Actions\UpdateSellerOrderStatus;
 use App\Models\PlatformFeeStatement;
 use App\Models\ReturnCase;
+use App\Models\SellerOrder;
 use App\Models\User;
 use App\Services\GmailOrderMailer;
 use Carbon\CarbonImmutable;
@@ -26,12 +28,16 @@ Artisan::command('returns:remind', function (GmailOrderMailer $mailer): void {
             : collect([$case->buyer])->filter();
 
         foreach ($recipients as $recipient) {
-            $mailer->send(
-                $recipient,
-                'JMMart return case is overdue',
-                "The return case for order {$case->sellerOrder->order->number} passed its {$case->deadline()->format('M j, Y g:i A')} deadline and is waiting on you. JMMart can take the case over while it stays unanswered."
-                ."\n\nView the case: ".route($sellerTurn ? 'seller.returns.show' : 'returns.show', $case),
-            );
+            try {
+                $mailer->send(
+                    $recipient,
+                    'JMMart return case is overdue',
+                    "The return case for order {$case->sellerOrder->order->number} passed its {$case->deadline()->format('M j, Y g:i A')} deadline and is waiting on you. JMMart can take the case over while it stays unanswered."
+                    ."\n\nView the case: ".route($sellerTurn ? 'seller.returns.show' : 'returns.show', $case),
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
 
         $case->events()->create(['type' => 'reminder', 'data' => ['status' => $case->status], 'created_at' => now()]);
@@ -53,6 +59,26 @@ Artisan::command('returns:remind', function (GmailOrderMailer $mailer): void {
     $this->info("Reminded {$cases->count()} case(s); {$overdue} overdue in total.");
 })->purpose('Remind the waiting party about overdue return cases and alert support')->daily();
 
+Artisan::command('orders:auto-deliver', function (UpdateSellerOrderStatus $updateStatus): void {
+    $sellerOrders = SellerOrder::query()
+        ->where('status', 'shipped')
+        ->where('shipped_at', '<', now()->subDays((int) config('marketplace.orders.auto_deliver_days')))
+        ->whereDoesntHave('issues', fn ($query) => $query->where('status', 'open'))
+        ->get();
+    $delivered = 0;
+
+    foreach ($sellerOrders as $sellerOrder) {
+        try {
+            $updateStatus->handle($sellerOrder, 'delivered', null);
+            $delivered++;
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    $this->info("Marked {$delivered} shipped store order(s) delivered.");
+})->purpose('Mark store orders delivered when the buyer never confirms them')->daily();
+
 Artisan::command('platform-fees:bill {month? : The month to bill as YYYY-MM; defaults to last month}', function (IssuePlatformFeeStatements $issue, GmailOrderMailer $mailer): int {
     $requested = $this->argument('month');
     if ($requested !== null && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $requested) !== 1) {
@@ -66,12 +92,17 @@ Artisan::command('platform-fees:bill {month? : The month to bill as YYYY-MM; def
 
     foreach ($statements->filter(fn (PlatformFeeStatement $statement): bool => $statement->status === 'unpaid')->load('tenant.members.user') as $statement) {
         foreach ($statement->tenant->members->pluck('user')->filter() as $recipient) {
-            $mailer->send(
-                $recipient,
-                "JMMart platform fee statement for {$month->format('F Y')}",
-                'Your platform fee for '.$month->format('F Y').' is ₱'.number_format((float) $statement->amount_due, 2).", due {$statement->due_at->format('M j, Y')}."
-                ."\n\nPay by bank or GCash transfer, then upload the reference number and receipt: ".route('seller.platform-fees.index'),
-            );
+            // A rerun issues nothing new, so one failed email must not cost the other stores theirs.
+            try {
+                $mailer->send(
+                    $recipient,
+                    "JMMart platform fee statement for {$month->format('F Y')}",
+                    'Your platform fee for '.$month->format('F Y').' is ₱'.number_format((float) $statement->amount_due, 2).", due {$statement->due_at->format('M j, Y')}."
+                    ."\n\nPay by bank or GCash transfer, then upload the reference number and receipt: ".route('seller.platform-fees.index'),
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
     }
 
@@ -88,12 +119,17 @@ Artisan::command('platform-fees:remind', function (GmailOrderMailer $mailer): vo
 
     foreach ($statements as $statement) {
         foreach ($statement->tenant->members->pluck('user')->filter() as $recipient) {
-            $mailer->send(
-                $recipient,
-                'JMMart platform fee is overdue',
-                'Your platform fee of ₱'.number_format((float) $statement->amount_due, 2)." for {$statement->period_start->format('F Y')} was due {$statement->due_at->format('M j, Y')}. JMMart may suspend stores with unpaid fees."
-                ."\n\nPay and upload your receipt: ".route('seller.platform-fees.index'),
-            );
+            // The list runs in the same order daily, so one bad address must not block every store after it.
+            try {
+                $mailer->send(
+                    $recipient,
+                    'JMMart platform fee is overdue',
+                    'Your platform fee of ₱'.number_format((float) $statement->amount_due, 2)." for {$statement->period_start->format('F Y')} was due {$statement->due_at->format('M j, Y')}. JMMart may suspend stores with unpaid fees."
+                    ."\n\nPay and upload your receipt: ".route('seller.platform-fees.index'),
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
 
         $statement->update(['last_reminded_at' => now()]);

@@ -9,6 +9,7 @@
     $attentionItems = array_filter([
         $pendingOrderCount > 0 ? ['count' => number_format($pendingOrderCount), 'text' => Str::plural('order', $pendingOrderCount).' awaiting confirmation', 'cta' => 'Review orders', 'href' => route('seller.orders.index', ['status' => 'pending']), 'tone' => ''] : null,
         $outOfStockCount > 0 ? ['count' => number_format($outOfStockCount), 'text' => Str::plural('product', $outOfStockCount).' out of stock', 'cta' => 'Review products', 'href' => route('seller.products.index', ['stock' => 'out_of_stock']), 'tone' => ''] : null,
+        $unpaidFeeStatement ? ['count' => '₱', 'text' => ($unpaidFeeStatement->isOverdue() ? 'Overdue: ' : '').'₱'.number_format((float) $unpaidFeeStatement->amount_due, 2).' platform fee for '.$unpaidFeeStatement->period_start->format('F').', due '.$unpaidFeeStatement->due_at->format('M j'), 'cta' => 'Pay fee', 'href' => route('seller.platform-fees.index').'#statement-'.$unpaidFeeStatement->id, 'tone' => ''] : null,
         $needsFeeTerms ? ['count' => 'New', 'text' => 'Review and accept the Marketplace Fee Policy', 'cta' => 'Review terms', 'href' => route('seller.platform-fees.index'), 'tone' => 'is-info'] : null,
     ]);
 @endphp

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Actions\AcceptPlatformFeeTerms;
+use App\Actions\IssuePlatformFeeStatements;
 use App\Actions\PlatformFeePayment;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformFeeStatement;
-use App\Models\SellerEarning;
+use App\Models\User;
+use App\Services\GmailOrderMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -15,15 +17,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PlatformFeeController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, IssuePlatformFeeStatements $statements): View
     {
         $tenant = $request->user()->sellerTenant() ?? abort(403);
 
         return view('seller.platform-fees.index', [
             'tenant' => $tenant,
             'isOwner' => $request->user()->sellerTenant(['owner'])?->is($tenant) ?? false,
-            'statements' => PlatformFeeStatement::query()->where('tenant_id', $tenant->id)->latest('period_start')->paginate(12),
-            'unbilledTotal' => SellerEarning::query()->where('tenant_id', $tenant->id)->whereNull('platform_fee_statement_id')->sum('commission_amount'),
+            'statements' => PlatformFeeStatement::query()->where('tenant_id', $tenant->id)->with('earnings.sellerOrder.order')->latest('period_start')->paginate(12),
+            'openStatements' => PlatformFeeStatement::query()->where('tenant_id', $tenant->id)->whereIn('status', ['unpaid', 'submitted'])->where('amount_due', '>', 0)->orderBy('due_at')->get(),
+            'preview' => $statements->preview($tenant->id),
             'paymentInstructions' => config('marketplace.platform_fee.payment_instructions'),
         ]);
     }
@@ -33,12 +36,15 @@ class PlatformFeeController extends Controller
         $tenant = $request->user()->sellerTenant(['owner']) ?? abort(403);
         $request->validate(['accept' => ['accepted']], ['accept.accepted' => 'Tick the box to accept the Marketplace Fee Policy.']);
 
+        $wasCharged = $tenant->platform_fee_accepted_at !== null;
         $action->handle($request->user(), $tenant, $request->ip(), $request->userAgent());
 
-        return back()->with('status', 'Marketplace Fee Policy accepted. Fees apply to orders delivered from today.');
+        return back()->with('status', $wasCharged
+            ? 'Updated Marketplace Fee Policy accepted. The new rate applies to orders delivered from today.'
+            : 'Marketplace Fee Policy accepted. Fees apply to orders delivered from today.');
     }
 
-    public function pay(Request $request, PlatformFeeStatement $statement, PlatformFeePayment $action): RedirectResponse
+    public function pay(Request $request, PlatformFeeStatement $statement, PlatformFeePayment $action, GmailOrderMailer $mailer): RedirectResponse
     {
         $tenant = $request->user()->sellerTenant(['owner']) ?? abort(403);
         abort_unless($statement->tenant_id === $tenant->id, 404);
@@ -48,6 +54,19 @@ class PlatformFeeController extends Controller
         ]);
 
         $action->submit($request->user(), $statement, $data['reference'], $data['proof'], $request->ip());
+
+        foreach (User::query()->where('account_type', 'admin')->whereIn('platform_role', ['super_admin', 'admin'])->get() as $administrator) {
+            try {
+                $mailer->send(
+                    $administrator,
+                    'JMMart platform fee payment to confirm',
+                    ($tenant->store?->name ?? $tenant->name).' submitted ₱'.number_format((float) $statement->amount_due, 2)." for {$statement->period_start->format('F Y')}, reference {$data['reference']}."
+                    ."\n\nCheck it against the account: ".route('admin.platform-fees.index', ['status' => 'submitted']),
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return back()->with('status', 'Payment submitted. JMMart will confirm it shortly.');
     }

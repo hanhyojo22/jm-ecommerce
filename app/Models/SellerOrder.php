@@ -19,13 +19,14 @@ class SellerOrder extends Model
         'shipping_amount',
         'total',
         'status',
+        'shipped_at',
         'delivered_at',
         'cod_collected_at',
     ];
 
     protected function casts(): array
     {
-        return ['delivered_at' => 'datetime', 'cod_collected_at' => 'datetime'];
+        return ['shipped_at' => 'datetime', 'delivered_at' => 'datetime', 'cod_collected_at' => 'datetime'];
     }
 
     public function items(): HasMany

@@ -34,9 +34,23 @@
                                         <span class="font-normal text-muted">· {{ $statement->period_start->format('F Y') }}</span>
                                     </h2>
                                     <p class="mt-1 text-sm text-muted">₱{{ number_format((float) $statement->gross_total, 2) }} delivered · ₱{{ number_format((float) $statement->commission_total, 2) }} fees · −₱{{ number_format(bcadd((string) $statement->refund_credit, (string) $statement->credit_carried_in, 2), 2) }} credits · due {{ $statement->due_at->format('M j, Y') }}</p>
-                                    @if ($statement->payment_reference)<p class="mt-1 text-sm text-ink">Reference <span class="font-semibold">{{ $statement->payment_reference }}</span> · submitted {{ $statement->payment_submitted_at?->format('M j, Y g:i A') }} · <a href="{{ route('admin.platform-fees.proof', $statement) }}" target="_blank" rel="noopener" class="font-semibold text-brand underline">View receipt</a></p>@endif
+                                    @if ($statement->payment_reference)<p class="mt-1 text-sm text-ink">Reference <span class="font-semibold">{{ $statement->payment_reference }}</span>@if ($statement->payment_submitted_at) · submitted {{ $statement->payment_submitted_at->format('M j, Y g:i A') }}@endif @if ($statement->payment_proof_path) · <a href="{{ route('admin.platform-fees.proof', $statement) }}" target="_blank" rel="noopener" class="font-semibold text-brand underline">View receipt</a>@endif</p>@endif
                                     @if ($statement->status === 'paid' && $statement->confirmedBy)<p class="mt-1 text-sm text-muted">Confirmed by {{ $statement->confirmedBy->name }} on {{ $statement->paid_at?->format('M j, Y') }}</p>@endif
                                     @if ($statement->review_note && $statement->status === 'unpaid')<p class="mt-1 text-sm text-danger">Sent back: {{ $statement->review_note }}</p>@endif
+                                    @if ($statement->isOverdue())
+                                        @php($daysOverdue = (int) $statement->due_at->diffInDays(now()))
+                                        <p class="mt-1 text-sm font-semibold text-danger">Overdue {{ trans_choice('{0} less than a day|{1} :count day|[2,*] :count days', $daysOverdue) }}.@if ($daysOverdue >= 30 && $statement->tenant?->store && $statement->tenant->store->status !== 'suspended') <a href="{{ route('admin.stores.show', $statement->tenant->store) }}" class="underline">Review the store for suspension</a>@endif</p>
+                                    @endif
+                                    @if ($statement->earnings->isNotEmpty())
+                                        <details class="mt-2 text-sm">
+                                            <summary class="inline-flex min-h-10 cursor-pointer items-center font-semibold text-brand hover:text-brand-hover">{{ trans_choice('{1} :count order|[2,*] :count orders', $statement->earnings->count()) }} on this statement</summary>
+                                            <ul class="mt-1 max-h-60 divide-y divide-line overflow-y-auto rounded-lg border border-line">
+                                                @foreach ($statement->earnings->sortBy('available_at') as $earning)
+                                                    <li class="flex items-center justify-between gap-4 px-3 py-2"><span class="min-w-0 truncate">@if ($earning->sellerOrder?->order)<a href="{{ route('admin.orders.show', $earning->sellerOrder->order) }}" class="text-brand-hover underline">#{{ $earning->sellerOrder->order->number }}</a>@endif <span class="text-muted">delivered {{ $earning->available_at->format('M j') }}</span></span><span class="shrink-0 tabular-nums text-ink">₱{{ number_format((float) $earning->commission_amount, 2) }} on ₱{{ number_format((float) $earning->gross_amount, 2) }}</span></li>
+                                                @endforeach
+                                            </ul>
+                                        </details>
+                                    @endif
                                 </div>
                                 <div class="shrink-0 sm:text-right">
                                     <p class="text-xl font-semibold tabular-nums text-ink">₱{{ number_format((float) $statement->amount_due, 2) }}</p>
@@ -56,6 +70,15 @@
                                         <button type="submit" class="inline-flex min-h-11 items-center justify-self-start rounded-lg bg-danger px-4 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2">Send back to store</button>
                                     </form>
                                 </div>
+                            @elseif ($statement->status === 'unpaid' && (float) $statement->amount_due > 0)
+                                <details class="mt-4 rounded-lg bg-canvas p-4">
+                                    <summary class="inline-flex min-h-10 cursor-pointer items-center text-sm font-semibold text-ink">Paid another way or waived?</summary>
+                                    <form method="POST" action="{{ route('admin.platform-fees.update', $statement) }}" class="mt-3 grid gap-2">@csrf @method('PATCH')<input type="hidden" name="action" value="mark_paid">
+                                        <label for="mark-paid-{{ $statement->id }}" class="field-label">How was it settled? The store sees this.</label>
+                                        <input id="mark-paid-{{ $statement->id }}" name="note" required minlength="10" maxlength="255" placeholder="For example: paid ₱{{ number_format((float) $statement->amount_due, 2) }} cash at the office, OR #1234" class="block w-full rounded-lg border-line text-sm focus:border-brand focus:ring-brand">
+                                        <button type="submit" class="inline-flex min-h-11 items-center justify-self-start rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink hover:border-brand hover:text-brand">Mark paid</button>
+                                    </form>
+                                </details>
                             @endif
                         </article>
                     @empty

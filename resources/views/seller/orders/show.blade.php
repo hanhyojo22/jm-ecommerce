@@ -49,12 +49,16 @@
             </section>
         @endif
 
+        @if ($buyerCodRefusals > 0)
+            <div class="sc-notice" data-tone="warning" role="status">This buyer refused {{ trans_choice('{1} a cash-on-delivery parcel|[2,*] :count cash-on-delivery parcels', $buyerCodRefusals) }} in the last {{ config('marketplace.cod_refusals.window_days') }} days. Consider calling them to confirm before you ship.</div>
+        @endif
+
         @if ($sellerOrder->issues->isNotEmpty())
             <section class="sc-notice !block" data-tone="warning" aria-labelledby="buyer-requests-heading">
-                <h2 id="buyer-requests-heading" class="font-semibold">Buyer requests</h2>
-                <p class="mt-1">JMMart support reviews these requests. Wait for a cancellation decision before preparing this order.</p>
+                <h2 id="buyer-requests-heading" class="font-semibold">Requests to JMMart support</h2>
+                <p class="mt-1">JMMart support reviews these requests. Wait for its decision before changing this order.</p>
                 @foreach ($sellerOrder->issues as $issue)
-                    <div class="mt-3 border-t border-amber-200 pt-3"><p class="font-semibold">{{ str($issue->type)->replace('_', ' ')->title() }} · {{ ucfirst($issue->status) }}</p><p class="mt-1 whitespace-pre-wrap">{{ $issue->details }}</p></div>
+                    <div class="mt-3 border-t border-amber-200 pt-3"><p class="font-semibold">{{ $issue->type === 'failed_delivery' ? 'Failed delivery (reported by you)' : str($issue->type)->replace('_', ' ')->title() }} · {{ ucfirst($issue->status) }}</p><p class="mt-1 whitespace-pre-wrap">{{ $issue->details }}</p>@if ($issue->resolution_note)<p class="mt-1 font-medium">Support: {{ $issue->resolution_note }}</p>@endif</div>
                 @endforeach
             </section>
         @endif
@@ -111,6 +115,20 @@
                                 </div>
                             </div>
                         </dialog>
+                    </section>
+                @endif
+
+                @if ($canManageOrders && $sellerOrder->status === 'shipped' && ! $sellerOrder->issues->contains('status', 'open'))
+                    <section class="sc-card sc-card-pad" aria-labelledby="failed-delivery-heading">
+                        <h2 id="failed-delivery-heading" class="sc-card-title">Parcel didn't arrive?</h2>
+                        <p class="mt-1 sc-card-note">If the buyer refused it or the courier returned it, tell JMMart. Otherwise this order is marked delivered on {{ ($sellerOrder->shipped_at ?? now())->copy()->addDays((int) config('marketplace.orders.auto_deliver_days'))->format('M j') }} and charged its platform fee.</p>
+                        <details class="group mt-3">
+                            <summary class="sc-btn w-full cursor-pointer list-none justify-center">Report failed delivery</summary>
+                            <form method="POST" action="{{ route('seller.orders.failed-delivery', $sellerOrder) }}" class="mt-3 grid gap-3">@csrf
+                                <div class="sc-field"><label for="failed-delivery-details">What happened?</label><textarea id="failed-delivery-details" name="details" rows="3" required minlength="10" maxlength="2000" class="sc-input" placeholder="For example: buyer refused the parcel, courier returned it on Oct 20.">{{ old('details') }}</textarea></div>
+                                <button type="submit" class="seller-primary-button w-full">Send to JMMart support</button>
+                            </form>
+                        </details>
                     </section>
                 @endif
 

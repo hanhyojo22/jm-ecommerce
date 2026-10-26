@@ -2,19 +2,29 @@
     <x-slot name="header">
         <div class="sc-page-head">
             <div>
-                <h1 class="sc-title">Platform fees</h1>            </div>
+                <h1 class="sc-title">Platform fees</h1>
+                <p class="sc-subtitle">JMMart bills its {{ rtrim(rtrim(bcmul((string) config('marketplace.platform_fee.rate'), '100', 2), '0'), '.') }}% fee on delivered orders once a month.</p>
+            </div>
         </div>
     </x-slot>
+
+    @php($money = fn ($amount): string => '₱'.number_format((float) $amount, 2))
+    @php($nextIssue = now()->toImmutable()->startOfMonth()->addMonthNoOverflow())
 
     <div class="page-shell">
         <div class="page-container seller-workspace-page sc-stack">
             @if (session('status'))<div class="sc-notice" data-tone="success" role="status">{{ session('status') }}</div>@endif
             @if ($errors->any())<div class="sc-notice" data-tone="danger" role="alert">{{ $errors->first() }}</div>@endif
 
-            @if ($tenant->platform_fee_accepted_at === null)
+            @if (! $tenant->hasAcceptedCurrentFeeTerms())
                 <section class="sc-card sc-card-pad border-blue-200" aria-labelledby="fee-terms-heading">
-                    <h2 id="fee-terms-heading" class="sc-card-title">Accept the Marketplace Fee Policy</h2>
-                    <p class="mt-1 sc-card-note">Your store was approved before these terms existed. Nothing is charged until they are accepted, and only orders delivered afterwards count.</p>
+                    @if ($tenant->platform_fee_accepted_at === null)
+                        <h2 id="fee-terms-heading" class="sc-card-title">Accept the Marketplace Fee Policy</h2>
+                        <p class="mt-1 sc-card-note">Your store was approved before these terms existed. Nothing is charged until they are accepted, and only orders delivered afterwards count.</p>
+                    @else
+                        <h2 id="fee-terms-heading" class="sc-card-title">The Marketplace Fee Policy has changed</h2>
+                        <p class="mt-1 sc-card-note">You agreed to version {{ $tenant->platform_fee_policy_version ?? 'an earlier version' }}. Until you accept version {{ config('marketplace.platform_fee.policy_version') }}, orders are charged {{ rtrim(rtrim(bcmul($tenant->platformFeeRateAt(now()), '100', 2), '0'), '.') }}%, never more than you agreed to.</p>
+                    @endif
                     @include('partials.platform-fee-terms', ['class' => 'mt-4'])
                     @if ($isOwner)
                         <form method="POST" action="{{ route('seller.platform-fees.accept') }}" class="mt-5 flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">@csrf
@@ -27,14 +37,43 @@
                 </section>
             @endif
 
-            <section class="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]" aria-label="Platform fee summary">
-                <dl class="sc-metrics !grid-cols-1">
-                    <div class="sc-metric"><dt>Not yet billed</dt><dd><strong class="sc-metric-value">₱{{ number_format((float) $unbilledTotal, 2) }}</strong><span class="sc-metric-context">Fees on delivered orders that go on your next statement.</span></dd></div>
-                </dl>
+            @if ($openStatements->isNotEmpty())
+                @php($oldest = $openStatements->first())
+                @php($anyOverdue = $openStatements->contains(fn ($statement): bool => $statement->isOverdue()))
+                <section class="sc-notice flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-tone="{{ $anyOverdue ? 'danger' : ($openStatements->every(fn ($statement): bool => $statement->status === 'submitted') ? 'info' : 'warning') }}" aria-labelledby="balance-heading">
+                    <div>
+                        <h2 id="balance-heading" class="text-base font-semibold">
+                            {{ $money($openStatements->sum('amount_due')) }} open across {{ trans_choice('{1} :count statement|[2,*] :count statements', $openStatements->count()) }}
+                        </h2>
+                        <p class="mt-1 text-sm">
+                            @if ($anyOverdue)
+                                {{ $oldest->period_start->format('F Y') }} was due {{ $oldest->due_at->format('M j, Y') }}. JMMart may suspend stores with unpaid fees.
+                            @elseif ($openStatements->every(fn ($statement): bool => $statement->status === 'submitted'))
+                                Your payment is with JMMart for confirmation. Nothing else to do.
+                            @else
+                                Pay {{ $oldest->period_start->format('F Y') }} by {{ $oldest->due_at->format('M j, Y') }}.
+                            @endif
+                        </p>
+                    </div>
+                    @if ($oldest->status === 'unpaid' && $isOwner)<a href="#statement-{{ $oldest->id }}" class="seller-primary-button min-h-11 shrink-0">Pay {{ $oldest->period_start->format('F') }}</a>@endif
+                </section>
+            @endif
+
+            <section class="grid gap-5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]" aria-label="Platform fee summary">
+                <div class="sc-card sc-card-pad" aria-labelledby="next-statement-heading">
+                    <h2 id="next-statement-heading" class="sc-card-title">Next statement so far</h2>
+                    <p class="mt-1 sc-card-note">Issued {{ $nextIssue->format('M j') }}, due {{ $nextIssue->addDays((int) config('marketplace.platform_fee.due_days'))->subDay()->format('M j, Y') }}. It grows as orders are delivered.</p>
+                    <dl class="sc-sum mt-4">
+                        <div><dt>Fees on delivered orders</dt><dd>{{ $money($preview['commission']) }}</dd></div>
+                        @if ((float) $preview['refund_credit'] > 0)<div><dt>Refund credit</dt><dd class="text-success">−{{ $money($preview['refund_credit']) }}</dd></div>@endif
+                        @if ((float) $preview['credit_carried_in'] > 0)<div><dt>Credit from last statement</dt><dd class="text-success">−{{ $money($preview['credit_carried_in']) }}</dd></div>@endif
+                        <div class="is-total"><dt>Estimated amount due</dt><dd>{{ $money($preview['amount_due']) }}</dd></div>
+                    </dl>
+                </div>
                 <div class="sc-card sc-card-pad">
-                    <p class="text-[13px] font-medium text-muted">How to pay</p>
+                    <h2 class="sc-card-title">How to pay</h2>
                     <p class="mt-2 whitespace-pre-line text-sm leading-6 text-ink">{{ $paymentInstructions ?: 'JMMart will email you the bank and GCash details with your first statement.' }}</p>
-                    <p class="mt-2 sc-meta">After paying, upload the reference number and receipt on the statement below.</p>
+                    <p class="mt-3 sc-meta">After paying, add the reference number and receipt to the statement below. JMMart confirms it within a few business days.</p>
                 </div>
             </section>
 
@@ -47,34 +86,67 @@
                     @forelse ($statements as $statement)
                         @php($badge = match (true) {
                             (float) $statement->amount_due === 0.0 => ['Nothing due', 'neutral'],
-                            $statement->status === 'paid' => ['Paid', 'success'],
+                            $statement->status === 'paid' => ['Paid '.$statement->paid_at?->format('M j'), 'success'],
                             $statement->status === 'submitted' => ['Awaiting confirmation', 'info'],
                             $statement->isOverdue() => ['Overdue', 'danger'],
                             default => ['Due '.$statement->due_at->format('M j, Y'), 'warning'],
                         })
-                        <article class="sc-list-item !py-5">
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <article id="statement-{{ $statement->id }}" class="sc-list-item scroll-mt-24 !py-5">
+                            <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
-                                    <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold text-ink">{{ $statement->period_start->format('F Y') }}</h3><span class="sc-badge" data-tone="{{ $badge[1] }}">{{ $badge[0] }}</span></div>
-                                    <p class="mt-1 sc-meta">₱{{ number_format((float) $statement->gross_total, 2) }} delivered · ₱{{ number_format((float) $statement->commission_total, 2) }} fees @if ((float) $statement->refund_credit > 0)· −₱{{ number_format((float) $statement->refund_credit, 2) }} refund credit @endif @if ((float) $statement->credit_carried_in > 0)· −₱{{ number_format((float) $statement->credit_carried_in, 2) }} earlier credit @endif</p>
-                                    @if ((float) $statement->credit_carried_out > 0)<p class="mt-1 sc-meta">₱{{ number_format((float) $statement->credit_carried_out, 2) }} credit carries to your next statement.</p>@endif
+                                    <h3 class="font-semibold text-ink">{{ $statement->period_start->format('F Y') }}</h3>
+                                    <span class="sc-badge mt-1" data-tone="{{ $badge[1] }}">{{ $badge[0] }}</span>
                                 </div>
-                                <p class="shrink-0 text-xl font-semibold tabular-nums text-ink sm:text-right">₱{{ number_format((float) $statement->amount_due, 2) }}</p>
+                                <p class="shrink-0 text-right text-xl font-semibold tabular-nums text-ink">{{ $money($statement->amount_due) }}</p>
                             </div>
 
-                            @if ($statement->review_note)<p class="sc-notice mt-3" data-tone="danger" role="status">JMMart could not confirm your last payment: {{ $statement->review_note }}</p>@endif
-                            @if ($statement->payment_reference)<p class="mt-3 sc-meta">Reference {{ $statement->payment_reference }} · <a href="{{ route('seller.platform-fees.proof', $statement) }}" class="font-semibold text-brand underline">View receipt</a></p>@endif
+                            <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
+                                <dl class="sc-sum">
+                                    <div><dt>Fees on {{ $money($statement->gross_total) }} delivered</dt><dd>{{ $money($statement->commission_total) }}</dd></div>
+                                    @if ((float) $statement->refund_credit > 0)<div><dt>Refund credit</dt><dd class="text-success">−{{ $money($statement->refund_credit) }}</dd></div>@endif
+                                    @if ((float) $statement->credit_carried_in > 0)<div><dt>Credit from last statement</dt><dd class="text-success">−{{ $money($statement->credit_carried_in) }}</dd></div>@endif
+                                    <div class="is-total"><dt>Amount due</dt><dd>{{ $money($statement->amount_due) }}</dd></div>
+                                    @if ((float) $statement->credit_carried_out > 0)<div><dt>Credit carried to next statement</dt><dd>{{ $money($statement->credit_carried_out) }}</dd></div>@endif
+                                </dl>
+
+                                @if ($statement->earnings->isNotEmpty())
+                                    <details class="group rounded-lg border border-line">
+                                        <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-brand">
+                                            {{ trans_choice('{1} :count order on this statement|[2,*] :count orders on this statement', $statement->earnings->count()) }}
+                                            <svg class="size-4 shrink-0 text-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/></svg>
+                                        </summary>
+                                        <div class="sc-table-wrap max-h-72 overflow-y-auto border-t border-line">
+                                            <table class="sc-table">
+                                                <thead><tr><th scope="col">Order</th><th scope="col">Delivered</th><th scope="col" class="is-num">Total</th><th scope="col" class="is-num">Fee</th></tr></thead>
+                                                <tbody>
+                                                    @foreach ($statement->earnings->sortBy('available_at') as $earning)
+                                                        <tr>
+                                                            <th scope="row"><a href="{{ route('seller.orders.show', $earning->seller_order_id) }}" class="sc-link">#{{ \App\Models\Order::shortNumber((string) $earning->sellerOrder?->order?->number) }}</a></th>
+                                                            <td class="whitespace-nowrap">{{ $earning->available_at->format('M j') }}</td>
+                                                            <td class="is-num">{{ $money($earning->gross_amount) }}</td>
+                                                            <td class="is-num">{{ $money($earning->commission_amount) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </details>
+                                @endif
+                            </div>
+
+                            @if ($statement->review_note && $statement->status === 'unpaid')<p class="sc-notice mt-4" data-tone="danger" role="status">JMMart could not confirm your last payment: {{ $statement->review_note }}</p>@endif
+                            @if ($statement->payment_reference)<p class="mt-3 sc-meta">Reference {{ $statement->payment_reference }}@if ($statement->payment_submitted_at), submitted {{ $statement->payment_submitted_at->format('M j, Y') }}@endif. @if ($statement->payment_proof_path)<a href="{{ route('seller.platform-fees.proof', $statement) }}" class="font-semibold text-brand underline">View receipt</a>@endif</p>@endif
 
                             @if ($statement->status === 'unpaid' && (float) $statement->amount_due > 0 && $isOwner)
                                 <form method="POST" action="{{ route('seller.platform-fees.pay', $statement) }}" enctype="multipart/form-data" class="mt-4 grid gap-3 rounded-lg border border-line bg-[#f8fafc] p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">@csrf
-                                    <div class="sc-field"><label for="reference-{{ $statement->id }}">Transfer reference number</label><input id="reference-{{ $statement->id }}" name="reference" type="text" required maxlength="120" class="sc-input"></div>
+                                    <div class="sc-field"><label for="reference-{{ $statement->id }}">Transfer reference number</label><input id="reference-{{ $statement->id }}" name="reference" type="text" required maxlength="120" autocomplete="off" class="sc-input"></div>
                                     <div class="sc-field"><label for="proof-{{ $statement->id }}">Receipt (image or PDF, max 5 MB)</label><input id="proof-{{ $statement->id }}" name="proof" type="file" required accept=".jpg,.jpeg,.png,.webp,.pdf" class="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold file:text-ink file:ring-1 file:ring-line"></div>
-                                    <button type="submit" class="seller-primary-button min-h-11">Submit payment</button>
+                                    <button type="submit" class="seller-primary-button min-h-11">Submit {{ $money($statement->amount_due) }} payment</button>
                                 </form>
                             @endif
                         </article>
                     @empty
-                        <div class="sc-empty"><h3>No statements yet</h3><p>Your first statement arrives at the start of the month after an order is delivered.</p></div>
+                        <div class="sc-empty"><h3>No statements yet</h3><p>Your first statement arrives on {{ $nextIssue->format('M j') }} if an order is delivered this month.</p></div>
                     @endforelse
                 </div>
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\PlatformFeePayment;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformFeeStatement;
+use App\Services\GmailOrderMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +25,7 @@ class PlatformFeeController extends Controller
         $statements = PlatformFeeStatement::query()
             ->when($filter === 'overdue', fn ($query) => $query->overdue())
             ->when(in_array($filter, ['submitted', 'unpaid', 'paid'], true), fn ($query) => $query->where('status', $filter))
-            ->with('tenant.store', 'confirmedBy')
+            ->with('tenant.store', 'confirmedBy', 'earnings.sellerOrder.order')
             // Payments waiting for review come first, then what is overdue.
             ->orderByRaw("CASE WHEN status = 'submitted' THEN 0 WHEN status = 'unpaid' AND due_at < ? THEN 1 WHEN status = 'unpaid' THEN 2 ELSE 3 END", [now()])
             ->latest('period_start')
@@ -40,23 +41,46 @@ class PlatformFeeController extends Controller
         ]);
     }
 
-    public function update(Request $request, PlatformFeeStatement $statement, PlatformFeePayment $action): RedirectResponse
+    public function update(Request $request, PlatformFeeStatement $statement, PlatformFeePayment $action, GmailOrderMailer $mailer): RedirectResponse
     {
         abort_unless($request->user()->isPlatformAdministrator(), 403);
         $data = $request->validate([
-            'action' => ['required', 'in:confirm,reject'],
-            'note' => ['required_if:action,reject', 'nullable', 'string', 'min:10', 'max:1000'],
+            'action' => ['required', 'in:confirm,reject,mark_paid'],
+            // A mark-paid note becomes the statement's payment reference, a 255-character column.
+            'note' => ['exclude_unless:action,reject,mark_paid', 'required', 'string', 'min:10', $request->input('action') === 'mark_paid' ? 'max:255' : 'max:1000'],
         ]);
+
+        $month = $statement->period_start->format('F Y');
+
+        if ($data['action'] === 'mark_paid') {
+            $action->markPaid($request->user(), $statement, $data['note'], $request->ip());
+            $this->notifyStore($statement, $mailer, "JMMart settled your {$month} platform fee", "JMMart marked your {$month} platform fee of ₱".number_format((float) $statement->amount_due, 2)." as settled: {$data['note']}");
+
+            return back()->with('status', 'Statement marked paid.');
+        }
 
         if ($data['action'] === 'confirm') {
             $action->confirm($request->user(), $statement, $request->ip());
+            $this->notifyStore($statement, $mailer, "JMMart confirmed your {$month} platform fee payment", 'Your payment of ₱'.number_format((float) $statement->amount_due, 2)." for {$month} is confirmed. Thank you.");
 
             return back()->with('status', 'Payment confirmed.');
         }
 
         $action->reject($request->user(), $statement, $data['note'], $request->ip());
+        $this->notifyStore($statement, $mailer, "JMMart could not confirm your {$month} platform fee payment", "JMMart could not confirm your payment for {$month}: {$data['note']}\n\nPlease submit it again by {$statement->due_at->format('M j, Y')}.");
 
         return back()->with('status', 'Payment sent back to the store.');
+    }
+
+    private function notifyStore(PlatformFeeStatement $statement, GmailOrderMailer $mailer, string $subject, string $body): void
+    {
+        foreach ($statement->tenant->members()->with('user')->get()->pluck('user')->filter() as $recipient) {
+            try {
+                $mailer->send($recipient, $subject, $body."\n\nView your statements: ".route('seller.platform-fees.index'));
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
     }
 
     public function proof(Request $request, PlatformFeeStatement $statement): StreamedResponse
