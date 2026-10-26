@@ -11,7 +11,7 @@
         $hasAdvancedFilters = filled($filters['category_id'] ?? null) || filled($filters['stock'] ?? null) || ($filters['sort'] ?? 'newest') !== 'newest';
         $tabs = ['' => 'All', 'active' => 'Published', 'pending' => 'Pending review', 'draft' => 'Draft', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'unlisted' => 'Unlisted', 'inactive' => 'Suspended'];
     @endphp
-    <div class="page-shell"><div class="page-container seller-products-page seller-workspace-page sc-stack">
+    <div class="page-shell"><div class="page-container seller-products-page seller-workspace-page seller-measure-wide sc-stack">
         @if ($errors->has('status'))<div role="alert" class="sc-notice" data-tone="danger">{{ $errors->first('status') }}</div>@endif
         @if (session('status'))<div role="status" class="sc-notice" data-tone="success">{{ session('status') }}</div>@endif
 

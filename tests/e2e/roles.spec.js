@@ -27,7 +27,7 @@ test('seller catalog shows real products and opens working details at desktop an
         expect(Math.abs(desktopAlignment.headerLeft - desktopAlignment.catalogLeft)).toBeLessThanOrEqual(1);
         // Centred in the content column, not pinned to the sidebar.
         expect(desktopAlignment.leftSlack).toBe(desktopAlignment.rightSlack);
-        expect(desktopAlignment.catalogWidth).toBe(1336);
+        expect(desktopAlignment.catalogWidth).toBe(1386);
         await expect(page.getByRole('table').getByText('QA Canvas Tote')).toBeVisible();
         await expect(page.getByRole('table').getByText('₱19.99', { exact: true })).toBeVisible();
         await expect(page.getByText('Other Seller QA Product')).toHaveCount(0);
