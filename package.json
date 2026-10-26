@@ -6,6 +6,7 @@
         "build": "vite build",
         "dev": "vite",
         "test:e2e": "playwright test",
+        "test:e2e:auth": "playwright test tests/e2e/authentication.spec.js",
         "test:e2e:ui": "playwright test --ui",
         "test:qa": "composer test && npm run test:e2e",
         "qa:e2e:server": "node tests/e2e/server.js"

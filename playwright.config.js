@@ -40,18 +40,29 @@ const reporters = [
     ['junit', { outputFile: 'artifacts/playwright-junit.xml' }],
 ];
 
+/*
+ * The seeded suite shares one SQLite database and several tests deliberately
+ * mutate cart, order, and onboarding state. Keep the safe serial default.
+ * Raise PLAYWRIGHT_WORKERS for a focused, isolated spec (for example the POM
+ * authentication suite) when you have made its fixtures independent.
+ */
+const configuredWorkers = Number.parseInt(process.env.PLAYWRIGHT_WORKERS ?? '1', 10);
+const workers = Number.isInteger(configuredWorkers) && configuredWorkers > 0 ? configuredWorkers : 1;
+
 export default defineConfig({
     testDir: './tests/e2e',
-    fullyParallel: false,
+    fullyParallel: process.env.PLAYWRIGHT_FULLY_PARALLEL === 'true',
     forbidOnly: Boolean(process.env.CI),
     retries: process.env.CI ? 1 : 0,
-    workers: 1,
+    workers,
     reporter: reporters,
     outputDir: 'artifacts/playwright-results',
     expect: { timeout: 10_000 },
     timeout: 30_000,
     use: {
         baseURL: 'http://127.0.0.1:4173',
+        headless: true,
+        testIdAttribute: 'data-testid',
         actionTimeout: 10_000,
         navigationTimeout: 20_000,
         trace: 'retain-on-failure',
