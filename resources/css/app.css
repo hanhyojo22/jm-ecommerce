@@ -34,6 +34,13 @@
         --color-sunken: #f8fafc;
         --color-line-soft: #eef1f5;
         --color-selected: #e9edf3;
+        --color-sidebar: #111f33;
+        --color-sidebar-text: #c5d1e0;
+        --color-sidebar-muted: #8ea2ba;
+        --color-sidebar-line: rgb(255 255 255 / 8%);
+        --color-sidebar-hover: rgb(255 255 255 / 6%);
+        --color-sidebar-selected: rgb(255 255 255 / 9%);
+        --color-sidebar-focus: #8fb7ff;
         --focus-ring: 0 0 0 3px rgb(32 91 244 / 14%);
         --font-display: var(--font-sans);
         --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -238,6 +245,95 @@
         color: var(--color-fg);
         font-size: 13px;
         font-weight: 600;
+    }
+
+    /*
+     * Workspace rail. Sellers, customers and admins share one ink plane so the light work area
+     * reads as the active surface. White is reserved for the current row and the brand.
+     */
+    .workspace-sidebar {
+        border-right-color: var(--color-sidebar-line);
+        background: var(--color-sidebar);
+        color: var(--color-sidebar-text);
+        scrollbar-color: rgb(255 255 255 / 18%) transparent;
+        scrollbar-width: thin;
+    }
+
+    .workspace-sidebar .workspace-sidebar-brand-name {
+        color: #fff;
+    }
+
+    .workspace-sidebar .workspace-sidebar-brand-meta {
+        color: var(--color-sidebar-muted);
+    }
+
+    .workspace-sidebar .workspace-sidebar-brand img {
+        box-shadow: 0 0 0 1px rgb(255 255 255 / 16%);
+    }
+
+    .workspace-sidebar .workspace-sidebar-card {
+        border-color: var(--color-sidebar-line);
+        background: rgb(255 255 255 / 5%);
+    }
+
+    .workspace-sidebar .workspace-sidebar-avatar {
+        border-color: rgb(255 255 255 / 12%);
+        background: rgb(255 255 255 / 8%);
+        color: #fff;
+    }
+
+    .workspace-sidebar .workspace-nav-label {
+        color: var(--color-sidebar-muted);
+    }
+
+    .workspace-sidebar .workspace-nav-link {
+        color: var(--color-sidebar-text);
+    }
+
+    .workspace-sidebar .workspace-nav-link:hover {
+        background: var(--color-sidebar-hover);
+        color: #fff;
+    }
+
+    .workspace-sidebar .workspace-nav-link[aria-current='page'] {
+        background: var(--color-sidebar-selected);
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
+        color: #fff;
+    }
+
+    .workspace-sidebar .workspace-nav-link:focus-visible,
+    .workspace-sidebar .workspace-sidebar-brand:focus-visible,
+    .workspace-sidebar button:focus-visible {
+        outline-color: var(--color-sidebar-focus);
+    }
+
+    .workspace-sidebar .text-ink {
+        color: #fff;
+    }
+
+    .workspace-sidebar .text-muted {
+        color: var(--color-sidebar-muted);
+    }
+
+    .workspace-sidebar .border-line {
+        border-color: var(--color-sidebar-line);
+    }
+
+    .workspace-sidebar .bg-success {
+        background-color: #4ade80;
+    }
+
+    .workspace-sidebar .bg-danger {
+        background-color: #f87171;
+    }
+
+    .workspace-sidebar .bg-muted {
+        background-color: #94a3b8;
+    }
+
+    .workspace-sidebar .workspace-drawer-close:hover {
+        background: var(--color-sidebar-hover);
+        color: #fff;
     }
 
     .button-primary {

@@ -1,4 +1,4 @@
-<aside data-workspace-header="customer" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r border-line bg-surface px-2 py-3 lg:flex" aria-label="My account sidebar">
+<aside data-workspace-header="customer" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r workspace-sidebar px-2 py-3 lg:flex" aria-label="My account sidebar">
     <div class="px-3 pb-5 pt-3">
         <a href="{{ route('orders.index') }}" class="workspace-sidebar-brand" aria-label="JMMart My account">
             <img src="{{ asset('favicon.svg') }}" alt="" class="size-8 rounded-lg" width="32" height="32">

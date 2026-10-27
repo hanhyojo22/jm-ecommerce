@@ -65,7 +65,7 @@
     @resize.window="visible = window.innerWidth >= 1024"
     @keydown.escape.window="if (visible && window.innerWidth < 1024) close()"
 >
-    <aside id="admin-workspace-nav" data-workspace-header="admin" x-ref="sidebar" aria-label="Admin workspace navigation" :class="visible ? 'block lg:sticky lg:top-0 lg:h-screen lg:w-auto' : 'hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:w-auto'" class="overflow-y-auto border-r border-line bg-surface px-2 py-3">
+    <aside id="admin-workspace-nav" data-workspace-header="admin" x-ref="sidebar" aria-label="Admin workspace navigation" :class="visible ? 'block lg:sticky lg:top-0 lg:h-screen lg:w-auto' : 'hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:w-auto'" class="overflow-y-auto border-r workspace-sidebar px-2 py-3">
         <div class="flex min-h-full flex-col">
             <div class="px-3 pb-5 pt-3">
                 <p class="workspace-sidebar-brand-name">Administration</p>
