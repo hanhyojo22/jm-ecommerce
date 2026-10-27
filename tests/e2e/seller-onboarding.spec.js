@@ -32,7 +32,7 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
         for (const [label, value] of Object.entries({
             Region: 'NCR', Province: 'Metro Manila', 'City or municipality': 'Manila',
             Barangay: 'Ermita', 'Street address': '10 QA Street', 'Postal code': '1000',
-            'Order processing days': '2', 'Fulfillment methods': 'Courier', 'Supported delivery areas': 'Philippines',
+            'Order processing time': '2', 'Fulfillment methods': 'Courier', 'Supported delivery areas': 'Philippines',
         })) {
             await customer.page.getByLabel(label).fill(value);
         }
@@ -53,7 +53,7 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
             await checkbox.check();
         }
         await customer.page.getByRole('button', { name: 'Submit application' }).click();
-        await expect(customer.page.getByRole('heading', { name: 'Application submitted' })).toBeVisible();
+        await expect(customer.page.getByRole('heading', { name: /You.re in review, QA/ })).toBeVisible();
         expect((await customer.page.goto('/seller/products')).status()).toBe(403);
         await expect(customer.page.getByRole('heading', { name: 'Access restricted' })).toBeVisible();
 

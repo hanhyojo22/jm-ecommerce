@@ -89,8 +89,8 @@ test('seller application steps remain usable on mobile and desktop', async ({ br
     try {
         await page.goto('/start-selling');
         await expect(page.getByRole('heading', { name: 'Become a seller' })).toBeVisible();
-        await expect(page.getByRole('navigation', { name: 'Application progress' }).getByRole('link')).toHaveCount(7);
-        await page.getByRole('link', { name: /Step 4 Address and fulfillment/ }).click();
+        await expect(page.getByRole('link', { name: /^Step \d/ })).toHaveCount(7);
+        await page.getByRole('link', { name: /Step 4:? Shipping/ }).click();
         await expect(page.getByLabel('Region')).toBeVisible();
         await expect(page.getByLabel('Return address')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
@@ -253,7 +253,7 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
             await expect(page.getByRole('heading', { name: 'Quick actions' })).toBeVisible();
             await page.screenshot({ path: testInfo.outputPath('overview-reference-size.png') });
             const sidebar = page.getByRole('complementary', { name: 'Seller Center sidebar' });
-            expect(await sidebar.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(17, 28, 50)');
+            expect(await sidebar.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)');
             await page.getByRole('button', { name: 'Toggle Seller Center sidebar' }).click();
             await expect(sidebar).toBeHidden();
             await page.getByRole('button', { name: 'Toggle Seller Center sidebar' }).click();
@@ -265,7 +265,7 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
             await page.getByRole('button', { name: 'Open navigation menu' }).click();
             const drawer = page.getByRole('dialog', { name: 'Seller Center navigation' });
             await expect(drawer).toBeVisible();
-            expect(await drawer.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(17, 28, 50)');
+            expect(await drawer.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)');
             await drawer.screenshot({ path: testInfo.outputPath('seller-navigation-mobile.png') });
             await drawer.getByRole('link', { name: 'Reviews' }).click();
             await expect(page).toHaveURL(/\/seller\/reviews$/);
@@ -590,10 +590,12 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
     let sidebar;
 
     try {
-        // Seller Center pages centre in their content column at the same 1400px measure.
+        // Seller Center pages centre in their content column at the 1400px measure. Orders and
+        // Products are working surfaces, so they fill the content column instead.
         for (const path of ['/seller', '/seller/orders', '/seller/products', '/seller/reviews', '/seller/earnings', '/seller/store-settings']) {
             const center = await measure(seller.page, path);
-            expect(center.width, path).toBe(1400);
+            const fillsColumn = path === '/seller/orders' || path === '/seller/products';
+            expect(center.width, path).toBe(fillsColumn ? center.mainWidth : 1400);
             expect(center.leftSlack, path).toBe(center.rightSlack);
             sidebar ??= center.sidebar;
             expect(center.sidebar, path).toBe(sidebar);

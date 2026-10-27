@@ -139,14 +139,17 @@ class SellerApplicationController extends Controller
                 $application->statusHistory()->create(['actor_user_id' => $user->id, 'from_status' => null, 'to_status' => 'draft', 'created_at' => now()]);
             }
 
-            $redirect = route('seller-application.create', ['step' => $step + 1]);
+            $exit = $request->boolean('exit');
+            $redirect = $exit
+                ? route('profile.edit')
+                : route('seller-application.create', ['step' => $step + 1]);
             if ($request->expectsJson()) {
-                session()->flash('status', 'Draft saved.');
+                session()->flash('status', $exit ? 'Draft saved. You can finish your application anytime.' : 'Draft saved.');
 
                 return response()->json(['redirect' => $redirect]);
             }
 
-            return redirect($redirect)->with('status', 'Draft saved.');
+            return redirect($redirect)->with('status', $exit ? 'Draft saved. You can finish your application anytime.' : 'Draft saved.');
         });
     }
 

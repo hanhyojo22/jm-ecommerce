@@ -65,26 +65,22 @@
     @resize.window="visible = window.innerWidth >= 1024"
     @keydown.escape.window="if (visible && window.innerWidth < 1024) close()"
 >
-    <aside id="admin-workspace-nav" data-workspace-header="admin" x-ref="sidebar" aria-label="Admin workspace navigation" :class="visible ? 'block lg:sticky lg:top-0 lg:h-screen lg:w-auto' : 'hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:w-auto'" class="overflow-y-auto border-r border-line bg-surface">
-        <div class="flex min-h-full flex-col px-3 py-5">
-            <div class="mb-5 px-3">
-                <p class="text-sm font-semibold text-ink">Administration</p>
-                <p class="mt-1 text-xs text-muted">Protected workspace</p>
+    <aside id="admin-workspace-nav" data-workspace-header="admin" x-ref="sidebar" aria-label="Admin workspace navigation" :class="visible ? 'block lg:sticky lg:top-0 lg:h-screen lg:w-auto' : 'hidden lg:sticky lg:top-0 lg:block lg:h-screen lg:w-auto'" class="overflow-y-auto border-r border-line bg-surface px-2 py-3">
+        <div class="flex min-h-full flex-col">
+            <div class="px-3 pb-5 pt-3">
+                <p class="workspace-sidebar-brand-name">Administration</p>
+                <p class="workspace-sidebar-brand-meta">Protected workspace</p>
             </div>
 
-            <nav class="space-y-5" aria-label="Admin sections">
+            <nav class="flex-1 space-y-5 px-1 py-4" aria-label="Admin sections">
                 @foreach ($groups as $group)
                     <div>
-                        <h2 class="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">{{ $group['label'] }}</h2>
+                        <h2 class="workspace-nav-label">{{ $group['label'] }}</h2>
                         <div class="space-y-1">
                             @foreach ($group['items'] as $item)
                                 @if ($item['icon'] !== 'accounts' || auth()->user()?->isOwner())
-                                    <a href="{{ $item['href'] }}" @class([
-                                        'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
-                                        'bg-brand/10 font-semibold text-brand-hover' => $item['active'],
-                                        'text-muted hover:bg-canvas hover:text-ink' => ! $item['active'],
-                                    ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
-                                        <svg class="size-5 shrink-0 {{ $item['active'] ? 'text-brand-hover' : 'text-muted group-hover:text-ink' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <a href="{{ $item['href'] }}" class="workspace-nav-link" {{ $item['active'] ? 'aria-current=page' : '' }}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             @switch($item['icon'])
                                                 @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
                                                 @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break
@@ -109,10 +105,12 @@
                 @endforeach
             </nav>
 
-            <a href="{{ route('home') }}" class="mt-auto inline-flex min-h-11 items-center gap-3 rounded-lg px-3 pt-6 text-sm font-medium text-muted transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
-                <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12" /><path d="M3 4v16" /></svg>
-                View marketplace
-            </a>
+            <div class="mt-auto border-t border-line px-1 pt-3">
+                <a href="{{ route('home') }}" class="workspace-nav-link">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12" /><path d="M3 4v16" /></svg>
+                    <span>View marketplace</span>
+                </a>
+            </div>
         </div>
     </aside>
 </div>

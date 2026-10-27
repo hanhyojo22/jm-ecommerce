@@ -58,19 +58,11 @@
     @foreach ($groups as $group)
         <div class="space-y-1">
             @if ($group['label'])
-                <p class="sc-nav-label">{{ $group['label'] }}</p>
+                <p class="workspace-nav-label">{{ $group['label'] }}</p>
             @endif
             @foreach ($group['items'] as $item)
-                <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @endif @class([
-                    'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-white',
-                    'bg-white/10 font-semibold text-white' => $item['active'],
-                    'font-medium text-slate-300 hover:bg-white/5 hover:text-white' => ! $item['active'],
-                ]) {{ $item['active'] ? 'aria-current=page' : '' }}>
-                    <svg @class([
-                        'size-[18px] shrink-0',
-                        'text-[#8db6ff]' => $item['active'],
-                        'text-slate-400 group-hover:text-white' => ! $item['active'],
-                    ]) viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @endif class="workspace-nav-link" {{ $item['active'] ? 'aria-current=page' : '' }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         @switch($item['icon'])
                             @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
                             @case('products')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />@break

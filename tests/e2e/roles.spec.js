@@ -99,7 +99,7 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
                 expect(layout.paddingInline, section).toBe(expectedPadding);
                 if (width === 1682) {
                     // Messages and Orders stretch across the whole content column; the rest take the 1400px measure.
-                    expect(layout.width, section).toBe({ '/messages?context=selling': 1396, '/seller/orders': 1386 }[section] ?? 1336);
+                    expect(layout.width, section).toBe({ '/messages?context=selling': 1386, '/seller/orders': 1386 }[section] ?? 1336);
                 }
                 if (layout.headerLeft !== null) {
                     expect(layout.headerLeft, section).toBe(layout.contentLeft);
@@ -164,16 +164,10 @@ test('seller dashboard stays compact and usable on a narrow screen', async ({ br
 
         await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
         await expect(page.locator('[data-seller-guide]')).toHaveJSProperty('open', false);
-        const recentOrders = page.locator('details').filter({ has: page.getByRole('heading', { name: 'Recent orders' }) });
-        await expect(recentOrders.locator('summary')).toBeVisible();
 
-        // The panel auto-opens when the seller has pending orders, and the shared fixture
-        // database is not reset between tests, so normalise it closed before toggling.
-        if (await recentOrders.evaluate((element) => element.open)) {
-            await recentOrders.locator('summary').click();
-        }
-
-        await expect(recentOrders).toHaveJSProperty('open', false);
+        // Recent orders is a card on the compact dashboard, not a collapsible panel.
+        const recentOrders = page.getByRole('region', { name: 'Recent orders' });
+        await expect(recentOrders).toBeVisible();
 
         const dimensions = await page.evaluate(() => ({
             viewport: document.documentElement.clientWidth,
@@ -182,13 +176,10 @@ test('seller dashboard stays compact and usable on a narrow screen', async ({ br
 
         expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
 
-        await recentOrders.locator('summary').click();
-        await expect(recentOrders).toHaveJSProperty('open', true);
-
         // The fixture database is shared across the run, so this seller may already hold an
         // order from the checkout test. Accept either the empty state or an order card.
         await expect(
-            recentOrders.getByText('No orders yet').or(recentOrders.locator('article').first())
+            recentOrders.getByText('No orders yet').or(recentOrders.locator('a[href*="/seller/orders/"]:visible').first())
         ).toBeVisible();
     } finally {
         await context.close();

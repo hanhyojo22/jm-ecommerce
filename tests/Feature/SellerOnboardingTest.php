@@ -112,6 +112,21 @@ class SellerOnboardingTest extends TestCase
         $this->assertSame([1], $buyer->sellerApplications()->firstOrFail()->completed_steps);
     }
 
+    public function test_save_and_exit_returns_to_the_account_with_the_draft_saved(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+
+        $this->actingAs($buyer)->post(route('seller-application.step', 1), ['seller_type' => 'individual', 'exit' => '1'])
+            ->assertRedirect(route('profile.edit'))
+            ->assertSessionHas('status', 'Draft saved. You can finish your application anytime.');
+
+        $this->assertSame([1], $buyer->sellerApplications()->firstOrFail()->completed_steps);
+
+        $this->actingAs($buyer)->postJson(route('seller-application.step', 1), ['seller_type' => 'individual', 'exit' => '1'])
+            ->assertOk()
+            ->assertJsonPath('redirect', route('profile.edit'));
+    }
+
     public function test_private_document_access_is_limited_to_admins(): void
     {
         Storage::fake('chat_attachments');

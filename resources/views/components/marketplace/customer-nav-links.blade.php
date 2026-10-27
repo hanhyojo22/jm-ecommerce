@@ -12,14 +12,10 @@
 @endphp
 
 <nav class="flex-1 space-y-1 {{ $mode === 'mobile' ? 'overflow-y-auto p-4' : 'px-3 py-4' }}" aria-label="Customer account navigation" data-role-navigation="customer">
-    <p class="px-3 pb-2 text-xs font-semibold uppercase tracking-[.14em] text-slate-400">My account</p>
+    <p class="workspace-nav-label">My account</p>
     @foreach ($items as $item)
-        <a href="{{ $item['href'] }}" @class([
-            'group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition focus-visible:ring-2 focus-visible:ring-white',
-            'bg-white/10 font-semibold text-white' => $item['active'],
-            'font-medium text-slate-300 hover:bg-white/5 hover:text-white' => ! $item['active'],
-        ]) @if ($item['active']) aria-current="page" @endif>
-            <svg class="size-[18px] shrink-0 {{ $item['active'] ? 'text-[#8db6ff]' : 'text-slate-400 group-hover:text-white' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <a href="{{ $item['href'] }}" class="workspace-nav-link" @if ($item['active']) aria-current="page" @endif>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 @switch($item['icon'])
                     @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break
                     @case('reviews')<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />@break
@@ -31,13 +27,13 @@
             <span class="min-w-0 truncate">{{ $item['label'] }}</span>
         </a>
     @endforeach
-    <div class="mt-5 space-y-1 border-t border-white/10 pt-4">
-        <a href="{{ route('home') }}" class="group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
-            <svg class="size-[18px] shrink-0 text-slate-400 group-hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
+    <div class="mt-5 space-y-1 border-t border-line pt-4">
+        <a href="{{ route('home') }}" class="workspace-nav-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
             <span class="min-w-0 truncate">Marketplace</span>
         </a>
-        <a href="{{ route('seller-application.create') }}" class="group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
-            <svg class="size-[18px] shrink-0 text-slate-400 group-hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z" /><path d="M7 7h.01" /></svg>
+        <a href="{{ route('seller-application.create') }}" class="workspace-nav-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z" /><path d="M7 7h.01" /></svg>
             <span class="min-w-0 truncate">Start selling</span>
         </a>
     </div>
