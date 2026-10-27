@@ -57,14 +57,21 @@ class MarkCodPaymentPaid
         });
     }
 
+    /**
+     * The store records that its money arrived: COD cash after delivery, or a GCash/Maya transfer
+     * the buyer sent a reference for, before the store confirms the order.
+     */
     public function collectSellerOrder(User $actor, SellerOrder $sellerOrder, ?string $ipAddress = null): void
     {
         DB::transaction(function () use ($actor, $sellerOrder, $ipAddress): void {
             $order = Order::query()->lockForUpdate()->findOrFail($sellerOrder->order_id);
             $payment = $order->payment()->lockForUpdate()->firstOrFail();
             $sellerOrder = $order->sellerOrders()->lockForUpdate()->findOrFail($sellerOrder->id);
-            if ($payment->method !== 'cod' || ! in_array($payment->status, ['pending', 'paid'], true) || $sellerOrder->status !== 'delivered' || $sellerOrder->cod_collected_at !== null) {
-                throw new LogicException('This seller order is not awaiting COD collection.');
+            $isAwaitingPayment = in_array($payment->method, Payment::DIRECT_METHODS, true)
+                ? $sellerOrder->status === 'pending' && $sellerOrder->payment_reference !== null
+                : $payment->method === 'cod' && $sellerOrder->status === 'delivered';
+            if (! $isAwaitingPayment || ! in_array($payment->status, ['pending', 'paid'], true) || $sellerOrder->cod_collected_at !== null) {
+                throw new LogicException('This seller order is not awaiting payment.');
             }
             $sellerOrder->update(['cod_collected_at' => now()]);
             if (! $order->sellerOrders()->where('status', '!=', 'cancelled')->whereNull('cod_collected_at')->exists()) {
@@ -72,7 +79,7 @@ class MarkCodPaymentPaid
             }
             AuditLog::query()->create([
                 'actor_user_id' => $actor->id, 'action' => 'seller_order.cod_collected', 'entity_type' => SellerOrder::class,
-                'entity_id' => $sellerOrder->id, 'new_values' => ['cod_collected_at' => $sellerOrder->cod_collected_at, 'payment_status' => $payment->fresh()->status], 'ip_address' => $ipAddress,
+                'entity_id' => $sellerOrder->id, 'new_values' => ['cod_collected_at' => $sellerOrder->cod_collected_at, 'method' => $payment->method, 'payment_reference' => $sellerOrder->payment_reference, 'payment_status' => $payment->fresh()->status], 'ip_address' => $ipAddress,
             ]);
         });
     }

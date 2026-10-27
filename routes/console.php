@@ -79,6 +79,29 @@ Artisan::command('orders:auto-deliver', function (UpdateSellerOrderStatus $updat
     $this->info("Marked {$delivered} shipped store order(s) delivered.");
 })->purpose('Mark store orders delivered when the buyer never confirms them')->daily();
 
+Artisan::command('orders:cancel-unpaid', function (UpdateSellerOrderStatus $updateStatus): void {
+    // A buyer who sent a reference may have paid, so only orders with no reference at all are released.
+    $sellerOrders = collect(config('marketplace.wallet.payment_hours'))->flatMap(fn (int $hours, string $method) => SellerOrder::query()
+        ->where('status', 'pending')
+        ->whereNull('cod_collected_at')
+        ->whereNull('payment_reference')
+        ->where('created_at', '<', now()->subHours($hours))
+        ->whereHas('order.payment', fn ($query) => $query->where('method', $method))
+        ->get());
+    $cancelled = 0;
+
+    foreach ($sellerOrders as $sellerOrder) {
+        try {
+            $updateStatus->handle($sellerOrder, 'cancelled', null);
+            $cancelled++;
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    $this->info("Cancelled {$cancelled} unpaid direct-payment store order(s).");
+})->purpose('Release stock held by GCash, Maya, and bank transfer orders the buyer never paid')->hourly();
+
 Artisan::command('platform-fees:bill {month? : The month to bill as YYYY-MM; defaults to last month}', function (IssuePlatformFeeStatements $issue, GmailOrderMailer $mailer): int {
     $requested = $this->argument('month');
     if ($requested !== null && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $requested) !== 1) {

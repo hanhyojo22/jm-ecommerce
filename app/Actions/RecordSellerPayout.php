@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\AuditLog;
+use App\Models\Payment;
 use App\Models\SellerEarning;
 use App\Models\SellerPayout;
 use App\Models\User;
@@ -25,7 +26,7 @@ class RecordSellerPayout
                 ->lockForUpdate()
                 ->get();
 
-            if ($earnings->count() !== count(array_unique($earningIds)) || $earnings->contains(fn (SellerEarning $earning): bool => $earning->status !== 'available' || $earning->seller_payout_id !== null || $earning->voided_at !== null || $earning->sellerOrder->order->payment?->method === 'cod')) {
+            if ($earnings->count() !== count(array_unique($earningIds)) || $earnings->contains(fn (SellerEarning $earning): bool => $earning->status !== 'available' || $earning->seller_payout_id !== null || $earning->voided_at !== null || in_array($earning->sellerOrder->order->payment?->method, ['cod', ...Payment::DIRECT_METHODS], true))) {
                 throw new LogicException('One or more selected earnings are no longer available for payout.');
             }
 

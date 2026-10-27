@@ -105,9 +105,35 @@
                             @endforeach
                         </div>
                     </section>
-                    <section class="marketplace-surface p-6" aria-labelledby="payment-heading">
-                        <div class="grid gap-2"><h2 id="payment-heading" class="text-lg font-semibold text-ink">Payment method</h2><p class="text-sm text-muted">Pay when your items arrive.</p></div>
-                        <div class="mt-6 flex items-start gap-4 rounded-[10px] border border-blue-200 p-4"><span class="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border-[5px] border-brand" aria-hidden="true"></span><div class="grid gap-2"><p class="text-sm font-semibold text-ink">Cash on delivery</p><p class="text-sm leading-6 text-muted">Pay ₱{{ number_format($subtotal, 2) }} on delivery. No online payment is required.</p></div></div>
+                    <section class="marketplace-surface p-6" aria-labelledby="payment-heading" x-data="{ method: @js(old('payment_method', 'cod')) }">
+                        <div class="grid gap-2"><h2 id="payment-heading" class="text-lg font-semibold text-ink">Payment method</h2><p class="text-sm text-muted">{{ $walletMethods === [] ? 'Pay when your items arrive.' : 'Pay on delivery, or pay each store directly.' }}</p></div>
+                        <fieldset class="mt-6 grid gap-3">
+                            <legend class="sr-only">Payment method</legend>
+                            @foreach (['cod' => ['Cash on delivery', 'Pay ₱'.number_format($subtotal, 2).' on delivery. No online payment is required.'], 'gcash' => ['GCash', 'Pay each store from its GCash QR on your order page, then enter the reference number. Stores ship once they see your payment.'], 'maya' => ['Maya', 'Pay each store from its Maya QR on your order page, then enter the reference number. Stores ship once they see your payment.'], 'bank' => ['Bank transfer', 'Transfer to each store\'s bank account by InstaPay or PESONet using the details on your order page, then enter the reference number. PESONet can take until the next banking day.']] as $method => [$label, $description])
+                                @continue($method !== 'cod' && ! in_array($method, $walletMethods, true))
+                                <label class="flex cursor-pointer items-start gap-4 rounded-[10px] border border-line p-4 has-[:checked]:border-brand has-[:checked]:bg-blue-50/50">
+                                    <input type="radio" name="payment_method" value="{{ $method }}" x-model="method" @checked(old('payment_method', 'cod') === $method) class="mt-0.5 size-5 border-line text-brand focus:ring-brand">
+                                    <span class="grid gap-2"><span class="text-sm font-semibold text-ink">{{ $label }}</span><span class="text-sm leading-6 text-muted">{{ $description }}</span></span>
+                                </label>
+                            @endforeach
+                        </fieldset>
+                        @error('payment_method')<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@enderror
+                        @if ($walletMethods !== [])
+                            <div x-cloak x-show="method !== 'cod'" class="mt-4 rounded-[10px] border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-ink" role="note" aria-labelledby="wallet-notice-heading">
+                                <p id="wallet-notice-heading" class="font-semibold">Before you pay a store directly</p>
+                                <ul class="mt-2 list-disc space-y-1 pl-5">
+                                    <li>Your money goes <strong>straight to the store's own account</strong>. JMMart never holds it, so we cannot reverse a transfer or refund it ourselves. Refunds come from the store, or through your bank's or e-wallet's dispute process.</li>
+                                    <li>Stores can't ship until they record your payment. We keep your reference number, review order help requests, and can suspend stores that don't deliver or refund.</li>
+                                    <li><strong>Only pay the QR code or account shown on your JMMart order page.</strong> Never pay a number sent by chat or text, and never share your MPIN or OTP.</li>
+                                    <li>Prefer to pay when the parcel arrives? Choose cash on delivery.</li>
+                                </ul>
+                                <label class="mt-3 flex items-start gap-3 font-medium">
+                                    <input type="checkbox" name="wallet_notice" value="1" :required="method !== 'cod'" @checked(old('wallet_notice')) class="mt-1 size-4 rounded border-line text-brand focus:ring-brand">
+                                    <span>I understand how paying a store directly works, as explained in the <a href="{{ route('terms') }}#wallet-payments" target="_blank" class="font-semibold text-brand underline">Terms of Use</a>.</span>
+                                </label>
+                            </div>
+                            @error('wallet_notice')<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@enderror
+                        @endif
                     </section>
                     <p class="rounded-[10px] bg-blue-50 p-6 text-sm leading-6 text-muted">Each store confirms delivery availability and timing after receiving your order. Shipping is free.</p>
                 </div>

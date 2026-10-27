@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\AuditLog;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\PaymentAdjustment;
 use App\Models\Product;
 use App\Models\SellerOrder;
@@ -25,11 +26,15 @@ class UpdateSellerOrderStatus
     public function __construct(private RecordSellerEarning $recordSellerEarning) {}
 
     /**
-     * A null actor is JMMart itself, completing an order the buyer never confirmed.
+     * A null actor is JMMart itself, completing an order the buyer never confirmed or cancelling
+     * one the buyer never paid for.
+     *
+     * A store that cancels after receiving a GCash/Maya payment refunds the buyer itself and
+     * records the transfer's reference here.
      */
-    public function handle(SellerOrder $sellerOrder, string $status, ?User $actor, ?string $ipAddress = null): SellerOrder
+    public function handle(SellerOrder $sellerOrder, string $status, ?User $actor, ?string $ipAddress = null, ?string $refundReference = null): SellerOrder
     {
-        $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress): SellerOrder {
+        $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress, $refundReference): SellerOrder {
             $order = Order::query()
                 ->lockForUpdate()
                 ->findOrFail($sellerOrder->order_id);
@@ -58,6 +63,18 @@ class UpdateSellerOrderStatus
                 throw ValidationException::withMessages(['status' => 'A cancellation request is awaiting review.']);
             }
 
+            $isWalletPayment = in_array($order->payment()->value('method'), Payment::DIRECT_METHODS, true);
+
+            if ($isWalletPayment && $status === 'confirmed' && $sellerOrder->cod_collected_at === null) {
+                throw ValidationException::withMessages(['status' => 'Record that the buyer’s payment arrived before confirming this order.']);
+            }
+
+            $refundReference = $isWalletPayment && $status === 'cancelled' && $sellerOrder->cod_collected_at !== null ? $refundReference : null;
+
+            if ($isWalletPayment && $status === 'cancelled' && $sellerOrder->cod_collected_at !== null && blank($refundReference) && ! $actor?->isPlatformAdministrator()) {
+                throw ValidationException::withMessages(['refund_reference' => 'Refund the buyer’s payment, then enter the refund reference number to cancel.']);
+            }
+
             $previousStatus = $sellerOrder->status;
 
             if ($status === 'cancelled') {
@@ -65,6 +82,7 @@ class UpdateSellerOrderStatus
             }
 
             $sellerOrder->update([
+                'refund_reference' => $refundReference ?? $sellerOrder->refund_reference,
                 'status' => $status,
                 'shipped_at' => $status === 'shipped' ? now() : $sellerOrder->shipped_at,
                 'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at,
@@ -120,7 +138,7 @@ class UpdateSellerOrderStatus
                 'entity_type' => SellerOrder::class,
                 'entity_id' => $sellerOrder->id,
                 'old_values' => ['status' => $previousStatus],
-                'new_values' => ['status' => $status, 'order_total' => $remainingTotal],
+                'new_values' => array_filter(['status' => $status, 'order_total' => $remainingTotal, 'refund_reference' => $refundReference], fn ($value): bool => $value !== null),
                 'ip_address' => $ipAddress,
             ]);
 

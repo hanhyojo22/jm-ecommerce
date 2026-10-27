@@ -182,6 +182,53 @@
                 </div>
                 </div>
             </form>
+
+            <form method="POST" action="{{ route('seller.store-settings.wallets') }}" enctype="multipart/form-data" class="mt-5 min-w-0">
+                @csrf
+                @method('PATCH')
+                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="wallets-heading">
+                    <h2 id="wallets-heading" class="text-lg font-semibold text-ink">GCash, Maya, and bank transfer</h2>
+                    <p class="mt-0.5 text-sm text-muted">Buyers pay straight into your account and send you the reference number. Check each payment in your app before you confirm the order. GCash and Maya need a number and a QR code; bank transfer needs the bank, account name, and number. Clear the number to stop offering a method. These details are shown to buyers.</p>
+                    <x-input-error :messages="$errors->get('wallets')" class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" />
+                    <div class="mt-5 grid min-w-0 gap-5 md:grid-cols-2">
+                        @foreach (['gcash' => 'GCash', 'maya' => 'Maya'] as $method => $label)
+                            <fieldset class="min-w-0 rounded-lg border border-line p-4">
+                                <legend class="px-1 text-sm font-semibold text-ink">{{ $label }} {{ $store->acceptsWallet($method) ? '· offered at checkout' : '' }}</legend>
+                                <label for="{{ $method }}_number" class="block text-sm font-semibold text-ink">{{ $label }} number</label>
+                                <input id="{{ $method }}_number" name="{{ $method }}_number" value="{{ old($method.'_number', $store->{$method.'_number'}) }}" inputmode="tel" placeholder="09171234567" class="mt-2 min-h-11 w-full rounded-lg border-line text-sm focus:border-brand focus:ring-brand" @error($method.'_number') aria-invalid="true" @enderror>
+                                <x-input-error :messages="$errors->get($method.'_number')" class="mt-2" />
+                                <label for="{{ $method }}_qr" class="mt-4 block text-sm font-semibold text-ink">{{ $label }} QR code</label>
+                                @if ($store->{$method.'_qr_path'})
+                                    <img src="{{ Storage::disk('public')->url($store->{$method.'_qr_path'}) }}" alt="Current {{ $label }} QR code" class="mt-2 size-32 rounded-lg border border-line bg-white object-contain">
+                                @endif
+                                <input id="{{ $method }}_qr" name="{{ $method }}_qr" type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full text-sm text-muted">
+                                <p class="mt-1 text-xs text-muted">Download it from your {{ $label }} app's Receive screen. JPEG, PNG, or WebP up to 2 MB.</p>
+                                <x-input-error :messages="$errors->get($method.'_qr')" class="mt-2" />
+                            </fieldset>
+                        @endforeach
+                        <fieldset class="min-w-0 rounded-lg border border-line p-4 md:col-span-2">
+                            <legend class="px-1 text-sm font-semibold text-ink">Bank transfer {{ $store->acceptsWallet('bank') ? '· offered at checkout' : '' }}</legend>
+                            <div class="grid min-w-0 gap-4 md:grid-cols-3">
+                                @foreach (['bank_name' => ['Bank', 'BDO, BPI, Landbank…'], 'bank_account_name' => ['Account name', 'As it appears on the account'], 'bank_number' => ['Account number', '']] as $field => [$fieldLabel, $placeholder])
+                                    <div class="min-w-0">
+                                        <label for="{{ $field }}" class="block text-sm font-semibold text-ink">{{ $fieldLabel }}</label>
+                                        <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $store->{$field}) }}" placeholder="{{ $placeholder }}" @if ($field === 'bank_number') inputmode="numeric" @endif class="mt-2 min-h-11 w-full rounded-lg border-line text-sm focus:border-brand focus:ring-brand" @error($field) aria-invalid="true" @enderror>
+                                        <x-input-error :messages="$errors->get($field)" class="mt-2" />
+                                    </div>
+                                @endforeach
+                            </div>
+                            <label for="bank_qr" class="mt-4 block text-sm font-semibold text-ink">QR Ph code <span class="font-normal text-muted">(optional)</span></label>
+                            @if ($store->bank_qr_path)
+                                <img src="{{ Storage::disk('public')->url($store->bank_qr_path) }}" alt="Current bank QR code" class="mt-2 size-32 rounded-lg border border-line bg-white object-contain">
+                            @endif
+                            <input id="bank_qr" name="bank_qr" type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 block w-full text-sm text-muted">
+                            <p class="mt-1 text-xs text-muted">Most bank apps can generate a QR Ph code that buyers scan with any bank, GCash, or Maya. JPEG, PNG, or WebP up to 2 MB.</p>
+                            <x-input-error :messages="$errors->get('bank_qr')" class="mt-2" />
+                        </fieldset>
+                    </div>
+                    <button type="submit" class="seller-primary-button mt-5">Save payment accounts</button>
+                </section>
+            </form>
         </div>
     </div>
 </x-app-layout>

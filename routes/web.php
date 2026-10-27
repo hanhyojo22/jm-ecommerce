@@ -69,6 +69,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/seller-orders/{sellerOrder}/payment-reference', [OrderController::class, 'paymentReference'])->middleware('throttle:10,1')->name('orders.payment-reference');
     Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])->middleware('throttle:10,1')->name('orders.received');
     Route::post('/orders/store-orders/{sellerOrder}/issues', [OrderIssueController::class, 'store'])->middleware('throttle:10,1')->name('order-issues.store');
     Route::post('/orders/store-orders/{sellerOrder}/returns', [BuyerReturnCaseController::class, 'store'])->middleware('throttle:10,1')->name('returns.store');
@@ -123,6 +124,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::get('/seller', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
     Route::get('/seller/store-settings', [StoreSettingsController::class, 'edit'])->name('seller.store-settings.edit');
     Route::patch('/seller/store-settings', [StoreSettingsController::class, 'update'])->middleware('throttle:10,1')->name('seller.store-settings.update');
+    Route::patch('/seller/store-settings/wallets', [StoreSettingsController::class, 'updateWallets'])->middleware('throttle:10,1')->name('seller.store-settings.wallets');
     Route::post('/seller/store-settings/undo', [StoreSettingsController::class, 'undo'])->middleware('throttle:10,1')->name('seller.store-settings.undo');
     Route::get('/seller/products', [ProductController::class, 'index'])->name('seller.products.index');
     Route::post('/seller/products/bulk-deactivate', [ProductController::class, 'bulkDeactivate'])->middleware('throttle:10,1')->name('seller.products.bulk-deactivate');

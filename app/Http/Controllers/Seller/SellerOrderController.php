@@ -65,7 +65,7 @@ class SellerOrderController extends Controller
 
         $sellerOrder = $tenant->sellerOrders()
             ->whereKey($sellerOrder)
-            ->with($isModal ? ['items.product.images', 'order', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'issues', 'returnCases.items.orderItem'])
+            ->with($isModal ? ['items.product.images', 'order.payment', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'issues', 'returnCases.items.orderItem'])
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',
@@ -129,10 +129,11 @@ class SellerOrderController extends Controller
 
         $data = $request->validate([
             'status' => ['required', 'in:confirmed,processing,shipped,delivered,cancelled'],
+            'refund_reference' => ['nullable', 'string', 'max:40', 'regex:/^[0-9A-Za-z -]+$/'],
         ]);
 
         $sellerOrder->load('order');
-        $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip());
+        $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip(), $data['refund_reference'] ?? null);
 
         return back()->with('status', "Order {$sellerOrder->order->number} was marked as {$data['status']}.");
     }
@@ -147,7 +148,7 @@ class SellerOrderController extends Controller
             return back()->withErrors(['payment' => $exception->getMessage()]);
         }
 
-        return back()->with('status', 'COD collection recorded for this store order.');
+        return back()->with('status', 'Payment recorded for this store order.');
     }
 
     public function bulkConfirm(Request $request, UpdateSellerOrderStatus $updateStatus): RedirectResponse

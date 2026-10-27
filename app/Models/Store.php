@@ -12,7 +12,18 @@ class Store extends Model
 {
     use HasUlids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status'];
+    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', 'gcash_number', 'gcash_qr_path', 'maya_number', 'maya_qr_path', 'bank_name', 'bank_account_name', 'bank_number', 'bank_qr_path'];
+
+    /**
+     * A store takes a GCash or Maya payment once buyers have its number and QR. A bank transfer
+     * needs the bank, account name, and number instead; its QR Ph code is optional.
+     */
+    public function acceptsWallet(string $method): bool
+    {
+        return $method === 'bank'
+            ? filled($this->bank_name) && filled($this->bank_account_name) && filled($this->bank_number)
+            : filled($this->{$method.'_number'}) && filled($this->{$method.'_qr_path'});
+    }
 
     public function tenant(): BelongsTo
     {

@@ -37,10 +37,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | GCash, Maya, and Bank Transfer
+    |--------------------------------------------------------------------------
+    |
+    | Buyers pay the store's own account and send the reference number. A store
+    | order still without a reference after this many hours is cancelled so
+    | its stock goes back on sale. PESONet transfers can take until the next
+    | banking day, so bank transfers get longer.
+    |
+    */
+
+    'wallet' => [
+        'payment_hours' => ['gcash' => 24, 'maya' => 24, 'bank' => 48],
+        // Bump when the buyer notice in terms.blade.php#wallet-payments changes; each order logs the version accepted.
+        'notice_version' => '1.1',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Cash on Delivery Refusals
     |--------------------------------------------------------------------------
     |
-    | COD is the only way to pay, so a buyer who keeps refusing parcels is not
+    | Many stores take only COD, so a buyer who keeps refusing parcels is not
     | blocked: after this many refusals within the window they can have only
     | one order in progress at a time, until support lifts the limit.
     |

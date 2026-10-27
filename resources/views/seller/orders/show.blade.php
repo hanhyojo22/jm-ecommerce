@@ -8,6 +8,11 @@
         default => 'This seller order was cancelled and its stock was restored.',
     };
     $paymentStatus = $sellerOrder->cod_collected_at ? 'paid' : 'pending';
+    $walletLabel = ['gcash' => 'GCash', 'maya' => 'Maya', 'bank' => 'bank'][$sellerOrder->order->payment?->method] ?? null;
+    $needsRefundReference = $walletLabel !== null && $sellerOrder->cod_collected_at;
+    if ($walletLabel !== null && ! $sellerOrder->cod_collected_at && $sellerOrder->status === 'pending') {
+        $guidance = $sellerOrder->payment_reference ? "Check your {$walletLabel} for this payment, then record it before confirming." : "Waiting for the buyer to pay your {$walletLabel} account and send the reference number.";
+    }
 @endphp
 
 <x-app-layout>
@@ -98,6 +103,7 @@
                         <p class="mt-1 sc-card-note">Only valid transitions for this order are available.</p>
                         <div class="mt-4 grid gap-2">
                             @foreach ($sellerOrder->available_transitions as $transition)
+                                @continue($transition === 'confirmed' && $walletLabel !== null && ! $sellerOrder->cod_collected_at)
                                 @if (in_array($transition, ['shipped', 'cancelled'], true))
                                     <button type="button" @click="confirmation = '{{ $transition }}'; $nextTick(() => $refs.confirmation.showModal())" class="{{ $transition === 'cancelled' ? 'sc-btn sc-btn-danger' : 'seller-primary-button' }} w-full">{{ $transition === 'shipped' ? 'Mark as shipped' : 'Cancel order' }}</button>
                                 @else
@@ -111,7 +117,11 @@
                                 <p class="mt-2 text-sm leading-6 text-muted" x-text="confirmation === 'shipped' ? 'This tells your customer the order has left your store. You can only move it to delivered afterward.' : 'This cancels only your store’s part of the checkout and restores its item stock. This cannot be undone.'"></p>
                                 <div class="mt-6 flex justify-end gap-2">
                                     <button type="button" @click="$refs.confirmation.close()" class="seller-outline-button">Keep editing</button>
-                                    <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}">@csrf @method('PATCH')<input type="hidden" name="status" :value="confirmation"><button type="submit" class="sc-btn text-white" :class="confirmation === 'cancelled' ? 'bg-rose-700 hover:bg-rose-800' : 'bg-brand hover:bg-brand-hover'" x-text="confirmation === 'shipped' ? 'Mark shipped' : 'Cancel order'"></button></form>
+                                    <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}">@csrf @method('PATCH')<input type="hidden" name="status" :value="confirmation">
+                                        @if ($needsRefundReference)
+                                            <div x-show="confirmation === 'cancelled'" class="mb-3 text-left"><label for="refund_reference" class="block text-sm font-semibold text-ink">{{ $walletLabel }} refund reference</label><input id="refund_reference" name="refund_reference" maxlength="40" :required="confirmation === 'cancelled'" class="mt-1 min-h-11 w-full rounded-lg border-line text-sm focus:border-brand focus:ring-brand"><p class="mt-1 text-xs text-muted">Send ₱{{ number_format($sellerOrder->total, 2) }} back to the buyer ({{ $sellerOrder->order->phone }}) first.</p></div>
+                                        @endif
+                                        <button type="submit" class="sc-btn text-white" :class="confirmation === 'cancelled' ? 'bg-rose-700 hover:bg-rose-800' : 'bg-brand hover:bg-brand-hover'" x-text="confirmation === 'shipped' ? 'Mark shipped' : 'Cancel order'"></button></form>
                                 </div>
                             </div>
                         </dialog>
@@ -145,10 +155,23 @@
                 <section class="sc-card sc-card-pad" aria-labelledby="payment-heading">
                     <h2 id="payment-heading" class="sc-card-title">Payment</h2>
                     <dl class="sc-dl mt-4">
-                        <div><dt>Method</dt><dd class="font-medium">Cash on delivery</dd></div>
+                        <div><dt>Method</dt><dd class="font-medium">{{ \App\Models\Payment::METHOD_LABELS[$sellerOrder->order->payment?->method] ?? 'Cash on delivery' }}</dd></div>
                         <div><dt>Payment status</dt><dd class="mt-1"><x-marketplace.order-status :status="$paymentStatus" payment /></dd></div>
+                        @if ($sellerOrder->payment_reference)<div><dt>Buyer's reference</dt><dd class="font-medium">{{ $sellerOrder->payment_reference }}</dd></div>@endif
+                        @if ($sellerOrder->refund_reference)<div><dt>Refund reference</dt><dd class="font-medium">{{ $sellerOrder->refund_reference }}</dd></div>@endif
                     </dl>
-                    @if ($sellerOrder->cod_collected_at)
+                    <x-input-error :messages="$errors->get('payment')" class="mt-3" />
+                    <x-input-error :messages="$errors->get('refund_reference')" class="mt-3" />
+                    @if ($walletLabel !== null)
+                        @if ($sellerOrder->cod_collected_at)
+                            <p class="mt-4 text-sm font-semibold text-success">{{ $walletLabel }} payment received {{ $sellerOrder->cod_collected_at->format('M j, Y g:i A') }}</p>
+                        @elseif ($canManageOrders && $sellerOrder->status === 'pending' && $sellerOrder->payment_reference)
+                            <form method="POST" action="{{ route('seller.orders.cod-collection', $sellerOrder) }}" class="mt-4 border-t border-line pt-4">@csrf @method('PATCH')
+                                <p class="sc-meta">Record this only after ₱{{ number_format($sellerOrder->total, 2) }} with reference {{ $sellerOrder->payment_reference }} shows in your {{ $walletLabel }} account.</p>
+                                <button class="seller-primary-button mt-3 w-full">Record {{ $walletLabel }} payment</button>
+                            </form>
+                        @endif
+                    @elseif ($sellerOrder->cod_collected_at)
                         <p class="mt-4 text-sm font-semibold text-success">COD collected {{ $sellerOrder->cod_collected_at->format('M j, Y g:i A') }}</p>
                     @elseif ($canManageOrders && $sellerOrder->status === 'delivered')
                         <form method="POST" action="{{ route('seller.orders.cod-collection', $sellerOrder) }}" class="mt-4 border-t border-line pt-4">@csrf @method('PATCH')

@@ -6,10 +6,13 @@ use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
 use App\Models\SellerOrder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -110,6 +113,28 @@ class OrderController extends Controller
         abort_unless($order->user_id === $request->user()->id, 404);
 
         return view('marketplace.orders.show', ['order' => $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment')]);
+    }
+
+    /**
+     * The buyer sent this store its GCash/Maya payment and gives the transfer's reference number,
+     * so the store can find it in its own wallet before confirming. It can be corrected until then.
+     */
+    public function paymentReference(Request $request, SellerOrder $sellerOrder): RedirectResponse
+    {
+        abort_unless($sellerOrder->order()->value('user_id') === $request->user()->id, 404);
+        $data = $request->validate(['payment_reference' => ['required', 'string', 'max:40', 'regex:/^[0-9A-Za-z -]+$/']]);
+
+        DB::transaction(function () use ($sellerOrder, $data): void {
+            $sellerOrder = SellerOrder::query()->with('order.payment')->lockForUpdate()->findOrFail($sellerOrder->id);
+
+            if (! in_array($sellerOrder->order->payment?->method, Payment::DIRECT_METHODS, true) || $sellerOrder->status !== 'pending' || $sellerOrder->cod_collected_at !== null) {
+                throw ValidationException::withMessages(['payment_reference' => 'This store order is not awaiting a payment reference.']);
+            }
+
+            $sellerOrder->update(['payment_reference' => trim($data['payment_reference'])]);
+        });
+
+        return back()->with('status', 'Reference sent. The store will confirm once the payment shows in its account.');
     }
 
     /**

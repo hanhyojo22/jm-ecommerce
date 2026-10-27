@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\Payment;
 use App\Models\SellerEarning;
 use App\Models\SellerOrder;
 use App\Models\Tenant;
@@ -12,7 +13,7 @@ class RecordSellerEarning
     /**
      * Record what a delivered store order earned and JMMart's share of it.
      *
-     * The store keeps the cash from a COD order, so the earning is voided for payout
+     * The store keeps the cash from a COD order (and a GCash/Maya payment sent to it), so the earning is voided for payout
      * and its commission is what the store owes JMMart on the next monthly statement.
      * Orders delivered before the store accepted the fee terms are charged nothing.
      */
@@ -33,7 +34,7 @@ class RecordSellerEarning
             'net_amount' => bcsub($gross, $commission, 2),
             'status' => 'available',
             'available_at' => $deliveredAt,
-            'voided_at' => $sellerOrder->order()->first()?->payment()->value('method') === 'cod' ? now() : null,
+            'voided_at' => in_array($sellerOrder->order()->first()?->payment()->value('method'), ['cod', ...Payment::DIRECT_METHODS], true) ? now() : null,
         ]);
     }
 }

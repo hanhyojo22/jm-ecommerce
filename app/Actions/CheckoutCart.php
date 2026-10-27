@@ -2,8 +2,10 @@
 
 namespace App\Actions;
 
+use App\Models\AuditLog;
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -14,12 +16,13 @@ class CheckoutCart
 {
     /**
      * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
+     * @param  'cod'|'gcash'|'maya'  $paymentMethod  a wallet method means the buyer accepted the direct-payment notice, which is logged with the order
      */
-    public function handle(User $user, array $delivery): Order
+    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $ipAddress = null): Order
     {
         abort_unless($user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(), 403);
 
-        return DB::transaction(function () use ($user, $delivery): Order {
+        return DB::transaction(function () use ($user, $delivery, $paymentMethod, $ipAddress): Order {
             $cart = Cart::query()
                 ->where('user_id', $user->id)
                 ->lockForUpdate()
@@ -30,7 +33,8 @@ class CheckoutCart
             }
 
             // The cart lock above serializes this buyer's checkouts, so two tabs cannot both slip past.
-            if ($user->hasReachedCodOrderLimit()) {
+            // A prepaid wallet order cannot be refused at the door, so the limit is for COD only.
+            if ($paymentMethod === 'cod' && $user->hasReachedCodOrderLimit()) {
                 throw ValidationException::withMessages(['cart' => 'Because cash-on-delivery parcels were refused recently, you can have one order in progress at a time. You can place this order once your current one is delivered.']);
             }
 
@@ -55,7 +59,7 @@ class CheckoutCart
 
             $managedTenantIds = $user->tenantMemberships()->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all();
 
-            $lines = $items->map(function ($item) use ($products, $managedTenantIds): array {
+            $lines = $items->map(function ($item) use ($products, $managedTenantIds, $paymentMethod): array {
                 $product = $products->get($item->product_id);
 
                 $variant = $product !== null && $item->product_variant_id !== null
@@ -76,6 +80,10 @@ class CheckoutCart
                     || ($item->product_variant_id === null && $product->variants()->exists())
                 ) {
                     throw ValidationException::withMessages(['cart' => 'A product in your cart is unavailable.']);
+                }
+
+                if ($paymentMethod !== 'cod' && ! $product->store->acceptsWallet($paymentMethod)) {
+                    throw ValidationException::withMessages(['payment_method' => "{$product->store->name} does not accept ".Payment::METHOD_LABELS[$paymentMethod].'. Choose another payment method.']);
                 }
 
                 $product->decrement('stock_quantity', $item->quantity);
@@ -139,7 +147,18 @@ class CheckoutCart
                     }
                 });
 
-            $order->payment()->create(['method' => 'cod', 'amount' => $total]);
+            $order->payment()->create(['method' => $paymentMethod, 'amount' => $total]);
+
+            if ($paymentMethod !== 'cod') {
+                AuditLog::query()->create([
+                    'actor_user_id' => $user->id,
+                    'action' => 'order.wallet_notice_accepted',
+                    'entity_type' => Order::class,
+                    'entity_id' => $order->id,
+                    'new_values' => ['method' => $paymentMethod, 'notice_version' => config('marketplace.wallet.notice_version')],
+                    'ip_address' => $ipAddress,
+                ]);
+            }
             $cart->items()->whereKey($items->modelKeys())->delete();
 
             return $order;

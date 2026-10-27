@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Actions\CheckoutCart;
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
 use App\Services\GmailOrderMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CheckoutController extends Controller
@@ -55,8 +58,11 @@ class CheckoutController extends Controller
         $preferredAddress = $addresses->first()
             ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
+        $stores = $cart->items->pluck('product.store')->unique('id');
+
         return view('marketplace.checkout.create', [
             'orderLimitReached' => $request->user()->hasReachedCodOrderLimit(),
+            'walletMethods' => array_values(array_filter(Payment::DIRECT_METHODS, fn (string $method): bool => $stores->every(fn ($store): bool => $store->acceptsWallet($method)))),
             'cart' => $cart,
             'subtotal' => $subtotal,
             'addresses' => $addresses,
@@ -74,8 +80,14 @@ class CheckoutController extends Controller
             'province' => ['required', 'string', 'max:100'],
             'postal_code' => ['required', 'regex:/^\d{4}$/'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],
-        ]);
-        $order = $checkout->handle($request->user(), $data);
+            'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::DIRECT_METHODS])],
+            'wallet_notice' => ['accepted_if:payment_method,'.implode(',', Payment::DIRECT_METHODS)],
+        ], ['wallet_notice.accepted_if' => 'Confirm that you understand how paying a store directly works.']);
+        $paymentMethod = $data['payment_method'] ?? 'cod';
+        $order = $checkout->handle($request->user(), Arr::except($data, ['payment_method', 'wallet_notice']), $paymentMethod, $request->ip());
+        $paymentNote = $paymentMethod === 'cod'
+            ? 'payable on delivery. Each store confirms its delivery timing.'
+            : 'paid by '.Payment::METHOD_LABELS[$paymentMethod].'. Pay each store from your order page so they can confirm and ship. Only pay the QR code or account shown on your JMMart order page, never one sent by chat or text, and never share your MPIN or OTP.';
         $buyer = $request->user();
 
         /*
@@ -84,12 +96,12 @@ class CheckoutController extends Controller
          * response is already on its way. A failure is still reported and still does not fail the
          * order; a queued job would add retries if the receipt ever has to be guaranteed.
          */
-        defer(function () use ($mailer, $buyer, $order): void {
+        defer(function () use ($mailer, $buyer, $order, $paymentNote): void {
             try {
                 $mailer->send(
                     $buyer,
                     "JMMart order {$order->number} received",
-                    "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, payable on delivery. Each store confirms its delivery timing.\n\nTrack your order or request help: ".route('orders.show', $order),
+                    "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, {$paymentNote}\n\nTrack your order or request help: ".route('orders.show', $order),
                 );
             } catch (\Throwable $exception) {
                 report($exception);

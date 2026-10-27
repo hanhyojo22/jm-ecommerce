@@ -22,6 +22,8 @@ class SellerOrder extends Model
         'shipped_at',
         'delivered_at',
         'cod_collected_at',
+        'payment_reference',
+        'refund_reference',
     ];
 
     protected function casts(): array

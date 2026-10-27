@@ -6,11 +6,13 @@ use App\Actions\StorePublicImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateStoreSettingsRequest;
 use App\Models\AuditLog;
+use App\Models\Payment;
 use App\Models\Store;
 use App\Models\Tenant;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
@@ -104,6 +106,80 @@ class StoreSettingsController extends Controller
         }
 
         return to_route('seller.store-settings.edit')->with('status', 'Store details saved.');
+    }
+
+    /**
+     * The GCash, Maya, and bank accounts buyers pay this store into. Each is offered at checkout
+     * only once it is complete (see Store::acceptsWallet).
+     */
+    public function updateWallets(Request $request, StorePublicImage $storePublicImage): RedirectResponse
+    {
+        $tenant = $this->managedTenant($request);
+        $rules = [
+            'bank_name' => ['nullable', 'required_with:bank_number', 'string', 'max:100'],
+            'bank_account_name' => ['nullable', 'required_with:bank_number', 'string', 'max:150'],
+        ];
+        foreach (Payment::DIRECT_METHODS as $method) {
+            $rules["{$method}_number"] = $method === 'bank'
+                ? ['nullable', 'string', 'regex:/^[0-9 -]{6,30}$/']
+                : ['nullable', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'];
+            $rules["{$method}_qr"] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
+        }
+        $data = $request->validate($rules, [
+            'gcash_number.regex' => 'Enter a mobile number like 09171234567.',
+            'maya_number.regex' => 'Enter a mobile number like 09171234567.',
+            'bank_number.regex' => 'Enter the account number using digits only.',
+        ]);
+
+        $uploadedPaths = [];
+        try {
+            foreach (Payment::DIRECT_METHODS as $method) {
+                if ($request->hasFile("{$method}_qr")) {
+                    $uploadedPaths["{$method}_qr_path"] = $storePublicImage->handle($request->file("{$method}_qr"), 'store-wallet-qr', 'public');
+                }
+            }
+
+            $replacedPaths = DB::transaction(function () use ($request, $tenant, $data, $uploadedPaths): array {
+                $store = Store::query()->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
+                $fields = ['gcash_number', 'gcash_qr_path', 'maya_number', 'maya_qr_path', 'bank_name', 'bank_account_name', 'bank_number', 'bank_qr_path'];
+                $oldValues = $store->only($fields);
+                $newValues = [...$oldValues, ...$uploadedPaths];
+                foreach (Payment::DIRECT_METHODS as $method) {
+                    $newValues["{$method}_number"] = $data["{$method}_number"] ?? null;
+                    // Clearing the number turns the method off, so its QR goes with it.
+                    if ($newValues["{$method}_number"] === null) {
+                        $newValues["{$method}_qr_path"] = null;
+                    }
+                }
+                $newValues['bank_name'] = $newValues['bank_number'] === null ? null : $data['bank_name'];
+                $newValues['bank_account_name'] = $newValues['bank_number'] === null ? null : $data['bank_account_name'];
+
+                $store->update($newValues);
+
+                AuditLog::query()->create([
+                    'actor_user_id' => $request->user()->id,
+                    'action' => 'store.wallets_updated',
+                    'entity_type' => Store::class,
+                    'entity_id' => $store->id,
+                    'old_values' => $oldValues,
+                    'new_values' => $newValues,
+                    'ip_address' => $request->ip(),
+                ]);
+
+                $qrFields = ['gcash_qr_path', 'maya_qr_path', 'bank_qr_path'];
+
+                return array_diff(array_filter(Arr::only($oldValues, $qrFields)), Arr::only($newValues, $qrFields));
+            });
+        } catch (Throwable $exception) {
+            array_map(fn (string $path) => $this->deleteUploadedLogo($path), $uploadedPaths);
+            report($exception);
+
+            return back()->withErrors(['wallets' => 'We could not save your GCash and Maya details. Please try again.'])->withInput();
+        }
+
+        array_map(fn (string $path) => $this->deleteUploadedLogo($path), $replacedPaths);
+
+        return to_route('seller.store-settings.edit')->with('status', 'GCash and Maya details saved.');
     }
 
     public function undo(Request $request): RedirectResponse

@@ -102,8 +102,42 @@
                     <div class="mt-5 border-t border-line pt-5">
                         <p class="text-sm font-semibold text-ink">Payment</p>
                         @if($order->payment)
-                            <div class="mt-2 flex items-center justify-between gap-3"><span class="text-sm text-muted">{{ str($order->payment->method)->upper() }}</span><span class="status-badge {{ $paymentStyles[$order->payment->status] }}">{{ ucfirst($order->payment->status) }}</span></div>
-                            <ul class="mt-3 space-y-1 text-xs text-muted">@foreach ($order->sellerOrders as $sellerOrder)<li>{{ $sellerOrder->store->name }}: {{ $sellerOrder->cod_collected_at ? 'COD collected' : 'COD collection not recorded' }}</li>@endforeach</ul>
+                            @php($walletLabel = ['gcash' => 'GCash', 'maya' => 'Maya', 'bank' => 'bank'][$order->payment->method] ?? null)
+                            <div class="mt-2 flex items-center justify-between gap-3"><span class="text-sm text-muted">{{ \App\Models\Payment::METHOD_LABELS[$order->payment->method] ?? str($order->payment->method)->upper() }}</span><span class="status-badge {{ $paymentStyles[$order->payment->status] }}">{{ ucfirst($order->payment->status) }}</span></div>
+                            @if ($walletLabel === null)
+                                <ul class="mt-3 space-y-1 text-xs text-muted">@foreach ($order->sellerOrders as $sellerOrder)<li>{{ $sellerOrder->store->name }}: {{ $sellerOrder->cod_collected_at ? 'COD collected' : 'COD collection not recorded' }}</li>@endforeach</ul>
+                            @else
+                                <ul class="mt-3 space-y-4">
+                                    @foreach ($order->sellerOrders as $sellerOrder)
+                                        <li class="rounded-lg border border-line p-3 text-sm">
+                                            <p class="flex justify-between gap-3 font-semibold text-ink"><span>{{ $sellerOrder->store->name }}</span><span class="tabular-nums">₱{{ number_format($sellerOrder->total, 2) }}</span></p>
+                                            @if ($sellerOrder->cod_collected_at)
+                                                <p class="mt-1 text-xs font-semibold text-success">Payment received {{ $sellerOrder->cod_collected_at->format('M j, Y') }}</p>
+                                            @elseif ($sellerOrder->status === 'cancelled')
+                                                <p class="mt-1 text-xs text-muted">Cancelled{{ $sellerOrder->refund_reference ? ' · refunded, ref. '.$sellerOrder->refund_reference : '' }}</p>
+                                            @elseif ($sellerOrder->status === 'pending')
+                                                <p class="mt-1 text-xs leading-5 text-muted">Send exactly this amount to the store's {{ $walletLabel }} account{{ $walletLabel === 'bank' ? ' by InstaPay or PESONet' : '' }}, then enter the reference number from your receipt. Unpaid store orders are cancelled after {{ config('marketplace.wallet.payment_hours.'.$order->payment->method) }} hours.</p>
+                                                <p class="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs leading-5 text-ink" role="note"><strong>Only pay this QR or number.</strong> JMMart and stores never ask you to pay another number by chat or text, or for your MPIN or OTP. Your money goes to the store, not JMMart. <a href="{{ route('terms') }}#wallet-payments" class="font-semibold text-brand underline">What JMMart can and can't do</a></p>
+                                                @if ($sellerOrder->store->{$order->payment->method.'_qr_path'})
+                                                    <img src="{{ Storage::disk('public')->url($sellerOrder->store->{$order->payment->method.'_qr_path'}) }}" alt="{{ $sellerOrder->store->name }} {{ $walletLabel }} QR code" class="mx-auto mt-3 size-44 rounded-lg border border-line bg-white object-contain">
+                                                @endif
+                                                @if ($walletLabel === 'bank' && $sellerOrder->store->bank_number)
+                                                    <dl class="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs"><dt class="text-muted">Bank</dt><dd class="font-semibold text-ink">{{ $sellerOrder->store->bank_name }}</dd><dt class="text-muted">Account name</dt><dd class="font-semibold text-ink">{{ $sellerOrder->store->bank_account_name }}</dd><dt class="text-muted">Account no.</dt><dd class="font-semibold tabular-nums text-ink">{{ $sellerOrder->store->bank_number }}</dd></dl>
+                                                @else
+                                                    <p class="mt-2 text-center text-xs text-muted">{{ $walletLabel }} number: <span class="font-semibold text-ink tabular-nums">{{ $sellerOrder->store->{$order->payment->method.'_number'} ?? 'not available, message the store' }}</span></p>
+                                                @endif
+                                                <form method="POST" action="{{ route('orders.payment-reference', $sellerOrder) }}" class="mt-3 grid gap-2">@csrf @method('PATCH')
+                                                    <label for="payment_reference_{{ $sellerOrder->id }}" class="text-xs font-semibold text-ink">Reference number</label>
+                                                    <input id="payment_reference_{{ $sellerOrder->id }}" name="payment_reference" value="{{ $sellerOrder->payment_reference }}" required maxlength="40" class="min-h-11 w-full rounded-lg border-line text-sm focus:border-brand focus:ring-brand">
+                                                    <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">{{ $sellerOrder->payment_reference ? 'Update reference' : 'Send reference' }}</button>
+                                                </form>
+                                                @if ($sellerOrder->payment_reference)<p class="mt-2 text-xs text-muted">Waiting for the store to confirm reference {{ $sellerOrder->payment_reference }}. If it isn't recorded within 2 days, <a href="#order-help" class="font-semibold text-brand underline">request help</a> and report it to {{ $walletLabel === 'bank' ? 'your bank' : $walletLabel }} too.</p>@endif
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ul>
+                                @error('payment_reference')<p class="mt-2 text-sm text-danger" role="alert">{{ $message }}</p>@enderror
+                            @endif
                         @else
                             <p class="mt-2 text-sm text-muted">Payment details unavailable.</p>
                         @endif
