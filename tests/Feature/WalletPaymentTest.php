@@ -124,14 +124,15 @@ class WalletPaymentTest extends TestCase
     {
         [$seller, $product] = $this->sellerProduct(walletReady: false);
 
-        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['bank_number' => '001234567890'])
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['method' => 'bank', 'bank_number' => '001234567890'])
             ->assertSessionHasErrors(['bank_name', 'bank_account_name']);
         $this->assertFalse($product->store->refresh()->acceptsWallet('bank'));
 
-        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['bank_name' => 'BDO', 'bank_account_name' => 'Store Owner', 'bank_number' => '001234567890'])
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['method' => 'bank', 'bank_name' => 'BDO', 'bank_account_name' => 'Store Owner', 'bank_number' => '0012-3456 7890'])
             ->assertRedirect(route('seller.store-settings.edit'));
 
         $this->assertTrue($product->store->refresh()->acceptsWallet('bank'));
+        $this->assertSame('001234567890', $product->store->bank_number);
         $this->assertFalse($product->store->acceptsWallet('gcash'));
         $this->assertDatabaseHas('audit_logs', ['action' => 'store.wallets_updated', 'entity_id' => $product->store_id]);
     }
@@ -141,17 +142,43 @@ class WalletPaymentTest extends TestCase
         Storage::fake('public');
         [$seller, $product] = $this->sellerProduct(walletReady: false);
 
-        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['gcash_qr' => UploadedFile::fake()->image('gcash.png')])
-            ->assertSessionHasErrors(['gcash_number' => 'Add the GCash number that goes with this QR code.']);
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['method' => 'gcash', 'gcash_qr' => UploadedFile::fake()->image('gcash.png')])
+            ->assertSessionHasErrors(['gcash_number' => 'Enter your GCash mobile number.']);
         $this->assertNull($product->store->refresh()->gcash_qr_path);
 
-        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['gcash_number' => '+63 917-123 4567', 'gcash_qr' => UploadedFile::fake()->image('gcash.png')])
-            ->assertSessionHasNoErrors();
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['method' => 'gcash', 'gcash_number' => '+63 917-123 4567', 'gcash_qr' => UploadedFile::fake()->image('gcash.png')])
+            ->assertSessionHas('status', 'GCash saved. Buyers can now choose it at checkout.');
 
         $store = $product->store->refresh();
         $this->assertSame('+639171234567', $store->gcash_number);
         Storage::disk('public')->assertExists($store->gcash_qr_path);
         $this->actingAs($this->buyerWithCart($product, 1))->get(route('checkout.create'))->assertOk()->assertSee('value="gcash"', false)->assertDontSee('value="maya"', false);
+        $this->actingAs($seller)->get(route('seller.store-settings.edit'))->assertOk()->assertSee('Live at checkout')->assertSee('Save GCash');
+    }
+
+    public function test_each_method_saves_on_its_own_and_can_be_turned_off(): void
+    {
+        Storage::fake('public');
+        [$seller, $product] = $this->sellerProduct();
+        $oldMayaQr = UploadedFile::fake()->image('maya.png')->store('store-wallet-qr', 'public');
+        $product->store->update(['maya_qr_path' => $oldMayaQr]);
+
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['method' => 'maya', 'maya_number' => '09189998888', 'maya_qr' => UploadedFile::fake()->image('new-maya.png')])
+            ->assertSessionHasNoErrors();
+
+        $store = $product->store->refresh();
+        $this->assertSame('09189998888', $store->maya_number);
+        $this->assertSame('09171234567', $store->gcash_number);
+        $this->assertTrue($store->acceptsWallet('bank'));
+        Storage::disk('public')->assertMissing($oldMayaQr);
+
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['method' => 'gcash', 'disable' => '1'])
+            ->assertSessionHas('status', 'GCash is turned off. Buyers can no longer choose it at checkout.');
+
+        $store->refresh();
+        $this->assertNull($store->gcash_number);
+        $this->assertNull($store->gcash_qr_path);
+        $this->assertTrue($store->acceptsWallet('maya'));
     }
 
     private function buyerWithCart(Product $product, int $quantity, ?User $buyer = null): User
