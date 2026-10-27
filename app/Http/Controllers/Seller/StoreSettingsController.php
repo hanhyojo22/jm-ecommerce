@@ -115,20 +115,30 @@ class StoreSettingsController extends Controller
     public function updateWallets(Request $request, StorePublicImage $storePublicImage): RedirectResponse
     {
         $tenant = $this->managedTenant($request);
+        // Sellers copy numbers as "0917 123 4567" or "+63 917-123-4567"; store them as plain digits.
+        foreach (Payment::DIRECT_METHODS as $method) {
+            if (is_string($request->input("{$method}_number"))) {
+                $request->merge(["{$method}_number" => preg_replace('/[\s-]+/', '', $request->input("{$method}_number"))]);
+            }
+        }
         $rules = [
             'bank_name' => ['nullable', 'required_with:bank_number', 'string', 'max:100'],
             'bank_account_name' => ['nullable', 'required_with:bank_number', 'string', 'max:150'],
         ];
         foreach (Payment::DIRECT_METHODS as $method) {
+            // A QR without its number would be dropped on save, so ask for the number instead.
             $rules["{$method}_number"] = $method === 'bank'
-                ? ['nullable', 'string', 'regex:/^[0-9 -]{6,30}$/']
-                : ['nullable', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'];
+                ? ['nullable', "required_with:{$method}_qr", 'string', 'regex:/^\d{6,30}$/']
+                : ['nullable', "required_with:{$method}_qr", 'string', 'regex:/^(?:\+63|0)9\d{9}$/'];
             $rules["{$method}_qr"] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
         }
         $data = $request->validate($rules, [
             'gcash_number.regex' => 'Enter a mobile number like 09171234567.',
             'maya_number.regex' => 'Enter a mobile number like 09171234567.',
             'bank_number.regex' => 'Enter the account number using digits only.',
+            'gcash_number.required_with' => 'Add the GCash number that goes with this QR code.',
+            'maya_number.required_with' => 'Add the Maya number that goes with this QR code.',
+            'bank_number.required_with' => 'Add the account number that goes with this QR code.',
         ]);
 
         $uploadedPaths = [];
@@ -174,12 +184,12 @@ class StoreSettingsController extends Controller
             array_map(fn (string $path) => $this->deleteUploadedLogo($path), $uploadedPaths);
             report($exception);
 
-            return back()->withErrors(['wallets' => 'We could not save your GCash and Maya details. Please try again.'])->withInput();
+            return back()->withErrors(['wallets' => 'We could not save your payment accounts. Please try again.'])->withInput();
         }
 
         array_map(fn (string $path) => $this->deleteUploadedLogo($path), $replacedPaths);
 
-        return to_route('seller.store-settings.edit')->with('status', 'GCash and Maya details saved.');
+        return to_route('seller.store-settings.edit')->with('status', 'Payment accounts saved.');
     }
 
     public function undo(Request $request): RedirectResponse

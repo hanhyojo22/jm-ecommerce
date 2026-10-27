@@ -194,6 +194,9 @@
                         @foreach (['gcash' => 'GCash', 'maya' => 'Maya'] as $method => $label)
                             <fieldset class="min-w-0 rounded-lg border border-line p-4">
                                 <legend class="px-1 text-sm font-semibold text-ink">{{ $label }} {{ $store->acceptsWallet($method) ? '· offered at checkout' : '' }}</legend>
+                                @if (! $store->acceptsWallet($method) && ($store->{$method.'_number'} || $store->{$method.'_qr_path'}))
+                                    <p class="mb-3 rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-warning-text" role="status">Not offered at checkout yet: add {{ $store->{$method.'_number'} ? 'your QR code' : 'your number' }}.</p>
+                                @endif
                                 <label for="{{ $method }}_number" class="block text-sm font-semibold text-ink">{{ $label }} number</label>
                                 <input id="{{ $method }}_number" name="{{ $method }}_number" value="{{ old($method.'_number', $store->{$method.'_number'}) }}" inputmode="tel" placeholder="09171234567" class="mt-2 min-h-11 w-full rounded-lg border-line text-sm focus:border-brand focus:ring-brand" @error($method.'_number') aria-invalid="true" @enderror>
                                 <x-input-error :messages="$errors->get($method.'_number')" class="mt-2" />

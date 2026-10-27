@@ -10,6 +10,8 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WalletPaymentTest extends TestCase
@@ -132,6 +134,24 @@ class WalletPaymentTest extends TestCase
         $this->assertTrue($product->store->refresh()->acceptsWallet('bank'));
         $this->assertFalse($product->store->acceptsWallet('gcash'));
         $this->assertDatabaseHas('audit_logs', ['action' => 'store.wallets_updated', 'entity_id' => $product->store_id]);
+    }
+
+    public function test_gcash_qr_is_kept_with_its_number_and_the_store_is_offered_at_checkout(): void
+    {
+        Storage::fake('public');
+        [$seller, $product] = $this->sellerProduct(walletReady: false);
+
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['gcash_qr' => UploadedFile::fake()->image('gcash.png')])
+            ->assertSessionHasErrors(['gcash_number' => 'Add the GCash number that goes with this QR code.']);
+        $this->assertNull($product->store->refresh()->gcash_qr_path);
+
+        $this->actingAs($seller)->patch(route('seller.store-settings.wallets'), ['gcash_number' => '+63 917-123 4567', 'gcash_qr' => UploadedFile::fake()->image('gcash.png')])
+            ->assertSessionHasNoErrors();
+
+        $store = $product->store->refresh();
+        $this->assertSame('+639171234567', $store->gcash_number);
+        Storage::disk('public')->assertExists($store->gcash_qr_path);
+        $this->actingAs($this->buyerWithCart($product, 1))->get(route('checkout.create'))->assertOk()->assertSee('value="gcash"', false)->assertDontSee('value="maya"', false);
     }
 
     private function buyerWithCart(Product $product, int $quantity, ?User $buyer = null): User
