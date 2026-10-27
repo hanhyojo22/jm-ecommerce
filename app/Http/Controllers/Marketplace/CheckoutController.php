@@ -59,9 +59,15 @@ class CheckoutController extends Controller
             ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
         $stores = $cart->items->pluck('product.store')->unique('id');
+        // Each store is paid separately by GCash, Maya, or bank, so checkout shows what each one is owed.
+        $storeTotals = $cart->items->groupBy(fn ($item) => $item->product->store_id)->map(fn ($storeItems) => [
+            'name' => $storeItems->first()->product->store->name,
+            'total' => $storeItems->reduce(fn (string $sum, $item): string => bcadd($sum, (string) $item->line_total, 2), '0.00'),
+        ])->values();
 
         return view('marketplace.checkout.create', [
             'orderLimitReached' => $request->user()->hasReachedCodOrderLimit(),
+            'storeTotals' => $storeTotals,
             'walletMethods' => array_values(array_filter(Payment::DIRECT_METHODS, fn (string $method): bool => $stores->every(fn ($store): bool => $store->acceptsWallet($method)))),
             'cart' => $cart,
             'subtotal' => $subtotal,

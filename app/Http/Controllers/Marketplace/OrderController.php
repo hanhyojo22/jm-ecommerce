@@ -134,7 +134,10 @@ class OrderController extends Controller
             $sellerOrder->update(['payment_reference' => trim($data['payment_reference'])]);
         });
 
-        return back()->with('status', 'Reference sent. The store will confirm once the payment shows in its account.');
+        // Sent from the guided dialog, the order page reopens it on the next store still to pay.
+        return to_route('orders.show', $sellerOrder->order_id)
+            ->with('status', 'Reference sent. The store will confirm once the payment shows in its account.')
+            ->with('guided_pay', $request->boolean('guided'));
     }
 
     /**

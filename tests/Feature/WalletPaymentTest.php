@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Cart;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\Store;
@@ -12,6 +13,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 use Tests\TestCase;
 
 class WalletPaymentTest extends TestCase
@@ -179,6 +182,57 @@ class WalletPaymentTest extends TestCase
         $this->assertNull($store->gcash_number);
         $this->assertNull($store->gcash_qr_path);
         $this->assertTrue($store->acceptsWallet('maya'));
+    }
+
+    public function test_buyer_is_guided_to_pay_each_store_after_placing_a_gcash_order(): void
+    {
+        [, $firstProduct] = $this->sellerProduct();
+        [, $secondProduct] = $this->sellerProduct();
+        $buyer = $this->buyerWithCart($firstProduct, 1);
+        $this->buyerWithCart($secondProduct, 2, $buyer);
+        $firstStore = $firstProduct->store->name;
+        $secondStore = $secondProduct->store->name;
+
+        $this->actingAs($buyer)->get(route('checkout.create'))->assertOk()
+            ->assertSee('QR unlocks after you order')->assertSee('2 stores · paid separately');
+
+        $response = $this->actingAs($buyer)->post(route('checkout.store'), [...$this->delivery(), 'payment_method' => 'gcash', 'wallet_notice' => '1']);
+        $order = Order::query()->sole();
+        $response->assertRedirect(route('orders.show', $order));
+
+        $this->actingAs($buyer)->withSession(['order_placed' => true])->get(route('orders.show', $order))->assertOk()
+            ->assertSee('0/2')->assertSee("Pay {$firstStore} with GCash")->assertSee('Send reference · next store');
+
+        $first = $order->sellerOrders()->whereHas('store', fn ($query) => $query->where('name', $firstStore))->sole();
+        $this->actingAs($buyer)->patch(route('orders.payment-reference', $first), ['payment_reference' => 'GC123', 'guided' => '1'])
+            ->assertRedirect(route('orders.show', $order))->assertSessionHas('guided_pay', true);
+
+        $this->actingAs($buyer)->withSession(['guided_pay' => true])->get(route('orders.show', $order))->assertOk()
+            ->assertSee('1/2')->assertSee("Pay {$secondStore} with GCash")->assertSee('Send reference · done')->assertSee('Ref GC123');
+    }
+
+    public function test_guide_counts_the_right_store_and_keeps_a_rejected_reference_on_its_own_store(): void
+    {
+        [, $firstProduct] = $this->sellerProduct();
+        [, $secondProduct] = $this->sellerProduct();
+        $buyer = $this->buyerWithCart($firstProduct, 1);
+        $this->buyerWithCart($secondProduct, 1, $buyer);
+        $this->actingAs($buyer)->post(route('checkout.store'), [...$this->delivery(), 'payment_method' => 'gcash', 'wallet_notice' => '1']);
+        $order = Order::query()->sole();
+        [$first, $second] = [$order->sellerOrders()->where('store_id', $firstProduct->store_id)->sole(), $order->sellerOrders()->where('store_id', $secondProduct->store_id)->sole()];
+        $second->update(['payment_reference' => 'PAIDFIRST']);
+
+        $this->actingAs($buyer)->from(route('orders.show', $order))
+            ->patch(route('orders.payment-reference', $first), ['payment_reference' => 'BAD#REF', 'seller_order_id' => $first->id, 'guided' => '1'])
+            ->assertSessionHasErrors('payment_reference');
+
+        $this->actingAs($buyer)->withSession(['_old_input' => ['payment_reference' => 'BAD#REF', 'seller_order_id' => $first->id, 'guided' => '1'], 'errors' => (new ViewErrorBag)->put('default', new MessageBag(['payment_reference' => ['Invalid.']]))])
+            ->get(route('orders.show', $order))->assertOk()
+            ->assertSee('Store 1 of 2')
+            ->assertSee("Pay {$firstProduct->store->name} with GCash")
+            ->assertSee('value="BAD#REF"', false)
+            ->assertSee('value="PAIDFIRST"', false)
+            ->assertDontSee('Store 2 of 2');
     }
 
     private function buyerWithCart(Product $product, int $quantity, ?User $buyer = null): User
