@@ -21,7 +21,7 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
         await customer.page.getByRole('button', { name: 'Save and continue' }).click();
 
         await customer.page.getByLabel('Store name').fill(storeName);
-        await customer.page.getByLabel('Storefront URL slug').fill(storeSlug);
+        await customer.page.getByLabel('Store link').fill(storeSlug);
         await customer.page.getByLabel('Store description').fill('Useful marketplace goods.');
         await customer.page.getByLabel('Primary product category').fill('Fashion');
         await customer.page.getByLabel('Customer support contact').fill('qa-customer@example.test');
@@ -36,7 +36,7 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
         })) {
             await customer.page.getByLabel(label).fill(value);
         }
-        await customer.page.getByLabel('Use residential address for pickup and returns').check();
+        await customer.page.getByLabel('Use this address for pickup and returns').check();
         await customer.page.getByRole('button', { name: 'Save and continue' }).click();
 
         await customer.page.getByLabel('ID number').fill('P123456789');

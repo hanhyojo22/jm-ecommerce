@@ -39,6 +39,7 @@ class SellerOnboardingTest extends TestCase
         $this->assertNotSame('123456789012', $application->payoutProfile->getRawOriginal('account_number'));
         $this->actingAs($buyer)->post(route('seller-application.step', 6), ['method' => 'bank', 'provider' => 'Test Bank', 'holder_name' => 'Ava Seller', 'account_number' => ''])->assertSessionHasNoErrors();
         $this->assertSame('123456789012', $application->payoutProfile()->firstOrFail()->account_number);
+        $this->actingAs($buyer)->get(route('seller-application.create', ['step' => 3]))->assertOk()->assertSee(Storage::disk('public')->url($application->logo_path), false);
         $this->actingAs($buyer)->get(route('seller-application.create', ['step' => 7]))->assertOk()->assertSee('•••• 9012')->assertDontSee('123456789012');
         $policies = array_fill_keys(['seller_agreement', 'terms', 'privacy', 'prohibited_products', 'returns_refunds', 'fees'], '1');
         $this->actingAs($buyer)->post(route('seller-application.store'), ['agreements' => $policies])->assertSessionHasNoErrors();
@@ -47,6 +48,21 @@ class SellerOnboardingTest extends TestCase
         $this->assertTrue($application->policyAcceptances()->where('policy_type', 'fees')->where('version', '2.0')->exists());
         $this->assertStringNotContainsString('123456789012', json_encode(AuditLog::query()->firstOrFail()->toArray()));
         $this->actingAs($buyer)->post(route('seller-application.store'), ['agreements' => $policies])->assertForbidden();
+    }
+
+    public function test_business_applicant_reviews_business_details_before_submitting(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('seller-application.step', 1), ['seller_type' => 'business'])->assertSessionHasNoErrors();
+        $this->actingAs($buyer)->post(route('seller-application.step', 2), ['seller_name' => 'Ava Seller', 'phone' => '+639171234567', 'business_name' => 'Ava Trading Corp', 'registration_number' => 'DTI-778899', 'representative_name' => 'Ava Seller'])->assertSessionHasNoErrors();
+
+        $this->actingAs($buyer)->get(route('seller-application.create', ['step' => 5]))
+            ->assertOk()
+            ->assertSee('name="id_number" type="text" value=""', false);
+        $this->actingAs($buyer)->get(route('seller-application.create', ['step' => 7]))
+            ->assertOk()
+            ->assertSee('Ava Trading Corp')
+            ->assertSee('DTI-778899');
     }
 
     public function test_business_fields_and_corrections_are_enforced(): void
