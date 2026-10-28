@@ -50,7 +50,7 @@ class ReturnCaseWorkflow
             abort_unless($admin || $order->order->user_id === $actor->id, 404);
             if ($admin
                 ? $order->status === 'cancelled'
-                : ($order->status !== 'delivered' || $order->delivered_at === null || now()->greaterThan($order->delivered_at->copy()->addDays(7)))) {
+                : ($order->status !== 'delivered' || $order->delivered_at === null || now()->greaterThan($order->delivered_at->copy()->addDays((int) config('marketplace.orders.return_window_days'))))) {
                 throw ValidationException::withMessages(['items' => $admin
                     ? 'A cancelled store order cannot have a return case.'
                     : 'The seven-day request window has ended or delivery cannot be verified. Contact support for a later claim.']);

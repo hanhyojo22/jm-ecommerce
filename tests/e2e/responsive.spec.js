@@ -18,14 +18,16 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(purchase).toContainText('QA Canvas Tote');
         await expect(purchase).toContainText('Cash on delivery');
         const filters = page.getByRole('navigation', { name: 'Purchase status filters' });
+        // Inactive tabs drop a zero count, so each label may or may not carry a number.
         await expect(filters.getByRole('link')).toHaveText([
-            /^\s*All\s+\d+\s*$/,
-            /^\s*Awaiting Confirmation\s+\d+\s*$/,
-            /^\s*To Dispatch\s+\d+\s*$/,
-            /^\s*To Receive\s+\d+\s*$/,
-            /^\s*Delivered\s+\d+\s*$/,
-            /^\s*To Review\s+\d+\s*$/,
-            /^\s*Returns\s+\d+\s*$/,
+            /^\s*All\s+\d+ orders?\s*$/,
+            /^\s*To pay(\s+\d+ orders?)?\s*$/,
+            /^\s*Awaiting store(\s+\d+ orders?)?\s*$/,
+            /^\s*Preparing(\s+\d+ orders?)?\s*$/,
+            /^\s*On the way(\s+\d+ orders?)?\s*$/,
+            /^\s*Delivered(\s+\d+ orders?)?\s*$/,
+            /^\s*To review(\s+\d+ orders?)?\s*$/,
+            /^\s*Returns(\s+\d+ orders?)?\s*$/,
         ]);
         await expect(filters.getByRole('link', { name: /^All/ })).toHaveAttribute('aria-current', 'page');
         const rowsOrder = page.getByRole('article').filter({ hasText: 'QA-ROWS-001' });
@@ -34,6 +36,8 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(chatRow).toContainText('Blue / Medium');
         await expect(chatRow).toContainText('Qty 2');
         await expect(chatRow).toContainText('₱49.98');
+        // A single extra row is shown outright rather than hidden behind a toggle.
+        await expect(items.getByRole('button', { name: /more item/ })).toHaveCount(0);
         await expect(items.getByText('QA Retired Pouch')).toBeVisible();
         await expect(items.getByRole('link', { name: 'QA Retired Pouch' })).toHaveCount(0);
         await expect(items.locator(':scope > div').filter({ hasText: 'QA Retired Pouch' }).getByText('Product image unavailable')).toHaveCount(1);
@@ -53,7 +57,7 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(rowsOrder).toBeVisible();
         await expect(rowsOrder.getByRole('link', { name: 'Write review' })).toBeVisible();
         await expect(rowsOrder.getByRole('link', { name: 'Request return' })).toBeVisible();
-        await filters.getByRole('link', { name: /^To Review/ }).click();
+        await filters.getByRole('link', { name: /^To review/ }).click();
         await expect(rowsOrder).toBeVisible();
         await expect(purchase).toHaveCount(0);
         await expect(rowsOrder.getByRole('link', { name: 'Write review' })).toBeVisible();
@@ -66,8 +70,8 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await page.locator('[data-purchases]').getByRole('button', { name: 'Search', exact: true }).click();
         await expect(page).toHaveURL(/search=QA-REVIEW-001/);
         await expect(purchase).toBeVisible();
-        await filters.getByRole('link', { name: /^Awaiting Confirmation/ }).click();
-        await expect(page.getByRole('heading', { name: 'No purchases match those filters' })).toBeVisible();
+        await filters.getByRole('link', { name: /^Awaiting store/ }).click();
+        await expect(page.getByRole('heading', { name: 'No purchases match “QA-REVIEW-001” in Awaiting store' })).toBeVisible();
         await expect(page.getByRole('searchbox', { name: 'Search purchases', exact: true })).toHaveValue('QA-REVIEW-001');
         await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
         await purchase.getByRole('link', { name: 'View order', exact: true }).click();

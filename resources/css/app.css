@@ -512,7 +512,8 @@
  */
 :is(.seller-workspace, .customer-workspace) .page-container.account-measure-orders {
     margin-inline: auto;
-    max-width: 1400px;
+    /* An order reads as one ledger line; wider only pushes qty and price away from the name. */
+    max-width: 1080px;
 }
 
 /* Seller orders is a working table, so it takes a wider measure and its page header follows. */
@@ -971,6 +972,12 @@ body:has(footer) [data-cookie-floating] {
 }
 
 .marketplace-nav-scroll::-webkit-scrollbar { display: none; }
+
+/* With the last item selected the rail is scrolled to its end, so the fade would only wash out the selection. */
+.marketplace-nav-scroll:has(> [aria-current]:last-child) {
+    -webkit-mask-image: none;
+    mask-image: none;
+}
 
 @media (min-width: 641px) {
     .marketplace-nav-scroll {

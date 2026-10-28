@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
+use App\Models\ReturnCase;
 use App\Models\SellerOrder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,7 @@ class OrderController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:pending,confirmed,processing,shipped,delivered,cancelled'],
-            'tab' => ['nullable', 'in:all,awaiting_confirmation,to_dispatch,to_receive,delivered,to_review,returns'],
+            'tab' => ['nullable', 'in:all,to_pay,awaiting_confirmation,to_dispatch,to_receive,delivered,to_review,returns'],
         ]);
         $search = trim($filters['search'] ?? '');
         $searchTerm = '%'.mb_strtolower($search).'%';
@@ -32,11 +33,12 @@ class OrderController extends Controller
             ->pluck('tenant_id')->all();
         $tabs = [
             'all' => 'All',
-            'awaiting_confirmation' => 'Awaiting Confirmation',
-            'to_dispatch' => 'To Dispatch',
-            'to_receive' => 'To Receive',
+            'to_pay' => 'To pay',
+            'awaiting_confirmation' => 'Awaiting store',
+            'to_dispatch' => 'Preparing',
+            'to_receive' => 'On the way',
             'delivered' => 'Delivered',
-            'to_review' => 'To Review',
+            'to_review' => 'To review',
             'returns' => 'Returns',
         ];
 
@@ -56,6 +58,19 @@ class OrderController extends Controller
             $tabCounts[$key] = $this->inTab(clone $baseQuery, $key, $ownedTenantIds)->count();
         }
 
+        // What waits on the buyer right now, so the page can say so before any tab is opened.
+        $attentionCounts = array_filter([
+            'to_pay' => $tabCounts['to_pay'],
+            'returns' => (clone $baseQuery)->whereHas('returnCases', $this->returnNeedsBuyer(...))->count(),
+            'refunds' => $this->refundDue(clone $baseQuery)->count(),
+            'to_receive' => $tabCounts['to_receive'],
+        ]);
+
+        $directMethods = implode(', ', array_fill(0, count(Payment::DIRECT_METHODS), '?'));
+        $buyerTurnCase = ReturnCase::query()->selectRaw('1')
+            ->whereColumn('return_cases.seller_order_id', 'seller_orders.id')
+            ->where($this->returnNeedsBuyer(...));
+
         $sellerOrders = $this->inTab(clone $baseQuery, $tab, $ownedTenantIds)
             ->with([
                 'order' => fn ($query) => $query->select('id', 'user_id', 'number', 'total', 'created_at')->withCount('sellerOrders'),
@@ -66,8 +81,16 @@ class OrderController extends Controller
                 'items.product.store:id,slug',
                 'items.review:id,order_item_id',
                 'issues' => fn ($query) => $query->latest(),
-                'returnCases' => fn ($query) => $query->latest(),
+                'returnCases' => fn ($query) => $query->latest('id'),
             ])
+            // Orders waiting on the buyer lead, so a payment owed never slips to a later page.
+            ->orderByRaw(
+                "case when (seller_orders.status = 'pending' and seller_orders.payment_reference is null and seller_orders.cod_collected_at is null and exists (select 1 from payments where payments.order_id = seller_orders.order_id and payments.method in ({$directMethods})))
+                    or (seller_orders.status = 'cancelled' and seller_orders.refund_reference is null and (seller_orders.payment_reference is not null or seller_orders.cod_collected_at is not null) and exists (select 1 from payments where payments.order_id = seller_orders.order_id and payments.method in ({$directMethods})))
+                    or exists ({$buyerTurnCase->toSql()}) then 0
+                    when seller_orders.status = 'shipped' then 1 else 2 end",
+                [...Payment::DIRECT_METHODS, ...Payment::DIRECT_METHODS, ...$buyerTurnCase->getBindings()],
+            )
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -86,6 +109,7 @@ class OrderController extends Controller
             'tab' => $tab,
             'tabs' => $tabs,
             'tabCounts' => $tabCounts,
+            'attentionCounts' => $attentionCounts,
             'reviewableItemIds' => $reviewableItemIds,
         ]);
     }
@@ -96,7 +120,8 @@ class OrderController extends Controller
     private function inTab(Builder $query, string $tab, array $ownedTenantIds): Builder
     {
         return match ($tab) {
-            'awaiting_confirmation' => $query->where('status', 'pending'),
+            'to_pay' => $this->needingPayment($query),
+            'awaiting_confirmation' => $query->where('status', 'pending')->whereNot(fn (Builder $unpaid) => $this->needingPayment($unpaid)),
             'to_dispatch' => $query->whereIn('status', ['confirmed', 'processing']),
             'to_receive' => $query->where('status', 'shipped'),
             'delivered' => $query->where('status', 'delivered'),
@@ -106,6 +131,29 @@ class OrderController extends Controller
             'returns' => $query->where(fn (Builder $returnQuery) => $returnQuery->whereHas('returnCases')->orWhereHas('issues', fn (Builder $issueQuery) => $issueQuery->where('type', 'return_refund'))),
             default => $query,
         };
+    }
+
+    /**
+     * A store waits for a direct GCash, Maya, or bank payment before it confirms, so these orders
+     * are the buyer's to move, not the store's.
+     */
+    private function needingPayment(Builder $query): Builder
+    {
+        return $query->where('status', 'pending')
+            ->whereNull('payment_reference')
+            ->whereNull('cod_collected_at')
+            ->whereHas('order.payment', fn (Builder $paymentQuery) => $paymentQuery->whereIn('method', Payment::DIRECT_METHODS));
+    }
+
+    /**
+     * A store cancelled after the buyer paid it directly and has not recorded the refund yet.
+     */
+    private function refundDue(Builder $query): Builder
+    {
+        return $query->where('status', 'cancelled')
+            ->whereNull('refund_reference')
+            ->where(fn (Builder $paid) => $paid->whereNotNull('payment_reference')->orWhereNotNull('cod_collected_at'))
+            ->whereHas('order.payment', fn (Builder $paymentQuery) => $paymentQuery->whereIn('method', Payment::DIRECT_METHODS));
     }
 
     public function show(Request $request, Order $order): View
@@ -141,14 +189,34 @@ class OrderController extends Controller
     }
 
     /**
+     * Return cases where the next step is the buyer's: decide or send the item back before their deadline,
+     * or escalate a store that let its own deadline pass.
+     */
+    private function returnNeedsBuyer(Builder $caseQuery): Builder
+    {
+        // Only the latest case counts, because that is the one the purchase card shows.
+        return $caseQuery->whereRaw('return_cases.id = (select max(latest.id) from return_cases as latest where latest.seller_order_id = seller_orders.id)')
+            ->where(fn (Builder $turn): Builder => $turn
+                ->where(fn (Builder $leg): Builder => $leg->whereIn('status', ['offered', 'rejected'])
+                    ->where(fn (Builder $open): Builder => $open->whereNull('buyer_respond_by')->orWhere('buyer_respond_by', '>=', now())))
+                ->orWhere('status', 'awaiting_confirmation')
+                ->orWhere('status', 'awaiting_return')
+                ->orWhere(fn (Builder $leg): Builder => $leg->where('status', 'awaiting_seller')->where('respond_by', '<', now())));
+    }
+
+    /**
      * The buyer confirms the parcel arrived, so the store order is delivered.
      */
     public function received(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
         abort_unless($sellerOrder->order()->value('user_id') === $request->user()->id, 404);
 
-        $updateStatus->handle($sellerOrder, 'delivered', $request->user(), $request->ip());
+        try {
+            $updateStatus->handle($sellerOrder, 'delivered', $request->user(), $request->ip());
+        } catch (ValidationException) {
+            throw ValidationException::withMessages(['received' => 'We couldn’t mark this order received. It may already be delivered or have an open request; refresh to see its latest status.']);
+        }
 
-        return back()->with('status', 'Thanks for confirming. You can now review your items.');
+        return back()->with('status', 'Thanks for confirming your '.$sellerOrder->store->name.' order. You can now review your items.');
     }
 }

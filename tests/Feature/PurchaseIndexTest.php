@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Order;
 use App\Models\OrderIssue;
 use App\Models\Product;
+use App\Models\ReturnCase;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -151,12 +152,88 @@ class PurchaseIndexTest extends TestCase
                 && $counts['delivered'] === 0
                 && $counts['to_dispatch'] === 1);
         $this->actingAs($buyer)->get(route('orders.index', ['search' => 'Secret']))
-            ->assertOk()->assertSee('No purchases match those filters')->assertDontSee('Secret Store')->assertDontSee('Secret Delivery');
+            ->assertOk()->assertSee('No purchases match “Secret”')->assertSee('Clear search')->assertDontSee('Secret Store')->assertDontSee('Secret Delivery');
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'delivered']))
-            ->assertOk()->assertSee('Nothing here yet')->assertDontSee('Secret Delivery');
+            ->assertOk()->assertSee('No delivered orders yet')->assertSee('View all purchases')->assertDontSee('Secret Delivery');
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'unknown']))
             ->assertSessionHasErrors('tab');
         $this->actingAs($buyer)->get(route('orders.show', $otherOrder))->assertNotFound();
+    }
+
+    public function test_each_purchase_offers_only_the_buyers_next_step(): void
+    {
+        $buyer = User::factory()->create();
+        $walletOrder = $this->order($buyer, 'WALLET-001', '25.00');
+        $walletOrder->payment()->update(['method' => 'gcash']);
+        $unpaid = $this->sellerOrder($walletOrder, 'Unpaid Store', 'pending', '10.00');
+        $this->sellerOrder($walletOrder, 'Referenced Store', 'pending', '15.00')->update(['payment_reference' => 'REF123']);
+        $shipped = $this->sellerOrder($this->order($buyer, 'SHIP-001', '5.00'), 'Shipping Store', 'shipped', '5.00');
+        $closed = $this->sellerOrder($this->order($buyer, 'OLD-001', '5.00'), 'Old Store', 'delivered', '5.00');
+        $closed->update(['delivered_at' => now()->subDays(8)]);
+
+        $response = $this->actingAs($buyer)->get(route('orders.index'))->assertOk();
+
+        $response->assertSee('Pay Unpaid Store ₱10.00 by GCash')->assertSee('To pay')
+            ->assertSee(route('orders.show', $unpaid->order_id).'#pay-stores', false)
+            ->assertSee('Reference sent. Referenced Store confirms')
+            ->assertSee('action="'.route('orders.received', $shipped).'"', false)
+            ->assertSee('The 7-day return window has closed.')
+            ->assertSee('Contact support');
+        $this->assertSame(1, substr_count($response->getContent(), '>Pay store<'));
+        $this->assertSame($unpaid->id, $response->viewData('sellerOrders')->first()->id);
+
+        $this->get(route('orders.index', ['tab' => 'to_pay']))->assertOk()
+            ->assertSee('Unpaid Store')->assertDontSee('Referenced Store')->assertDontSee('Shipping Store');
+        $this->get(route('orders.index', ['tab' => 'awaiting_confirmation']))->assertOk()
+            ->assertSee('Referenced Store')->assertDontSee('Unpaid Store');
+
+        $unpaid->update(['status' => 'cancelled', 'payment_reference' => 'PAID42']);
+        $this->get(route('orders.index'))->assertOk()
+            ->assertSee('Unpaid Store owes you a refund of ₱10.00')->assertSee('Refund due')
+            ->assertSee('1 refund to chase');
+
+        $answered = $this->sellerOrder($this->order($buyer, 'RET-001', '5.00'), 'Answered Store', 'delivered', '5.00');
+        ReturnCase::create(['seller_order_id' => $answered->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'offered', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The item arrived broken.']);
+        $this->get(route('orders.index'))->assertOk()
+            ->assertSee('1 return needs you')
+            ->assertSee('Answered Store answered your return. Decide on the return page.')
+            ->assertSee('Answer return');
+
+        $sendBack = $this->sellerOrder($this->order($buyer, 'RET-002', '6.00'), 'Return Store', 'delivered', '6.00');
+        ReturnCase::create(['seller_order_id' => $sendBack->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'awaiting_return', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The item arrived broken.', 'return_by' => now()->addDays(7)]);
+        $this->get(route('orders.index'))->assertOk()
+            ->assertSee('2 returns need you')
+            ->assertSee('Send the item back to Return Store by '.now()->addDays(7)->format('M j'))
+            ->assertSee('Send item back');
+
+        // A store past its response deadline can be escalated; a buyer past theirs no longer counts as waiting on them.
+        $lateStore = $this->sellerOrder($this->order($buyer, 'RET-003', '7.00'), 'Late Store', 'delivered', '7.00');
+        ReturnCase::create(['seller_order_id' => $lateStore->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'awaiting_seller', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'details' => 'The item arrived broken.', 'respond_by' => now()->subHour()]);
+        $sendBack->returnCases()->update(['return_by' => now()->subDay()]);
+        $this->get(route('orders.index'))->assertOk()
+            ->assertSee('3 returns need you')
+            ->assertSee('Late Store didn’t respond by')
+            ->assertSee('Ask JMMart to step in')
+            ->assertSee('send-back date passed. Record the handoff now')
+            ->assertSee('Send item back');
+
+        // Confirming or disputing an outcome has no buyer cutoff, so it keeps waiting on the buyer past its date.
+        $outcome = $this->sellerOrder($this->order($buyer, 'RET-004', '8.00'), 'Outcome Store', 'delivered', '8.00');
+        ReturnCase::create(['seller_order_id' => $outcome->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'awaiting_confirmation', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The item arrived broken.', 'buyer_respond_by' => now()->subDay()]);
+        $this->get(route('orders.index'))->assertOk()
+            ->assertSee('4 returns need you')
+            ->assertSee('Outcome Store recorded your refund. Your confirmation window has passed')
+            ->assertSee('Confirm outcome');
+        $outcome->returnCases()->update(['buyer_respond_by' => now()->addDays(2)]);
+        $this->get(route('orders.index'))->assertOk()
+            ->assertSee('Outcome Store recorded your refund. Confirm you got it, or dispute it, by '.now()->addDays(2)->format('M j'));
+
+        // An offer left past its answer date can no longer be accepted, so it stops asking the buyer to decide.
+        $answered->returnCases()->update(['buyer_respond_by' => now()->subDay()]);
+        $this->get(route('orders.index'))->assertOk()
+            ->assertSee('3 returns need you')
+            ->assertSee('Response window passed')
+            ->assertSee('Your deadline to respond passed');
     }
 
     private function order(User $buyer, string $number, string $total): Order

@@ -20,7 +20,7 @@
         @foreach ($order->sellerOrders as $sellerOrder)
             @if ($sellerOrder->status === 'delivered')
                 @php
-                    $windowEndsAt = $sellerOrder->delivered_at?->copy()->addDays(7);
+                    $windowEndsAt = $sellerOrder->delivered_at?->copy()->addDays((int) config('marketplace.orders.return_window_days'));
                     $windowOpen = $windowEndsAt && now()->lessThanOrEqualTo($windowEndsAt);
                     $windowClosingSoon = $windowOpen && $windowEndsAt->lessThan(now()->addHours(48));
                     $resubmitted = old('store_order') === $sellerOrder->id;

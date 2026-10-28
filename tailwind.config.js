@@ -21,6 +21,8 @@ export default {
             // 15 section title · 24 figure · 26 page title. Larger steps collapse onto the title.
             fontSize: {
                 xs: ['12px', '16px'],
+                // 13 meta: secondary lines inside dense lists, between the 12 small and 14 body steps.
+                meta: ['13px', '20px'],
                 sm: ['14px', '20px'],
                 base: ['14px', '22px'],
                 lg: ['15px', '22px'],
@@ -36,7 +38,10 @@ export default {
                 surface: '#FFFFFF',
                 ink: '#182C48',
                 muted: '#596B83',
-                line: '#E3E8F1',
+                line: {
+                    DEFAULT: '#E3E8F1',
+                    soft: '#EEF1F5',
+                },
                 brand: {
                     DEFAULT: '#205BF4',
                     hover: '#1D4ED8',
