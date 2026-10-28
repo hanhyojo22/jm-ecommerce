@@ -123,7 +123,7 @@ class CheckoutTest extends TestCase
             ->assertSee('data-sign-in-url="'.route('login', ['redirect' => '/checkout']).'"', false);
     }
 
-    public function test_checkout_renders_single_page_delivery_and_order_summary(): void
+    public function test_checkout_renders_delivery_payment_and_review_steps_with_order_summary(): void
     {
         [, $product] = $this->sellerProduct('19.99', 5);
         $customer = User::factory()->create(['email_verified_at' => now()]);
@@ -132,13 +132,13 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($customer)->get(route('checkout.create'))
             ->assertOk()
-            ->assertSee('Delivery by store')
+            ->assertSeeInOrder(['Delivery address', 'Payment method', 'Review &amp; place order', 'Order summary'], false)
             ->assertSee('Cash on delivery')
             ->assertSee('Place order')
             ->assertSee('name="province"', false)
             ->assertSee('name="postal_code"', false)
             ->assertSee('name="delivery_note"', false)
-            ->assertDontSee('Review order');
+            ->assertSee('Free shipping');
     }
 
     public function test_checkout_saves_and_prefills_the_buyers_delivery_address(): void

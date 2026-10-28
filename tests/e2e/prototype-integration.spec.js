@@ -105,6 +105,8 @@ test('mixed-store COD checkout preserves the selected variant and its price', as
         await page.getByLabel('City', { exact: true }).fill('Cebu');
         await page.getByLabel('Province').fill('Cebu');
         await page.getByLabel('Postal code').fill('6000');
+        await page.getByRole('button', { name: 'Continue to payment' }).click();
+        await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
         await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
         await expect(page.getByText('Black / Standard', { exact: true })).toBeVisible();

@@ -244,10 +244,12 @@ test('seller shops another store and returns to Seller Center with the same acco
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
         await page.getByRole('link', { name: 'Cart: 1 item' }).click();
         await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
-        await page.getByLabel('Use a saved address').selectOption({ label: 'QA Seller · 20 QA Street, Manila' });
+        await page.getByRole('radio', { name: /^QA Seller 20 QA Street, Manila/ }).check();
         await expect(page.getByLabel('Street address')).toHaveValue('20 QA Street');
         await expect(page.getByLabel('Province')).toHaveValue('Metro Manila');
         await expect(page.getByLabel('Postal code')).toHaveValue('1000');
+        await page.getByRole('button', { name: 'Continue to payment' }).click();
+        await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
         await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
         await expect(page.getByText('Other Seller QA Product').first()).toBeVisible();
@@ -290,9 +292,12 @@ test('customer can place a COD order from the product page through checkout', as
         await page.getByLabel('City').fill('Manila');
         await page.getByLabel('Province').fill('Metro Manila');
         await page.getByLabel('Postal code').fill('1000');
+        await page.getByRole('button', { name: 'Continue to payment' }).click();
+        await expect(page.locator('#step-1-title')).toContainText('Ava QA Customer · 10 QA Street · Manila');
+        await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
+        await expect(page.locator('#step-3-body')).toContainText('10 QA Street, Manila, Metro Manila, 1000');
         await page.getByLabel('Delivery note').fill('Blue gate');
-        await expect(page.getByRole('heading', { name: 'Delivery by store' })).toBeVisible();
-        const deliveryBox = await page.locator('#delivery-heading').boundingBox();
+        const deliveryBox = await page.locator('#step-1-title').boundingBox();
         const summaryBox = await page.locator('#checkout-summary-heading').boundingBox();
         expect(summaryBox.x).toBeGreaterThan(deliveryBox.x);
         expect(await page.locator('#checkout-summary-heading').locator('xpath=ancestor::aside').evaluate(element => getComputedStyle(element).position)).toBe('sticky');
@@ -322,17 +327,24 @@ test('mobile checkout stacks the summary and shows server field errors', async (
         await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
         await expect(page).toHaveURL(/\/checkout$/);
 
-        await expect(page.getByRole('button', { name: /Place order/ })).toHaveCount(1);
         const form = page.locator('#checkout-form');
-        const summary = page.locator('#checkout-summary-heading');
-        const payment = page.locator('#payment-heading');
-        expect((await summary.boundingBox()).y).toBeGreaterThan((await payment.boundingBox()).y);
+        const summary = page.getByRole('button', { name: /^Order summary/ });
+        expect((await summary.boundingBox()).y).toBeLessThan((await page.locator('#step-1-title').boundingBox()).y);
+        await summary.click();
+        await expect(page.locator('#checkout-summary-body')).toBeVisible();
         await page.screenshot({ path: testInfo.outputPath('checkout-mobile.png'), fullPage: true });
+        const newAddress = page.getByRole('radio', { name: /Use a new address/ });
+        if (await newAddress.count()) {
+            await newAddress.check();
+        }
         await page.getByLabel('Recipient name').fill('');
         await page.getByLabel('Mobile number').fill('');
         await page.getByLabel('Street address').fill('');
         await page.getByLabel('City').fill('');
         await form.evaluate(element => { element.noValidate = true; });
+        await page.getByRole('button', { name: 'Continue', exact: true }).click();
+        await page.getByRole('button', { name: 'Review order', exact: true }).click();
+        await expect(page.getByRole('button', { name: /Place order/ })).toHaveCount(1);
         await page.getByRole('button', { name: /Place order/ }).click();
         await expect(page.getByLabel('Recipient name')).toHaveAttribute('aria-invalid', 'true');
         await expect(page.locator('#recipient_name-error')).toBeVisible();
