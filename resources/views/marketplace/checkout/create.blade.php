@@ -6,8 +6,8 @@
     @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->hasAny(['payment_method', 'wallet_notice']) ? 2 : ($errors->has('delivery_note') ? 3 : 1)))
     @php($fieldInput = 'min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
 
-    {{-- Room at the foot so the fixed phone action bar never covers the last of the summary. --}}
-    <div class="page-shell min-h-[calc(100dvh-4.5rem)] !pt-6 max-lg:pb-28 max-sm:!pt-3.5">
+    {{-- Room at the foot so the fixed phone action bar never covers the last of the form. --}}
+    <div class="page-shell min-h-[calc(100dvh-4.5rem)] !pt-6 max-sm:!pt-3.5 max-sm:pb-28">
         <div class="page-container" x-data="{
             step: {{ $initialStep }},
             done: @js(range(1, $initialStep - 1)),
@@ -19,6 +19,15 @@
             fields: @js(array_keys($addressFields)),
             addresses: @js($addresses->map(fn ($address) => $address->only(['id', 'recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']))),
             choice: @js(session()->hasOldInput() || $addresses->isEmpty() ? 'new' : $addresses->first()->id),
+            issues: @js((object) collect($errors->getMessages())->map(fn (array $messages): string => $messages[0])->all()),
+            messages: {
+                recipient_name: 'Enter the recipient’s full name.',
+                phone: 'Enter a mobile number like 09171234567.',
+                address_line: 'Enter the house number, street, and barangay.',
+                city: 'Enter the city.',
+                province: 'Enter the province.',
+                postal_code: 'Enter a 4-digit postal code.',
+            },
             addressShort: '',
             addressFull: '',
             init() { this.syncAddress() },
@@ -49,19 +58,26 @@
                 });
             },
             complete(number) { if (! this.done.includes(number)) this.done.push(number) },
-            {{-- Hidden steps cannot show the browser's own validation bubble, so the step holding the problem is opened first. --}}
+            {{-- Problems show beside their field, and the step holding the first one opens with it centred clear of the phone bar. --}}
+            reveal(number, input) {
+                this.open(number, false);
+                this.$nextTick(() => {
+                    input.focus({ preventScroll: true });
+                    input.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+                });
+            },
             validAddress() {
                 if (this.$refs.form.noValidate) return true;
-                const invalid = this.fields.map((field) => document.getElementById(field)).find((input) => ! input.checkValidity());
-                if (! invalid) return true;
-                this.open(1, false);
-                this.$nextTick(() => invalid.reportValidity());
+                const invalid = this.fields.filter((field) => ! document.getElementById(field).checkValidity());
+                invalid.forEach((field) => this.issues[field] = this.messages[field]);
+                if (invalid.length === 0) return true;
+                this.reveal(1, document.getElementById(invalid[0]));
                 return false;
             },
             validPayment() {
                 if (this.$refs.form.noValidate || this.method === 'cod' || this.$refs.walletNotice.checked) return true;
-                this.open(2, false);
-                this.$nextTick(() => this.$refs.walletNotice.reportValidity());
+                this.issues.wallet_notice = 'Tick the box to confirm you understand how paying a store directly works.';
+                this.reveal(2, this.$refs.walletNotice);
                 return false;
             },
             next() {
@@ -133,24 +149,29 @@
                                 </div>
                             @endif
 
-                            <div x-show="showFields" @input="syncAddress()" @class(['mt-4 border-t border-line pt-[18px]' => $addresses->isNotEmpty()])>
+                            <div x-show="showFields" @input="syncAddress(); delete issues[$event.target.id]" @class(['mt-4 border-t border-line pt-[18px]' => $addresses->isNotEmpty()])>
                                 <p x-show="choice !== 'new'" class="mb-3.5 text-[13px] text-muted">Fill in any missing details from this older saved address.</p>
-                                <div class="grid grid-cols-2 gap-x-3 gap-y-3.5 max-sm:grid-cols-1">
+                                {{-- Six columns: name and number share a row, then street, then city, province and postal code. --}}
+                                <div class="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-6">
                                     @foreach ($addressFields as $field => $label)
-                                        @php($wide = $field === 'address_line')
-                                        <div @class(['col-span-full' => $wide])>
+                                        <div @class([
+                                            'col-span-2 sm:col-span-3' => in_array($field, ['recipient_name', 'phone'], true),
+                                            'col-span-2 sm:col-span-6' => $field === 'address_line',
+                                            'col-span-2' => $field === 'city',
+                                            'sm:col-span-2' => in_array($field, ['province', 'postal_code'], true),
+                                        ])>
                                             <label for="{{ $field }}" class="mb-1.5 block text-[13.5px] font-semibold text-ink">{{ $label }}</label>
                                             <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" required
                                                 @switch($field)
                                                     @case('recipient_name') autocomplete="name" maxlength="150" placeholder="Full name" @break
-                                                    @case('phone') type="tel" autocomplete="tel" maxlength="13" placeholder="09171234567" @break
+                                                    @case('phone') type="tel" autocomplete="tel" pattern="(\+63|0)9[0-9]{9}" maxlength="13" placeholder="09171234567" @break
                                                     @case('address_line') autocomplete="street-address" maxlength="255" placeholder="House number, street, and barangay" @break
                                                     @case('city') autocomplete="address-level2" maxlength="100" @break
                                                     @case('province') autocomplete="address-level1" maxlength="100" @break
-                                                    @case('postal_code') inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{4}" maxlength="4" placeholder="1600" @break
+                                                    @case('postal_code') inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{4}" maxlength="4" @break
                                                 @endswitch
-                                                @error($field) aria-invalid="true" aria-describedby="{{ $field }}-error" @enderror class="{{ $fieldInput }}">
-                                            @error($field)<p id="{{ $field }}-error" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger" role="alert">{{ $message }}</p>@enderror
+                                                aria-invalid="{{ $errors->has($field) ? 'true' : 'false' }}" aria-describedby="{{ $field }}-error" :aria-invalid="issues.{{ $field }} ? 'true' : 'false'" class="{{ $fieldInput }}">
+                                            <p id="{{ $field }}-error" x-show="issues.{{ $field }}" x-text="issues.{{ $field }}" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger" @unless ($errors->has($field)) style="display: none" @endunless role="alert">{{ $errors->first($field) }}</p>
                                         </div>
                                     @endforeach
                                 </div>
@@ -225,11 +246,11 @@
                                         <p>Your money goes <strong class="font-semibold text-ink">straight to each store</strong>. JMMart never holds it, so we can't reverse a transfer; refunds come from the store or your bank's or e-wallet's dispute process. We keep your reference number, review order help requests, and can suspend stores that don't deliver or refund. <strong class="font-semibold text-ink">Only pay the QR or account shown on your JMMart order page</strong>, and never share your MPIN or OTP.</p>
                                     </div>
                                     <label class="mt-2.5 flex cursor-pointer items-start gap-[9px] text-[12.5px] font-medium leading-[1.45] text-ink">
-                                        <input type="checkbox" name="wallet_notice" value="1" x-ref="walletNotice" :required="method !== 'cod'" @checked(old('wallet_notice')) class="mt-px size-4 rounded border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
+                                        <input type="checkbox" name="wallet_notice" value="1" x-ref="walletNotice" @change="delete issues.wallet_notice" :required="method !== 'cod'" @checked(old('wallet_notice')) class="mt-px size-4 rounded border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
                                         <span>I understand how paying a store directly works, as explained in the <a href="{{ route('terms') }}#wallet-payments" target="_blank" class="font-semibold text-brand underline underline-offset-2">Terms of Use</a>.</span>
                                     </label>
                                 </div>
-                                @error('wallet_notice')<p class="mt-2 text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                                <p x-show="issues.wallet_notice && method !== 'cod'" x-text="issues.wallet_notice" class="mt-2 text-[12.5px] font-medium text-danger" @unless ($errors->has('wallet_notice')) style="display: none" @endunless role="alert">{{ $errors->first('wallet_notice') }}</p>
                             @endif
 
                             <div class="mt-5 flex items-center justify-end gap-3.5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-1">
@@ -328,8 +349,8 @@
                     On a phone the step buttons give way to one bar that keeps the total in view and
                     moves the buyer through the same three steps.
                 --}}
-                <div class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_24px_-18px_rgb(15_23_42/35%)] backdrop-blur lg:hidden">
-                    <div class="mx-auto flex max-w-[560px] items-center gap-3.5">
+                <div class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_24px_-18px_rgb(15_23_42/35%)] backdrop-blur sm:hidden">
+                    <div class="flex items-center gap-3.5">
                         <div class="min-w-0">
                             <p class="text-[11.5px] text-muted">Total to pay</p>
                             <p class="truncate text-lg/tight font-semibold tracking-[-0.025em] tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</p>
