@@ -65,6 +65,19 @@ class SellerOnboardingTest extends TestCase
             ->assertSee('DTI-778899');
     }
 
+    public function test_review_lists_unfinished_steps_and_blocks_submitting(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('seller-application.step', 1), ['seller_type' => 'individual'])->assertSessionHasNoErrors();
+
+        $this->actingAs($buyer)->get(route('seller-application.create', ['step' => 7]))
+            ->assertOk()
+            ->assertSee('Finish these steps before you submit:')
+            ->assertSee('Step 2: Your details')
+            ->assertDontSee('Step 1: Seller type</a></li>', false)
+            ->assertSee('<button type="submit" class="onboarding-button onboarding-button--primary" disabled>Submit application</button>', false);
+    }
+
     public function test_business_fields_and_corrections_are_enforced(): void
     {
         $buyer = User::factory()->create(['email_verified_at' => now()]);

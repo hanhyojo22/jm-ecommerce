@@ -23,13 +23,16 @@
         $payout = $application?->payoutProfile;
         $shippingAddress = collect([$application?->address_line, $application?->barangay, $application?->city, $application?->province, $application?->region, $application?->postal_code])->filter()->implode(', ');
         $documentCount = $application?->documents()->count() ?? 0;
+        $sameAddresses = (bool) old('same_addresses', blank($application?->pickup_address) || ($application->pickup_address === $application->return_address && $application->pickup_address === $application->address_line.', '.$application->barangay.', '.$application->city.', '.$application->province.', '.$application->region.' '.$application->postal_code));
+        $missingSteps = array_diff(range(1, 6), $completed);
+        $lockedNote = 'Not open for changes in this correction';
         $submittedAt = $application?->statusHistory()->where('to_status', 'submitted')->latest()->first()?->created_at ?? $application?->updated_at;
     @endphp
 
     <div
         @class(['onboarding-app', 'min-h-screen'])
         @if ($editable && $step <= 6)
-            x-data="{ saving: false, exit: false, sameAddresses: false, uploadProgress: 0, uploadError: '', validationErrors: [], save(event) { this.saving = true; this.uploadError = ''; this.validationErrors = []; const request = new XMLHttpRequest(); request.open('POST', event.target.action); request.setRequestHeader('Accept', 'application/json'); request.upload.onprogress = (progress) => { if (progress.lengthComputable) this.uploadProgress = Math.round(progress.loaded / progress.total * 100) }; request.onload = () => { if (request.status === 200) { window.location.assign(JSON.parse(request.responseText).redirect); return; } this.saving = false; if (request.status === 422) { this.validationErrors = Object.values(JSON.parse(request.responseText).errors).flat(); this.$nextTick(() => this.$refs.formErrors?.focus()); } else { this.uploadError = 'Could not save this step. Please try again.'; } }; request.onerror = () => { this.saving = false; this.uploadError = 'Upload failed. Please check your connection and retry.'; }; request.send(new FormData(event.target)); } }"
+            x-data="{ saving: false, exitBlocked: false, uploadProgress: 0, uploadError: '', validationErrors: [], saveAndExit() { const form = this.$refs.stepForm; this.exitBlocked = false; if (! form.checkValidity()) { this.exitBlocked = true; form.reportValidity(); return; } this.send(form, true); }, save(event) { this.send(event.target, false); }, send(form, exit) { this.saving = true; this.exitBlocked = false; this.uploadError = ''; this.validationErrors = []; const data = new FormData(form); if (exit) data.set('exit', '1'); const request = new XMLHttpRequest(); request.open('POST', form.action); request.setRequestHeader('Accept', 'application/json'); request.upload.onprogress = (progress) => { if (progress.lengthComputable) this.uploadProgress = Math.round(progress.loaded / progress.total * 100) }; request.onload = () => { if (request.status === 200) { window.location.assign(JSON.parse(request.responseText).redirect); return; } this.saving = false; if (request.status === 422) { this.exitBlocked = exit; this.validationErrors = Object.values(JSON.parse(request.responseText).errors).flat(); this.$nextTick(() => this.$refs.formErrors?.focus()); } else { this.uploadError = 'Could not save this step. Please try again.'; } }; request.onerror = () => { this.saving = false; this.uploadError = 'Upload failed. Please check your connection and retry.'; }; request.send(data); } }"
         @endif
     >
         <header class="onboarding-topbar">
@@ -47,7 +50,7 @@
                             <span x-show="!saving">Draft saves when you continue</span>
                             <span x-cloak x-show="saving">Saving draft…</span>
                         </span>
-                        <button type="submit" form="seller-step-form" class="onboarding-topbar-button" @click="exit = true">
+                        <button type="button" class="onboarding-topbar-button" :disabled="saving" @click="saveAndExit()">
                             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10" /></svg>
                             Save &amp; exit
                         </button>
@@ -128,8 +131,8 @@
                     <section class="onboarding-state-card" aria-labelledby="state-title">
                         <p class="onboarding-kicker">Seller application</p>
                         <h1 id="state-title">Application {{ str_replace('_', ' ', $application->status) }}</h1>
-                        <p class="onboarding-state-lead">Store: {{ $application->store_name }}. You can continue shopping while we review your application.</p>
-                        @if ($application->review_note)<p class="mt-3 rounded-[10px] bg-canvas p-3 text-sm">{{ $application->review_note }}</p>@endif
+                        <p class="onboarding-state-lead">Store: {{ $application->store_name }}. {{ $application->status === 'rejected' ? 'This application wasn’t approved. You can keep shopping on JMMart as usual.' : 'You can keep shopping on JMMart as usual.' }}</p>
+                        @if ($application->review_note)<p class="mt-3 rounded-[10px] bg-canvas p-3 text-sm">@if ($application->status === 'rejected')<strong>Reason:</strong> @endif{{ $application->review_note }}</p>@endif
                         <ol class="onboarding-timeline" aria-label="Application status timeline">
                             @foreach ($application->statusHistory()->oldest()->get() as $event)
                                 <li class="is-done">
@@ -183,7 +186,7 @@
                                         @endif
                                     </a>
                                 @else
-                                    <span class="onboarding-dot-link" aria-disabled="true" aria-label="Step {{ $number }}: {{ $item['label'] }}">
+                                    <span class="onboarding-dot-link" aria-disabled="true" title="{{ $lockedNote }}" aria-label="Step {{ $number }}: {{ $item['label'] }}, {{ Str::lower($lockedNote) }}">
                                         @if ($done)
                                             <svg class="size-3" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
                                         @else
@@ -216,7 +219,7 @@
                                     </span>
                                 </a>
                             @else
-                                <span class="onboarding-step" role="link" aria-disabled="true" @if ($number === $step) aria-current="step" @endif @if ($done) data-done="true" @endif>
+                                <span class="onboarding-step" role="link" aria-disabled="true" title="{{ $lockedNote }}" @if ($number === $step) aria-current="step" @endif @if ($done) data-done="true" @endif>
                                     <span aria-hidden="true" class="onboarding-step-dot">
                                         @if ($done)
                                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>
@@ -226,7 +229,7 @@
                                     </span>
                                     <span class="onboarding-step-copy">
                                         <span class="onboarding-step-name"><span class="sr-only">Step {{ $number }} </span>{{ $item['label'] }}</span>
-                                        <span class="onboarding-step-hint">{{ $item['hint'] }}@if ($done)<span class="sr-only">, done</span>@endif</span>
+                                        <span class="onboarding-step-hint">{{ $item['hint'] }}@if ($done)<span class="sr-only">, done</span>@endif<span class="sr-only">, {{ Str::lower($lockedNote) }}</span></span>
                                     </span>
                                 </span>
                             @endif
@@ -255,7 +258,7 @@
                         </div>
                     @endif
                     @if ($application?->status === 'more_information_required')
-                        <p role="status" class="mb-5 rounded-[10px] border border-warning/20 bg-warning/10 p-4 text-sm text-warning-text">More information required: {{ $application->review_note }}. Update the requested steps, then resubmit.</p>
+                        <p role="status" class="mb-5 rounded-[10px] border border-warning/20 bg-warning/10 p-4 text-sm text-warning-text">More information required: {{ rtrim((string) $application->review_note, '.') }}. Update the requested steps, then resubmit.</p>
                     @endif
 
                     <header class="onboarding-step-head">
@@ -265,9 +268,8 @@
                     </header>
 
                     @if ($step < 7)
-                        <form id="seller-step-form" method="POST" enctype="multipart/form-data" action="{{ route('seller-application.step', $step) }}" @submit.prevent="save($event)">@csrf
-                            <input type="hidden" name="exit" :value="exit ? '1' : ''">
-                            <div x-cloak x-show="validationErrors.length || uploadError" x-ref="formErrors" tabindex="-1" role="alert" class="mb-5 rounded-[10px] border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p x-text="uploadError"></p><template x-for="error in validationErrors"><p x-text="error"></p></template></div>
+                        <form id="seller-step-form" x-ref="stepForm" method="POST" enctype="multipart/form-data" action="{{ route('seller-application.step', $step) }}" @submit.prevent="save($event)">@csrf
+                            <div x-cloak x-show="validationErrors.length || uploadError || exitBlocked" x-ref="formErrors" tabindex="-1" role="alert" class="mb-5 rounded-[10px] border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p x-text="uploadError"></p><template x-for="error in validationErrors"><p x-text="error"></p></template><p x-show="exitBlocked" class="mt-2">This step isn’t complete, so it can’t be saved yet. Finish it, or <a href="{{ route('profile.edit') }}" class="font-semibold underline underline-offset-2">leave without saving this step</a>. Your earlier steps are already saved.</p></div>
 
                             @if ($step === 1)
                                 <div role="radiogroup" aria-label="Seller type">
@@ -325,7 +327,7 @@
                                     <p>Your legal name and date of birth are private. Buyers only see your store name and the contact details you choose to publish.</p>
                                 </div>
                             @elseif ($step === 3)
-                                <div class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_260px] 2xl:items-start" x-data="{ store_name: @js(old('store_name', $application?->store_name)), store_slug: @js(old('store_slug', $application?->store_slug)), store_description: @js(old('store_description', $application?->store_description)), store_category: @js(old('store_category', $application?->store_category)), logoPreview: null }" @file-preview="if ($event.detail.name === 'logo') logoPreview = $event.detail.url" @input="if ($event.target.name in $data) $data[$event.target.name] = $event.target.value">
+                                <div x-data="{ store_name: @js(old('store_name', $application?->store_name)), store_slug: @js(old('store_slug', $application?->store_slug)), store_description: @js(old('store_description', $application?->store_description)), store_category: @js(old('store_category', $application?->store_category)), logoPreview: null, bannerPreview: null, slugPreview() { return (this.store_slug || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') } }" @file-preview="if ($event.detail.name === 'logo') logoPreview = $event.detail.url; if ($event.detail.name === 'banner') bannerPreview = $event.detail.url" @input="if ($event.target.name in $data) $data[$event.target.name] = $event.target.value">
                                     <div class="space-y-7">
                                         <section class="onboarding-section" aria-labelledby="store-details-heading">
                                             <div class="onboarding-section-head">
@@ -354,14 +356,14 @@
                                                 <div aria-hidden="true">
                                                     <p class="onboarding-preview-label">Buyer preview</p>
                                                     <div class="onboarding-preview-card">
-                                                        <div class="onboarding-preview-banner" @if ($application?->banner_path) style="background-image: url('{{ Storage::disk('public')->url($application->banner_path) }}')" @endif></div>
+                                                        <div class="onboarding-preview-banner" :style="bannerPreview ? { backgroundImage: 'url(' + bannerPreview + ')' } : {}" @if ($application?->banner_path) style="background-image: url('{{ Storage::disk('public')->url($application->banner_path) }}')" @endif></div>
                                                         <div class="onboarding-preview-body">
                                                             <div class="onboarding-preview-logo">
                                                                 <img x-cloak x-show="logoPreview" :src="logoPreview" alt="">
                                                                 <span x-show="!logoPreview" class="contents">@if ($application?->logo_path)<img src="{{ Storage::disk('public')->url($application->logo_path) }}" alt="">@else<span x-text="(store_name || 'S').trim().charAt(0).toUpperCase()"></span>@endif</span>
                                                             </div>
                                                             <p class="onboarding-preview-name" x-text="store_name || 'Your store name'"></p>
-                                                            <p class="onboarding-preview-slug">/stores/<span x-text="store_slug || 'your-store'"></span></p>
+                                                            <p class="onboarding-preview-slug">/stores/<span x-text="slugPreview() || 'your-store'"></span></p>
                                                             <p class="onboarding-preview-desc" x-text="store_description || 'Your store description appears here.'"></p>
                                                             <span class="onboarding-chip" x-show="store_category" x-text="store_category"></span>
                                                         </div>
@@ -373,7 +375,7 @@
                                     </div>
                                 </div>
                             @elseif ($step === 4)
-                                <section class="onboarding-section" aria-labelledby="address-heading">
+                                <section class="onboarding-section" aria-labelledby="address-heading" x-data="{ sameAddresses: @js($sameAddresses) }">
                                     <div class="onboarding-section-head">
                                         <h3 id="address-heading">Pickup address</h3>
                                         <p>We’ll use this as your default pickup and return address.</p>
@@ -384,12 +386,12 @@
                                         @endforeach
                                     </div>
                                     <label class="onboarding-check-strip">
-                                        <input type="checkbox" name="same_addresses" value="1" x-model="sameAddresses">
+                                        <input type="checkbox" name="same_addresses" value="1" x-model="sameAddresses" @checked($sameAddresses)>
                                         <span><strong>Use this address for pickup and returns.</strong> Uncheck if your courier collects from, or returns come to, a different place.</span>
                                     </label>
                                     <div x-show="!sameAddresses" class="onboarding-grid mt-[18px]">
-                                        @include('seller-applications.field', ['name' => 'pickup_address', 'label' => 'Pickup address'])
-                                        @include('seller-applications.field', ['name' => 'return_address', 'label' => 'Return address'])
+                                        @include('seller-applications.field', ['name' => 'pickup_address', 'label' => 'Pickup address', 'requiredWhen' => '!sameAddresses'])
+                                        @include('seller-applications.field', ['name' => 'return_address', 'label' => 'Return address', 'requiredWhen' => '!sameAddresses'])
                                     </div>
                                 </section>
 
@@ -416,6 +418,7 @@
                                     </div>
                                 </section>
                             @elseif ($step === 5)
+                                <div x-data="{ idType: @js(old('id_type', $application?->id_type ?? '')) }">
                                 <section class="onboarding-section" aria-labelledby="id-heading">
                                     <div class="onboarding-section-head">
                                         <h3 id="id-heading">Government ID</h3>
@@ -424,11 +427,13 @@
                                     <div class="onboarding-grid">
                                         <div>
                                             <label for="id_type" class="field-label">ID type</label>
-                                            <select id="id_type" name="id_type" required class="field-control">
+                                            <select id="id_type" name="id_type" required x-model="idType" class="field-control">
+                                                <option value="" disabled @selected(! old('id_type', $application?->id_type))>Choose an ID type</option>
                                                 @foreach ($idTypes as $option => $label)
                                                     <option value="{{ $option }}" @selected(old('id_type', $application?->id_type) === $option)>{{ $label }}</option>
                                                 @endforeach
                                             </select>
+                                            <x-input-error :messages="$errors->get('id_type')" class="mt-1" />
                                         </div>
                                         @include('seller-applications.field', ['name' => 'id_number', 'label' => 'ID number', 'required' => true])
                                     </div>
@@ -443,11 +448,12 @@
                                         @php($savedDocuments = $application?->documents()->pluck('type')->all() ?? [])
                                         @foreach (['id_front' => 'Front of ID', 'id_back' => 'Back of ID, if applicable', 'selfie' => 'Identity selfie', 'business_registration' => 'Business registration document', 'bir_certificate' => 'BIR certificate, if applicable'] as $name => $label)
                                             @if (! in_array($name, ['business_registration', 'bir_certificate'], true) || $isBusiness)
-                                                @include('seller-applications.field', ['name' => $name, 'label' => $label, 'type' => 'file', 'accept' => $name === 'selfie' ? 'image/jpeg,image/png' : 'image/jpeg,image/png,application/pdf', 'saved' => in_array($name, $savedDocuments, true), 'required' => in_array($name, ['id_front', 'selfie'], true), 'help' => ['selfie' => $isBusiness ? 'Optional for businesses' : 'A photo of you holding your ID', 'id_back' => 'Needed for driver’s license and National ID'][$name] ?? null])
+                                                @include('seller-applications.field', ['name' => $name, 'label' => $label, 'type' => 'file', 'accept' => $name === 'selfie' ? 'image/jpeg,image/png' : 'image/jpeg,image/png,application/pdf', 'saved' => in_array($name, $savedDocuments, true), 'required' => $name === 'id_front' || ($name === 'selfie' && ! $isBusiness) || ($name === 'business_registration' && $isBusiness), 'requiredWhen' => $name === 'id_back' ? "['drivers_license', 'national_id'].includes(idType)" : null, 'help' => ['selfie' => $isBusiness ? 'Optional for businesses' : 'A photo of you holding your ID', 'id_back' => 'Needed for driver’s license and National ID'][$name] ?? null])
                                             @endif
                                         @endforeach
                                     </div>
                                 </section>
+                                </div>
 
                                 <div class="onboarding-note">
                                     <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
@@ -505,6 +511,16 @@
                             </div>
                         </form>
                     @else
+                        @if ($missingSteps)
+                            <div role="status" class="mb-5 rounded-[10px] border border-warning/20 bg-warning/10 p-4 text-sm text-warning-text">
+                                <p class="font-semibold">Finish these steps before you submit:</p>
+                                <ul class="mt-2 list-disc pl-5">
+                                    @foreach ($missingSteps as $number)
+                                        <li>@if ($canEditStep($number))<a href="{{ route('seller-application.create', ['step' => $number]) }}" class="font-semibold underline underline-offset-2">Step {{ $number }}: {{ $steps[$number]['label'] }}</a>@else Step {{ $number }}: {{ $steps[$number]['label'] }}@endif</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                         <div class="onboarding-review">
                             <section class="onboarding-review-block" aria-labelledby="review-about">
                                 <div class="onboarding-review-head">
@@ -598,10 +614,10 @@
                             </section>
 
                             <div class="onboarding-actions">
-                                <p class="onboarding-save-hint" x-text="accepted === total ? 'Ready to submit.' : `${accepted} of ${total} policies accepted.`">0 of 6 policies accepted.</p>
+                                <p class="onboarding-save-hint" x-text="@js((bool) $missingSteps) ? 'Finish every step to submit.' : accepted === total ? 'Ready to submit.' : `${accepted} of ${total} policies accepted.`">0 of 6 policies accepted.</p>
                                 <div class="onboarding-action-buttons">
                                     <a href="{{ route('seller-application.create', ['step' => 6]) }}" class="onboarding-button onboarding-button--quiet">Back</a>
-                                    <button type="submit" class="onboarding-button onboarding-button--primary">Submit application</button>
+                                    <button type="submit" class="onboarding-button onboarding-button--primary" @disabled($missingSteps)>Submit application</button>
                                 </div>
                             </div>
                         </form>

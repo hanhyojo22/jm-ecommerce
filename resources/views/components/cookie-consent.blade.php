@@ -2,7 +2,7 @@
 
 <div data-cookie-consent data-functional="{{ $cookiePreferences['functional'] ?? false ? 'true' : 'false' }}" data-save-url="{{ route('cookie-preferences.store') }}" data-csrf="{{ csrf_token() }}">
     @if ($cookiePreferences === null)
-        <section data-cookie-banner aria-labelledby="cookie-banner-title" class="fixed inset-x-3 {{ request()->routeIs('home') ? 'bottom-20' : 'bottom-3' }} z-[90] mx-auto max-h-[calc(100dvh-6rem)] max-w-[480px] overflow-y-auto rounded-xl border border-line bg-white p-3 shadow-lg sm:bottom-3">
+        <section data-cookie-banner aria-labelledby="cookie-banner-title" @class(['fixed inset-x-3 z-[90] mx-auto max-h-[calc(100dvh-6rem)] max-w-[480px] overflow-y-auto rounded-xl border border-line bg-white p-3 shadow-lg', 'bottom-20 sm:bottom-3' => request()->routeIs('home'), 'bottom-24 md:bottom-3' => request()->routeIs('seller-application.create'), 'bottom-3' => ! request()->routeIs('home', 'seller-application.create')])>
             <div class="flex items-center gap-2">
                 <span class="grid size-7 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand-hover" aria-hidden="true">
                     <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a3 3 0 0 0 3 3 3 3 0 0 0 3 3 3 3 0 0 0 3 3M8 11h.01M12 16h.01M16 13h.01M10 7h.01" stroke-linecap="round"/></svg>

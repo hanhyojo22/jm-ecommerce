@@ -92,6 +92,8 @@ test('seller application steps remain usable on mobile and desktop', async ({ br
         await expect(page.getByRole('link', { name: /^Step \d/ })).toHaveCount(7);
         await page.getByRole('link', { name: /Step 4:? Shipping/ }).click();
         await expect(page.getByLabel('Region')).toBeVisible();
+        await expect(page.getByLabel('Return address')).toBeHidden();
+        await page.getByLabel('Use this address for pickup and returns').uncheck();
         await expect(page.getByLabel('Return address')).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
     } finally {
