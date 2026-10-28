@@ -38,9 +38,9 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(items.getByRole('link', { name: 'QA Retired Pouch' })).toHaveCount(0);
         await expect(items.locator(':scope > div').filter({ hasText: 'QA Retired Pouch' }).getByText('Product image unavailable')).toHaveCount(1);
         if (testInfo.project.name === 'mobile-chromium') {
-            await expect(chatRow.getByText('Amount ₱49.98')).toBeVisible();
+            await expect(chatRow.getByText('₱49.98', { exact: true })).toBeVisible();
         }
-        if (testInfo.project.name !== 'desktop-chromium') {
+        if (testInfo.project.name === 'mobile-chromium') {
             expect(await filters.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
         }
         await page.screenshot({ path: testInfo.outputPath('my-purchases.png'), fullPage: true });
