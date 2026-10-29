@@ -43,7 +43,7 @@ class SellerStoreSettingsTest extends TestCase
         $this->assertSame('Quezon City', $store->city);
         Storage::disk('public')->assertExists($store->logo_path);
         $this->actingAs($owner)->get(route('seller.store-settings.edit'))
-            ->assertSee('Current Northwind Goods logo', false)
+            ->assertSee("Current {$store->name} logo", false)
             ->assertSee('Handmade home goods from Manila.')
             ->assertSee('+639171234568')
             ->assertSee('25 New Market Street')
@@ -52,7 +52,7 @@ class SellerStoreSettingsTest extends TestCase
         $this->actingAs($owner)->get(route('seller.dashboard'))
             ->assertSee(Storage::disk('public')->url($store->logo_path), false);
         $this->get(route('catalog.store', $store->slug))
-            ->assertSee('alt="Northwind Goods logo"', false)
+            ->assertSee('alt="'.$store->name.' logo"', false)
             ->assertSee('Handmade home goods from Manila.')
             ->assertSee('Quezon City')
             ->assertDontSee('+639171234568')
@@ -279,7 +279,7 @@ class SellerStoreSettingsTest extends TestCase
     {
         $owner = User::factory()->seller()->create(['email_verified_at' => now()]);
         $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind-'.str()->lower(str()->random(6)), 'status' => 'active']);
-        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Goods', 'slug' => 'northwind-goods-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Goods '.str()->random(6), 'slug' => 'northwind-goods-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner']);
 
         return [$owner, $tenant, $store];

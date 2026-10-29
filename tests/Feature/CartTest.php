@@ -260,7 +260,7 @@ class CartTest extends TestCase
         $tenant = Tenant::create(['name' => 'Northwind '.$sku, 'slug' => 'northwind-'.str()->lower($sku), 'status' => 'active']);
         $store = Store::create([
             'tenant_id' => $tenant->id,
-            'name' => 'Northwind Goods',
+            'name' => 'Northwind Goods '.$sku,
             'slug' => 'northwind-goods-'.str()->lower($sku),
             'phone' => '+639171234567',
             'address_line' => '10 Market Street',

@@ -9,6 +9,7 @@ use App\Models\SellerApplication;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -148,7 +149,12 @@ class SellerApplicationController extends Controller
             $completed[] = $step;
             $application->completed_steps = array_values(array_unique($completed));
             $application->status ??= 'draft';
-            $user->sellerApplications()->save($application);
+            try {
+                $user->sellerApplications()->save($application);
+            } catch (UniqueConstraintViolationException) {
+                // Another applicant claimed the name or link between the check above and this save.
+                throw ValidationException::withMessages(['store_name' => 'This store name or link was just taken. Choose another.']);
+            }
             if ($application->wasRecentlyCreated) {
                 $application->statusHistory()->create(['actor_user_id' => $user->id, 'from_status' => null, 'to_status' => 'draft', 'created_at' => now()]);
             }

@@ -50,7 +50,7 @@ class SellerDashboardTest extends TestCase
             ->assertSee('Quick actions')
             ->assertSee(route('catalog.store', $store->slug), false)
             ->assertSee('target="_blank"', false)
-            ->assertSee('View Northwind Goods storefront in a new tab');
+            ->assertSee("View {$store->name} storefront in a new tab");
     }
 
     public function test_seller_without_active_store_is_redirected_to_application_onboarding(): void
@@ -163,7 +163,7 @@ class SellerDashboardTest extends TestCase
     {
         $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
         $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind-'.str()->lower(str()->random(6)), 'status' => 'active']);
-        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Goods', 'slug' => 'northwind-goods-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Goods '.str()->random(6), 'slug' => 'northwind-goods-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner']);
 
         return [$seller, $tenant, $store];
