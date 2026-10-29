@@ -441,7 +441,7 @@
 :is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
     margin-inline: auto;
     max-width: 1400px;
-    padding: 32px 32px 28px;
+    padding: 24px 32px 28px;
 }
 
 /* Swiss seller center: the page header closes with a hairline, like a ruled grid. */
@@ -478,7 +478,7 @@
     }
 
     :is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
-        padding: 25px 25px 24px;
+        padding: 24px 25px 24px;
     }
 }
 
@@ -488,7 +488,7 @@
     }
 
     :is(.seller-workspace, .customer-workspace) .workspace-main > header:not([data-header-design]) {
-        padding: 23px 17px 22px;
+        padding: 24px 17px 22px;
     }
 }
 

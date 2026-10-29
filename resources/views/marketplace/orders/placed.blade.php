@@ -21,7 +21,7 @@
         $arrow = '<svg class="size-[13px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-5-5 5 5-5 5"/></svg>';
     @endphp
 
-    <div class="page-shell min-h-[calc(100dvh-4.5rem)] !pt-10 pb-24 max-sm:!pt-6">
+    <div class="page-shell min-h-[calc(100dvh-4.5rem)] pb-24">
         <div class="page-container grid grid-cols-1 items-start gap-x-12 gap-y-10 lg:grid-cols-[minmax(0,1fr)_360px]">
 
             {{-- The confirmation and the next move lead; the progress track belongs to the same thought. --}}
