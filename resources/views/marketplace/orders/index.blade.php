@@ -127,9 +127,9 @@
             <x-input-error :messages="$errors->get('tab')" class="mt-2" />
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
-            {{-- One surface: each order is a store bar, its item lines, then a footer whose total and next-step
+            {{-- Each order is its own card: a store bar, its item lines, then a footer whose total and next-step
                  columns line up down the page. --}}
-            <section id="purchases" class="mt-5 scroll-mt-24 overflow-hidden rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-labelledby="purchase-results-heading">
+            <section id="purchases" class="mt-5 scroll-mt-24 flex flex-col gap-6" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
                 @php
@@ -144,8 +144,8 @@
                         $groupLabel = $groupDate->isToday() ? 'Today' : ($groupDate->isYesterday() ? 'Yesterday' : $groupDate->format($groupDate->isCurrentYear() ? 'M j' : 'M j, Y'));
                         $groupTotal = $groupOrders->reduce(fn (string $sum, $sellerOrder): string => bcadd($sum, (string) $sellerOrder->total, 2), '0.00');
                     @endphp
-                    <section class="border-t border-line max-lg:first-of-type:border-t-0 [&>article:first-of-type]:border-t-0" aria-label="Orders from {{ $groupDate->format('M j, Y') }}">
-                        <div class="flex items-baseline justify-between gap-3 px-4 pb-1.5 pt-[18px] lg:px-6">
+                    <section class="space-y-3" aria-label="Orders from {{ $groupDate->format('M j, Y') }}">
+                        <div class="flex items-baseline justify-between gap-3 px-1">
                             <h3 class="text-meta font-semibold text-ink">{{ $groupLabel }}@if ($groupDate->isToday() || $groupDate->isYesterday())<span class="ml-1.5 font-medium text-muted">{{ $groupDate->format('M j') }}</span>@endif</h3>
                             <p class="text-xs tabular-nums text-muted">{{ $groupOrders->count() }} {{ Str::plural('order', $groupOrders->count()) }} · ₱{{ number_format($groupTotal, 2) }}</p>
                         </div>
@@ -251,7 +251,7 @@
                                     $noteIsUrgent = $needsPayment || $returnSoon || $refundDue || $returnDecision;
                                 @endphp
 
-                                <article class="border-t border-line-soft transition-colors hover:bg-[#fbfcfe]" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
+                                <article class="overflow-hidden rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
                                     <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3 lg:px-6">
                                         <div class="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
                                             <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
@@ -391,7 +391,7 @@
                             @endforeach
                     </section>
                 @empty
-                    <div class="px-5 py-14 text-center">
+                    <div class="rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)] px-5 py-14 text-center">
                         @if ($hasFilters)
                             <h3 class="text-lg font-semibold text-ink">{{ $search !== '' ? 'No purchases match “'.$search.'”'.($tab !== 'all' ? ' in '.$tabs[$tab] : '') : 'No purchases match those filters' }}</h3>
                             <p class="mx-auto mt-2 max-w-sm text-meta text-muted">Try an order number, a store name, or part of a product name.</p>
@@ -415,7 +415,7 @@
                 {{-- Load more swaps in the whole longer list rather than appending rows, because orders are
                      grouped by day and a day can straddle two batches. The link still works without script. --}}
                 @if ($sellerOrders->total() > $sellerOrders->count() || $sellerOrders->count() > 10)
-                    <div class="flex flex-col items-stretch gap-3 border-t border-line bg-[var(--color-sunken)] px-4 py-3.5 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left lg:px-6" x-data="{ loading: false, async more(link) {
+                    <div class="flex flex-col items-stretch gap-3 rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)] px-4 py-3.5 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left lg:px-6" x-data="{ loading: false, async more(link) {
                         if (this.loading) return;
                         this.loading = true;
                         const shown = document.querySelectorAll('#purchases article').length;
