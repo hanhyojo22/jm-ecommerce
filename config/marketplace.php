@@ -39,20 +39,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | GCash, Maya, and Bank Transfer
+    | Online Payments (PayMongo)
     |--------------------------------------------------------------------------
     |
-    | Buyers pay the store's own account and send the reference number. A store
-    | order still without a reference after this many hours is cancelled so
-    | its stock goes back on sale. PESONet transfers can take until the next
-    | banking day, so bank transfers get longer.
+    | One PayMongo checkout pays every store in the order: each store's share
+    | is split to its PayMongo account and JMMart keeps its platform fee. The
+    | buyer pays PayMongo's fee as a separate line. PayMongo takes its fee
+    | before splitting, and if the shares exceed what is left the split fails
+    | silently, so these rates must be at least what the PayMongo contract
+    | charges. An order still unpaid after `payment_hours` is cancelled.
     |
     */
 
-    'wallet' => [
-        'payment_hours' => ['gcash' => 24, 'maya' => 24, 'bank' => 48],
-        // Bump when the buyer notice in terms.blade.php#wallet-payments changes; each order logs the version accepted.
-        'notice_version' => '1.1',
+    'online_payment' => [
+        'fees' => [
+            'gcash' => ['rate' => '0.025', 'fixed' => '0.00'],
+            'maya' => ['rate' => '0.022', 'fixed' => '0.00'],
+            'card' => ['rate' => '0.035', 'fixed' => '15.00'],
+        ],
+        'payment_hours' => 2,
     ],
 
     /*

@@ -13,6 +13,7 @@ use App\Queries\TopProductQuery;
 use App\Services\GmailOrderMailer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class UpdateSellerOrderStatus
 {
@@ -23,18 +24,18 @@ class UpdateSellerOrderStatus
         'shipped' => ['delivered'],
     ];
 
-    public function __construct(private RecordSellerEarning $recordSellerEarning) {}
+    public function __construct(private RecordSellerEarning $recordSellerEarning, private RefundOnlinePayment $refundOnlinePayment) {}
 
     /**
      * A null actor is JMMart itself, completing an order the buyer never confirmed or cancelling
      * one the buyer never paid for.
      *
-     * A store that cancels after receiving a GCash/Maya payment refunds the buyer itself and
-     * records the transfer's reference here.
+     * Cancelling a store order the buyer already paid online refunds its share through PayMongo
+     * once this commits; a refund that fails stays visible as due until it is retried.
      */
-    public function handle(SellerOrder $sellerOrder, string $status, ?User $actor, ?string $ipAddress = null, ?string $refundReference = null): SellerOrder
+    public function handle(SellerOrder $sellerOrder, string $status, ?User $actor, ?string $ipAddress = null): SellerOrder
     {
-        $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress, $refundReference): SellerOrder {
+        $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress): SellerOrder {
             $order = Order::query()
                 ->lockForUpdate()
                 ->findOrFail($sellerOrder->order_id);
@@ -63,16 +64,10 @@ class UpdateSellerOrderStatus
                 throw ValidationException::withMessages(['status' => 'A cancellation request is awaiting review.']);
             }
 
-            $isWalletPayment = in_array($order->payment()->value('method'), Payment::DIRECT_METHODS, true);
+            $isOnlinePayment = in_array($order->payment()->value('method'), Payment::ONLINE_METHODS, true);
 
-            if ($isWalletPayment && $status === 'confirmed' && $sellerOrder->cod_collected_at === null) {
-                throw ValidationException::withMessages(['status' => 'Record that the buyer’s payment arrived before confirming this order.']);
-            }
-
-            $refundReference = $isWalletPayment && $status === 'cancelled' && $sellerOrder->cod_collected_at !== null ? $refundReference : null;
-
-            if ($isWalletPayment && $status === 'cancelled' && $sellerOrder->cod_collected_at !== null && blank($refundReference) && ! $actor?->isPlatformAdministrator()) {
-                throw ValidationException::withMessages(['refund_reference' => 'Refund the buyer’s payment, then enter the refund reference number to cancel.']);
+            if ($isOnlinePayment && $status === 'confirmed' && $sellerOrder->cod_collected_at === null) {
+                throw ValidationException::withMessages(['status' => 'Wait for the buyer’s online payment before confirming this order.']);
             }
 
             $previousStatus = $sellerOrder->status;
@@ -82,7 +77,6 @@ class UpdateSellerOrderStatus
             }
 
             $sellerOrder->update([
-                'refund_reference' => $refundReference ?? $sellerOrder->refund_reference,
                 'status' => $status,
                 'shipped_at' => $status === 'shipped' ? now() : $sellerOrder->shipped_at,
                 'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at,
@@ -138,7 +132,7 @@ class UpdateSellerOrderStatus
                 'entity_type' => SellerOrder::class,
                 'entity_id' => $sellerOrder->id,
                 'old_values' => ['status' => $previousStatus],
-                'new_values' => array_filter(['status' => $status, 'order_total' => $remainingTotal, 'refund_reference' => $refundReference], fn ($value): bool => $value !== null),
+                'new_values' => ['status' => $status, 'order_total' => $remainingTotal],
                 'ip_address' => $ipAddress,
             ]);
 
@@ -146,6 +140,16 @@ class UpdateSellerOrderStatus
         });
 
         TopProductQuery::forgetCachedRankings();
+
+        if ($status === 'cancelled' && $updatedSellerOrder->cod_collected_at !== null && $updatedSellerOrder->order->payment?->isOnline()) {
+            DB::afterCommit(function () use ($updatedSellerOrder): void {
+                try {
+                    $this->refundOnlinePayment->cancelled($updatedSellerOrder);
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            });
+        }
 
         DB::afterCommit(function () use ($updatedSellerOrder, $status, $actor): void {
             try {
@@ -163,7 +167,7 @@ class UpdateSellerOrderStatus
                         : "{$updatedSellerOrder->store->name} marked its part of order #{$number} as {$status}.")
                     ."\n\nView your order: ".route('orders.show', $updatedSellerOrder->order_id),
                 );
-            } catch (\Throwable $exception) {
+            } catch (Throwable $exception) {
                 report($exception);
             }
         });

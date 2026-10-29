@@ -3,7 +3,7 @@
     @php($itemCount = $cart->items->sum('quantity'))
     @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City', 'province' => 'Province', 'postal_code' => 'Postal code'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
-    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->hasAny(['payment_method', 'wallet_notice']) ? 2 : ($errors->has('delivery_note') ? 3 : 1)))
+    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->has('delivery_note') ? 3 : 1)))
     @php($fieldInput = 'min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
 
     {{-- Room at the foot so the fixed phone action bar never covers the last of the form. --}}
@@ -15,7 +15,7 @@
             summaryOpen: false,
             method: @js(old('payment_method', 'cod')),
             methodLabels: @js(\App\Models\Payment::METHOD_LABELS),
-            get placeLabel() { return this.method === 'cod' ? 'Place order' : (this.method === 'bank' ? 'Place order & show bank details' : 'Place order & show ' + this.methodLabels[this.method] + ' QR') },
+            get placeLabel() { return this.method === 'cod' ? 'Place order' : 'Place order & pay with ' + this.methodLabels[this.method] },
             fields: @js(array_keys($addressFields)),
             addresses: @js($addresses->map(fn ($address) => $address->only(['id', 'recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']))),
             choice: @js(session()->hasOldInput() || $addresses->isEmpty() ? 'new' : $addresses->first()->id),
@@ -74,19 +74,13 @@
                 this.reveal(1, document.getElementById(invalid[0]));
                 return false;
             },
-            validPayment() {
-                if (this.$refs.form.noValidate || this.method === 'cod' || this.$refs.walletNotice.checked) return true;
-                this.issues.wallet_notice = 'Tick the box to confirm you understand how paying a store directly works.';
-                this.reveal(2, this.$refs.walletNotice);
-                return false;
-            },
             next() {
                 if (this.step === 1 && this.validAddress()) { this.complete(1); this.open(2) }
-                else if (this.step === 2 && this.validPayment()) { this.complete(2); this.open(3) }
+                else if (this.step === 2) { this.complete(2); this.open(3) }
             },
-            place(event) { if (! this.validAddress() || ! this.validPayment()) event.preventDefault() },
+            place(event) { if (! this.validAddress()) event.preventDefault() },
             {{-- The phone bar's button stays type=button: swapping it to submit mid-click would place the order a step early. --}}
-            submit() { if (this.validAddress() && this.validPayment()) this.$refs.form.requestSubmit() },
+            submit() { if (this.validAddress()) this.$refs.form.requestSubmit() },
         }">
             <a href="{{ route('cart.index') }}" class="inline-flex min-h-10 items-center gap-1.5 text-[13px] font-semibold text-brand transition-colors hover:text-brand-hover">
                 <svg class="size-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
@@ -192,20 +186,21 @@
                                 <legend class="sr-only">Payment method</legend>
                                 @foreach ([
                                     'cod' => ['label' => 'Cash on delivery', 'hint' => 'Pay ₱'.number_format($subtotal, 2).' when it arrives.', 'tile' => 'bg-[#EEF3FF] text-brand'],
-                                    'gcash' => ['label' => 'GCash', 'hint' => 'Scan each store\'s QR after ordering.', 'tile' => 'bg-[#0070F0] text-white'],
-                                    'maya' => ['label' => 'Maya', 'hint' => 'Scan each store\'s Maya QR after ordering.', 'tile' => 'bg-[#101820] text-[#3DDC84]'],
-                                    'bank' => ['label' => 'Bank transfer', 'hint' => 'InstaPay or PESONet to each store.', 'tile' => 'bg-slate-100 text-slate-600'],
+                                    'gcash' => ['label' => 'GCash', 'tile' => 'bg-[#0070F0] text-white'],
+                                    'maya' => ['label' => 'Maya', 'tile' => 'bg-[#101820] text-[#3DDC84]'],
+                                    'card' => ['label' => 'Credit or debit card', 'tile' => 'bg-slate-100 text-slate-600'],
                                 ] as $method => $option)
-                                    @continue($method !== 'cod' && ! in_array($method, $walletMethods, true))
+                                    @continue($method !== 'cod' && ! isset($onlineFees[$method]))
+                                    @php($option['hint'] ??= 'Pay now · ₱'.number_format($onlineFees[$method], 2).' payment fee.')
                                     <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-[13px] transition hover:border-[#CBD4E0] has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand">
                                         <input type="radio" name="payment_method" value="{{ $method }}" x-model="method" @checked(old('payment_method', 'cod') === $method) class="size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
                                         <span class="min-w-0"><span class="block text-sm font-semibold leading-[1.35] text-ink">{{ $option['label'] }}</span><span class="mt-0.5 block text-[12.5px] leading-[1.45] text-muted">{{ $option['hint'] }}</span></span>
                                         <span class="grid size-[30px] place-items-center rounded-lg text-xs font-bold leading-none {{ $option['tile'] }}" aria-hidden="true">
                                             @switch($method)
                                                 @case('cod')<svg class="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path stroke-linecap="round" d="M6 9.5h.01M18 14.5h.01"/></svg>@break
-                                                @case('gcash')G@break
-                                                @case('maya')M@break
-                                                @case('bank')<svg class="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18"/></svg>@break
+                                                @case('gcash'){{ 'G' }}@break
+                                                @case('maya'){{ 'M' }}@break
+                                                @case('card')<svg class="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6 15h3"/></svg>@break
                                             @endswitch
                                         </span>
                                     </label>
@@ -218,39 +213,17 @@
                                 <p><strong class="font-semibold text-ink">No card needed.</strong> Hand <strong class="font-semibold text-ink">₱{{ number_format($subtotal, 2) }}</strong> to the courier when your order arrives.</p>
                             </div>
 
-                            @if ($walletMethods !== [])
-                                <div x-cloak x-show="method !== 'cod'" class="mt-3.5 rounded-xl border border-[#D6E2FB] bg-[#F8FAFF] p-4" role="group" aria-labelledby="direct-pay-heading">
-                                    <div class="flex flex-wrap items-center justify-between gap-2">
-                                        <p id="direct-pay-heading" class="text-[13.5px] font-semibold text-ink">Paying by <span x-text="methodLabels[method]"></span></p>
-                                        <span class="rounded-full bg-[#E8EFFF] px-[9px] py-[3px] text-[11.5px] font-semibold text-brand-hover">{{ $storeTotals->count() }} {{ Str::plural('store', $storeTotals->count()) }} · paid separately</span>
-                                    </div>
-                                    <ul class="mt-3 grid grid-cols-2 gap-2 max-sm:grid-cols-1" role="list">
-                                        @foreach ($storeTotals as $storeTotal)
-                                            <li class="flex items-center justify-between gap-2.5 rounded-[9px] border border-line bg-white px-2.5 py-2 text-xs font-semibold text-ink"><span class="min-w-0 truncate">{{ $storeTotal['name'] }}</span><span class="whitespace-nowrap tabular-nums">₱{{ number_format($storeTotal['total'], 2) }}</span></li>
-                                        @endforeach
-                                    </ul>
-                                    <ol class="mt-3 grid grid-cols-3 gap-2.5 max-sm:grid-cols-1">
-                                        @foreach ([
-                                            ['Place your order', 'Items are held for <span x-text="method === \'bank\' ? '.(int) config('marketplace.wallet.payment_hours.bank').' : '.(int) config('marketplace.wallet.payment_hours.gcash').'"></span> hours.'],
-                                            ['Pay each store', 'Scan its QR or send to its <span x-text="method === \'bank\' ? \'account\' : \'number\'"></span>, exact amount.'],
-                                            ['Send the reference', 'The store confirms, then ships.'],
-                                        ] as [$heading, $detail])
-                                            <li class="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2">
-                                                <span class="grid size-5 place-items-center rounded-full bg-[#E8EFFF] text-[11px] font-bold leading-none text-brand-hover" aria-hidden="true">{{ $loop->iteration }}</span>
-                                                <span><strong class="block text-[12.5px] font-semibold leading-[1.35] text-ink">{{ $heading }}</strong><small class="mt-px block text-xs leading-[1.4] text-muted">{!! $detail !!}</small></span>
-                                            </li>
-                                        @endforeach
-                                    </ol>
-                                    <div class="mt-3 flex gap-2 border-t border-[#D6E2FB] pt-3 text-[12.5px] leading-normal text-muted" role="note">
-                                        <svg class="mt-0.5 size-[15px] shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3 4.5 6v6c0 4.4 3.2 7.7 7.5 9 4.3-1.3 7.5-4.6 7.5-9V6L12 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4"/></svg>
-                                        <p>Your money goes <strong class="font-semibold text-ink">straight to each store</strong>. JMMart never holds it, so we can't reverse a transfer; refunds come from the store or your bank's or e-wallet's dispute process. We keep your reference number, review order help requests, and can suspend stores that don't deliver or refund. <strong class="font-semibold text-ink">Only pay the QR or account shown on your JMMart order page</strong>, and never share your MPIN or OTP.</p>
-                                    </div>
-                                    <label class="mt-2.5 flex cursor-pointer items-start gap-[9px] text-[12.5px] font-medium leading-[1.45] text-ink">
-                                        <input type="checkbox" name="wallet_notice" value="1" x-ref="walletNotice" @change="delete issues.wallet_notice" :required="method !== 'cod'" @checked(old('wallet_notice')) class="mt-px size-4 rounded border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
-                                        <span>I understand how paying a store directly works, as explained in the <a href="{{ route('terms') }}#wallet-payments" target="_blank" class="font-semibold text-brand underline underline-offset-2">Terms of Use</a>.</span>
-                                    </label>
+                            @if ($onlineFees !== [])
+                                <div x-cloak x-show="method !== 'cod'" class="mt-3.5 rounded-xl border border-[#D6E2FB] bg-[#F8FAFF] p-4" role="group" aria-labelledby="online-pay-heading">
+                                    <p id="online-pay-heading" class="text-[13.5px] font-semibold text-ink">One secure payment{{ $storeTotals->count() > 1 ? ' for all '.$storeTotals->count().' stores' : '' }}</p>
+                                    <p class="mt-1 text-[12.5px] leading-normal text-muted">After you place the order you’ll pay on PayMongo’s secure page. Each store receives its share automatically; there’s nothing to send or confirm yourself.</p>
+                                    <dl class="mt-3 grid gap-1.5 border-t border-[#D6E2FB] pt-3 text-[13px]">
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">Items</dt><dd class="tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div>
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">Payment fee <span class="text-xs">(PayMongo)</span></dt><dd class="tabular-nums text-ink">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)">₱{{ number_format($fee, 2) }}</span>@endforeach</dd></div>
+                                        <div class="flex justify-between gap-3 font-semibold text-ink"><dt>You pay now</dt><dd class="tabular-nums">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)">₱{{ number_format(bcadd($subtotal, $fee, 2), 2) }}</span>@endforeach</dd></div>
+                                    </dl>
+                                    <p class="mt-2 text-xs leading-normal text-muted">Items are held for {{ (int) config('marketplace.online_payment.payment_hours') }} hours while you pay. A cancelled store order is refunded to you through PayMongo; the payment fee is not refunded.</p>
                                 </div>
-                                <p x-show="issues.wallet_notice && method !== 'cod'" x-text="issues.wallet_notice" class="mt-2 text-[12.5px] font-medium text-danger" @unless ($errors->has('wallet_notice')) style="display: none" @endunless role="alert">{{ $errors->first('wallet_notice') }}</p>
                             @endif
 
                             <div class="mt-5 flex items-center justify-end gap-3.5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-1">
@@ -269,7 +242,7 @@
                                     <button type="button" @click="open(1)" class="inline-flex min-h-10 shrink-0 items-center text-[12.5px] font-semibold text-brand underline-offset-[3px] hover:text-brand-hover hover:underline">Change</button>
                                 </div>
                                 <div class="flex items-start justify-between gap-4 border-b border-line py-3">
-                                    <div class="min-w-0"><dt class="text-xs font-medium text-muted">Payment</dt><dd class="mt-0.5 text-[13px] leading-normal text-ink" x-text="method === 'cod' ? 'Cash on delivery · Pay when your order arrives' : methodLabels[method] + ' · Pay each store after you order'"></dd></div>
+                                    <div class="min-w-0"><dt class="text-xs font-medium text-muted">Payment</dt><dd class="mt-0.5 text-[13px] leading-normal text-ink" x-text="method === 'cod' ? 'Cash on delivery · Pay when your order arrives' : methodLabels[method] + ' · Pay on PayMongo right after you order'"></dd></div>
                                     <button type="button" @click="open(2)" class="inline-flex min-h-10 shrink-0 items-center text-[12.5px] font-semibold text-brand underline-offset-[3px] hover:text-brand-hover hover:underline">Change</button>
                                 </div>
                             </dl>
@@ -287,7 +260,7 @@
 
                             <div class="mt-5 grid gap-3">
                                 <button type="submit" @click="place($event)" :disabled="placing" class="flex min-h-[46px] w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-sm:hidden" x-text="placing ? 'Placing order…' : (method === 'cod' ? 'Place order · ₱{{ number_format($subtotal, 2) }}' : placeLabel)">Place order · ₱{{ number_format($subtotal, 2) }}</button>
-                                <p class="text-center text-xs leading-normal text-muted max-sm:hidden" x-text="method === 'cod' ? 'You will pay on delivery.' : 'Each store\'s payment details appear on the next screen. Nothing is paid until you send it.'">You will pay on delivery.</p>
+                                <p class="text-center text-xs leading-normal text-muted max-sm:hidden" x-text="method === 'cod' ? 'You will pay on delivery.' : 'You’ll pay on PayMongo’s secure page next.'">You will pay on delivery.</p>
                                 <button type="button" @click="open(2)" class="inline-flex min-h-11 items-center justify-center gap-1.5 justify-self-center text-[13px] font-semibold text-muted transition-colors hover:text-ink">
                                     <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
                                     Back to payment

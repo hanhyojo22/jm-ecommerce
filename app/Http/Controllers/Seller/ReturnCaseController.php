@@ -8,6 +8,7 @@ use App\Models\ReturnCase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ReturnCaseController extends Controller
@@ -82,8 +83,9 @@ class ReturnCaseController extends Controller
             'return_waived' => ['nullable', 'boolean'],
             'return_instructions' => ['nullable', 'string', 'max:2000'],
             'return_method' => ['nullable', 'string', 'max:500'],
-            'paid_at' => ['required_if:action,refund', 'nullable', 'date', 'before_or_equal:today'],
-            'proof' => ['required_if:action,refund', 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+            // An online payment is refunded through PayMongo, so only a COD refund needs a date and receipt.
+            'paid_at' => [Rule::requiredIf($request->input('action') === 'refund' && ! $case->sellerOrder->order->payment?->isOnline()), 'nullable', 'date', 'before_or_equal:today'],
+            'proof' => [Rule::requiredIf($request->input('action') === 'refund' && ! $case->sellerOrder->order->payment?->isOnline()), 'nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'reference' => ['required_if:action,ship', 'nullable', 'string', 'max:255'],
             'case_item_id' => ['required_if:action,restock', 'nullable', 'ulid'],
             'quantity' => ['required_if:action,restock', 'nullable', 'integer', 'min:1'],

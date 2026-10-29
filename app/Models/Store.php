@@ -12,17 +12,15 @@ class Store extends Model
 {
     use HasUlids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', 'gcash_number', 'gcash_qr_path', 'maya_number', 'maya_qr_path', 'bank_name', 'bank_account_name', 'bank_number', 'bank_qr_path'];
+    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', 'paymongo_account_id', 'paymongo_account_status'];
 
     /**
-     * A store takes a GCash or Maya payment once buyers have its number and QR. A bank transfer
-     * needs the bank, account name, and number instead; its QR Ph code is optional.
+     * A store takes online payments once PayMongo has activated its child account, because the
+     * checkout splits the store's share straight to that account.
      */
-    public function acceptsWallet(string $method): bool
+    public function acceptsOnlinePayments(): bool
     {
-        return $method === 'bank'
-            ? filled($this->bank_name) && filled($this->bank_account_name) && filled($this->bank_number)
-            : filled($this->{$method.'_number'}) && filled($this->{$method.'_qr_path'});
+        return filled($this->paymongo_account_id) && $this->paymongo_account_status === 'activated';
     }
 
     public function tenant(): BelongsTo

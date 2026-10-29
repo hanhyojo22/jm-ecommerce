@@ -2,11 +2,13 @@
 
 use App\Actions\IssuePlatformFeeStatements;
 use App\Actions\UpdateSellerOrderStatus;
+use App\Models\Payment;
 use App\Models\PlatformFeeStatement;
 use App\Models\ReturnCase;
 use App\Models\SellerOrder;
 use App\Models\User;
 use App\Services\GmailOrderMailer;
+use App\Services\PayMongo;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -79,15 +81,15 @@ Artisan::command('orders:auto-deliver', function (UpdateSellerOrderStatus $updat
     $this->info("Marked {$delivered} shipped store order(s) delivered.");
 })->purpose('Mark store orders delivered when the buyer never confirms them')->daily();
 
-Artisan::command('orders:cancel-unpaid', function (UpdateSellerOrderStatus $updateStatus): void {
-    // A buyer who sent a reference may have paid, so only orders with no reference at all are released.
-    $sellerOrders = collect(config('marketplace.wallet.payment_hours'))->flatMap(fn (int $hours, string $method) => SellerOrder::query()
+Artisan::command('orders:cancel-unpaid', function (UpdateSellerOrderStatus $updateStatus, PayMongo $payMongo): void {
+    // An online order the buyer never paid holds stock, so it is released after the payment window.
+    $sellerOrders = SellerOrder::query()
+        ->with('order.payment')
         ->where('status', 'pending')
         ->whereNull('cod_collected_at')
-        ->whereNull('payment_reference')
-        ->where('created_at', '<', now()->subHours($hours))
-        ->whereHas('order.payment', fn ($query) => $query->where('method', $method))
-        ->get());
+        ->where('created_at', '<', now()->subHours((int) config('marketplace.online_payment.payment_hours')))
+        ->whereHas('order.payment', fn ($query) => $query->whereIn('method', [...Payment::ONLINE_METHODS, 'bank'])->where('status', 'pending'))
+        ->get();
     $cancelled = 0;
 
     foreach ($sellerOrders as $sellerOrder) {
@@ -99,8 +101,17 @@ Artisan::command('orders:cancel-unpaid', function (UpdateSellerOrderStatus $upda
         }
     }
 
-    $this->info("Cancelled {$cancelled} unpaid direct-payment store order(s).");
-})->purpose('Release stock held by GCash, Maya, and bank transfer orders the buyer never paid')->hourly();
+    // A late payment on a released order would only be refunded, so the checkout is closed too.
+    foreach ($sellerOrders->pluck('order.payment')->unique('id')->filter(fn ($payment): bool => $payment->checkout_session_id !== null) as $payment) {
+        try {
+            $payMongo->expireCheckoutSession($payment->checkout_session_id);
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    $this->info("Cancelled {$cancelled} unpaid online store order(s).");
+})->purpose('Release stock held by online orders the buyer never paid')->hourly();
 
 Artisan::command('platform-fees:bill {month? : The month to bill as YYYY-MM; defaults to last month}', function (IssuePlatformFeeStatements $issue, GmailOrderMailer $mailer): int {
     $requested = $this->argument('month');

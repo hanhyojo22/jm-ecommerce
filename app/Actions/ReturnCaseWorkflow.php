@@ -17,6 +17,8 @@ use Illuminate\Validation\ValidationException;
 
 class ReturnCaseWorkflow
 {
+    public function __construct(private RefundOnlinePayment $refundOnlinePayment) {}
+
     /**
      * What each notified case action means to the buyer and the seller. A type that is absent
      * here changes nothing either side has to act on, so it is recorded without an email.
@@ -148,6 +150,14 @@ class ReturnCaseWorkflow
                         throw ValidationException::withMessages(['action' => 'No cash has been collected for this store order, so there is nothing to refund. Record the collection first, or ask support to change the remedy.']);
                     }
                     $amount = $case->items->reduce(fn (string $sum, ReturnCaseItem $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
+                    // An online payment is refunded through PayMongo, so there is no transfer receipt to upload.
+                    if ($case->sellerOrder->order->payment?->isOnline()) {
+                        $refundId = $this->refundOnlinePayment->refund($case->sellerOrder, $amount);
+                        $case->outcome()->create(['recorded_by' => $actor->id, 'kind' => 'refund', 'amount' => $amount, 'paid_at' => now(), 'created_at' => now()]);
+                        $changes = ['status' => 'awaiting_confirmation', 'buyer_respond_by' => now()->addDays(7)];
+                        $eventData = ['refund_amount' => $amount, 'gateway_refund_id' => $refundId];
+                        break;
+                    }
                     $proof = $this->evidence($case, $actor, 'refund', $data['proof']);
                     $case->outcome()->create(['recorded_by' => $actor->id, 'kind' => 'refund', 'amount' => $amount, 'paid_at' => $data['paid_at'], 'proof_evidence_id' => $proof->id, 'created_at' => now()]);
                     $changes = ['status' => 'awaiting_confirmation', 'buyer_respond_by' => now()->addDays(7)];

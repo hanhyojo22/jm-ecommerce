@@ -6,16 +6,13 @@ use App\Actions\StorePublicImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateStoreSettingsRequest;
 use App\Models\AuditLog;
-use App\Models\Payment;
 use App\Models\Store;
 use App\Models\Tenant;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Throwable;
 
 class StoreSettingsController extends Controller
@@ -107,101 +104,6 @@ class StoreSettingsController extends Controller
         }
 
         return to_route('seller.store-settings.edit')->with('status', 'Store details saved.');
-    }
-
-    /**
-     * Sets up, edits, or turns off one way buyers pay this store directly. Each method saves on its
-     * own so editing Maya can never clear GCash. A method is offered at checkout only once it is
-     * complete (see Store::acceptsWallet).
-     */
-    public function updateWallets(Request $request, StorePublicImage $storePublicImage): RedirectResponse
-    {
-        $tenant = $this->managedTenant($request);
-        $method = $request->validate(['method' => ['required', Rule::in(Payment::DIRECT_METHODS)]])['method'];
-        $label = Payment::METHOD_LABELS[$method];
-        $fields = $method === 'bank' ? ['bank_name', 'bank_account_name', 'bank_number', 'bank_qr_path'] : ["{$method}_number", "{$method}_qr_path"];
-
-        if ($request->boolean('disable')) {
-            $this->saveWalletFields($request, $tenant, $fields, array_fill_keys($fields, null));
-
-            return to_route('seller.store-settings.edit')->with('status', "{$label} is turned off. Buyers can no longer choose it at checkout.");
-        }
-
-        // Sellers copy numbers as "0917 123 4567" or "+63 917-123-4567"; store them as plain digits.
-        if (is_string($request->input("{$method}_number"))) {
-            $request->merge(["{$method}_number" => preg_replace('/[\s-]+/', '', $request->input("{$method}_number"))]);
-        }
-        $rules = [
-            "{$method}_number" => $method === 'bank' ? ['required', 'string', 'regex:/^\d{6,30}$/'] : ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
-            "{$method}_qr" => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-        ];
-        if ($method === 'bank') {
-            $rules['bank_name'] = ['required', 'string', 'max:100'];
-            $rules['bank_account_name'] = ['required', 'string', 'max:150'];
-        }
-        $data = $request->validate($rules, [
-            "{$method}_number.required" => $method === 'bank' ? 'Enter the account number.' : "Enter your {$label} mobile number.",
-            "{$method}_number.regex" => $method === 'bank' ? 'Enter the account number using digits only.' : 'Enter a mobile number like 09171234567.',
-            'bank_name.required' => 'Enter the bank name.',
-            'bank_account_name.required' => 'Enter the account name exactly as it appears on the account.',
-        ]);
-
-        try {
-            $uploadedPath = $request->hasFile("{$method}_qr") ? $storePublicImage->handle($request->file("{$method}_qr"), 'store-wallet-qr', 'public') : null;
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return back()->withErrors(["{$method}_qr" => 'The QR code could not be uploaded. Please try again.'])->withInput();
-        }
-
-        $values = Arr::only($data, array_diff($fields, ["{$method}_qr_path"]));
-        if ($uploadedPath !== null) {
-            $values["{$method}_qr_path"] = $uploadedPath;
-        }
-
-        try {
-            $this->saveWalletFields($request, $tenant, $fields, $values);
-        } catch (Throwable $exception) {
-            $this->deleteUploadedLogo($uploadedPath);
-            report($exception);
-
-            return back()->withErrors(["{$method}_number" => "We could not save your {$label} details. Please try again."])->withInput();
-        }
-
-        $store = $tenant->store()->first();
-
-        return to_route('seller.store-settings.edit')->with('status', $store->acceptsWallet($method)
-            ? "{$label} saved. Buyers can now choose it at checkout."
-            : "{$label} saved. Add your QR code to offer it at checkout.");
-    }
-
-    /**
-     * @param  array<int, string>  $fields
-     * @param  array<string, ?string>  $values
-     */
-    private function saveWalletFields(Request $request, Tenant $tenant, array $fields, array $values): void
-    {
-        $replacedQrPath = DB::transaction(function () use ($request, $tenant, $fields, $values): ?string {
-            $store = Store::query()->where('tenant_id', $tenant->id)->lockForUpdate()->firstOrFail();
-            $oldValues = $store->only($fields);
-            $store->update($values);
-
-            AuditLog::query()->create([
-                'actor_user_id' => $request->user()->id,
-                'action' => 'store.wallets_updated',
-                'entity_type' => Store::class,
-                'entity_id' => $store->id,
-                'old_values' => $oldValues,
-                'new_values' => [...$oldValues, ...$values],
-                'ip_address' => $request->ip(),
-            ]);
-
-            $qrField = collect($fields)->first(fn (string $field): bool => str_ends_with($field, '_qr_path'));
-
-            return array_key_exists($qrField, $values) && $oldValues[$qrField] !== $values[$qrField] ? $oldValues[$qrField] : null;
-        });
-
-        $this->deleteUploadedLogo($replacedQrPath);
     }
 
     public function undo(Request $request): RedirectResponse

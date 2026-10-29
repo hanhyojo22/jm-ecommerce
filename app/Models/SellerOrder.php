@@ -22,8 +22,7 @@ class SellerOrder extends Model
         'shipped_at',
         'delivered_at',
         'cod_collected_at',
-        'payment_reference',
-        'refund_reference',
+        'gateway_refund_id',
     ];
 
     protected function casts(): array
@@ -49,6 +48,11 @@ class SellerOrder extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 
     public function store(): BelongsTo

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Actions\CheckoutCart;
+use App\Actions\StartOnlinePayment;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Services\GmailOrderMailer;
@@ -59,7 +60,7 @@ class CheckoutController extends Controller
             ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
         $stores = $cart->items->pluck('product.store')->unique('id');
-        // Each store is paid separately by GCash, Maya, or bank, so checkout shows what each one is owed.
+        // One online payment is split between the stores, so checkout still shows what each one gets.
         $storeTotals = $cart->items->groupBy(fn ($item) => $item->product->store_id)->map(fn ($storeItems) => [
             'name' => $storeItems->first()->product->store->name,
             'total' => $storeItems->reduce(fn (string $sum, $item): string => bcadd($sum, (string) $item->line_total, 2), '0.00'),
@@ -68,7 +69,10 @@ class CheckoutController extends Controller
         return view('marketplace.checkout.create', [
             'orderLimitReached' => $request->user()->hasReachedCodOrderLimit(),
             'storeTotals' => $storeTotals,
-            'walletMethods' => array_values(array_filter(Payment::DIRECT_METHODS, fn (string $method): bool => $stores->every(fn ($store): bool => $store->acceptsWallet($method)))),
+            // Online payment needs every store in the order to be connected to PayMongo.
+            'onlineFees' => $stores->every(fn ($store): bool => $store->acceptsOnlinePayments())
+                ? collect(Payment::ONLINE_METHODS)->mapWithKeys(fn (string $method): array => [$method => StartOnlinePayment::buyerFee($subtotal, $method)])->all()
+                : [],
             'cart' => $cart,
             'subtotal' => $subtotal,
             'addresses' => $addresses,
@@ -86,14 +90,13 @@ class CheckoutController extends Controller
             'province' => ['required', 'string', 'max:100'],
             'postal_code' => ['required', 'regex:/^\d{4}$/'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],
-            'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::DIRECT_METHODS])],
-            'wallet_notice' => ['accepted_if:payment_method,'.implode(',', Payment::DIRECT_METHODS)],
-        ], ['wallet_notice.accepted_if' => 'Confirm that you understand how paying a store directly works.']);
+            'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
+        ]);
         $paymentMethod = $data['payment_method'] ?? 'cod';
-        $order = $checkout->handle($request->user(), Arr::except($data, ['payment_method', 'wallet_notice']), $paymentMethod, $request->ip());
+        $order = $checkout->handle($request->user(), Arr::except($data, ['payment_method']), $paymentMethod);
         $paymentNote = $paymentMethod === 'cod'
             ? 'payable on delivery. Each store confirms its delivery timing.'
-            : 'paid by '.Payment::METHOD_LABELS[$paymentMethod].'. Pay each store from your order page so they can confirm and ship. Only pay the QR code or account shown on your JMMart order page, never one sent by chat or text, and never share your MPIN or OTP.';
+            : 'to be paid by '.Payment::METHOD_LABELS[$paymentMethod].'. If you left the payment page, pay from your order page so the stores can confirm and ship.';
         $buyer = $request->user();
 
         /*
@@ -114,6 +117,6 @@ class CheckoutController extends Controller
             }
         });
 
-        return to_route('orders.placed', $order);
+        return $paymentMethod === 'cod' ? to_route('orders.placed', $order) : to_route('orders.pay', $order);
     }
 }

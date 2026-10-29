@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['__session']);
-        $middleware->validateCsrfTokens(except: ['clerk/webhook']);
+        $middleware->validateCsrfTokens(except: ['clerk/webhook', 'paymongo/webhook']);
         $middleware->append(SecurityHeaders::class);
 
         /*

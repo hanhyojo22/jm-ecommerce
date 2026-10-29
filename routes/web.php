@@ -26,9 +26,11 @@ use App\Http\Controllers\Marketplace\OrderIssueController;
 use App\Http\Controllers\Marketplace\ProductDiscussionController;
 use App\Http\Controllers\Marketplace\ProductReviewController as MarketplaceProductReviewController;
 use App\Http\Controllers\Marketplace\ReturnCaseController as BuyerReturnCaseController;
+use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\EarningController;
+use App\Http\Controllers\Seller\OnlinePaymentsController;
 use App\Http\Controllers\Seller\PlatformFeeController as SellerPlatformFeeController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
@@ -56,6 +58,7 @@ Route::get('/stores', [CatalogController::class, 'stores'])->name('catalog.store
 Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalog.store');
 Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('catalog.show');
 Route::post('/clerk/webhook', ClerkWebhookController::class)->middleware('throttle:60,1')->name('clerk.webhook');
+Route::post('/paymongo/webhook', PayMongoWebhookController::class)->middleware('throttle:120,1')->name('paymongo.webhook');
 
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -70,7 +73,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/placed', [OrderController::class, 'placed'])->name('orders.placed');
-    Route::patch('/orders/seller-orders/{sellerOrder}/payment-reference', [OrderController::class, 'paymentReference'])->middleware('throttle:10,1')->name('orders.payment-reference');
+    Route::get('/orders/{order}/pay', [OrderController::class, 'pay'])->middleware('throttle:10,1')->name('orders.pay');
     Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])->middleware('throttle:10,1')->name('orders.received');
     Route::post('/orders/store-orders/{sellerOrder}/issues', [OrderIssueController::class, 'store'])->middleware('throttle:10,1')->name('order-issues.store');
     Route::post('/orders/store-orders/{sellerOrder}/returns', [BuyerReturnCaseController::class, 'store'])->middleware('throttle:10,1')->name('returns.store');
@@ -125,7 +128,8 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::get('/seller', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
     Route::get('/seller/store-settings', [StoreSettingsController::class, 'edit'])->name('seller.store-settings.edit');
     Route::patch('/seller/store-settings', [StoreSettingsController::class, 'update'])->middleware('throttle:10,1')->name('seller.store-settings.update');
-    Route::patch('/seller/store-settings/wallets', [StoreSettingsController::class, 'updateWallets'])->middleware('throttle:10,1')->name('seller.store-settings.wallets');
+    Route::post('/seller/online-payments', [OnlinePaymentsController::class, 'store'])->middleware('throttle:10,1')->name('seller.online-payments.store');
+    Route::post('/seller/online-payments/refresh', [OnlinePaymentsController::class, 'refresh'])->middleware('throttle:10,1')->name('seller.online-payments.refresh');
     Route::post('/seller/store-settings/undo', [StoreSettingsController::class, 'undo'])->middleware('throttle:10,1')->name('seller.store-settings.undo');
     Route::get('/seller/products', [ProductController::class, 'index'])->name('seller.products.index');
     Route::post('/seller/products/bulk-deactivate', [ProductController::class, 'bulkDeactivate'])->middleware('throttle:10,1')->name('seller.products.bulk-deactivate');

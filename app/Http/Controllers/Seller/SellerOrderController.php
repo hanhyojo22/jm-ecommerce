@@ -129,11 +129,10 @@ class SellerOrderController extends Controller
 
         $data = $request->validate([
             'status' => ['required', 'in:confirmed,processing,shipped,delivered,cancelled'],
-            'refund_reference' => ['nullable', 'string', 'max:40', 'regex:/^[0-9A-Za-z -]+$/'],
         ]);
 
         $sellerOrder->load('order');
-        $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip(), $data['refund_reference'] ?? null);
+        $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip());
 
         return back()->with('status', "Order {$sellerOrder->order->number} was marked as {$data['status']}.");
     }

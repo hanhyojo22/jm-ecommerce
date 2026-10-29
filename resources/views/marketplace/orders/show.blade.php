@@ -12,7 +12,9 @@
         $storeStep = fn (string $status): int => ['pending'=>1,'confirmed'=>2,'processing'=>2,'shipped'=>3,'delivered'=>4][$status] ?? 1;
         // The badge sits beside the store it belongs to, so naming the seller again only makes it long.
         $statusLabel = fn (string $status): string => $status === 'pending' ? 'Awaiting confirmation' : ucfirst($status);
-        $isDirectPayment = in_array($order->payment?->method, \App\Models\Payment::DIRECT_METHODS, true);
+        $isOnlinePayment = $order->payment?->isOnline() ?? false;
+        $awaitingOnlinePayment = $isOnlinePayment && $order->payment->status === 'pending'
+            && $order->sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null);
         $methodLabel = \App\Models\Payment::METHOD_LABELS[$order->payment?->method] ?? 'Cash on delivery';
         $storeCount = $order->sellerOrders->count();
         $isMultiStore = $storeCount > 1;
@@ -59,8 +61,15 @@
         </div>
         <div class="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
             <div class="space-y-6">
-                @if($isDirectPayment)
-                    @include('marketplace.orders._direct-payment')
+                @if($awaitingOnlinePayment)
+                    @php($payBy = $order->created_at->copy()->addHours((int) config('marketplace.online_payment.payment_hours')))
+                    <section id="pay-now" class="flex flex-wrap items-center justify-between gap-4 rounded-[18px] border border-[var(--color-warning-line)] bg-[var(--color-warning-wash)] p-5 sm:p-6" aria-labelledby="pay-now-heading">
+                        <div class="min-w-0 max-w-[52ch]">
+                            <h2 id="pay-now-heading" class="text-lg font-semibold text-ink">Pay ₱{{ number_format(bcadd((string) $order->total, (string) $order->payment->fee_amount, 2), 2) }} to confirm your order</h2>
+                            <p class="mt-1 text-sm leading-6 text-warning-text">Pay with {{ $methodLabel }} on PayMongo before {{ $payBy->format('M j, g:i A') }}. Unpaid orders are cancelled and the items released.</p>
+                        </div>
+                        <a href="{{ route('orders.pay', $order) }}" class="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Pay now</a>
+                    </section>
                 @endif
                 <section class="rounded-[18px] border border-line bg-surface p-5 shadow-sm sm:p-6">
                     @if($order->status === 'cancelled')
@@ -83,7 +92,7 @@
                     <h2 id="delivery-payment-heading" class="text-lg font-semibold text-ink">Delivery &amp; payment</h2>
                     <div class="mt-5 grid gap-6 sm:grid-cols-2">
                         <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Delivery address</h3><address class="mt-3 not-italic text-sm leading-6 text-muted">@if($order->recipient_name)<p class="font-semibold text-ink">{{ $order->recipient_name }}</p>@endif @if($order->address_line)<p>{{ $order->address_line }}</p>@endif @if($order->city || $order->province || $order->postal_code)<p>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endif @if($order->phone)<p class="mt-2">{{ $order->phone }}</p>@endif @if($order->delivery_note)<p class="mt-2 whitespace-pre-line"><span class="font-semibold text-ink">Delivery note:</span> {{ $order->delivery_note }}</p>@endif</address></div>
-                        <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Payment method</h3><p class="mt-3 text-sm font-semibold text-ink">{{ $methodLabel }}</p><p class="mt-1 text-sm leading-6 text-muted">{{ $isDirectPayment ? 'Paid directly to each store, which confirms it before shipping. Shipping is free.' : 'Payment is due when the order arrives. Shipping is free.' }}</p></div>
+                        <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Payment method</h3><p class="mt-3 text-sm font-semibold text-ink">{{ $methodLabel }}</p><p class="mt-1 text-sm leading-6 text-muted">{{ $isOnlinePayment ? ($order->payment->status === 'paid' ? 'Paid' : 'Pay').' online through PayMongo; each store receives its share automatically. Shipping is free.' : 'Payment is due when the order arrives. Shipping is free.' }}</p></div>
                     </div>
                 </section>
                 @include('marketplace.orders._returns')
@@ -104,15 +113,14 @@
                             <ul class="mt-3 space-y-1 text-xs text-muted">
                                 @foreach ($order->sellerOrders as $sellerOrder)
                                     <li>{{ $sellerOrder->store->name }}: {{ match (true) {
-                                        $sellerOrder->status === 'cancelled' => 'cancelled'.($sellerOrder->refund_reference ? ', refunded (ref. '.$sellerOrder->refund_reference.')' : ''),
-                                        ! $isDirectPayment => $sellerOrder->cod_collected_at ? 'COD collected' : 'COD collection not recorded',
-                                        $sellerOrder->cod_collected_at !== null => 'payment confirmed',
-                                        $sellerOrder->payment_reference !== null => 'reference sent',
-                                        default => 'to pay',
+                                        $sellerOrder->status === 'cancelled' => 'cancelled'.($sellerOrder->gateway_refund_id ? ', refunded' : ($isOnlinePayment && $sellerOrder->cod_collected_at ? ', refund pending' : '')),
+                                        ! $isOnlinePayment => $sellerOrder->cod_collected_at ? 'COD collected' : 'COD collection not recorded',
+                                        $sellerOrder->cod_collected_at !== null => 'paid',
+                                        default => 'awaiting payment',
                                     } }}</li>
                                 @endforeach
                             </ul>
-                            @if ($isDirectPayment)<a href="#pay-stores" class="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:text-brand-hover">Payment details →</a>@endif
+                            @if (bccomp((string) $order->payment->fee_amount, '0', 2) > 0)<p class="mt-2 text-xs text-muted">Includes a ₱{{ number_format($order->payment->fee_amount, 2) }} PayMongo payment fee, paid on top of the total.</p>@endif
                         @else
                             <p class="mt-2 text-sm text-muted">Payment details unavailable.</p>
                         @endif

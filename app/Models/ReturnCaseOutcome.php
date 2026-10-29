@@ -31,7 +31,8 @@ class ReturnCaseOutcome extends Model
                 ? SellerEarning::query()->whereHas('sellerOrder.returnCases', fn ($query) => $query->whereKey($outcome->return_case_id))->first()
                 : null;
 
-            if ($earning === null) {
+            // An online refund already gives back JMMart's share of the split, so there is nothing to credit.
+            if ($earning === null || $earning->fee_collected_at_payment) {
                 return;
             }
 

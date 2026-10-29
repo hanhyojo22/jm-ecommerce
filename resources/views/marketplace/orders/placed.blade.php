@@ -1,18 +1,23 @@
 <x-app-layout>
     @php
         $method = $order->payment?->method ?? 'cod';
-        $isCod = ! in_array($method, \App\Models\Payment::DIRECT_METHODS, true);
+        $isCod = ! ($order->payment?->isOnline() ?? false);
+        // PayMongo's webhook marks the payment paid; until then the buyer may have just paid, or not yet.
+        $isPaid = ! $isCod && $order->payment->status === 'paid';
         $methodLabel = \App\Models\Payment::METHOD_LABELS[$method];
         $storeCount = $order->sellerOrders->count();
         $itemCount = $order->sellerOrders->sum(fn ($sellerOrder) => $sellerOrder->items->sum('quantity'));
         $total = '₱'.number_format($order->total, 2);
+        $fee = (string) ($order->payment?->fee_amount ?? '0.00');
+        $charged = '₱'.number_format(bcadd((string) $order->total, $fee, 2), 2);
         $firstName = Str::before(trim((string) $order->recipient_name), ' ');
-        // Wallet orders are not paid at checkout: each store is paid directly, before this deadline.
-        $deadline = $isCod ? null : $order->created_at->copy()->addHours((int) config('marketplace.wallet.payment_hours.'.$method))->format('M j, g:i A');
+        $deadline = $isCod ? null : $order->created_at->copy()->addHours((int) config('marketplace.online_payment.payment_hours'))->format('M j, g:i A');
         $stores = $storeCount === 1 ? 'the store' : ($storeCount === 2 ? 'both stores' : 'all '.$storeCount.' stores');
-        $steps = $isCod
-            ? [['Placed', $order->created_at->format('M j, g:i A')], ['Store confirms', 'Sets its delivery timing'], ['Shipped', null], ['Delivered', 'Pay the courier']]
-            : [['Placed', $order->created_at->format('M j, g:i A')], ['You pay '.($storeCount === 1 ? 'the store' : 'each store'), 'By '.$deadline], ['Store confirms', 'Once your payment arrives'], ['Shipped & delivered', null]];
+        [$steps, $current] = match (true) {
+            $isCod => [[['Placed', $order->created_at->format('M j, g:i A')], ['Store confirms', 'Sets its delivery timing'], ['Shipped', null], ['Delivered', 'Pay the courier']], 1],
+            $isPaid => [[['Placed', $order->created_at->format('M j, g:i A')], ['Paid', 'With '.$methodLabel], ['Store confirms', 'Sets its delivery timing'], ['Shipped & delivered', null]], 2],
+            default => [[['Placed', $order->created_at->format('M j, g:i A')], ['You pay online', 'By '.$deadline], ['Store confirms', 'Once your payment arrives'], ['Shipped & delivered', null]], 1],
+        };
         $arrow = '<svg class="size-[13px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-5-5 5 5-5 5"/></svg>';
     @endphp
 
@@ -23,31 +28,34 @@
             <section class="min-w-0" aria-labelledby="placed-heading">
                 <h1 id="placed-heading" class="flex items-center gap-3 text-[44px] font-semibold leading-[1.05] tracking-[-0.035em] text-ink max-lg:text-[38px] max-sm:text-[30px]">
                     <svg class="size-[0.72em] shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.6"/><path stroke-linecap="round" stroke-linejoin="round" d="m7.5 12.3 3 3 6-6.3"/></svg>
-                    Order placed
+                    {{ $isPaid ? 'Payment successful' : 'Order placed' }}
                 </h1>
                 <p class="mt-4 max-w-[52ch] text-[17px] leading-[1.55] text-ink max-sm:text-[15.5px]">
                     @if($isCod)
                         Thanks, {{ $firstName }}. {{ ucfirst($stores) }} will confirm and ship, and you pay <strong class="font-semibold">{{ $total }}</strong> to the courier on delivery.
+                    @elseif($isPaid)
+                        Thanks, {{ $firstName }}. We received <strong class="font-semibold">{{ $charged }}</strong> by {{ $methodLabel }}. {{ ucfirst($stores) }} will confirm and ship.
                     @else
-                        Thanks, {{ $firstName }}. Your items are reserved. Pay <strong class="font-semibold">{{ $total }}</strong> to {{ $storeCount === 1 ? 'the store' : 'each store separately' }} with {{ $methodLabel }} by <strong class="font-semibold">{{ $deadline }}</strong>, or the order is cancelled.
+                        Thanks, {{ $firstName }}. Your items are reserved until <strong class="font-semibold">{{ $deadline }}</strong>. If you’ve just paid, this page updates in a moment; otherwise pay <strong class="font-semibold">{{ $charged }}</strong> with {{ $methodLabel }} now.
                     @endif
                 </p>
 
                 <div class="mt-7 flex flex-wrap items-center gap-3 print:hidden max-sm:grid max-sm:grid-cols-1">
-                    @if($isCod)
+                    @if($isCod || $isPaid)
                         <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Track order {!! $arrow !!}</a>
                     @else
-                        <a href="{{ route('orders.show', [$order, 'pay' => 1]) }}#pay-stores" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Pay {{ $storeCount === 1 ? 'store' : 'stores' }} now {!! $arrow !!}</a>
+                        <a href="{{ route('orders.pay', $order) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Pay now {!! $arrow !!}</a>
+                        <a href="{{ route('orders.placed', $order) }}" class="inline-flex min-h-12 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">I’ve paid, refresh</a>
                     @endif
                     <a href="{{ route('home') }}" class="inline-flex min-h-12 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">Continue shopping</a>
                 </div>
 
                 <ol class="mt-10 grid grid-cols-4 gap-2 max-sm:mt-8 max-sm:grid-cols-2 max-sm:gap-x-3 max-sm:gap-y-5" aria-label="What happens next">
                     @foreach($steps as $index => [$label, $note])
-                        <li class="min-w-0" @if($index === 1) aria-current="step" @endif>
-                            <span @class(['block h-1.5 rounded-full', 'bg-brand' => $index === 0, 'placed-step-now' => $index === 1, 'bg-slate-200' => $index > 1]) aria-hidden="true"></span>
-                            <p @class(['mt-3 text-[13px] leading-[1.35]', 'font-semibold text-ink' => $index <= 1, 'font-medium text-muted' => $index > 1])>{{ $label }}</p>
-                            @if($note)<p @class(['mt-0.5 text-xs leading-[1.4]', 'font-medium text-warning-text' => $index === 1 && ! $isCod, 'text-muted' => ! ($index === 1 && ! $isCod)])>{{ $note }}</p>@endif
+                        <li class="min-w-0" @if($index === $current) aria-current="step" @endif>
+                            <span @class(['block h-1.5 rounded-full', 'bg-brand' => $index < $current, 'placed-step-now' => $index === $current, 'bg-slate-200' => $index > $current]) aria-hidden="true"></span>
+                            <p @class(['mt-3 text-[13px] leading-[1.35]', 'font-semibold text-ink' => $index <= $current, 'font-medium text-muted' => $index > $current])>{{ $label }}</p>
+                            @if($note)<p @class(['mt-0.5 text-xs leading-[1.4]', 'font-medium text-warning-text' => $index === $current && ! $isCod && ! $isPaid, 'text-muted' => ! ($index === $current && ! $isCod && ! $isPaid)])>{{ $note }}</p>@endif
                         </li>
                     @endforeach
                 </ol>
@@ -61,18 +69,21 @@
                         <div class="relative px-6 pb-6 pt-5">
                             <h2 id="receipt-heading" class="text-sm font-semibold text-ink">Receipt</h2>
                             <p class="text-xs text-muted">{{ $order->created_at->format('M j, Y · g:i A') }}</p>
-                            <p class="mt-6 text-[34px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-ink max-sm:text-[31px]">{{ $total }}</p>
-                            <p class="mt-2 text-[13px] font-medium text-warning-text">{{ $isCod ? 'Due on delivery' : ($storeCount === 1 ? 'To pay the store directly' : 'To pay stores directly') }}</p>
-                            <span class="placed-stamp" aria-hidden="true"><span><strong>{{ $isCod ? 'COD' : 'To pay' }}</strong><small>{{ $isCod ? 'On delivery' : $methodLabel }}</small></span></span>
+                            <p class="mt-6 text-[34px] font-semibold leading-none tracking-[-0.035em] tabular-nums text-ink max-sm:text-[31px]">{{ $isCod ? $total : $charged }}</p>
+                            <p @class(['mt-2 text-[13px] font-medium', 'text-success' => $isPaid, 'text-warning-text' => ! $isPaid])>{{ $isCod ? 'Due on delivery' : ($isPaid ? 'Paid in full' : 'Awaiting payment') }}</p>
+                            <span @class(['placed-stamp', 'is-paid' => $isPaid]) aria-hidden="true"><span><strong>{{ $isCod ? 'COD' : ($isPaid ? 'Paid' : 'To pay') }}</strong><small>{{ $isCod ? 'On delivery' : $methodLabel }}</small></span></span>
                         </div>
 
                         <dl class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-y-2.5 [&>dd]:pl-3 px-6 pb-5 pt-6 text-[13px] leading-[1.5]">
                             <dt class="text-muted">Items ({{ $itemCount }})</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($order->subtotal, 2) }}</dd>
                             <dt class="text-muted">Shipping</dt><dd class="text-right font-semibold text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd>
-                            <dt class="border-t border-line pt-2.5 font-semibold text-ink">Total</dt><dd class="border-t border-line pt-2.5 text-right font-semibold tabular-nums text-ink">{{ $total }}</dd>
+                            @unless($isCod)
+                                <dt class="text-muted">Payment fee</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($fee, 2) }}</dd>
+                            @endunless
+                            <dt class="border-t border-line pt-2.5 font-semibold text-ink">Total</dt><dd class="border-t border-line pt-2.5 text-right font-semibold tabular-nums text-ink">{{ $isCod ? $total : $charged }}</dd>
 
                             <dt class="mt-3 border-t border-line-soft pt-4 text-muted">Payment</dt>
-                            <dd class="mt-3 border-t border-line-soft pt-4 text-ink"><span class="font-semibold">{{ $methodLabel }}</span><span class="mt-0.5 block text-xs leading-[1.45] text-muted">{{ $isCod ? 'Have '.$total.' ready for the courier.' : 'Only pay the details on your JMMart order page.' }}</span></dd>
+                            <dd class="mt-3 border-t border-line-soft pt-4 text-ink"><span class="font-semibold">{{ $methodLabel }}</span><span class="mt-0.5 block text-xs leading-[1.45] text-muted">{{ $isCod ? 'Have '.$total.' ready for the courier.' : ($isPaid ? 'Paid through PayMongo. Each store gets its share automatically.' : 'Pay on PayMongo’s secure page.') }}</span></dd>
                             <dt class="text-muted">Deliver to</dt>
                             <dd class="text-ink"><address class="not-italic">{{ $order->recipient_name }}<br>{{ $order->address_line }}<br>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}<br><span class="tabular-nums text-muted">{{ $order->phone }}</span></address></dd>
                         </dl>
@@ -101,11 +112,11 @@
 
                 <div class="mt-4 divide-y-[6px] divide-canvas overflow-hidden rounded-2xl border border-line bg-surface">
                     @foreach($order->sellerOrders as $sellerOrder)
-                        @php($sent = $sellerOrder->payment_reference !== null)
+                        @php($storePaid = $sellerOrder->cod_collected_at !== null)
                         <article aria-label="{{ $sellerOrder->store->name }}">
                             <header class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 pb-1 pt-4 max-sm:px-4">
                                 <h3 class="min-w-0 truncate text-sm font-semibold text-ink">{{ $sellerOrder->store->name }}</h3>
-                                <span @class(['inline-flex items-center gap-1.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current', 'text-brand-hover' => $isCod || $sent, 'text-warning-text' => ! $isCod && ! $sent])>{{ $isCod ? 'Awaiting confirmation' : ($sent ? 'Reference sent' : 'To pay') }}</span>
+                                <span @class(['inline-flex items-center gap-1.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current', 'text-brand-hover' => $isCod || $storePaid, 'text-warning-text' => ! $isCod && ! $storePaid])>{{ $isCod || $storePaid ? 'Awaiting confirmation' : 'To pay' }}</span>
                                 <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}" class="ml-auto print:hidden">@csrf<button class="inline-flex min-h-10 items-center gap-1 whitespace-nowrap text-xs font-semibold text-brand transition hover:text-brand-hover">Message store {!! $arrow !!}</button></form>
                             </header>
                             <ul class="divide-y divide-line-soft px-5 max-sm:px-4">
@@ -122,7 +133,7 @@
                                 @endforeach
                             </ul>
                             @if($storeCount > 1)
-                                <p class="flex justify-between gap-3 border-t border-line-soft px-5 py-3 text-xs text-muted max-sm:px-4">{{ $isCod ? 'Store subtotal' : 'Pay '.$sellerOrder->store->name }}<strong class="text-[13px] font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</strong></p>
+                                <p class="flex justify-between gap-3 border-t border-line-soft px-5 py-3 text-xs text-muted max-sm:px-4">Store subtotal<strong class="text-[13px] font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</strong></p>
                             @endif
                         </article>
                     @endforeach

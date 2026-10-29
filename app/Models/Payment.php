@@ -11,12 +11,21 @@ class Payment extends Model
 {
     use HasUlids;
 
-    /** Paid straight into the store's own GCash, Maya, or bank account; the store confirms it arrived. */
-    public const DIRECT_METHODS = ['gcash', 'maya', 'bank'];
+    /** Paid online through one PayMongo checkout that splits the money between the stores. */
+    public const ONLINE_METHODS = ['gcash', 'maya', 'card'];
 
-    public const METHOD_LABELS = ['cod' => 'Cash on delivery', 'gcash' => 'GCash', 'maya' => 'Maya', 'bank' => 'Bank transfer'];
+    /** The PayMongo payment method type each online method is limited to at checkout. */
+    public const PAYMONGO_TYPES = ['gcash' => 'gcash', 'maya' => 'paymaya', 'card' => 'card'];
 
-    protected $fillable = ['method', 'status', 'amount'];
+    // Bank transfer stays labelled for orders placed before online payments moved to PayMongo.
+    public const METHOD_LABELS = ['cod' => 'Cash on delivery', 'gcash' => 'GCash', 'maya' => 'Maya', 'card' => 'Card', 'bank' => 'Bank transfer'];
+
+    protected $fillable = ['method', 'status', 'amount', 'fee_amount', 'checkout_session_id', 'gateway_payment_id'];
+
+    public function isOnline(): bool
+    {
+        return in_array($this->method, [...self::ONLINE_METHODS, 'bank'], true);
+    }
 
     public function order(): BelongsTo
     {

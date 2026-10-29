@@ -93,6 +93,8 @@ class IssuePlatformFeeStatements
     {
         return SellerEarning::query()
             ->whereNull('platform_fee_statement_id')
+            // The online split already kept JMMart's fee, so only COD earnings are billed.
+            ->where('fee_collected_at_payment', false)
             ->where('commission_amount', '>', 0)
             ->where('available_at', '<', $periodEnd);
     }
@@ -106,7 +108,7 @@ class IssuePlatformFeeStatements
     public function preview(string $tenantId): array
     {
         $previous = $this->latestStatement($tenantId);
-        $commission = $this->sum(SellerEarning::query()->where('tenant_id', $tenantId)->whereNull('platform_fee_statement_id')->pluck('commission_amount'));
+        $commission = $this->sum(SellerEarning::query()->where('tenant_id', $tenantId)->whereNull('platform_fee_statement_id')->where('fee_collected_at_payment', false)->pluck('commission_amount'));
         $refundCredit = $this->sum($this->refundsSince($tenantId, $previous, CarbonImmutable::now()->addSecond())->pluck('commission_credit'));
         $creditCarriedIn = (string) ($previous->credit_carried_out ?? '0.00');
         $balance = bcsub(bcsub($commission, $refundCredit, 2), $creditCarriedIn, 2);

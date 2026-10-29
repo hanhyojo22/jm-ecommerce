@@ -12,15 +12,12 @@
     $canCancel = in_array('cancelled', $sellerOrder->available_transitions, true);
     $canRecordCash = $canManageOrders && $sellerOrder->status === 'delivered' && ! $sellerOrder->cod_collected_at;
     $order = $sellerOrder->order;
-    $walletLabel = ['gcash' => 'GCash', 'maya' => 'Maya', 'bank' => 'bank'][$order->payment?->method] ?? null;
-    if ($walletLabel !== null && ! $sellerOrder->cod_collected_at && $sellerOrder->status === 'pending') {
-        // The order can't be confirmed until the store sees the buyer's transfer in its own wallet.
-        $guidance = $sellerOrder->payment_reference ? "Check your {$walletLabel} for reference {$sellerOrder->payment_reference}, then record the payment." : "Waiting for the buyer to pay your {$walletLabel} account and send the reference number.";
+    $isOnline = $order->payment?->isOnline() ?? false;
+    if ($isOnline && ! $sellerOrder->cod_collected_at && $sellerOrder->status === 'pending') {
+        // The order can't be confirmed until PayMongo reports the buyer's payment.
+        $guidance = 'Waiting for the buyer to pay online. You can confirm once PayMongo reports the payment.';
         $nextTransition = null;
     }
-    $canRecordWallet = $canManageOrders && $walletLabel !== null && $sellerOrder->status === 'pending' && $sellerOrder->payment_reference && ! $sellerOrder->cod_collected_at;
-    // Cancelling a paid wallet order needs a refund reference, which the full page asks for.
-    $canCancel = $canCancel && ! ($walletLabel !== null && $sellerOrder->cod_collected_at);
 @endphp
 {{-- Body of the order modal on the orders list. Every form posts back to the list, which reopens this order. --}}
 <div class="sc-modal-head">
@@ -75,8 +72,8 @@
         </section>
         <section class="sc-modal-box" aria-labelledby="order-modal-payment">
             <h3 id="order-modal-payment" class="sc-modal-label">Payment</h3>
-            <p class="text-ink">{{ \App\Models\Payment::METHOD_LABELS[$order->payment?->method] ?? 'Cash on delivery' }}@if ($walletLabel && $sellerOrder->payment_reference) <span class="sc-meta">· Ref. {{ $sellerOrder->payment_reference }}</span>@endif</p>
-            <p class="mt-1.5 flex flex-wrap items-center gap-2"><x-marketplace.order-status :status="$sellerOrder->cod_collected_at ? 'paid' : 'pending'" payment /><span class="sc-meta">{{ $sellerOrder->cod_collected_at ? ($walletLabel ? 'Received ' : 'Collected ').$sellerOrder->cod_collected_at->format('M j, Y') : ($walletLabel ? 'Awaiting ₱'.number_format($sellerOrder->total, 2) : 'Collect ₱'.number_format($sellerOrder->total, 2)) }}</span></p>
+            <p class="text-ink">{{ \App\Models\Payment::METHOD_LABELS[$order->payment?->method] ?? 'Cash on delivery' }}@if ($isOnline) <span class="sc-meta">· PayMongo</span>@endif</p>
+            <p class="mt-1.5 flex flex-wrap items-center gap-2"><x-marketplace.order-status :status="$sellerOrder->cod_collected_at ? 'paid' : 'pending'" payment /><span class="sc-meta">{{ $sellerOrder->cod_collected_at ? ($isOnline ? 'Paid ' : 'Collected ').$sellerOrder->cod_collected_at->format('M j, Y') : ($isOnline ? 'Awaiting online payment' : 'Collect ₱'.number_format($sellerOrder->total, 2)) }}</span></p>
         </section>
     </div>
 
@@ -85,7 +82,7 @@
 
 <div class="sc-modal-foot">
     @if ($canCancel)
-        <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" data-confirm-title="Cancel this order?" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="{{ ucfirst($sellerOrder->status) }}" data-confirm-to="Cancelled" data-confirm="Only your store’s part of the checkout is cancelled and its item stock is restored. This can’t be undone." data-confirm-action="Cancel order" data-confirm-dismiss="Keep order" data-confirm-tone="danger">@csrf @method('PATCH')<input type="hidden" name="status" value="cancelled"><button type="submit" class="sc-btn sc-btn-danger !border-transparent">Cancel order</button></form>
+        <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" data-confirm-title="Cancel this order?" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="{{ ucfirst($sellerOrder->status) }}" data-confirm-to="Cancelled" data-confirm="Only your store’s part of the checkout is cancelled and its item stock is restored.{{ $isOnline && $sellerOrder->cod_collected_at ? ' The buyer is refunded through PayMongo from your share.' : '' }} This can’t be undone." data-confirm-action="Cancel order" data-confirm-dismiss="Keep order" data-confirm-tone="danger">@csrf @method('PATCH')<input type="hidden" name="status" value="cancelled"><button type="submit" class="sc-btn sc-btn-danger !border-transparent">Cancel order</button></form>
     @endif
     <span class="flex-1 max-sm:hidden"></span>
     <span class="text-xs text-muted max-lg:hidden">Esc to close · ← → to switch orders</span>
@@ -93,8 +90,6 @@
     @if ($conversation)<a href="{{ route('messages.show', $conversation) }}" class="seller-outline-button">Message buyer</a>@endif
     @if ($canManageOrders && $nextTransition)
         <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" class="max-sm:flex-1" @if ($nextTransition === 'shipped') data-confirm-title="Mark this order as shipped?" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="{{ ucfirst($sellerOrder->status) }}" data-confirm-to="Shipped" data-confirm="Your customer is told the parcel has left your store. Do this only once it’s with your courier." data-confirm-action="Mark as shipped" @endif>@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $nextTransition }}"><button type="submit" class="seller-primary-button w-full">{{ $transitionLabels[$nextTransition] }}</button></form>
-    @elseif ($canRecordWallet)
-        <form method="POST" action="{{ route('seller.orders.cod-collection', $sellerOrder) }}" class="max-sm:flex-1" data-confirm-title="Record {{ $walletLabel }} payment?" data-confirm-reference="Ref. {{ $sellerOrder->payment_reference }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="Unpaid" data-confirm-to="Paid" data-confirm="Record this only after ₱{{ number_format($sellerOrder->total, 2) }} with reference {{ $sellerOrder->payment_reference }} shows in your {{ $walletLabel }} account." data-confirm-action="Record payment">@csrf @method('PATCH')<button type="submit" class="seller-primary-button w-full">Record {{ $walletLabel }} payment</button></form>
     @elseif ($canRecordCash)
         <form method="POST" action="{{ route('seller.orders.cod-collection', $sellerOrder) }}" class="max-sm:flex-1" data-confirm-title="Record cash collected?" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="Unpaid" data-confirm-to="Paid" data-confirm="Confirm your store received ₱{{ number_format($sellerOrder->total, 2) }} in cash for this order. Record only cash you actually have." data-confirm-action="Record cash">@csrf @method('PATCH')<button type="submit" class="seller-primary-button w-full">Record cash collected</button></form>
     @endif

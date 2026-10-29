@@ -1118,6 +1118,7 @@ form[data-submitting] button[aria-busy="true"]:not([class*="primary"])::after { 
     mask-composite: intersect; }
 .placed-docket::after { position: absolute; top: var(--tear); right: calc(var(--notch) + 9px); left: calc(var(--notch) + 9px); border-top: 1.5px dashed #d7dfeb; content: ''; }
 .placed-stamp { position: absolute; top: 22px; right: 20px; display: grid; min-width: 76px; height: 57px; padding-inline: 8px; place-content: center; border: 2px solid currentColor; border-radius: 6px; color: var(--color-warning-text); text-align: center; transform: rotate(-7deg); animation: placed-stamp .5s .18s cubic-bezier(.2, 1.4, .4, 1) both; }
+.placed-stamp.is-paid { color: var(--color-success); }
 .placed-stamp::before { position: absolute; inset: 3px; border: 1px solid currentColor; border-radius: 3px; opacity: .45; content: ''; }
 .placed-stamp > span { display: grid; justify-items: center; }
 .placed-stamp strong { font-size: 15px; font-weight: 700; letter-spacing: .13em; line-height: 1; text-transform: uppercase; white-space: nowrap; }

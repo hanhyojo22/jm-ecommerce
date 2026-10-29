@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Actions\StartOnlinePayment;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -12,9 +13,10 @@ use App\Models\SellerOrder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirect;
+use Throwable;
 
 class OrderController extends Controller
 {
@@ -68,7 +70,7 @@ class OrderController extends Controller
             'to_receive' => $tabCounts['to_receive'],
         ]);
 
-        $directMethods = implode(', ', array_fill(0, count(Payment::DIRECT_METHODS), '?'));
+        $onlineMethods = implode(', ', array_fill(0, count(Payment::ONLINE_METHODS), '?'));
         $buyerTurnCase = ReturnCase::query()->selectRaw('1')
             ->whereColumn('return_cases.seller_order_id', 'seller_orders.id')
             ->where($this->returnNeedsBuyer(...));
@@ -87,11 +89,11 @@ class OrderController extends Controller
             ])
             // Orders waiting on the buyer lead, so a payment owed never slips to a later page.
             ->orderByRaw(
-                "case when (seller_orders.status = 'pending' and seller_orders.payment_reference is null and seller_orders.cod_collected_at is null and exists (select 1 from payments where payments.order_id = seller_orders.order_id and payments.method in ({$directMethods})))
-                    or (seller_orders.status = 'cancelled' and seller_orders.refund_reference is null and (seller_orders.payment_reference is not null or seller_orders.cod_collected_at is not null) and exists (select 1 from payments where payments.order_id = seller_orders.order_id and payments.method in ({$directMethods})))
+                "case when (seller_orders.status = 'pending' and seller_orders.cod_collected_at is null and exists (select 1 from payments where payments.order_id = seller_orders.order_id and payments.method in ({$onlineMethods})))
+                    or (seller_orders.status = 'cancelled' and seller_orders.gateway_refund_id is null and seller_orders.cod_collected_at is not null and exists (select 1 from payments where payments.order_id = seller_orders.order_id and payments.method in ({$onlineMethods})))
                     or exists ({$buyerTurnCase->toSql()}) then 0
                     when seller_orders.status = 'shipped' then 1 else 2 end",
-                [...Payment::DIRECT_METHODS, ...Payment::DIRECT_METHODS, ...$buyerTurnCase->getBindings()],
+                [...Payment::ONLINE_METHODS, ...Payment::ONLINE_METHODS, ...$buyerTurnCase->getBindings()],
             )
             ->latest()
             // "Load more" reads ?page=N as "the first N batches", so back and refresh rebuild the same list.
@@ -137,26 +139,25 @@ class OrderController extends Controller
     }
 
     /**
-     * A store waits for a direct GCash, Maya, or bank payment before it confirms, so these orders
-     * are the buyer's to move, not the store's.
+     * A store waits for the buyer's online payment before it confirms, so these orders are the
+     * buyer's to move, not the store's.
      */
     private function needingPayment(Builder $query): Builder
     {
         return $query->where('status', 'pending')
-            ->whereNull('payment_reference')
             ->whereNull('cod_collected_at')
-            ->whereHas('order.payment', fn (Builder $paymentQuery) => $paymentQuery->whereIn('method', Payment::DIRECT_METHODS));
+            ->whereHas('order.payment', fn (Builder $paymentQuery) => $paymentQuery->whereIn('method', Payment::ONLINE_METHODS));
     }
 
     /**
-     * A store cancelled after the buyer paid it directly and has not recorded the refund yet.
+     * A store order cancelled after the buyer paid online whose PayMongo refund has not gone through.
      */
     private function refundDue(Builder $query): Builder
     {
         return $query->where('status', 'cancelled')
-            ->whereNull('refund_reference')
-            ->where(fn (Builder $paid) => $paid->whereNotNull('payment_reference')->orWhereNotNull('cod_collected_at'))
-            ->whereHas('order.payment', fn (Builder $paymentQuery) => $paymentQuery->whereIn('method', Payment::DIRECT_METHODS));
+            ->whereNull('gateway_refund_id')
+            ->whereNotNull('cod_collected_at')
+            ->whereHas('order.payment', fn (Builder $paymentQuery) => $paymentQuery->whereIn('method', Payment::ONLINE_METHODS));
     }
 
     public function show(Request $request, Order $order): View
@@ -183,28 +184,22 @@ class OrderController extends Controller
     }
 
     /**
-     * The buyer sent this store its GCash/Maya payment and gives the transfer's reference number,
-     * so the store can find it in its own wallet before confirming. It can be corrected until then.
+     * Sends the buyer to a fresh PayMongo checkout for what they still owe. Reached right after
+     * checkout and from "Pay now" on an unpaid order, so a closed tab never strands the order.
      */
-    public function paymentReference(Request $request, SellerOrder $sellerOrder): RedirectResponse
+    public function pay(Request $request, Order $order, StartOnlinePayment $startOnlinePayment): RedirectResponse|SymfonyRedirect
     {
-        abort_unless($sellerOrder->order()->value('user_id') === $request->user()->id, 404);
-        $data = $request->validate(['payment_reference' => ['required', 'string', 'max:40', 'regex:/^[0-9A-Za-z -]+$/']]);
+        abort_unless($order->user_id === $request->user()->id, 404);
 
-        DB::transaction(function () use ($sellerOrder, $data): void {
-            $sellerOrder = SellerOrder::query()->with('order.payment')->lockForUpdate()->findOrFail($sellerOrder->id);
+        try {
+            return redirect()->away($startOnlinePayment->handle($order));
+        } catch (ValidationException $exception) {
+            return to_route('orders.show', $order)->withErrors($exception->errors());
+        } catch (Throwable $exception) {
+            report($exception);
 
-            if (! in_array($sellerOrder->order->payment?->method, Payment::DIRECT_METHODS, true) || $sellerOrder->status !== 'pending' || $sellerOrder->cod_collected_at !== null) {
-                throw ValidationException::withMessages(['payment_reference' => 'This store order is not awaiting a payment reference.']);
-            }
-
-            $sellerOrder->update(['payment_reference' => trim($data['payment_reference'])]);
-        });
-
-        // Sent from the guided dialog, the order page reopens it on the next store still to pay.
-        return to_route('orders.show', $sellerOrder->order_id)
-            ->with('status', 'Reference sent. The store will confirm once the payment shows in its account.')
-            ->with('guided_pay', $request->boolean('guided'));
+            return to_route('orders.show', $order)->withErrors(['payment' => 'We couldn’t open the payment page. Please try again in a few minutes.']);
+        }
     }
 
     /**

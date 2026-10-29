@@ -175,18 +175,16 @@
                                     $returnOpen = $returnCases->isNotEmpty() || ($returnIssue && ($tab === 'returns' || $returnIssue->status === 'open'));
                                     $reviewableItemId = $reviewableItemIds[$sellerOrder->id] ?? null;
                                     $method = $order->payment?->method;
-                                    $isDirect = in_array($method, \App\Models\Payment::DIRECT_METHODS, true);
-                                    $needsPayment = $isDirect && $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null && $sellerOrder->payment_reference === null;
+                                    $isDirect = $order->payment?->isOnline() ?? false;
+                                    $needsPayment = $isDirect && $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null;
                                     // The same deadline orders:cancel-unpaid enforces, so the buyer sees it before it passes.
-                                    $payHours = config('marketplace.wallet.payment_hours.'.$method);
-                                    $payBy = $needsPayment && $payHours ? $order->created_at->copy()->addHours((int) $payHours) : null;
-                                    // Money already sent to a store that then cancelled is owed back by that store.
-                                    $refundDue = $sellerOrder->status === 'cancelled' && $isDirect && $sellerOrder->refund_reference === null && ($sellerOrder->payment_reference !== null || $sellerOrder->cod_collected_at !== null);
+                                    $payBy = $needsPayment ? $order->created_at->copy()->addHours((int) config('marketplace.online_payment.payment_hours')) : null;
+                                    // A paid store order that was cancelled is refunded through PayMongo; until that lands it is due.
+                                    $refundDue = $sellerOrder->status === 'cancelled' && $isDirect && $sellerOrder->gateway_refund_id === null && $sellerOrder->cod_collected_at !== null;
                                     $paymentState = match (true) {
-                                        $sellerOrder->status === 'cancelled' => $sellerOrder->refund_reference ? 'Refunded' : ($refundDue ? 'Refund due' : null),
+                                        $sellerOrder->status === 'cancelled' => $sellerOrder->gateway_refund_id ? 'Refunded' : ($refundDue ? 'Refund due' : null),
                                         ! $isDirect => $sellerOrder->cod_collected_at ? 'Paid' : 'Pay on delivery',
                                         $sellerOrder->cod_collected_at !== null => 'Paid',
-                                        $sellerOrder->payment_reference !== null => 'Reference sent',
                                         default => 'To pay',
                                     };
                                     $returnEndsAt = $sellerOrder->status === 'delivered' ? $sellerOrder->delivered_at?->copy()->addDays($returnDays) : null;
@@ -202,7 +200,7 @@
                                     }
                                     // One filled button per order, and only when the buyer has something to do.
                                     $nextAction = match (true) {
-                                        $needsPayment => [$payBy?->isPast() ? 'Send reference' : 'Pay store', route('orders.show', $order).'#pay-stores'],
+                                        $needsPayment => ['Pay now', route('orders.pay', $order)],
                                         $sellerOrder->status === 'shipped' => ['Order received', null],
                                         $storeLate => ['Ask JMMart to step in', route('returns.show', $returnCase)],
                                         $returnDecision => [match ($returnCase->status) { 'awaiting_return' => 'Send item back', 'awaiting_confirmation' => 'Confirm outcome', default => 'Answer return' }, route('returns.show', $returnCase)],
@@ -298,15 +296,13 @@
                                             @unless ($needsPayment && $payBy?->isPast())
                                                 <p @class(['mt-0.5 max-w-[62ch] text-meta leading-5', 'text-warning-text' => $noteIsUrgent, 'text-muted' => ! $noteIsUrgent])>
                                                     @if ($refundDue)
-                                                        This order was cancelled after you paid. {{ $store }} owes you a refund of ₱{{ number_format($sellerOrder->total, 2) }}. Message them first. If the refund doesn’t arrive, <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">get help from JMMart</a>.
+                                                        This order was cancelled after you paid. Your ₱{{ number_format($sellerOrder->total, 2) }} refund through PayMongo hasn’t gone through yet. If it doesn’t arrive, <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">get help from JMMart</a>.
                                                     @elseif ($sellerOrder->status === 'cancelled')
-                                                        {{ $cancelledAtRequest ? 'Cancelled at your request.' : 'This order was cancelled.' }}@if ($sellerOrder->refund_reference) Refunded (ref. {{ $sellerOrder->refund_reference }}).@endif
+                                                        {{ $cancelledAtRequest ? 'Cancelled at your request.' : 'This order was cancelled.' }}@if ($sellerOrder->gateway_refund_id) Your payment was refunded to your {{ \App\Models\Payment::METHOD_LABELS[$method] ?? 'account' }}.@endif
                                                     @elseif ($cancelRequest)
                                                         You asked {{ $store }} to cancel. Its reply will show on the <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">order page</a>.
                                                     @elseif ($needsPayment)
-                                                        Pay {{ $store }} ₱{{ number_format($sellerOrder->total, 2) }} by {{ \App\Models\Payment::METHOD_LABELS[$method] }}@if ($payBy) before {{ $payBy->format('M j, g:i A') }}{{ now()->diffInHours($payBy) < 24 ? ' ('.$payBy->diffForHumans(['parts' => 1]).')' : '' }}@endif, then send the reference number. Unpaid orders are cancelled. <a href="{{ route('terms') }}#wallet-payments" class="{{ $inlineLink }}">How paying a store works</a>
-                                                    @elseif ($isDirect && $sellerOrder->status === 'pending')
-                                                        Reference sent. {{ $store }} confirms once the payment shows in its account. <a href="{{ route('terms') }}#wallet-payments" class="{{ $inlineLink }}">How paying a store works</a>
+                                                        Pay with {{ \App\Models\Payment::METHOD_LABELS[$method] }} before {{ $payBy->format('M j, g:i A') }}{{ $payBy->isFuture() && now()->diffInHours($payBy) < 24 ? ' ('.$payBy->diffForHumans(['parts' => 1]).')' : '' }}. Unpaid orders are cancelled and the items released.
                                                     @elseif ($sellerOrder->status === 'pending')
                                                         You can still change your mind. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Ask to cancel</a>
                                                     @elseif (in_array($sellerOrder->status, ['confirmed', 'processing'], true))

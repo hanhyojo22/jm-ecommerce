@@ -64,6 +64,15 @@ return [
         'from' => env('GMAIL_FROM_ADDRESS'),
     ],
 
+    'paymongo' => [
+        'secret_key' => env('PAYMONGO_SECRET_KEY'),
+        // Shown once when the webhook endpoint is created in the PayMongo dashboard.
+        'webhook_secret' => env('PAYMONGO_WEBHOOK_SECRET'),
+        // JMMart's own merchant ID, which keeps its fee share and gives it back on refunds.
+        'merchant_id' => env('PAYMONGO_MERCHANT_ID'),
+        'base_url' => env('PAYMONGO_BASE_URL', 'https://api.paymongo.com'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

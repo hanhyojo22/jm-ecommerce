@@ -39,7 +39,7 @@ class PurchaseIndexTest extends TestCase
             ->assertSee('₱20.00')
             ->assertSee('₱30.00')
             ->assertSee('Checkout total ₱65.00')
-            ->assertSee('Cash on delivery')
+            ->assertSee('Pay on delivery')
             ->assertDontSee('Pay Now')
             ->assertViewHas('tabCounts', fn (array $counts): bool => $counts['all'] === 4
                 && $counts['awaiting_confirmation'] === 1
@@ -180,33 +180,35 @@ class PurchaseIndexTest extends TestCase
     public function test_each_purchase_offers_only_the_buyers_next_step(): void
     {
         $buyer = User::factory()->create();
-        $walletOrder = $this->order($buyer, 'WALLET-001', '25.00');
-        $walletOrder->payment()->update(['method' => 'gcash']);
-        $unpaid = $this->sellerOrder($walletOrder, 'Unpaid Store', 'pending', '10.00');
-        $this->sellerOrder($walletOrder, 'Referenced Store', 'pending', '15.00')->update(['payment_reference' => 'REF123']);
+        $onlineOrder = $this->order($buyer, 'ONLINE-001', '10.00');
+        $onlineOrder->payment()->update(['method' => 'gcash']);
+        $unpaid = $this->sellerOrder($onlineOrder, 'Unpaid Store', 'pending', '10.00');
+        $paidOrder = $this->order($buyer, 'PAID-001', '15.00');
+        $paidOrder->payment()->update(['method' => 'gcash', 'status' => 'paid']);
+        $this->sellerOrder($paidOrder, 'Paid Store', 'pending', '15.00')->update(['cod_collected_at' => now()]);
         $shipped = $this->sellerOrder($this->order($buyer, 'SHIP-001', '5.00'), 'Shipping Store', 'shipped', '5.00');
         $closed = $this->sellerOrder($this->order($buyer, 'OLD-001', '5.00'), 'Old Store', 'delivered', '5.00');
         $closed->update(['delivered_at' => now()->subDays(8)]);
 
         $response = $this->actingAs($buyer)->get(route('orders.index'))->assertOk();
 
-        $response->assertSee('Pay Unpaid Store ₱10.00 by GCash')->assertSee('To pay')
-            ->assertSee(route('orders.show', $unpaid->order_id).'#pay-stores', false)
-            ->assertSee('Reference sent. Referenced Store confirms')
+        $response->assertSee('Pay with GCash before')->assertSee('To pay')
+            ->assertSee(route('orders.pay', $unpaid->order_id), false)
             ->assertSee('action="'.route('orders.received', $shipped).'"', false)
             ->assertSee('The 7-day return window has closed.')
             ->assertSee('Contact support');
-        $this->assertSame(1, substr_count($response->getContent(), '>Pay store<'));
+        $this->assertSame(1, substr_count($response->getContent(), '>Pay now<'));
         $this->assertSame($unpaid->id, $response->viewData('sellerOrders')->first()->id);
 
         $this->get(route('orders.index', ['tab' => 'to_pay']))->assertOk()
-            ->assertSee('Unpaid Store')->assertDontSee('Referenced Store')->assertDontSee('Shipping Store');
+            ->assertSee('Unpaid Store')->assertDontSee('Paid Store')->assertDontSee('Shipping Store');
         $this->get(route('orders.index', ['tab' => 'awaiting_confirmation']))->assertOk()
-            ->assertSee('Referenced Store')->assertDontSee('Unpaid Store');
+            ->assertSee('Paid Store')->assertDontSee('Unpaid Store');
 
-        $unpaid->update(['status' => 'cancelled', 'payment_reference' => 'PAID42']);
+        // Paid, then cancelled, and PayMongo's refund has not gone through yet.
+        $unpaid->update(['status' => 'cancelled', 'cod_collected_at' => now()]);
         $this->get(route('orders.index'))->assertOk()
-            ->assertSee('Unpaid Store owes you a refund of ₱10.00')->assertSee('Refund due')
+            ->assertSee('Your ₱10.00 refund through PayMongo hasn’t gone through yet')->assertSee('Refund due')
             ->assertSee('1 refund to chase');
 
         $answered = $this->sellerOrder($this->order($buyer, 'RET-001', '5.00'), 'Answered Store', 'delivered', '5.00');
