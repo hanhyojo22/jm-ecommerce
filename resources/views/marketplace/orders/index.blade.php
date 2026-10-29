@@ -127,8 +127,8 @@
             <x-input-error :messages="$errors->get('tab')" class="mt-2" />
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
-            {{-- One surface, one grid: every order shares the image, details, total and next-step columns,
-                 so totals and buttons line up down the page. --}}
+            {{-- One surface: each order is a store bar, its item lines, then a footer whose total and next-step
+                 columns line up down the page. --}}
             <section id="purchases" class="mt-5 scroll-mt-24 overflow-hidden rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
@@ -137,12 +137,6 @@
                         ->groupBy(fn ($sellerOrder): string => $sellerOrder->order->created_at->toDateString())
                         ->sortKeysDesc();
                 @endphp
-
-                @if ($orderGroups->isNotEmpty())
-                    <div aria-hidden="true" class="hidden h-10 items-center gap-x-5 bg-[var(--color-sunken)] px-6 text-xs font-medium text-muted lg:grid lg:grid-cols-[56px_minmax(0,1fr)_136px_152px]">
-                        <span class="col-span-2">Order</span><span class="text-right">Store total</span><span class="text-right">Next step</span>
-                    </div>
-                @endif
 
                 @forelse ($orderGroups as $groupOrders)
                     @php
@@ -218,12 +212,6 @@
                                     $items = $sellerOrder->items;
                                     $leadItemName = $items->first()?->product_name;
                                     $orderLabel = $leadItemName ? $leadItemName.' order' : 'order';
-                                    $thumbPaths = $items
-                                        ->map(fn ($item) => $item->image_path ?? $item->product?->thumbnail?->path)
-                                        ->filter()
-                                        ->take(3)
-                                        ->values();
-                                    $remainingThumbs = max(0, $items->count() - $thumbPaths->count());
                                     $shortNumber = Str::upper(Str::substr($order->number, -6));
                                     // The badge is the order's own state; buyer/store lateness replaces it with the turn that matters now.
                                     $overlayLabel = $statusLabel;
@@ -263,28 +251,46 @@
                                     $noteIsUrgent = $needsPayment || $returnSoon || $refundDue || $returnDecision;
                                 @endphp
 
-                                <article class="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3.5 sm:grid-cols-[56px_minmax(0,1fr)] lg:grid-cols-[56px_minmax(0,1fr)_136px_152px] lg:gap-x-5 border-t border-line-soft px-4 py-4 transition-colors hover:bg-[#fbfcfe] lg:px-6" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
-                                    <div class="relative size-12 overflow-hidden rounded-md border border-line bg-paper sm:size-14">
-                                        @if ($thumbPaths->isNotEmpty())
-                                            <img src="{{ Storage::disk('product_images')->url($thumbPaths->first()) }}" alt="" width="56" height="56" loading="lazy" class="size-full object-cover">
-                                        @else
-                                            <svg class="absolute inset-0 m-auto size-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
-                                        @endif
-                                        @if ($items->count() > 1)
-                                            <span class="absolute bottom-0.5 right-0.5 min-w-5 rounded-md bg-ink/80 px-1 text-center text-[11px] font-semibold leading-4 text-white">+{{ $items->count() - 1 }}<span class="sr-only"> more {{ Str::plural('item', $items->count() - 1) }}</span></span>
-                                        @endif
-                                    </div>
+                                <article class="border-t border-line-soft transition-colors hover:bg-[#fbfcfe]" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
+                                    <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3 lg:px-6">
+                                        <div class="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                                            <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                                            <a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="truncate text-sm font-semibold text-ink hover:text-brand-hover">{{ $store }}</a>
+                                            <a id="purchase-number-{{ $sellerOrder->id }}" href="{{ route('orders.show', $order) }}" class="inline-flex min-h-6 items-center text-xs font-medium tabular-nums text-muted underline-offset-2 hover:text-ink hover:underline"><span aria-hidden="true">#…{{ $shortNumber }}</span><span class="sr-only">Order {{ $order->number }}</span></a>
+                                        </div>
+                                        <span @class(['inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-sunken)] px-3 py-1 text-xs font-semibold', $overlayText])>
+                                            <span class="size-[7px] rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
+                                            {{ $overlayLabel }}
+                                        </span>
+                                    </header>
 
+                                    <ul class="divide-y divide-line-soft">
+                                        @foreach ($items as $item)
+                                            @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
+                                            <li class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-4 px-4 py-4 sm:grid-cols-[80px_minmax(0,1fr)_120px_80px] lg:px-6">
+                                                <div class="relative size-16 overflow-hidden rounded-md border border-line bg-paper sm:size-20">
+                                                    @if ($itemThumb)
+                                                        <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="80" height="80" loading="lazy" class="size-full object-cover">
+                                                    @else
+                                                        <svg class="absolute inset-0 m-auto size-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                                                    @endif
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <p class="line-clamp-2 text-sm leading-5 text-ink">{{ $item->product_name }}</p>
+                                                    @if ($item->variant_label)
+                                                        <p class="mt-1 text-xs text-muted">{{ $item->variant_label }}</p>
+                                                    @endif
+                                                </div>
+                                                <div class="col-start-2 mt-1.5 flex gap-4 text-sm sm:contents">
+                                                    <p class="tabular-nums text-ink sm:mt-0"><span class="sr-only">Price </span>₱{{ number_format($item->unit_price, 2) }}</p>
+                                                    <p class="tabular-nums text-ink"><span class="text-muted">Qty:</span> {{ $item->quantity }}</p>
+                                                </div>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+
+                                    <div class="grid gap-x-5 gap-y-3 border-t border-line-soft px-4 py-3.5 lg:grid-cols-[minmax(0,1fr)_136px_152px] lg:px-6">
                                     <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs leading-[18px] text-muted">
-                                                <span @class(['inline-flex items-center gap-1.5 font-semibold', $overlayText])>
-                                                    <span class="size-[7px] rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
-                                                    {{ $overlayLabel }}
-                                                </span>
-                                                <span class="font-semibold text-ink"><a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="hover:text-brand-hover">{{ $store }}</a></span>
-                                                <a id="purchase-number-{{ $sellerOrder->id }}" href="{{ route('orders.show', $order) }}" class="inline-flex min-h-6 items-center font-medium tabular-nums text-ink underline-offset-2 hover:underline"><span aria-hidden="true">#…{{ $shortNumber }}</span><span class="sr-only">Order {{ $order->number }}</span></a>
-                                            </div>
-
                                             @if (! $buyerLate && ! $storeMissed && $returnCase && ($tab === 'returns' || ! $returnFinished))
                                                 <x-returns.status-badge :status="$returnCase->status" buyer class="mt-2" />
                                             @elseif ($tab === 'returns' && $returnIssue)
@@ -356,8 +362,7 @@
                                             @endif
                                         </div>
                                     </div>
-
-                                    <div class="col-start-2 mt-3 flex flex-wrap items-baseline justify-between gap-x-3 border-t border-line-soft pt-3 lg:col-start-auto lg:mt-0 lg:block lg:border-0 lg:pt-[22px] lg:text-right">
+                                    <div class="flex flex-wrap items-baseline justify-between gap-x-3 lg:block lg:text-right">
                                         <p class="text-[15px] font-semibold tabular-nums tracking-[-0.01em] text-ink"><span class="sr-only">Store total </span>₱{{ number_format($sellerOrder->total, 2) }}</p>
                                         <p class="text-xs text-muted lg:mt-0.5">{{-- Cash on delivery is implied by its own state, so only a wallet names its method. --}}@if ($isDirect || ! $paymentState){{ \App\Models\Payment::METHOD_LABELS[$method] ?? 'Payment' }}@endif @if ($paymentState)@if ($isDirect)<span aria-hidden="true">·</span> @endif<span @class(['font-semibold', 'text-warning-text' => in_array($paymentState, ['To pay', 'Refund due'], true), 'text-success' => in_array($paymentState, ['Paid', 'Refunded'], true), 'text-ink' => in_array($paymentState, ['Reference sent', 'Pay on delivery'], true)])>{{ $paymentState }}</span>@endif</p>
                                         @if ($order->seller_orders_count > 1)
@@ -365,7 +370,7 @@
                                         @endif
                                     </div>
 
-                                    <div @class(['col-start-2 lg:col-start-auto lg:pt-[18px]', 'pt-2.5' => $nextAction !== null])>
+                                    <div class="lg:pt-0.5">
                                         @if ($nextAction && $nextAction[1] !== null)
                                             <a href="{{ $nextAction[1] }}" class="{{ $nextAction[0] === 'Write review' ? $outlineAction : $primaryAction }} w-full whitespace-nowrap">{{ $nextAction[0] }}</a>
                                         @elseif ($nextAction && $nextAction[1] === null)
@@ -380,6 +385,7 @@
                                                         <button type="submit" x-ref="received" @click="if (! confirming) { $event.preventDefault(); confirming = true }" :disabled="sending" :aria-describedby="confirming ? 'received-note-{{ $sellerOrder->id }}' : null" class="{{ $primaryAction }} w-full disabled:cursor-wait disabled:opacity-70" x-text="sending ? 'Saving…' : (confirming ? 'Yes, received' : 'Order received')">Order received</button>
                                                     </form>
                                         @endif
+                                    </div>
                                     </div>
                                 </article>
                             @endforeach
