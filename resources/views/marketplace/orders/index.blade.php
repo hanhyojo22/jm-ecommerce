@@ -75,21 +75,33 @@
                 <p role="alert" class="mt-3 rounded-[10px] border border-[var(--color-danger-line)] bg-[var(--color-danger-wash)] px-3.5 py-2.5 text-meta font-medium text-danger-text">{{ $message }}</p>
             @enderror
 
-            <div class="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                {{-- The track scrolls on a phone, so the selected tab and whichever tab takes focus are kept in view. --}}
-                <nav class="flex min-w-0 gap-0.5 overflow-x-auto rounded-xl bg-paper p-1 xl:flex-1" aria-label="Purchase status filters" x-data @focusin="$event.target.scrollIntoView({ block: 'nearest', inline: 'center' })">
+            <div class="mt-4 flex flex-col gap-3 2xl:flex-row 2xl:items-end 2xl:justify-between 2xl:gap-6">
+                {{-- The tabs read as the order's journey, bracketed by All and by what comes after delivery,
+                     so a rule sits between those groups. Only a tab where the next move is the buyer's gets a
+                     warm count; every other count stays quiet. The track scrolls on a phone, so the selected
+                     tab and whichever tab takes focus are kept in view. --}}
+                @php
+                    $buyerTurn = ['to_pay' => $tabCounts['to_pay'] > 0, 'returns' => isset($attentionCounts['returns'])];
+                @endphp
+                <nav class="relative flex min-w-0 items-stretch overflow-x-auto border-b border-line [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%-20px),transparent)] [&::-webkit-scrollbar]:hidden 2xl:flex-1" aria-label="Purchase status filters" x-data @focusin="$event.target.scrollIntoView({ block: 'nearest', inline: 'center' })">
                     @foreach ($tabs as $key => $label)
+                        @if (in_array($key, ['to_pay', 'to_review'], true))<span aria-hidden="true" class="mx-1.5 h-4 w-px shrink-0 self-center bg-line"></span>@endif
                         <a href="{{ route('orders.index', [...request()->except('tab', 'page'), 'tab' => $key]) }}" @class([
-                            'relative inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-meta font-semibold transition-colors focus-visible:outline-offset-2',
-                            'bg-surface text-ink shadow-sm' => $tab === $key,
-                            'text-muted hover:text-ink' => $tab !== $key,
-                        ]) @if ($tab === $key) aria-current="page" x-init="$el.parentElement.scrollLeft = Math.max(0, $el.offsetLeft - 24)" @endif>
-                            {{ $label }}@if ($tabCounts[$key] > 0 || $tab === $key) <span @class(['text-[11px] font-semibold tabular-nums', 'text-brand' => $tab === $key])>{{ $tabCounts[$key] }}<span class="sr-only"> {{ Str::plural('order', $tabCounts[$key]) }}</span></span>@endif
+                            '-mb-px inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 text-meta font-semibold transition-colors focus-visible:outline-offset-[-2px] lg:min-h-10',
+                            'border-brand text-ink' => $tab === $key,
+                            'border-transparent text-muted hover:border-line hover:text-ink' => $tab !== $key,
+                        ]) @if ($tab === $key) aria-current="page" x-init="$el.parentElement.scrollLeft = Math.max(0, $el.offsetLeft - ($el.parentElement.clientWidth - $el.offsetWidth) / 2)" @endif>
+                            {{ $label }}
+                            @if ($buyerTurn[$key] ?? false)
+                                <span class="inline-grid h-5 min-w-5 place-items-center rounded-full border border-[var(--color-warning-line)] bg-[var(--color-warning-wash)] px-1.5 text-[11px] font-semibold tabular-nums text-warning-text">{{ $tabCounts[$key] }}<span class="sr-only"> {{ Str::plural('order', $tabCounts[$key]) }}, waiting on you</span></span>
+                            @elseif ($tabCounts[$key] > 0 || $tab === $key)
+                                <span @class(['text-[11px] font-semibold tabular-nums', 'text-brand' => $tab === $key, 'text-muted' => $tab !== $key])>{{ $tabCounts[$key] }}<span class="sr-only"> {{ Str::plural('order', $tabCounts[$key]) }}</span></span>
+                            @endif
                         </a>
                     @endforeach
                 </nav>
 
-                <form method="GET" action="{{ route('orders.index') }}" class="flex min-w-0 items-start gap-2 xl:w-[288px] xl:shrink-0">
+                <form method="GET" action="{{ route('orders.index') }}" class="order-first flex min-w-0 items-start gap-2 sm:max-w-md 2xl:order-last 2xl:w-[288px] 2xl:shrink-0">
                     @if ($tab !== 'all')<input type="hidden" name="tab" value="{{ $tab }}">@endif
                     @if (filled($filters['status'] ?? null))<input type="hidden" name="status" value="{{ $filters['status'] }}">@endif
                     <div class="min-w-0 flex-1">
