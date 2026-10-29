@@ -25,6 +25,8 @@ class OrderController extends Controller
             'status' => ['nullable', 'in:pending,confirmed,processing,shipped,delivered,cancelled'],
             'tab' => ['nullable', 'in:all,to_pay,awaiting_confirmation,to_dispatch,to_receive,delivered,to_review,returns'],
         ]);
+        // shortcut: capped at 50 batches (500 orders) per request; switch to cursor batches if buyers outgrow it.
+        $loadedBatches = min(50, max(1, (int) $request->query('page', 1)));
         $search = trim($filters['search'] ?? '');
         $searchTerm = '%'.mb_strtolower($search).'%';
         $tab = $filters['tab'] ?? 'all';
@@ -92,8 +94,8 @@ class OrderController extends Controller
                 [...Payment::DIRECT_METHODS, ...Payment::DIRECT_METHODS, ...$buyerTurnCase->getBindings()],
             )
             ->latest()
-            ->paginate(10)
-            ->withQueryString();
+            // "Load more" reads ?page=N as "the first N batches", so back and refresh rebuild the same list.
+            ->paginate(10 * $loadedBatches, ['*'], 'page', 1);
 
         $reviewableItemIds = [];
         foreach ($sellerOrders as $sellerOrder) {
@@ -105,6 +107,7 @@ class OrderController extends Controller
 
         return view('marketplace.orders.index', [
             'sellerOrders' => $sellerOrders,
+            'loadMoreUrl' => $sellerOrders->hasMorePages() && $loadedBatches < 50 ? $request->fullUrlWithQuery(['page' => $loadedBatches + 1]) : null,
             'filters' => $filters,
             'tab' => $tab,
             'tabs' => $tabs,

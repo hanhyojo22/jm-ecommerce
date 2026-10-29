@@ -411,9 +411,37 @@
                         @endif
                     </div>
                 @endforelse
-            </section>
 
-            @if ($sellerOrders->hasPages())<div class="mt-6">{{ $sellerOrders->links() }}</div>@endif
+                {{-- Load more swaps in the whole longer list rather than appending rows, because orders are
+                     grouped by day and a day can straddle two batches. The link still works without script. --}}
+                @if ($sellerOrders->total() > $sellerOrders->count() || $sellerOrders->count() > 10)
+                    <div class="mt-8 flex flex-col items-center gap-3" x-data="{ loading: false, async more(link) {
+                        if (this.loading) return;
+                        this.loading = true;
+                        const shown = document.querySelectorAll('#purchases article').length;
+                        try {
+                            const response = await fetch(link.href, { headers: { Accept: 'text/html' } });
+                            if (! response.ok) throw new Error(response.status);
+                            const fresh = new DOMParser().parseFromString(await response.text(), 'text/html').getElementById('purchases');
+                            document.getElementById('purchases').replaceWith(fresh);
+                            history.replaceState(history.state, '', link.href);
+                            const first = fresh.querySelectorAll('article')[shown];
+                            first?.setAttribute('tabindex', '-1');
+                            first?.focus({ preventScroll: true });
+                        } catch {
+                            window.location.assign(link.href);
+                        }
+                    } }">
+                        <p class="text-meta text-muted">Showing {{ $sellerOrders->count() }} of {{ $sellerOrders->total() }} {{ Str::plural('order', $sellerOrders->total()) }}</p>
+                        @if ($loadMoreUrl)
+                            <a href="{{ $loadMoreUrl }}" @click.prevent="more($el)" :aria-busy="loading" :class="loading && 'pointer-events-none opacity-60'" class="{{ $outlineAction }} min-w-[200px] justify-center">
+                                <span x-show="! loading">Load more</span>
+                                <span x-cloak x-show="loading">Loading…</span>
+                            </a>
+                        @endif
+                    </div>
+                @endif
+            </section>
         </div>
     </x-marketplace.account-shell>
 </x-app-layout>

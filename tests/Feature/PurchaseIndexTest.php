@@ -160,7 +160,7 @@ class PurchaseIndexTest extends TestCase
         $this->actingAs($buyer)->get(route('orders.show', $otherOrder))->assertNotFound();
     }
 
-    public function test_purchases_page_ten_at_a_time_and_keep_the_tab(): void
+    public function test_purchases_load_ten_more_at_a_time_and_keep_the_tab(): void
     {
         $buyer = User::factory()->create();
         foreach (range(1, 11) as $index) {
@@ -168,11 +168,13 @@ class PurchaseIndexTest extends TestCase
         }
 
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'to_dispatch']))
-            ->assertOk()->assertSee('Page 1 of 2')
+            ->assertOk()->assertSee('Showing 10 of 11 orders')->assertSee('Load more')
             ->assertSee(route('orders.index', ['tab' => 'to_dispatch', 'page' => 2]))
-            ->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 10 && $sellerOrders->total() === 11);
+            ->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 10);
+        // A loaded-more address rebuilds the whole longer list, so back and refresh keep it.
         $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'to_dispatch', 'page' => 2]))
-            ->assertOk()->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 1);
+            ->assertOk()->assertSee('Showing 11 of 11 orders')->assertDontSee('Load more')
+            ->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 11);
     }
 
     public function test_each_purchase_offers_only_the_buyers_next_step(): void
