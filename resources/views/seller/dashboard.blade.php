@@ -167,7 +167,7 @@
 
         <details class="text-sm">
             <summary class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-muted hover:text-ink">Customize overview</summary>
-            <fieldset class="sc-card sc-card-pad mt-2 grid gap-2 sm:grid-cols-2"><legend class="sr-only">Overview sections to show</legend>@foreach (['setup' => 'Store setup', 'help' => 'Seller guide', 'orders' => 'Recent orders', 'products' => 'Recent products'] as $section => $label)<label class="inline-flex min-h-10 items-center gap-2"><input type="checkbox" data-dashboard-toggle="{{ $section }}" checked class="rounded border-line text-brand focus:ring-brand">{{ $label }}</label>@endforeach<button type="button" data-dashboard-reset class="min-h-10 justify-self-start font-semibold text-brand underline underline-offset-4">Restore defaults</button></fieldset>
+            <fieldset class="sc-card sc-card-pad mt-2 grid gap-2 sm:grid-cols-2"><legend class="sr-only">Overview sections to show</legend>@foreach (['setup' => 'Store setup', 'help' => 'Seller guide', 'orders' => 'Recent orders', 'products' => 'Recent products'] as $section => $label)<label class="inline-flex min-h-10 items-center gap-2"><input type="checkbox" data-dashboard-toggle="{{ $section }}" checked class="rounded-md border-line text-brand focus:ring-brand">{{ $label }}</label>@endforeach<button type="button" data-dashboard-reset class="min-h-10 justify-self-start font-semibold text-brand underline underline-offset-4">Restore defaults</button></fieldset>
         </details>
     </div></div>
 </x-app-layout>

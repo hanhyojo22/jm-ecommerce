@@ -12,20 +12,20 @@
     <div class="py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
             @if (session('status'))
-                <div class="mb-6 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-6 rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
             @endif
             @if ($errors->any())
-                <div class="mb-6 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not complete that moderation action. {{ $errors->first() }}</div>
+                <div class="mb-6 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not complete that moderation action. {{ $errors->first() }}</div>
             @endif
 
             <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                 <div class="space-y-6">
-                    <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+                    <section class="rounded-lg border border-line bg-surface p-5 sm:p-6">
                         <div class="flex flex-wrap items-start gap-4">
                             @if ($store->logo_path)
-                                <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="h-16 w-16 rounded-2xl object-cover">
+                                <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="h-16 w-16 rounded-lg object-cover">
                             @else
-                                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10 text-xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
+                                <div class="flex h-16 w-16 items-center justify-center rounded-lg bg-brand/10 text-xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
                             @endif
                             <div class="min-w-0 flex-1">
                                 <h2 class="text-xl font-semibold text-ink">Store profile</h2>
@@ -52,7 +52,7 @@
                         </dl>
                     </section>
 
-                    <section class="overflow-hidden rounded-2xl border border-line bg-surface ">
+                    <section class="overflow-hidden rounded-lg border border-line bg-surface ">
                         <div class="border-b border-line px-5 py-4 sm:px-6">
                             <h2 class="font-semibold text-ink">Products</h2>
                             <p class="mt-1 text-sm text-muted">Live listings owned by this store. Prices are current listing prices, not order snapshots.</p>
@@ -92,7 +92,7 @@
                         @endif
                     </section>
 
-                    <section class="overflow-hidden rounded-2xl border border-line bg-surface ">
+                    <section class="overflow-hidden rounded-lg border border-line bg-surface ">
                         <div class="border-b border-line px-5 py-4 sm:px-6">
                             <h2 class="font-semibold text-ink">Orders</h2>
                             <p class="mt-1 text-sm text-muted">Totals are checkout snapshots; later product edits do not change them.</p>
@@ -131,7 +131,7 @@
                         @endif
                     </section>
 
-                    <section class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+                    <section class="rounded-lg border border-line bg-surface p-5 sm:p-6">
                         <h2 class="font-semibold text-ink">Activity history</h2>
                         <p class="mt-1 text-sm text-muted">Recorded moderation and onboarding events for this store and its tenant. Reasons are stored in the audit log.</p>
                         <div class="mt-4 space-y-0 divide-y divide-line">
@@ -151,7 +151,7 @@
                 </div>
 
                 <aside class="space-y-6">
-                    <section class="rounded-2xl border border-line bg-surface p-5 ">
+                    <section class="rounded-lg border border-line bg-surface p-5 ">
                         <h2 class="font-semibold text-ink">Seller contact</h2>
                         @if ($owner)
                             <dl class="mt-4 space-y-4 text-sm">
@@ -165,7 +165,7 @@
                         @endif
                     </section>
 
-                    <section class="rounded-2xl border border-line bg-surface p-5 ">
+                    <section class="rounded-lg border border-line bg-surface p-5 ">
                         <h2 class="font-semibold text-ink">Verification record</h2>
                         @if ($application)
                             <dl class="mt-4 space-y-4 text-sm">
@@ -180,12 +180,12 @@
                         @endif
                     </section>
 
-                    <section id="suspension-appeals" class="scroll-mt-24 rounded-2xl border border-line bg-surface p-5 " aria-label="Store suspension appeals">
+                    <section id="suspension-appeals" class="scroll-mt-24 rounded-lg border border-line bg-surface p-5 " aria-label="Store suspension appeals">
                         <h2 class="font-semibold text-ink">Suspension appeals</h2>
                         <p class="mt-1 text-sm text-muted">Appeals are submitted by the store owner and reviewed here.</p>
                         <div class="mt-4 space-y-4">
                             @forelse ($appeals as $appeal)
-                                <article id="appeal-{{ $appeal->id }}" class="rounded-2xl border border-line p-4">
+                                <article id="appeal-{{ $appeal->id }}" class="rounded-lg border border-line p-4">
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                         <p class="text-sm font-semibold text-ink">{{ $appeal->seller?->name ?? 'Former seller' }}</p>
                                         <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ ['pending' => 'bg-warning/10 text-warning-text', 'approved' => 'bg-success/10 text-success', 'rejected' => 'bg-danger/10 text-danger-text'][$appeal->status] }}">{{ ucfirst($appeal->status) }}</span>
@@ -217,7 +217,7 @@
                                         <p class="mt-2 text-xs text-muted">Reviewed {{ $appeal->reviewed_at?->format('M j, Y · g:i A') }}{{ $appeal->reviewer ? ' by '.$appeal->reviewer->name : '' }}</p>
                                         @if (! $hasPendingAppeal && (($appeal->status === 'approved' && $store->status === 'active') || ($appeal->status === 'rejected' && $store->status === 'suspended')))
                                             @if ($appeal->status === 'approved')
-                                                <p class="mt-3 rounded-[10px] border border-warning/20 bg-warning/10 p-3 text-sm text-warning-text">Reopening this approved appeal will suspend the active store until a new review decision.</p>
+                                                <p class="mt-3 rounded-md border border-warning/20 bg-warning/10 p-3 text-sm text-warning-text">Reopening this approved appeal will suspend the active store until a new review decision.</p>
                                             @endif
                                             <form method="POST" action="{{ route('admin.stores.appeals.reopen', [$store, $appeal]) }}" class="mt-4 space-y-3" @if ($appeal->status === 'approved') onsubmit="return confirm('Reopening this appeal will suspend the active store until a new review decision. Continue?')" @endif>
                                                 @csrf
@@ -239,7 +239,7 @@
                         </div>
                     </section>
 
-                    <section class="rounded-2xl border border-line bg-surface p-5 ">
+                    <section class="rounded-lg border border-line bg-surface p-5 ">
                         <h2 class="font-semibold text-ink">Quick links</h2>
                         <div class="mt-4 grid gap-2">
                             <a href="{{ route('catalog.store', $store->slug) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-ink transition hover:border-brand/30 hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">View storefront</a>
@@ -249,13 +249,13 @@
                         <p class="mt-3 text-xs leading-5 text-muted">The public storefront only renders when both the store and its tenant are active.</p>
                     </section>
 
-                    <section class="rounded-2xl border border-danger/20 bg-surface p-5 " aria-label="Store moderation">
+                    <section class="rounded-lg border border-danger/20 bg-surface p-5 " aria-label="Store moderation">
                         <h2 class="font-semibold text-ink">Moderation</h2>
                         @if ($store->status === 'suspended')
                             <p class="mt-2 text-sm leading-6 text-muted">This store is suspended and hidden from the storefront. Reactivating restores both the store and its tenant to active.</p>
                             <div x-data class="mt-4">
                                 <button type="button" @click="$refs.reactivate.showModal()" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Reactivate store</button>
-                                <dialog x-ref="reactivate" class="w-[calc(100%-2rem)] max-w-md rounded-2xl border-0 p-0 shadow-2xl backdrop:bg-ink/40">
+                                <dialog x-ref="reactivate" class="w-[calc(100%-2rem)] max-w-md rounded-lg border-0 p-0 shadow-2xl backdrop:bg-ink/40">
                                     <form method="POST" action="{{ route('admin.stores.reactivate', $store) }}" class="bg-surface p-6">
                                         @csrf
                                         @method('PATCH')
@@ -272,7 +272,7 @@
                             <p class="mt-2 text-sm leading-6 text-muted">Suspending hides the store and its tenant from the storefront immediately. A reason is required and stored in the audit log.</p>
                             <div x-data class="mt-4">
                                 <button type="button" @click="$refs.suspend.showModal()" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-danger/20 bg-surface px-4 text-sm font-semibold text-danger transition hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2">Suspend store</button>
-                                <dialog x-ref="suspend" class="w-[calc(100%-2rem)] max-w-md rounded-2xl border-0 p-0 shadow-2xl backdrop:bg-ink/40">
+                                <dialog x-ref="suspend" class="w-[calc(100%-2rem)] max-w-md rounded-lg border-0 p-0 shadow-2xl backdrop:bg-ink/40">
                                     <form method="POST" action="{{ route('admin.stores.suspend', $store) }}" class="bg-surface p-6">
                                         @csrf
                                         @method('PATCH')

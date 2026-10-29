@@ -4,7 +4,7 @@
     @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City', 'province' => 'Province', 'postal_code' => 'Postal code'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
     @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->has('delivery_note') ? 3 : 1)))
-    @php($fieldInput = 'min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
+    @php($fieldInput = 'min-h-[46px] w-full rounded-md border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
 
     {{-- Room at the foot so the fixed phone action bar never covers the last of the form. --}}
     <div class="page-shell min-h-[calc(100dvh-4.5rem)] !pt-6 max-sm:!pt-3.5 max-sm:pb-28">
@@ -95,17 +95,17 @@
                 @csrf
                 <div class="grid min-w-0 gap-3.5">
                     @if ($orderLimitReached)
-                        <div class="rounded-[10px] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950" role="alert">
+                        <div class="rounded-md border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950" role="alert">
                             <p class="font-semibold">You can place this order once your current one is delivered.</p>
                             <p class="mt-1">Cash-on-delivery parcels on your account were refused recently, so you can have one order in progress at a time. <a href="{{ route('orders.index') }}" class="font-semibold underline">Track your current order</a>. If a refusal wasn't your fault, ask for order help on that order.</p>
                         </div>
                     @elseif ($errors->has('cart'))
-                        <div class="rounded-[10px] border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
+                        <div class="rounded-md border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950" role="alert">{{ $errors->first('cart') }} Return to your cart to update it, then try again.</div>
                     @endif
                     @php($fieldErrors = collect([...$addressFields, 'delivery_note' => 'Delivery note'])->filter(fn ($label, $field) => $errors->has($field)))
                     @if ($fieldErrors->isNotEmpty())
                         {{-- A rejected field can sit far below the fold, so the page says what to fix and takes the reader there. --}}
-                        <div role="alert" tabindex="-1" x-init="$el.focus()" aria-labelledby="checkout-errors-title" class="flex gap-2.5 rounded-[10px] border border-[#F3C7CD] bg-[#FFF5F5] px-3.5 py-3 text-[13.5px] leading-[1.45] text-ink">
+                        <div role="alert" tabindex="-1" x-init="$el.focus()" aria-labelledby="checkout-errors-title" class="flex gap-2.5 rounded-md border border-[#F3C7CD] bg-[#FFF5F5] px-3.5 py-3 text-[13.5px] leading-[1.45] text-ink">
                             <svg class="mt-px size-[18px] shrink-0 text-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v5"/><circle cx="12" cy="16.3" r=".9" fill="currentColor" stroke="none"/></svg>
                             <div>
                                 <h2 id="checkout-errors-title" class="font-semibold text-danger">{{ $fieldErrors->count() === 1 ? 'There is 1 detail to fix' : 'There are '.$fieldErrors->count().' details to fix' }}</h2>
@@ -119,10 +119,10 @@
                     @endif
 
                     {{-- One sheet keeps the flow legible as a single form rather than a stack of cards. --}}
-                    <div class="divide-y divide-line overflow-hidden rounded-[16px] border border-line bg-surface">
+                    <div class="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
                         <x-marketplace.checkout-step :number="1" title="Delivery address" sub="Where should we send your order?" value="addressShort">
                             @if ($addresses->isNotEmpty())
-                                <div class="overflow-hidden rounded-xl border border-line" role="radiogroup" aria-label="Delivery address">
+                                <div class="overflow-hidden rounded-lg border border-line" role="radiogroup" aria-label="Delivery address">
                                     @foreach ($addresses as $address)
                                         <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-3 border-b border-line px-4 py-[15px] transition-colors hover:bg-slate-50 has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-brand">
                                             <input type="radio" name="saved_address" value="{{ $address->id }}" :checked="choice === @js($address->id)" @change="choose(@js($address->id))" class="mt-[3px] size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
@@ -177,7 +177,7 @@
                                     <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                     Manage saved addresses
                                 </a>
-                                <button type="button" @click="next()" class="inline-flex min-h-[46px] items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px max-sm:hidden">Continue to payment</button>
+                                <button type="button" @click="next()" class="inline-flex min-h-[46px] items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px max-sm:hidden">Continue to payment</button>
                             </div>
                         </x-marketplace.checkout-step>
 
@@ -192,7 +192,7 @@
                                 ] as $method => $option)
                                     @continue($method !== 'cod' && ! isset($onlineFees[$method]))
                                     @php($option['hint'] ??= 'Pay now · ₱'.number_format($onlineFees[$method], 2).' payment fee.')
-                                    <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-[13px] transition hover:border-[#CBD4E0] has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand">
+                                    <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-lg border border-line bg-white px-3.5 py-[13px] transition hover:border-[#CBD4E0] has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand">
                                         <input type="radio" name="payment_method" value="{{ $method }}" x-model="method" @checked(old('payment_method', 'cod') === $method) class="size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
                                         <span class="min-w-0"><span class="block text-sm font-semibold leading-[1.35] text-ink">{{ $option['label'] }}</span><span class="mt-0.5 block text-[12.5px] leading-[1.45] text-muted">{{ $option['hint'] }}</span></span>
                                         <span class="grid size-[30px] place-items-center rounded-lg text-xs font-bold leading-none {{ $option['tile'] }}" aria-hidden="true">
@@ -208,13 +208,13 @@
                             </fieldset>
                             @error('payment_method')<p class="mt-2 text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
 
-                            <div x-show="method === 'cod'" class="mt-3.5 flex items-start gap-[9px] rounded-[10px] border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
+                            <div x-show="method === 'cod'" class="mt-3.5 flex items-start gap-[9px] rounded-md border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
                                 <svg class="mt-px size-4 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
                                 <p><strong class="font-semibold text-ink">No card needed.</strong> Hand <strong class="font-semibold text-ink">₱{{ number_format($subtotal, 2) }}</strong> to the courier when your order arrives.</p>
                             </div>
 
                             @if ($onlineFees !== [])
-                                <div x-cloak x-show="method !== 'cod'" class="mt-3.5 rounded-xl border border-[#D6E2FB] bg-[#F8FAFF] p-4" role="group" aria-labelledby="online-pay-heading">
+                                <div x-cloak x-show="method !== 'cod'" class="mt-3.5 rounded-lg border border-[#D6E2FB] bg-[#F8FAFF] p-4" role="group" aria-labelledby="online-pay-heading">
                                     <p id="online-pay-heading" class="text-[13.5px] font-semibold text-ink">One secure payment{{ $storeTotals->count() > 1 ? ' for all '.$storeTotals->count().' stores' : '' }}</p>
                                     <p class="mt-1 text-[12.5px] leading-normal text-muted">After you place the order you’ll pay on PayMongo’s secure page. Each store receives its share automatically; there’s nothing to send or confirm yourself.</p>
                                     <dl class="mt-3 grid gap-1.5 border-t border-[#D6E2FB] pt-3 text-[13px]">
@@ -231,7 +231,7 @@
                                     <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
                                     Back to delivery
                                 </button>
-                                <button type="button" @click="next()" class="inline-flex min-h-[46px] items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px max-sm:hidden">Review order</button>
+                                <button type="button" @click="next()" class="inline-flex min-h-[46px] items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px max-sm:hidden">Review order</button>
                             </div>
                         </x-marketplace.checkout-step>
 
@@ -253,13 +253,13 @@
                                 @error('delivery_note')<p id="delivery_note-error" class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
                             </div>
 
-                            <div class="mt-4 flex gap-[9px] rounded-[10px] border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
+                            <div class="mt-4 flex gap-[9px] rounded-md border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
                                 <svg class="mt-px size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
                                 <p>Each store confirms delivery timing after receiving your order. Shipping is free.</p>
                             </div>
 
                             <div class="mt-5 grid gap-3">
-                                <button type="submit" @click="place($event)" :disabled="placing" class="flex min-h-[46px] w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-sm:hidden" x-text="placing ? 'Placing order…' : (method === 'cod' ? 'Place order · ₱{{ number_format($subtotal, 2) }}' : placeLabel)">Place order · ₱{{ number_format($subtotal, 2) }}</button>
+                                <button type="submit" @click="place($event)" :disabled="placing" class="flex min-h-[46px] w-full items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-sm:hidden" x-text="placing ? 'Placing order…' : (method === 'cod' ? 'Place order · ₱{{ number_format($subtotal, 2) }}' : placeLabel)">Place order · ₱{{ number_format($subtotal, 2) }}</button>
                                 <p class="text-center text-xs leading-normal text-muted max-sm:hidden" x-text="method === 'cod' ? 'You will pay on delivery.' : 'You’ll pay on PayMongo’s secure page next.'">You will pay on delivery.</p>
                                 <button type="button" @click="open(2)" class="inline-flex min-h-11 items-center justify-center gap-1.5 justify-self-center text-[13px] font-semibold text-muted transition-colors hover:text-ink">
                                     <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
@@ -270,8 +270,8 @@
                     </div>
                 </div>
 
-                <aside class="min-w-0 rounded-[16px] border border-line bg-surface max-lg:order-first lg:sticky lg:top-24" aria-label="Order summary">
-                    <button type="button" @click="summaryOpen = ! summaryOpen" :aria-expanded="summaryOpen.toString()" aria-controls="checkout-summary-body" class="flex w-full items-center justify-between gap-2.5 rounded-[16px] px-4 py-[15px] text-left lg:hidden">
+                <aside class="min-w-0 rounded-lg border border-line bg-surface max-lg:order-first lg:sticky lg:top-24" aria-label="Order summary">
+                    <button type="button" @click="summaryOpen = ! summaryOpen" :aria-expanded="summaryOpen.toString()" aria-controls="checkout-summary-body" class="flex w-full items-center justify-between gap-2.5 rounded-lg px-4 py-[15px] text-left lg:hidden">
                         <span><span class="block text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</span><span class="mt-0.5 block text-[12.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} from {{ $itemsByStore->count() }} {{ Str::plural('store', $itemsByStore->count()) }}</span></span>
                         <span class="flex items-center gap-2">
                             <span class="text-[15px] font-semibold tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</span>
@@ -294,7 +294,7 @@
                                 <ul class="mt-2.5 grid gap-3">
                                     @foreach ($storeItems as $item)
                                         <li class="grid grid-cols-[48px_minmax(0,1fr)_auto] items-start gap-2.5">
-                                            <span class="grid size-12 place-items-center overflow-hidden rounded-[9px] border border-line bg-slate-100">@if ($item->imagePath())<img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="" loading="lazy" decoding="async" width="48" height="48" class="size-full object-cover">@else<svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>@endif</span>
+                                            <span class="grid size-12 place-items-center overflow-hidden rounded-md border border-line bg-slate-100">@if ($item->imagePath())<img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="" loading="lazy" decoding="async" width="48" height="48" class="size-full object-cover">@else<svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>@endif</span>
                                             <span class="min-w-0">
                                                 <span class="block text-[13px] font-medium leading-[1.4] text-ink [overflow-wrap:anywhere]">{{ $item->product->name }}</span>
                                                 <span class="mt-0.5 block text-[12.5px] leading-[1.4] text-muted">{{ $item->variant ? $item->variant->label().' · ' : '' }}Qty {{ $item->quantity }}</span>
@@ -328,7 +328,7 @@
                             <p class="text-[11.5px] text-muted">Total to pay</p>
                             <p class="truncate text-lg/tight font-semibold tracking-[-0.025em] tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</p>
                         </div>
-                        <button type="button" @click="step === 3 ? submit() : next()" :disabled="placing" class="ml-auto flex min-h-[46px] min-w-[140px] shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-[380px]:min-w-[118px] max-[380px]:px-3.5" x-text="placing ? 'Placing order…' : ({ 1: 'Continue', 2: 'Review order' }[step] ?? 'Place order')">Continue</button>
+                        <button type="button" @click="step === 3 ? submit() : next()" :disabled="placing" class="ml-auto flex min-h-[46px] min-w-[140px] shrink-0 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-[380px]:min-w-[118px] max-[380px]:px-3.5" x-text="placing ? 'Placing order…' : ({ 1: 'Continue', 2: 'Review order' }[step] ?? 'Place order')">Continue</button>
                     </div>
                 </div>
             </form>

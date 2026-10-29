@@ -28,10 +28,10 @@
                 @csrf
                 @method('PATCH')
                 @if ($errors->any())
-                    <div role="alert" tabindex="-1" x-init="$nextTick(() => $el.focus())" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">We could not save your changes. Review the errors below and try again.</div>
+                    <div role="alert" tabindex="-1" x-init="$nextTick(() => $el.focus())" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">We could not save your changes. Review the errors below and try again.</div>
                 @endif
-                <x-input-error :messages="$errors->get('settings')" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" />
-                <x-input-error :messages="$errors->get('undo')" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3" />
+                <x-input-error :messages="$errors->get('settings')" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3" />
+                <x-input-error :messages="$errors->get('undo')" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3" />
                 <p class="mb-3 flex items-center gap-2 text-sm font-medium" :class="dirty ? 'text-warning-text' : 'text-muted'" role="status" aria-live="polite">
                     <span class="grid size-4 shrink-0 place-items-center rounded-full text-xs font-semibold text-white" :class="dirty ? 'bg-amber-600' : 'bg-emerald-600'" x-text="saving ? '…' : dirty ? '!' : '✓'" aria-hidden="true">{{ $errors->any() ? '!' : '✓' }}</span>
                     <span x-text="saving ? 'Saving store settings…' : dirty ? 'Unsaved changes' : 'All changes saved'">{{ $errors->any() ? 'Unsaved changes' : 'All changes saved' }}</span>
@@ -40,7 +40,7 @@
                 <div class="min-w-0 space-y-5">
                 <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="store-profile-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
+                        <span class="grid size-10 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-700" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5 5 4h14l2 5.5M4 10h16v10H4zM9 20v-6h6v6M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>
                         </span>
                         <div>
@@ -74,7 +74,7 @@
                                             <label class="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-rose-600">
                                                 <input x-model="removeLogo" type="checkbox" name="remove_logo" value="1" @checked(old('remove_logo')) aria-label="Remove current logo on save" aria-describedby="remove-logo-help @error('remove_logo') remove-logo-error @enderror" @error('remove_logo') aria-invalid="true" @enderror
                                                     @change="if ($event.target.checked) { $refs.logoInput.value = ''; if (logoPreview) URL.revokeObjectURL(logoPreview); logoPreview = null; logoName = ''; }"
-                                                    class="size-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500 @error('remove_logo') border-rose-500 @enderror">
+                                                    class="size-4 rounded-md border-rose-300 text-rose-600 focus:ring-rose-500 @error('remove_logo') border-rose-500 @enderror">
                                                 Remove logo
                                             </label>
                                         @endif
@@ -103,7 +103,7 @@
 
                 <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="contact-details-heading">
                     <div class="flex items-start gap-3">
-                        <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
+                        <span class="grid size-10 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-700" aria-hidden="true">
                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.5 7-12a7 7 0 0 0-14 0c0 6.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
                         </span>
                         <div>
@@ -144,7 +144,7 @@
                     <section class="seller-form-card min-w-0 overflow-hidden" aria-labelledby="store-preview-heading">
                         <div class="flex items-center justify-between gap-2 px-3 py-3">
                             <h2 id="store-preview-heading" class="flex min-w-0 items-center gap-1.5 text-base font-semibold leading-5 text-ink">
-                                <span class="grid size-6 shrink-0 place-items-center rounded bg-slate-100 text-slate-600" aria-hidden="true"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                                <span class="grid size-6 shrink-0 place-items-center rounded-md bg-slate-100 text-slate-600" aria-hidden="true"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
                                 Store details
                             </h2>
                             <span class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold {{ $store->status === 'active' ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-muted' }}">
@@ -154,12 +154,12 @@
                         <div class="relative overflow-hidden bg-ink px-5 py-6 text-white">
                             <div class="relative flex min-w-0 items-center gap-4">
                                 @if ($store->logo_path)
-                                    <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" x-show="!logoPreview && !removeLogo" class="size-16 shrink-0 rounded-xl border-2 border-white/60 bg-white object-cover">
-                                    <div x-cloak x-show="removeLogo" class="grid size-16 shrink-0 place-items-center rounded-xl bg-white text-2xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
+                                    <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" x-show="!logoPreview && !removeLogo" class="size-16 shrink-0 rounded-lg border-2 border-white/60 bg-white object-cover">
+                                    <div x-cloak x-show="removeLogo" class="grid size-16 shrink-0 place-items-center rounded-lg bg-white text-2xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
                                 @else
-                                    <div x-show="!logoPreview" class="grid size-16 shrink-0 place-items-center rounded-xl bg-white text-2xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
+                                    <div x-show="!logoPreview" class="grid size-16 shrink-0 place-items-center rounded-lg bg-white text-2xl font-semibold text-brand" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</div>
                                 @endif
-                                <img x-cloak x-show="logoPreview" :src="logoPreview" alt="Selected storefront logo preview" class="size-16 shrink-0 rounded-xl border-2 border-white/60 bg-white object-cover">
+                                <img x-cloak x-show="logoPreview" :src="logoPreview" alt="Selected storefront logo preview" class="size-16 shrink-0 rounded-lg border-2 border-white/60 bg-white object-cover">
                                 <div class="min-w-0">
                                     <p class="truncate text-xl font-semibold">{{ $store->name }}</p>
                                     <p class="mt-0.5 truncate text-xs text-slate-200">/stores/{{ $store->slug }}</p>

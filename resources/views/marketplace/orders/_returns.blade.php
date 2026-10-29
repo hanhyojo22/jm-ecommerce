@@ -30,7 +30,7 @@
                 <div class="p-5 sm:p-6">
                     <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                         <div class="flex min-w-0 items-center gap-3">
-                            <span class="grid size-10 shrink-0 place-items-center rounded-[9px] border border-line bg-canvas font-display text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
+                            <span class="grid size-10 shrink-0 place-items-center rounded-md border border-line bg-canvas font-display text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($sellerOrder->store->name, 0, 1)) }}</span>
                             <div class="min-w-0">
                                 <h3 class="truncate font-semibold text-ink">{{ $sellerOrder->store->name }}</h3>
                                 @if ($sellerOrder->delivered_at)
@@ -57,7 +57,7 @@
                             <ul class="mt-2 grid gap-2" aria-label="Return cases for {{ $sellerOrder->store->name }}">
                                 @foreach ($sellerOrder->returnCases as $case)
                                     <li>
-                                        <a href="{{ route('returns.show', $case) }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border border-line bg-white px-3.5 py-3 transition hover:border-blue-300 hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
+                                        <a href="{{ route('returns.show', $case) }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-line bg-white px-3.5 py-3 transition hover:border-blue-300 hover:bg-blue-50/40 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold text-ink">Return case · opened {{ $case->created_at->format('M j, Y') }}</span>
                                                 <span class="mt-0.5 block text-xs text-muted">View the case history and your next step.</span>
@@ -75,7 +75,7 @@
                     @endif
 
                     @if ($windowOpen)
-                        <details class="group mt-4 overflow-hidden rounded-2xl border border-line bg-canvas" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
+                        <details class="group mt-4 overflow-hidden rounded-lg border border-line bg-canvas" @if ($resubmitted || ($order->sellerOrders->count() === 1 && $sellerOrder->returnCases->isEmpty())) open @endif>
                             <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand transition hover:bg-blue-50/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand [&::-webkit-details-marker]:hidden">
                                 <span class="flex min-w-0 items-center gap-2">
                                     <span class="grid size-6 shrink-0 place-items-center rounded-[5px] border border-blue-200 bg-white text-brand" aria-hidden="true"><x-returns.icon name="plus" class="size-3.5" /></span>
@@ -99,14 +99,14 @@
                                     <fieldset class="grid gap-2" x-on:input="units = [...$el.querySelectorAll('input[type=number]')].reduce((total, field) => total + (Number(field.value) || 0), 0)">
                                         <legend class="field-label flex items-center gap-2"><span class="returns-form-step" aria-hidden="true">1</span> Which items are affected?</legend>
                                         <p class="-mt-1 text-xs leading-5 text-muted">Set a quantity for every item you are claiming. Leave the rest at zero.</p>
-                                        <ul class="divide-y divide-line overflow-hidden rounded-[12px] border border-line bg-white">
+                                        <ul class="divide-y divide-line overflow-hidden rounded-lg border border-line bg-white">
                                             @foreach ($sellerOrder->items as $item)
                                                 <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 px-3.5 py-3">
                                                     <div class="flex min-w-0 items-center gap-3">
                                                         @if ($item->product?->images->first())
-                                                            <img src="{{ Storage::disk('product_images')->url($item->product->images->first()->path) }}" alt="" class="size-11 shrink-0 rounded-[8px] border border-line object-cover" loading="lazy" decoding="async">
+                                                            <img src="{{ Storage::disk('product_images')->url($item->product->images->first()->path) }}" alt="" class="size-11 shrink-0 rounded-lg border border-line object-cover" loading="lazy" decoding="async">
                                                         @else
-                                                            <span class="grid size-11 shrink-0 place-items-center rounded-[8px] bg-canvas text-sm font-semibold text-muted" aria-hidden="true">{{ Str::upper(Str::substr($item->product_name, 0, 1)) }}</span>
+                                                            <span class="grid size-11 shrink-0 place-items-center rounded-lg bg-canvas text-sm font-semibold text-muted" aria-hidden="true">{{ Str::upper(Str::substr($item->product_name, 0, 1)) }}</span>
                                                         @endif
                                                         <div class="min-w-0">
                                                             <label for="return-qty-{{ $item->id }}" class="block text-sm font-medium text-ink">{{ $item->product_name }}</label>
@@ -115,7 +115,7 @@
                                                     </div>
                                                     <div class="flex shrink-0 items-center">
                                                         <input type="hidden" name="items[{{ $loop->index }}][order_item_id]" value="{{ $item->id }}">
-                                                        <div class="flex items-center overflow-hidden rounded-[10px] border border-line bg-white focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2">
+                                                        <div class="flex items-center overflow-hidden rounded-md border border-line bg-white focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2">
                                                             <button type="button" class="grid h-11 w-10 place-items-center text-muted transition hover:bg-canvas hover:text-ink focus:outline-none" aria-label="Remove one unit of {{ $item->product_name }}" @click="$refs.qty{{ $loop->index }}.stepDown(); $refs.qty{{ $loop->index }}.dispatchEvent(new Event('input', { bubbles: true }))">
                                                                 <x-returns.icon name="minus" class="size-4" />
                                                             </button>
@@ -188,8 +188,8 @@
 
                                     <div>
                                         <label for="return-photos-{{ $sellerOrder->id }}" class="field-label flex items-center gap-2"><span class="returns-form-step" aria-hidden="true">5</span> Photos <span class="font-normal text-muted">(optional, up to three, 5 MB each)</span></label>
-                                        <label for="return-photos-{{ $sellerOrder->id }}" class="flex cursor-pointer items-center gap-3 rounded-[12px] border border-dashed border-slate-300 bg-canvas px-4 py-3.5 transition hover:border-brand hover:bg-blue-50/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand has-[:focus-visible]:ring-offset-2">
-                                            <span class="grid size-9 shrink-0 place-items-center rounded-[8px] border border-line bg-white text-brand" aria-hidden="true"><x-returns.icon name="camera" class="size-4" /></span>
+                                        <label for="return-photos-{{ $sellerOrder->id }}" class="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-canvas px-4 py-3.5 transition hover:border-brand hover:bg-blue-50/40 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand has-[:focus-visible]:ring-offset-2">
+                                            <span class="grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-white text-brand" aria-hidden="true"><x-returns.icon name="camera" class="size-4" /></span>
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold text-ink">Add photos of the problem</span>
                                                 <span class="mt-0.5 block text-xs text-muted">JPEG, PNG, or WebP · up to three files</span>
@@ -199,7 +199,7 @@
                                         <p class="mt-1.5 text-xs text-muted">Photos have to be picked again if the form comes back with an error.</p>
                                         <ul x-show="photos.length" x-cloak class="mt-2 flex flex-wrap gap-2" aria-label="Selected photos">
                                             <template x-for="photo in photos" :key="photo.url">
-                                                <li class="overflow-hidden rounded-[10px] border border-line bg-canvas">
+                                                <li class="overflow-hidden rounded-md border border-line bg-canvas">
                                                     <img :src="photo.url" :alt="photo.name" class="size-16 object-cover">
                                                 </li>
                                             </template>
@@ -234,7 +234,7 @@
                             </div>
                         </details>
                     @else
-                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line bg-canvas px-4 py-3.5">
+                        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-canvas px-4 py-3.5">
                             <p class="text-sm leading-6 text-muted">The seven-day online request window {{ $windowEndsAt ? 'closed on '.$windowEndsAt->format('M j, Y · g:i A').'.' : 'cannot be applied because the delivery date is uncertain.' }} Your legal rights may continue.</p>
                             <a href="mailto:itservices@jmsolutionitservices.com?subject=Later%20return%20claim%20{{ urlencode($order->number) }}" class="button-secondary shrink-0">Contact support</a>
                         </div>

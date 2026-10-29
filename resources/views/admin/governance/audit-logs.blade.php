@@ -7,7 +7,7 @@
 
     <div class="page-shell">
         <div class="page-container">
-            <section class="overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Administrative activity log">
+            <section class="overflow-hidden rounded-lg border border-line bg-surface" aria-label="Administrative activity log">
                 <div class="table-scroll hidden lg:block">
                     <table class="min-w-[900px] divide-y divide-line text-sm">
                         <thead class="bg-canvas text-left text-xs font-semibold uppercase tracking-[0.1em] text-muted">

@@ -53,8 +53,8 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-2 sm:ml-auto">
                         <button type="button" @click="filtersOpen = ! filtersOpen" :aria-expanded="filtersOpen.toString()" aria-controls="top-product-filters" class="marketplace-toolbar-control px-4 lg:hidden">Filters</button>
-                        <span class="inline-flex min-h-11 items-center rounded-[10px] border border-line bg-white px-3 text-[13px] font-medium text-muted">Last {{ $rankingPeriodDays }} days</span>
-                        <div class="hidden items-center gap-1 rounded-[10px] border border-line bg-white p-1 sm:flex" role="group" aria-label="View layout">
+                        <span class="inline-flex min-h-11 items-center rounded-md border border-line bg-white px-3 text-[13px] font-medium text-muted">Last {{ $rankingPeriodDays }} days</span>
+                        <div class="hidden items-center gap-1 rounded-md border border-line bg-white p-1 sm:flex" role="group" aria-label="View layout">
                             <button type="button" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'" aria-label="Grid view" :class="viewMode === 'grid' ? 'bg-ink text-white' : 'text-muted hover:text-ink'" class="grid size-10 place-items-center rounded-lg transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
                             <button type="button" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'" aria-label="List view" :class="viewMode === 'list' ? 'bg-ink text-white' : 'text-muted hover:text-ink'" class="grid size-10 place-items-center rounded-lg transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h12M9 12h12M9 19h12"/><path d="M3 5h2M3 12h2M3 19h2"/></svg></button>
                         </div>
@@ -78,7 +78,7 @@
                     <div class="mt-5 rounded-[var(--radius-surface)] border border-dashed border-line bg-white px-6 py-16 text-center">
                         <h2 class="text-lg font-semibold">No top products yet</h2>
                         <p class="mt-2 text-sm text-muted">Delivered orders from the last {{ $rankingPeriodDays }} days will appear here.</p>
-                        @if ($selectedCategory)<a href="{{ route('catalog.top-products') }}" class="mt-4 inline-flex min-h-11 items-center rounded-[10px] px-3 text-sm font-semibold text-brand hover:bg-blue-50 hover:text-brand-hover">Clear category filter</a>@endif
+                        @if ($selectedCategory)<a href="{{ route('catalog.top-products') }}" class="mt-4 inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-brand hover:bg-blue-50 hover:text-brand-hover">Clear category filter</a>@endif
                     </div>
                 @endif
             </section>

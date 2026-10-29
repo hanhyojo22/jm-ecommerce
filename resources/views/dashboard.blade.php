@@ -12,13 +12,13 @@
     <div class="min-w-0 px-[18px] pb-10 pt-6 sm:px-8 lg:pt-8">
 
             @if (session('status'))
-                <div class="mb-5 rounded-xl border border-success/20 bg-success/10 px-4 py-3 text-sm text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-5 rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm text-success" role="status">{{ session('status') }}</div>
             @endif
             @if (session('error'))
-                <div class="mb-5 rounded-xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ session('error') }}</div>
+                <div class="mb-5 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ session('error') }}</div>
             @endif
             @if ($errors->hasAny(['type', 'sort']))
-                <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning-text" role="alert">
+                <div class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning-text" role="alert">
                     <span>That queue view is no longer available. The dashboard is showing all open items.</span>
                     <a href="{{ route('admin.moderation') }}" class="font-semibold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warning-text">Reset to all items</a>
                 </div>
@@ -38,13 +38,13 @@
                     </div>
 
                     <dl class="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Marketplace key figures">
-                        <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Gross merchandise value</dt><dd class="mt-1 whitespace-nowrap text-base font-semibold tabular-nums tracking-tight text-ink xl:text-xl">₱{{ $marketplaceStats['gmv'] }}</dd></div>
-                        <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Orders</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['orders']) }}</dd></div>
-                        <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Customers</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['customers']) }}</dd></div>
-                        <div class="rounded-xl border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Active sellers</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['activeSellers']) }}</dd></div>
+                        <div class="rounded-lg border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Gross merchandise value</dt><dd class="mt-1 whitespace-nowrap text-base font-semibold tabular-nums tracking-tight text-ink xl:text-xl">₱{{ $marketplaceStats['gmv'] }}</dd></div>
+                        <div class="rounded-lg border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Orders</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['orders']) }}</dd></div>
+                        <div class="rounded-lg border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Customers</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['customers']) }}</dd></div>
+                        <div class="rounded-lg border border-line bg-surface px-4 py-3.5"><dt class="text-xs font-medium text-muted">Active sellers</dt><dd class="mt-1 text-xl font-semibold tabular-nums tracking-tight text-ink">{{ number_format($marketplaceStats['activeSellers']) }}</dd></div>
                     </dl>
 
-                    <div class="mt-6 flex min-h-[4.5rem] flex-col gap-3 rounded-xl bg-brand px-4 py-3.5 text-white sm:flex-row sm:items-center sm:justify-between sm:px-5" role="status">
+                    <div class="mt-6 flex min-h-[4.5rem] flex-col gap-3 rounded-lg bg-brand px-4 py-3.5 text-white sm:flex-row sm:items-center sm:justify-between sm:px-5" role="status">
                         <div class="flex items-center gap-3.5">
                             <span class="grid size-10 shrink-0 place-items-center rounded-full bg-warning text-ink">
                                 @if ($counts['attention'] > 0)
@@ -172,7 +172,7 @@
 
                 </section>
 
-                <aside class="rounded-xl border border-line bg-surface px-4 py-4 xl:mt-0" aria-labelledby="quick-checks-title">
+                <aside class="rounded-lg border border-line bg-surface px-4 py-4 xl:mt-0" aria-labelledby="quick-checks-title">
                     <h2 id="quick-checks-title" class="text-lg font-semibold tracking-[-0.02em] text-ink">Governance shortcuts</h2>
                     <p class="mt-1 text-sm leading-5 text-muted">Review suspended stores, pending applications, and recent decisions.</p>
                     <div class="mt-2 divide-y divide-line">

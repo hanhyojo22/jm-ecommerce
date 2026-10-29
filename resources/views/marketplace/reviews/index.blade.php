@@ -11,8 +11,8 @@
         </header>
 
         @if ($reviews->isEmpty())
-            <section class="mt-7 rounded-2xl border border-dashed border-line bg-white px-6 py-14 text-center sm:py-16" aria-labelledby="empty-reviews-heading">
-                <span class="mx-auto grid size-14 place-items-center rounded-2xl bg-blue-50 text-brand" aria-hidden="true"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" /></svg></span>
+            <section class="mt-7 rounded-lg border border-dashed border-line bg-white px-6 py-14 text-center sm:py-16" aria-labelledby="empty-reviews-heading">
+                <span class="mx-auto grid size-14 place-items-center rounded-lg bg-blue-50 text-brand" aria-hidden="true"><svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" /></svg></span>
                 <h2 id="empty-reviews-heading" class="mt-5 font-semibold text-ink">No reviews yet</h2>
                 <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">After an order is delivered, open the purchase to share your experience with the store.</p>
                 <a href="{{ route('orders.index') }}" class="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">View my purchases</a>
@@ -26,9 +26,9 @@
                         'removed' => 'bg-rose-50 text-rose-800 ring-rose-200',
                         default => 'bg-slate-100 text-slate-700 ring-line',
                     })
-                    <article class="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+                    <article class="overflow-hidden rounded-lg border border-line bg-white shadow-sm">
                         <div class="flex flex-wrap items-start gap-4 p-5 sm:flex-nowrap sm:p-6">
-                            <span class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100 text-slate-400" aria-hidden="true">
+                            <span class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400" aria-hidden="true">
                                 @if ($review->product?->thumbnail)
                                     <img src="{{ Storage::disk('product_images')->url($review->product->thumbnail->path) }}" alt="" width="80" height="80" loading="lazy" class="size-full object-contain">
                                 @else

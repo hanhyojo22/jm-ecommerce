@@ -8,7 +8,7 @@
     </head>
     <body class="bg-canvas font-sans text-ink">
         <main class="grid min-h-screen place-items-center px-4 py-12">
-            <section class="w-full max-w-xl rounded-xl border border-line bg-white p-6 text-center sm:p-10" role="alert">
+            <section class="w-full max-w-xl rounded-lg border border-line bg-white p-6 text-center sm:p-10" role="alert">
                 <h1 class="font-display text-2xl font-semibold">We couldn’t load your overview</h1>
                 <p class="mt-3 text-sm leading-6 text-muted">The latest store data is temporarily unavailable. Your listings and orders haven’t been changed.</p>
                 <p class="mt-3 text-sm leading-6 text-muted">You can review products while we restore the overview, or try again in a few minutes.</p>

@@ -110,7 +110,7 @@
                                 @endif
                             @endforeach
                         </div>
-                        <dialog x-ref="confirmation" @close="confirmation = null" class="w-[calc(100%-2rem)] max-w-md rounded-xl border-0 p-0 shadow-2xl backdrop:bg-slate-950/40">
+                        <dialog x-ref="confirmation" @close="confirmation = null" class="w-[calc(100%-2rem)] max-w-md rounded-lg border-0 p-0 shadow-2xl backdrop:bg-slate-950/40">
                             <div class="bg-white p-6">
                                 <h3 class="text-lg font-semibold text-ink" x-text="confirmation === 'shipped' ? 'Mark order as shipped?' : 'Cancel this order?'"></h3>
                                 <p class="mt-2 text-sm leading-6 text-muted" x-text="confirmation === 'shipped' ? 'This tells your customer the order has left your store. You can only move it to delivered afterward.' : 'This cancels only your store’s part of the checkout and restores its item stock. This cannot be undone.'"></p>

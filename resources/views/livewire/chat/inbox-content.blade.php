@@ -2,7 +2,7 @@
     <header class="shrink-0 border-b border-line px-4 pb-3 pt-4 sm:px-5">
         <h1 class="text-xl font-semibold tracking-tight text-ink">Messages</h1>
         <p class="mt-0.5 text-xs text-muted">{{ $isBuyerMessages ? 'Contact stores about products and orders.' : 'Your customer conversations.' }}</p>
-        <label for="conversation-search" class="mt-4 flex min-h-11 items-center gap-2.5 rounded-[10px] border border-line bg-canvas px-3 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-2 focus-within:ring-brand/15">
+        <label for="conversation-search" class="mt-4 flex min-h-11 items-center gap-2.5 rounded-md border border-line bg-canvas px-3 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-2 focus-within:ring-brand/15">
             <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.75" cy="10.75" r="6.75"/><path stroke-linecap="round" d="m16 16 4.5 4.5"/></svg>
             <span class="sr-only">Search conversations</span>
             <input wire:model.live.debounce.300ms="search" id="conversation-search" type="search" placeholder="Search conversations" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">

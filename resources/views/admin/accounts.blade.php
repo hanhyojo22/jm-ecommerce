@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header"><div><h1 class="mt-1 marketplace-page-title">Admin management</h1></div></x-slot>
     <div class="page-shell"><div class="page-container space-y-6">
-        @if (session('status'))<div class="rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
+        @if (session('status'))<div class="rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
         <section class="section-card"><h2 class="text-lg font-semibold text-ink">Invite an administrator</h2><p class="mt-1 max-w-2xl text-sm leading-6 text-muted">Clerk sends the invitation and manages the administrator's sign-in methods. Admin accounts cannot be created publicly.</p>
             <form method="POST" action="{{ route('admin.accounts.store') }}" x-data="{ submitting: false }" @submit="submitting = true" class="mt-5 grid gap-5 md:grid-cols-2">@csrf
                 <div><x-input-label for="name" :value="__('Name')" /><x-text-input id="name" class="mt-1.5" name="name" :value="old('name')" autocomplete="name" required /><x-input-error :messages="$errors->get('name')" class="mt-2" /></div><div><x-input-label for="email" :value="__('Email')" /><x-text-input id="email" class="mt-1.5" type="email" name="email" :value="old('email')" autocomplete="email" required /><x-input-error :messages="$errors->get('email')" class="mt-2" /></div><div class="md:col-span-2"><x-primary-button x-bind:disabled="submitting"><span x-show="!submitting">Send Clerk invitation</span><span x-cloak x-show="submitting">Sending…</span></x-primary-button></div>

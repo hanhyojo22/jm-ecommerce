@@ -324,7 +324,7 @@ const renderClerkComponentError = (message = 'Authentication could not load. Ple
         element.replaceChildren(description, retryButton);
         element.setAttribute('aria-busy', 'false');
         element.setAttribute('role', 'alert');
-        element.classList.add('space-y-3', 'rounded-xl', 'border', 'border-red-200', 'bg-red-50', 'p-4', 'text-sm', 'text-red-800');
+        element.classList.add('space-y-3', 'rounded-lg', 'border', 'border-red-200', 'bg-red-50', 'p-4', 'text-sm', 'text-red-800');
         retryButton.classList.add('inline-flex', 'min-h-11', 'items-center', 'justify-center', 'rounded-lg', 'bg-white', 'px-4', 'font-semibold', 'text-red-800', 'ring-1', 'ring-inset', 'ring-red-300', 'transition', 'hover:bg-red-100', 'focus-visible:outline-none', 'focus-visible:ring-2', 'focus-visible:ring-red-700', 'focus-visible:ring-offset-2');
     });
 };

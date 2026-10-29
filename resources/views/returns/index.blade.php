@@ -70,7 +70,7 @@
             @endforeach
         </div>
 
-        <section class="mt-6 rounded-[16px] border border-line bg-surface p-4 sm:p-5" aria-label="Case filters">
+        <section class="mt-6 rounded-lg border border-line bg-surface p-4 sm:p-5" aria-label="Case filters">
             <form method="GET" action="{{ route($routeName) }}" class="grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-12">
                 <div class="sm:col-span-2 lg:col-span-5">
                     <label for="search" class="field-label">Search cases</label>
@@ -89,7 +89,7 @@
                 </div>
                 <div class="lg:col-span-2">
                     <label class="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm font-medium text-muted">
-                        <input type="checkbox" name="overdue" value="1" @checked($filters['overdue']) class="rounded border-line text-brand focus:ring-brand">
+                        <input type="checkbox" name="overdue" value="1" @checked($filters['overdue']) class="rounded-md border-line text-brand focus:ring-brand">
                         Overdue only
                     </label>
                 </div>

@@ -8,7 +8,7 @@
             <div class="review-comment-body">
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                     <span class="font-semibold text-ink">{{ $review->user->name }}</span>
-                    <span class="rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-success">Verified buyer</span>
+                    <span class="rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-success">Verified buyer</span>
                 </div>
                 <div class="mt-1 flex gap-0.5 text-amber-500" role="img" aria-label="{{ $review->rating }} out of 5 stars">@foreach (range(1, 5) as $star)<span class="text-sm {{ $star <= $review->rating ? '' : 'text-slate-200' }}">&#9733;</span>@endforeach</div>
                 @if ($review->title)<h3 class="mt-1 text-sm font-semibold text-ink">{{ $review->title }}</h3>@endif
@@ -18,7 +18,7 @@
                         @foreach ($review->photos as $photo)
                             <button type="button" @click="source = '{{ Storage::disk('public')->url($photo->path) }}'; open = true" class="size-16 overflow-hidden rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><img src="{{ Storage::disk('public')->url($photo->path) }}" alt="Review photo {{ $loop->iteration }}" loading="lazy" class="h-full w-full object-cover"></button>
                         @endforeach
-                        <div x-show="open" x-cloak @keydown.escape.window="open = false" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4" role="dialog" aria-modal="true" aria-label="Expanded review photo"><button type="button" @click="open = false" class="absolute right-5 top-5 min-h-11 min-w-11 rounded-lg bg-white px-3 text-sm font-semibold">Close</button><img :src="source" alt="Expanded review photo" class="max-h-full max-w-full rounded-xl"></div>
+                        <div x-show="open" x-cloak @keydown.escape.window="open = false" class="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4" role="dialog" aria-modal="true" aria-label="Expanded review photo"><button type="button" @click="open = false" class="absolute right-5 top-5 min-h-11 min-w-11 rounded-lg bg-white px-3 text-sm font-semibold">Close</button><img :src="source" alt="Expanded review photo" class="max-h-full max-w-full rounded-lg"></div>
                     </div>
                 @endif
             </div>
@@ -58,7 +58,7 @@
                         @endif
                         <div class="min-w-0 flex-1">
                             <div class="review-comment-body">
-                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"><span class="font-semibold text-ink">{{ $official ? $store->name : $response->user->name }}</span>@if ($official)<span class="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-brand">Seller</span>@endif</div>
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"><span class="font-semibold text-ink">{{ $official ? $store->name : $response->user->name }}</span>@if ($official)<span class="rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-brand">Seller</span>@endif</div>
                                 <p class="mt-0.5 whitespace-pre-line break-words text-sm leading-6 text-ink">{{ $response->body }}</p>
                             </div>
                             <div class="review-actions">

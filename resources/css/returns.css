@@ -20,7 +20,7 @@
 .returns-panel {
     min-width: 0;
     border: 1px solid var(--color-border);
-    border-radius: 16px;
+    border-radius: 8px;
     background: var(--color-surface);
     padding: 1.35rem;
     box-shadow: 0 1px 2px rgb(24 44 72 / 3%);
@@ -88,7 +88,7 @@
     position: relative;
     overflow: hidden;
     border: 1px solid #dfe7f5;
-    border-radius: 18px;
+    border-radius: 8px;
     background:
         radial-gradient(90% 120% at 100% 0%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0) 58%),
         linear-gradient(135deg, #f8fbff 0%, #eaf0fa 100%);
@@ -124,7 +124,7 @@
     flex: none;
     place-items: center;
     border: 1px solid #d7e3f6;
-    border-radius: 10px;
+    border-radius: 6px;
     background: #ffffff;
     color: var(--color-accent);
     font-family: var(--font-display);
@@ -385,7 +385,7 @@
     align-items: flex-start;
     gap: 0.8rem;
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 8px;
     background: var(--color-surface);
     padding: 0.9rem;
     transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
@@ -480,7 +480,7 @@
     margin: 0;
     padding: 0;
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 8px;
     background: #f8fafc;
     list-style: none;
 }
@@ -536,7 +536,7 @@
 .returns-request {
     overflow: hidden;
     border: 1px solid var(--color-border);
-    border-radius: 18px;
+    border-radius: 8px;
     background: var(--color-surface);
     box-shadow: 0 1px 2px rgb(24 44 72 / 3%);
 }
@@ -562,7 +562,7 @@
     flex: none;
     place-items: center;
     border: 1px solid #cbd5e1;
-    border-radius: 9px;
+    border-radius: 6px;
     background: #ffffff;
     color: var(--color-accent);
 }
@@ -623,7 +623,7 @@
     min-height: 8.75rem;
     padding: 1.2rem;
     border: 1px solid var(--color-border);
-    border-radius: 14px;
+    border-radius: 8px;
     background: var(--color-surface);
     transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
@@ -837,7 +837,7 @@
 
 .returns-late-store {
     border: 1px solid var(--color-border);
-    border-radius: 12px;
+    border-radius: 8px;
     background: var(--color-surface);
 }
 
@@ -870,7 +870,7 @@
     position: relative;
     overflow: hidden;
     border: 1px solid #dfe7f5;
-    border-radius: 20px;
+    border-radius: 8px;
     background:
         radial-gradient(80% 120% at 100% 0%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 58%),
         linear-gradient(135deg, #f8fbff 0%, #eaf0fa 100%);
@@ -902,7 +902,7 @@
 
 .returns-policy-summary {
     border: 1px solid #1e293b;
-    border-radius: 14px;
+    border-radius: 8px;
     background:
         radial-gradient(100% 140% at 100% 0%, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0) 55%),
         #111c32;
@@ -955,7 +955,7 @@
     display: grid;
     overflow: hidden;
     border: 1px solid var(--color-border);
-    border-radius: 16px;
+    border-radius: 8px;
     background: var(--color-surface);
 }
 
@@ -1061,7 +1061,7 @@
 .returns-policy-article {
     min-width: 0;
     border: 1px solid var(--color-border);
-    border-radius: 18px;
+    border-radius: 8px;
     background: var(--color-surface);
     padding: 1.5rem;
 }
@@ -1140,7 +1140,7 @@
     margin-top: 1.1rem;
     border: 1px solid #bfdbfe;
     border-left: 3px solid var(--color-accent);
-    border-radius: 0 10px 10px 0;
+    border-radius: 0 6px 6px 0;
     background: #eff6ff;
     padding: 0.9rem 1rem;
     color: #334155;
@@ -1152,7 +1152,7 @@
     position: relative;
     overflow: hidden;
     border: 1px solid #1e293b;
-    border-radius: 16px;
+    border-radius: 8px;
     background:
         radial-gradient(100% 150% at 100% 0%, rgba(59, 130, 246, 0.18) 0%, rgba(59, 130, 246, 0) 55%),
         #111c32;
@@ -1232,7 +1232,7 @@
     }
 
     .returns-hero {
-        border-radius: 16px;
+        border-radius: 8px;
     }
 
     .returns-hero-stat {
@@ -1240,20 +1240,20 @@
     }
 
     .returns-panel {
-        border-radius: 14px;
+        border-radius: 8px;
         padding: 1.15rem;
     }
 
     .returns-policy-hero {
-        border-radius: 16px;
+        border-radius: 8px;
     }
 
     .returns-policy-summary {
-        border-radius: 12px;
+        border-radius: 8px;
     }
 
     .returns-policy-article {
-        border-radius: 14px;
+        border-radius: 8px;
         padding: 1.15rem;
     }
 
@@ -1271,7 +1271,7 @@
     }
 
     .returns-request {
-        border-radius: 16px;
+        border-radius: 8px;
     }
 }
 

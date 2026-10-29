@@ -56,7 +56,7 @@
                         ['Message the seller', 'Ask about stock or delivery before you commit.', 'M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z'],
                     ] as [$title, $copy, $path])
                         <div @class(['flex gap-3.5 py-3.5', 'border-t border-white/10' => ! $loop->first])>
-                            <span class="grid size-[38px] shrink-0 place-items-center rounded-[11px] bg-white/10 text-[#93b4f5]" aria-hidden="true">
+                            <span class="grid size-[38px] shrink-0 place-items-center rounded-md bg-white/10 text-[#93b4f5]" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="size-[19px]"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
                             </span>
                             <div class="min-w-0">
@@ -76,7 +76,7 @@
 
         <main class="flex items-start justify-center px-[18px] py-7 sm:px-8 lg:items-center lg:py-12">
             <section class="w-full max-w-[392px]" aria-labelledby="auth-heading" data-od-id="auth-card">
-                <div class="flex gap-1 rounded-[10px] bg-canvas p-1" role="tablist" aria-label="Sign in or create account">
+                <div class="flex gap-1 rounded-md bg-canvas p-1" role="tablist" aria-label="Sign in or create account">
                     <a href="{{ route('login', $redirectParams) }}" role="tab" @if (! $isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => ! $isSignUp, 'text-muted hover:text-ink' => $isSignUp])>Sign in</a>
                     <a href="{{ route('register', $redirectParams) }}" role="tab" @if ($isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => $isSignUp, 'text-muted hover:text-ink' => ! $isSignUp])>Create account</a>
                 </div>

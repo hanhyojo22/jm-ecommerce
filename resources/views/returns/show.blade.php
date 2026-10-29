@@ -104,13 +104,13 @@
         </section>
 
         @if (session('status'))
-            <p class="mt-5 flex items-start gap-2.5 rounded-[10px] border border-green-200 bg-green-50 px-3.5 py-3 text-sm font-semibold text-success" role="status">
+            <p class="mt-5 flex items-start gap-2.5 rounded-md border border-green-200 bg-green-50 px-3.5 py-3 text-sm font-semibold text-success" role="status">
                 <svg class="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
                 {{ session('status') }}
             </p>
         @endif
         @if ($errors->any())
-            <div class="mt-5 rounded-[10px] border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-danger" role="alert">
+            <div class="mt-5 rounded-md border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-danger" role="alert">
                 <p class="font-semibold">The last action could not be completed.</p>
                 <ul class="mt-1 list-inside list-disc">
                     @foreach ($errors->all() as $error)
@@ -120,7 +120,7 @@
             </div>
         @endif
         @if ($overdue)
-            <div class="mt-5 flex items-start gap-3 rounded-[10px] border border-red-200 bg-red-50 px-4 py-3.5" role="alert">
+            <div class="mt-5 flex items-start gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3.5" role="alert">
                 <svg class="mt-0.5 size-5 shrink-0 text-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
                 <div>
                     <p class="text-sm font-semibold text-danger">This case is overdue</p>
@@ -184,8 +184,8 @@
                             </fieldset>
                             <fieldset class="grid gap-4">
                                 <legend class="field-label">Return of the goods</legend>
-                                <label class="flex cursor-pointer items-start gap-3 rounded-[10px] border border-line bg-canvas px-3.5 py-3">
-                                    <input type="checkbox" name="return_waived" value="1" x-model="waived" class="mt-0.5 rounded border-line text-brand focus:ring-brand">
+                                <label class="flex cursor-pointer items-start gap-3 rounded-md border border-line bg-canvas px-3.5 py-3">
+                                    <input type="checkbox" name="return_waived" value="1" x-model="waived" class="mt-0.5 rounded-md border-line text-brand focus:ring-brand">
                                     <span>
                                         <span class="block text-sm font-semibold text-ink">Waive the physical return</span>
                                         <span class="mt-0.5 block text-xs leading-5 text-muted">Skip sending the goods back and complete the remedy directly.</span>
@@ -216,7 +216,7 @@
                         <h2 id="next-step-heading" class="returns-section-title">Your turn: respond to the seller</h2>
                         <p class="mt-1.5 text-sm leading-6 text-muted">Respond by <strong>{{ $case->buyer_respond_by?->format('M j, g:i A') }}</strong>. After that JMMart can close the case without a remedy.</p>
                         @if ($case->status === 'offered')
-                            <div class="mt-4 rounded-[10px] border border-blue-200 bg-blue-50/60 px-4 py-3.5">
+                            <div class="mt-4 rounded-md border border-blue-200 bg-blue-50/60 px-4 py-3.5">
                                 <p class="text-sm font-semibold text-ink">Offer: {{ ucfirst($case->remedy) }}</p>
                                 @if ($case->return_waived)
                                     <p class="mt-1 text-sm text-muted">No return needed — the seller completes the remedy directly.</p>
@@ -258,7 +258,7 @@
                     @elseif ($role === 'seller' && $case->status === 'awaiting_fulfillment' && $case->remedy === 'refund')
                         <h2 id="next-step-heading" class="returns-section-title">Your turn: record the refund</h2>
                         <p class="mt-1.5 text-sm leading-6 text-muted">Support coordinates the refund destination privately. Record proof only after payment. The original order total stays unchanged.</p>
-                        <p class="mt-3 rounded-[10px] border border-line bg-canvas px-3.5 py-2.5 text-sm text-ink">Refund amount: <strong class="tabular-nums">₱{{ number_format((float) $amountAtStake, 2) }}</strong></p>
+                        <p class="mt-3 rounded-md border border-line bg-canvas px-3.5 py-2.5 text-sm text-ink">Refund amount: <strong class="tabular-nums">₱{{ number_format((float) $amountAtStake, 2) }}</strong></p>
                         <form method="POST" action="{{ $actionRoute }}" enctype="multipart/form-data" class="mt-4 grid gap-4">@csrf @method('PATCH')
                             <div>
                                 <label for="seller-paid-at" class="field-label">Payment date</label>
@@ -356,8 +356,8 @@
                             </div>
                             <fieldset class="grid gap-4" x-show="decision !== 'deny'">
                                 <legend class="field-label">Return of the goods</legend>
-                                <label class="flex cursor-pointer items-start gap-3 rounded-[10px] border border-line bg-canvas px-3.5 py-3">
-                                    <input type="checkbox" name="return_waived" value="1" x-model="waived" class="mt-0.5 rounded border-line text-brand focus:ring-brand">
+                                <label class="flex cursor-pointer items-start gap-3 rounded-md border border-line bg-canvas px-3.5 py-3">
+                                    <input type="checkbox" name="return_waived" value="1" x-model="waived" class="mt-0.5 rounded-md border-line text-brand focus:ring-brand">
                                     <span>
                                         <span class="block text-sm font-semibold text-ink">Waive the physical return</span>
                                         <span class="mt-0.5 block text-xs leading-5 text-muted">Set the remedy without asking for the goods back.</span>
@@ -436,7 +436,7 @@
                             };
                         @endphp
                         <div class="flex items-start gap-3">
-                            <span class="grid size-9 shrink-0 place-items-center rounded-[10px] {{ $closedIconClasses }}" aria-hidden="true">
+                            <span class="grid size-9 shrink-0 place-items-center rounded-md {{ $closedIconClasses }}" aria-hidden="true">
                                 @if ($case->status === 'completed')
                                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6" /></svg>
                                 @else
@@ -450,7 +450,7 @@
                         </div>
                     @else
                         <div class="flex items-start gap-3">
-                            <span class="grid size-9 shrink-0 place-items-center rounded-[10px] bg-blue-50 text-brand-hover" aria-hidden="true">
+                            <span class="grid size-9 shrink-0 place-items-center rounded-md bg-blue-50 text-brand-hover" aria-hidden="true">
                                 <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
                             </span>
                             <div>
@@ -508,13 +508,13 @@
                     </div>
 
                     @if ($case->response_note)
-                        <div class="mt-4 rounded-[10px] border border-line bg-canvas px-3.5 py-3">
+                        <div class="mt-4 rounded-md border border-line bg-canvas px-3.5 py-3">
                             <p class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Latest response</p>
                             <p class="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-ink">{{ $case->response_note }}</p>
                         </div>
                     @endif
                     @if ($case->remedy && $case->remedy !== $case->requested_remedy)
-                        <p class="mt-3 flex items-start gap-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-warning-text">
+                        <p class="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-warning-text">
                             <svg class="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4M12 17h.01" /><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" /></svg>
                             The approved remedy ({{ $case->remedy }}) differs from the {{ $case->requested_remedy }} the buyer asked for.
                         </p>
@@ -522,20 +522,20 @@
                     @if ($case->return_waived)
                         <p class="mt-3 text-sm text-muted">Physical return waived — no goods need to travel back.</p>
                     @elseif ($case->return_instructions)
-                        <div class="mt-3 rounded-[10px] border border-line bg-canvas px-3.5 py-3">
+                        <div class="mt-3 rounded-md border border-line bg-canvas px-3.5 py-3">
                             <p class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Return instructions</p>
                             <p class="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-ink">{{ $case->return_instructions }}</p>
                             <p class="mt-1 text-sm text-muted">No-cost method: {{ $case->return_method }}</p>
                         </div>
                     @endif
                     @if ($case->outcome?->kind === 'refund')
-                        <div class="mt-3 rounded-[10px] border border-green-200 bg-green-50 px-3.5 py-3">
+                        <div class="mt-3 rounded-md border border-green-200 bg-green-50 px-3.5 py-3">
                             <p class="text-xs font-semibold uppercase tracking-[0.1em] text-success">Refund recorded</p>
                             <p class="mt-1.5 text-sm text-ink">₱{{ number_format((float) $case->outcome->amount, 2) }} · paid {{ $case->outcome->paid_at?->format('M j, Y') }}. The seller's payment proof is in the evidence list.</p>
                         </div>
                     @endif
                     @if ($case->outcome?->kind === 'replacement')
-                        <div class="mt-3 rounded-[10px] border border-green-200 bg-green-50 px-3.5 py-3">
+                        <div class="mt-3 rounded-md border border-green-200 bg-green-50 px-3.5 py-3">
                             <p class="text-xs font-semibold uppercase tracking-[0.1em] text-success">Replacement shipment</p>
                             <p class="mt-1.5 text-sm text-ink">Reference {{ $case->outcome->shipment_reference }} · shipped {{ $case->outcome->shipped_at?->format('M j, Y') }}.</p>
                         </div>
@@ -565,9 +565,9 @@
                             @endphp
                             <li class="flex items-center gap-3 py-3">
                                 @if ($isImage)
-                                    <img src="{{ route('returns.evidence', [$case, $evidence]) }}" alt="{{ $kindLabel }}: {{ $evidence->original_name }}" loading="lazy" decoding="async" class="h-16 w-16 shrink-0 rounded-[10px] border border-line object-cover">
+                                    <img src="{{ route('returns.evidence', [$case, $evidence]) }}" alt="{{ $kindLabel }}: {{ $evidence->original_name }}" loading="lazy" decoding="async" class="h-16 w-16 shrink-0 rounded-md border border-line object-cover">
                                 @else
-                                    <span class="grid h-16 w-16 shrink-0 place-items-center rounded-[10px] border border-line bg-canvas text-muted" aria-hidden="true">
+                                    <span class="grid h-16 w-16 shrink-0 place-items-center rounded-md border border-line bg-canvas text-muted" aria-hidden="true">
                                         <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h7l4 4v14H5V3z" /><path d="M15 3v5h5" /></svg>
                                     </span>
                                 @endif

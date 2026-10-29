@@ -101,7 +101,7 @@
                     <p class="mt-1 text-xs text-muted">{{ $detail }}</p>
                 @endif
                 @if ($event->note)
-                    <p class="mt-2 whitespace-pre-wrap rounded-[10px] border border-line bg-canvas px-3 py-2 text-sm leading-6 text-ink">{{ $event->note }}</p>
+                    <p class="mt-2 whitespace-pre-wrap rounded-md border border-line bg-canvas px-3 py-2 text-sm leading-6 text-ink">{{ $event->note }}</p>
                 @endif
             </div>
         </li>

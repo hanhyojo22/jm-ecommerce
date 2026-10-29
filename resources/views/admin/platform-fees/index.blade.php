@@ -8,8 +8,8 @@
 
     <div class="page-shell">
         <div class="page-container">
-            @if (session('status'))<div class="mb-5 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
-            @if ($errors->any())<div class="mb-5 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">{{ $errors->first() }}</div>@endif
+            @if (session('status'))<div class="mb-5 rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>@endif
+            @if ($errors->any())<div class="mb-5 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm font-medium text-danger" role="alert">{{ $errors->first() }}</div>@endif
 
             <section class="grid gap-4 sm:grid-cols-3" aria-label="Platform fee summary">
                 <article class="section-card"><p class="text-sm font-medium text-muted">Outstanding</p><p class="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format((float) $outstandingTotal, 2) }}</p><p class="mt-2 text-sm text-muted">Unpaid and awaiting confirmation.</p></article>

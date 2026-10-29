@@ -49,8 +49,8 @@
         --page-max: 1320px;
         --gutter: 18px;
         --gutter-wide: 32px;
-        --radius-surface: 16px;
-        --radius-control: 10px;
+        --radius-surface: 8px;
+        --radius-control: 6px;
         --section-space: 2.5rem;
     }
 
@@ -160,7 +160,7 @@
         align-items: center;
         gap: 12px;
         border: 0;
-        border-radius: 10px;
+        border-radius: 6px;
         background: transparent;
         padding: 0 12px;
         color: var(--color-muted);
@@ -199,7 +199,7 @@
         display: inline-flex;
         align-items: center;
         gap: 12px;
-        border-radius: 10px;
+        border-radius: 6px;
     }
 
     .workspace-sidebar-brand-name {
@@ -227,7 +227,7 @@
         align-items: center;
         gap: 12px;
         border: 1px solid var(--color-border);
-        border-radius: 10px;
+        border-radius: 6px;
         background: var(--color-bg);
         padding: 12px;
     }
@@ -592,7 +592,7 @@
 
 .seller-workspace :where(.section-card, .content-card) {
     border-color: var(--color-border);
-    border-radius: 12px;
+    border-radius: 8px;
     box-shadow: none;
 }
 
@@ -637,7 +637,7 @@
 
 .workspace-main :where(a, button, input, select, textarea).rounded-lg,
 .account-shell-content :where(a, button, input, select, textarea).rounded-lg {
-    border-radius: 10px;
+    border-radius: 6px;
 }
 
 @media (max-width: 639px) {
@@ -735,7 +735,7 @@
 
 [data-header-design='bold-modular'] form[role='search'] label,
 [data-header-design='bold-modular'] form:not([role='search']) label {
-    border-radius: 14px;
+    border-radius: 8px;
     background: var(--color-bg);
     border-color: var(--color-border);
     box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.03);
@@ -747,7 +747,7 @@
 }
 
 [data-header-design='bold-modular'] button[type='submit'] {
-    border-radius: 12px;
+    border-radius: 8px;
     box-shadow: 0 4px 10px rgb(29 78 216 / 0.18);
 }
 
@@ -762,7 +762,7 @@
 }
 
 [data-header-design='bold-modular'] details > summary {
-    border-radius: 14px;
+    border-radius: 8px;
     background: var(--color-bg);
 }
 
@@ -771,7 +771,7 @@
 }
 
 [data-header-design='bold-modular'] [data-header-marketplace-link] {
-    border-radius: 12px;
+    border-radius: 8px;
     background: var(--color-accent);
     color: var(--color-surface);
 }
@@ -815,7 +815,7 @@
 
 [data-header-role='admin'] select {
     min-height: 2.25rem;
-    border-radius: 10px;
+    border-radius: 6px;
     background-color: var(--color-bg);
     color: var(--color-accent);
 }
@@ -826,7 +826,7 @@
     }
 
     [data-header-design='bold-modular'] form label {
-        border-radius: 14px;
+        border-radius: 8px;
     }
 }
 
@@ -835,15 +835,15 @@ body:has(footer) [data-cookie-floating] {
 }
 
 /* Marketplace handoff: shared tokens and real product imagery. */
-.marketplace-hero { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; min-height: 365px; overflow: hidden; border: 1px solid #dfe7f5; border-radius: 20px; background: #eaf0fa; }
+.marketplace-hero { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; min-height: 365px; overflow: hidden; border: 1px solid #dfe7f5; border-radius: 8px; background: #eaf0fa; }
 .marketplace-hero-copy { z-index: 1; padding: 48px 40px; }
 .marketplace-hero-art { position: relative; min-width: 0; }
 .marketplace-hero-orbit { position: absolute; width: 420px; height: 420px; top: -35px; left: 5%; border: 1px solid #d7e3f6; border-radius: 50%; box-shadow: 0 0 0 44px #eaf0fa, 0 0 0 45px #d7e3f6; }
-.marketplace-hero-photo { position: absolute; overflow: hidden; width: 46%; height: 70%; top: 12%; border: 8px solid white; border-radius: 16px; background: white; box-shadow: 0 20px 40px #182c4820; }
+.marketplace-hero-photo { position: absolute; overflow: hidden; width: 46%; height: 70%; top: 12%; border: 8px solid white; border-radius: 8px; background: white; box-shadow: 0 20px 40px #182c4820; }
 .marketplace-hero-photo img { width: 100%; height: 100%; object-fit: cover; }
 .marketplace-hero-photo-0 { left: 3%; transform: rotate(-8deg); }
 .marketplace-hero-photo-1 { right: 6%; top: 28%; width: 40%; height: 57%; transform: rotate(10deg); }
-.marketplace-hero-note { position: absolute; right: 5%; bottom: 7%; display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 12px; background: white; box-shadow: 0 12px 24px #182c4810; }
+.marketplace-hero-note { position: absolute; right: 5%; bottom: 7%; display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 8px; background: white; box-shadow: 0 12px 24px #182c4810; }
 @media (max-width: 767px) {
     .marketplace-hero { grid-template-columns: 1fr; min-height: 560px; }
     .marketplace-hero-copy { padding: 28px 24px 0; }
@@ -1062,11 +1062,11 @@ body:has(footer) [data-cookie-floating] {
 }
 
 .confirm-dialog > form { --notch-left: radial-gradient(circle var(--slip-notch) at 0 var(--slip-tear, 50%), #0000 calc(var(--slip-notch) - .5px), #000 var(--slip-notch)); --notch-right: radial-gradient(circle var(--slip-notch) at 100% var(--slip-tear, 50%), #0000 calc(var(--slip-notch) - .5px), #000 var(--slip-notch)); -webkit-mask: var(--notch-left), var(--notch-right); -webkit-mask-composite: source-in; mask: var(--notch-left), var(--notch-right); mask-composite: intersect; }
-.confirm-slip { border-radius: 16px 16px 0 0; background: var(--color-surface); padding: 20px 22px 16px; }
+.confirm-slip { border-radius: 8px 8px 0 0; background: var(--color-surface); padding: 20px 22px 16px; }
 .confirm-slip-title { font-size: 17px; font-weight: 700; line-height: 1.3; letter-spacing: -.018em; text-wrap: balance; }
 .confirm-slip-message { margin-top: 4px; max-width: 46ch; color: var(--color-muted); font-size: 13.5px; line-height: 1.5; text-wrap: pretty; }
 
-.confirm-stub { position: relative; border-radius: 0 0 16px 16px; background: var(--slip-stub); padding: 16px 22px 18px; }
+.confirm-stub { position: relative; border-radius: 0 0 8px 8px; background: var(--slip-stub); padding: 16px 22px 18px; }
 .confirm-stub::before { position: absolute; top: -1px; right: calc(var(--slip-notch) + 8px); left: calc(var(--slip-notch) + 8px); height: 2px; background: repeating-linear-gradient(90deg, var(--slip-perforation) 0 7px, transparent 7px 13px); content: ''; }
 .confirm-stub-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
 .confirm-stub-reference { min-width: 0; color: var(--color-muted); font-size: 12px; font-weight: 600; overflow-wrap: anywhere; }
@@ -1079,7 +1079,7 @@ body:has(footer) [data-cookie-floating] {
 .confirm-stub-line[hidden] + .confirm-stub-amount { margin-top: 0; }
 .confirm-stub-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
 .confirm-stub-line[hidden] + .confirm-stub-amount[hidden] + .confirm-stub-actions { margin-top: 0; }
-.confirm-stub-actions button { min-height: 40px; border-radius: 10px; padding: 0 14px; font-size: 13.5px; font-weight: 650; transition: background-color .15s, box-shadow .15s, transform .1s; }
+.confirm-stub-actions button { min-height: 40px; border-radius: 6px; padding: 0 14px; font-size: 13.5px; font-weight: 650; transition: background-color .15s, box-shadow .15s, transform .1s; }
 .confirm-stub-actions button:active { transform: translateY(1px); }
 .confirm-stub-actions button:focus-visible { outline: 2px solid var(--slip-tone); outline-offset: 3px; }
 .confirm-dismiss { border: 1.5px solid var(--slip-perforation); background: var(--color-surface); color: var(--color-fg); }
@@ -1111,7 +1111,7 @@ form[data-submitting] button[aria-busy="true"]:not([class*="primary"])::after { 
 @keyframes confirm-spin { to { transform: rotate(360deg); } }
 
 /* Order placed: a receipt docket with a torn edge and a stamp, beside the order's progress track. */
-.placed-docket { --notch: 9px; --tear: 170px; position: relative; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface);
+.placed-docket { --notch: 9px; --tear: 170px; position: relative; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface);
     -webkit-mask: radial-gradient(circle var(--notch) at 0 var(--tear), transparent calc(var(--notch) - .5px), #000 var(--notch)), radial-gradient(circle var(--notch) at 100% var(--tear), transparent calc(var(--notch) - .5px), #000 var(--notch));
     -webkit-mask-composite: source-in;
     mask: radial-gradient(circle var(--notch) at 0 var(--tear), transparent calc(var(--notch) - .5px), #000 var(--notch)), radial-gradient(circle var(--notch) at 100% var(--tear), transparent calc(var(--notch) - .5px), #000 var(--notch));

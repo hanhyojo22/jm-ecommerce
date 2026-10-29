@@ -28,7 +28,7 @@
             </template>
         </div>
     </div>
-    <dialog x-ref="zoomDialog" @close="zoomTrigger?.focus()" @keydown.left.prevent="selected = (selected - 1 + gallery.length) % gallery.length" @keydown.right.prevent="selected = (selected + 1) % gallery.length" aria-label="Enlarged product image" class="max-h-[95dvh] w-[min(95vw,72rem)] max-w-none rounded-2xl border border-line bg-white p-4 shadow-xl backdrop:bg-slate-950/80 sm:p-6">
+    <dialog x-ref="zoomDialog" @close="zoomTrigger?.focus()" @keydown.left.prevent="selected = (selected - 1 + gallery.length) % gallery.length" @keydown.right.prevent="selected = (selected + 1) % gallery.length" aria-label="Enlarged product image" class="max-h-[95dvh] w-[min(95vw,72rem)] max-w-none rounded-lg border border-line bg-white p-4 shadow-xl backdrop:bg-slate-950/80 sm:p-6">
         <div class="flex justify-end"><button type="button" @click="$refs.zoomDialog.close()" class="min-h-11 rounded-lg border border-line px-4 text-sm font-semibold">Close</button></div>
         <template x-for="(image, index) in gallery" :key="index"><img x-show="selected === index" :src="image.url" :alt="'Enlarged ' + image.alt" width="1200" height="1020" class="mx-auto max-h-[75dvh] w-full object-contain"></template>
     </dialog>

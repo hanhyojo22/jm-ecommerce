@@ -42,12 +42,12 @@
 
                 <div class="mt-7 flex flex-wrap items-center gap-3 print:hidden max-sm:grid max-sm:grid-cols-1">
                     @if($isCod || $isPaid)
-                        <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Track order {!! $arrow !!}</a>
+                        <a href="{{ route('orders.show', $order) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Track order {!! $arrow !!}</a>
                     @else
-                        <a href="{{ route('orders.pay', $order) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-[10px] bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Pay now {!! $arrow !!}</a>
-                        <a href="{{ route('orders.placed', $order) }}" class="inline-flex min-h-12 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">I’ve paid, refresh</a>
+                        <a href="{{ route('orders.pay', $order) }}" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-brand px-6 text-sm font-semibold text-white transition hover:bg-brand-hover">Pay now {!! $arrow !!}</a>
+                        <a href="{{ route('orders.placed', $order) }}" class="inline-flex min-h-12 items-center justify-center rounded-md px-4 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">I’ve paid, refresh</a>
                     @endif
-                    <a href="{{ route('home') }}" class="inline-flex min-h-12 items-center justify-center rounded-[10px] px-4 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">Continue shopping</a>
+                    <a href="{{ route('home') }}" class="inline-flex min-h-12 items-center justify-center rounded-md px-4 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">Continue shopping</a>
                 </div>
 
                 <ol class="mt-10 grid grid-cols-4 gap-2 max-sm:mt-8 max-sm:grid-cols-2 max-sm:gap-x-3 max-sm:gap-y-5" aria-label="What happens next">
@@ -89,13 +89,13 @@
                         </dl>
 
                         <div class="px-6 pb-5 print:hidden">
-                            <button type="button" onclick="window.print()" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-[#cbd4e0] bg-surface px-5 text-[13.5px] font-semibold text-ink transition hover:border-ink">
+                            <button type="button" onclick="window.print()" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#cbd4e0] bg-surface px-5 text-[13.5px] font-semibold text-ink transition hover:border-ink">
                                 <svg class="size-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 9V4h10v5M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1.5"/></svg>
                                 Print receipt
                             </button>
                         </div>
 
-                        <div x-data="{ copied: false, copy() { navigator.clipboard?.writeText(@js($order->number)); this.copied = true; setTimeout(() => this.copied = false, 2200) } }" class="flex items-center gap-3 rounded-b-[18px] border-t border-line-soft bg-[#f8fafc] py-2 pl-6 pr-3">
+                        <div x-data="{ copied: false, copy() { navigator.clipboard?.writeText(@js($order->number)); this.copied = true; setTimeout(() => this.copied = false, 2200) } }" class="flex items-center gap-3 rounded-b-lg border-t border-line-soft bg-[#f8fafc] py-2 pl-6 pr-3">
                             <p class="min-w-0 flex-1 text-xs leading-[1.4] text-muted">Order <span class="block font-semibold tracking-[0.02em] tabular-nums text-ink break-all">{{ $order->number }}</span></p>
                             <button type="button" @click="copy" class="inline-flex min-h-10 shrink-0 items-center rounded-lg px-2.5 text-xs font-semibold text-brand transition hover:bg-[#eef3ff] print:hidden" :aria-label="copied ? 'Order number copied' : 'Copy order number'" x-text="copied ? 'Copied' : 'Copy'">Copy</button>
                         </div>
@@ -110,7 +110,7 @@
                     <p class="text-[13px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} · {{ $storeCount }} {{ Str::plural('store', $storeCount) }}</p>
                 </div>
 
-                <div class="mt-4 divide-y-[6px] divide-canvas overflow-hidden rounded-2xl border border-line bg-surface">
+                <div class="mt-4 divide-y-[6px] divide-canvas overflow-hidden rounded-lg border border-line bg-surface">
                     @foreach($order->sellerOrders as $sellerOrder)
                         @php($storePaid = $sellerOrder->cod_collected_at !== null)
                         <article aria-label="{{ $sellerOrder->store->name }}">
@@ -123,7 +123,7 @@
                                 @foreach($sellerOrder->items as $item)
                                     @php($imagePath = $item->image_path ?? $item->product?->images->first()?->path)
                                     <li class="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-4 py-3.5 max-sm:grid-cols-[48px_minmax(0,1fr)_auto] max-sm:gap-3">
-                                        <span class="grid size-14 place-items-center overflow-hidden rounded-[10px] bg-slate-100 max-sm:size-12">@if($imagePath)<img src="{{ Storage::disk('product_images')->url($imagePath) }}" alt="" class="size-full object-cover" loading="lazy">@else<svg class="size-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>@endif</span>
+                                        <span class="grid size-14 place-items-center overflow-hidden rounded-md bg-slate-100 max-sm:size-12">@if($imagePath)<img src="{{ Storage::disk('product_images')->url($imagePath) }}" alt="" class="size-full object-cover" loading="lazy">@else<svg class="size-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg>@endif</span>
                                         <span class="min-w-0">
                                             <span class="block break-words text-sm font-medium leading-[1.4] text-ink">{{ $item->product_name }}</span>
                                             <span class="mt-0.5 block text-xs leading-[1.4] text-muted">{{ collect([$item->variant_label, 'Qty '.$item->quantity])->filter()->join(' · ') }}</span>

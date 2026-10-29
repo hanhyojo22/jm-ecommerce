@@ -14,14 +14,14 @@
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
             @if (session('status'))
-                <div class="mb-5 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-5 rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
             @endif
             @if ($errors->any())
-                <div class="mb-5 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not apply those filters. {{ $errors->first() }}</div>
+                <div class="mb-5 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not apply those filters. {{ $errors->first() }}</div>
             @endif
 
             @if ($pendingReviewCount > 0)
-                <div class="mb-5 flex flex-col gap-2 rounded-2xl border border-brand/20 bg-surface px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between" role="status">
+                <div class="mb-5 flex flex-col gap-2 rounded-lg border border-brand/20 bg-surface px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between" role="status">
                     <p class="font-medium text-ink">{{ number_format($pendingReviewCount) }} {{ Str::plural('seller application', $pendingReviewCount) }} awaiting review</p>
                     <a href="{{ route('admin.seller-applications.index') }}" class="w-fit font-semibold text-brand underline decoration-brand/30 underline-offset-4 transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Review application</a>
                 </div>
@@ -34,7 +34,7 @@
                     ['label' => 'Inactive', 'count' => $statusCounts['inactive'] ?? 0, 'valueClass' => 'text-ink'],
                     ['label' => 'Suspended', 'count' => $statusCounts['suspended'] ?? 0, 'valueClass' => 'text-danger'],
                 ] as $summary)
-                    <div class="rounded-2xl border border-line bg-surface px-5 py-4 ">
+                    <div class="rounded-lg border border-line bg-surface px-5 py-4 ">
                         <p class="text-2xl font-semibold tabular-nums tracking-tight {{ $summary['valueClass'] }}">{{ number_format($summary['count']) }}</p>
                         <p class="mt-1 text-sm font-medium text-muted">{{ $summary['label'] }}</p>
                     </div>
@@ -77,7 +77,7 @@
 
                     <details class="relative shrink-0">
                         <summary class="flex min-h-11 cursor-pointer list-none items-center rounded-lg px-3 text-sm font-semibold text-muted transition hover:bg-surface hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">More filters <span class="ml-1.5 text-xs" aria-hidden="true">⌄</span></summary>
-                        <form method="GET" action="{{ route('admin.stores.index') }}" class="absolute right-0 z-10 mt-2 w-72 rounded-2xl border border-line bg-surface p-4 shadow-lg">
+                        <form method="GET" action="{{ route('admin.stores.index') }}" class="absolute right-0 z-10 mt-2 w-72 rounded-lg border border-line bg-surface p-4 shadow-lg">
                             @if (filled($filters['search'] ?? null))
                                 <input type="hidden" name="search" value="{{ $filters['search'] }}">
                             @endif
@@ -117,7 +117,7 @@
                     </details>
                 </div>
 
-                <div class="mt-5 overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Seller stores">
+                <div class="mt-5 overflow-hidden rounded-lg border border-line bg-surface" aria-label="Seller stores">
                     <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_6rem_6rem_7rem_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted md:grid">
                         <span>Store</span><span>Owner</span><span>Products</span><span>Orders</span><span>Status</span><span>Next step</span>
                     </div>
@@ -126,9 +126,9 @@
                         <article class="grid gap-3 border-b border-line px-4 py-4 last:border-0 sm:px-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_6rem_6rem_7rem_auto] md:items-center md:gap-4">
                             <div class="flex min-w-0 items-center gap-3">
                                 @if ($store->logo_path)
-                                    <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="size-11 shrink-0 rounded-[10px] border border-line object-cover">
+                                    <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="size-11 shrink-0 rounded-md border border-line object-cover">
                                 @else
-                                    <span class="grid size-11 shrink-0 place-items-center rounded-[10px] bg-brand text-sm font-semibold text-white" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</span>
+                                    <span class="grid size-11 shrink-0 place-items-center rounded-md bg-brand text-sm font-semibold text-white" aria-hidden="true">{{ mb_strtoupper(mb_substr($store->name, 0, 1)) }}</span>
                                 @endif
                                 <div class="min-w-0">
                                     <p class="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted md:hidden">Store</p>
@@ -157,7 +157,7 @@
                 </div>
 
                 @if ($stores->hasPages())
-                    <div class="mt-6 rounded-2xl border border-line bg-surface px-4 py-4 ">{{ $stores->links() }}</div>
+                    <div class="mt-6 rounded-lg border border-line bg-surface px-4 py-4 ">{{ $stores->links() }}</div>
                 @endif
             </section>
         </div>

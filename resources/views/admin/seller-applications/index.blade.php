@@ -11,11 +11,11 @@
     <div class="bg-canvas py-8 sm:py-10">
         <div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
             @if (session('status'))
-                <div class="mb-5 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
+                <div class="mb-5 rounded-lg border border-success/20 bg-success/10 px-4 py-3 text-sm font-medium text-success" role="status">{{ session('status') }}</div>
             @endif
 
             @if ($errors->has('application'))
-                <div class="mb-5 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ $errors->first('application') }}</div>
+                <div class="mb-5 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">{{ $errors->first('application') }}</div>
             @endif
 
             <section class="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label="Seller application summaries">
@@ -24,7 +24,7 @@
                     ['label' => 'Approved', 'count' => $statusCounts['approved'] ?? 0, 'valueClass' => 'text-success'],
                     ['label' => 'Rejected', 'count' => $statusCounts['rejected'] ?? 0, 'valueClass' => 'text-danger'],
                 ] as $summary)
-                    <div class="rounded-2xl border border-line bg-surface px-5 py-4 ">
+                    <div class="rounded-lg border border-line bg-surface px-5 py-4 ">
                         <p class="text-2xl font-semibold tabular-nums tracking-tight {{ $summary['valueClass'] }}">{{ number_format($summary['count']) }}</p>
                         <p class="mt-1 text-sm font-medium text-muted">{{ $summary['label'] }}</p>
                     </div>
@@ -66,7 +66,7 @@
                     @endforeach
                 </nav>
 
-                <div class="mt-5 overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Seller applications">
+                <div class="mt-5 overflow-hidden rounded-lg border border-line bg-surface" aria-label="Seller applications">
                     <div class="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(8rem,.8fr)_auto] gap-4 border-b border-line bg-canvas px-5 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-muted md:grid">
                         <span>Applicant</span><span>Proposed store</span><span>Status / submitted</span><span>Next step</span>
                     </div>
@@ -100,7 +100,7 @@
                 </div>
 
                 @if ($applications->hasPages())
-                    <div class="mt-6 rounded-2xl border border-line bg-surface px-4 py-4 ">{{ $applications->links() }}</div>
+                    <div class="mt-6 rounded-lg border border-line bg-surface px-4 py-4 ">{{ $applications->links() }}</div>
                 @endif
             </section>
         </div>

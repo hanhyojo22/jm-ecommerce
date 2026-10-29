@@ -28,7 +28,7 @@
         @if ($textarea ?? false)
             <textarea id="{{ $name }}" name="{{ $name }}" rows="4" @if ($required ?? false) required @endif @if ($maxlength ?? false) maxlength="{{ $maxlength }}" @endif class="field-control">{{ old($name, $value) }}</textarea>
         @elseif ($prefix ?? false)
-            <div class="flex overflow-hidden rounded-[10px] border border-line bg-white focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+            <div class="flex overflow-hidden rounded-md border border-line bg-white focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
                 <span class="flex shrink-0 items-center border-r border-line bg-canvas px-3 text-sm text-muted">{{ $prefix }}</span>
                 <input id="{{ $name }}" name="{{ $name }}" type="{{ $type }}" value="{{ old($name, $value) }}" @if ($required ?? false) required @endif class="block min-h-11 w-full min-w-0 border-0 text-sm text-ink focus:ring-0">
             </div>

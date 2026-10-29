@@ -6,7 +6,7 @@
         data-sign-in-url="{{ $signInUrl ?? route('login') }}"
         role="status"
         aria-live="polite"
-        class="space-y-3 rounded-2xl border border-line bg-surface p-6 text-center"
+        class="space-y-3 rounded-lg border border-line bg-surface p-6 text-center"
     >
         <span class="mx-auto block size-8 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden="true"></span>
         <p class="font-semibold text-ink">Finishing your sign-in</p>
@@ -17,13 +17,13 @@
         data-clerk-handoff-error
         hidden
         role="alert"
-        class="space-y-3 rounded-2xl border border-danger/20 bg-danger/10 p-6 text-center"
+        class="space-y-3 rounded-lg border border-danger/20 bg-danger/10 p-6 text-center"
     >
         <p data-clerk-handoff-error-title class="font-semibold text-ink">We could not finish signing you in.</p>
         <p class="text-sm text-danger">The hand-off did not complete. Check your connection, then try again — nothing has been changed yet.</p>
         <div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <a href="{{ $signInUrl ?? route('login') }}" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-transparent bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Return to sign in</a>
-            <button type="button" data-clerk-handoff-retry class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink/30 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Try again</button>
+            <a href="{{ $signInUrl ?? route('login') }}" class="inline-flex min-h-11 items-center justify-center rounded-md border border-transparent bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Return to sign in</a>
+            <button type="button" data-clerk-handoff-retry class="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-surface px-4 py-2 text-sm font-semibold text-ink transition hover:border-ink/30 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Try again</button>
         </div>
     </div>
 

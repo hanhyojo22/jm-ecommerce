@@ -28,7 +28,7 @@
                     @include('partials.platform-fee-terms', ['class' => 'mt-4'])
                     @if ($isOwner)
                         <form method="POST" action="{{ route('seller.platform-fees.accept') }}" class="mt-5 flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between">@csrf
-                            <label class="flex items-start gap-3 text-sm"><input type="checkbox" name="accept" value="1" required class="mt-0.5 rounded border-line text-brand focus:ring-brand"> <span>I accept the Marketplace Fee Policy (version {{ config('marketplace.platform_fee.policy_version') }}).</span></label>
+                            <label class="flex items-start gap-3 text-sm"><input type="checkbox" name="accept" value="1" required class="mt-0.5 rounded-md border-line text-brand focus:ring-brand"> <span>I accept the Marketplace Fee Policy (version {{ config('marketplace.platform_fee.policy_version') }}).</span></label>
                             <button type="submit" class="seller-primary-button min-h-11 shrink-0">Accept terms</button>
                         </form>
                     @else

@@ -3,7 +3,7 @@
         <div class="space-y-5">
             <div><h1 class="text-2xl font-semibold tracking-[-0.02em] text-ink">Delivery Addresses</h1><p class="mt-1 text-sm text-muted">Save addresses for faster checkout. Past orders keep their original delivery details.</p></div>
             @if (session('status'))<p class="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status">{{ session('status') }}</p>@endif
-            <section class="rounded-2xl border border-line bg-white p-5 sm:p-[26px]" aria-labelledby="saved-addresses-heading">
+            <section class="rounded-lg border border-line bg-white p-5 sm:p-[26px]" aria-labelledby="saved-addresses-heading">
                 <h2 id="saved-addresses-heading" class="text-lg font-semibold text-ink">Saved addresses</h2>
                 <div class="mt-4 divide-y divide-line">
                     @forelse ($addresses as $address)
@@ -16,7 +16,7 @@
                     @endforelse
                 </div>
             </section>
-            <section class="rounded-2xl border border-line bg-white p-5 sm:p-[26px]" aria-labelledby="add-address-heading">
+            <section class="rounded-lg border border-line bg-white p-5 sm:p-[26px]" aria-labelledby="add-address-heading">
                 <h2 id="add-address-heading" class="mb-5 text-lg font-semibold text-ink">Add an address</h2>
                 @include('marketplace.delivery-addresses.form', ['action' => route('delivery-addresses.store'), 'method' => 'POST', 'address' => null, 'submitLabel' => 'Save address'])
             </section>

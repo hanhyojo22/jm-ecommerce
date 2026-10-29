@@ -65,9 +65,9 @@
 
         @if (! $editable)
             <main id="main-content" tabindex="-1" class="onboarding-state-shell">
-                @if (session('status'))<p role="status" class="mb-5 rounded-[10px] border border-success/20 bg-success/10 p-4 text-sm text-success">{{ session('status') }}</p>@endif
+                @if (session('status'))<p role="status" class="mb-5 rounded-md border border-success/20 bg-success/10 p-4 text-sm text-success">{{ session('status') }}</p>@endif
                 @if ($errors->any())
-                    <div role="alert" class="mb-5 rounded-[10px] border border-danger/20 bg-danger/10 p-4 text-sm text-danger">
+                    <div role="alert" class="mb-5 rounded-md border border-danger/20 bg-danger/10 p-4 text-sm text-danger">
                         <p class="font-semibold">Please correct these fields.</p>
                         <ul class="mt-2 list-disc pl-5">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
                     </div>
@@ -130,7 +130,7 @@
                         <p class="onboarding-kicker">Seller application</p>
                         <h1 id="state-title">Application {{ str_replace('_', ' ', $application->status) }}</h1>
                         <p class="onboarding-state-lead">Store: {{ $application->store_name }}. {{ $application->status === 'rejected' ? 'This application wasn’t approved. You can keep shopping on JMMart as usual.' : 'You can keep shopping on JMMart as usual.' }}</p>
-                        @if ($application->review_note)<p class="mt-3 rounded-[10px] bg-canvas p-3 text-sm">@if ($application->status === 'rejected')<strong>Reason:</strong> @endif{{ $application->review_note }}</p>@endif
+                        @if ($application->review_note)<p class="mt-3 rounded-md bg-canvas p-3 text-sm">@if ($application->status === 'rejected')<strong>Reason:</strong> @endif{{ $application->review_note }}</p>@endif
                         <ol class="onboarding-timeline" aria-label="Application status timeline">
                             @foreach ($application->statusHistory()->oldest()->get() as $event)
                                 <li class="is-done">
@@ -250,13 +250,13 @@
                         <p role="status" class="mb-4 inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success"><span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>{{ session('status') }}</p>
                     @endif
                     @if ($errors->any())
-                        <div role="alert" class="mb-5 rounded-[10px] border border-danger/20 bg-danger/10 p-4 text-sm text-danger">
+                        <div role="alert" class="mb-5 rounded-md border border-danger/20 bg-danger/10 p-4 text-sm text-danger">
                             <p class="font-semibold">Please correct these fields.</p>
                             <ul class="mt-2 list-disc pl-5">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
                         </div>
                     @endif
                     @if ($application?->status === 'more_information_required')
-                        <p role="status" class="mb-5 rounded-[10px] border border-warning/20 bg-warning/10 p-4 text-sm text-warning-text">More information required: {{ rtrim((string) $application->review_note, '.') }}. Update the requested steps, then resubmit.</p>
+                        <p role="status" class="mb-5 rounded-md border border-warning/20 bg-warning/10 p-4 text-sm text-warning-text">More information required: {{ rtrim((string) $application->review_note, '.') }}. Update the requested steps, then resubmit.</p>
                     @endif
 
                     <header class="onboarding-step-head">
@@ -267,7 +267,7 @@
 
                     @if ($step < 7)
                         <form id="seller-step-form" x-ref="stepForm" method="POST" enctype="multipart/form-data" action="{{ route('seller-application.step', $step) }}" @submit.prevent="save($event)">@csrf
-                            <div x-cloak x-show="validationErrors.length || uploadError || exitBlocked" x-ref="formErrors" tabindex="-1" role="alert" class="mb-5 rounded-[10px] border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p x-text="uploadError"></p><template x-for="error in validationErrors"><p x-text="error"></p></template><p x-show="exitBlocked" class="mt-2">This step isn’t complete, so it can’t be saved yet. Finish it, or <a href="{{ route('profile.edit') }}" class="font-semibold underline underline-offset-2">leave without saving this step</a>. Your earlier steps are already saved.</p></div>
+                            <div x-cloak x-show="validationErrors.length || uploadError || exitBlocked" x-ref="formErrors" tabindex="-1" role="alert" class="mb-5 rounded-md border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p x-text="uploadError"></p><template x-for="error in validationErrors"><p x-text="error"></p></template><p x-show="exitBlocked" class="mt-2">This step isn’t complete, so it can’t be saved yet. Finish it, or <a href="{{ route('profile.edit') }}" class="font-semibold underline underline-offset-2">leave without saving this step</a>. Your earlier steps are already saved.</p></div>
 
                             @if ($step === 1)
                                 <div role="radiogroup" aria-label="Seller type">
@@ -510,7 +510,7 @@
                         </form>
                     @else
                         @if ($missingSteps)
-                            <div role="status" class="mb-5 rounded-[10px] border border-warning/20 bg-warning/10 p-4 text-sm text-warning-text">
+                            <div role="status" class="mb-5 rounded-md border border-warning/20 bg-warning/10 p-4 text-sm text-warning-text">
                                 <p class="font-semibold">Finish these steps before you submit:</p>
                                 <ul class="mt-2 list-disc pl-5">
                                     @foreach ($missingSteps as $number)

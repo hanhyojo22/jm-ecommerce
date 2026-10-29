@@ -72,7 +72,7 @@
                  when something is the buyer's to do; parcels on the way alone stay neutral. --}}
             @if ($attentionCounts !== [] && $tab === 'all' && ! $hasFilters)
                 <div role="region" aria-label="Waiting on you" @class([
-                    'mt-5 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border px-4 py-2.5 text-meta lg:px-6',
+                    'mt-5 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border px-4 py-2.5 text-meta lg:px-6',
                     'border-[var(--color-warning-line)] bg-[var(--color-warning-wash)]' => $waitingOnYou !== [],
                     'border-line bg-surface' => $waitingOnYou === [],
                 ])>
@@ -89,10 +89,10 @@
             @endif
 
             @if (session('status'))
-                <p role="status" class="mt-3 rounded-[10px] border border-[var(--color-success-line)] bg-[var(--color-success-wash)] px-3.5 py-2.5 text-meta font-medium text-success">{{ session('status') }}</p>
+                <p role="status" class="mt-3 rounded-md border border-[var(--color-success-line)] bg-[var(--color-success-wash)] px-3.5 py-2.5 text-meta font-medium text-success">{{ session('status') }}</p>
             @endif
             @error('received')
-                <p role="alert" class="mt-3 rounded-[10px] border border-[var(--color-danger-line)] bg-[var(--color-danger-wash)] px-3.5 py-2.5 text-meta font-medium text-danger-text">{{ $message }}</p>
+                <p role="alert" class="mt-3 rounded-md border border-[var(--color-danger-line)] bg-[var(--color-danger-wash)] px-3.5 py-2.5 text-meta font-medium text-danger-text">{{ $message }}</p>
             @enderror
 
             <div class="mt-5">
@@ -129,7 +129,7 @@
 
             {{-- One surface, one grid: every order shares the image, details, total and next-step columns,
                  so totals and buttons line up down the page. --}}
-            <section id="purchases" class="mt-5 scroll-mt-24 overflow-hidden rounded-[14px] border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-labelledby="purchase-results-heading">
+            <section id="purchases" class="mt-5 scroll-mt-24 overflow-hidden rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
                 @php
@@ -264,7 +264,7 @@
                                 @endphp
 
                                 <article class="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3.5 sm:grid-cols-[56px_minmax(0,1fr)] lg:grid-cols-[56px_minmax(0,1fr)_136px_152px] lg:gap-x-5 border-t border-line-soft px-4 py-4 transition-colors hover:bg-[#fbfcfe] lg:px-6" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
-                                    <div class="relative size-12 overflow-hidden rounded-[10px] border border-line bg-paper sm:size-14">
+                                    <div class="relative size-12 overflow-hidden rounded-md border border-line bg-paper sm:size-14">
                                         @if ($thumbPaths->isNotEmpty())
                                             <img src="{{ Storage::disk('product_images')->url($thumbPaths->first()) }}" alt="" width="56" height="56" loading="lazy" class="size-full object-cover">
                                         @else

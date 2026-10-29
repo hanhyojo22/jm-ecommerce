@@ -8,7 +8,7 @@
         </button>
 
         <form method="GET" action="{{ route('admin.orders.index') }}" x-data="{ scope: 'orders', query: '' }" @submit="if (!query.trim()) { $event.preventDefault(); }" :action="{ orders: @js(route('admin.orders.index')), products: @js(route('admin.products.index')), stores: @js(route('admin.stores.index')), customers: @js(route('admin.customers.index')) }[scope]" class="order-3 flex min-w-0 basis-full items-center gap-2 sm:order-none sm:basis-auto sm:max-w-md sm:flex-1" role="search" aria-label="Global admin search">
-            <label class="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-line bg-canvas px-3 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
+            <label class="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-md border border-line bg-canvas px-3 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
                 <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
                 <span class="sr-only">Search admin records</span>
                 <input name="search" x-model="query" type="search" placeholder="Search records" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
@@ -30,7 +30,7 @@
                     <span class="hidden max-w-36 truncate sm:inline">{{ $user->name }}</span>
                     <svg class="size-4 text-muted transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
                 </summary>
-                <div class="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-line bg-surface p-2 shadow-lg shadow-ink/10">
+                <div class="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-line bg-surface p-2 shadow-lg shadow-ink/10">
                     <a href="{{ route('home') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">View marketplace</a>
                     <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Account settings</a>
                     <button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Sign out</button>

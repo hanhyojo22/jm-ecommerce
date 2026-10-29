@@ -9,8 +9,8 @@
         <div class="grid animate-pulse motion-reduce:animate-none md:grid-cols-[14rem_minmax(0,1fr)]" aria-hidden="true">
             <div class="space-y-3 border-b border-line p-4 md:border-b-0 md:border-r md:px-3 md:py-4">
                 <div class="h-3 w-16 rounded-full bg-slate-200"></div>
-                <div class="h-11 rounded-[10px] bg-slate-100"></div>
-                <div class="h-11 rounded-[10px] bg-slate-100"></div>
+                <div class="h-11 rounded-md bg-slate-100"></div>
+                <div class="h-11 rounded-md bg-slate-100"></div>
             </div>
             <div class="space-y-4 p-4 md:px-6">
                 <div class="h-5 w-36 rounded-full bg-slate-200"></div>

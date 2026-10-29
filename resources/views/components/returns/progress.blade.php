@@ -99,13 +99,13 @@
                 default => 'border-line bg-canvas text-muted',
             };
         @endphp
-        <div class="mt-5 flex items-start gap-2.5 rounded-[10px] border px-3.5 py-2.5 text-sm {{ $terminalClasses }}">
+        <div class="mt-5 flex items-start gap-2.5 rounded-md border px-3.5 py-2.5 text-sm {{ $terminalClasses }}">
             <svg class="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="m8.5 12 2.5 2.5L16 9.5" /></svg>
             <p>{{ $terminalCopy }}</p>
         </div>
     @else
         <div @class([
-            'mt-5 flex items-start gap-2.5 rounded-[10px] border px-3.5 py-2.5 text-sm',
+            'mt-5 flex items-start gap-2.5 rounded-md border px-3.5 py-2.5 text-sm',
             'border-amber-200 bg-amber-50 text-warning-text' => $yourTurn,
             'border-line bg-canvas text-muted' => ! $yourTurn,
         ])>

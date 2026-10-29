@@ -1,4 +1,4 @@
-<div x-cloak x-show="open" class="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(28rem,70vh)] overflow-y-auto rounded-xl border border-line bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,.16)]">
+<div x-cloak x-show="open" class="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(28rem,70vh)] overflow-y-auto rounded-lg border border-line bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,.16)]">
     <p x-show="loading" class="px-3 py-3 text-sm text-muted" role="status">Searching products…</p>
     <p x-show="!loading && !items.length" class="px-3 py-3 text-sm text-muted" role="status">No matching products</p>
     <div id="{{ $listId }}" role="listbox" aria-label="Product suggestions"><template x-for="(item, index) in items" :key="item.url">

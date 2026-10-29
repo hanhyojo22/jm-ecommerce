@@ -8,7 +8,7 @@
 @endphp
 
 <a href="{{ $href }}" @if ($selected) aria-current="page" @endif @class([
-    'group flex min-h-36 min-w-0 flex-col items-center justify-center rounded-2xl border bg-surface px-3 py-4 text-center transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 motion-reduce:transform-none',
+    'group flex min-h-36 min-w-0 flex-col items-center justify-center rounded-lg border bg-surface px-3 py-4 text-center transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 motion-reduce:transform-none',
     'border-brand bg-blue-50' => $selected,
     'border-line hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]' => ! $selected,
 ])>

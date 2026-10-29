@@ -41,19 +41,19 @@
         </div>
         <div class="flex flex-wrap items-baseline gap-x-2"><p class="text-[15px] font-semibold leading-6 tabular-nums text-ink">₱{{ number_format($displayPrice, $priceDecimals) }}</p>@if ($isOnSale)<del class="text-[13px] tabular-nums text-muted">₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}</del>@endif</div>
         @if ($product->variants_exists && $product->stock_quantity > 0 && ! $isOwnStore)
-            <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}#purchase" class="mt-auto inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line px-3 text-sm font-semibold text-brand hover:border-brand hover:bg-blue-50">Choose options</a>
+            <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}#purchase" class="mt-auto inline-flex min-h-11 items-center justify-center rounded-md border border-line px-3 text-sm font-semibold text-brand hover:border-brand hover:bg-blue-50">Choose options</a>
         @elseif ($isBuyer)
-            <form method="POST" action="{{ route('cart.store', $product) }}" data-add-to-cart data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="mt-auto">@csrf<input type="hidden" name="quantity" value="1"><button @disabled($product->stock_quantity < 1) class="min-h-11 w-full rounded-[10px] border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:text-muted">{{ $product->stock_quantity > 0 ? 'Add to cart' : 'Sold out' }}</button></form>
+            <form method="POST" action="{{ route('cart.store', $product) }}" data-add-to-cart data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" class="mt-auto">@csrf<input type="hidden" name="quantity" value="1"><button @disabled($product->stock_quantity < 1) class="min-h-11 w-full rounded-md border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:text-muted">{{ $product->stock_quantity > 0 ? 'Add to cart' : 'Sold out' }}</button></form>
         @elseif (! Auth::check() && $product->stock_quantity > 0)
-            <a href="{{ route('login', ['redirect' => request()->getPathInfo(), 'add_to_cart' => $product->id]) }}" class="mt-auto flex min-h-11 w-full items-center justify-center rounded-[10px] border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Sign in to add {{ $product->name }} to cart">Add to cart</a>
+            <a href="{{ route('login', ['redirect' => request()->getPathInfo(), 'add_to_cart' => $product->id]) }}" class="mt-auto flex min-h-11 w-full items-center justify-center rounded-md border border-line bg-white px-3 text-sm font-semibold text-ink transition hover:border-ink hover:bg-ink hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" aria-label="Sign in to add {{ $product->name }} to cart">Add to cart</a>
         @elseif ($canShop && $product->stock_quantity > 0 && ! $isOwnStore)
-            <a href="{{ route('profile.edit') }}" class="mt-auto flex min-h-11 w-full items-center justify-center rounded-[10px] border border-line bg-white px-3 text-sm font-semibold text-ink">Verify email to add to cart</a>
+            <a href="{{ route('profile.edit') }}" class="mt-auto flex min-h-11 w-full items-center justify-center rounded-md border border-line bg-white px-3 text-sm font-semibold text-ink">Verify email to add to cart</a>
         @elseif ($isOwnStore)
-            <span class="mt-auto flex min-h-11 w-full items-center justify-center rounded-[10px] border border-line px-3 text-center text-sm font-semibold text-muted">You cannot buy from your store</span>
+            <span class="mt-auto flex min-h-11 w-full items-center justify-center rounded-md border border-line px-3 text-center text-sm font-semibold text-muted">You cannot buy from your store</span>
         @elseif ($product->stock_quantity > 0)
-            <span class="mt-auto flex min-h-11 w-full items-center justify-center rounded-[10px] border border-line px-3 text-center text-sm font-semibold text-muted">Shopping unavailable for this account</span>
+            <span class="mt-auto flex min-h-11 w-full items-center justify-center rounded-md border border-line px-3 text-center text-sm font-semibold text-muted">Shopping unavailable for this account</span>
         @else
-            <span class="mt-auto flex min-h-11 w-full items-center justify-center rounded-[10px] border border-line px-3 text-sm font-semibold text-muted">Sold out</span>
+            <span class="mt-auto flex min-h-11 w-full items-center justify-center rounded-md border border-line px-3 text-sm font-semibold text-muted">Sold out</span>
         @endif
     </div>
 </article>

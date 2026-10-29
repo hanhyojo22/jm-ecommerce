@@ -26,12 +26,12 @@
                     <h1 class="marketplace-page-title text-ink">Discover stores</h1>
                 </div>
                 <form method="GET" action="{{ route('catalog.stores') }}" class="flex w-full gap-2 sm:max-w-md">
-                    <label for="store-search" class="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-[10px] border border-line bg-surface px-3 text-muted focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
+                    <label for="store-search" class="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-md border border-line bg-surface px-3 text-muted focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
                         <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
                         <span class="sr-only">Search stores</span>
                         <input id="store-search" name="q" value="{{ $search }}" type="search" placeholder="Search stores or sellers" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
                     </label>
-                    <button class="min-h-11 shrink-0 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Search</button>
+                    <button class="min-h-11 shrink-0 rounded-md bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Search</button>
                 </form>
             </div>
 
@@ -43,7 +43,7 @@
                 @forelse ($stores as $store)
                     <a href="{{ route('catalog.store', $store->slug) }}" class="marketplace-surface group min-w-0 p-5 transition hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                         <div class="flex items-center gap-3">
-                            <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-blue-50 text-sm font-semibold text-brand-hover">
+                            <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-blue-50 text-sm font-semibold text-brand-hover">
                                 @if ($store->logo_path)
                                     <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="{{ $store->name }} logo" class="size-full object-cover">
                                 @else
@@ -65,7 +65,7 @@
                         <h2 class="font-semibold text-ink">No stores found</h2>
                         @if ($search)
                             <p class="mt-2 text-sm text-muted">Try another store or seller name.</p>
-                            <a href="{{ route('catalog.stores') }}" class="mt-4 inline-flex min-h-11 items-center rounded-[10px] px-3 text-sm font-semibold text-brand hover:bg-blue-50 hover:text-brand-hover">Clear search</a>
+                            <a href="{{ route('catalog.stores') }}" class="mt-4 inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-brand hover:bg-blue-50 hover:text-brand-hover">Clear search</a>
                         @endif
                     </div>
                 @endforelse

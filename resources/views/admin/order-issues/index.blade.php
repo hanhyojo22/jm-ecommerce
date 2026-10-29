@@ -9,7 +9,7 @@
             @endforeach
         </nav>
         @forelse($issues as $issue)
-            <article class="rounded-2xl border border-line bg-surface p-5 sm:p-6">
+            <article class="rounded-lg border border-line bg-surface p-5 sm:p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div><h2 class="font-semibold text-ink">{{ str($issue->type)->replace('_', ' ')->title() }} · {{ $issue->sellerOrder->store->name }}</h2><p class="mt-1 text-sm text-muted"><a class="text-brand-hover underline" href="{{ route('admin.orders.show', $issue->sellerOrder->order) }}">Order #{{ $issue->sellerOrder->order->number }}</a> · {{ $issue->buyer->name }} ({{ $issue->buyer->email }}) · {{ $issue->created_at->format('M j, Y') }}</p>@if($issue->type === 'failed_delivery' && $issue->status === 'open')@php($refusals = $issue->buyer->codRefusalCount())<p class="mt-1 text-sm {{ $refusals > 0 ? 'font-semibold text-danger' : 'text-muted' }}">Reported by the store. This buyer has {{ trans_choice('{0} no confirmed COD refusals|{1} :count confirmed COD refusal|[2,*] :count confirmed COD refusals', $refusals) }} in the last {{ config('marketplace.cod_refusals.window_days') }} days.</p>@endif</div>
                     <span class="rounded-full bg-canvas px-3 py-1 text-xs font-semibold text-muted">{{ ucfirst($issue->status) }}</span>

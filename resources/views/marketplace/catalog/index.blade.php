@@ -103,7 +103,7 @@
 
         <main class="marketplace-container pb-16">
             @if ($errors->any())
-                <div role="alert" class="mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">
+                <div role="alert" class="mt-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900">
                     {{ $errors->first() }}
                     <a href="#product-results" class="ml-2 font-semibold underline underline-offset-4">Try again</a>
                 </div>
@@ -133,15 +133,15 @@
                             </div>
                         </div>
                         <div class="flex shrink-0 flex-wrap gap-2">
-                            <a href="#product-results" class="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Browse products</a>
+                            <a href="#product-results" class="inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Browse products</a>
                             @php($storeFirstProduct = $storeFeatured->first() ?? $storeBestSellers->first() ?? $products->getCollection()->first())
                             @if ($isBuyer && $storeFirstProduct)
                                 <form method="POST" action="{{ route('messages.products.start', $storeFirstProduct) }}" class="contents">
                                     @csrf
-                                    <button class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Chat with seller</button>
+                                    <button class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Chat with seller</button>
                                 </form>
                             @endif
-                            <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-[10px] border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Marketplace</a>
+                            <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Marketplace</a>
                         </div>
                     </div>
                 </section>
@@ -171,7 +171,7 @@
                         <h2 id="store-best-heading" class="text-xl font-semibold tracking-[-0.02em]">Best sellers</h2>
                         <ol class="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                             @foreach ($storeBestSellers as $product)
-                                <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-2xl border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}@if ($product->stock_quantity < 1)<span class="mt-1 block font-semibold text-danger">Sold out</span>@endif</span></a></li>
+                                <li class="min-w-0"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="flex min-h-24 flex-col justify-between rounded-lg border border-line bg-white p-4 transition hover:border-brand hover:shadow-[0_12px_28px_rgba(15,23,42,.10)]"><span class="line-clamp-2 text-sm font-semibold text-ink">{{ $loop->iteration }} · {{ $product->name }}</span><span class="mt-2 text-xs text-muted">{{ number_format((int) ($product->sold_quantity ?? 0)) }} sold · ₱{{ number_format($product->price, 2) }}@if ($product->stock_quantity < 1)<span class="mt-1 block font-semibold text-danger">Sold out</span>@endif</span></a></li>
                             @endforeach
                         </ol>
                     </section>
@@ -193,7 +193,7 @@
                 @if ($sellerStore)
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div class="min-w-0"><h2 id="product-results-heading" class="marketplace-section-title">{{ $sellerStore ? 'All products' : 'Products' }}</h2><p class="marketplace-section-subtitle">{{ number_format($products->total()) }} {{ Str::plural('product', $products->total()) }}@if ($search) matching “{{ Str::limit($search, 32) }}”@endif</p></div>
-                        <button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-line bg-white px-4 text-sm font-semibold transition hover:border-brand lg:hidden">
+                        <button type="button" @click="toggleFilters($event)" :aria-expanded="filtersOpen.toString()" aria-controls="catalog-filters" class="inline-flex min-h-11 items-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-semibold transition hover:border-brand lg:hidden">
                             <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4" /></svg>
                             Filters
                             @if (! empty($filterChips))<span class="rounded-full bg-brand px-2 py-0.5 text-xs font-semibold text-white">{{ count($filterChips) }}</span>@endif
@@ -228,7 +228,7 @@
                                     @if ($categories->count() > 5)
                                         <details class="relative text-xs" @if ($categories->skip(5)->contains('slug', request('category'))) open @endif>
                                             <summary class="cursor-pointer list-none font-medium text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden">More</summary>
-                                            <ul class="absolute right-0 top-full z-30 mt-2 max-h-60 w-[230px] overflow-y-auto rounded-xl border border-line bg-white p-2 shadow-lg shadow-ink/10">
+                                            <ul class="absolute right-0 top-full z-30 mt-2 max-h-60 w-[230px] overflow-y-auto rounded-lg border border-line bg-white p-2 shadow-lg shadow-ink/10">
                                                 @foreach ($categories->skip(5) as $category)
                                                     <x-marketplace.filter-option :item="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page']), 'category' => $category->slug])" :clear-href="route($catalogRouteName, [...$catalogRouteParameters, ...request()->except(['category', 'page'])])" :selected="request('category') === $category->slug" />
                                                 @endforeach
@@ -251,8 +251,8 @@
                             <div role="group" aria-labelledby="catalog-price-heading" class="border-t border-line py-[14px]">
                                 <h3 id="catalog-price-heading" class="mb-2.5 marketplace-filter-heading">Price</h3>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <div><label for="minimum-price" class="sr-only">Minimum price in pesos</label><input id="minimum-price" x-ref="minPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="min_price" min="0" step="0.01" value="{{ $activeFilters['min_price'] ?? '' }}" placeholder="Min ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
-                                    <div><label for="maximum-price" class="sr-only">Maximum price in pesos</label><input id="maximum-price" x-ref="maxPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="max_price" min="0" step="0.01" value="{{ $activeFilters['max_price'] ?? '' }}" placeholder="Max ₱" class="h-[33px] w-full rounded-[10px] border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
+                                    <div><label for="minimum-price" class="sr-only">Minimum price in pesos</label><input id="minimum-price" x-ref="minPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="min_price" min="0" step="0.01" value="{{ $activeFilters['min_price'] ?? '' }}" placeholder="Min ₱" class="h-[33px] w-full rounded-md border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
+                                    <div><label for="maximum-price" class="sr-only">Maximum price in pesos</label><input id="maximum-price" x-ref="maxPrice" x-on:change="$nextTick(() => { if (document.activeElement !== $refs.minPrice && document.activeElement !== $refs.maxPrice) $el.form.requestSubmit() })" x-on:keydown.enter.prevent="$el.form.requestSubmit()" type="number" name="max_price" min="0" step="0.01" value="{{ $activeFilters['max_price'] ?? '' }}" placeholder="Max ₱" class="h-[33px] w-full rounded-md border-line px-2 text-sm focus:border-brand focus:ring-brand"></div>
                                 </div>
                             </div>
 
@@ -363,8 +363,8 @@
                                     </select>
                                 </form>
                                 <div class="flex shrink-0 items-center gap-2" role="group" aria-label="Product view">
-                                    <button type="button" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'" aria-label="Grid view" :class="viewMode === 'grid' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-11 place-items-center rounded-[10px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
-                                    <button type="button" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'" aria-label="List view" :class="viewMode === 'list' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-11 place-items-center rounded-[10px] border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h12M9 12h12M9 19h12"/><path d="M3 5h2M3 12h2M3 19h2"/></svg></button>
+                                    <button type="button" @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'" aria-label="Grid view" :class="viewMode === 'grid' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-11 place-items-center rounded-md border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+                                    <button type="button" @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'" aria-label="List view" :class="viewMode === 'list' ? 'border-ink bg-ink text-white' : 'bg-white text-muted hover:text-ink'" class="grid size-11 place-items-center rounded-md border border-line transition"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5h12M9 12h12M9 19h12"/><path d="M3 5h2M3 12h2M3 19h2"/></svg></button>
                                 </div>
                             </div>
                         </div>
@@ -378,7 +378,7 @@
                         @endif
                         <div x-show="loading" x-cloak class="{{ $isListing && ! $sellerStore && empty($filterChips) ? 'mt-7' : 'mt-4' }} marketplace-product-grid" aria-hidden="true">
                             @for ($i = 0; $i < 8; $i++)
-                                <div class="marketplace-surface overflow-hidden"><div class="aspect-square animate-pulse motion-reduce:animate-none bg-slate-200"></div><div class="space-y-2 p-4"><div class="h-4 animate-pulse motion-reduce:animate-none rounded bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse motion-reduce:animate-none rounded bg-slate-200"></div></div></div>
+                                <div class="marketplace-surface overflow-hidden"><div class="aspect-square animate-pulse motion-reduce:animate-none bg-slate-200"></div><div class="space-y-2 p-4"><div class="h-4 animate-pulse motion-reduce:animate-none rounded-md bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse motion-reduce:animate-none rounded-md bg-slate-200"></div></div></div>
                             @endfor
                         </div>
                         <p x-show="loading" x-cloak class="mt-3 text-[13px] text-muted" role="status" aria-live="polite">Loading curated results&hellip;</p>
@@ -396,7 +396,7 @@
                                 <div class="rounded-[var(--radius-surface)] border border-dashed border-line bg-white p-10 text-center sm:p-12">
                                     <h3 class="text-lg font-semibold text-ink">@if (filled($search))No results for &ldquo;{{ Str::limit($search, 60) }}&rdquo;@elseif ($hasActiveFilters)Nothing matched these filters.@else No products yet.@endif</h3>
                                     <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">@if (filled($search))Try fewer filters, check spelling, or browse trending categories.@elseif ($hasActiveFilters)Try removing a filter or browse available products.@else Products from approved sellers will appear here.@endif</p>
-                                    <a href="{{ $clearAllUrl }}" class="mt-6 inline-flex min-h-11 items-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">{{ filled($search) || $hasActiveFilters ? 'Clear filters' : 'Browse marketplace' }}</a>
+                                    <a href="{{ $clearAllUrl }}" class="mt-6 inline-flex min-h-11 items-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">{{ filled($search) || $hasActiveFilters ? 'Clear filters' : 'Browse marketplace' }}</a>
                                 </div>
                             @endif
                         </div>
@@ -408,9 +408,9 @@
             @if ($categories->count() > 1)
                 <div x-show="categoriesOpen" x-cloak x-on:keydown.escape.stop="closeCategories()" x-on:keydown.tab="trapCategories($event)" class="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="all-categories-heading">
                     <div @click="closeCategories()" class="absolute inset-0 bg-slate-950/35"></div>
-                    <div x-ref="categoryDialog" class="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-[16px] bg-canvas p-5 shadow-[0_-18px_40px_-24px_rgba(15,23,42,0.45)] lg:inset-x-auto lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:max-h-[80vh] lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[16px] lg:p-7">
+                    <div x-ref="categoryDialog" class="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-lg bg-canvas p-5 shadow-[0_-18px_40px_-24px_rgba(15,23,42,0.45)] lg:inset-x-auto lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:max-h-[80vh] lg:w-[min(58rem,calc(100vw-3rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-lg lg:p-7">
                         <div class="mx-auto mb-5 h-1.5 w-12 rounded-full bg-slate-300 lg:hidden"></div>
-                        <div class="flex items-start justify-between gap-4"><div><h2 id="all-categories-heading" class="text-2xl font-semibold tracking-[-0.02em]">All categories</h2><p class="mt-1 text-sm text-muted">Browse products by category.</p></div><button type="button" data-category-focus @click="closeCategories()" class="inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-line bg-white text-muted transition hover:text-ink" aria-label="Close categories"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
+                        <div class="flex items-start justify-between gap-4"><div><h2 id="all-categories-heading" class="text-2xl font-semibold tracking-[-0.02em]">All categories</h2><p class="mt-1 text-sm text-muted">Browse products by category.</p></div><button type="button" data-category-focus @click="closeCategories()" class="inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-line bg-white text-muted transition hover:text-ink" aria-label="Close categories"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div>
                         <div class="mt-7 space-y-7">
                             @foreach ($categoryGroups as $groupName => $groupCategories)
                                 <section aria-labelledby="category-group-{{ Str::slug($groupName) }}"><h3 id="category-group-{{ Str::slug($groupName) }}" class="text-sm font-semibold">{{ $groupName }}</h3><div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">@foreach ($groupCategories as $category)<x-marketplace.category-card :category="$category" :href="route($catalogRouteName, [...$catalogRouteParameters, ...array_diff_key($catalogQueryParams, ['category' => true]), 'category' => $category->slug])" :selected="request('category') === $category->slug" />@endforeach</div></section>
