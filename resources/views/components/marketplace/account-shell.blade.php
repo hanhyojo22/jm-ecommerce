@@ -10,8 +10,8 @@
 })
 
 <div class="page-shell min-h-[calc(100dvh-4.5rem)] {{ $active === 'messages' ? 'account-messages-shell' : '' }}">
-    {{-- Settings and messages set their own top edge; the rest relied on the removed breadcrumb for it. --}}
-    <div class="page-container {{ $measure }} {{ in_array($active, ['settings', 'messages'], true) ? '' : 'pt-8' }}">
+    {{-- Settings, messages and orders set their own top edge; the rest relied on the removed breadcrumb for it. --}}
+    <div class="page-container {{ $measure }} {{ in_array($active, ['settings', 'messages', 'orders'], true) ? '' : 'pt-8' }}">
         <div class="account-shell-content min-w-0">
             {{ $slot }}
         </div>

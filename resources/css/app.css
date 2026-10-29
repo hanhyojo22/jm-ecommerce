@@ -111,11 +111,11 @@
     }
 
     .content-card {
-        @apply overflow-hidden rounded-[16px] border border-line bg-surface;
+        @apply overflow-hidden rounded-lg border border-line bg-surface;
     }
 
     .section-card {
-        @apply rounded-[16px] border border-line bg-surface p-5 sm:p-6;
+        @apply rounded-lg border border-line bg-surface p-5 sm:p-6;
         box-shadow: 0 1px 2px rgb(24 44 72 / 3%);
     }
 
@@ -124,7 +124,7 @@
     }
 
     .field-control {
-        @apply block min-h-11 w-full rounded-[10px] border-line bg-white text-sm text-ink shadow-none placeholder:text-muted focus:border-brand focus:ring-0;
+        @apply block min-h-11 w-full rounded-md border-line bg-white text-sm text-ink shadow-none placeholder:text-muted focus:border-brand focus:ring-0;
     }
 
     .field-control:focus {
@@ -337,11 +337,11 @@
     }
 
     .button-primary {
-        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300;
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300;
     }
 
     .button-secondary {
-        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-line bg-white px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2;
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line bg-white px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2;
     }
 
     .button-quiet {
@@ -349,11 +349,11 @@
     }
 
     .button-danger {
-        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-red-200 bg-white px-5 text-sm font-semibold text-danger transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2;
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-red-200 bg-white px-5 text-sm font-semibold text-danger transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-danger focus:ring-offset-2;
     }
 
     .button-success {
-        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] border border-green-300 bg-white px-5 text-sm font-semibold text-success transition hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2;
+        @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-green-300 bg-white px-5 text-sm font-semibold text-success transition hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-success focus:ring-offset-2;
     }
 
     .empty-state {
