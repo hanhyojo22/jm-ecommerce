@@ -84,7 +84,7 @@
                             'bg-surface text-ink shadow-sm' => $tab === $key,
                             'text-muted hover:text-ink' => $tab !== $key,
                         ]) @if ($tab === $key) aria-current="page" x-init="$el.parentElement.scrollLeft = Math.max(0, $el.offsetLeft - 24)" @endif>
-                            {{ $label }}@if ($tabCounts[$key] > 0 || $tab === $key) <span @class(['text-[10px] font-semibold tabular-nums', 'text-brand' => $tab === $key])>{{ $tabCounts[$key] }}<span class="sr-only"> {{ Str::plural('order', $tabCounts[$key]) }}</span></span>@endif
+                            {{ $label }}@if ($tabCounts[$key] > 0 || $tab === $key) <span @class(['text-[11px] font-semibold tabular-nums', 'text-brand' => $tab === $key])>{{ $tabCounts[$key] }}<span class="sr-only"> {{ Str::plural('order', $tabCounts[$key]) }}</span></span>@endif
                         </a>
                     @endforeach
                 </nav>
@@ -101,7 +101,7 @@
                                 <a href="{{ route('orders.index', request()->except('search', 'page')) }}" class="absolute right-0 top-0 grid size-11 place-items-center rounded-lg text-muted hover:text-ink lg:size-10" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></a>
                             @endif
                         </div>
-                        <x-input-error id="purchase-search-error" :messages="$errors->get('search')" class="mt-1.5" />
+                        <x-input-error id="purchase-search-error" :messages="$errors->get('search')" class="mt-2" />
                     </div>
                     <button type="submit" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-meta font-semibold text-ink transition-colors hover:border-brand hover:text-brand-hover lg:min-h-10">Search</button>
                 </form>
@@ -112,7 +112,7 @@
             <x-input-error :messages="$errors->get('tab')" class="mt-2" />
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
-            <section id="purchases" class="mt-5 scroll-mt-24" aria-labelledby="purchase-results-heading">
+            <section id="purchases" class="mt-6 scroll-mt-24" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
                 @php
@@ -181,7 +181,6 @@
                                     } elseif ($cancelRequest) {
                                         [$statusLabel, $statusDot, $statusText] = ['Cancel requested', 'bg-warning', 'text-warning-text'];
                                     }
-                                    $placedFormat = $order->created_at->isCurrentYear() ? 'M j' : 'M j, Y';
                                     // One filled button per order, and only when the buyer has something to do.
                                     $nextAction = match (true) {
                                         $needsPayment => [$payBy?->isPast() ? 'Send reference' : 'Pay store', route('orders.show', $order).'#pay-stores'],
@@ -254,12 +253,12 @@
                                 @endphp
 
                                 <article class="relative border-b border-line-soft py-4 last:border-0 lg:py-5" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
-                                    <span @class(['absolute -left-[26px] top-[19px] size-2.5 rounded-full ring-4 ring-canvas lg:-left-[34px] lg:top-[23px]', $dotTone]) aria-hidden="true"></span>
+                                    <span @class(['absolute -left-[26px] top-[23px] size-2.5 rounded-full ring-4 ring-canvas lg:-left-[34px] lg:top-[27px]', $dotTone]) aria-hidden="true"></span>
 
                                     <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px] lg:gap-5">
                                         <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] leading-4 text-muted">
-                                                <span @class(['inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-[10px] font-bold', $overlayText])>
+                                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-muted">
+                                                <span @class(['inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-[11px] font-bold', $overlayText])>
                                                     <span class="size-1.5 rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
                                                     {{ $overlayLabel }}
                                                 </span>
@@ -268,12 +267,12 @@
                                             </div>
 
                                             @if (! $buyerLate && ! $storeMissed && $returnCase && ($tab === 'returns' || ! $returnFinished))
-                                                <x-returns.status-badge :status="$returnCase->status" buyer class="mt-1.5" />
+                                                <x-returns.status-badge :status="$returnCase->status" buyer class="mt-2" />
                                             @elseif ($tab === 'returns' && $returnIssue)
-                                                <p class="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-warning-text"><span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>Return request open</p>
+                                                <p class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-warning-text"><span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>Return request open</p>
                                             @endif
 
-                                            <h4 id="purchase-{{ $sellerOrder->id }}" class="mt-1.5 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{{ $headline }}</h4>
+                                            <h4 id="purchase-{{ $sellerOrder->id }}" class="mt-2 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{{ $headline }}</h4>
 
                                             @unless ($needsPayment && $payBy?->isPast())
                                                 <p @class(['mt-1 text-meta leading-5', 'text-warning-text' => $noteIsUrgent, 'text-muted' => ! $noteIsUrgent])>
@@ -329,7 +328,7 @@
                                                 </p>
                                             @endunless
 
-                                            <div class="mt-2.5 flex items-center gap-2.5">
+                                            <div class="mt-3 flex items-center gap-2.5">
                                                 <div class="flex shrink-0">
                                                     @forelse ($thumbPaths as $thumbPath)
                                                         <img src="{{ Storage::disk('product_images')->url($thumbPath) }}" alt="" width="36" height="36" loading="lazy" class="-ml-2 size-9 rounded-lg border-2 border-surface object-cover first:ml-0">
@@ -340,7 +339,7 @@
                                                         </span>
                                                     @endforelse
                                                     @if ($remainingThumbs > 0)
-                                                        <span class="-ml-2 grid size-9 place-items-center rounded-lg border-2 border-surface bg-paper text-[10px] font-bold text-muted">+{{ $remainingThumbs }}</span>
+                                                        <span class="-ml-2 grid size-9 place-items-center rounded-lg border-2 border-surface bg-paper text-[11px] font-bold text-muted">+{{ $remainingThumbs }}</span>
                                                     @endif
                                                 </div>
                                                 <p class="min-w-0 text-[11px] leading-4 text-muted">{{ $leadItemName ?? 'Order items' }}@if ($items->count() > 1) <span aria-hidden="true">·</span> {{ $items->count() }} items @endif</p>
@@ -363,13 +362,13 @@
                                             </div>
                                         </div>
 
-                                        <div class="mt-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-t border-line-soft pt-3 lg:mt-0 lg:flex-col lg:items-end lg:justify-start lg:gap-2 lg:border-0 lg:pt-0">
+                                        <div class="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line-soft pt-3 lg:mt-0 lg:flex-col lg:items-end lg:justify-start lg:gap-3 lg:border-0 lg:pt-0">
                                             <div class="text-left lg:text-right">
-                                                <p class="text-[10px] font-semibold uppercase tracking-[0.05em] text-muted">Store total</p>
-                                                <p class="mt-0.5 text-lg font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format($sellerOrder->total, 2) }}</p>
+                                                <p class="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted">Store total</p>
+                                                <p class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format($sellerOrder->total, 2) }}</p>
                                             </div>
 
-                                            <div class="flex flex-col items-end gap-1">
+                                            <div class="flex flex-col items-end">
                                                 @if ($nextAction && $nextAction[1] !== null)
                                                     <a href="{{ $nextAction[1] }}" class="{{ $primaryAction }} whitespace-nowrap">{{ $nextAction[0] }}</a>
                                                 @elseif ($nextAction && $nextAction[1] === null)
@@ -384,7 +383,6 @@
                                                         <button type="submit" x-ref="received" @click="if (! confirming) { $event.preventDefault(); confirming = true }" :disabled="sending" :aria-describedby="confirming ? 'received-note-{{ $sellerOrder->id }}' : null" class="{{ $primaryAction }} flex-1 disabled:cursor-wait disabled:opacity-70 sm:flex-none" x-text="sending ? 'Saving…' : (confirming ? 'Yes, received' : 'Order received')">Order received</button>
                                                     </form>
                                                 @endif
-                                                <p class="text-[10.5px] text-muted">{{ $items->count() }} {{ Str::plural('item', $items->count()) }} <span aria-hidden="true">·</span> Order placed {{ $order->created_at->format($placedFormat) }}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -396,14 +394,14 @@
                     <div class="rounded-2xl border border-dashed border-line bg-surface px-5 py-12 text-center">
                         @if ($hasFilters)
                             <h3 class="text-lg font-semibold text-ink">{{ $search !== '' ? 'No purchases match “'.$search.'”'.($tab !== 'all' ? ' in '.$tabs[$tab] : '') : 'No purchases match those filters' }}</h3>
-                            <p class="mx-auto mt-1.5 max-w-sm text-meta text-muted">Try an order number, a store name, or part of a product name.</p>
+                            <p class="mx-auto mt-2 max-w-sm text-meta text-muted">Try an order number, a store name, or part of a product name.</p>
                             <div class="mt-4 flex flex-wrap justify-center gap-2">
                                 @if ($search !== '')<a href="{{ route('orders.index', request()->except('search', 'page')) }}" class="{{ $outlineAction }}">Clear search</a>@endif
                                 @if ($tab !== 'all' || filled($filters['status'] ?? null))<a href="{{ route('orders.index') }}" class="{{ $outlineAction }}">Reset filters</a>@endif
                             </div>
                         @else
                             <h3 class="text-lg font-semibold text-ink">{{ $emptyCopy[$tab][0] }}</h3>
-                            <p class="mx-auto mt-1.5 max-w-sm text-meta text-muted">{{ $emptyCopy[$tab][1] }}</p>
+                            <p class="mx-auto mt-2 max-w-sm text-meta text-muted">{{ $emptyCopy[$tab][1] }}</p>
                             @php($showAll = $tab !== 'all' && $tabCounts['all'] > 0)
                             @if ($tab === 'returns' && $tabCounts['delivered'] > 0)
                                 <a href="{{ route('orders.index', ['tab' => 'delivered']) }}" class="{{ $outlineAction }} mt-4">View delivered orders</a>
@@ -415,7 +413,7 @@
                 @endforelse
             </section>
 
-            @if ($sellerOrders->hasPages())<div class="mt-5">{{ $sellerOrders->links() }}</div>@endif
+            @if ($sellerOrders->hasPages())<div class="mt-6">{{ $sellerOrders->links() }}</div>@endif
         </div>
     </x-marketplace.account-shell>
 </x-app-layout>
