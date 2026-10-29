@@ -297,59 +297,59 @@
                                 @endfor
                             </div>
 
-                            <p @class(['mt-2 text-meta leading-5', 'text-warning-text' => $noteIsUrgent, 'text-muted' => ! $noteIsUrgent])>
-                                @if ($refundDue)
-                                    This order was cancelled after you paid. {{ $store }} owes you a refund of ₱{{ number_format($sellerOrder->total, 2) }}. Message them first. If the refund doesn’t arrive, <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">get help from JMMart</a>.
-                                @elseif ($sellerOrder->status === 'cancelled')
-                                    {{ $cancelledAtRequest ? 'Cancelled at your request.' : 'This order was cancelled.' }}@if ($sellerOrder->refund_reference) Refunded (ref. {{ $sellerOrder->refund_reference }}).@endif
-                                @elseif ($cancelRequest)
-                                    You asked {{ $store }} to cancel. Its reply will show on the <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">order page</a>.
-                                @elseif ($needsPayment && $payBy?->isPast())
-                                    The payment window closed {{ $payBy->format('M j, g:i A') }}, so this order will be cancelled. If you already paid {{ $store }}, <a href="{{ route('orders.show', $order) }}#pay-stores" class="{{ $inlineLink }}">send the reference now</a>.
-                                @elseif ($needsPayment)
-                                    Pay {{ $store }} ₱{{ number_format($sellerOrder->total, 2) }} by {{ \App\Models\Payment::METHOD_LABELS[$method] }}@if ($payBy) before {{ $payBy->format('M j, g:i A') }}{{ now()->diffInHours($payBy) < 24 ? ' ('.$payBy->diffForHumans(['parts' => 1]).')' : '' }}@endif, then send the reference number. Unpaid orders are cancelled. <a href="{{ route('terms') }}#wallet-payments" class="{{ $inlineLink }}">How paying a store works</a>
-                                @elseif ($isDirect && $sellerOrder->status === 'pending')
-                                    Reference sent. {{ $store }} confirms once the payment shows in its account. <a href="{{ route('terms') }}#wallet-payments" class="{{ $inlineLink }}">How paying a store works</a>
-                                @elseif ($sellerOrder->status === 'pending')
-                                    Waiting for {{ $store }} to confirm your order. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Need to cancel?</a>
-                                @elseif (in_array($sellerOrder->status, ['confirmed', 'processing'], true))
-                                    {{ $store }} is preparing your order for shipping.@if ($sellerOrder->status === 'confirmed') <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Need to cancel?</a>@endif
-                                @elseif ($sellerOrder->status === 'shipped')
-                                    On its way. Confirm with Order received once it arrives{{ $sellerOrder->shipped_at ? ' (auto-confirmed '.$sellerOrder->shipped_at->copy()->addDays((int) config('marketplace.orders.auto_deliver_days'))->format('M j').')' : '' }}. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Not here yet?</a>
-                                @elseif ($storeLate)
-                                    {{ $store }} didn’t respond by {{ $returnCase->respond_by->format('M j, g:i A') }}. You can now ask JMMart to review your return.
-                                @elseif ($buyerLate)
-                                    Your deadline to respond passed {{ $returnCase->deadline()->format('M j') }}. JMMart may close this return without a remedy; to still respond, contact support from the return page.
-                                @elseif ($storeMissed)
-                                    {{ $store }} missed its {{ $returnCase->deadline()->format('M j') }} deadline. JMMart support can step in; details are on the return page.
-                                @elseif ($returnCase?->status === 'appealed')
-                                    JMMart support is reviewing your return. Updates show on the return page.
-                                @elseif ($returnCase?->status === 'awaiting_receipt' && $returnCase->return_by)
-                                    You sent the item back. {{ $store }} has until {{ $returnCase->return_by->format('M j') }} to confirm it arrived.
-                                @elseif ($returnCase?->status === 'awaiting_fulfillment' && $returnCase->fulfill_by)
-                                    {{ $store }} has until {{ $returnCase->fulfill_by->format('M j') }} to send your {{ $returnCase->remedy ?? 'remedy' }}.
-                                @elseif ($returnCase?->status === 'awaiting_return')
-                                    @if ($returnCase->return_by?->isPast())
-                                        Your {{ $returnCase->return_by->format('M j') }} send-back date passed. Record the handoff now; until you do, JMMart may close this return without a remedy.
-                                    @else
-                                        Send the item back to {{ $store }}@if ($returnCase->return_by) by {{ $returnCase->return_by->format('M j') }}@endif, then record the handoff on the return page.
+                            @unless ($needsPayment && $payBy?->isPast())
+                                <p @class(['mt-2 text-meta leading-5', 'text-warning-text' => $noteIsUrgent, 'text-muted' => ! $noteIsUrgent])>
+                                    @if ($refundDue)
+                                        This order was cancelled after you paid. {{ $store }} owes you a refund of ₱{{ number_format($sellerOrder->total, 2) }}. Message them first. If the refund doesn’t arrive, <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">get help from JMMart</a>.
+                                    @elseif ($sellerOrder->status === 'cancelled')
+                                        {{ $cancelledAtRequest ? 'Cancelled at your request.' : 'This order was cancelled.' }}@if ($sellerOrder->refund_reference) Refunded (ref. {{ $sellerOrder->refund_reference }}).@endif
+                                    @elseif ($cancelRequest)
+                                        You asked {{ $store }} to cancel. Its reply will show on the <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">order page</a>.
+                                    @elseif ($needsPayment)
+                                        Pay {{ $store }} ₱{{ number_format($sellerOrder->total, 2) }} by {{ \App\Models\Payment::METHOD_LABELS[$method] }}@if ($payBy) before {{ $payBy->format('M j, g:i A') }}{{ now()->diffInHours($payBy) < 24 ? ' ('.$payBy->diffForHumans(['parts' => 1]).')' : '' }}@endif, then send the reference number. Unpaid orders are cancelled. <a href="{{ route('terms') }}#wallet-payments" class="{{ $inlineLink }}">How paying a store works</a>
+                                    @elseif ($isDirect && $sellerOrder->status === 'pending')
+                                        Reference sent. {{ $store }} confirms once the payment shows in its account. <a href="{{ route('terms') }}#wallet-payments" class="{{ $inlineLink }}">How paying a store works</a>
+                                    @elseif ($sellerOrder->status === 'pending')
+                                        Waiting for {{ $store }} to confirm your order. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Need to cancel?</a>
+                                    @elseif (in_array($sellerOrder->status, ['confirmed', 'processing'], true))
+                                        {{ $store }} is preparing your order for shipping.@if ($sellerOrder->status === 'confirmed') <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Need to cancel?</a>@endif
+                                    @elseif ($sellerOrder->status === 'shipped')
+                                        On its way. Confirm with Order received once it arrives{{ $sellerOrder->shipped_at ? ' (auto-confirmed '.$sellerOrder->shipped_at->copy()->addDays((int) config('marketplace.orders.auto_deliver_days'))->format('M j').')' : '' }}. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Not here yet?</a>
+                                    @elseif ($storeLate)
+                                        {{ $store }} didn’t respond by {{ $returnCase->respond_by->format('M j, g:i A') }}. You can now ask JMMart to review your return.
+                                    @elseif ($buyerLate)
+                                        Your deadline to respond passed {{ $returnCase->deadline()->format('M j') }}. JMMart may close this return without a remedy; to still respond, contact support from the return page.
+                                    @elseif ($storeMissed)
+                                        {{ $store }} missed its {{ $returnCase->deadline()->format('M j') }} deadline. JMMart support can step in; details are on the return page.
+                                    @elseif ($returnCase?->status === 'appealed')
+                                        JMMart support is reviewing your return. Updates show on the return page.
+                                    @elseif ($returnCase?->status === 'awaiting_receipt' && $returnCase->return_by)
+                                        You sent the item back. {{ $store }} has until {{ $returnCase->return_by->format('M j') }} to confirm it arrived.
+                                    @elseif ($returnCase?->status === 'awaiting_fulfillment' && $returnCase->fulfill_by)
+                                        {{ $store }} has until {{ $returnCase->fulfill_by->format('M j') }} to send your {{ $returnCase->remedy ?? 'remedy' }}.
+                                    @elseif ($returnCase?->status === 'awaiting_return')
+                                        @if ($returnCase->return_by?->isPast())
+                                            Your {{ $returnCase->return_by->format('M j') }} send-back date passed. Record the handoff now; until you do, JMMart may close this return without a remedy.
+                                        @else
+                                            Send the item back to {{ $store }}@if ($returnCase->return_by) by {{ $returnCase->return_by->format('M j') }}@endif, then record the handoff on the return page.
+                                        @endif
+                                    @elseif ($returnCase?->status === 'awaiting_confirmation')
+                                        {{ $store }} recorded your {{ $returnCase->remedy ?? 'remedy' }}. {{ $returnCase->buyer_respond_by === null ? 'Confirm you got it, or dispute it, on the return page.' : ($returnCase->buyer_respond_by->isFuture() ? 'Confirm you got it, or dispute it, by '.$returnCase->buyer_respond_by->format('M j, g:i A').'.' : 'Your confirmation window has passed, so JMMart may close this as complete. Dispute it on the return page if it didn’t arrive.') }}
+                                    @elseif ($returnDecision)
+                                        {{ $store }} answered your return. {{ $returnCase->buyer_respond_by ? 'Decide by '.$returnCase->buyer_respond_by->format('M j, g:i A').' on the return page.' : 'Decide on the return page.' }}
+                                    @elseif ($returnFinished)
+                                        Your return is {{ $returnCase->status === 'completed' ? 'complete' : ($returnCase->status === 'denied' ? 'closed: the claim was denied' : 'closed') }}. Details are on the return page.
+                                    @elseif ($returnCase?->status === 'awaiting_seller' && $returnCase->respond_by)
+                                        Your return request is with {{ $store }}, which has until {{ $returnCase->respond_by->format('M j, g:i A') }} to respond.
+                                    @elseif ($returnOpen)
+                                        Your return request is with {{ $store }}. Follow it on the return page.
+                                    @elseif ($canReturn)
+                                        {{ $returnSoon ? 'Returns close '.($returnEndsAt->isToday() ? 'today' : 'tomorrow').' at '.$returnEndsAt->format('g:i A').'.' : 'Returns are open until '.$returnEndsAt->format('M j').'.' }} <a href="{{ route('orders.show', $order) }}#returns" class="{{ $inlineLink }}">Request return</a>
+                                    @elseif ($returnClosedRecently)
+                                        The {{ $returnDays }}-day return window has closed. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Contact support</a> if something’s wrong.
                                     @endif
-                                @elseif ($returnCase?->status === 'awaiting_confirmation')
-                                    {{ $store }} recorded your {{ $returnCase->remedy ?? 'remedy' }}. {{ $returnCase->buyer_respond_by === null ? 'Confirm you got it, or dispute it, on the return page.' : ($returnCase->buyer_respond_by->isFuture() ? 'Confirm you got it, or dispute it, by '.$returnCase->buyer_respond_by->format('M j, g:i A').'.' : 'Your confirmation window has passed, so JMMart may close this as complete. Dispute it on the return page if it didn’t arrive.') }}
-                                @elseif ($returnDecision)
-                                    {{ $store }} answered your return. {{ $returnCase->buyer_respond_by ? 'Decide by '.$returnCase->buyer_respond_by->format('M j, g:i A').' on the return page.' : 'Decide on the return page.' }}
-                                @elseif ($returnFinished)
-                                    Your return is {{ $returnCase->status === 'completed' ? 'complete' : ($returnCase->status === 'denied' ? 'closed: the claim was denied' : 'closed') }}. Details are on the return page.
-                                @elseif ($returnCase?->status === 'awaiting_seller' && $returnCase->respond_by)
-                                    Your return request is with {{ $store }}, which has until {{ $returnCase->respond_by->format('M j, g:i A') }} to respond.
-                                @elseif ($returnOpen)
-                                    Your return request is with {{ $store }}. Follow it on the return page.
-                                @elseif ($canReturn)
-                                    {{ $returnSoon ? 'Returns close '.($returnEndsAt->isToday() ? 'today' : 'tomorrow').' at '.$returnEndsAt->format('g:i A').'.' : 'Returns are open until '.$returnEndsAt->format('M j').'.' }} <a href="{{ route('orders.show', $order) }}#returns" class="{{ $inlineLink }}">Request return</a>
-                                @elseif ($returnClosedRecently)
-                                    The {{ $returnDays }}-day return window has closed. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Contact support</a> if something’s wrong.
-                                @endif
-                            </p>
+                                </p>
+                            @endunless
 
                             <footer class="mt-auto border-t border-line-soft pt-3">
                                 <div class="flex items-end justify-between gap-3">
