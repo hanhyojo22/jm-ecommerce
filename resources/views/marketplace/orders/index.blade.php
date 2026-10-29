@@ -39,34 +39,54 @@
         $primaryAction = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3.5 text-meta font-semibold text-white transition-colors hover:bg-brand-hover lg:min-h-10';
         $outlineAction = 'inline-flex min-h-11 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-meta font-semibold text-ink transition-colors hover:border-brand hover:text-brand-hover lg:min-h-10';
         $inlineLink = 'font-semibold text-brand underline-offset-2 hover:text-brand-hover hover:underline';
+        $rowLink = 'inline-flex min-h-11 items-center text-xs font-semibold text-muted transition-colors hover:text-brand-hover lg:min-h-8';
     @endphp
 
     <x-marketplace.account-shell active="orders">
         <div data-purchases class="min-w-0">
-            <header class="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+            <header class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
                 <div class="min-w-0">
                     <h1 class="text-3xl font-semibold tracking-tight text-ink">My purchases</h1>
-                    @if ($sellerOrders->total() > 0)
-                        <p class="mt-1 text-meta text-muted">
-                            {{ $sellerOrders->total() }} {{ Str::plural('order', $sellerOrders->total()) }}
-                            @if ($attentionCounts !== [] && $tab === 'all' && ! $hasFilters)
-                                <span aria-hidden="true" class="px-1.5 text-line">·</span>
-                                @if ($waitingOnYou !== [])
-                                    <span class="font-semibold text-ink">Waiting on you:</span>
-                                    @foreach ($waitingOnYou as $key => $count)
-                                        <a href="{{ $attentionHref($key) }}" class="{{ $inlineLink }}">{{ $attentionLabel($key, $count) }}</a>@unless ($loop->last)<span aria-hidden="true" class="text-muted"> · </span>@endunless
-                                    @endforeach
-                                @endif
-                                @isset ($attentionCounts['to_receive'])
-                                    @if ($waitingOnYou !== [])<span aria-hidden="true" class="text-muted"> · </span>@endif
-                                    <a href="{{ route('orders.index', ['tab' => 'to_receive']) }}" class="{{ $inlineLink }}">{{ $attentionCounts['to_receive'] }} on the way</a> to you
-                                @endisset
-                            @endif
-                        </p>
-                    @endif
+                    <p class="mt-1 text-meta text-muted">
+                        @if ($sellerOrders->total() > 0){{ $sellerOrders->total() }} {{ Str::plural('order', $sellerOrders->total()) }}<span aria-hidden="true" class="px-1.5">·</span>@endif
+                        <a href="{{ route('catalog.index') }}" class="{{ $inlineLink }}">Continue shopping <span aria-hidden="true">→</span></a>
+                    </p>
                 </div>
-                <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-brand underline-offset-2 hover:text-brand-hover hover:underline lg:min-h-10">Continue shopping <span aria-hidden="true">→</span></a>
+
+                <form method="GET" action="{{ route('orders.index') }}" class="w-full sm:w-80" role="search">
+                    @if ($tab !== 'all')<input type="hidden" name="tab" value="{{ $tab }}">@endif
+                    @if (filled($filters['status'] ?? null))<input type="hidden" name="status" value="{{ $filters['status'] }}">@endif
+                    <label for="purchase-search" class="sr-only">Search purchases</label>
+                    <div class="relative">
+                        <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
+                        <input id="purchase-search" name="search" value="{{ $search }}" type="search" maxlength="100" enterkeyhint="search" class="field-control pl-9 text-[16px] sm:text-meta lg:min-h-10 {{ $search !== '' ? 'pr-11' : '' }}" placeholder="Order #, store, or item" @error('search') aria-invalid="true" aria-describedby="purchase-search-error" @enderror>
+                        @if ($search !== '')
+                            <a href="{{ route('orders.index', request()->except('search', 'page')) }}" class="absolute right-0 top-0 grid size-11 place-items-center rounded-lg text-muted hover:text-ink lg:size-10" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></a>
+                        @endif
+                    </div>
+                    <x-input-error id="purchase-search-error" :messages="$errors->get('search')" class="mt-2" />
+                </form>
             </header>
+
+            {{-- What waits on the buyer, in one strip that shares the list's inner edge. It turns warm only
+                 when something is the buyer's to do; parcels on the way alone stay neutral. --}}
+            @if ($attentionCounts !== [] && $tab === 'all' && ! $hasFilters)
+                <div role="region" aria-label="Waiting on you" @class([
+                    'mt-5 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border px-4 py-2.5 text-meta lg:px-6',
+                    'border-[var(--color-warning-line)] bg-[var(--color-warning-wash)]' => $waitingOnYou !== [],
+                    'border-line bg-surface' => $waitingOnYou === [],
+                ])>
+                    @if ($waitingOnYou !== [])
+                        <strong class="font-semibold text-ink">Waiting on you</strong>
+                        @foreach ($waitingOnYou as $key => $count)
+                            <a href="{{ $attentionHref($key) }}" class="inline-flex min-h-8 items-center gap-1.5 font-semibold text-warning-text underline-offset-2 hover:underline"><span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>{{ $attentionLabel($key, $count) }}</a>
+                        @endforeach
+                    @endif
+                    @isset ($attentionCounts['to_receive'])
+                        <a href="{{ route('orders.index', ['tab' => 'to_receive']) }}" class="inline-flex min-h-8 items-center gap-1.5 font-semibold text-brand underline-offset-2 hover:underline"><span class="size-1.5 rounded-full bg-brand" aria-hidden="true"></span>{{ $attentionCounts['to_receive'] }} on the way to you</a>
+                    @endisset
+                </div>
+            @endif
 
             @if (session('status'))
                 <p role="status" class="mt-3 rounded-[10px] border border-[var(--color-success-line)] bg-[var(--color-success-wash)] px-3.5 py-2.5 text-meta font-medium text-success">{{ session('status') }}</p>
@@ -75,7 +95,7 @@
                 <p role="alert" class="mt-3 rounded-[10px] border border-[var(--color-danger-line)] bg-[var(--color-danger-wash)] px-3.5 py-2.5 text-meta font-medium text-danger-text">{{ $message }}</p>
             @enderror
 
-            <div class="mt-4 flex flex-col gap-3 2xl:flex-row 2xl:items-end 2xl:justify-between 2xl:gap-6">
+            <div class="mt-5">
                 {{-- The tabs read as the order's journey, bracketed by All and by what comes after delivery,
                      so a rule sits between those groups. Only a tab where the next move is the buyer's gets a
                      warm count; every other count stays quiet. The track scrolls on a phone, so the selected
@@ -83,7 +103,7 @@
                 @php
                     $buyerTurn = ['to_pay' => $tabCounts['to_pay'] > 0, 'returns' => isset($attentionCounts['returns'])];
                 @endphp
-                <nav class="relative flex min-w-0 items-stretch overflow-x-auto border-b border-line [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%-20px),transparent)] [&::-webkit-scrollbar]:hidden 2xl:flex-1" aria-label="Purchase status filters" x-data @focusin="$event.target.scrollIntoView({ block: 'nearest', inline: 'center' })">
+                <nav class="relative flex min-w-0 items-stretch overflow-x-auto border-b border-line [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,transparent,#000_20px,#000_calc(100%-20px),transparent)] [&::-webkit-scrollbar]:hidden" aria-label="Purchase status filters" x-data @focusin="$event.target.scrollIntoView({ block: 'nearest', inline: 'center' })">
                     @foreach ($tabs as $key => $label)
                         @if (in_array($key, ['to_pay', 'to_review'], true))<span aria-hidden="true" class="mx-1.5 h-4 w-px shrink-0 self-center bg-line"></span>@endif
                         <a href="{{ route('orders.index', [...request()->except('tab', 'page'), 'tab' => $key]) }}" @class([
@@ -100,23 +120,6 @@
                         </a>
                     @endforeach
                 </nav>
-
-                <form method="GET" action="{{ route('orders.index') }}" class="order-first flex min-w-0 items-start gap-2 sm:max-w-md 2xl:order-last 2xl:w-[288px] 2xl:shrink-0">
-                    @if ($tab !== 'all')<input type="hidden" name="tab" value="{{ $tab }}">@endif
-                    @if (filled($filters['status'] ?? null))<input type="hidden" name="status" value="{{ $filters['status'] }}">@endif
-                    <div class="min-w-0 flex-1">
-                        <label for="purchase-search" class="sr-only">Search purchases</label>
-                        <div class="relative">
-                            <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
-                            <input id="purchase-search" name="search" value="{{ $search }}" type="search" maxlength="100" enterkeyhint="search" class="field-control pl-9 text-[16px] sm:text-meta lg:min-h-10 {{ $search !== '' ? 'pr-11' : '' }}" placeholder="Order #, store, item" @error('search') aria-invalid="true" aria-describedby="purchase-search-error" @enderror>
-                            @if ($search !== '')
-                                <a href="{{ route('orders.index', request()->except('search', 'page')) }}" class="absolute right-0 top-0 grid size-11 place-items-center rounded-lg text-muted hover:text-ink lg:size-10" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></a>
-                            @endif
-                        </div>
-                        <x-input-error id="purchase-search-error" :messages="$errors->get('search')" class="mt-2" />
-                    </div>
-                    <button type="submit" class="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-meta font-semibold text-ink transition-colors hover:border-brand hover:text-brand-hover lg:min-h-10">Search</button>
-                </form>
             </div>
             @if (filled($filters['status'] ?? null) && isset($statusStyles[$filters['status']]))
                 <p class="mt-2 text-meta text-muted">Filtered to checkouts marked {{ $statusStyles[$filters['status']][0] }} <span aria-hidden="true">·</span> <a href="{{ route('orders.index', request()->except('status', 'page')) }}" class="{{ $inlineLink }}">Show all</a></p>
@@ -124,7 +127,9 @@
             <x-input-error :messages="$errors->get('tab')" class="mt-2" />
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
-            <section id="purchases" class="mt-6 scroll-mt-24" aria-labelledby="purchase-results-heading">
+            {{-- One surface, one grid: every order shares the image, details, total and next-step columns,
+                 so totals and buttons line up down the page. --}}
+            <section id="purchases" class="mt-5 scroll-mt-24 overflow-hidden rounded-[14px] border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
                 @php
@@ -133,21 +138,23 @@
                         ->sortKeysDesc();
                 @endphp
 
+                @if ($orderGroups->isNotEmpty())
+                    <div aria-hidden="true" class="hidden h-10 items-center gap-x-5 bg-[var(--color-sunken)] px-6 text-xs font-medium text-muted lg:grid lg:grid-cols-[56px_minmax(0,1fr)_136px_152px]">
+                        <span class="col-span-2">Order</span><span class="text-right">Store total</span><span class="text-right">Next step</span>
+                    </div>
+                @endif
+
                 @forelse ($orderGroups as $groupOrders)
                     @php
                         $groupDate = $groupOrders->first()->order->created_at->copy()->startOfDay();
                         $groupLabel = $groupDate->isToday() ? 'Today' : ($groupDate->isYesterday() ? 'Yesterday' : $groupDate->format($groupDate->isCurrentYear() ? 'M j' : 'M j, Y'));
-                        $groupMeta = $groupDate->isToday() || $groupDate->isYesterday()
-                            ? $groupDate->format('M j')
-                            : $groupOrders->count().' '.Str::plural('order', $groupOrders->count());
+                        $groupTotal = $groupOrders->reduce(fn (string $sum, $sellerOrder): string => bcadd($sum, (string) $sellerOrder->total, 2), '0.00');
                     @endphp
-                    <section @class(['grid gap-2 lg:grid-cols-[112px_minmax(0,1fr)] lg:gap-6', 'mt-7' => ! $loop->first]) aria-label="Orders from {{ $groupDate->format('M j, Y') }}">
-                        <div class="flex items-baseline gap-2 lg:block lg:pt-2 lg:text-right">
-                            <h3 class="text-xl font-semibold tracking-tight text-ink lg:text-[23px]">{{ $groupLabel }}</h3>
-                            <p class="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:mt-1">{{ $groupMeta }}</p>
+                    <section class="border-t border-line max-lg:first-of-type:border-t-0 [&>article:first-of-type]:border-t-0" aria-label="Orders from {{ $groupDate->format('M j, Y') }}">
+                        <div class="flex items-baseline justify-between gap-3 px-4 pb-1.5 pt-[18px] lg:px-6">
+                            <h3 class="text-meta font-semibold text-ink">{{ $groupLabel }}@if ($groupDate->isToday() || $groupDate->isYesterday())<span class="ml-1.5 font-medium text-muted">{{ $groupDate->format('M j') }}</span>@endif</h3>
+                            <p class="text-xs tabular-nums text-muted">{{ $groupOrders->count() }} {{ Str::plural('order', $groupOrders->count()) }} · ₱{{ number_format($groupTotal, 2) }}</p>
                         </div>
-
-                        <div class="relative border-l border-line pb-1 pl-5 pt-2 lg:pl-7">
                             @foreach ($groupOrders as $sellerOrder)
                                 @php
                                     $order = $sellerOrder->order;
@@ -255,23 +262,25 @@
                                         default => $store.' order update',
                                     };
                                     $isUrgent = $needsPayment || $returnDecision || $refundDue || $storeLate;
-                                    $dotTone = match (true) {
-                                        $isUrgent => 'bg-warning',
-                                        $sellerOrder->status === 'delivered' && ! ($returnCase && ! $returnFinished) => 'bg-success',
-                                        in_array($sellerOrder->status, ['shipped', 'confirmed', 'processing'], true) => 'bg-brand',
-                                        default => 'bg-[var(--color-border-strong)]',
-                                    };
                                     $noteIsUrgent = $needsPayment || $returnSoon || $refundDue || $returnDecision;
                                 @endphp
 
-                                <article class="relative border-b border-line-soft py-4 last:border-0 lg:py-5" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
-                                    <span @class(['absolute -left-[26px] top-[23px] size-2.5 rounded-full ring-4 ring-canvas lg:-left-[34px] lg:top-[27px]', $dotTone]) aria-hidden="true"></span>
+                                <article class="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3.5 sm:grid-cols-[56px_minmax(0,1fr)] lg:grid-cols-[56px_minmax(0,1fr)_136px_152px] lg:gap-x-5 border-t border-line-soft px-4 py-4 transition-colors hover:bg-[#fbfcfe] lg:px-6" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
+                                    <div class="relative size-12 overflow-hidden rounded-[10px] border border-line bg-paper sm:size-14">
+                                        @if ($thumbPaths->isNotEmpty())
+                                            <img src="{{ Storage::disk('product_images')->url($thumbPaths->first()) }}" alt="" width="56" height="56" loading="lazy" class="size-full object-cover">
+                                        @else
+                                            <svg class="absolute inset-0 m-auto size-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                                        @endif
+                                        @if ($items->count() > 1)
+                                            <span class="absolute bottom-0.5 right-0.5 min-w-5 rounded-md bg-ink/80 px-1 text-center text-[11px] font-semibold leading-4 text-white">+{{ $items->count() - 1 }}<span class="sr-only"> more {{ Str::plural('item', $items->count() - 1) }}</span></span>
+                                        @endif
+                                    </div>
 
-                                    <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px] lg:gap-5">
-                                        <div class="min-w-0">
-                                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-4 text-muted">
-                                                <span @class(['inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 text-[11px] font-bold', $overlayText])>
-                                                    <span class="size-1.5 rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
+                                    <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs leading-[18px] text-muted">
+                                                <span @class(['inline-flex items-center gap-1.5 font-semibold', $overlayText])>
+                                                    <span class="size-[7px] rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
                                                     {{ $overlayLabel }}
                                                 </span>
                                                 <span class="font-semibold text-ink"><a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="hover:text-brand-hover">{{ $store }}</a></span>
@@ -284,10 +293,10 @@
                                                 <p class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-warning-text"><span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>Return request open</p>
                                             @endif
 
-                                            <h4 id="purchase-{{ $sellerOrder->id }}" class="mt-2 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{{ $headline }}</h4>
+                                            <h4 id="purchase-{{ $sellerOrder->id }}" class="mt-1 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{{ $headline }}</h4>
 
                                             @unless ($needsPayment && $payBy?->isPast())
-                                                <p @class(['mt-1 text-meta leading-5', 'text-warning-text' => $noteIsUrgent, 'text-muted' => ! $noteIsUrgent])>
+                                                <p @class(['mt-0.5 max-w-[62ch] text-meta leading-5', 'text-warning-text' => $noteIsUrgent, 'text-muted' => ! $noteIsUrgent])>
                                                     @if ($refundDue)
                                                         This order was cancelled after you paid. {{ $store }} owes you a refund of ₱{{ number_format($sellerOrder->total, 2) }}. Message them first. If the refund doesn’t arrive, <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">get help from JMMart</a>.
                                                     @elseif ($sellerOrder->status === 'cancelled')
@@ -340,70 +349,47 @@
                                                 </p>
                                             @endunless
 
-                                            <div class="mt-3 flex items-center gap-2.5">
-                                                <div class="flex shrink-0">
-                                                    @forelse ($thumbPaths as $thumbPath)
-                                                        <img src="{{ Storage::disk('product_images')->url($thumbPath) }}" alt="" width="36" height="36" loading="lazy" class="-ml-2 size-9 rounded-lg border-2 border-surface object-cover first:ml-0">
-                                                    @empty
-                                                        <span class="grid size-9 place-items-center rounded-lg bg-paper text-muted">
-                                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
-                                                            <span class="sr-only">Product image unavailable</span>
-                                                        </span>
-                                                    @endforelse
-                                                    @if ($remainingThumbs > 0)
-                                                        <span class="-ml-2 grid size-9 place-items-center rounded-lg border-2 border-surface bg-paper text-[11px] font-bold text-muted">+{{ $remainingThumbs }}</span>
-                                                    @endif
-                                                </div>
-                                                <p class="min-w-0 text-[11px] leading-4 text-muted">{{ $leadItemName ?? 'Order items' }}@if ($items->count() > 1) <span aria-hidden="true">·</span> {{ $items->count() }} items @endif</p>
-                                            </div>
-
-                                            <p class="mt-2 text-[11px] leading-4 text-muted">
-                                                {{ \App\Models\Payment::METHOD_LABELS[$method] ?? 'Payment' }}@if ($paymentState && ! $needsPayment) <span aria-hidden="true">·</span> <span @class(['font-semibold', 'text-warning-text' => in_array($paymentState, ['To pay', 'Refund due'], true), 'text-success' => in_array($paymentState, ['Paid', 'Refunded'], true), 'text-ink' => in_array($paymentState, ['Reference sent', 'Pay on delivery'], true)])>{{ $paymentState }}</span>@endif
-                                                @if ($order->seller_orders_count > 1)<span aria-hidden="true">·</span> Checkout total ₱{{ number_format($order->total, 2) }} across {{ $order->seller_orders_count }} stores @endif
-                                            </p>
-
-                                            <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                                                <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}" class="-ml-1.5">@csrf<button type="submit" class="{{ $quietAction }}">Message seller</button></form>
-                                                <a href="{{ route('orders.show', $order) }}" class="{{ $quietAction }}">View order</a>
-                                                @if ($viewReturnHref)
-                                                    <a href="{{ $viewReturnHref }}" class="{{ $quietAction }}">View return</a>
-                                                @endif
-                                                @if ($alsoReview)
-                                                    <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="{{ $quietAction }}">Write review</a>
-                                                @endif
-                                            </div>
+                                        <div class="mt-1 flex flex-wrap items-center gap-x-4">
+                                            <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}">@csrf<button type="submit" class="{{ $rowLink }}">Message seller</button></form>
+                                            <a href="{{ route('orders.show', $order) }}" class="{{ $rowLink }}">View order</a>
+                                            @if ($viewReturnHref)
+                                                <a href="{{ $viewReturnHref }}" class="{{ $rowLink }}">View return</a>
+                                            @endif
+                                            @if ($alsoReview)
+                                                <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="{{ $rowLink }}">Write review</a>
+                                            @endif
                                         </div>
+                                    </div>
 
-                                        <div class="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line-soft pt-3 lg:mt-0 lg:flex-col lg:items-end lg:justify-start lg:gap-3 lg:border-0 lg:pt-0">
-                                            <div class="text-left lg:text-right">
-                                                <p class="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted">Store total</p>
-                                                <p class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format($sellerOrder->total, 2) }}</p>
-                                            </div>
+                                    <div class="col-start-2 mt-3 flex flex-wrap items-baseline justify-between gap-x-3 border-t border-line-soft pt-3 lg:col-start-auto lg:mt-0 lg:block lg:border-0 lg:pt-[22px] lg:text-right">
+                                        <p class="text-[15px] font-semibold tabular-nums tracking-[-0.01em] text-ink"><span class="sr-only">Store total </span>₱{{ number_format($sellerOrder->total, 2) }}</p>
+                                        <p class="text-xs text-muted lg:mt-0.5">{{-- Cash on delivery is implied by its own state, so only a wallet names its method. --}}@if ($isDirect || ! $paymentState){{ \App\Models\Payment::METHOD_LABELS[$method] ?? 'Payment' }}@endif @if ($paymentState)@if ($isDirect)<span aria-hidden="true">·</span> @endif<span @class(['font-semibold', 'text-warning-text' => in_array($paymentState, ['To pay', 'Refund due'], true), 'text-success' => in_array($paymentState, ['Paid', 'Refunded'], true), 'text-ink' => in_array($paymentState, ['Reference sent', 'Pay on delivery'], true)])>{{ $paymentState }}</span>@endif</p>
+                                        @if ($order->seller_orders_count > 1)
+                                            <p class="w-full text-xs text-muted lg:mt-0.5">Checkout total ₱{{ number_format($order->total, 2) }} across {{ $order->seller_orders_count }} stores</p>
+                                        @endif
+                                    </div>
 
-                                            <div class="flex flex-col items-end">
-                                                @if ($nextAction && $nextAction[1] !== null)
-                                                    <a href="{{ $nextAction[1] }}" class="{{ $primaryAction }} whitespace-nowrap">{{ $nextAction[0] }}</a>
-                                                @elseif ($nextAction && $nextAction[1] === null)
-                                                    {{--
-                                                        Confirming starts the return window and closes delivery, so the first press asks and the
-                                                        second posts. Without Alpine the button is a plain submit, so it still works.
-                                                    --}}
-                                                    <form method="POST" action="{{ route('orders.received', $sellerOrder) }}" x-data="{ confirming: false, sending: false }" @submit="sending = true" @pageshow.window="sending = false; confirming = false" @keydown.escape="if (confirming) { confirming = false; $nextTick(() => $refs.received.focus()) }" class="flex flex-wrap items-center justify-end gap-1.5" role="group" aria-label="Confirm {{ $store }} order received">
+                                    <div @class(['col-start-2 lg:col-start-auto lg:pt-[18px]', 'pt-2.5' => $nextAction !== null])>
+                                        @if ($nextAction && $nextAction[1] !== null)
+                                            <a href="{{ $nextAction[1] }}" class="{{ $nextAction[0] === 'Write review' ? $outlineAction : $primaryAction }} w-full whitespace-nowrap">{{ $nextAction[0] }}</a>
+                                        @elseif ($nextAction && $nextAction[1] === null)
+                                            {{--
+                                                Confirming starts the return window and closes delivery, so the first press asks and the
+                                                second posts. Without Alpine the button is a plain submit, so it still works.
+                                            --}}
+                                                    <form method="POST" action="{{ route('orders.received', $sellerOrder) }}" x-data="{ confirming: false, sending: false }" @submit="sending = true" @pageshow.window="sending = false; confirming = false" @keydown.escape="if (confirming) { confirming = false; $nextTick(() => $refs.received.focus()) }" class="flex w-full flex-col gap-1.5" role="group" aria-label="Confirm {{ $store }} order received">
                                                         @csrf
-                                                        <span x-cloak x-show="confirming" id="received-note-{{ $sellerOrder->id }}" class="w-full text-left text-[11px] leading-4 text-ink">Got the parcel? You’ll have {{ $returnDays }} days to request a return.</span>
-                                                        <button type="button" x-cloak x-show="confirming" @click="confirming = false; $nextTick(() => $refs.received.focus())" class="{{ $outlineAction }} max-sm:flex-1">Not yet</button>
-                                                        <button type="submit" x-ref="received" @click="if (! confirming) { $event.preventDefault(); confirming = true }" :disabled="sending" :aria-describedby="confirming ? 'received-note-{{ $sellerOrder->id }}' : null" class="{{ $primaryAction }} flex-1 disabled:cursor-wait disabled:opacity-70 sm:flex-none" x-text="sending ? 'Saving…' : (confirming ? 'Yes, received' : 'Order received')">Order received</button>
+                                                        <span x-cloak x-show="confirming" id="received-note-{{ $sellerOrder->id }}" class="text-xs leading-4 text-ink">Got the parcel? You’ll have {{ $returnDays }} days to request a return.</span>
+                                                        <button type="button" x-cloak x-show="confirming" @click="confirming = false; $nextTick(() => $refs.received.focus())" class="{{ $outlineAction }} w-full">Not yet</button>
+                                                        <button type="submit" x-ref="received" @click="if (! confirming) { $event.preventDefault(); confirming = true }" :disabled="sending" :aria-describedby="confirming ? 'received-note-{{ $sellerOrder->id }}' : null" class="{{ $primaryAction }} w-full disabled:cursor-wait disabled:opacity-70" x-text="sending ? 'Saving…' : (confirming ? 'Yes, received' : 'Order received')">Order received</button>
                                                     </form>
-                                                @endif
-                                            </div>
-                                        </div>
+                                        @endif
                                     </div>
                                 </article>
                             @endforeach
-                        </div>
                     </section>
                 @empty
-                    <div class="rounded-2xl border border-dashed border-line bg-surface px-5 py-12 text-center">
+                    <div class="px-5 py-14 text-center">
                         @if ($hasFilters)
                             <h3 class="text-lg font-semibold text-ink">{{ $search !== '' ? 'No purchases match “'.$search.'”'.($tab !== 'all' ? ' in '.$tabs[$tab] : '') : 'No purchases match those filters' }}</h3>
                             <p class="mx-auto mt-2 max-w-sm text-meta text-muted">Try an order number, a store name, or part of a product name.</p>
@@ -427,7 +413,7 @@
                 {{-- Load more swaps in the whole longer list rather than appending rows, because orders are
                      grouped by day and a day can straddle two batches. The link still works without script. --}}
                 @if ($sellerOrders->total() > $sellerOrders->count() || $sellerOrders->count() > 10)
-                    <div class="mt-8 flex flex-col items-center gap-3" x-data="{ loading: false, async more(link) {
+                    <div class="flex flex-col items-stretch gap-3 border-t border-line bg-[var(--color-sunken)] px-4 py-3.5 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left lg:px-6" x-data="{ loading: false, async more(link) {
                         if (this.loading) return;
                         this.loading = true;
                         const shown = document.querySelectorAll('#purchases article').length;
@@ -446,7 +432,7 @@
                     } }">
                         <p class="text-meta text-muted">Showing {{ $sellerOrders->count() }} of {{ $sellerOrders->total() }} {{ Str::plural('order', $sellerOrders->total()) }}</p>
                         @if ($loadMoreUrl)
-                            <a href="{{ $loadMoreUrl }}" @click.prevent="more($el)" :aria-busy="loading" :class="loading && 'pointer-events-none opacity-60'" class="{{ $outlineAction }} min-w-[200px] justify-center">
+                            <a href="{{ $loadMoreUrl }}" @click.prevent="more($el)" :aria-busy="loading" :class="loading && 'pointer-events-none opacity-60'" class="{{ $outlineAction }} sm:w-[152px]">
                                 <span x-show="! loading">Load more</span>
                                 <span x-cloak x-show="loading">Loading…</span>
                             </a>
