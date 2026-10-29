@@ -69,6 +69,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::get('/orders/{order}/placed', [OrderController::class, 'placed'])->name('orders.placed');
     Route::patch('/orders/seller-orders/{sellerOrder}/payment-reference', [OrderController::class, 'paymentReference'])->middleware('throttle:10,1')->name('orders.payment-reference');
     Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])->middleware('throttle:10,1')->name('orders.received');
     Route::post('/orders/store-orders/{sellerOrder}/issues', [OrderIssueController::class, 'store'])->middleware('throttle:10,1')->name('order-issues.store');

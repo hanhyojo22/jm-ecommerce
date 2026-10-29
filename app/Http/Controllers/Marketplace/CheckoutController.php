@@ -114,6 +114,6 @@ class CheckoutController extends Controller
             }
         });
 
-        return to_route('orders.show', $order)->with('order_placed', true);
+        return to_route('orders.placed', $order);
     }
 }

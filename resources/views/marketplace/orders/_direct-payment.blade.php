@@ -16,7 +16,7 @@
     $leftAmount = $toPay->reduce(fn (string $sum, $sellerOrder) => bcadd($sum, (string) $sellerOrder->total, 2), '0.00');
     $deadline = $order->created_at->copy()->addHours((int) config('marketplace.wallet.payment_hours.'.$method));
     // Also reopens after a reference sent from the guide was rejected, so the buyer sees why.
-    $openGuide = (session('order_placed') || session('guided_pay') || ($errors->has('payment_reference') && old('guided'))) && $toPay->isNotEmpty();
+    $openGuide = (request()->boolean('pay') || session('guided_pay') || ($errors->has('payment_reference') && old('guided'))) && $toPay->isNotEmpty();
     $ringOffset = $payable->count() > 0 ? 170 - (170 * $doneCount / $payable->count()) : 170;
 @endphp
 
@@ -109,7 +109,7 @@
                     <span class="mx-auto mt-2.5 block h-1 w-10 rounded-full bg-slate-300 sm:hidden" aria-hidden="true"></span>
                     <nav aria-label="Stores to pay" class="hidden flex-col gap-5 bg-ink p-7 text-white lg:flex">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{{ session('order_placed') ? 'Order placed ✓' : 'Paying your order' }}</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{{ request()->boolean('pay') ? 'Order placed ✓' : 'Paying your order' }}</p>
                             <p class="mt-1.5 text-xl font-semibold">Pay {{ $payable->count() }} {{ Str::plural('store', $payable->count()) }}</p>
                             <p class="mt-1 text-sm text-slate-300">Items held for <span class="tabular-nums" x-text="left"></span></p>
                         </div>

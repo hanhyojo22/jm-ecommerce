@@ -194,13 +194,18 @@ class WalletPaymentTest extends TestCase
         $secondStore = $secondProduct->store->name;
 
         $this->actingAs($buyer)->get(route('checkout.create'))->assertOk()
-            ->assertSee('QR unlocks after you order')->assertSee('2 stores · paid separately');
+            ->assertSee("Scan each store's QR after ordering.")->assertSee('2 stores · paid separately');
 
         $response = $this->actingAs($buyer)->post(route('checkout.store'), [...$this->delivery(), 'payment_method' => 'gcash', 'wallet_notice' => '1']);
         $order = Order::query()->sole();
-        $response->assertRedirect(route('orders.show', $order));
+        $response->assertRedirect(route('orders.placed', $order));
 
-        $this->actingAs($buyer)->withSession(['order_placed' => true])->get(route('orders.show', $order))->assertOk()
+        // Nothing is paid at checkout, so the landing page asks for payment instead of claiming it.
+        $this->actingAs($buyer)->get(route('orders.placed', $order))->assertOk()
+            ->assertSee('To pay stores directly')->assertSee('Pay stores now')->assertSee(route('orders.show', [$order, 'pay' => 1]), false)
+            ->assertDontSee('Payment successful');
+
+        $this->actingAs($buyer)->get(route('orders.show', [$order, 'pay' => 1]))->assertOk()
             ->assertSee('0/2')->assertSee("Pay {$firstStore} with GCash")->assertSee('Send reference · next store');
 
         $first = $order->sellerOrders()->whereHas('store', fn ($query) => $query->where('name', $firstStore))->sole();

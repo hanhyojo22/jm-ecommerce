@@ -52,7 +52,7 @@ class CodRefusalTest extends TestCase
         $this->assertSame(1, $buyer->orders()->where('status', '!=', 'cancelled')->count());
 
         $inProgress->order->update(['status' => 'delivered']);
-        $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
+        $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery())->assertRedirectContains('/placed');
         $this->assertSame(2, $buyer->orders()->where('status', '!=', 'cancelled')->count());
     }
 

@@ -148,7 +148,7 @@ class CheckoutTest extends TestCase
         $cart = Cart::create(['user_id' => $customer->id]);
         $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
 
-        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertRedirectContains('/placed');
         $this->assertDatabaseHas('delivery_addresses', ['user_id' => $customer->id, ...$this->delivery()]);
 
         $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
@@ -159,7 +159,7 @@ class CheckoutTest extends TestCase
             ->assertSee('value="Metro Manila"', false)
             ->assertSee('value="1000"', false);
 
-        $this->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
+        $this->post(route('checkout.store'), $this->delivery())->assertRedirectContains('/placed');
         $this->assertSame(1, $customer->deliveryAddresses()->count());
 
         $customer->deliveryAddresses()->delete();
@@ -188,7 +188,7 @@ class CheckoutTest extends TestCase
         $response = $this->actingAs($customer)->post(route('checkout.store'), [...$this->delivery(), 'delivery_note' => 'Blue gate']);
         $order = Order::query()->firstOrFail();
 
-        $response->assertRedirect(route('orders.show', $order));
+        $response->assertRedirect(route('orders.placed', $order));
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '59.97', 'shipping_amount' => '0.00', 'total' => '59.97', 'province' => 'Metro Manila', 'postal_code' => '1000', 'delivery_note' => 'Blue gate']);
         $this->assertDatabaseHas('delivery_addresses', ['user_id' => $customer->id, 'province' => 'Metro Manila', 'postal_code' => '1000']);
         $this->actingAs($customer)->get(route('orders.show', $order))->assertOk()->assertSee('Blue gate')->assertSee('Metro Manila');
@@ -242,7 +242,7 @@ class CheckoutTest extends TestCase
         $this->actingAs($customer)->get(route('checkout.create'))
             ->assertOk()->assertSee('Older street')->assertSee('Fill in any missing details');
         $this->post(route('checkout.store'), [...$this->delivery(), 'address_line' => 'Older street'])
-            ->assertSessionHas('order_placed');
+            ->assertRedirectContains('/placed');
         $this->assertDatabaseHas('orders', ['address_line' => 'Older street', 'province' => 'Metro Manila', 'postal_code' => '1000']);
     }
 
@@ -268,8 +268,25 @@ class CheckoutTest extends TestCase
         $cart = Cart::create(['user_id' => $customer->id]);
         $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
 
-        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertSessionHas('order_placed');
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertRedirectContains('/placed');
         $this->assertDatabaseCount('orders', 1);
+    }
+
+    public function test_cod_order_lands_on_its_placed_page_until_a_store_moves_it(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        Cart::create(['user_id' => $customer->id])->items()->create(['product_id' => $product->id, 'quantity' => 2]);
+
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery());
+        $order = Order::query()->sole();
+
+        $this->get(route('orders.placed', $order))->assertOk()
+            ->assertSee('Order placed')->assertSee('Due on delivery')->assertSee('₱39.98')->assertSee($order->number)->assertSee('Track order');
+        $this->actingAs(User::factory()->create(['email_verified_at' => now()]))->get(route('orders.placed', $order))->assertNotFound();
+
+        $order->sellerOrders()->update(['status' => 'confirmed']);
+        $this->actingAs($customer)->get(route('orders.placed', $order))->assertRedirect(route('orders.show', $order));
     }
 
     public function test_customer_selects_a_color_and_size_and_cancellation_restores_that_stock(): void

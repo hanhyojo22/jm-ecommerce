@@ -164,6 +164,22 @@ class OrderController extends Controller
     }
 
     /**
+     * Where checkout lands. It only describes a fresh order, so once any store has moved it the
+     * order page, which tracks every step, takes over.
+     */
+    public function placed(Request $request, Order $order): RedirectResponse|View
+    {
+        abort_unless($order->user_id === $request->user()->id, 404);
+        $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'payment');
+
+        if ($order->sellerOrders->contains(fn (SellerOrder $sellerOrder): bool => $sellerOrder->status !== 'pending')) {
+            return to_route('orders.show', $order);
+        }
+
+        return view('marketplace.orders.placed', ['order' => $order]);
+    }
+
+    /**
      * The buyer sent this store its GCash/Maya payment and gives the transfer's reference number,
      * so the store can find it in its own wallet before confirming. It can be corrected until then.
      */
