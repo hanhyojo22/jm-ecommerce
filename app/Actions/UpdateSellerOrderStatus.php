@@ -4,7 +4,6 @@ namespace App\Actions;
 
 use App\Models\AuditLog;
 use App\Models\Order;
-use App\Models\Payment;
 use App\Models\PaymentAdjustment;
 use App\Models\Product;
 use App\Models\SellerOrder;
@@ -64,7 +63,13 @@ class UpdateSellerOrderStatus
                 throw ValidationException::withMessages(['status' => 'A cancellation request is awaiting review.']);
             }
 
-            $isOnlinePayment = in_array($order->payment()->value('method'), Payment::ONLINE_METHODS, true);
+            $payment = $order->payment()->first();
+            $isOnlinePayment = $payment?->isOnline() ?? false;
+
+            // Paid to the store's own account before PayMongo, so there is no gateway payment to refund from.
+            if ($isOnlinePayment && $status === 'cancelled' && $sellerOrder->cod_collected_at !== null && $payment->gateway_payment_id === null && ! $actor?->isPlatformAdministrator()) {
+                throw ValidationException::withMessages(['status' => 'This order was paid to your store directly before online payments moved to PayMongo. Ask JMMart support to cancel it so the refund is recorded.']);
+            }
 
             if ($isOnlinePayment && $status === 'confirmed' && $sellerOrder->cod_collected_at === null) {
                 throw ValidationException::withMessages(['status' => 'Wait for the buyer’s online payment before confirming this order.']);
@@ -141,7 +146,7 @@ class UpdateSellerOrderStatus
 
         TopProductQuery::forgetCachedRankings();
 
-        if ($status === 'cancelled' && $updatedSellerOrder->cod_collected_at !== null && $updatedSellerOrder->order->payment?->isOnline()) {
+        if ($status === 'cancelled' && $updatedSellerOrder->cod_collected_at !== null && $updatedSellerOrder->order->payment?->gateway_payment_id !== null) {
             DB::afterCommit(function () use ($updatedSellerOrder): void {
                 try {
                     $this->refundOnlinePayment->cancelled($updatedSellerOrder);

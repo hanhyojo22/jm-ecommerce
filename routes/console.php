@@ -88,7 +88,9 @@ Artisan::command('orders:cancel-unpaid', function (UpdateSellerOrderStatus $upda
         ->where('status', 'pending')
         ->whereNull('cod_collected_at')
         ->where('created_at', '<', now()->subHours((int) config('marketplace.online_payment.payment_hours')))
-        ->whereHas('order.payment', fn ($query) => $query->whereIn('method', [...Payment::ONLINE_METHODS, 'bank'])->where('status', 'pending'))
+        // Only PayMongo orders, which always carry a payment fee. An order from before the switch may
+        // already have been paid to the store directly, so support settles those by hand.
+        ->whereHas('order.payment', fn ($query) => $query->whereIn('method', Payment::ONLINE_METHODS)->where('status', 'pending')->where('fee_amount', '>', 0))
         ->get();
     $cancelled = 0;
 

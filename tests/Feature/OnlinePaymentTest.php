@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Actions\IssuePlatformFeeStatements;
+use App\Actions\ReturnCaseWorkflow;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ReturnCase;
 use App\Models\SellerEarning;
 use App\Models\SellerOrder;
 use App\Models\Store;
@@ -126,6 +128,50 @@ class OnlinePaymentTest extends TestCase
         $this->assertSame('cancelled', $sellerOrder->status);
         $this->assertSame(5, $sellerOrder->items()->first()->product->stock_quantity);
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/checkout_sessions/cs_1/expire'));
+    }
+
+    public function test_orders_paid_directly_before_paymongo_are_left_to_support(): void
+    {
+        $order = $this->checkOut($this->buyerWithCart($this->product(), 2));
+        // How an order from before the switch looks: no PayMongo fee and no gateway payment.
+        $order->payment->update(['fee_amount' => '0.00']);
+        $sellerOrder = $order->sellerOrders()->sole();
+
+        $this->travel(3)->hours();
+        $this->artisan('orders:cancel-unpaid')->assertSuccessful();
+        $this->assertSame('pending', $sellerOrder->refresh()->status);
+
+        $sellerOrder->update(['cod_collected_at' => now()]);
+        try {
+            app(UpdateSellerOrderStatus::class)->handle($sellerOrder, 'cancelled', $sellerOrder->store->tenant->members()->first()->user);
+            $this->fail('A store cancelled an order paid directly to it.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('Ask JMMart support', $exception->errors()['status'][0]);
+        }
+
+        app(UpdateSellerOrderStatus::class)->handle($sellerOrder, 'cancelled', User::factory()->administrator()->create());
+        $this->assertSame('cancelled', $sellerOrder->refresh()->status);
+        Http::assertNotSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/refunds'));
+    }
+
+    public function test_an_online_return_refund_is_paid_once_and_cannot_be_set_aside(): void
+    {
+        $order = $this->paidOrder();
+        $sellerOrder = $order->sellerOrders()->sole();
+        foreach (['confirmed', 'processing', 'shipped', 'delivered'] as $status) {
+            app(UpdateSellerOrderStatus::class)->handle($sellerOrder->refresh(), $status, null);
+        }
+        $case = ReturnCase::create(['seller_order_id' => $sellerOrder->id, 'buyer_id' => $order->user_id, 'opened_by' => $order->user_id, 'status' => 'awaiting_fulfillment', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The tote arrived torn.']);
+        $item = $sellerOrder->items()->first();
+        $case->items()->create(['order_item_id' => $item->id, 'quantity' => 1, 'unit_price' => $item->unit_price]);
+        $seller = $sellerOrder->store->tenant->members()->first()->user;
+
+        app(ReturnCaseWorkflow::class)->act($case, $seller, 'refund');
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/refunds') && $request['data']['attributes']['amount'] === 2000);
+
+        $case->update(['status' => 'appealed']);
+        $this->expectException(ValidationException::class);
+        app(ReturnCaseWorkflow::class)->act($case, User::factory()->administrator()->create(), 'reopen');
     }
 
     public function test_only_the_store_owner_connects_paymongo(): void

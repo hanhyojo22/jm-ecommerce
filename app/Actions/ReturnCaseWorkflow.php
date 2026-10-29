@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ReturnCase;
 use App\Models\ReturnCaseEvidence;
 use App\Models\ReturnCaseItem;
+use App\Models\ReturnCaseOutcome;
 use App\Models\SellerOrder;
 use App\Models\User;
 use App\Services\GmailOrderMailer;
@@ -151,7 +152,12 @@ class ReturnCaseWorkflow
                     }
                     $amount = $case->items->reduce(fn (string $sum, ReturnCaseItem $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
                     // An online payment is refunded through PayMongo, so there is no transfer receipt to upload.
-                    if ($case->sellerOrder->order->payment?->isOnline()) {
+                    if ($case->sellerOrder->order->payment?->gateway_payment_id !== null) {
+                        $refunded = (string) ReturnCaseOutcome::query()->where('kind', 'refund')
+                            ->whereHas('returnCase', fn ($query) => $query->where('seller_order_id', $case->seller_order_id))->sum('amount');
+                        if (bccomp(bcadd($refunded, $amount, 2), (string) $case->sellerOrder->total, 2) > 0) {
+                            throw ValidationException::withMessages(['action' => 'This refund would take more back than the buyer paid for this store order. Contact JMMart support.']);
+                        }
                         $refundId = $this->refundOnlinePayment->refund($case->sellerOrder, $amount);
                         $case->outcome()->create(['recorded_by' => $actor->id, 'kind' => 'refund', 'amount' => $amount, 'paid_at' => now(), 'created_at' => now()]);
                         $changes = ['status' => 'awaiting_confirmation', 'buyer_respond_by' => now()->addDays(7)];
@@ -193,6 +199,10 @@ class ReturnCaseWorkflow
                     $this->requireStatus($status, ['appealed']);
                     if ($case->outcome === null) {
                         throw ValidationException::withMessages(['action' => 'There is no recorded outcome to set aside.']);
+                    }
+                    // Money PayMongo already sent back can't be set aside; doing so would let a second refund through.
+                    if ($case->outcome->kind === 'refund' && $case->sellerOrder->order->payment?->gateway_payment_id !== null) {
+                        throw ValidationException::withMessages(['action' => 'This refund was already paid through PayMongo and can’t be set aside. Resolve the appeal another way.']);
                     }
                     if ($case->outcome->kind === 'replacement') {
                         $this->replacementStock($case, $actor, restore: true);
