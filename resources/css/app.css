@@ -1110,7 +1110,7 @@ form[data-submitting] button[aria-busy="true"]::after { position: absolute; inse
 form[data-submitting] button[aria-busy="true"]:not([class*="primary"])::after { border-color: rgb(15 23 42 / 18%); border-top-color: var(--color-fg); }
 @keyframes confirm-spin { to { transform: rotate(360deg); } }
 
-/* Order placed: a receipt docket with a torn edge and a stamp, beside a four-step "what happens next". */
+/* Order placed: a receipt docket with a torn edge and a stamp, beside the order's progress track. */
 .placed-docket { --notch: 9px; --tear: 170px; position: relative; border: 1px solid var(--color-border); border-radius: 18px; background: var(--color-surface);
     -webkit-mask: radial-gradient(circle var(--notch) at 0 var(--tear), transparent calc(var(--notch) - .5px), #000 var(--notch)), radial-gradient(circle var(--notch) at 100% var(--tear), transparent calc(var(--notch) - .5px), #000 var(--notch));
     -webkit-mask-composite: source-in;
@@ -1123,28 +1123,12 @@ form[data-submitting] button[aria-busy="true"]:not([class*="primary"])::after { 
 .placed-stamp strong { font-size: 15px; font-weight: 700; letter-spacing: .13em; line-height: 1; text-transform: uppercase; white-space: nowrap; }
 .placed-stamp small { margin-top: 4px; font-size: 7.5px; font-weight: 600; letter-spacing: .08em; white-space: nowrap; line-height: 1; text-transform: uppercase; }
 @keyframes placed-stamp { from { opacity: 0; transform: scale(1.55) rotate(-13deg); } 60% { opacity: 1; } to { opacity: 1; transform: scale(1) rotate(-7deg); } }
-.placed-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 22px; }
-.placed-steps > li { position: relative; min-width: 0; padding-right: 10px; }
-.placed-steps > li::after { position: absolute; top: 9px; right: 4px; left: 23px; height: 2px; background: var(--color-border); content: ''; }
-.placed-steps > li:last-child::after { display: none; }
-.placed-steps > :is(.is-done, .is-current)::after { background: #bcd0ff; }
-.placed-step-dot { position: relative; z-index: 1; display: grid; width: 20px; height: 20px; place-items: center; border: 2px solid var(--color-border-strong); border-radius: 50%; background: var(--color-surface); }
-.placed-step-dot svg { width: 10px; height: 10px; }
-.placed-steps > .is-done .placed-step-dot { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
-.placed-steps > .is-current .placed-step-dot { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-info-wash); }
-.placed-step-label { margin-top: 9px; color: var(--color-muted); font-size: 12.5px; font-weight: 500; line-height: 1.35; }
-.placed-steps > :is(.is-done, .is-current) .placed-step-label { color: var(--color-fg); font-weight: 600; }
 @media (max-width: 639px) {
     .placed-docket { --tear: 162px; }
     .placed-stamp { top: 20px; right: 17px; min-width: 70px; height: 53px; }
     .placed-stamp strong { font-size: 13px; }
-    .placed-steps { grid-template-columns: minmax(0, 1fr); margin-top: 18px; }
-    .placed-steps > li { padding: 0 0 19px 34px; }
-    .placed-steps > li:last-child { padding-bottom: 0; }
-    .placed-steps > li::after { top: 20px; right: auto; bottom: 0; left: 9px; width: 2px; height: auto; }
-    .placed-step-dot { position: absolute; top: 0; left: 0; }
-    .placed-step-label { margin-top: 0; font-size: 13px; }
 }
+.placed-step-now { background: linear-gradient(90deg, var(--color-accent) 0 50%, #bcd0ff 50%); }
 @media (prefers-reduced-motion: reduce) { .placed-stamp { animation: none; } }
 /* Printing keeps only the receipt, whatever chrome the layout wraps around it. */
 @media print {
