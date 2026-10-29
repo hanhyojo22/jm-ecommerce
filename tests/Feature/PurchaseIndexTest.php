@@ -160,6 +160,21 @@ class PurchaseIndexTest extends TestCase
         $this->actingAs($buyer)->get(route('orders.show', $otherOrder))->assertNotFound();
     }
 
+    public function test_purchases_page_ten_at_a_time_and_keep_the_tab(): void
+    {
+        $buyer = User::factory()->create();
+        foreach (range(1, 11) as $index) {
+            $this->sellerOrder($this->order($buyer, sprintf('PAGE-%03d', $index), '10.00'), sprintf('Page Store %02d', $index), 'confirmed', '10.00');
+        }
+
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'to_dispatch']))
+            ->assertOk()->assertSee('Page 1 of 2')
+            ->assertSee(route('orders.index', ['tab' => 'to_dispatch', 'page' => 2]))
+            ->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 10 && $sellerOrders->total() === 11);
+        $this->actingAs($buyer)->get(route('orders.index', ['tab' => 'to_dispatch', 'page' => 2]))
+            ->assertOk()->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 1);
+    }
+
     public function test_each_purchase_offers_only_the_buyers_next_step(): void
     {
         $buyer = User::factory()->create();
