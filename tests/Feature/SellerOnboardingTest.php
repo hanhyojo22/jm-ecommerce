@@ -140,6 +140,48 @@ class SellerOnboardingTest extends TestCase
             ->assertJsonPath('redirect', route('profile.edit'));
     }
 
+    public function test_replacing_an_identity_document_deletes_the_old_file(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('seller-application.step', 1), ['seller_type' => 'individual']);
+        $documents = fn (string $front) => ['id_type' => 'passport', 'id_number' => 'P123456', 'id_front' => UploadedFile::fake()->image($front), 'selfie' => UploadedFile::fake()->image('selfie.jpg')];
+
+        $this->post(route('seller-application.step', 5), $documents('first.jpg'))->assertSessionHasNoErrors();
+        $application = $buyer->sellerApplications()->firstOrFail();
+        $firstPath = $application->documents()->where('type', 'id_front')->value('path');
+        $this->post(route('seller-application.step', 5), $documents('second.jpg'))->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $application->documents()->where('type', 'id_front')->count());
+        Storage::disk('chat_attachments')->assertMissing($firstPath);
+        Storage::disk('chat_attachments')->assertExists($application->documents()->where('type', 'id_front')->value('path'));
+    }
+
+    public function test_store_name_taken_by_another_application_is_rejected_in_any_case(): void
+    {
+        Storage::fake('public');
+        User::factory()->create()->sellerApplications()->create(['store_name' => 'Ava Goods', 'status' => 'pending']);
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('seller-application.step', 1), ['seller_type' => 'individual']);
+        $storefront = fn (string $name) => ['store_name' => $name, 'store_slug' => 'other-goods', 'store_description' => 'Useful goods', 'store_category' => 'Home', 'support_contact' => 'help@example.test', 'logo' => UploadedFile::fake()->image('logo.jpg')];
+
+        $this->post(route('seller-application.step', 3), $storefront('Ava Goods'))->assertSessionHasErrors('store_name');
+        $this->post(route('seller-application.step', 3), $storefront('ava GOODS'))->assertSessionHasErrors('store_name');
+    }
+
+    public function test_a_step_ignores_files_that_belong_to_another_step(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('seller-application.step', 1), ['seller_type' => 'individual']);
+
+        $this->post(route('seller-application.step', 2), ['seller_name' => 'Ava Seller', 'phone' => '+639171234567', 'date_of_birth' => '1990-01-01', 'id_front' => UploadedFile::fake()->create('payload.exe', 20, 'application/x-msdownload')])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(0, $buyer->sellerApplications()->firstOrFail()->documents()->count());
+        $this->assertSame([], Storage::disk('chat_attachments')->allFiles());
+    }
+
     public function test_private_document_access_is_limited_to_admins(): void
     {
         Storage::fake('chat_attachments');

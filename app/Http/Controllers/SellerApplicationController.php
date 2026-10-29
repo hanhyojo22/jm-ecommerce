@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -23,12 +24,13 @@ class SellerApplicationController extends Controller
     public function create(): View|RedirectResponse
     {
         $user = request()->user();
+        // Every query here is a network round trip, and most applicants belong to no tenant yet.
+        $membership = $user->tenantMemberships()->with('tenant.store')->oldest('created_at')->first();
 
-        if ($user->sellerTenant() !== null) {
+        if ($membership !== null && $user->sellerTenant() !== null) {
             return to_route('seller.dashboard');
         }
 
-        $membership = $user->tenantMemberships()->with('tenant.store')->oldest('created_at')->first();
         $store = $membership?->tenant?->store;
         $workspaceSuspended = $membership?->tenant?->status === 'suspended'
             || $store?->status === 'suspended';
@@ -63,10 +65,13 @@ class SellerApplicationController extends Controller
         return DB::transaction(function () use ($request, $step, $storePublicImage): RedirectResponse|JsonResponse {
             $user = User::query()->lockForUpdate()->findOrFail($request->user()->id);
             abort_if($user->tenantMemberships()->exists(), 403);
-            if ($user->sellerApplications()->whereIn('status', ['pending', 'submitted', 'under_review', 'approved', 'suspended'])->exists()) {
+            $applications = $user->sellerApplications()->latest()->get();
+            if ($applications->contains(fn (SellerApplication $existing): bool => in_array($existing->status, ['pending', 'submitted', 'under_review', 'approved', 'suspended'], true))) {
                 throw ValidationException::withMessages(['application' => 'You already have an active seller application.']);
             }
-            $application = $user->sellerApplications()->latest()->first() ?? new SellerApplication;
+            $application = $applications->first() ?? new SellerApplication;
+            $documents = $step === 5 && $application->exists ? $application->documents()->get()->keyBy('type') : collect();
+            $replacedFiles = [];
             abort_unless($application->status === null || in_array($application->status, ['draft', 'more_information_required'], true), 403);
             abort_if($application->status === 'more_information_required' && ! in_array($step, $application->correction_steps ?? [], true), 403);
             if ($step > 1 && ! in_array(1, $application->completed_steps ?? [], true)) {
@@ -76,10 +81,10 @@ class SellerApplicationController extends Controller
             $rules = match ($step) {
                 1 => ['seller_type' => ['required', Rule::in(['individual', 'business'])]],
                 2 => ['seller_name' => ['required', 'string', 'max:120'], 'phone' => ['required', 'regex:/^\\+?[0-9 ]{10,18}$/'], 'date_of_birth' => [$application->seller_type === 'individual' ? 'required' : 'nullable', 'date', 'before:-18 years'], 'business_name' => [$application->seller_type === 'business' ? 'required' : 'nullable', 'string', 'max:255'], 'registration_number' => [$application->seller_type === 'business' ? 'required' : 'nullable', 'string', 'max:100'], 'bir_details' => ['nullable', 'string', 'max:255'], 'representative_name' => [$application->seller_type === 'business' ? 'required' : 'nullable', 'string', 'max:120']],
-                3 => ['store_name' => ['required', 'string', 'min:3', 'max:120', Rule::unique('seller_applications')->ignore($application->id), Rule::unique('stores', 'name')], 'store_slug' => ['required', 'string', 'min:3', 'max:80', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::notIn(['admin', 'seller', 'support', 'jmmart', 'official', 'help', 'login']), Rule::unique('seller_applications')->ignore($application->id), Rule::unique('stores', 'slug')], 'store_description' => ['required', 'string', 'max:2000'], 'store_category' => ['required', 'string', 'max:100'], 'support_contact' => ['required', 'string', 'max:120'], 'logo' => [$application->logo_path ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'], 'banner' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096']],
+                3 => ['store_name' => ['required', 'string', 'min:3', 'max:120'], 'store_slug' => ['required', 'string', 'min:3', 'max:80', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::notIn(['admin', 'seller', 'support', 'jmmart', 'official', 'help', 'login']), Rule::unique('seller_applications')->ignore($application->id), Rule::unique('stores', 'slug')], 'store_description' => ['required', 'string', 'max:2000'], 'store_category' => ['required', 'string', 'max:100'], 'support_contact' => ['required', 'string', 'max:120'], 'logo' => [$application->logo_path ? 'nullable' : 'required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'], 'banner' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096']],
                 4 => ['region' => ['required', 'string', 'max:100'], 'province' => ['required', 'string', 'max:100'], 'city' => ['required', 'string', 'max:100'], 'barangay' => ['required', 'string', 'max:100'], 'address_line' => ['required', 'string', 'max:255'], 'postal_code' => ['required', 'digits:4'], 'same_addresses' => ['nullable', 'boolean'], 'pickup_address' => ['required_unless:same_addresses,1', 'nullable', 'string', 'max:255'], 'return_address' => ['required_unless:same_addresses,1', 'nullable', 'string', 'max:255'], 'processing_days' => ['required', 'integer', 'between:1,30'], 'fulfillment_methods' => ['required', 'string', 'max:120'], 'delivery_areas' => ['required', 'string', 'max:1000']],
-                5 => ['id_type' => ['required', Rule::in(['passport', 'drivers_license', 'national_id', 'other'])], 'id_number' => ['required', 'string', 'max:100'], 'id_front' => [$application->documents()->where('type', 'id_front')->exists() ? 'nullable' : 'required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], 'id_back' => [in_array($request->input('id_type'), ['drivers_license', 'national_id'], true) && ! $application->documents()->where('type', 'id_back')->exists() ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], 'selfie' => [$application->seller_type === 'individual' && ! $application->documents()->where('type', 'selfie')->exists() ? 'required' : 'nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'], 'business_registration' => [$application->seller_type === 'business' && ! $application->documents()->where('type', 'business_registration')->exists() ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], 'bir_certificate' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120']],
-                6 => ['method' => ['required', Rule::in(['bank', 'wallet'])], 'provider' => ['required', 'string', 'max:120'], 'holder_name' => ['required', 'string', 'max:120'], 'account_number' => [$application->payoutProfile()->exists() ? 'nullable' : 'required', 'string', 'min:6', 'max:40', 'regex:/^[0-9A-Za-z -]+$/']],
+                5 => ['id_type' => ['required', Rule::in(['passport', 'drivers_license', 'national_id', 'other'])], 'id_number' => ['required', 'string', 'max:100'], 'id_front' => [$documents->has('id_front') ? 'nullable' : 'required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], 'id_back' => [in_array($request->input('id_type'), ['drivers_license', 'national_id'], true) && ! $documents->has('id_back') ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], 'selfie' => [$application->seller_type === 'individual' && ! $documents->has('selfie') ? 'required' : 'nullable', 'image', 'mimes:jpg,jpeg,png', 'max:5120'], 'business_registration' => [$application->seller_type === 'business' && ! $documents->has('business_registration') ? 'required' : 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], 'bir_certificate' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120']],
+                6 => ['method' => ['required', Rule::in(['bank', 'wallet'])], 'provider' => ['required', 'string', 'max:120'], 'holder_name' => ['required', 'string', 'max:120'], 'account_number' => [$application->payoutProfile !== null ? 'nullable' : 'required', 'string', 'min:6', 'max:40', 'regex:/^[0-9A-Za-z -]+$/']],
             };
             if ($step === 3) {
                 $request->merge(['store_slug' => Str::slug($request->input('store_slug', ''))]);
@@ -109,18 +114,27 @@ class SellerApplicationController extends Controller
                 if (filled($accountNumber)) {
                     $data['account_number'] = $accountNumber;
                 }
-                $application->payoutProfile()->updateOrCreate([], $data);
+                ($application->payoutProfile ?? $application->payoutProfile()->make())->fill($data)->save();
             } else {
                 foreach (['logo', 'banner', 'id_front', 'id_back', 'selfie', 'business_registration', 'bir_certificate'] as $upload) {
-                    if ($request->hasFile($upload)) {
+                    // Only a file this step validated is stored; any other is ignored, never saved unchecked.
+                    if (array_key_exists($upload, $rules) && $request->hasFile($upload)) {
                         $file = $request->file($upload);
                         $path = $step === 3
                             ? $storePublicImage->handle($file, 'seller-applications/'.$application->id, 'public')
                             : ($file->store('seller-applications/'.$application->id, 'chat_attachments') ?: throw new RuntimeException('Document upload failed.'));
                         if ($step === 3) {
+                            if ($application->{$upload.'_path'}) {
+                                $replacedFiles[] = ['public', $application->{$upload.'_path'}];
+                            }
                             $data[$upload.'_path'] = $path;
                         } else {
-                            $application->documents()->updateOrCreate(['type' => $upload], ['path' => $path, 'mime_type' => $file->getMimeType()]);
+                            // A replaced ID document must not linger on disk once its record points elsewhere.
+                            $document = $documents->get($upload) ?? $application->documents()->make(['type' => $upload]);
+                            if ($document->exists) {
+                                $replacedFiles[] = ['chat_attachments', $document->path];
+                            }
+                            $document->fill(['path' => $path, 'mime_type' => $file->getMimeType()])->save();
                         }
                         unset($data[$upload]);
                     }
@@ -138,6 +152,11 @@ class SellerApplicationController extends Controller
             if ($application->wasRecentlyCreated) {
                 $application->statusHistory()->create(['actor_user_id' => $user->id, 'from_status' => null, 'to_status' => 'draft', 'created_at' => now()]);
             }
+            DB::afterCommit(function () use ($replacedFiles): void {
+                foreach ($replacedFiles as [$disk, $path]) {
+                    Storage::disk($disk)->delete($path);
+                }
+            });
 
             $exit = $request->boolean('exit');
             $redirect = $exit

@@ -14,8 +14,8 @@
     top: 0;
     z-index: 40;
     border-bottom: 1px solid var(--color-border);
-    background: rgb(255 255 255 / 92%);
-    backdrop-filter: blur(12px);
+    /* Solid rather than blurred: a backdrop filter repaints on every scroll frame on low-end phones. */
+    background: rgb(255 255 255 / 97%);
 }
 
 .onboarding-topbar-inner {
@@ -1746,8 +1746,7 @@
         margin: 0;
         padding: 11px 16px calc(11px + env(safe-area-inset-bottom));
         border-top: 1px solid var(--color-border);
-        background: rgb(255 255 255 / 96%);
-        backdrop-filter: blur(12px);
+        background: rgb(255 255 255 / 98%);
     }
 
     .onboarding-actions .onboarding-save-hint {

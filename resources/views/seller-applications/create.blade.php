@@ -20,19 +20,16 @@
         $inReview = in_array($application?->status, ['pending', 'submitted', 'under_review'], true);
         $firstName = Str::of(auth()->user()->name)->explode(' ')->first();
         $idTypes = ['passport' => 'Passport', 'drivers_license' => 'Driver’s license', 'national_id' => 'National ID', 'other' => 'Other government ID'];
-        $payout = $application?->payoutProfile;
         $shippingAddress = collect([$application?->address_line, $application?->barangay, $application?->city, $application?->province, $application?->region, $application?->postal_code])->filter()->implode(', ');
-        $documentCount = $application?->documents()->count() ?? 0;
         $sameAddresses = (bool) old('same_addresses', blank($application?->pickup_address) || ($application->pickup_address === $application->return_address && $application->pickup_address === $application->address_line.', '.$application->barangay.', '.$application->city.', '.$application->province.', '.$application->region.' '.$application->postal_code));
         $missingSteps = array_diff(range(1, 6), $completed);
         $lockedNote = 'Not open for changes in this correction';
-        $submittedAt = $application?->statusHistory()->where('to_status', 'submitted')->latest()->first()?->created_at ?? $application?->updated_at;
     @endphp
 
     <div
         @class(['onboarding-app', 'min-h-screen'])
         @if ($editable && $step <= 6)
-            x-data="{ saving: false, exitBlocked: false, uploadProgress: 0, uploadError: '', validationErrors: [], saveAndExit() { const form = this.$refs.stepForm; this.exitBlocked = false; if (! form.checkValidity()) { this.exitBlocked = true; form.reportValidity(); return; } this.send(form, true); }, save(event) { this.send(event.target, false); }, send(form, exit) { this.saving = true; this.exitBlocked = false; this.uploadError = ''; this.validationErrors = []; const data = new FormData(form); if (exit) data.set('exit', '1'); const request = new XMLHttpRequest(); request.open('POST', form.action); request.setRequestHeader('Accept', 'application/json'); request.upload.onprogress = (progress) => { if (progress.lengthComputable) this.uploadProgress = Math.round(progress.loaded / progress.total * 100) }; request.onload = () => { if (request.status === 200) { window.location.assign(JSON.parse(request.responseText).redirect); return; } this.saving = false; if (request.status === 422) { this.exitBlocked = exit; this.validationErrors = Object.values(JSON.parse(request.responseText).errors).flat(); this.$nextTick(() => this.$refs.formErrors?.focus()); } else { this.uploadError = 'Could not save this step. Please try again.'; } }; request.onerror = () => { this.saving = false; this.uploadError = 'Upload failed. Please check your connection and retry.'; }; request.send(data); } }"
+            x-data="{ saving: false, exitBlocked: false, uploadProgress: 0, uploadError: '', validationErrors: [], saveAndExit() { const form = this.$refs.stepForm; this.exitBlocked = false; if (! form.checkValidity()) { this.exitBlocked = true; form.reportValidity(); return; } this.send(form, true); }, save(event) { this.send(event.target, false); }, send(form, exit) { this.saving = true; this.exitBlocked = false; this.uploadError = ''; this.validationErrors = []; const data = new FormData(form); if (exit) data.set('exit', '1'); const request = new XMLHttpRequest(); request.open('POST', form.action); request.setRequestHeader('Accept', 'application/json'); request.upload.onprogress = (progress) => { if (progress.lengthComputable) this.uploadProgress = Math.round(progress.loaded / progress.total * 100) }; request.onload = () => { if (request.status === 200) { window.location.assign(JSON.parse(request.responseText).redirect); return; } this.saving = false; if (request.status === 422) { this.exitBlocked = exit; this.validationErrors = Object.values(JSON.parse(request.responseText).errors).flat(); this.$nextTick(() => this.$refs.formErrors?.focus()); } else { this.uploadError = request.status === 419 ? 'Your session expired. Refresh the page, then save this step again.' : (request.status === 429 ? 'Too many saves in a minute. Wait a moment, then try again.' : 'Could not save this step. Please try again.'); } }; request.onerror = () => { this.saving = false; this.uploadError = 'Upload failed. Please check your connection and retry.'; }; request.send(data); } }"
         @endif
     >
         <header class="onboarding-topbar">
@@ -99,6 +96,7 @@
                         </div>
                     </section>
                 @elseif ($inReview)
+                    @php($submittedAt = $application->statusHistory()->where('to_status', 'submitted')->latest()->first()?->created_at ?? $application->updated_at)
                     <section class="onboarding-state-card" aria-labelledby="state-title">
                         <div class="onboarding-state-icon" aria-hidden="true">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7" /></svg>
@@ -106,7 +104,7 @@
                         <p class="onboarding-kicker">Application received</p>
                         <h1 id="state-title">You’re in review, {{ $firstName }}.</h1>
                         <p class="onboarding-state-lead">We’re checking your store and documents. Most applications take 1–2 business days, and we’ll email you the moment there’s news.</p>
-                        <p class="onboarding-state-ref">Application <strong>#JM-{{ str_pad((string) $application->id, 5, '0', STR_PAD_LEFT) }}</strong>@if ($submittedAt) · Submitted {{ $submittedAt->format('M j, Y') }}@endif</p>
+                        <p class="onboarding-state-ref">Application <strong>#JM-{{ Str::upper($application->id) }}</strong>@if ($submittedAt) · Submitted {{ $submittedAt->format('M j, Y') }}@endif</p>
                         <ol class="onboarding-timeline" aria-label="Application status timeline">
                             <li class="is-done">
                                 <span class="onboarding-timeline-dot" aria-hidden="true"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7" /></svg></span>
@@ -521,6 +519,9 @@
                                 </ul>
                             </div>
                         @endif
+                        {{-- Only the review reads payout and document details, so other steps skip those queries. --}}
+                        @php($payout = $application?->payoutProfile)
+                        @php($documentCount = $application?->documents()->count() ?? 0)
                         <div class="onboarding-review">
                             <section class="onboarding-review-block" aria-labelledby="review-about">
                                 <div class="onboarding-review-head">
