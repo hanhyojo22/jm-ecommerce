@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>My purchases · item rows review</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ------------------------------------------------------------------
+           JMMart My purchases - review mockup: item rows adopt the reference
+           layout (thumb, clamped name, variant, return chip, price, qty).
+           Tokens mirror resources/css/app.css; store bar, state pills, and
+           the footer stay exactly as the live page renders them.
+           ------------------------------------------------------------------ */
+        :root {
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --paper: #f1f5f9;
+            --sunken: #f8fafc;
+            --ink: #182c48;
+            --muted: #596b83;
+            --border: #e3e8f1;
+            --border-strong: #cbd4e0;
+            --line-soft: #eef1f5;
+            --accent: #205bf4;
+            --accent-hover: #1d4ed8;
+            --success: #166534;
+            --focus-ring: 0 0 0 3px rgb(32 91 244 / 18%);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html { background: var(--bg); scrollbar-color: #c3cede var(--bg); }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "cv11", "ss01";
+        }
+        ::selection { background: #fde68a66; color: var(--ink); }
+        ::-webkit-scrollbar { width: 12px; height: 12px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { border: 3px solid var(--bg); border-radius: 999px; background: #c3cede; }
+        h1, h2, h3, p { margin: 0; }
+        a { color: inherit; text-decoration: none; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+        .num { font-variant-numeric: tabular-nums; }
+
+        .demo { max-width: 880px; margin: 0 auto; padding: 32px 24px 96px; }
+        .demo > header h1 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+        .demo > header p { margin-top: 4px; max-width: 72ch; color: var(--muted); font-size: 13px; }
+
+        .label { display: flex; align-items: baseline; gap: 10px; margin: 30px 0 4px; }
+        .label h2 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+        .label .tag {
+            padding: 2px 9px;
+            border: 1px solid rgb(32 91 244 / 45%);
+            border-radius: 999px;
+            background: #eef3ff;
+            color: var(--accent-hover);
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .label .tag.neutral { border-color: var(--border-strong); background: var(--sunken); color: var(--muted); }
+        .label + .hint { margin: 0 0 12px; color: var(--muted); font-size: 12.5px; }
+
+        /* ------------------------------------------------------------------
+           Order card: store bar and footer unchanged from the live page;
+           only the item rows change.
+           ------------------------------------------------------------------ */
+        .card { overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px rgb(24 44 72 / 4%); }
+        .group + .card { margin-top: 12px; }
+
+        .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--line-soft); }
+        .bar-left { display: flex; min-width: 0; align-items: center; gap: 10px; }
+        .bar-left > svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+        .bar .store { font-size: 14px; font-weight: 600; color: var(--ink); transition: color .15s ease; }
+        .bar .store:hover { color: var(--accent-hover); }
+        .bar .ref { font-size: 12px; font-weight: 500; color: var(--muted); transition: color .15s ease; }
+        .bar .ref:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+        .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--sunken); color: var(--ink); font-size: 12px; font-weight: 600; flex: none; }
+        .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+        .pill.is-good { color: var(--success); }
+        .pill.is-good i { background: var(--success); }
+
+        /* Reference-layout item rows: thumbnail, details, price, qty — columns
+           shared by every row so prices and quantities read straight down. */
+        .list { padding: 6px 24px 8px; }
+        .item {
+            display: grid;
+            grid-template-columns: 72px minmax(0, 1fr) 104px 96px;
+            align-items: center;
+            column-gap: 24px;
+            padding: 16px 0;
+        }
+        .thumb { position: relative; width: 72px; height: 72px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--paper); }
+        .thumb img, .thumb svg { width: 100%; height: 100%; }
+        .thumb img { object-fit: cover; }
+        .thumb svg { position: absolute; inset: 0; margin: auto; width: 22px; height: 22px; color: #94a3b8; background: none; }
+        .item .name {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            font-size: 14px;
+            line-height: 20px;
+            color: var(--ink);
+        }
+        .item .variant { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+        .chip {
+            display: inline-flex;
+            margin-top: 8px;
+            padding: 2px 9px;
+            border: 1px solid rgb(32 91 244 / 40%);
+            border-radius: 4px;
+            color: var(--accent-hover);
+            font-size: 11.5px;
+            font-weight: 600;
+            line-height: 18px;
+        }
+        .item .amount { font-size: 14px; color: var(--ink); }
+        .item .qty { font-size: 14px; color: var(--ink); }
+        .item .qty .k { color: var(--muted); }
+
+        .foot { display: grid; grid-template-columns: minmax(0, 1fr) 136px 152px; gap: 12px 20px; padding: 14px 24px; border-top: 1px solid var(--line-soft); align-items: start; }
+        .headline { margin-top: 2px; font-size: 15px; font-weight: 600; line-height: 22px; letter-spacing: -.01em; }
+        .note { max-width: 62ch; margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--muted); }
+        .note a { color: var(--accent); font-weight: 600; }
+        .note a:hover { text-decoration: underline; text-underline-offset: 2px; }
+        .quiet { display: flex; flex-wrap: wrap; gap: 0 16px; margin-top: 6px; }
+        .quiet a { display: inline-flex; min-height: 32px; align-items: center; font-size: 12px; font-weight: 600; color: var(--muted); transition: color .15s ease; }
+        .quiet a:hover { color: var(--accent-hover); }
+        .total { padding-top: 22px; text-align: right; }
+        .total strong { display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+        .total span { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+        .total span.is-done { color: var(--success); font-weight: 600; }
+        .no-action { min-height: 1px; }
+
+        .endnote { margin-top: 32px; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--sunken); color: var(--muted); font-size: 12.5px; line-height: 20px; }
+        .endnote strong { color: var(--ink); font-weight: 600; }
+
+        @media (max-width: 860px) {
+            .demo { padding: 24px 16px 80px; }
+            .bar, .foot { padding-inline: 16px; }
+            .list { padding-inline: 16px; }
+            .item { grid-template-columns: 64px minmax(0, 1fr) auto; row-gap: 8px; }
+            .thumb { width: 64px; height: 64px; }
+            .amount { grid-column: 2; grid-row: 2; justify-self: start; font-size: 13px; }
+            .qty { grid-column: 3; grid-row: 2; justify-self: end; font-size: 13px; }
+            .foot { grid-template-columns: minmax(0, 1fr); }
+            .total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 2px; text-align: left; }
+            .total span { margin-top: 0; }
+            .no-action { display: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="demo">
+    <header>
+        <h1>My purchases — item rows (review)</h1>
+        <p>The reference layout, applied to every item row: one shared column grid per card, product photo, two-line name, variant, the return-window chip, then price and quantity as straight-down columns. Store bar, state pills, and footers are unchanged from the live page.</p>
+    </header>
+
+    <div class="label"><h2>Reference state · delivered, 3 items in one order</h2><span class="tag">Proposed</span></div>
+    <p class="hint">The Moso order from the reference: each variant of the product is its own row, and ₱ / Qty line up down the card.</p>
+
+    <article class="card">
+        <div class="bar">
+            <div class="bar-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                <a href="#" class="store">Moso</a>
+                <a href="#" class="ref num">#…W2R8K3</a>
+            </div>
+            <span class="pill is-good"><i aria-hidden="true"></i>Delivered</span>
+        </div>
+        <div class="list">
+            <div class="item">
+                <div class="thumb"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23f4f6fa'/%3E%3Cpath d='M20 18L28 14C30 19 42 19 44 14L52 18L50 27L46 25L46 56L26 56L26 25L22 27Z' fill='%23262a30'/%3E%3C/svg%3E" alt="" width="72" height="72"></div>
+                <div>
+                    <p class="name">MOSO KINGBA Men's Round Neck Dri-Fit T-Shirt Crew Neck Sports Training Tee</p>
+                    <p class="variant">Black, M</p>
+                    <span class="chip">7 Days Return</span>
+                </div>
+                <p class="amount num">₱82.02</p>
+                <p class="qty"><span class="k">Qty:</span> 1</p>
+            </div>
+            <div class="item">
+                <div class="thumb"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23f1f4ec'/%3E%3Cpath d='M20 18L28 14C30 19 42 19 44 14L52 18L50 27L46 25L46 56L26 56L26 25L22 27Z' fill='%235d6b40'/%3E%3C/svg%3E" alt="" width="72" height="72"></div>
+                <div>
+                    <p class="name">MOSO KINGBA Men's Round Neck Dri-Fit T-Shirt Crew Neck Sports Training Tee</p>
+                    <p class="variant">Army, M</p>
+                    <span class="chip">7 Days Return</span>
+                </div>
+                <p class="amount num">₱82.02</p>
+                <p class="qty"><span class="k">Qty:</span> 1</p>
+            </div>
+            <div class="item">
+                <div class="thumb"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23eef2f8'/%3E%3Cpath d='M20 18L28 14C30 19 42 19 44 14L52 18L50 27L46 25L46 56L26 56L26 25L22 27Z' fill='%232b3f66'/%3E%3C/svg%3E" alt="" width="72" height="72"></div>
+                <div>
+                    <p class="name">MOSO KINGBA Men's Round Neck Dri-Fit T-Shirt Crew Neck Sports Training Tee</p>
+                    <p class="variant">Navy Blue, M</p>
+                    <span class="chip">7 Days Return</span>
+                </div>
+                <p class="amount num">₱82.02</p>
+                <p class="qty"><span class="k">Qty:</span> 1</p>
+            </div>
+        </div>
+        <div class="foot">
+            <div>
+                <h3 class="headline">Your MOSO KINGBA Men's Round Neck Dri-Fit T-Shirt Crew Neck Sports Training Tee order was delivered</h3>
+                <p class="note">Returns are open until Nov 5. <a href="#">Request return</a></p>
+                <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+            </div>
+            <div class="total"><strong>₱246.06</strong><span class="is-done">GCash · Paid</span></div>
+            <div class="no-action" aria-hidden="true"></div>
+        </div>
+    </article>
+
+    <div class="label"><h2>Other states · one item per order</h2><span class="tag">Proposed</span></div>
+    <p class="hint">The same row grid in a pending order and a shipped order — the chip and columns never move.</p>
+
+    <article class="card">
+        <div class="bar">
+            <div class="bar-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                <a href="#" class="store">JM</a>
+                <a href="#" class="ref num">#…7K3M2X</a>
+            </div>
+            <span class="pill"><i aria-hidden="true"></i>Awaiting store</span>
+        </div>
+        <div class="list">
+            <div class="item">
+                <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div>
+                    <p class="name">Portable Bluetooth Speaker, 20W Stereo Output, IPX7</p>
+                    <p class="variant">Black, Standard</p>
+                    <span class="chip">7 Days Return</span>
+                </div>
+                <p class="amount num">₱3,350.00</p>
+                <p class="qty"><span class="k">Qty:</span> 2</p>
+            </div>
+        </div>
+        <div class="foot">
+            <div>
+                <h3 class="headline">Waiting for JM to confirm your order</h3>
+                <p class="note">You can still change your mind. <a href="#">Ask to cancel</a></p>
+                <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+            </div>
+            <div class="total"><strong>₱6,700.00</strong><span>Pay on delivery</span></div>
+            <div class="no-action" aria-hidden="true"></div>
+        </div>
+    </article>
+
+    <article class="card" style="margin-top:12px">
+        <div class="bar">
+            <div class="bar-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                <a href="#" class="store">JM</a>
+                <a href="#" class="ref num">#…Q8P5V1</a>
+            </div>
+            <span class="pill"><i aria-hidden="true" style="background:var(--accent)"></i>On the way</span>
+        </div>
+        <div class="list">
+            <div class="item">
+                <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div>
+                    <p class="name">USB-C Fast Charging Cable, 1m Braided Nylon</p>
+                    <p class="variant">White, 1 meter</p>
+                    <span class="chip">7 Days Return</span>
+                </div>
+                <p class="amount num">₱1,075.00</p>
+                <p class="qty"><span class="k">Qty:</span> 2</p>
+            </div>
+        </div>
+        <div class="foot">
+            <div>
+                <h3 class="headline">Your USB-C Fast Charging Cable order is on the way</h3>
+                <p class="note">Confirm with Order received once it arrives (auto-confirmed Nov 11). <a href="#">Not here yet?</a></p>
+                <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+            </div>
+            <div class="total"><strong>₱2,150.00</strong><span class="is-done">Maya · Paid</span></div>
+            <div class="no-action" aria-hidden="true"></div>
+        </div>
+    </article>
+
+    <div class="endnote">
+        <strong>What this mockup changes, and only this:</strong> the item rows. Photo size, the two-line clamped name, the variant line, the blue return chip (our 7-day return window, from the marketplace config), and fixed price / qty columns shared by every row. Store bar, state pills, day groups, and footers render exactly as the live page does today. Footers still await your pick from the earlier review (clean footer + highlighted buttons); nothing here assumes it.
+    </div>
+</div>
+</body>
+</html>

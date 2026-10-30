@@ -1,0 +1,133 @@
+- generic [active] [ref=f24e1]:
+  - link "Skip to content" [ref=f24e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f24e3]:
+    - complementary "Store announcement" [ref=f24e4]:
+      - generic [ref=f24e5]:
+        - text: Free shipping on every order · Cash on delivery —
+        - link "Shop best sellers" [ref=f24e6] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/top-products
+    - banner [ref=f24e7]:
+      - generic [ref=f24e8]:
+        - link "JMMart marketplace home" [ref=f24e10] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000
+          - generic [aria-hidden] [ref=f24e11]: jm
+          - generic [ref=f24e12]: JMMart.
+        - generic [ref=f24e14]:
+          - combobox "Search products, brands, and stores" [ref=f24e18]
+          - button "Search" [ref=f24e19] [cursor=pointer]
+        - generic [ref=f24e20]:
+          - link "Messages" [ref=f24e21] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages
+          - 'link "Cart: 2 items" [ref=f24e24] [cursor=pointer]':
+            - /url: http://127.0.0.1:8000/cart
+            - generic [aria-hidden] [ref=f24e30]: "2"
+          - button "Account menu" [ref=f24e32] [cursor=pointer]:
+            - generic [ref=f24e36]: Hi, Maria
+      - navigation "Marketplace sections" [ref=f24e37]:
+        - generic [ref=f24e38]:
+          - link "Categories ▾" [ref=f24e39] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000#shop-by-category
+          - link "New Arrivals" [ref=f24e40] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/search?sort=newest
+          - link "Best Sellers" [ref=f24e41] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/top-products
+          - link "Deals" [ref=f24e42] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000#flash-deals
+          - link "Stores" [ref=f24e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/stores
+          - link "Sell on JMMart" [ref=f24e44] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/start-selling
+    - main [ref=f24e45]:
+      - generic [ref=f24e47]:
+        - link "Back to cart" [ref=f24e48] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/cart
+        - generic [ref=f24e51]:
+          - heading "Checkout" [level=1] [ref=f24e52]
+          - paragraph [ref=f24e53]: 2 items from 2 stores · Free shipping
+        - generic [ref=f24e54]:
+          - generic [ref=f24e56]:
+            - region [ref=f24e57]:
+              - heading [level=2] [ref=f24e58]:
+                - button "Delivery address Where should we send your order?" [ref=f24e59] [cursor=pointer]:
+                  - generic [ref=f24e61]: "1"
+                  - generic [ref=f24e62]:
+                    - generic [ref=f24e63]: Delivery address
+                    - generic [ref=f24e64]: Where should we send your order?
+            - region [ref=f24e67]:
+              - heading [level=2] [ref=f24e68]:
+                - button "Payment method Choose how you would like to pay." [ref=f24e69] [cursor=pointer]:
+                  - generic [ref=f24e71]: "2"
+                  - generic [ref=f24e72]:
+                    - generic [ref=f24e73]: Payment method
+                    - generic [ref=f24e74]: Choose how you would like to pay.
+            - region [ref=f24e77]:
+              - heading [level=2] [ref=f24e78]:
+                - button "Review & place order One last look before this goes to the stores." [ref=f24e79] [cursor=pointer]:
+                  - generic [ref=f24e81]: "3"
+                  - generic [ref=f24e82]:
+                    - generic [ref=f24e83]: Review & place order
+                    - generic [ref=f24e84]: One last look before this goes to the stores.
+          - complementary "Order summary" [ref=f24e87]:
+            - generic [ref=f24e88]:
+              - heading "Order summary" [level=2] [ref=f24e89]
+              - paragraph [ref=f24e90]: 2 items from 2 stores
+            - generic [ref=f24e91]:
+              - region [ref=f24e92]:
+                - heading "Demo Store" [level=3] [ref=f24e93]
+                - list [ref=f24e96]:
+                  - listitem [ref=f24e97]:
+                    - generic [ref=f24e103]:
+                      - generic [ref=f24e104]: Everyday Canvas Tote
+                      - generic [ref=f24e105]: Qty 1
+                    - generic [ref=f24e106]: ₱499.00
+              - region [ref=f24e107]:
+                - heading "Franil Store" [level=3] [ref=f24e108]
+                - list [ref=f24e111]:
+                  - listitem [ref=f24e112]:
+                    - generic [ref=f24e118]:
+                      - generic [ref=f24e119]: TP-Link 300Mbps Router
+                      - generic [ref=f24e120]: Qty 1
+                    - generic [ref=f24e121]: ₱1,299.00
+              - generic [ref=f24e122]:
+                - generic [ref=f24e123]:
+                  - term [ref=f24e124]: Subtotal
+                  - definition [ref=f24e125]: ₱1,798.00
+                - generic [ref=f24e126]:
+                  - term [ref=f24e127]: Shipping
+                  - definition [ref=f24e128]: Free
+                - generic [ref=f24e129]:
+                  - term [ref=f24e130]: Total
+                  - definition [ref=f24e131]: ₱1,798.00
+              - paragraph [ref=f24e132]: Free shipping · No hidden fees
+    - contentinfo [ref=f24e135]:
+      - generic [ref=f24e136]:
+        - generic [ref=f24e137]:
+          - link "JMMart marketplace home" [ref=f24e138] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000
+            - generic [aria-hidden] [ref=f24e139]: jm
+            - text: JM
+            - generic [ref=f24e140]: Mart.
+          - generic [ref=f24e141]: Good finds. Great local stores.
+        - navigation "Footer" [ref=f24e142]:
+          - link "Terms" [ref=f24e143] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/terms
+          - link "Privacy" [ref=f24e144] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/privacy-policy
+          - link "Cookie Policy" [ref=f24e145] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/cookie-policy
+          - button "Cookie Preferences" [ref=f24e146] [cursor=pointer]
+          - generic [ref=f24e147]: © 2026 JMMart
+  - region [ref=f24e148]:
+    - heading "Your privacy matters" [level=2] [ref=f24e154]
+    - paragraph [ref=f24e155]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f24e156] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f24e157] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=f24e158]:
+      - button "Reject Optional" [ref=f24e159] [cursor=pointer]
+      - button "Customize" [ref=f24e160] [cursor=pointer]
+      - button "Accept All" [ref=f24e161] [cursor=pointer]

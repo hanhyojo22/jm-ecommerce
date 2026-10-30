@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variant Picker Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --ink:#15233a; --muted:#5d6b80; --line:#e3e8ef; --soft:#f5f7fb; --blue:#1f5af0; --blue-soft:#eef3ff; --amber:#a15c07; --amber-soft:#fff6e6; --green:#187e61; --danger:#a33c4b; }
+* { box-sizing:border-box; margin:0; }
+body { background:#f7f8fb; color:var(--ink); font-family:Inter, system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+button { font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
+.note { max-width:1180px; margin:20px auto 0; padding:0 24px; color:var(--muted); font-size:13px; }
+.note b { color:var(--ink); }
+.page { max-width:1180px; margin:16px auto 64px; padding:0 24px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:56px; align-items:start; }
+
+/* Gallery */
+.gallery { position:sticky; top:24px; display:grid; grid-template-columns:72px minmax(0,1fr); gap:14px; }
+.thumbs { display:grid; gap:10px; align-content:start; }
+.thumb { aspect-ratio:1; border-radius:10px; background:#fff; border:1px solid var(--line); display:grid; place-items:center; overflow:hidden; }
+.thumb.is-on { border-color:var(--ink); box-shadow:0 0 0 1px var(--ink); }
+.stage { aspect-ratio:1; border-radius:16px; background:#fff; border:1px solid var(--line); display:grid; place-items:center; position:relative; overflow:hidden; }
+.stage svg { width:68%; transition:color .25s ease; }
+.thumb svg { width:70%; }
+.stage-tag { position:absolute; left:16px; bottom:16px; background:rgb(255 255 255 / 92%); border:1px solid var(--line); border-radius:999px; padding:6px 12px; font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:8px; }
+.stage-tag i { width:12px; height:12px; border-radius:50%; box-shadow:inset 0 0 0 1px rgb(0 0 0 / 15%); }
+
+/* Buy box */
+.store { display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:13px; font-weight:500; }
+.store svg { color:var(--blue); }
+h1 { margin-top:10px; font-size:30px; line-height:1.15; letter-spacing:-.02em; font-weight:700; }
+.rating { margin-top:10px; display:flex; gap:8px; align-items:center; font-size:13.5px; color:var(--muted); }
+.rating .stars { color:#f2b33d; letter-spacing:1px; }
+.price { margin-top:22px; display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+.price strong { font-size:28px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.price del { color:var(--muted); font-size:16px; }
+.price .sale { background:#e6f4ee; color:var(--green); border-radius:6px; padding:3px 8px; font-size:12.5px; font-weight:650; }
+.tax { margin-top:4px; color:var(--muted); font-size:13px; }
+
+.option { margin-top:26px; border:0; padding:0; }
+.option legend { display:flex; gap:6px; align-items:baseline; font-size:14px; font-weight:600; padding:0; margin-bottom:12px; width:100%; }
+.option legend span { color:var(--muted); font-weight:500; }
+.option legend .aside { margin-left:auto; color:var(--muted); font-size:12.5px; font-weight:500; }
+
+.swatches { display:flex; flex-wrap:wrap; gap:12px; }
+.swatch { position:relative; width:40px; height:40px; border-radius:50%; padding:3px; box-shadow:0 0 0 1px var(--line); transition:box-shadow .15s; }
+.swatch i { display:block; width:100%; height:100%; border-radius:50%; box-shadow:inset 0 0 0 1px rgb(0 0 0 / 12%); }
+.swatch:hover { box-shadow:0 0 0 1px #9aa6b8; }
+.swatch[aria-checked="true"] { box-shadow:0 0 0 2px var(--ink); }
+.swatch.is-out::after { content:''; position:absolute; left:50%; top:4px; bottom:4px; width:1.5px; background:#fff; transform:rotate(45deg); box-shadow:0 0 0 .5px rgb(0 0 0 / 25%); }
+.swatch.is-out i { opacity:.55; }
+
+.pills { display:flex; flex-wrap:wrap; gap:8px; }
+.pill { min-width:56px; height:44px; padding:0 16px; border-radius:10px; border:1px solid var(--line); background:#fff; font-size:14px; font-weight:500; transition:border-color .15s, background .15s; }
+.pill:hover { border-color:#9aa6b8; }
+.pill[aria-checked="true"] { background:var(--ink); border-color:var(--ink); color:#fff; }
+.pill.is-out { color:#98a2b3; background:linear-gradient(to top right, transparent calc(50% - .75px), #c9d0da calc(50% - .75px), #c9d0da calc(50% + .75px), transparent calc(50% + .75px)), #fff; }
+.pill.is-out[aria-checked="true"] { background:linear-gradient(to top right, transparent calc(50% - .75px), #7c889b calc(50% - .75px), #7c889b calc(50% + .75px), transparent calc(50% + .75px)), var(--soft); color:var(--muted); border-color:var(--ink); }
+.swatch:focus-visible, .pill:focus-visible, .btn:focus-visible, .qty button:focus-visible { outline:2px solid var(--blue); outline-offset:3px; }
+
+.stock { margin-top:22px; display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:500; }
+.stock .dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px #e6f4ee; }
+.stock.is-low { color:var(--amber); } .stock.is-low .dot { background:#e08a1e; box-shadow:0 0 0 4px var(--amber-soft); }
+.stock.is-out { color:var(--danger); } .stock.is-out .dot { background:var(--danger); box-shadow:0 0 0 4px #fbecee; }
+
+.buy { margin-top:16px; display:grid; grid-template-columns:auto 1fr; gap:10px; }
+.qty { display:inline-flex; align-items:center; height:52px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.qty button { width:44px; height:100%; font-size:18px; color:var(--muted); border-radius:12px; }
+.qty output { width:28px; text-align:center; font-weight:600; font-variant-numeric:tabular-nums; }
+.btn { height:52px; border-radius:12px; font-size:15px; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:10px; }
+.btn.primary { background:var(--blue); color:#fff; } .btn.primary:hover { background:#1749cb; }
+.btn.secondary { grid-column:1 / -1; background:var(--ink); color:#fff; } .btn.secondary:hover { background:#0c1728; }
+.btn:disabled { background:#e7ebf1; color:#8792a3; cursor:not-allowed; }
+.btn.notify { grid-column:1 / -1; background:#fff; color:var(--ink); border:1px solid var(--line); }
+
+.perks { margin-top:24px; border-top:1px solid var(--line); padding-top:18px; display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; font-size:12.5px; color:var(--muted); }
+.perks div { display:flex; gap:8px; align-items:flex-start; }
+.perks b { display:block; color:var(--ink); font-weight:600; font-size:13px; }
+.perks svg { flex-shrink:0; color:var(--blue); margin-top:1px; }
+
+.sku { margin-top:16px; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+
+@media (max-width:860px) {
+  .page { grid-template-columns:1fr; gap:24px; padding:0 16px; }
+  .gallery { position:static; grid-template-columns:1fr; }
+  .thumbs { grid-template-columns:repeat(4, 64px); order:2; }
+  h1 { font-size:24px; }
+  .perks { grid-template-columns:1fr; }
+}
+@media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
+</style>
+</head>
+<body>
+<p class="note"><b>Mockup:</b> variant picker on the buyer product page. Click colors and sizes: Black / XL and every Sunset size are sold out, Navy / S has 3 left.</p>
+
+<main class="page">
+  <div class="gallery">
+    <div class="thumbs" aria-label="Photos">
+      <div class="thumb is-on"><svg viewBox="0 0 100 100" data-shirt><use href="#shirt"/></svg></div>
+      <div class="thumb"><svg viewBox="0 0 100 100" style="color:#cfd6e0"><use href="#shirt"/></svg></div>
+      <div class="thumb"><svg viewBox="0 0 100 100" style="color:#e2d7c3"><use href="#shirt"/></svg></div>
+    </div>
+    <div class="stage">
+      <svg viewBox="0 0 100 100" data-shirt><use href="#shirt"/></svg>
+      <span class="stage-tag"><i data-tag-dot></i><span data-tag-name></span></span>
+    </div>
+  </div>
+
+  <section>
+    <span class="store"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 8 3v6c0 5-5 8-8 10-3-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>JM Apparel · Cebu</span>
+    <h1>Everyday Cotton Tee</h1>
+    <div class="rating"><span class="stars">★★★★★</span><b style="color:var(--ink)">4.8</b>(124 reviews) · 1.2k sold</div>
+
+    <div class="price"><strong data-price>₱1,299.00</strong><del>₱1,599.00</del><span class="sale">Save 19%</span></div>
+    <p class="tax">Cash on delivery available. Shipping calculated at checkout.</p>
+
+    <fieldset class="option">
+      <legend>Color: <span data-color-name></span></legend>
+      <div class="swatches" role="radiogroup" aria-label="Color" data-colors></div>
+    </fieldset>
+
+    <fieldset class="option">
+      <legend>Size: <span data-size-name></span></legend>
+      <div class="pills" role="radiogroup" aria-label="Size" data-sizes></div>
+    </fieldset>
+
+    <p class="stock" data-stock aria-live="polite"><span class="dot"></span><span data-stock-text></span></p>
+
+    <div class="buy" data-buy></div>
+
+    <p class="sku" data-sku></p>
+
+    <div class="perks">
+      <div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 5h13v13H2zM15 10h4l3 4v4h-7"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg><span><b>Free shipping</b>Ships in 1–2 days</span></div>
+      <div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span><b>7-day returns</b>Easy return requests</span></div>
+      <div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg><span><b>Cash on delivery</b>Pay when it arrives</span></div>
+    </div>
+  </section>
+</main>
+
+<svg width="0" height="0" style="position:absolute"><symbol id="shirt" viewBox="0 0 100 100"><path fill="currentColor" d="M35 12c3 6 9 9 15 9s12-3 15-9l20 9 9 22-14 6-4-9v52H24V40l-4 9-14-6 9-22 20-9Z"/><path fill="none" stroke="rgb(0 0 0 / 18%)" stroke-width="1.5" d="M42 21c2 6 5 10 8 10s6-4 8-10M30 78h40"/></symbol></svg>
+
+<script>
+const colors = [
+  { name: 'Navy', hex: '#263b60' },
+  { name: 'Black', hex: '#292d34' },
+  { name: 'Heather Grey', hex: '#a7adb6' },
+  { name: 'Sunset', hex: '#e8774a' },
+];
+const sizes = ['S', 'M', 'L', 'XL'];
+const stock = (color, size) => ({ 'Black|XL': 0, 'Navy|S': 3 })[color + '|' + size] ?? (color === 'Sunset' ? 0 : 24);
+const state = { color: 'Navy', size: 'M', qty: 1 };
+const $ = selector => document.querySelector(selector);
+
+function render() {
+  const hex = colors.find(color => color.name === state.color).hex;
+  document.querySelectorAll('[data-shirt]').forEach(svg => svg.style.color = hex);
+  $('[data-tag-dot]').style.background = hex;
+  $('[data-tag-name]').textContent = state.color;
+  $('[data-color-name]').textContent = state.color;
+  $('[data-size-name]').textContent = state.size;
+
+  $('[data-colors]').innerHTML = colors.map(color => {
+    const out = sizes.every(size => stock(color.name, size) === 0);
+    return `<button type="button" role="radio" aria-checked="${color.name === state.color}" aria-label="${color.name}${out ? ', sold out' : ''}" title="${color.name}${out ? ' · Sold out' : ''}" class="swatch${out ? ' is-out' : ''}" data-color="${color.name}"><i style="background:${color.hex}"></i></button>`;
+  }).join('');
+  $('[data-sizes]').innerHTML = sizes.map(size => {
+    const out = stock(state.color, size) === 0;
+    return `<button type="button" role="radio" aria-checked="${size === state.size}" aria-label="${size}${out ? ', sold out in ' + state.color : ''}" class="pill${out ? ' is-out' : ''}" data-size="${size}">${size}</button>`;
+  }).join('');
+
+  const left = stock(state.color, state.size);
+  state.qty = Math.max(1, Math.min(state.qty, left || 1));
+  const el = $('[data-stock]');
+  el.className = 'stock' + (left === 0 ? ' is-out' : left <= 5 ? ' is-low' : '');
+  $('[data-stock-text]').textContent = left === 0 ? `${state.color} / ${state.size} is sold out` : left <= 5 ? `Only ${left} left in ${state.color} / ${state.size}` : 'In stock, ready to ship';
+
+  $('[data-buy]').innerHTML = left === 0
+    ? `<button class="btn primary" disabled style="grid-column:1 / -1">Sold out</button>`
+    : `<div class="qty" role="group" aria-label="Quantity"><button type="button" data-qty="-1" aria-label="Reduce quantity">−</button><output>${state.qty}</output><button type="button" data-qty="1" aria-label="Increase quantity">+</button></div><button class="btn primary" type="button">Add to cart</button><button class="btn secondary" type="button">Buy now</button>`;
+  $('[data-sku]').textContent = `SKU TEE-${state.color.toUpperCase().replace(/\s+/g, '-')}-${state.size}`;
+}
+
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-color],[data-size],[data-qty]');
+  if (! target) return;
+  if (target.dataset.color) state.color = target.dataset.color;
+  if (target.dataset.size) state.size = target.dataset.size;
+  if (target.dataset.qty) state.qty = Math.max(1, Math.min(stock(state.color, state.size), state.qty + Number(target.dataset.qty)));
+  render();
+  document.querySelector(target.dataset.color ? `[data-color="${state.color}"]` : target.dataset.size ? `[data-size="${state.size}"]` : '[data-qty]')?.focus();
+});
+render();
+</script>
+</body>
+</html>

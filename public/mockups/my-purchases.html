@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>My purchases · JMMart mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ------------------------------------------------------------------
+           JMMart My purchases - layout mockup only.
+           Tokens mirror resources/css/app.css. Every order row shares one
+           grid (image, details, total, next step) so totals and actions
+           line up down the whole page.
+           ------------------------------------------------------------------ */
+        :root {
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --paper: #f1f5f9;
+            --sunken: #f8fafc;
+            --ink: #182c48;
+            --muted: #596b83;
+            --border: #e3e8f1;
+            --border-strong: #cbd4e0;
+            --line-soft: #eef1f5;
+            --accent: #205bf4;
+            --accent-hover: #1d4ed8;
+            --accent-wash: #eef3ff;
+            --accent-line: #d6e2fb;
+            --success: #166534;
+            --success-wash: #f1faf4;
+            --success-line: #bfe3cc;
+            --warning: #f59e0b;
+            --warning-text: #b45309;
+            --warning-wash: #fffaf0;
+            --warning-line: #f4d9a8;
+            --danger-text: #b91c1c;
+            --sidebar: #111f33;
+            --sidebar-text: #c5d1e0;
+            --sidebar-muted: #8ea2ba;
+
+            /* The row grid every order shares. */
+            --col-thumb: 56px;
+            --col-total: 112px;
+            --col-action: 152px;
+            --col-gap: 20px;
+            --row-pad-x: 24px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html { background: var(--bg); scrollbar-color: #c3cede var(--bg); }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "cv11", "ss01";
+        }
+        ::selection { background: #dbeafe; color: var(--ink); }
+        ::-webkit-scrollbar { width: 12px; height: 12px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { border: 3px solid var(--bg); border-radius: 999px; background: #c3cede; }
+        h1, h2, h3, p { margin: 0; }
+        a { color: inherit; text-decoration: none; }
+        button, input { font: inherit; color: inherit; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+        .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+        .num { font-variant-numeric: tabular-nums; }
+
+        /* ------------------------------------------------------------------
+           Account shell (simplified)
+           ------------------------------------------------------------------ */
+        .shell { display: grid; grid-template-columns: 232px minmax(0, 1fr); min-height: 100vh; }
+        .sidebar { position: sticky; top: 0; height: 100vh; padding: 20px 12px; background: var(--sidebar); color: var(--sidebar-text); }
+        .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 22px; color: #fff; font-weight: 600; letter-spacing: -.01em; }
+        .sidebar-brand span:first-child { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; background: var(--accent); font-size: 13px; }
+        .sidebar a { display: flex; min-height: 40px; align-items: center; gap: 10px; padding: 0 12px; border-radius: 8px; font-size: 14px; }
+        .sidebar a:hover { background: rgb(255 255 255 / 6%); }
+        .sidebar a[aria-current] { background: rgb(255 255 255 / 9%); color: #fff; font-weight: 600; }
+        .sidebar svg { width: 18px; height: 18px; flex: none; }
+
+        .main { min-width: 0; }
+        .topbar { display: flex; height: 60px; align-items: center; gap: 12px; padding: 0 32px; border-bottom: 1px solid var(--border); background: var(--surface); font-size: 14px; color: var(--muted); }
+        .topbar strong { color: var(--ink); font-weight: 600; }
+        .topbar-link { margin-left: auto; }
+
+        .page { max-width: 1040px; margin: 0 auto; padding: 36px 32px 96px; }
+
+        /* ------------------------------------------------------------------
+           Header
+           ------------------------------------------------------------------ */
+        .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+        .page-head h1 { font-size: 26px; font-weight: 600; line-height: 32px; letter-spacing: -.025em; }
+        .page-head p { margin-top: 4px; color: var(--muted); font-size: 13px; }
+        .link { color: var(--accent); font-weight: 600; transition: color .15s ease; }
+        .link:hover { color: var(--accent-hover); }
+        .head-link { display: inline-flex; min-height: 40px; align-items: center; gap: 6px; font-size: 13px; }
+
+        /* Waiting on you: one aligned strip, items read left to right. */
+        .turn {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 20px;
+            margin-top: 20px;
+            padding: 12px var(--row-pad-x);
+            border: 1px solid var(--warning-line);
+            border-radius: 12px;
+            background: var(--warning-wash);
+            font-size: 13px;
+        }
+        .turn strong { color: var(--ink); font-weight: 600; }
+        .turn a { display: inline-flex; min-height: 28px; align-items: center; gap: 6px; color: var(--warning-text); font-weight: 600; }
+        .turn a:hover { text-decoration: underline; text-underline-offset: 3px; }
+        .turn a::before { width: 6px; height: 6px; border-radius: 50%; background: var(--warning); content: ""; }
+
+        /* ------------------------------------------------------------------
+           Toolbar: grouped tabs on one rule, search on the same baseline
+           ------------------------------------------------------------------ */
+        .toolbar { display: flex; align-items: flex-end; gap: 24px; margin-top: 24px; border-bottom: 1px solid var(--border); }
+        .tabs { position: relative; display: flex; min-width: 0; flex: 1; overflow-x: auto; scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab {
+            display: inline-flex;
+            min-height: 44px;
+            flex: none;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: -1px;
+            padding: 0 10px;
+            border: 0;
+            border-bottom: 2px solid transparent;
+            background: none;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: color .15s ease, border-color .15s ease;
+        }
+        .tab:first-child { padding-left: 0; }
+        .tab:hover { border-bottom-color: var(--border-strong); color: var(--ink); }
+        .tab[aria-pressed="true"] { border-bottom-color: var(--accent); color: var(--ink); }
+        .tab .count { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+        .tab[aria-pressed="true"] .count { color: var(--accent); }
+        .tab .count.is-turn {
+            display: inline-grid;
+            min-width: 20px;
+            height: 20px;
+            place-items: center;
+            padding: 0 6px;
+            border: 1px solid var(--warning-line);
+            border-radius: 999px;
+            background: var(--warning-wash);
+            color: var(--warning-text);
+        }
+        .tab-rule { width: 1px; height: 16px; flex: none; align-self: center; margin: 0 6px; background: var(--border); }
+
+        .search { position: relative; width: 288px; flex: none; }
+        .search svg { position: absolute; top: 50%; left: 12px; width: 16px; height: 16px; color: var(--muted); transform: translateY(-50%); pointer-events: none; }
+        .search input {
+            width: 100%;
+            height: 40px;
+            padding: 0 12px 0 36px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            font-size: 13px;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .search input::placeholder { color: #66758b; }
+        .search input:focus { border-color: var(--accent); outline: 0; box-shadow: 0 0 0 3px rgb(32 91 244 / 12%); }
+
+        /* ------------------------------------------------------------------
+           The list: one surface, one grid for every row
+           ------------------------------------------------------------------ */
+        .list {
+            margin-top: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            background: var(--surface);
+            box-shadow: 0 1px 2px rgb(24 44 72 / 4%);
+        }
+
+        .row-grid {
+            display: grid;
+            grid-template-columns: var(--col-thumb) minmax(0, 1fr) var(--col-total) var(--col-action);
+            column-gap: var(--col-gap);
+            padding: 0 var(--row-pad-x);
+        }
+
+        .list-head {
+            align-items: center;
+            min-height: 40px;
+            border-bottom: 1px solid var(--border);
+            background: var(--sunken);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .list-head span:nth-child(2) { grid-column: 1 / 3; }
+        .list-head span:nth-child(3) { text-align: right; }
+        .list-head span:nth-child(4) { text-align: right; }
+
+        .day {
+            align-items: baseline;
+            padding-top: 18px;
+            padding-bottom: 6px;
+        }
+        .day h2 { grid-column: 1 / 3; font-size: 13px; font-weight: 600; }
+        .day h2 span { margin-left: 6px; color: var(--muted); font-weight: 500; }
+        .day p { grid-column: 3 / 5; color: var(--muted); font-size: 12px; text-align: right; }
+        .day + .order { border-top: 0; }
+
+        .order {
+            align-items: start;
+            padding-top: 16px;
+            padding-bottom: 16px;
+            border-top: 1px solid var(--line-soft);
+            transition: background-color .15s ease;
+        }
+        .order:hover { background: #fbfcfe; }
+        .group + .group .day { border-top: 1px solid var(--border); }
+
+        .thumb {
+            position: relative;
+            width: var(--col-thumb);
+            height: var(--col-thumb);
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--paper);
+        }
+        .thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb svg { position: absolute; inset: 0; width: 22px; height: 22px; margin: auto; color: #94a3b8; }
+        .thumb .more {
+            position: absolute;
+            right: 3px;
+            bottom: 3px;
+            min-width: 22px;
+            padding: 1px 5px;
+            border-radius: 6px;
+            background: rgb(24 44 72 / 82%);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: 12px; line-height: 18px; color: var(--muted); }
+        .status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+        .status::before { width: 7px; height: 7px; border-radius: 50%; background: currentColor; content: ""; }
+        .status.is-turn { color: var(--warning-text); }
+        .status.is-moving { color: var(--accent-hover); }
+        .status.is-waiting { color: var(--muted); }
+        .status.is-done { color: var(--success); }
+        .status.is-stopped { color: var(--danger-text); }
+        .meta .store { color: var(--ink); font-weight: 600; }
+        .meta .store:hover { color: var(--accent-hover); }
+        .meta .ref { font-variant-numeric: tabular-nums; }
+        .meta .ref:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+
+        .headline { margin-top: 4px; font-size: 15px; font-weight: 600; line-height: 22px; letter-spacing: -.01em; }
+        .note { max-width: 62ch; margin-top: 2px; color: var(--muted); font-size: 13px; line-height: 20px; text-wrap: pretty; }
+        .note.is-turn { color: var(--warning-text); }
+        .note a { color: var(--accent); font-weight: 600; }
+        .note a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+        .quiet { display: flex; flex-wrap: wrap; gap: 0 16px; margin-top: 6px; }
+        .quiet a { display: inline-flex; min-height: 32px; align-items: center; color: var(--muted); font-size: 12px; font-weight: 600; transition: color .15s ease; }
+        .quiet a:hover { color: var(--accent-hover); }
+
+        .total { padding-top: 22px; text-align: right; }
+        .total strong { display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+        .total span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+        .total span.is-turn { color: var(--warning-text); font-weight: 600; }
+        .total span.is-done { color: var(--success); font-weight: 600; }
+
+        .action { display: flex; justify-content: flex-end; padding-top: 18px; }
+        .btn {
+            display: inline-flex;
+            width: 100%;
+            min-height: 40px;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 0 14px;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: background-color .15s ease, border-color .15s ease, color .15s ease, transform .1s ease;
+        }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+        .btn-primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+        .btn-outline { border-color: var(--border-strong); background: var(--surface); color: var(--ink); }
+        .btn-outline:hover { border-color: var(--ink); }
+        .no-action { min-height: 1px; }
+
+        .list-foot {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px var(--row-pad-x);
+            border-top: 1px solid var(--border);
+            background: var(--sunken);
+            color: var(--muted);
+            font-size: 13px;
+        }
+        .list-foot .btn { width: var(--col-action); }
+
+        .empty { padding: 56px 24px; text-align: center; }
+        .empty h3 { font-size: 15px; font-weight: 600; }
+        .empty p { margin-top: 4px; color: var(--muted); font-size: 13px; }
+        .empty .btn { width: auto; margin-top: 16px; }
+
+        [hidden] { display: none !important; }
+
+        /* ------------------------------------------------------------------
+           Responsive: below 820px the total and action drop under the
+           details, still aligned to the details column.
+           ------------------------------------------------------------------ */
+        @media (max-width: 1080px) {
+            .shell { grid-template-columns: minmax(0, 1fr); }
+            .sidebar { display: none; }
+        }
+
+        @media (max-width: 820px) {
+            :root { --col-thumb: 48px; --col-gap: 14px; --row-pad-x: 16px; }
+            .page { padding: 24px 16px 88px; }
+            .topbar { padding: 0 16px; }
+            .page-head { flex-direction: column; align-items: stretch; }
+            .search { width: 100%; }
+            .topbar-link { display: none; }
+            .tabs { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+            .list-head { display: none; }
+            .row-grid { grid-template-columns: var(--col-thumb) minmax(0, 1fr); }
+            .day h2 { grid-column: 1 / 3; }
+            .day p { display: none; }
+            .total, .action, .no-action { grid-column: 2; }
+            .total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); text-align: left; }
+            .total span { margin-top: 0; }
+            .action { justify-content: stretch; padding-top: 10px; }
+            .no-action { display: none; }
+            .list-foot { flex-direction: column; align-items: stretch; text-align: center; }
+            .list-foot .btn { width: 100%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar" aria-label="My account">
+        <div class="sidebar-brand"><span>jm</span><span>JMMart</span></div>
+        <nav>
+            <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 4h2l2.5 12h10L21 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>My purchases</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>My reviews</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>Delivery addresses</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z"/></svg>Messages</a>
+        </nav>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">My account <span aria-hidden="true">/</span> <strong>My purchases</strong><a href="#" class="link head-link topbar-link">Continue shopping <span aria-hidden="true">→</span></a></header>
+
+        <main class="page" id="main">
+            <div class="page-head">
+                <div>
+                    <h1>My purchases</h1>
+                    <p class="num">23 orders from 9 stores</p>
+                </div>
+                <label class="search">
+                    <span class="sr-only">Search purchases</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
+                    <input type="search" placeholder="Order #, store, or item" data-search>
+                </label>
+            </div>
+
+            <div class="turn" role="region" aria-label="Waiting on you">
+                <strong>Waiting on you</strong>
+                <a href="#" data-jump="to_pay">1 order to pay</a>
+                <a href="#" data-jump="returns">1 return to answer</a>
+                <a href="#" data-jump="to_receive">1 parcel to confirm</a>
+            </div>
+
+            <div class="toolbar">
+                <div class="tabs" role="group" aria-label="Purchase status filters">
+                    <button type="button" class="tab" data-tab="all" aria-pressed="true">All <span class="count">23</span></button>
+                    <span class="tab-rule" aria-hidden="true"></span>
+                    <button type="button" class="tab" data-tab="to_pay" aria-pressed="false">To pay <span class="count is-turn">1<span class="sr-only"> waiting on you</span></span></button>
+                    <button type="button" class="tab" data-tab="awaiting" aria-pressed="false">Awaiting store <span class="count">1</span></button>
+                    <button type="button" class="tab" data-tab="preparing" aria-pressed="false">Preparing <span class="count">1</span></button>
+                    <button type="button" class="tab" data-tab="to_receive" aria-pressed="false">On the way <span class="count">1</span></button>
+                    <button type="button" class="tab" data-tab="delivered" aria-pressed="false">Delivered <span class="count">17</span></button>
+                    <span class="tab-rule" aria-hidden="true"></span>
+                    <button type="button" class="tab" data-tab="to_review" aria-pressed="false">To review <span class="count">2</span></button>
+                    <button type="button" class="tab" data-tab="returns" aria-pressed="false">Returns <span class="count is-turn">1<span class="sr-only"> waiting on you</span></span></button>
+                </div>
+            </div>
+
+            <section class="list" aria-label="Purchases">
+                <div class="row-grid list-head" aria-hidden="true">
+                    <span></span><span>Order</span><span>Total</span><span>Next step</span>
+                </div>
+
+                <div class="group" data-group>
+                    <div class="row-grid day"><h2>Today <span>Oct 29</span></h2><p class="num">2 orders · ₱1,798.00</p></div>
+
+                    <article class="row-grid order" data-tabs="all to_pay" aria-labelledby="o1">
+                        <div class="thumb"><img src="tote.jpg" alt="" width="56" height="56"></div>
+                        <div>
+                            <div class="meta"><span class="status is-turn">To pay</span><a href="#" class="store">Demo Store</a><a href="#" class="ref">#…Q8W7Y4</a></div>
+                            <h3 class="headline" id="o1">Pay for your Everyday Canvas Tote order</h3>
+                            <p class="note is-turn">Pay ₱499.00 by GCash before Oct 30, 2:14 PM (in 23 hours), then send the reference number. Unpaid orders are cancelled.</p>
+                            <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+                        </div>
+                        <div class="total"><strong>₱499.00</strong><span class="is-turn">GCash · To pay</span></div>
+                        <div class="action"><a href="#" class="btn btn-primary">Pay store</a></div>
+                    </article>
+
+                    <article class="row-grid order" data-tabs="all awaiting" aria-labelledby="o2">
+                        <div class="thumb"><img src="router.png" alt="" width="56" height="56"></div>
+                        <div>
+                            <div class="meta"><span class="status is-waiting">Awaiting store</span><a href="#" class="store">Franil Store</a><a href="#" class="ref">#…N9R2T1</a></div>
+                            <h3 class="headline" id="o2">Waiting for Franil Store to confirm your order</h3>
+                            <p class="note">You can still change your mind. <a href="#">Ask to cancel</a></p>
+                            <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+                        </div>
+                        <div class="total"><strong>₱1,299.00</strong><span>Pay on delivery</span></div>
+                        <div class="no-action" aria-hidden="true"></div>
+                    </article>
+                </div>
+
+                <div class="group" data-group>
+                    <div class="row-grid day"><h2>Yesterday <span>Oct 28</span></h2><p class="num">2 orders · ₱3,840.00</p></div>
+
+                    <article class="row-grid order" data-tabs="all to_receive" aria-labelledby="o3">
+                        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="more">+2</span></div>
+                        <div>
+                            <div class="meta"><span class="status is-moving">On the way</span><a href="#" class="store">Trail &amp; Tide</a><a href="#" class="ref">#…PH9TJN</a></div>
+                            <h3 class="headline" id="o3">Your Microfiber Travel Towel order is on the way</h3>
+                            <p class="note">Confirm with Order received once it arrives (auto-confirmed Nov 11). <a href="#">Not here yet?</a></p>
+                            <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+                        </div>
+                        <div class="total"><strong>₱2,229.00</strong><span>Pay on delivery</span></div>
+                        <div class="action"><button type="button" class="btn btn-primary">Order received</button></div>
+                    </article>
+
+                    <article class="row-grid order" data-tabs="all preparing" aria-labelledby="o4">
+                        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                        <div>
+                            <div class="meta"><span class="status is-moving">Preparing</span><a href="#" class="store">Northwind Goods</a><a href="#" class="ref">#…K5V3N9</a></div>
+                            <h3 class="headline" id="o4">Northwind Goods is preparing your Ceramic Pour-Over Set order</h3>
+                            <p class="note">It will be handed to the courier when ready. <a href="#">Ask to cancel</a></p>
+                            <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+                        </div>
+                        <div class="total"><strong>₱1,611.00</strong><span class="is-done">Maya · Paid</span></div>
+                        <div class="no-action" aria-hidden="true"></div>
+                    </article>
+                </div>
+
+                <div class="group" data-group>
+                    <div class="row-grid day"><h2>Oct 21</h2><p class="num">3 orders · ₱4,276.00</p></div>
+
+                    <article class="row-grid order" data-tabs="all delivered returns" aria-labelledby="o5">
+                        <div class="thumb"><img src="router.png" alt="" width="56" height="56"></div>
+                        <div>
+                            <div class="meta"><span class="status is-turn">Return · your answer</span><a href="#" class="store">Franil Store</a><a href="#" class="ref">#…BN1WPG</a></div>
+                            <h3 class="headline" id="o5">Franil Store answered your return</h3>
+                            <p class="note is-turn">Franil Store offered a replacement. Decide by Oct 31, 5:00 PM on the return page.</p>
+                            <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+                        </div>
+                        <div class="total"><strong>₱1,299.00</strong><span class="is-done">Paid</span></div>
+                        <div class="action"><a href="#" class="btn btn-primary">Answer return</a></div>
+                    </article>
+
+                    <article class="row-grid order" data-tabs="all delivered to_review" aria-labelledby="o6">
+                        <div class="thumb"><img src="tote.jpg" alt="" width="56" height="56"></div>
+                        <div>
+                            <div class="meta"><span class="status is-done">Delivered</span><a href="#" class="store">Demo Store</a><a href="#" class="ref">#…YHW0HJ</a></div>
+                            <h3 class="headline" id="o6">Your Everyday Canvas Tote order arrived</h3>
+                            <p class="note">Returns are open until Oct 28. <a href="#">Request return</a></p>
+                            <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+                        </div>
+                        <div class="total"><strong>₱499.00</strong><span class="is-done">Paid</span></div>
+                        <div class="action"><a href="#" class="btn btn-outline">Write review</a></div>
+                    </article>
+
+                    <article class="row-grid order" data-tabs="all" aria-labelledby="o7">
+                        <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                        <div>
+                            <div class="meta"><span class="status is-stopped">Cancelled</span><a href="#" class="store">Harbor &amp; Co.</a><a href="#" class="ref">#…3108BN</a></div>
+                            <h3 class="headline" id="o7">Harbor &amp; Co. owes you a refund</h3>
+                            <p class="note is-turn">This order was cancelled after you paid. Harbor &amp; Co. owes you ₱2,478.00. Message them first. If it doesn’t arrive, <a href="#">get help from JMMart</a>.</p>
+                            <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+                        </div>
+                        <div class="total"><strong>₱2,478.00</strong><span class="is-turn">Refund due</span></div>
+                        <div class="no-action" aria-hidden="true"></div>
+                    </article>
+                </div>
+
+                <div class="empty" data-empty hidden>
+                    <h3>Nothing here</h3>
+                    <p>Orders in this step will appear here.</p>
+                    <button type="button" class="btn btn-outline" data-reset>View all purchases</button>
+                </div>
+
+                <div class="list-foot" data-foot>
+                    <span class="num">Showing 7 of 23 orders</span>
+                    <button type="button" class="btn btn-outline">Load more</button>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+    (function () {
+        'use strict';
+
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-tab]'));
+        var orders = Array.prototype.slice.call(document.querySelectorAll('[data-tabs]'));
+        var groups = Array.prototype.slice.call(document.querySelectorAll('[data-group]'));
+        var empty = document.querySelector('[data-empty]');
+        var foot = document.querySelector('[data-foot]');
+        var head = document.querySelector('.list-head');
+        var search = document.querySelector('[data-search]');
+        var current = 'all';
+
+        function apply() {
+            var term = search.value.trim().toLowerCase();
+            var shown = 0;
+
+            orders.forEach(function (order) {
+                var inTab = order.dataset.tabs.split(' ').indexOf(current) !== -1;
+                var matches = term === '' || order.textContent.toLowerCase().indexOf(term) !== -1;
+                order.hidden = ! (inTab && matches);
+                if (! order.hidden) { shown++; }
+            });
+            groups.forEach(function (group) {
+                group.hidden = ! group.querySelector('[data-tabs]:not([hidden])');
+            });
+            empty.hidden = shown !== 0;
+            head.hidden = shown === 0;
+            foot.hidden = current !== 'all' || term !== '';
+        }
+
+        function select(key) {
+            current = key;
+            tabs.forEach(function (tab) { tab.setAttribute('aria-pressed', String(tab.dataset.tab === key)); });
+            apply();
+        }
+
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () { select(tab.dataset.tab); });
+        });
+        document.querySelectorAll('[data-jump]').forEach(function (link) {
+            link.addEventListener('click', function (event) { event.preventDefault(); select(link.dataset.jump); });
+        });
+        document.querySelector('[data-reset]').addEventListener('click', function () { search.value = ''; select('all'); });
+        search.addEventListener('input', apply);
+    })();
+</script>
+</body>
+</html>

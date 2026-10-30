@@ -1,0 +1,41 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - link "JMMart" [ref=e4] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000
+      - status [ref=e8]:
+        - paragraph [ref=e10]: Finishing your sign-in
+        - paragraph [ref=e11]: We're securely connecting your account to the marketplace.
+      - link "Back to marketplace" [ref=e12] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000
+  - contentinfo [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - link "JMMart marketplace home" [ref=e16] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000
+          - generic [aria-hidden] [ref=e17]: jm
+          - text: JM
+          - generic [ref=e18]: Mart.
+        - generic [ref=e19]: Good finds. Great local stores.
+      - navigation "Footer" [ref=e20]:
+        - link "Terms" [ref=e21] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/terms
+        - link "Privacy" [ref=e22] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/privacy-policy
+        - link "Cookie Policy" [ref=e23] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/cookie-policy
+        - button "Cookie Preferences" [ref=e24] [cursor=pointer]
+        - generic [ref=e25]: © 2026 JMMart
+  - region [ref=e26]:
+    - heading "Your privacy matters" [level=2] [ref=e32]
+    - paragraph [ref=e33]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=e34] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=e35] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=e36]:
+      - button "Reject Optional" [ref=e37] [cursor=pointer]
+      - button "Customize" [ref=e38] [cursor=pointer]
+      - button "Accept All" [ref=e39] [cursor=pointer]

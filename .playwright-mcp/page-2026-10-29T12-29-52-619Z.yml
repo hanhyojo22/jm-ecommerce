@@ -1,0 +1,158 @@
+- generic [active] [ref=f26e1]:
+  - link "Skip to content" [ref=f26e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f26e4]:
+    - complementary "Seller Center sidebar" [ref=f26e5]:
+      - link "JMMart Seller Center overview" [ref=f26e7] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/seller
+        - generic [ref=f26e8]:
+          - generic [ref=f26e9]: JMMart
+          - generic [ref=f26e10]: Seller Center
+      - generic [ref=f26e11]:
+        - generic [aria-hidden] [ref=f26e12]: "N"
+        - generic [ref=f26e13]:
+          - paragraph [ref=f26e14]: New Store
+          - paragraph [ref=f26e15]: Active store
+      - navigation "Seller workspace navigation" [ref=f26e17]:
+        - link "Overview" [ref=f26e19] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/seller
+        - generic [ref=f26e23]:
+          - paragraph [ref=f26e24]: Manage
+          - link "Orders" [ref=f26e25] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/seller/orders
+          - link "Returns" [ref=f26e31] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/seller/returns
+          - link "Products" [ref=f26e36] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/seller/products
+        - generic [ref=f26e41]:
+          - paragraph [ref=f26e42]: Engage
+          - link "Messages" [ref=f26e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages?context=selling
+          - link "Reviews" [ref=f26e47] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/seller/reviews
+        - generic [ref=f26e51]:
+          - paragraph [ref=f26e52]: Business
+          - link "Earnings" [ref=f26e53] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/seller/earnings
+          - link "Platform fees" [ref=f26e58] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/seller/platform-fees
+          - link "Storefront" [ref=f26e63] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/stores/new-store-soa8
+          - link "Store settings" [ref=f26e67] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/seller/store-settings
+      - generic [ref=f26e72]:
+        - link "Account" [ref=f26e73] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/profile
+        - button "Sign out" [ref=f26e78] [cursor=pointer]
+    - main [ref=f26e83]:
+      - generic [ref=f26e85]:
+        - generic [ref=f26e86]:
+          - button "Toggle Seller Center sidebar" [ref=f26e87] [cursor=pointer]
+          - generic [ref=f26e90]:
+            - generic [ref=f26e91]: Seller Center
+            - generic [aria-hidden] [ref=f26e92]: /
+            - strong [ref=f26e93]: Store settings
+        - generic [ref=f26e95]:
+          - textbox "Search your products by name or SKU" [ref=f26e99]:
+            - /placeholder: Search your products
+          - button "Search" [ref=f26e100] [cursor=pointer]
+        - generic [ref=f26e101]:
+          - link "Messages" [ref=f26e102] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages?context=selling
+          - 'link "Cart: 0 items" [ref=f26e105] [cursor=pointer]':
+            - /url: http://127.0.0.1:8000/cart
+          - button "Account menu" [ref=f26e112] [cursor=pointer]:
+            - generic [ref=f26e116]: Hi, Ms.
+      - heading "Store settings" [level=1] [ref=f26e120]
+      - generic [ref=f26e122]:
+        - generic [ref=f26e123]:
+          - status [ref=f26e124]:
+            - generic [aria-hidden] [ref=f26e125]: ✓
+            - generic [ref=f26e126]: All changes saved
+          - generic [ref=f26e127]:
+            - generic [ref=f26e128]:
+              - region [ref=f26e129]:
+                - generic [ref=f26e134]:
+                  - heading "Store identity" [level=2] [ref=f26e135]
+                  - paragraph [ref=f26e136]: Choose a recognizable logo and describe what your store offers.
+                - generic [ref=f26e137]:
+                  - generic [ref=f26e138]:
+                    - paragraph [ref=f26e139]: Store logo
+                    - paragraph [ref=f26e140]: Square JPEG, PNG, or WebP. Maximum 2 MB.
+                    - generic [ref=f26e141]:
+                      - generic [aria-hidden] [ref=f26e143]: "N"
+                      - generic [ref=f26e144]:
+                        - paragraph [ref=f26e145]: No logo uploaded yet
+                        - button "Change logo" [ref=f26e146]
+                        - generic [ref=f26e147]: Change logo
+                  - generic [ref=f26e149]:
+                    - generic [ref=f26e150]: Store description
+                    - paragraph [ref=f26e151]: Tell shoppers what you sell and what makes your store distinct.
+                    - textbox "Store description" [ref=f26e152]
+                    - paragraph [ref=f26e154]: 0 / 2,000 characters
+              - region [ref=f26e155]:
+                - generic [ref=f26e161]:
+                  - heading "Contact & location" [level=2] [ref=f26e162]
+                  - paragraph [ref=f26e163]: Keep your saved contact and address details current.
+                - generic [ref=f26e164]:
+                  - generic [ref=f26e165]:
+                    - generic [ref=f26e166]: Phone (required)
+                    - textbox "Phone (required)" [ref=f26e167]: "+639171234567"
+                  - generic [ref=f26e168]:
+                    - generic [ref=f26e169]: City (required)
+                    - textbox "City (required)" [ref=f26e170]: Manila
+                  - generic [ref=f26e171]:
+                    - generic [ref=f26e172]: Street address (required)
+                    - textbox "Street address (required)" [ref=f26e173]: 10 Market Street
+              - generic [ref=f26e174]:
+                - link "Cancel" [ref=f26e175] [cursor=pointer]:
+                  - /url: http://127.0.0.1:8000/seller
+                - button "Save store settings" [ref=f26e176] [cursor=pointer]:
+                  - generic [ref=f26e177]: Save changes
+            - region [ref=f26e179]:
+              - generic [ref=f26e180]:
+                - heading "Store details" [level=2] [ref=f26e181]
+                - generic [ref=f26e186]: Active
+              - generic [ref=f26e189]:
+                - generic [aria-hidden] [ref=f26e190]: "N"
+                - generic [ref=f26e191]:
+                  - paragraph [ref=f26e192]: New Store
+                  - paragraph [ref=f26e193]: /stores/new-store-soa8
+                  - link "Visit storefront" [ref=f26e194] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/new-store-soa8
+              - generic [ref=f26e198]:
+                - generic [ref=f26e199]:
+                  - term [ref=f26e200]: Description
+                  - definition [ref=f26e203]: Not added yet
+                - generic [ref=f26e204]:
+                  - term [ref=f26e205]: Phone
+                  - definition [ref=f26e208]: "+639171234567"
+                - generic [ref=f26e209]:
+                  - term [ref=f26e210]: City
+                  - definition [ref=f26e214]: Manila
+                - generic [ref=f26e215]:
+                  - term [ref=f26e216]: Address
+                  - definition [ref=f26e219]: 10 Market Street
+              - paragraph [ref=f26e220]: Your logo, name, URL, description, and city appear publicly. Phone and street address stay in your saved store details.
+        - region [ref=f26e221]:
+          - generic [ref=f26e222]:
+            - generic [ref=f26e229]:
+              - heading "Get paid online" [level=2] [ref=f26e230]
+              - paragraph [ref=f26e231]: Connect PayMongo so buyers can pay online. Until then, your store takes cash on delivery only.
+            - generic [ref=f26e232]: Not set up
+          - generic [ref=f26e233]:
+            - button "Connect PayMongo" [ref=f26e235] [cursor=pointer]
+            - paragraph [ref=f26e236]: JMMart keeps its 1% platform fee from each online payment, so online orders never appear on your monthly fee statement. Buyers pay PayMongo’s processing fee. Never share your MPIN or OTP; JMMart will never ask for them.
+  - region [ref=f26e237]:
+    - heading "Your privacy matters" [level=2] [ref=f26e243]
+    - paragraph [ref=f26e244]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f26e245] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f26e246] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=f26e247]:
+      - button "Reject Optional" [ref=f26e248] [cursor=pointer]
+      - button "Customize" [ref=f26e249] [cursor=pointer]
+      - button "Accept All" [ref=f26e250] [cursor=pointer]

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+                                                <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq">
+        <link rel="icon" type="image/svg+xml" href="http://127.0.0.1:8000/favicon.svg">
+        <meta name="clerk-publishable-key" content="pk_test_cHJvbW90ZWQta29hbGEtMTM2My5jbGVyay5hY2NvdW50cy5kZXYk">
+        <meta name="clerk-sign-in-url" content="/sign-in">
+        <meta name="clerk-sign-up-url" content="/sign-up">
+                    
+            <meta name="clerk-session-refresh-endpoint" content="http://127.0.0.1:8000/auth/session">
+                <meta name="reverb-app-key" content="jmmart-test-key">
+        <meta name="reverb-host" content="127.0.0.1">
+        <meta name="reverb-port" content="8080">
+        <meta name="reverb-scheme" content="http">
+
+        <title>JMMart</title>
+
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+        <!-- Scripts -->
+        <link rel="preload" as="style" href="http://127.0.0.1:8000/build/assets/app-CmbHwg4E.css" /><link rel="modulepreload" as="script" href="http://127.0.0.1:8000/build/assets/app-dAUSb3S4.js" /><link rel="stylesheet" href="http://127.0.0.1:8000/build/assets/app-CmbHwg4E.css" data-navigate-track="reload" /><script type="module" src="http://127.0.0.1:8000/build/assets/app-dAUSb3S4.js" data-navigate-track="reload"></script>        
+                    <link rel="preload" as="style" href="http://127.0.0.1:8000/build/assets/seller-center-pei_LGQy.css" /><link rel="stylesheet" href="http://127.0.0.1:8000/build/assets/seller-center-pei_LGQy.css" data-navigate-track="reload" />                    </head>
+    <body class="bg-canvas font-sans antialiased text-ink">
+        <a href="#main-content" class="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-ink px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Skip to content</a>
+        <div class="min-h-screen bg-canvas">
+            
+            <!-- Page Content -->
+                            <div data-workspace="seller" x-data="{ sellerSidebarOpen: true }" @seller-sidebar-toggle.window="sellerSidebarOpen = !sellerSidebarOpen" :class="{ 'seller-sidebar-collapsed': !sellerSidebarOpen }" class="seller-workspace min-h-screen bg-canvas lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
+                    <aside data-workspace-header="seller" class="sticky top-0 hidden h-screen self-start flex-col overflow-y-auto border-r workspace-sidebar px-2 py-3 lg:flex" aria-label="Seller Center sidebar">
+    <div class="px-3 pb-5 pt-3">
+        <a href="http://127.0.0.1:8000/seller" class="workspace-sidebar-brand" aria-label="JMMart Seller Center overview">
+            <img src="http://127.0.0.1:8000/favicon.svg" alt="" class="size-8 rounded-lg" width="32" height="32">
+            <span>
+                <span class="workspace-sidebar-brand-name">JMMart</span>
+                <span class="workspace-sidebar-brand-meta">Seller Center</span>
+            </span>
+        </a>
+    </div>
+
+        <div class="mx-2 mb-2 workspace-sidebar-card">
+        <span class="workspace-sidebar-avatar" aria-hidden="true">
+                            D
+                    </span>
+        <div class="min-w-0">
+            <p class="truncate text-sm font-semibold text-ink">Demo Store</p>
+            <p class="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                <span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>
+                Active store
+            </p>
+        </div>
+    </div>
+
+    <nav class="flex-1 space-y-5 px-1 py-4" aria-label="Seller workspace navigation">
+            <div class="space-y-1">
+                                        <a href="http://127.0.0.1:8000/seller"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />                    </svg>
+                    <span class="min-w-0 truncate">Overview</span>
+                </a>
+                    </div>
+            <div class="space-y-1">
+                            <p class="workspace-nav-label">Manage</p>
+                                        <a href="http://127.0.0.1:8000/seller/orders"  data-seller-shortcut="orders" aria-keyshortcuts="O"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />                    </svg>
+                    <span class="min-w-0 truncate">Orders</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/returns"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" />                    </svg>
+                    <span class="min-w-0 truncate">Returns</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/products"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />                    </svg>
+                    <span class="min-w-0 truncate">Products</span>
+                </a>
+                    </div>
+            <div class="space-y-1">
+                            <p class="workspace-nav-label">Engage</p>
+                                        <a href="http://127.0.0.1:8000/messages?context=selling"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z" />                    </svg>
+                    <span class="min-w-0 truncate">Messages</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/reviews"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />                    </svg>
+                    <span class="min-w-0 truncate">Reviews</span>
+                </a>
+                    </div>
+            <div class="space-y-1">
+                            <p class="workspace-nav-label">Business</p>
+                                        <a href="http://127.0.0.1:8000/seller/earnings"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h3" />                    </svg>
+                    <span class="min-w-0 truncate">Earnings</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/platform-fees"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6M9 16h3" />                    </svg>
+                    <span class="min-w-0 truncate">Platform fees</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/stores/demo-store-v6hk"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />                    </svg>
+                    <span class="min-w-0 truncate">Storefront</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/store-settings"  class="workspace-nav-link" aria-current=page>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />                    </svg>
+                    <span class="min-w-0 truncate">Store settings</span>
+                </a>
+                    </div>
+    </nav>
+
+    <div class="mt-auto space-y-1 border-t border-line px-1 pt-3">
+        <a href="http://127.0.0.1:8000/profile" class="workspace-nav-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M5 21a7 7 0 0 1 14 0" /></svg>
+            <span>Account</span>
+        </a>
+        <button type="button" data-clerk-sign-out class="workspace-nav-link w-full text-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-6" /></svg>
+            <span>Sign out</span>
+        </button>
+    </div>
+</aside>
+                    <main id="main-content" tabindex="-1" class="workspace-main min-w-0">
+                        <header
+        data-header-design="bold-modular"
+        data-header-role="seller"
+        x-data="{
+            accountOpen: false,
+            accountButton: null,
+            drawerOpen: false,
+            menuButton: null,
+            closeDrawer() { this.drawerOpen = false; this.$nextTick(() => this.menuButton?.focus()) },
+            toggleAccount(event) { this.accountButton = event.currentTarget; this.accountOpen = !this.accountOpen },
+            closeAccount() { this.accountOpen = false; this.$nextTick(() => this.accountButton?.focus()) },
+            toggleDrawer(event) { this.menuButton = event.currentTarget; this.drawerOpen = !this.drawerOpen; if (this.drawerOpen) this.$nextTick(() => this.$refs.drawer.querySelector('[data-drawer-focus]')?.focus()) },
+            trap(event) { const items = [...this.$refs.drawer.querySelectorAll('a,button,input')].filter((item) => !item.disabled && item.offsetParent); const first = items[0], last = items.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() } },
+        }"
+        x-init="$watch('drawerOpen', (open) => document.body.classList.toggle('overflow-hidden', open))"
+        @keydown.escape.window="if (drawerOpen) closeDrawer(); if (accountOpen) closeAccount()"
+        class="sticky top-0 z-40 border-b border-line bg-white"
+    >
+        <div class="marketplace-container flex flex-wrap items-center gap-x-5 gap-y-3 py-3.5">
+            <div class="order-1 flex min-w-0 items-center gap-2.5 min-[641px]:order-none">
+                <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="lg:hidden grid size-11 shrink-0 place-items-center rounded-[10px] text-muted transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Open navigation menu">
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
+                </button>
+                                    <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-lg border border-line text-ink shadow-sm transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle Seller Center sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
+                    <a href="http://127.0.0.1:8000/seller" class="inline-flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
+                        <img src="http://127.0.0.1:8000/favicon.svg" alt="" class="size-8 shrink-0 rounded-lg" width="32" height="32">
+                        <span class="text-sm font-semibold text-ink sm:text-base">Seller Center</span>
+                    </a>
+                    <div class="hidden min-w-0 items-center gap-2 text-sm lg:flex">
+                        <span class="font-medium text-muted">Seller Center</span>
+                        <span class="text-slate-300" aria-hidden="true">/</span>
+                        <strong class="truncate font-semibold text-ink">Store settings</strong>
+                    </div>
+                            </div>
+
+            <form method="GET" action="http://127.0.0.1:8000/seller/products" x-data="{ query: &#039;&#039;, loading: false }" @submit="loading = true"  class="relative order-3 min-w-0 basis-full min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1">
+                <label for="marketplace-search" class="flex h-11 items-center gap-2 rounded-[10px] border border-line bg-canvas pl-3.5 pr-1.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
+                    <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+<input id="marketplace-search" name="search" aria-label="Search your products by name or SKU"  data-seller-shortcut="search" aria-keyshortcuts="S"  x-model="query" value="" autocomplete="off" placeholder="Search your products" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink placeholder:text-muted focus:ring-0">
+                    <button x-cloak x-show="query.length" type="button" @click="query = &#039;&#039;; $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+                    <button type="submit" class="h-9 rounded-[8px] bg-brand px-4 py-0 text-sm font-semibold text-white transition hover:bg-brand-hover">Search</button>
+                    <span x-cloak x-show="loading" class="text-xs font-semibold text-brand">Searching…</span>
+                </label>
+                            </form>
+
+            <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-2 min-[641px]:order-none min-[641px]:ml-0">
+                                    <a href="http://127.0.0.1:8000/messages?context=selling" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages">
+                        <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
+                                            </a>
+                
+                                    <a href="http://127.0.0.1:8000/cart" data-cart-link class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Cart: 0 items">
+                        <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
+                        
+                        
+                        <span data-cart-badge aria-hidden="true" class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[5px] text-xs font-semibold leading-none tabular-nums text-white"  style="display: none" >0</span>
+                    </a>
+                
+                                    <div class="relative" @click.outside="accountOpen = false">
+                        <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" class="flex min-h-11 max-w-48 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand">
+                            <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
+                            <span class="hidden lg:inline">Hi, Ramiro</span>
+                        </button>
+                        <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-[16px] border border-line bg-white p-2 shadow-[0_16px_36px_rgba(15,23,42,.14)]">
+                            <div class="flex min-w-0 items-center gap-3 px-2 py-3">
+                                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-semibold text-brand" aria-hidden="true">R</span>
+                                <div class="min-w-0"><p class="truncate text-sm font-semibold text-ink">Ramiro Larson</p><p class="truncate text-xs text-muted">nicklaus15@example.com</p></div>
+                            </div>
+                            <nav aria-label="Account links" class="border-t border-line py-1">
+                                                                                                    <a href="http://127.0.0.1:8000/messages?context=selling" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
+                                                                <a href="http://127.0.0.1:8000/profile" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My account</a>
+                                                                                            </nav>
+                                                            <div class="border-t border-line py-2">
+                                    <form method="POST" action="http://127.0.0.1:8000/profile/workspace" data-workspace-switch>
+                                        <input type="hidden" name="_token" value="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq" autocomplete="off">                                        <input type="hidden" name="workspace" value="customer">
+                                        <button type="submit" class="flex min-h-14 w-full items-center gap-3 rounded-xl bg-blue-50 px-3 text-left transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            <svg class="size-5 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h15m0 0-4-4m4 4-4 4M20 17H5m0 0 4-4m-4 4 4 4"/></svg>
+                                            <span class="min-w-0 flex-1"><span class="block text-sm font-semibold text-brand">Switch Account</span><span class="block text-xs text-muted">Go to shopping</span></span>
+                                            <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                                        </button>
+                                    </form>
+                                </div>
+                                                        <div class="border-t border-line pt-1"><button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800">Sign out</button></div>
+                        </div>
+                    </div>
+                            </div>
+        </div>
+
+        
+        <div x-cloak x-show="drawerOpen" x-transition.opacity class="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
+            <button type="button" @click="closeDrawer" class="h-full w-full" tabindex="-1" aria-label="Close navigation menu"></button>
+        </div>
+        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden workspace-sidebar" role="dialog" aria-modal="true" aria-label="Seller Center navigation">
+            <div class="flex h-[56px] items-center justify-between border-b border-line px-5">
+                <a href="http://127.0.0.1:8000/seller" data-drawer-focus @click="closeDrawer" class="workspace-sidebar-brand">
+                    <img src="http://127.0.0.1:8000/favicon.svg" alt="" class="size-8 rounded-lg" width="32" height="32">                    <span class="workspace-sidebar-brand-name">Seller Center</span>
+                </a>
+                <button type="button" @click="closeDrawer" class="workspace-drawer-close grid size-11 place-items-center rounded-[10px] text-muted transition hover:bg-canvas hover:text-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+            </div>
+
+            
+                            <div class="mx-4 mt-4 flex items-center gap-3 workspace-sidebar-card">
+                    <span class="workspace-sidebar-avatar" aria-hidden="true">
+                                                    D
+                                            </span>
+                    <div class="min-w-0">
+                        <p class="text-xs text-muted">Your store</p>
+                        <p class="mt-0.5 truncate text-sm font-semibold text-ink">Demo Store</p>
+                    </div>
+                </div>
+                <nav class="flex-1 space-y-5 overflow-y-auto p-4" aria-label="Seller workspace navigation">
+            <div class="space-y-1">
+                                        <a href="http://127.0.0.1:8000/seller"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />                    </svg>
+                    <span class="min-w-0 truncate">Overview</span>
+                </a>
+                    </div>
+            <div class="space-y-1">
+                            <p class="workspace-nav-label">Manage</p>
+                                        <a href="http://127.0.0.1:8000/seller/orders"  data-seller-shortcut="orders" aria-keyshortcuts="O"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />                    </svg>
+                    <span class="min-w-0 truncate">Orders</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/returns"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" />                    </svg>
+                    <span class="min-w-0 truncate">Returns</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/products"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />                    </svg>
+                    <span class="min-w-0 truncate">Products</span>
+                </a>
+                    </div>
+            <div class="space-y-1">
+                            <p class="workspace-nav-label">Engage</p>
+                                        <a href="http://127.0.0.1:8000/messages?context=selling"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z" />                    </svg>
+                    <span class="min-w-0 truncate">Messages</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/reviews"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />                    </svg>
+                    <span class="min-w-0 truncate">Reviews</span>
+                </a>
+                    </div>
+            <div class="space-y-1">
+                            <p class="workspace-nav-label">Business</p>
+                                        <a href="http://127.0.0.1:8000/seller/earnings"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 10h18M7 15h3" />                    </svg>
+                    <span class="min-w-0 truncate">Earnings</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/platform-fees"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6M9 16h3" />                    </svg>
+                    <span class="min-w-0 truncate">Platform fees</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/stores/demo-store-v6hk"  class="workspace-nav-link" >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />                    </svg>
+                    <span class="min-w-0 truncate">Storefront</span>
+                </a>
+                            <a href="http://127.0.0.1:8000/seller/store-settings"  class="workspace-nav-link" aria-current=page>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />                    </svg>
+                    <span class="min-w-0 truncate">Store settings</span>
+                </a>
+                    </div>
+    </nav>
+                <div class="space-y-1 border-t border-line p-4">
+                                            <a href="http://127.0.0.1:8000/stores/demo-store-v6hk" @click="closeDrawer" class="workspace-nav-link">View storefront</a>
+                                        <a href="http://127.0.0.1:8000/profile" @click="closeDrawer" class="workspace-nav-link">Account</a>
+                    <button type="button" data-clerk-sign-out @click="closeDrawer" class="workspace-nav-link w-full text-left">Sign out</button>
+                </div>
+                    </aside>
+    </header>
+                                                    <header class="px-4 pb-2 pt-6 sm:px-6 lg:px-7 lg:pt-8">
+                                <div class="sc-page-head">
+            <div>
+                <h1 class="sc-title">Store settings</h1>            </div>
+        </div>
+                            </header>
+                                                <div class="page-shell">
+        <div class="page-container seller-workspace-page">
+            
+            <form method="POST" action="http://127.0.0.1:8000/seller/store-settings" enctype="multipart/form-data" class="min-w-0"
+                x-data="{ dirty: false, saving: false, logoPreview: null, logoName: '', removeLogo: false, description: '', phone: '+639171234567', city: 'Manila', addressLine: '10 Market Street', descriptionLength: 0 }"
+                x-init="window.addEventListener('beforeunload', event => { if (dirty && !saving) { event.preventDefault(); event.returnValue = ''; } })"
+                @input="dirty = true" @change="dirty = true"
+                @submit="if (saving) { $event.preventDefault(); } else { saving = true; dirty = false; }">
+                <input type="hidden" name="_token" value="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq" autocomplete="off">                <input type="hidden" name="_method" value="PATCH">                                                                <p class="mb-3 flex items-center gap-2 text-sm font-medium" :class="dirty ? 'text-warning-text' : 'text-muted'" role="status" aria-live="polite">
+                    <span class="grid size-4 shrink-0 place-items-center rounded-full text-xs font-semibold text-white" :class="dirty ? 'bg-amber-600' : 'bg-emerald-600'" x-text="saving ? '…' : dirty ? '!' : '✓'" aria-hidden="true">✓</span>
+                    <span x-text="saving ? 'Saving store settings…' : dirty ? 'Unsaved changes' : 'All changes saved'">All changes saved</span>
+                </p>
+                <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                <div class="min-w-0 space-y-5">
+                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="store-profile-heading">
+                    <div class="flex items-start gap-3">
+                        <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9.5 5 4h14l2 5.5M4 10h16v10H4zM9 20v-6h6v6M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>
+                        </span>
+                        <div>
+                            <h2 id="store-profile-heading" class="text-lg font-semibold text-ink">Store identity</h2>
+                            <p class="mt-0.5 text-sm text-muted">Choose a recognizable logo and describe what your store offers.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 min-w-0 max-w-3xl space-y-5">
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold text-ink">Store logo</p>
+                            <p id="logo-help" class="mt-1 text-sm text-muted">Square JPEG, PNG, or WebP. Maximum 2 MB.</p>
+                            <div class="mt-3 flex min-w-0 flex-wrap items-center gap-4">
+                                <div class="grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-line bg-white">
+                                                                            <span class="text-3xl font-semibold text-muted" aria-hidden="true" x-show="!logoPreview">D</span>
+                                                                        <img x-cloak x-show="logoPreview" :src="logoPreview" alt="Selected store logo preview" class="size-full object-cover">
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-semibold text-ink" x-text="logoPreview ? 'New logo preview' : removeLogo ? 'Logo will be removed' : 'No logo uploaded yet'">No logo uploaded yet</p>
+                                    <input id="logo" x-ref="logoInput" name="logo" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="logo-help "                                         @change="if (logoPreview) URL.revokeObjectURL(logoPreview); logoPreview = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null; logoName = $event.target.files[0]?.name || ''; if (logoPreview) removeLogo = false"
+                                        class="peer sr-only">
+                                    <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                                        <label for="logo" class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-brand/50 bg-white px-4 text-sm font-semibold text-brand transition hover:bg-blue-50 peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ">Change logo</label>
+                                                                            </div>
+                                    <p x-cloak x-show="logoName" x-text="logoName" class="mt-2 truncate text-xs text-muted"></p>
+                                </div>
+                            </div>
+                                                                                </div>
+
+                        <div class="min-w-0 border-t border-line pt-5">
+                            <label for="description" class="block text-sm font-semibold text-ink">Store description</label>
+                            <p id="description-help" class="mt-1 text-sm text-muted">Tell shoppers what you sell and what makes your store distinct.</p>
+                            <textarea id="description" name="description" x-model="description" rows="3" maxlength="2000" aria-describedby="description-help description-count "  @input="descriptionLength = Array.from($event.target.value).length" class="field-control mt-2 resize-y text-base lg:text-sm "></textarea>
+                            <div class="mt-2 flex justify-end">
+                                <p id="description-count" class="text-xs text-muted"><span x-text="descriptionLength">0</span> / 2,000 characters</p>
+                            </div>
+                                                    </div>
+                    </div>
+                </section>
+
+                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="contact-details-heading">
+                    <div class="flex items-start gap-3">
+                        <span class="grid size-10 shrink-0 place-items-center rounded bg-slate-100 text-slate-700" aria-hidden="true">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-5.5 7-12a7 7 0 0 0-14 0c0 6.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                        </span>
+                        <div>
+                            <h2 id="contact-details-heading" class="text-lg font-semibold text-ink">Contact &amp; location</h2>
+                            <p class="mt-0.5 text-sm text-muted">Keep your saved contact and address details current.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-2">
+                        <div class="min-w-0">
+                            <label for="phone" class="block text-sm font-semibold text-ink">Phone <span class="font-normal text-muted">(required)</span></label>
+                            <input id="phone" name="phone" x-model="phone" type="tel" autocomplete="tel" maxlength="30" required  value="+639171234567" class="field-control mt-2 text-base lg:text-sm ">
+                                                    </div>
+                        <div class="min-w-0">
+                            <label for="city" class="block text-sm font-semibold text-ink">City <span class="font-normal text-muted">(required)</span></label>
+                            <input id="city" name="city" x-model="city" autocomplete="address-level2" maxlength="100" required  value="Manila" class="field-control mt-2 text-base lg:text-sm ">
+                                                    </div>
+                        <div class="min-w-0 max-w-3xl sm:col-span-2">
+                            <label for="address_line" class="block text-sm font-semibold text-ink">Street address <span class="font-normal text-muted">(required)</span></label>
+                            <input id="address_line" name="address_line" x-model="addressLine" autocomplete="street-address" maxlength="255" required  value="10 Market Street" class="field-control mt-2 text-base lg:text-sm ">
+                                                    </div>
+                    </div>
+                </section>
+
+                <div class="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-[#f5f7fa]/95 px-1 py-3 backdrop-blur">
+                    <p class="mr-auto text-sm text-muted" x-show="dirty" x-cloak>You have unsaved changes.</p>
+                    <a href="http://127.0.0.1:8000/seller" class="seller-outline-button min-h-11">Cancel</a>
+                    <button type="submit" :disabled="saving || !dirty" :aria-busy="saving" aria-label="Save store settings" class="seller-primary-button min-h-11 disabled:cursor-not-allowed disabled:opacity-60">
+                        <span x-show="!saving">Save changes</span>
+                        <span x-cloak x-show="saving">Saving…</span>
+                    </button>
+                </div>
+                </div>
+                <div class="min-w-0">
+                    <section class="seller-form-card min-w-0 overflow-hidden" aria-labelledby="store-preview-heading">
+                        <div class="flex items-center justify-between gap-2 px-3 py-3">
+                            <h2 id="store-preview-heading" class="flex min-w-0 items-center gap-1.5 text-base font-semibold leading-5 text-ink">
+                                <span class="grid size-6 shrink-0 place-items-center rounded bg-slate-100 text-slate-600" aria-hidden="true"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                                Store details
+                            </h2>
+                            <span class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold bg-emerald-50 text-emerald-800">
+                                <span class="size-1.5 rounded-full bg-emerald-600" aria-hidden="true"></span>Active
+                            </span>
+                        </div>
+                        <div class="relative overflow-hidden bg-ink px-5 py-6 text-white">
+                            <div class="relative flex min-w-0 items-center gap-4">
+                                                                    <div x-show="!logoPreview" class="grid size-16 shrink-0 place-items-center rounded-xl bg-white text-2xl font-semibold text-brand" aria-hidden="true">D</div>
+                                                                <img x-cloak x-show="logoPreview" :src="logoPreview" alt="Selected storefront logo preview" class="size-16 shrink-0 rounded-xl border-2 border-white/60 bg-white object-cover">
+                                <div class="min-w-0">
+                                    <p class="truncate text-xl font-semibold">Demo Store</p>
+                                    <p class="mt-0.5 truncate text-xs text-slate-200">/stores/demo-store-v6hk</p>
+                                    <a href="http://127.0.0.1:8000/stores/demo-store-v6hk" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-white px-3 text-sm font-semibold text-ink transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-ink">
+                                        Visit storefront
+                                        <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <dl class="divide-y divide-line px-4 py-2 text-sm sm:px-5">
+                            <div class="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3 py-3"><dt class="flex items-center gap-2 text-muted"><svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM15 3v5h4M9 12h7M9 16h7"/></svg>Description</dt><dd class="min-w-0 break-words font-medium text-ink" x-text="description.trim() || 'Not added yet'">Not added yet</dd></div>
+                            <div class="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3 py-3"><dt class="flex items-center gap-2 text-muted"><svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 3h4l2 5-2.5 2.5a17 17 0 0 0 5 5L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2Z"/></svg>Phone</dt><dd class="min-w-0 break-words font-medium text-ink" x-text="phone.trim() || '—'">+639171234567</dd></div>
+                            <div class="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3 py-3"><dt class="flex items-center gap-2 text-muted"><svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s7-5.5 7-12a7 7 0 0 0-14 0c0 6.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>City</dt><dd class="min-w-0 break-words font-medium text-ink" x-text="city.trim() || '—'">Manila</dd></div>
+                            <div class="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3 py-3"><dt class="flex items-center gap-2 text-muted"><svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7"/></svg>Address</dt><dd class="min-w-0 break-words font-medium text-ink" x-text="addressLine.trim() || '—'">10 Market Street</dd></div>
+                        </dl>
+                        <p x-cloak x-show="dirty" class="border-t border-line bg-blue-50/60 px-4 py-3 text-xs font-medium text-brand">Previewing unsaved changes. Save to update your store.</p>
+                        <p class="border-t border-line px-4 py-3 text-xs leading-5 text-muted">Your logo, name, URL, description, and city appear publicly. Phone and street address stay in your saved store details.</p>
+                    </section>
+                </div>
+                </div>
+            </form>
+
+            <section id="payment-methods" class="seller-form-card mt-5 min-w-0 scroll-mt-24 overflow-hidden" aria-labelledby="payment-methods-heading">
+    <div class="flex flex-wrap items-start justify-between gap-4 border-b border-line bg-gradient-to-br from-white to-slate-50/80 p-5 sm:p-6">
+        <div class="flex min-w-0 items-start gap-3">
+            <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-ink text-white shadow-sm" aria-hidden="true">
+                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M16 15h2"/><path d="M6 6V5a2 2 0 0 1 2-2h8"/></svg>
+            </span>
+            <div class="min-w-0">
+                <h2 id="payment-methods-heading" class="text-lg font-semibold tracking-[-0.01em] text-ink">Get paid online</h2>
+                <p class="mt-0.5 max-w-2xl text-sm leading-6 text-muted">Buyers can pay your store with GCash, Maya, or card. Your share of each payment goes to your PayMongo account automatically.</p>
+            </div>
+        </div>
+        <span class="sc-badge" data-tone="success">Online payments on</span>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3 p-5 sm:px-6">
+                        <p class="w-full text-xs leading-5 text-muted">JMMart keeps its 1% platform fee from each online payment, so online orders never appear on your monthly fee statement. Buyers pay PayMongo’s processing fee. Never share your MPIN or OTP; JMMart will never ask for them.</p>
+    </div>
+</section>
+        </div>
+    </div>
+                    </main>
+                </div>
+                                </div>
+        <div data-cookie-consent data-functional="false" data-save-url="http://127.0.0.1:8000/cookie-preferences" data-csrf="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq">
+            <section data-cookie-banner aria-labelledby="cookie-banner-title" class="fixed inset-x-3 z-[90] mx-auto max-h-[calc(100dvh-6rem)] max-w-[480px] overflow-y-auto rounded-xl border border-line bg-white p-3 shadow-lg bottom-3">
+            <div class="flex items-center gap-2">
+                <span class="grid size-7 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand-hover" aria-hidden="true">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a3 3 0 0 0 3 3 3 3 0 0 0 3 3 3 3 0 0 0 3 3M8 11h.01M12 16h.01M16 13h.01M10 7h.01" stroke-linecap="round"/></svg>
+                </span>
+                <h2 id="cookie-banner-title" class="text-base font-semibold text-ink">Your privacy matters</h2>
+            </div>
+            <p class="mt-1 text-sm leading-5 text-muted">Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences. <a href="http://127.0.0.1:8000/cookie-policy" class="font-semibold text-brand underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Policy</a> · <a href="http://127.0.0.1:8000/privacy-policy" class="font-semibold text-brand underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Privacy Policy</a></p>
+            <div class="mt-2 grid grid-cols-3 gap-2">
+                <button type="button" data-cookie-action="reject" class="relative min-h-9 rounded-md border border-line px-1 py-1 text-xs font-semibold leading-4 text-ink before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reject Optional</button>
+                <button type="button" data-cookie-action="customize" class="relative min-h-9 rounded-md border border-line px-1 py-1 text-xs font-semibold leading-4 text-ink before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Customize</button>
+                <button type="button" data-cookie-action="accept" class="relative min-h-9 rounded-md bg-brand px-1 py-1 text-xs font-semibold leading-4 text-white before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">Accept All</button>
+            </div>
+            <p data-cookie-error role="alert" class="mt-2 hidden text-sm text-red-700"></p>
+        </section>
+    
+    <dialog data-cookie-dialog aria-labelledby="cookie-dialog-title" class="w-[calc(100%-2rem)] max-w-md max-h-[85dvh] overflow-y-auto rounded-xl border border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-slate-950/50">
+        <div class="border-b border-line px-4 py-3">
+            <div class="flex items-center justify-between gap-3">
+                <h2 id="cookie-dialog-title" class="text-lg font-semibold">Cookie preferences</h2>
+                <button type="button" data-cookie-action="close" aria-label="Close cookie preferences" class="grid size-11 shrink-0 place-items-center rounded-lg text-xl hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">×</button>
+            </div>
+            <p class="text-sm leading-5 text-muted">Choose what JMMart may remember. Essential services stay on.</p>
+        </div>
+        <div class="divide-y divide-line px-4">
+            <section class="py-3">
+                <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Strictly Necessary</h3><span class="text-xs font-semibold text-brand">Always active</span></div>
+                <p class="mt-1 text-sm leading-5 text-muted">Sign-in, security, cart, checkout, and temporary chat drafts.</p>
+            </section>
+            <label class="flex cursor-pointer items-start justify-between gap-3 py-3">
+                <span><span class="block text-sm font-semibold">Functional</span><span class="mt-1 block text-sm leading-5 text-muted">Recently viewed products and Seller Center settings.</span></span>
+                <input type="checkbox" name="functional" class="mt-1 shrink-0 rounded border-line text-brand focus:ring-brand" >
+            </label>
+            <section class="py-3">
+                <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Analytics</h3><input type="checkbox" name="analytics" disabled aria-label="Analytics unavailable" class="shrink-0 rounded border-line"></div>
+                <p class="mt-1 text-sm leading-5 text-muted">Not in use. No analytics tracker is installed.</p>
+            </section>
+            <section class="py-3">
+                <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Marketing</h3><input type="checkbox" name="marketing" disabled aria-label="Marketing unavailable" class="shrink-0 rounded border-line"></div>
+                <p class="mt-1 text-sm leading-5 text-muted">Not in use. No advertising tracker is installed.</p>
+            </section>
+            <p class="py-3 text-xs leading-5 text-muted">Saved for up to 180 days. Read our <a href="http://127.0.0.1:8000/cookie-policy" class="font-semibold text-brand underline">Cookie Policy</a> and <a href="http://127.0.0.1:8000/privacy-policy" class="font-semibold text-brand underline">Privacy Policy</a>.</p>
+            <p data-cookie-error role="alert" class="hidden pb-3 text-sm text-red-700"></p>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-line px-4 py-3">
+            <button type="button" data-cookie-action="reject" class="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reject Optional</button>
+            <button type="button" data-cookie-action="save" class="min-h-11 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">Save Preferences</button>
+        </div>
+    </dialog>
+</div>
+        
+    </body>
+</html>

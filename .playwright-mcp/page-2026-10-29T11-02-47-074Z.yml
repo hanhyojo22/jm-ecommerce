@@ -1,0 +1,309 @@
+- generic [active] [ref=f22e1]:
+  - link "Skip to content" [ref=f22e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f22e4]:
+    - complementary "My account sidebar" [ref=f22e5]:
+      - link "JMMart My account" [ref=f22e7] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/orders
+        - generic [ref=f22e8]:
+          - generic [ref=f22e9]: JMMart
+          - generic [ref=f22e10]: My account
+      - generic [ref=f22e11]:
+        - generic [aria-hidden] [ref=f22e12]: F
+        - generic [ref=f22e13]:
+          - paragraph [ref=f22e14]: Franil Escalicas
+          - paragraph [ref=f22e15]: Customer account
+      - navigation "Customer account navigation" [ref=f22e16]:
+        - paragraph [ref=f22e17]: My account
+        - link "My Purchases" [ref=f22e18] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/orders
+        - link "My Reviews" [ref=f22e24] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/my-reviews
+        - link "Delivery Addresses" [ref=f22e28] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/delivery-addresses
+        - link "Messages" [ref=f22e33] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/messages?context=buying
+        - link "Settings" [ref=f22e37] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/profile
+        - generic [ref=f22e42]:
+          - link "Marketplace" [ref=f22e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000
+          - link "Start selling" [ref=f22e47] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/start-selling
+      - button "Sign out" [ref=f22e52] [cursor=pointer]
+    - main [ref=f22e57]:
+      - generic [ref=f22e59]:
+        - generic [ref=f22e60]:
+          - button "Toggle My account sidebar" [ref=f22e61] [cursor=pointer]
+          - generic [ref=f22e64]:
+            - generic [ref=f22e65]: My account
+            - generic [aria-hidden] [ref=f22e66]: /
+            - strong [ref=f22e67]: My Purchases
+        - generic [ref=f22e69]:
+          - combobox "Search products, brands, and stores" [ref=f22e73]
+          - button "Search" [ref=f22e74] [cursor=pointer]
+        - generic [ref=f22e75]:
+          - link "Messages" [ref=f22e76] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages?context=buying
+          - 'link "Cart: 6 items" [ref=f22e79] [cursor=pointer]':
+            - /url: http://127.0.0.1:8000/cart
+            - generic [aria-hidden] [ref=f22e85]: "6"
+          - button "Account menu" [ref=f22e87] [cursor=pointer]:
+            - generic [ref=f22e91]: Hi, Franil
+      - generic [ref=f22e95]:
+        - generic [ref=f22e96]:
+          - generic [ref=f22e97]:
+            - heading "My purchases" [level=1] [ref=f22e98]
+            - paragraph [ref=f22e99]:
+              - text: 7 orders·
+              - link "Continue shopping" [ref=f22e100] [cursor=pointer]:
+                - /url: http://127.0.0.1:8000/search
+                - text: Continue shopping →
+          - search [ref=f22e101]:
+            - generic [ref=f22e102]: Search purchases
+            - searchbox "Search purchases" [ref=f22e104]
+        - region "Waiting on you" [ref=f22e105]:
+          - strong [ref=f22e106]: Waiting on you
+          - link "2 to pay" [ref=f22e107] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=to_pay
+          - link "1 return needs you" [ref=f22e109] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=returns
+          - link "3 on the way to you" [ref=f22e111] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=to_receive
+        - navigation "Purchase status filters" [ref=f22e114]:
+          - link "All 7 orders" [ref=f22e115] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=all
+            - text: All
+            - generic [ref=f22e116]:
+              - text: "7"
+              - generic [ref=f22e117]: orders
+          - link "To pay 2 orders, waiting on you" [ref=f22e119] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=to_pay
+            - text: To pay
+            - generic [ref=f22e120]:
+              - text: "2"
+              - generic [ref=f22e121]: orders, waiting on you
+          - link "Awaiting store 7 orders" [ref=f22e122] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=awaiting_confirmation
+            - text: Awaiting store
+            - generic [ref=f22e123]:
+              - text: "7"
+              - generic [ref=f22e124]: orders
+          - link "Preparing" [ref=f22e125] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=to_dispatch
+          - link "On the way 3 orders" [ref=f22e126] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=to_receive
+            - text: On the way
+            - generic [ref=f22e127]:
+              - text: "3"
+              - generic [ref=f22e128]: orders
+          - link "Delivered 4 orders" [ref=f22e129] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=delivered
+            - text: Delivered
+            - generic [ref=f22e130]:
+              - text: "4"
+              - generic [ref=f22e131]: orders
+          - link "To review 2 orders" [ref=f22e133] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=to_review
+            - text: To review
+            - generic [ref=f22e134]:
+              - text: "2"
+              - generic [ref=f22e135]: orders
+          - link "Returns 1 order, waiting on you" [ref=f22e136] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/orders?tab=returns
+            - text: Returns
+            - generic [ref=f22e137]:
+              - text: "1"
+              - generic [ref=f22e138]: order, waiting on you
+        - region [ref=f22e139]:
+          - heading "All purchases (7)" [level=2] [ref=f22e140]
+          - generic [aria-hidden] [ref=f22e141]:
+            - generic [ref=f22e142]: Order
+            - generic [ref=f22e143]: Store total
+            - generic [ref=f22e144]: Next step
+          - region "Orders from Oct 15, 2026" [ref=f22e145]:
+            - generic [ref=f22e146]:
+              - heading "Oct 15" [level=3] [ref=f22e147]
+              - paragraph [ref=f22e148]: 1 order · ₱2,229.00
+            - article [ref=f22e149]:
+              - generic [ref=f22e151]:
+                - generic [ref=f22e152]:
+                  - generic [ref=f22e153]: Awaiting store
+                  - link "Trail & Tide" [ref=f22e156] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/trail-and-tide
+                  - link "Order JM-01M4YH1BKFGHX4FYCV92PH9TJN" [ref=f22e157] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4yh1bkg7nrrkgxbrxknb44h
+                    - generic [aria-hidden] [ref=f22e158]: "#…PH9TJN"
+                - heading "Waiting for Trail & Tide to confirm your order" [level=4] [ref=f22e160]
+                - paragraph [ref=f22e161]:
+                  - text: You can still change your mind.
+                  - link "Ask to cancel" [ref=f22e162] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4yh1bkg7nrrkgxbrxknb44h#order-help
+                - generic [ref=f22e163]:
+                  - button "Message seller" [ref=f22e165] [cursor=pointer]
+                  - link "View order" [ref=f22e166] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4yh1bkg7nrrkgxbrxknb44h
+              - generic [ref=f22e167]:
+                - paragraph [ref=f22e168]:
+                  - generic [ref=f22e169]: Store total
+                  - text: ₱2,229.00
+                - paragraph [ref=f22e170]: Pay on delivery
+          - region "Orders from Oct 12, 2026" [ref=f22e172]:
+            - generic [ref=f22e173]:
+              - heading "Oct 12" [level=3] [ref=f22e174]
+              - paragraph [ref=f22e175]: 4 orders · ₱100,000.00
+            - article [ref=f22e176]:
+              - generic [ref=f22e178]:
+                - generic [ref=f22e179]:
+                  - generic [ref=f22e180]: Awaiting store
+                  - link "Franil Store" [ref=f22e183] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/franil-store
+                  - link "Order JM-01M4QFTBPC7CKN6RNAT7HR71QY" [ref=f22e184] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qftbpd8ght0dx2n36bhkmg
+                    - generic [aria-hidden] [ref=f22e185]: "#…HR71QY"
+                - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f22e187]
+                - paragraph [ref=f22e188]:
+                  - text: You can still change your mind.
+                  - link "Ask to cancel" [ref=f22e189] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qftbpd8ght0dx2n36bhkmg#order-help
+                - generic [ref=f22e190]:
+                  - button "Message seller" [ref=f22e192] [cursor=pointer]
+                  - link "View order" [ref=f22e193] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qftbpd8ght0dx2n36bhkmg
+              - generic [ref=f22e194]:
+                - paragraph [ref=f22e195]:
+                  - generic [ref=f22e196]: Store total
+                  - text: ₱25,000.00
+                - paragraph [ref=f22e197]: Pay on delivery
+            - article [ref=f22e199]:
+              - generic [ref=f22e201]:
+                - generic [ref=f22e202]:
+                  - generic [ref=f22e203]: Awaiting store
+                  - link "Franil Store" [ref=f22e206] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/franil-store
+                  - link "Order JM-01M4QF1SMB0SK51C411EYHW0HJ" [ref=f22e207] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qf1smb0sk51c411eyhw0hk
+                    - generic [aria-hidden] [ref=f22e208]: "#…YHW0HJ"
+                - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f22e210]
+                - paragraph [ref=f22e211]:
+                  - text: You can still change your mind.
+                  - link "Ask to cancel" [ref=f22e212] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qf1smb0sk51c411eyhw0hk#order-help
+                - generic [ref=f22e213]:
+                  - button "Message seller" [ref=f22e215] [cursor=pointer]
+                  - link "View order" [ref=f22e216] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qf1smb0sk51c411eyhw0hk
+              - generic [ref=f22e217]:
+                - paragraph [ref=f22e218]:
+                  - generic [ref=f22e219]: Store total
+                  - text: ₱25,000.00
+                - paragraph [ref=f22e220]: Pay on delivery
+            - article [ref=f22e222]:
+              - generic [ref=f22e224]:
+                - generic [ref=f22e225]:
+                  - generic [ref=f22e226]: Awaiting store
+                  - link "Franil Store" [ref=f22e229] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/franil-store
+                  - link "Order JM-01M4QEHMVBE2T64X3108BN1WPG" [ref=f22e230] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qehmvbe2t64x3108bn1wph
+                    - generic [aria-hidden] [ref=f22e231]: "#…BN1WPG"
+                - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f22e233]
+                - paragraph [ref=f22e234]:
+                  - text: You can still change your mind.
+                  - link "Ask to cancel" [ref=f22e235] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qehmvbe2t64x3108bn1wph#order-help
+                - generic [ref=f22e236]:
+                  - button "Message seller" [ref=f22e238] [cursor=pointer]
+                  - link "View order" [ref=f22e239] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qehmvbe2t64x3108bn1wph
+              - generic [ref=f22e240]:
+                - paragraph [ref=f22e241]:
+                  - generic [ref=f22e242]: Store total
+                  - text: ₱25,000.00
+                - paragraph [ref=f22e243]: Pay on delivery
+            - article [ref=f22e245]:
+              - generic [ref=f22e247]:
+                - generic [ref=f22e248]:
+                  - generic [ref=f22e249]: Awaiting store
+                  - link "Franil Store" [ref=f22e252] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/franil-store
+                  - link "Order JM-01M4QDH0TNP3BTMQ5SR0130YKD" [ref=f22e253] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qdh0tnp3btmq5sr0130yke
+                    - generic [aria-hidden] [ref=f22e254]: "#…130YKD"
+                - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f22e256]
+                - paragraph [ref=f22e257]:
+                  - text: You can still change your mind.
+                  - link "Ask to cancel" [ref=f22e258] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qdh0tnp3btmq5sr0130yke#order-help
+                - generic [ref=f22e259]:
+                  - button "Message seller" [ref=f22e261] [cursor=pointer]
+                  - link "View order" [ref=f22e262] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4qdh0tnp3btmq5sr0130yke
+              - generic [ref=f22e263]:
+                - paragraph [ref=f22e264]:
+                  - generic [ref=f22e265]: Store total
+                  - text: ₱25,000.00
+                - paragraph [ref=f22e266]: Pay on delivery
+          - region "Orders from Oct 11, 2026" [ref=f22e268]:
+            - generic [ref=f22e269]:
+              - heading "Oct 11" [level=3] [ref=f22e270]
+              - paragraph [ref=f22e271]: 2 orders · ₱125,000.00
+            - article [ref=f22e272]:
+              - generic [ref=f22e274]:
+                - generic [ref=f22e275]:
+                  - generic [ref=f22e276]: Awaiting store
+                  - link "Franil Store" [ref=f22e279] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/franil-store
+                  - link "Order JM-01M4NHAS2S586H74Q284SYQEAM" [ref=f22e280] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4nhas2s586h74q284syqean
+                    - generic [aria-hidden] [ref=f22e281]: "#…SYQEAM"
+                - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f22e283]
+                - paragraph [ref=f22e284]:
+                  - text: You can still change your mind.
+                  - link "Ask to cancel" [ref=f22e285] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4nhas2s586h74q284syqean#order-help
+                - generic [ref=f22e286]:
+                  - button "Message seller" [ref=f22e288] [cursor=pointer]
+                  - link "View order" [ref=f22e289] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4nhas2s586h74q284syqean
+              - generic [ref=f22e290]:
+                - paragraph [ref=f22e291]:
+                  - generic [ref=f22e292]: Store total
+                  - text: ₱75,000.00
+                - paragraph [ref=f22e293]: Pay on delivery
+            - article [ref=f22e295]:
+              - generic [ref=f22e297]:
+                - generic [ref=f22e298]:
+                  - generic [ref=f22e299]: Awaiting store
+                  - link "Franil Store" [ref=f22e302] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/stores/franil-store
+                  - link "Order JM-01M4MT8407MW5ACSX1Z0BTW9Z7" [ref=f22e303] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4mt8408jefdgj94nfq0drxs
+                    - generic [aria-hidden] [ref=f22e304]: "#…BTW9Z7"
+                - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f22e306]
+                - paragraph [ref=f22e307]:
+                  - text: You can still change your mind.
+                  - link "Ask to cancel" [ref=f22e308] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4mt8408jefdgj94nfq0drxs#order-help
+                - generic [ref=f22e309]:
+                  - button "Message seller" [ref=f22e311] [cursor=pointer]
+                  - link "View order" [ref=f22e312] [cursor=pointer]:
+                    - /url: http://127.0.0.1:8000/orders/01m4mt8408jefdgj94nfq0drxs
+              - generic [ref=f22e313]:
+                - paragraph [ref=f22e314]:
+                  - generic [ref=f22e315]: Store total
+                  - text: ₱50,000.00
+                - paragraph [ref=f22e316]: Pay on delivery
+  - region [ref=f22e318]:
+    - heading "Your privacy matters" [level=2] [ref=f22e324]
+    - paragraph [ref=f22e325]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f22e326] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f22e327] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=f22e328]:
+      - button "Reject Optional" [ref=f22e329] [cursor=pointer]
+      - button "Customize" [ref=f22e330] [cursor=pointer]
+      - button "Accept All" [ref=f22e331] [cursor=pointer]

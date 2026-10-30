@@ -1,0 +1,1570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seller onboarding — JMMart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f8fc; --surface:#fff; --ink:#182c48; --muted:#596b83; --placeholder:#66748a;
+  --line:#e3e8f1; --line-strong:#d2dbe8;
+  --brand:#205bf4; --brand-hover:#1d4ed8; --brand-ink:#123a9e; --brand-soft:#eef3ff;
+  --green:#166534; --green-soft:#ecf8f0;
+  --red:#b42318; --red-soft:#fef3f2; --red-line:#f0c6c2;
+  --shadow:0 1px 2px rgba(21,36,60,.04), 0 20px 44px -32px rgba(21,36,60,.3);
+  --radius:16px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+svg{display:block;flex:none}
+[hidden]{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+::selection{background:#dce7ff;color:var(--ink)}
+.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.92);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;max-width:1180px;height:64px;margin:0 auto;padding:0 32px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-width:0;text-decoration:none;border-radius:8px}
+.brand img{width:30px;height:30px;border-radius:8px}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:-.02em}
+.brand-div{width:1px;height:16px;background:var(--line-strong)}
+.brand-context{font-size:13px;color:var(--muted);white-space:nowrap}
+.topbar-right{display:flex;align-items:center;gap:18px}
+.save{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.save-dot{width:6px;height:6px;border-radius:50%;background:#22a06b}
+.save.is-saving .save-dot{background:var(--brand);animation:pulse 1s ease infinite}
+@keyframes pulse{50%{opacity:.35;transform:scale(.8)}}
+.topbar-btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--line-strong);border-radius:9px;background:#fff;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;transition:background .15s,border-color .15s}
+.topbar-btn:hover{background:#f8fafc;border-color:#c4cfdf}
+.topbar-btn .i{width:15px;height:15px;color:var(--muted)}
+
+/* Layout */
+.shell{display:grid;grid-template-columns:268px minmax(0,1fr);gap:52px;max-width:1140px;margin:0 auto;padding:48px 32px 72px;align-items:start}
+.rail{position:sticky;top:92px;min-width:0}
+.rail-intro h1{margin:0;font-size:22px;line-height:1.25;font-weight:650;letter-spacing:-.03em}
+.rail-intro p{margin:8px 0 0;font-size:13px;line-height:1.6;color:var(--muted);max-width:30ch}
+.progress{display:flex;align-items:center;gap:13px;margin-top:22px}
+.dial{position:relative;flex:none;width:46px;height:46px}
+.dial svg{width:46px;height:46px;transform:rotate(-90deg)}
+.dial circle{fill:none;stroke-width:4}
+.dial-track{stroke:#e5ebf4}
+.dial-fill{stroke:var(--brand);stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:100;transition:stroke-dashoffset .4s ease}
+.dial>span{position:absolute;inset:0;display:grid;place-items:center;font-size:10.5px;font-weight:650;letter-spacing:-.02em;color:var(--brand-ink)}
+.progress-copy{min-width:0}
+.progress-label{display:block;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#66748a}
+.progress-copy strong{display:block;margin-top:2px;font-size:13px;font-weight:600;color:var(--ink)}
+.progress-step{display:block;margin-top:1px;font-size:11.5px;line-height:1.4;color:#66748a}
+.progress-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:12px}
+.progress-row strong{font-weight:600;color:var(--ink)}
+.progress-row span{color:var(--muted);white-space:nowrap}
+.track{height:4px;margin-top:9px;background:#e9eef7;border-radius:99px;overflow:hidden}
+.track>span{display:block;height:100%;width:0;background:var(--brand);border-radius:99px;transition:width .35s ease}
+.steps-nav{margin-top:6px}
+.nav-label{display:flex;align-items:center;gap:9px;margin:17px 0 6px 9px;font-size:10.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:#66748a}
+.nav-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.nav-label:first-child{margin-top:19px}
+.step-link{display:flex;align-items:flex-start;gap:11px;width:100%;padding:7px 10px;border:0;border-radius:9px;background:transparent;color:var(--muted);text-align:left;transition:background .15s,color .15s,box-shadow .15s}
+.step-link:hover{background:#f7f9fd}
+.step-link.is-current{background:#e9edf3;color:var(--ink)}
+.step-dot{display:grid;place-items:center;flex:none;width:24px;height:24px;margin-top:1px;border:1px solid #d8e0ed;border-radius:50%;background:#fff;font-size:11px;font-weight:600;color:#5d6c83;transition:background .15s,border-color .15s,color .15s}
+.step-dot .i{width:13px;height:13px;stroke-width:2.4}
+.step-copy{display:block;min-width:0;line-height:1.35}
+.step-name{display:block;font-size:13px;font-weight:500;letter-spacing:-.005em}
+.step-hint{display:block;margin-top:2px;font-size:11px;font-weight:400;line-height:1.4;color:#66748a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step-link.is-current .step-name{font-weight:600;color:var(--ink)}
+.step-link.is-current .step-hint{color:var(--muted)}
+.step-link.is-current .step-dot{background:var(--ink);border-color:var(--ink);color:#fff}
+.step-link.is-done .step-name{color:var(--ink)}
+.step-link.is-done .step-dot{background:var(--green-soft);border-color:transparent;color:var(--green)}
+.rail-foot{display:flex;gap:11px;margin-top:22px;padding:15px 0 0;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.rail-foot-icon{display:grid;place-items:center;flex:none;width:30px;height:30px;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--brand-ink)}
+.rail-foot-icon .i{width:15px;height:15px}
+.rail-foot-copy{min-width:0}
+.rail-foot strong{display:block;font-size:12.5px;font-weight:600;line-height:1.4;color:var(--ink)}
+.rail-foot a{display:inline-flex;align-items:center;gap:4px;margin-top:2px;color:var(--brand-ink);font-weight:600;text-decoration:none}
+.rail-foot a:hover{text-decoration:underline;text-underline-offset:3px}
+.m-progress{display:none}
+
+/* Panel */
+.panel{min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:38px 42px 30px}
+.alert{display:flex;align-items:flex-start;gap:10px;margin:0 0 22px;padding:12px 14px;border:1px solid var(--red-line);border-radius:10px;background:var(--red-soft);color:#8f1f14;font-size:13px;line-height:1.5}
+.alert .i{width:17px;height:17px;margin-top:1px;stroke-width:2}
+.step-head{padding-bottom:24px;margin-bottom:26px;border-bottom:1px solid var(--line)}
+.kicker{display:flex;align-items:center;gap:9px;margin:0;font-size:12px;font-weight:600;color:var(--brand-ink)}
+.kicker::before{content:"";width:18px;height:2px;border-radius:2px;background:var(--brand)}
+.step-head h2{margin:10px 0 0;font-size:26px;line-height:1.25;font-weight:650;letter-spacing:-.03em;text-wrap:balance;outline:none}
+.step-head .intro{max-width:62ch;margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.6}
+.step.is-active{animation:stepIn .26s ease both}
+@keyframes stepIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* Sections and fields */
+.section + .section{margin-top:28px;padding-top:26px;border-top:1px solid var(--line)}
+.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.section-head h3{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em}
+.section-head p{margin:3px 0 0;font-size:12.5px;color:var(--muted);line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.span-2{grid-column:span 2}
+.field{min-width:0}
+.field>label,.field-label{display:block;margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ink)}
+.optional{font-weight:400;color:var(--muted)}
+.control{width:100%;height:44px;padding:0 12px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;font-size:14px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+.control::placeholder{color:var(--placeholder)}
+.control:hover{border-color:#c2ccdc}
+.control:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(32,91,244,.13)}
+textarea.control{height:auto;min-height:88px;padding:10px 12px;line-height:1.55;resize:vertical}
+select.control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235d6c83' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+.field .hint{display:block;margin-top:6px;font-size:12px;line-height:1.5;color:var(--muted)}
+.field .error{display:none;margin-top:6px;font-size:12px;font-weight:500;color:var(--red)}
+.field.is-invalid .control,.field.is-invalid .input-group{border-color:var(--red);box-shadow:0 0 0 3px rgba(180,35,24,.09)}
+.field.is-invalid .error{display:block}
+.input-group{display:flex;align-items:stretch;height:44px;border:1px solid var(--line-strong);border-radius:10px;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.input-group:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px rgba(32,91,244,.13)}
+.input-group>span{display:flex;align-items:center;padding:0 11px;border-right:1px solid var(--line);background:#f7f9fc;color:var(--muted);font-size:12.5px;white-space:nowrap}
+.input-group>input{flex:1;min-width:0;height:100%;padding:0 12px;border:0;outline:none;background:transparent;font-size:14px}
+
+/* Seller type choice */
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.choice{position:relative;display:flex;flex-direction:column;gap:12px;padding:18px;border:1.5px solid var(--line-strong);border-radius:13px;background:#fff;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.choice:hover{border-color:#b9c9ea}
+.choice:has(input:checked){border-color:var(--brand);background:#fbfcff;box-shadow:0 0 0 3px rgba(32,91,244,.08)}
+.choice:has(input:focus-visible){outline:2px solid var(--brand);outline-offset:2px}
+.choice input{position:absolute;width:1px;height:1px;opacity:0}
+.choice-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:#f3f6fb;color:#334a6d}
+.choice:has(input:checked) .choice-icon{background:var(--brand-soft);color:var(--brand-ink)}
+.choice-icon .i{width:19px;height:19px}
+.choice-title{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.01em;padding-right:26px}
+.choice-desc{display:block;margin-top:2px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.choice-needs{display:grid;gap:4px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.choice-needs span{display:flex;align-items:center;gap:6px}
+.choice-needs .i{width:12px;height:12px;color:var(--green);stroke-width:2.6}
+.radio{position:absolute;top:18px;right:18px;width:18px;height:18px;border:1.5px solid #c3cddc;border-radius:50%;background:#fff}
+.choice:has(input:checked) .radio{border-color:var(--brand);background:var(--brand)}
+.choice:has(input:checked) .radio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:#fff}
+
+/* Quiet strips */
+.note{display:flex;gap:10px;margin-top:22px;padding:13px 14px;border-radius:10px;background:#f6f8fc;font-size:12.5px;line-height:1.55;color:var(--muted)}
+.note .i{width:16px;height:16px;margin-top:1px;color:var(--brand-ink)}
+.note strong{color:var(--ink);font-weight:600}
+.identity{display:flex;align-items:center;gap:11px;padding:12px 14px;margin-bottom:22px;border:1px solid var(--line);border-radius:11px;background:#f9fbfe}
+.identity-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:9px;background:var(--brand-soft);color:var(--brand-ink)}
+.identity-icon .i{width:16px;height:16px}
+.identity-copy{flex:1;min-width:0;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.identity-copy strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:600;color:var(--ink)}
+.pill{display:inline-flex;align-items:center;flex:none;padding:3px 8px;border-radius:99px;background:var(--green-soft);color:var(--green);font-size:11px;font-weight:600}
+.check-strip{display:flex;align-items:flex-start;gap:10px;margin-top:20px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#f8fafd;cursor:pointer}
+.check-strip input{flex:none;width:16px;height:16px;margin:2px 0 0;accent-color:var(--brand)}
+.check-strip span{font-size:12.5px;line-height:1.5;color:var(--muted)}
+.check-strip strong{font-weight:600;color:var(--ink)}
+
+/* Uploads */
+.upload-stack{display:grid;gap:10px;align-content:start}
+.upload{position:relative;display:flex;align-items:center;gap:12px;width:100%;padding:11px 12px;border:1px dashed #c7d2e3;border-radius:11px;background:#fcfdff;cursor:pointer;text-align:left;transition:border-color .15s,background .15s}
+.upload:hover{border-color:#9fb6e6;background:#f9fbff}
+.upload:focus-within{outline:2px solid var(--brand);outline-offset:2px}
+.upload.is-done{border-style:solid;border-color:var(--line);background:#fff}
+.upload input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.upload-thumb{position:relative;display:grid;place-items:center;flex:none;width:44px;height:44px;border-radius:9px;background:#eef3fb center/cover no-repeat;color:#4a5f7d;font-size:15px;font-weight:700}
+.upload-thumb .i{width:18px;height:18px}
+.thumb-check{position:absolute;right:-3px;bottom:-3px;display:none;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--green);color:#fff;border:1.5px solid #fff}
+.thumb-check .i{width:8px;height:8px;stroke-width:3.4}
+.upload.is-done .thumb-check{display:grid}
+.upload-copy{flex:1;min-width:0}
+.upload-title{display:block;font-size:13px;font-weight:600;line-height:1.4}
+.upload-help{display:block;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.upload-action{flex:none;font-size:12px;font-weight:600;color:var(--brand-ink);white-space:nowrap}
+.upload.is-done .upload-action{color:var(--brand-ink)}
+.upload-list{display:grid;gap:8px;margin-top:4px}
+.required-tag{display:inline-flex;margin-left:5px;padding:1px 5px;border-radius:4px;background:#f1f4f9;color:var(--muted);font-size:10px;font-weight:600;letter-spacing:.02em;vertical-align:1px}
+
+/* Store preview */
+.branding{display:grid;grid-template-columns:minmax(0,1fr) 224px;gap:18px;margin-top:4px}
+.preview-label{margin:0 0 6px;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#66748a}
+.preview-card{overflow:hidden;border:1px solid var(--line);border-radius:11px;background:#fff}
+.preview-banner{height:58px;background:linear-gradient(115deg,#e7edf8,#f4eee4);background-size:cover;background-position:center}
+.preview-body{position:relative;padding:0 13px 13px}
+.preview-logo{display:grid;place-items:center;width:44px;height:44px;margin-top:-22px;border:2.5px solid #fff;border-radius:10px;background:#1e3a5f center/cover no-repeat;color:#fff;font-size:15px;font-weight:700}
+.preview-name{margin:8px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:650;line-height:1.35}
+.preview-slug{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--brand-ink)}
+.preview-desc{display:-webkit-box;min-height:49px;margin:7px 0 0;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:3;font-size:11px;line-height:1.5;color:var(--muted)}
+.chip{display:inline-flex;margin-top:9px;padding:2px 7px;border-radius:99px;background:#f1f4f9;color:var(--muted);font-size:10.5px;font-weight:500}
+
+/* Stepper */
+.stepper-wrap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stepper{display:inline-flex;align-items:center;height:44px;overflow:hidden;border:1px solid var(--line-strong);border-radius:10px;background:#fff}
+.stepper button{display:grid;place-items:center;width:42px;height:100%;border:0;background:#fff;color:var(--muted);font-size:16px;line-height:1}
+.stepper button:hover{background:#f7f9fc;color:var(--ink)}
+.stepper input{width:48px;height:100%;border:0;outline:none;text-align:center;font-size:14px;font-weight:600;appearance:textfield}
+.stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.stepper-wrap .unit{font-size:12px;color:var(--muted)}
+
+/* Review */
+.review-block{padding:0 0 20px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.review-block:last-child{padding-bottom:0;margin-bottom:0;border-bottom:0}
+.review-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.review-head h3{margin:0;font-size:14px;font-weight:650;letter-spacing:-.01em}
+.edit{display:inline-flex;align-items:center;gap:5px;padding:4px;border:0;background:none;font-size:12px;font-weight:600;color:var(--brand-ink)}
+.edit:hover{text-decoration:underline;text-underline-offset:3px}
+.edit .i{width:13px;height:13px}
+.review-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;margin:0}
+.review-grid div{min-width:0}
+.review-grid dt{font-size:11.5px;line-height:1.4;color:var(--muted)}
+.review-grid dd{margin:2px 0 0;overflow-wrap:anywhere;font-size:13px;font-weight:500;line-height:1.45}
+.review-actions{display:flex;align-items:center;gap:10px}
+.choice-compact{flex-direction:row;align-items:center;gap:12px;padding:14px}
+.choice-compact .choice-title{padding-right:0}
+.choice-compact .choice-desc{margin-top:0}
+.choice-compact .choice-icon{width:36px;height:36px}
+.choice-compact .radio{position:relative;flex:none;margin-left:auto}
+.mt-field{margin-top:22px}
+.address-split{margin-top:18px}
+
+/* Policies */
+.policies{padding-top:26px;margin-top:28px;border-top:1px solid var(--line)}
+.policies-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+.policies-head h3{margin:0;font-size:15px;font-weight:650;letter-spacing:-.01em}
+.policies-head p{margin:3px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.count-pill{display:inline-flex;flex:none;padding:3px 9px;border-radius:99px;background:#f1f4f9;color:var(--muted);font-size:11px;font-weight:600}
+.policy-all{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;background:var(--brand-soft);font-size:13px;font-weight:600;color:var(--brand-ink);cursor:pointer}
+.policy-all input{flex:none;width:16px;height:16px;accent-color:var(--brand)}
+.policy-list{display:grid;grid-template-columns:1fr;gap:0;margin-top:6px}
+.policy{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eef1f6;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.policy:last-child{border-bottom:0}
+.policy input{flex:none;width:15px;height:15px;accent-color:var(--brand)}
+.policy label{flex:1;cursor:pointer}
+.policy strong{font-weight:500;color:var(--ink)}
+.policy a{margin-left:auto;padding-left:10px;color:var(--brand-ink);font-weight:600;text-decoration:none;white-space:nowrap}
+.policy a:hover{text-decoration:underline}
+
+/* Actions */
+.actions{display:flex;align-items:center;gap:20px;padding-top:20px;margin-top:30px;border-top:1px solid var(--line)}
+.save-hint{margin:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.action-buttons{display:flex;align-items:center;gap:8px;margin-left:auto}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:44px;padding:0 18px;border:1px solid transparent;border-radius:10px;font-size:13.5px;font-weight:600;white-space:nowrap;text-decoration:none;transition:background .15s,border-color .15s,box-shadow .15s,color .15s}
+.btn .i{width:16px;height:16px;stroke-width:2}
+.btn-primary{background:var(--brand);color:#fff;box-shadow:0 1px 2px rgba(21,36,60,.08),0 8px 18px -12px rgba(32,91,244,.8)}
+.btn-primary:hover{background:var(--brand-hover)}
+.btn-primary:active{transform:translateY(1px)}
+.btn-quiet{border-color:transparent;background:transparent;color:var(--muted);padding:0 12px}
+.btn-quiet:hover{background:#f4f7fc;color:var(--ink)}
+
+/* Success */
+.success{max-width:640px;margin:56px auto;padding:42px 44px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--shadow)}
+.success-icon{display:grid;place-items:center;width:44px;height:44px;margin-bottom:18px;border-radius:50%;background:var(--green-soft);color:var(--green)}
+.success-icon .i{width:20px;height:20px;stroke-width:2.6}
+.success h1{margin:10px 0 0;font-size:30px;font-weight:650;line-height:1.2;letter-spacing:-.035em;text-wrap:balance}
+.success-lead{margin:12px 0 0;font-size:14px;line-height:1.65;color:var(--muted)}
+.success-ref{margin:14px 0 0;font-size:12px;color:var(--muted)}
+.success-ref strong{font-weight:600;color:var(--ink)}
+.timeline{display:grid;gap:0;padding:20px 22px;margin:26px 0 0;border:1px solid var(--line);border-radius:13px;background:#fbfcfe;list-style:none}
+.timeline li{position:relative;display:flex;gap:12px;padding-bottom:18px}
+.timeline li:last-child{padding-bottom:0}
+.timeline li::before{content:"";position:absolute;left:9px;top:21px;bottom:0;width:1px;background:var(--line-strong)}
+.timeline li:last-child::before{display:none}
+.tl-dot{position:relative;z-index:1;display:grid;place-items:center;flex:none;width:19px;height:19px;margin-top:1px;border:1.5px solid #c6d0df;border-radius:50%;background:#fff}
+.tl-dot .i{width:11px;height:11px;stroke-width:3}
+.timeline .is-done .tl-dot{border-color:var(--green);background:var(--green);color:#fff}
+.timeline .is-current .tl-dot{border-color:var(--brand);background:var(--brand);box-shadow:inset 0 0 0 3px #fff}
+.timeline div{display:grid;gap:1px}
+.timeline strong{font-size:13px;font-weight:600}
+.timeline div span{font-size:12px;color:var(--muted)}
+.success-actions{display:flex;gap:10px;margin-top:26px}
+.success-note{margin:18px 0 0;padding-top:16px;border-top:1px solid var(--line);font-size:12px;line-height:1.55;color:var(--muted)}
+
+/* Footer chrome and toast */
+.mock-foot{margin:0 0 32px;text-align:center;font-size:11.5px;color:#66748a}
+.toast{position:fixed;left:50%;bottom:26px;z-index:60;max-width:calc(100vw - 32px);padding:11px 16px;border-radius:10px;background:#15243c;color:#fff;font-size:12.5px;line-height:1.5;text-align:center;box-shadow:0 12px 30px -12px rgba(0,0,0,.4);opacity:0;transform:translateX(-50%) translateY(8px);transition:opacity .2s,transform .2s}
+.toast.is-on{opacity:1;transform:translateX(-50%)}
+.m-dots{display:flex;gap:6px;margin-top:12px}
+.m-dot{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line-strong);border-radius:50%;background:#fff;color:var(--muted);font-size:11px;font-weight:600}
+.m-dot.is-current{border-color:var(--ink);background:var(--ink);color:#fff}
+.m-dot.is-done{border-color:transparent;background:var(--green-soft);color:var(--green)}
+.m-dot .i{width:13px;height:13px;stroke-width:2.6}
+
+@media(min-width:901px) and (max-height:840px){
+  .rail-intro p{display:none}
+  .step-hint{display:none}
+  .step-link{padding:8px 10px}
+  .nav-label{margin-top:14px}
+  .rail-foot{margin-top:18px}
+}
+@media(max-width:1040px){
+  .shell{grid-template-columns:236px minmax(0,1fr);gap:40px;padding:40px 24px 64px}
+  .step-hint{display:none}
+  .step-link{padding:8px 10px}
+  .panel{padding:32px 34px 28px}
+}
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr;gap:0;max-width:760px;padding:28px 24px 72px}
+  .rail{position:static;margin-bottom:16px}
+  .rail-intro{margin-bottom:14px}
+  .rail-intro h1{font-size:18px;letter-spacing:-.02em}
+  .rail-intro p,.steps-nav,.rail-foot,.progress{display:none}
+  .m-progress{display:block}
+  .topbar-inner{padding:0 24px}
+}
+@media(max-width:700px){
+  .topbar-inner{height:58px;padding:0 16px;gap:14px}
+  .topbar-right{gap:12px}
+  .save{font-size:12px}
+  .brand-context,.brand-div{display:none}
+  .shell{padding:20px 16px 104px}
+  .panel{padding:26px 24px 24px;border-radius:14px}
+  .step-head h2{font-size:23px}
+  .grid{grid-template-columns:1fr;gap:17px}
+  .span-2{grid-column:auto}
+  .choice-grid{grid-template-columns:1fr}
+  .branding{grid-template-columns:1fr}
+  .store-preview{max-width:320px}
+  .review-grid{grid-template-columns:1fr 1fr}
+  .policy-list{grid-template-columns:1fr}
+  .actions{position:fixed;left:0;right:0;bottom:0;z-index:35;gap:10px;padding:11px 16px calc(11px + env(safe-area-inset-bottom));margin:0;border-top:1px solid var(--line);background:rgba(255,255,255,.96);backdrop-filter:blur(12px)}
+  .actions .save-hint{display:none}
+  .action-buttons{width:100%;margin:0;gap:9px}
+  .action-buttons .btn-primary{flex:1}
+  .btn{height:46px}
+  .btn-quiet{border-color:var(--line-strong);background:#fff}
+  .success{margin:28px 16px 80px;padding:30px 24px}
+  .success h1{font-size:26px}
+  .timeline{padding:18px}
+  .toast{bottom:84px}
+}
+@media(max-width:560px){
+  .review-grid{grid-template-columns:1fr;gap:10px}
+  .review-actions{gap:6px}
+  .review-actions .edit{font-size:11.5px}
+  .policy{padding:9px 0}
+}
+@media(max-width:480px){
+  .save{font-size:11.5px}
+  .topbar-btn{height:34px;padding:0 11px;font-size:12.5px}
+  .topbar-btn .i{display:none}
+  .m-dot{width:100%;max-width:38px;aspect-ratio:1;height:auto}
+  .m-dots{gap:5px}
+  .step-head{padding-bottom:20px;margin-bottom:22px}
+  .step-head h2{font-size:22px}
+  .panel{padding:24px 18px 22px}
+  .success-actions{flex-direction:column;align-items:stretch}
+  .policy-all{font-size:12.5px}
+}
+@media(max-width:360px){
+  .save{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></symbol>
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+  <symbol id="i-store" viewBox="0 0 24 24"><path d="M4 10v10h16V10M3 10l2-6h14l2 6"/><path d="M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M9 20v-5h6v5"/></symbol>
+  <symbol id="i-id" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16a3 3 0 0 1 6 0M14 10h4m-4 4h4"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="m3 9 9-5 9 5M5 9v8m4-8v8m6-8v8m4-8v8M3 20h18"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="3"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 0 1 5.1.7c0 1.8-2.6 2-2.6 3.8M12 17h.01"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m13.5 6.5 3 3"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 6h11v10H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 7.7 7 10 4-2.3 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="#" class="brand" aria-label="JMMart home">
+      <img src="public/favicon.svg" alt="" width="30" height="30">
+      <span class="brand-name">JMMart</span>
+      <span class="brand-div" aria-hidden="true"></span>
+      <span class="brand-context">Seller application</span>
+    </a>
+    <div class="topbar-right">
+      <span class="save" id="save-state" aria-live="polite"><span class="save-dot" aria-hidden="true"></span><span id="save-text">All changes saved</span></span>
+      <button type="button" class="topbar-btn" data-toast="Draft saved. You can finish your application anytime.">
+        <svg class="i" aria-hidden="true"><use href="#i-logout"/></svg>
+        Save &amp; exit
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="shell" id="shell">
+  <aside class="rail">
+    <div class="rail-intro">
+      <h1>Become a seller</h1>
+      <p>Seven short steps, about 10 minutes. Your answers save as you go.</p>
+    </div>
+
+    <div class="progress">
+      <div class="dial" role="progressbar" aria-label="Application completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <svg viewBox="0 0 46 46" aria-hidden="true">
+          <circle class="dial-track" cx="23" cy="23" r="20"/>
+          <circle class="dial-fill js-ring" cx="23" cy="23" r="20" pathLength="100"/>
+        </svg>
+        <span class="js-dial">0%</span>
+      </div>
+      <div class="progress-copy">
+        <span class="progress-label">Application</span>
+        <strong class="js-count">Step 1 of 7</strong>
+        <span class="progress-step"><span class="js-done">0</span> of 6 steps complete</span>
+      </div>
+    </div>
+
+    <div class="m-progress">
+      <div class="progress-row"><strong class="js-pct">0% complete</strong><span class="js-count">Step 1 of 7</span></div>
+      <div class="track" role="progressbar" aria-label="Application completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="js-bar" style="width:0%"></span></div>
+      <div class="m-dots" id="m-dots" aria-label="Application steps"></div>
+    </div>
+
+    <nav class="steps-nav" aria-label="Application steps">
+      <p class="nav-label">About you</p>
+      <button type="button" class="step-link is-current" data-goto="1" aria-current="step">
+        <span class="step-dot" aria-hidden="true">1</span>
+        <span class="step-copy"><span class="step-name">Seller type</span><span class="step-hint">Individual or business</span></span>
+      </button>
+      <button type="button" class="step-link" data-goto="2">
+        <span class="step-dot" aria-hidden="true">2</span>
+        <span class="step-copy"><span class="step-name">Your details</span><span class="step-hint">Contact and address</span></span>
+      </button>
+      <p class="nav-label">Your store</p>
+      <button type="button" class="step-link" data-goto="3">
+        <span class="step-dot" aria-hidden="true">3</span>
+        <span class="step-copy"><span class="step-name">Storefront</span><span class="step-hint">Name, logo, category</span></span>
+      </button>
+      <button type="button" class="step-link" data-goto="4">
+        <span class="step-dot" aria-hidden="true">4</span>
+        <span class="step-copy"><span class="step-name">Shipping</span><span class="step-hint">Rates and coverage</span></span>
+      </button>
+      <p class="nav-label">Verify &amp; get paid</p>
+      <button type="button" class="step-link" data-goto="5">
+        <span class="step-dot" aria-hidden="true">5</span>
+        <span class="step-copy"><span class="step-name">Identity</span><span class="step-hint">ID and documents</span></span>
+      </button>
+      <button type="button" class="step-link" data-goto="6">
+        <span class="step-dot" aria-hidden="true">6</span>
+        <span class="step-copy"><span class="step-name">Payout</span><span class="step-hint">Where earnings go</span></span>
+      </button>
+      <p class="nav-label">Finish</p>
+      <button type="button" class="step-link" data-goto="7">
+        <span class="step-dot" aria-hidden="true">7</span>
+        <span class="step-copy"><span class="step-name">Review</span><span class="step-hint">Check and submit</span></span>
+      </button>
+    </nav>
+
+    <div class="rail-foot">
+      <span class="rail-foot-icon" aria-hidden="true"><svg class="i"><use href="#i-help"/></svg></span>
+      <div class="rail-foot-copy">
+        <strong>Need a hand?</strong>
+        <a href="#" data-toast="The seller guide opens in the real app.">Read the seller guide <svg class="i" style="width:13px;height:13px" aria-hidden="true"><use href="#i-arrow-right"/></svg></a>
+      </div>
+    </div>
+  </aside>
+
+  <main class="panel" id="panel">
+    <div class="alert" id="form-alert" role="alert" hidden>
+      <svg class="i" aria-hidden="true"><use href="#i-info"/></svg>
+      <span id="alert-text">Please complete the highlighted fields.</span>
+    </div>
+
+    <form id="app-form" novalidate>
+      <section class="step is-active" data-step="1" aria-labelledby="title-1">
+        <header class="step-head">
+          <p class="kicker">About you</p>
+          <h2 id="title-1" tabindex="-1">How will you sell?</h2>
+          <p class="intro">Choose the type that matches your documents. It sets what we ask for later, and can’t be changed after approval.</p>
+        </header>
+
+        <div role="radiogroup" aria-label="Seller type">
+          <div class="choice-grid">
+            <label class="choice">
+              <input type="radio" name="seller_type" value="individual" checked>
+              <span class="choice-icon" aria-hidden="true"><svg class="i"><use href="#i-user"/></svg></span>
+              <span>
+                <span class="choice-title">Individual seller</span>
+                <span class="choice-desc">You sell under your own name.</span>
+                <span class="choice-needs">
+                  <span><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>One government ID</span>
+                  <span><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>A selfie holding your ID</span>
+                </span>
+              </span>
+              <span class="radio" aria-hidden="true"></span>
+            </label>
+
+            <label class="choice">
+              <input type="radio" name="seller_type" value="business">
+              <span class="choice-icon" aria-hidden="true"><svg class="i"><use href="#i-briefcase"/></svg></span>
+              <span>
+                <span class="choice-title">Registered business</span>
+                <span class="choice-desc">You sell as a DTI- or SEC-registered company.</span>
+                <span class="choice-needs">
+                  <span><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>DTI or SEC certificate</span>
+                  <span><svg class="i" aria-hidden="true"><use href="#i-check"/></svg>BIR certificate, if you have one</span>
+                </span>
+              </span>
+              <span class="radio" aria-hidden="true"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="note">
+          <svg class="i" aria-hidden="true"><use href="#i-info"/></svg>
+          <p><strong>Have your ID and payout details ready.</strong> You’ll add them in steps 5 and 6.</p>
+        </div>
+      </section>
+
+      <section class="step" data-step="2" aria-labelledby="title-2" hidden>
+        <header class="step-head">
+          <p class="kicker">About you</p>
+          <h2 id="title-2" tabindex="-1">Your details</h2>
+          <p class="intro">Use the name on your government ID. Buyers won’t see it — we only use it to verify you and pay you.</p>
+        </header>
+
+        <div class="identity">
+          <span class="identity-icon" aria-hidden="true"><svg class="i"><use href="#i-user"/></svg></span>
+          <span class="identity-copy">Signed in as<strong>maria.santos@gmail.com</strong></span>
+          <span class="pill">Verified</span>
+        </div>
+
+        <div class="grid">
+          <div class="field span-2">
+            <label for="seller_name">Full legal name</label>
+            <input class="control" id="seller_name" name="seller_name" type="text" value="Maria P. Santos" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="phone">Mobile number</label>
+            <input class="control" id="phone" name="phone" type="tel" value="+63 917 555 0142" autocomplete="tel" required>
+          </div>
+          <div class="field individual-only">
+            <label for="date_of_birth">Date of birth</label>
+            <input class="control" id="date_of_birth" name="date_of_birth" type="date" value="1994-06-12" autocomplete="bday" required>
+          </div>
+
+          <div class="field span-2 business-only" hidden>
+            <label for="business_name">Registered business name</label>
+            <input class="control" id="business_name" name="business_name" type="text" value="Halo Home Trading Co." autocomplete="organization" required>
+          </div>
+          <div class="field business-only" hidden>
+            <label for="representative_name">Authorized representative</label>
+            <input class="control" id="representative_name" name="representative_name" type="text" value="Maria P. Santos" required>
+          </div>
+          <div class="field business-only" hidden>
+            <label for="registration_number">DTI or SEC registration no.</label>
+            <input class="control" id="registration_number" name="registration_number" type="text" value="DTI-4820193" required>
+          </div>
+          <div class="field span-2 business-only" hidden>
+            <label for="bir_details">BIR registration details <span class="optional">(optional)</span></label>
+            <input class="control" id="bir_details" name="bir_details" type="text" placeholder="TIN or certificate number">
+          </div>
+        </div>
+
+        <div class="note">
+          <svg class="i" aria-hidden="true"><use href="#i-lock"/></svg>
+          <p>Your legal name and date of birth are private. Buyers only see your store name and the contact details you choose to publish.</p>
+        </div>
+      </section>
+      <section class="step" data-step="3" aria-labelledby="title-3" hidden>
+        <header class="step-head">
+          <p class="kicker">Your store</p>
+          <h2 id="title-3" tabindex="-1">Set up your storefront</h2>
+          <p class="intro">This is what buyers see first. You can change any of it later in Store settings.</p>
+        </header>
+
+        <section class="section" aria-labelledby="store-details-heading">
+          <div class="section-head">
+            <div>
+              <h3 id="store-details-heading">Store details</h3>
+              <p>Keep it clear and specific — buyers scan these first.</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="field span-2">
+              <label for="store_name">Store name</label>
+              <input class="control" id="store_name" name="store_name" type="text" value="Halo Home" maxlength="80" required>
+            </div>
+            <div class="field span-2">
+              <label for="store_slug">Store link</label>
+              <div class="input-group">
+                <span aria-hidden="true">/stores/</span>
+                <input id="store_slug" name="store_slug" type="text" value="halo-home" maxlength="60" required>
+              </div>
+              <span class="hint">Lowercase letters, numbers and hyphens. This can’t be changed after approval.</span>
+            </div>
+            <div class="field span-2">
+              <label for="store_description">Store description</label>
+              <textarea class="control" id="store_description" name="store_description" rows="3" maxlength="2000" required>Everyday homeware and small-batch ceramics for calm, considered spaces.</textarea>
+              <span class="hint">A sentence or two about what you sell and how you pack orders.</span>
+            </div>
+            <div class="field">
+              <label for="store_category">Primary category</label>
+              <select class="control" id="store_category" name="store_category" required>
+                <option value="">Choose a category</option>
+                <option selected>Home &amp; living</option>
+                <option>Fashion &amp; accessories</option>
+                <option>Beauty &amp; personal care</option>
+                <option>Electronics</option>
+                <option>Food &amp; beverages</option>
+                <option>Arts &amp; crafts</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="support_contact">Customer support contact</label>
+              <input class="control" id="support_contact" name="support_contact" type="text" value="hello@halohome.ph" required>
+              <span class="hint">Shown on your storefront for order questions.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="branding-heading">
+          <div class="section-head">
+            <div>
+              <h3 id="branding-heading">Branding</h3>
+              <p>A square logo and a wide banner look best on every screen.</p>
+            </div>
+          </div>
+
+          <div class="branding">
+            <div class="upload-stack">
+              <label class="upload is-done">
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-upload="logo">
+                <span class="upload-thumb js-logo-thumb" aria-hidden="true"><span class="js-logo-initial">H</span><span class="thumb-check"><svg class="i"><use href="#i-check"/></svg></span></span>
+                <span class="upload-copy">
+                  <span class="upload-title">Store logo</span>
+                  <span class="upload-help js-upload-name">halo-home-logo.png · 184 KB</span>
+                </span>
+                <span class="upload-action">Replace</span>
+              </label>
+
+              <label class="upload">
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-upload="banner">
+                <span class="upload-thumb" aria-hidden="true"><svg class="i"><use href="#i-upload"/></svg><span class="thumb-check"><svg class="i"><use href="#i-check"/></svg></span></span>
+                <span class="upload-copy">
+                  <span class="upload-title">Store banner <span class="optional">(optional)</span></span>
+                  <span class="upload-help">JPG, PNG or WebP · up to 4 MB</span>
+                </span>
+                <span class="upload-action">Upload</span>
+              </label>
+            </div>
+
+            <div class="store-preview" aria-label="Buyer preview of your store">
+              <p class="preview-label">Buyer preview</p>
+              <div class="preview-card">
+                <div class="preview-banner js-preview-banner"></div>
+                <div class="preview-body">
+                  <div class="preview-logo js-logo-preview">H</div>
+                  <p class="preview-name" data-preview-name>Halo Home</p>
+                  <p class="preview-slug">jmmart.ph/stores/<span data-preview-slug>halo-home</span></p>
+                  <p class="preview-desc" data-preview-desc>Everyday homeware and small-batch ceramics for calm, considered spaces.</p>
+                  <span class="chip" data-preview-category>Home &amp; living</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+      <section class="step" data-step="4" aria-labelledby="title-4" hidden>
+        <header class="step-head">
+          <p class="kicker">Your store</p>
+          <h2 id="title-4" tabindex="-1">Where you ship from</h2>
+          <p class="intro">Couriers collect orders here, and returns come back here. Use a Philippine address.</p>
+        </header>
+
+        <section class="section" aria-labelledby="address-heading">
+          <div class="section-head">
+            <div>
+              <h3 id="address-heading">Pickup address</h3>
+              <p>We’ll use this as your default pickup and return address.</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="field">
+              <label for="region">Region</label>
+              <select class="control" id="region" name="region" required>
+                <option value="">Choose a region</option>
+                <option selected>National Capital Region</option>
+                <option>CALABARZON</option>
+                <option>Central Luzon</option>
+                <option>Central Visayas</option>
+                <option>Western Visayas</option>
+                <option>Davao Region</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="province">Province</label>
+              <input class="control" id="province" name="province" type="text" value="Metro Manila" required>
+            </div>
+            <div class="field">
+              <label for="city">City or municipality</label>
+              <input class="control" id="city" name="city" type="text" value="Quezon City" required>
+            </div>
+            <div class="field">
+              <label for="barangay">Barangay</label>
+              <input class="control" id="barangay" name="barangay" type="text" value="Pinyahan" required>
+            </div>
+            <div class="field span-2">
+              <label for="address_line">Street address</label>
+              <input class="control" id="address_line" name="address_line" type="text" value="24 Sct. Borromeo St." required>
+            </div>
+            <div class="field">
+              <label for="postal_code">Postal code</label>
+              <input class="control" id="postal_code" name="postal_code" type="text" value="1100" inputmode="numeric" required>
+            </div>
+          </div>
+
+          <label class="check-strip">
+            <input type="checkbox" id="same-address" checked>
+            <span><strong>Use this address for pickup and returns.</strong> Uncheck if your courier collects from, or returns come to, a different place.</span>
+          </label>
+
+          <div class="grid address-split" id="different-address" hidden>
+            <div class="field">
+              <label for="pickup_address">Pickup address</label>
+              <input class="control" id="pickup_address" name="pickup_address" type="text" placeholder="Street, barangay, city">
+            </div>
+            <div class="field">
+              <label for="return_address">Return address</label>
+              <input class="control" id="return_address" name="return_address" type="text" placeholder="Street, barangay, city">
+            </div>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="shipping-heading">
+          <div class="section-head">
+            <div>
+              <h3 id="shipping-heading">How you ship</h3>
+              <p>Set expectations buyers can rely on. These can be adjusted anytime.</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="field span-2">
+              <label for="processing_days">Order processing time</label>
+              <div class="stepper-wrap">
+                <div class="stepper">
+                  <button type="button" data-days="-1" aria-label="Decrease processing days">&minus;</button>
+                  <input id="processing_days" name="processing_days" type="number" min="1" max="30" value="2" required>
+                  <button type="button" data-days="1" aria-label="Increase processing days">+</button>
+                </div>
+                <span class="unit">business days before you hand orders to the courier</span>
+              </div>
+            </div>
+            <div class="field">
+              <label for="fulfillment_methods">Fulfillment methods</label>
+              <input class="control" id="fulfillment_methods" name="fulfillment_methods" type="text" value="Courier pickup, drop-off" required>
+              <span class="hint">For example: courier pickup, drop-off.</span>
+            </div>
+            <div class="field">
+              <label for="delivery_areas">Supported delivery areas</label>
+              <input class="control" id="delivery_areas" name="delivery_areas" type="text" value="Metro Manila, Luzon" required>
+              <span class="hint">For example: Metro Manila, Luzon.</span>
+            </div>
+          </div>
+        </section>
+      </section>
+      <section class="step" data-step="5" aria-labelledby="title-5" hidden>
+        <header class="step-head">
+          <p class="kicker">Verify &amp; get paid</p>
+          <h2 id="title-5" tabindex="-1">Verify your identity</h2>
+          <p class="intro">Only JMMart reviewers can see these documents. Buyers never do.</p>
+        </header>
+
+        <section class="section" aria-labelledby="id-heading">
+          <div class="section-head">
+            <div>
+              <h3 id="id-heading">Government ID</h3>
+              <p>Use an ID that is valid and not expired.</p>
+            </div>
+          </div>
+
+          <div class="grid">
+            <div class="field">
+              <label for="id_type">ID type</label>
+              <select class="control" id="id_type" name="id_type" required>
+                <option value="">Choose an ID type</option>
+                <option selected>Philippine National ID (PhilID)</option>
+                <option>Passport</option>
+                <option>Driver’s license</option>
+                <option>Other government ID</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="id_number">ID number</label>
+              <input class="control" id="id_number" name="id_number" type="text" value="1234-5678-9012" required>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="documents-heading">
+          <div class="section-head">
+            <div>
+              <h3 id="documents-heading">Documents</h3>
+              <p>Clear photos with all four corners visible. JPEG, PNG or PDF, up to 5 MB each.</p>
+            </div>
+          </div>
+
+          <div class="upload-list">
+            <label class="upload is-done">
+              <input type="file" accept="image/jpeg,image/png,application/pdf" data-upload="id_front">
+              <span class="upload-thumb" aria-hidden="true"><svg class="i"><use href="#i-id"/></svg><span class="thumb-check"><svg class="i"><use href="#i-check"/></svg></span></span>
+              <span class="upload-copy">
+                <span class="upload-title">Front of ID <span class="required-tag">Required</span></span>
+                <span class="upload-help js-upload-name">philid-front.jpg · 1.2 MB</span>
+              </span>
+              <span class="upload-action">Replace</span>
+            </label>
+
+            <label class="upload">
+              <input type="file" accept="image/jpeg,image/png,application/pdf" data-upload="id_back">
+              <span class="upload-thumb" aria-hidden="true"><svg class="i"><use href="#i-file"/></svg><span class="thumb-check"><svg class="i"><use href="#i-check"/></svg></span></span>
+              <span class="upload-copy">
+                <span class="upload-title">Back of ID <span class="optional">(if applicable)</span></span>
+                <span class="upload-help">Needed for driver’s licenses and national IDs</span>
+              </span>
+              <span class="upload-action">Upload</span>
+            </label>
+
+            <label class="upload is-done">
+              <input type="file" accept="image/jpeg,image/png" data-upload="selfie">
+              <span class="upload-thumb" aria-hidden="true"><svg class="i"><use href="#i-user"/></svg><span class="thumb-check"><svg class="i"><use href="#i-check"/></svg></span></span>
+              <span class="upload-copy">
+                <span class="upload-title">Identity selfie <span class="required-tag">Required</span></span>
+                <span class="upload-help js-upload-name">selfie-with-id.jpg · 2.1 MB</span>
+              </span>
+              <span class="upload-action">Replace</span>
+            </label>
+
+            <label class="upload business-only" hidden>
+              <input type="file" accept="image/jpeg,image/png,application/pdf" data-upload="business_registration">
+              <span class="upload-thumb" aria-hidden="true"><svg class="i"><use href="#i-briefcase"/></svg><span class="thumb-check"><svg class="i"><use href="#i-check"/></svg></span></span>
+              <span class="upload-copy">
+                <span class="upload-title">DTI or SEC certificate <span class="required-tag">Required</span></span>
+                <span class="upload-help">Business registration document</span>
+              </span>
+              <span class="upload-action">Upload</span>
+            </label>
+
+            <label class="upload business-only" hidden>
+              <input type="file" accept="image/jpeg,image/png,application/pdf" data-upload="bir_certificate">
+              <span class="upload-thumb" aria-hidden="true"><svg class="i"><use href="#i-file"/></svg><span class="thumb-check"><svg class="i"><use href="#i-check"/></svg></span></span>
+              <span class="upload-copy">
+                <span class="upload-title">BIR certificate <span class="optional">(optional)</span></span>
+                <span class="upload-help">BIR Form 2303 or certificate of registration</span>
+              </span>
+              <span class="upload-action">Upload</span>
+            </label>
+          </div>
+        </section>
+
+        <div class="note">
+          <svg class="i" aria-hidden="true"><use href="#i-lock"/></svg>
+          <p><strong>Your documents stay private.</strong> They’re encrypted, visible only to authorized reviewers, and never shared with buyers or other sellers.</p>
+        </div>
+      </section>
+      <section class="step" data-step="6" aria-labelledby="title-6" hidden>
+        <header class="step-head">
+          <p class="kicker">Verify &amp; get paid</p>
+          <h2 id="title-6" tabindex="-1">Where should we send your earnings?</h2>
+          <p class="intro">Use an account under your legal or business name. You can change it later in Payout settings.</p>
+        </header>
+
+        <div role="radiogroup" aria-label="Payout method">
+          <div class="choice-grid">
+            <label class="choice choice-compact">
+              <input type="radio" name="payout_method" value="bank" checked>
+              <span class="choice-icon" aria-hidden="true"><svg class="i"><use href="#i-bank"/></svg></span>
+              <span>
+                <span class="choice-title">Bank account</span>
+                <span class="choice-desc">BDO, BPI, UnionBank and more</span>
+              </span>
+              <span class="radio" aria-hidden="true"></span>
+            </label>
+            <label class="choice choice-compact">
+              <input type="radio" name="payout_method" value="wallet">
+              <span class="choice-icon" aria-hidden="true"><svg class="i"><use href="#i-wallet"/></svg></span>
+              <span>
+                <span class="choice-title">E-wallet</span>
+                <span class="choice-desc">GCash or Maya</span>
+              </span>
+              <span class="radio" aria-hidden="true"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid mt-field">
+          <div class="field">
+            <label for="provider" id="provider-label">Bank name</label>
+            <input class="control" id="provider" name="provider" type="text" value="BPI" list="banks" required>
+            <datalist id="banks">
+              <option value="BPI"></option><option value="BDO"></option><option value="UnionBank"></option><option value="Metrobank"></option><option value="Landbank"></option>
+            </datalist>
+            <datalist id="wallets">
+              <option value="GCash"></option><option value="Maya"></option>
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="holder_name">Account holder name</label>
+            <input class="control" id="holder_name" name="holder_name" type="text" value="Maria P. Santos" required>
+          </div>
+          <div class="field span-2">
+            <label for="account_number" id="account-label">Account number</label>
+            <input class="control" id="account_number" name="account_number" type="text" value="1234 5678 9012" inputmode="numeric" required>
+            <span class="hint">Only the last 4 digits are ever shown after you save.</span>
+          </div>
+        </div>
+
+        <div class="note">
+          <svg class="i" aria-hidden="true"><use href="#i-info"/></svg>
+          <p><strong>The name must match.</strong> Accounts under a different name take longer to verify. For business sellers, use the registered company name.</p>
+        </div>
+      </section>
+      <section class="step" data-step="7" aria-labelledby="title-7" hidden>
+        <header class="step-head">
+          <p class="kicker">Submit</p>
+          <h2 id="title-7" tabindex="-1">Review and submit</h2>
+          <p class="intro">Check your details, accept the seller policies, and send your application. We’ll email you when review is done.</p>
+        </header>
+
+        <div class="review">
+          <section class="review-block" aria-labelledby="review-about">
+            <div class="review-head">
+              <h3 id="review-about">About you</h3>
+              <button type="button" class="edit" data-goto="2"><svg class="i" aria-hidden="true"><use href="#i-edit"/></svg>Edit</button>
+            </div>
+            <dl class="review-grid">
+              <div><dt>Seller type</dt><dd id="rv-type">Individual seller</dd></div>
+              <div><dt>Full legal name</dt><dd id="rv-name">Maria P. Santos</dd></div>
+              <div><dt>Mobile number</dt><dd id="rv-phone">+63 917 555 0142</dd></div>
+              <div><dt>Email</dt><dd>maria.santos@gmail.com</dd></div>
+              <div class="business-only" hidden><dt>Business name</dt><dd id="rv-business">Halo Home Trading Co.</dd></div>
+              <div class="business-only" hidden><dt>Registration no.</dt><dd id="rv-registration">DTI-4820193</dd></div>
+            </dl>
+          </section>
+
+          <section class="review-block" aria-labelledby="review-store">
+            <div class="review-head">
+              <h3 id="review-store">Storefront</h3>
+              <button type="button" class="edit" data-goto="3"><svg class="i" aria-hidden="true"><use href="#i-edit"/></svg>Edit</button>
+            </div>
+            <dl class="review-grid">
+              <div><dt>Store name</dt><dd id="rv-store">Halo Home</dd></div>
+              <div><dt>Store link</dt><dd id="rv-slug">jmmart.ph/stores/halo-home</dd></div>
+              <div><dt>Primary category</dt><dd id="rv-category">Home &amp; living</dd></div>
+              <div><dt>Support contact</dt><dd id="rv-support">hello@halohome.ph</dd></div>
+            </dl>
+          </section>
+
+          <section class="review-block" aria-labelledby="review-shipping">
+            <div class="review-head">
+              <h3 id="review-shipping">Shipping</h3>
+              <button type="button" class="edit" data-goto="4"><svg class="i" aria-hidden="true"><use href="#i-edit"/></svg>Edit</button>
+            </div>
+            <dl class="review-grid">
+              <div><dt>Ships from</dt><dd id="rv-address">24 Sct. Borromeo St., Pinyahan, Quezon City</dd></div>
+              <div><dt>Processing time</dt><dd id="rv-processing">2 business days</dd></div>
+              <div><dt>Delivery areas</dt><dd id="rv-areas">Metro Manila, Luzon</dd></div>
+              <div><dt>Fulfillment</dt><dd id="rv-fulfillment">Courier pickup, drop-off</dd></div>
+            </dl>
+          </section>
+
+          <section class="review-block" aria-labelledby="review-verify">
+            <div class="review-head">
+              <h3 id="review-verify">Verification &amp; payout</h3>
+              <div class="review-actions">
+                <button type="button" class="edit" data-goto="5"><svg class="i" aria-hidden="true"><use href="#i-edit"/></svg>Documents</button>
+                <button type="button" class="edit" data-goto="6"><svg class="i" aria-hidden="true"><use href="#i-edit"/></svg>Payout</button>
+              </div>
+            </div>
+            <dl class="review-grid">
+              <div><dt>Government ID</dt><dd id="rv-id">Philippine National ID (PhilID)</dd></div>
+              <div><dt>Payout method</dt><dd id="rv-payout">BPI · •••• 9012</dd></div>
+              <div><dt>Documents</dt><dd id="rv-docs">2 of 3 uploaded</dd></div>
+              <div><dt>Account holder</dt><dd id="rv-holder">Maria P. Santos</dd></div>
+            </dl>
+          </section>
+        </div>
+
+        <section class="policies" aria-labelledby="policies-heading">
+          <div class="policies-head">
+            <div>
+              <h3 id="policies-heading">Seller policies</h3>
+              <p>You must accept each one to submit your application.</p>
+            </div>
+            <span class="count-pill" id="policy-count">0 of 6</span>
+          </div>
+
+          <label class="policy-all">
+            <input type="checkbox" id="accept-all">
+            <span>Accept all six policies</span>
+          </label>
+
+          <div class="policy-list">
+            <div class="policy"><input type="checkbox" id="policy-1" data-policy><label for="policy-1">I accept the <strong>Seller Agreement</strong> (v1.0).</label></div>
+            <div class="policy"><input type="checkbox" id="policy-2" data-policy><label for="policy-2">I accept the <strong>Terms and Conditions</strong> (v1.0).</label><a href="#" data-toast="The Terms page opens in the real app.">Read</a></div>
+            <div class="policy"><input type="checkbox" id="policy-3" data-policy><label for="policy-3">I accept the <strong>Privacy Policy</strong> (v1.0).</label><a href="#" data-toast="The Privacy Policy opens in the real app.">Read</a></div>
+            <div class="policy"><input type="checkbox" id="policy-4" data-policy><label for="policy-4">I accept the <strong>Prohibited Products Policy</strong> (v1.0).</label></div>
+            <div class="policy"><input type="checkbox" id="policy-5" data-policy><label for="policy-5">I accept the <strong>Returns and Refunds Policy</strong> (v1.0).</label><a href="#" data-toast="The Returns Policy opens in the real app.">Read</a></div>
+            <div class="policy"><input type="checkbox" id="policy-6" data-policy><label for="policy-6">I accept the <strong>Marketplace Fee Policy</strong> (v1.0).</label></div>
+          </div>
+        </section>
+      </section>
+
+      <div class="actions" id="actions">
+        <p class="save-hint" id="save-hint">Your progress saves automatically.</p>
+        <div class="action-buttons">
+          <button type="button" class="btn btn-quiet" id="back-btn"><svg class="i" aria-hidden="true"><use href="#i-arrow-left"/></svg> Back</button>
+          <button type="button" class="btn btn-primary" id="next-btn"><span id="next-label">Continue</span><svg class="i" id="next-icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+        </div>
+      </div>
+    </form>
+  </main>
+</div>
+
+<section class="success" id="success" hidden aria-labelledby="success-title">
+  <div class="success-icon" aria-hidden="true"><svg class="i"><use href="#i-check"/></svg></div>
+  <p class="kicker">Application received</p>
+  <h1 id="success-title">You’re in review, <span id="success-name">Maria</span>.</h1>
+  <p class="success-lead">We’re checking your store and documents. Most applications take 1–2 business days, and we’ll email you the moment there’s news.</p>
+  <p class="success-ref">Application <strong>#JM-24817</strong> · Submitted today</p>
+  <ol class="timeline">
+    <li class="is-done"><span class="tl-dot" aria-hidden="true"><svg class="i"><use href="#i-check"/></svg></span><div><strong>Application submitted</strong><span>Today</span></div></li>
+    <li class="is-current"><span class="tl-dot" aria-hidden="true"></span><div><strong>Under review</strong><span>Usually 1–2 business days</span></div></li>
+    <li><span class="tl-dot" aria-hidden="true"></span><div><strong>Decision</strong><span>We’ll email maria.santos@gmail.com</span></div></li>
+  </ol>
+  <div class="success-actions">
+    <a class="btn btn-primary" href="#" data-toast="This is a design mockup — the marketplace link isn’t wired up.">Browse JMMart</a>
+    <button type="button" class="btn btn-quiet" data-toast="This is a design mockup — the application page isn’t wired up.">View application</button>
+  </div>
+  <p class="success-note">You can keep shopping while we review. Your store stays private until it’s approved.</p>
+</section>
+
+<p class="mock-foot" id="mock-foot">Interactive design mockup · reload to start over</p>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script>
+(() => {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+  const form = $('#app-form');
+  const steps = $$('.step', form);
+  const railLinks = $$('.step-link');
+  const mDots = $('#m-dots');
+  const alertBox = $('#form-alert');
+  const alertText = $('#alert-text');
+  const saveState = $('#save-state');
+  const saveText = $('#save-text');
+  const backBtn = $('#back-btn');
+  const nextBtn = $('#next-btn');
+  const nextLabel = $('#next-label');
+  const nextIcon = $('#next-icon use');
+  const completed = new Set();
+  const stepLabels = ['Seller type', 'Your details', 'Storefront', 'Shipping', 'Identity', 'Payout', 'Review'];
+  const checkIcon = '<svg class="i" aria-hidden="true"><use href="#i-check"/></svg>';
+  let current = 1;
+  let saveTimer;
+  let toastTimer;
+  let toastHideTimer;
+
+  stepLabels.forEach((label, index) => {
+    const number = index + 1;
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'm-dot';
+    dot.dataset.goto = number;
+    dot.setAttribute('aria-label', `Step ${number}: ${label}`);
+    dot.textContent = number;
+    mDots.append(dot);
+  });
+
+  function sellerType() {
+    return $('input[name="seller_type"]:checked')?.value || 'individual';
+  }
+
+  function payoutMethod() {
+    return $('input[name="payout_method"]:checked')?.value || 'bank';
+  }
+
+  function fieldValue(id) {
+    const el = document.getElementById(id);
+    const value = el ? String(el.value).trim() : '';
+    return value || '—';
+  }
+
+  function syncSellerType() {
+    const isBusiness = sellerType() === 'business';
+    $$('.business-only').forEach((el) => { el.hidden = !isBusiness; });
+    $$('.individual-only').forEach((el) => { el.hidden = isBusiness; });
+    if (current === 7) {
+      syncReview();
+    }
+  }
+
+  function syncPayout() {
+    const isBank = payoutMethod() === 'bank';
+    $('#provider-label').textContent = isBank ? 'Bank name' : 'E-wallet provider';
+    $('#provider').setAttribute('list', isBank ? 'banks' : 'wallets');
+    $('#provider').placeholder = isBank ? 'BPI, BDO, UnionBank' : 'GCash or Maya';
+    $('#account-label').textContent = isBank ? 'Account number' : 'Wallet number';
+    $('#account_number').placeholder = isBank ? 'Enter your account number' : 'Enter your mobile number';
+    if (isBank && $('#provider').value === 'GCash') {
+      $('#provider').value = 'BPI';
+    }
+    if (!isBank && $('#provider').value === 'BPI') {
+      $('#provider').value = 'GCash';
+    }
+    if (current === 7) {
+      syncReview();
+    }
+  }
+
+  function syncPreview() {
+    const name = $('#store_name')?.value.trim() || 'Your store name';
+    const slug = $('#store_slug')?.value.trim() || 'your-store';
+    const description = $('#store_description')?.value.trim() || 'Your store description appears here.';
+    const category = $('#store_category');
+    const initial = (name.trim().charAt(0) || 'S').toUpperCase();
+
+    $$('[data-preview-name]').forEach((el) => { el.textContent = name; });
+    $$('[data-preview-slug]').forEach((el) => { el.textContent = slug; });
+    $$('[data-preview-desc]').forEach((el) => { el.textContent = description; });
+    $$('[data-preview-category]').forEach((el) => {
+      el.textContent = category && category.value ? category.options[category.selectedIndex].text : 'Category';
+    });
+
+    const initialThumb = $('.js-logo-initial');
+    if (initialThumb && !initialThumb.hidden) {
+      initialThumb.textContent = initial;
+    }
+    const previewLogo = $('.js-logo-preview');
+    if (previewLogo && !previewLogo.dataset.image) {
+      previewLogo.textContent = initial;
+    }
+  }
+
+  function syncReview() {
+    const days = fieldValue('processing_days');
+    const account = fieldValue('account_number');
+    const last4 = account === '—' ? '••••' : account.replace(/\D/g, '').slice(-4) || '••••';
+    const idType = $('#id_type');
+    const step5 = $('.step[data-step="5"]');
+    const uploaded = step5 ? $$('.upload.is-done', step5).filter((row) => !row.hidden).length : 0;
+    const address = [fieldValue('address_line'), fieldValue('barangay'), fieldValue('city'), fieldValue('province')]
+      .filter((part) => part !== '—')
+      .join(', ');
+
+    $('#rv-type').textContent = sellerType() === 'business' ? 'Registered business' : 'Individual seller';
+    $('#rv-name').textContent = fieldValue('seller_name');
+    $('#rv-phone').textContent = fieldValue('phone');
+    $('#rv-business').textContent = fieldValue('business_name');
+    $('#rv-registration').textContent = fieldValue('registration_number');
+    $('#rv-store').textContent = fieldValue('store_name');
+    $('#rv-slug').textContent = `jmmart.ph/stores/${fieldValue('store_slug') === '—' ? 'your-store' : fieldValue('store_slug')}`;
+    const category = $('#store_category');
+    $('#rv-category').textContent = category && category.value ? category.options[category.selectedIndex].text : '—';
+    $('#rv-support').textContent = fieldValue('support_contact');
+    $('#rv-address').textContent = address || '—';
+    $('#rv-processing').textContent = days === '—' ? '—' : `${days} business day${days === '1' ? '' : 's'}`;
+    $('#rv-areas').textContent = fieldValue('delivery_areas');
+    $('#rv-fulfillment').textContent = fieldValue('fulfillment_methods');
+    $('#rv-id').textContent = idType && idType.value ? idType.options[idType.selectedIndex].text : '—';
+    $('#rv-payout').textContent = `${fieldValue('provider')} · •••• ${last4}`;
+    $('#rv-holder').textContent = fieldValue('holder_name');
+    $('#rv-docs').textContent = `${uploaded} document${uploaded === 1 ? '' : 's'} uploaded`;
+  }
+
+  function updateChrome() {
+    const doneCount = [1, 2, 3, 4, 5, 6].filter((number) => completed.has(number)).length;
+    const percent = Math.round((doneCount / 6) * 100);
+
+    $$('.js-pct').forEach((el) => { el.textContent = `${percent}% complete`; });
+    $$('.js-done').forEach((el) => { el.textContent = String(doneCount); });
+    $$('.js-dial').forEach((el) => { el.textContent = `${percent}%`; });
+    $$('.js-ring').forEach((el) => { el.style.strokeDashoffset = String(100 - percent); });
+    $$('.js-count').forEach((el) => { el.textContent = `Step ${current} of 7`; });
+    $$('.js-bar').forEach((el) => { el.style.width = `${percent}%`; });
+    $$('[role="progressbar"]').forEach((el) => {
+      el.setAttribute('aria-valuenow', String(percent));
+      el.setAttribute('aria-valuetext', `${percent}% complete`);
+    });
+
+    railLinks.forEach((button) => {
+      const number = Number(button.dataset.goto);
+      const dot = $('.step-dot', button);
+      button.classList.toggle('is-current', number === current);
+      button.classList.toggle('is-done', completed.has(number) && number !== current);
+      if (number === current) {
+        button.setAttribute('aria-current', 'step');
+      } else {
+        button.removeAttribute('aria-current');
+      }
+      dot.innerHTML = completed.has(number) && number !== current ? checkIcon : String(number);
+    });
+
+    $$('.m-dot').forEach((dot) => {
+      const number = Number(dot.dataset.goto);
+      dot.classList.toggle('is-current', number === current);
+      dot.classList.toggle('is-done', completed.has(number) && number !== current);
+      if (number === current) {
+        dot.setAttribute('aria-current', 'step');
+      } else {
+        dot.removeAttribute('aria-current');
+      }
+      dot.innerHTML = completed.has(number) && number !== current ? checkIcon : String(number);
+    });
+
+    backBtn.hidden = current === 1;
+    nextLabel.textContent = current === 7 ? 'Submit application' : 'Continue';
+    nextIcon.setAttribute('href', current === 7 ? '#i-check' : '#i-arrow-right');
+    $('#save-hint').textContent = current === 7
+      ? 'Accept all six policies to submit.'
+      : 'Your progress saves automatically.';
+  }
+
+  function clearAlert() {
+    alertBox.hidden = true;
+  }
+
+  function showAlert(message) {
+    alertText.textContent = message;
+    alertBox.hidden = false;
+  }
+
+  function clearFieldError(control) {
+    const field = control.closest('.field');
+    if (!field) return;
+    field.classList.remove('is-invalid');
+    const error = $('.error', field);
+    if (error) error.textContent = '';
+  }
+
+  function markFieldError(control) {
+    const field = control.closest('.field');
+    if (!field) return;
+    field.classList.add('is-invalid');
+    let error = $('.error', field);
+    if (!error) {
+      error = document.createElement('span');
+      error.className = 'error';
+      field.append(error);
+    }
+    error.textContent = control.dataset.error || 'This field is required.';
+  }
+
+  function isVisible(el) {
+    if (el.closest('[hidden]') || el.disabled) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 || rect.height > 0;
+  }
+
+  function validateStep(number) {
+    const section = steps[number - 1];
+    const required = $$('input, select, textarea', section).filter((el) => (
+      el.required
+      && el.type !== 'file'
+      && el.type !== 'radio'
+      && el.type !== 'checkbox'
+      && isVisible(el)
+    ));
+    let firstInvalid = null;
+
+    required.forEach((control) => {
+      clearFieldError(control);
+      if (!String(control.value).trim()) {
+        markFieldError(control);
+        if (!firstInvalid) firstInvalid = control;
+      }
+    });
+
+    if (!firstInvalid) {
+      clearAlert();
+      return true;
+    }
+
+    showAlert('Please complete the highlighted fields.');
+    firstInvalid.focus({ preventScroll: true });
+    firstInvalid.closest('.field')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+
+  function validatePolicies() {
+    const policies = $$('[data-policy]');
+    if (policies.every((box) => box.checked)) {
+      return true;
+    }
+    const remaining = policies.filter((box) => !box.checked).length;
+    showAlert(`Accept all six policies to submit. ${remaining} remaining.`);
+    $('#accept-all').focus({ preventScroll: true });
+    $('.policies').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+
+  function setStep(number, options = {}) {
+    const { scroll = true, focus = true } = options;
+    const next = Math.min(7, Math.max(1, Number(number)));
+    current = next;
+
+    steps.forEach((section) => {
+      const active = Number(section.dataset.step) === current;
+      section.hidden = !active;
+      section.classList.toggle('is-active', active);
+    });
+
+    clearAlert();
+    if (current === 7) {
+      syncReview();
+    }
+    updateChrome();
+    if (current === 7) {
+      syncPolicies();
+    }
+
+    if (scroll) {
+      const top = $('#panel').getBoundingClientRect().top + window.scrollY - 84;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+    if (focus) {
+      window.setTimeout(() => {
+        $(`#title-${current}`)?.focus({ preventScroll: true });
+      }, 140);
+    }
+
+    try {
+      history.replaceState(null, '', `#step-${current}`);
+    } catch (error) {
+      /* file:// previews can block history updates */
+    }
+  }
+
+  function goNext() {
+    if (current === 7) {
+      if (!validatePolicies()) return;
+      [1, 2, 3, 4, 5, 6, 7].forEach((number) => completed.add(number));
+      showSuccess();
+      return;
+    }
+
+    if (!validateStep(current)) return;
+    completed.add(current);
+    setStep(current + 1);
+  }
+
+  function goBack() {
+    if (current > 1) {
+      setStep(current - 1);
+    }
+  }
+
+  function showSuccess() {
+    const name = fieldValue('seller_name');
+    $('#success-name').textContent = name === '—' ? 'there' : name.split(/\s+/)[0];
+    $('#shell').hidden = true;
+    $('#mock-foot').hidden = true;
+    const success = $('#success');
+    success.hidden = false;
+    const heading = $('#success-title');
+    heading.setAttribute('tabindex', '-1');
+    saveState.classList.remove('is-saving');
+    saveText.textContent = 'Application submitted';
+    $('.topbar-btn').hidden = true;
+    document.title = 'Application submitted — JMMart';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.setTimeout(() => heading.focus({ preventScroll: true }), 100);
+    try {
+      history.replaceState(null, '', '#submitted');
+    } catch (error) {
+      /* file:// previews can block history updates */
+    }
+  }
+
+  function markDirty() {
+    saveState.classList.add('is-saving');
+    saveText.textContent = 'Saving…';
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => {
+      saveState.classList.remove('is-saving');
+      saveText.textContent = 'All changes saved';
+    }, 700);
+  }
+
+  function showToast(message) {
+    const toast = $('#toast');
+    window.clearTimeout(toastTimer);
+    window.clearTimeout(toastHideTimer);
+    toast.textContent = message;
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add('is-on'));
+    toastTimer = window.setTimeout(() => {
+      toast.classList.remove('is-on');
+      toastHideTimer = window.setTimeout(() => { toast.hidden = true; }, 220);
+    }, 3200);
+  }
+
+  const formatSize = (bytes) => (
+    bytes >= 1048576
+      ? `${(bytes / 1048576).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(bytes / 1024))} KB`
+  );
+
+  $$('input[type="file"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const row = input.closest('.upload');
+      row.classList.add('is-done');
+      const action = $('.upload-action', row);
+      if (action) action.textContent = 'Replace';
+      const nameLabel = $('.js-upload-name', row) || $('.upload-help', row);
+      if (nameLabel) nameLabel.textContent = `${file.name} · ${formatSize(file.size)}`;
+
+      if (file.type.startsWith('image/')) {
+        const url = URL.createObjectURL(file);
+        if (input.dataset.upload === 'logo') {
+          const thumb = $('.js-logo-thumb');
+          const initial = $('.js-logo-initial');
+          const preview = $('.js-logo-preview');
+          if (thumb) {
+            thumb.style.backgroundImage = `url("${url}")`;
+            thumb.dataset.image = '1';
+          }
+          if (initial) initial.hidden = true;
+          if (preview) {
+            preview.style.backgroundImage = `url("${url}")`;
+            preview.textContent = '';
+            preview.dataset.image = '1';
+          }
+        }
+        if (input.dataset.upload === 'banner') {
+          const banner = $('.js-preview-banner');
+          if (banner) banner.style.backgroundImage = `url("${url}")`;
+        }
+      }
+      markDirty();
+    });
+  });
+
+  $$('input[name="seller_type"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      syncSellerType();
+      markDirty();
+    });
+  });
+
+  $$('input[name="payout_method"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      syncPayout();
+      markDirty();
+    });
+  });
+
+  $('#same-address').addEventListener('change', (event) => {
+    $('#different-address').hidden = event.target.checked;
+    markDirty();
+  });
+
+  $$('[data-days]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const input = $('#processing_days');
+      const next = Math.min(30, Math.max(1, (parseInt(input.value, 10) || 1) + Number(button.dataset.days)));
+      input.value = String(next);
+      markDirty();
+    });
+  });
+
+  const policyBoxes = $$('[data-policy]');
+  const acceptAll = $('#accept-all');
+
+  function syncPolicies() {
+    const accepted = policyBoxes.filter((box) => box.checked).length;
+    const total = policyBoxes.length;
+    $('#policy-count').textContent = `${accepted} of ${total}`;
+    acceptAll.checked = accepted === total;
+    acceptAll.indeterminate = accepted > 0 && accepted < total;
+    if (current === 7) {
+      $('#save-hint').textContent = accepted === total
+        ? 'Ready to submit.'
+        : `${accepted} of ${total} policies accepted.`;
+    }
+  }
+
+  policyBoxes.forEach((box) => {
+    box.addEventListener('change', () => {
+      syncPolicies();
+      markDirty();
+    });
+  });
+
+  acceptAll.addEventListener('change', () => {
+    policyBoxes.forEach((box) => { box.checked = acceptAll.checked; });
+    syncPolicies();
+    markDirty();
+  });
+
+  form.addEventListener('input', (event) => {
+    markDirty();
+    if (event.target.matches('.control, .input-group input')) {
+      clearFieldError(event.target);
+    }
+    if (['store_name', 'store_slug', 'store_description', 'store_category'].includes(event.target.id)) {
+      syncPreview();
+    }
+  });
+
+  form.addEventListener('change', (event) => {
+    if (['store_name', 'store_slug', 'store_description', 'store_category'].includes(event.target.id)) {
+      syncPreview();
+    }
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    goNext();
+  });
+
+  nextBtn.addEventListener('click', goNext);
+  backBtn.addEventListener('click', goBack);
+
+  document.addEventListener('click', (event) => {
+    const goto = event.target.closest('[data-goto]');
+    if (goto) {
+      event.preventDefault();
+      setStep(Number(goto.dataset.goto));
+      return;
+    }
+    const toast = event.target.closest('[data-toast]');
+    if (toast) {
+      event.preventDefault();
+      showToast(toast.dataset.toast);
+    }
+  });
+
+  syncSellerType();
+  syncPayout();
+  syncPreview();
+  syncPolicies();
+
+  const hashMatch = window.location.hash.match(/^#step-([1-7])$/);
+  const initialStep = hashMatch ? Number(hashMatch[1]) : 1;
+  for (let number = 1; number < initialStep; number += 1) {
+    completed.add(number);
+  }
+  setStep(initialStep, { scroll: false, focus: false });
+})();
+</script>
+</body>
+</html>

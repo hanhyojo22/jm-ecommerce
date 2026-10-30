@@ -1,0 +1,289 @@
+- generic [active] [ref=f10e1]:
+  - link "Skip to content" [ref=f10e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f10e4]:
+    - complementary "My account sidebar" [ref=f10e5]:
+      - link "JMMart My account" [ref=f10e7] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/orders
+        - generic [ref=f10e8]:
+          - generic [ref=f10e9]: JMMart
+          - generic [ref=f10e10]: My account
+      - generic [ref=f10e11]:
+        - generic [aria-hidden] [ref=f10e12]: F
+        - generic [ref=f10e13]:
+          - paragraph [ref=f10e14]: Franil Escalicas
+          - paragraph [ref=f10e15]: Customer account
+      - navigation "Customer account navigation" [ref=f10e16]:
+        - paragraph [ref=f10e17]: My account
+        - link "My Purchases" [ref=f10e18] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/orders
+        - link "My Reviews" [ref=f10e24] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/my-reviews
+        - link "Delivery Addresses" [ref=f10e28] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/delivery-addresses
+        - link "Messages" [ref=f10e33] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/messages?context=buying
+        - link "Settings" [ref=f10e37] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/profile
+        - generic [ref=f10e42]:
+          - link "Marketplace" [ref=f10e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000
+          - link "Start selling" [ref=f10e47] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/start-selling
+      - button "Sign out" [ref=f10e52] [cursor=pointer]
+    - main [ref=f10e57]:
+      - generic [ref=f10e59]:
+        - generic [ref=f10e60]:
+          - button "Toggle My account sidebar" [ref=f10e61] [cursor=pointer]
+          - generic [ref=f10e64]:
+            - generic [ref=f10e65]: My account
+            - generic [aria-hidden] [ref=f10e66]: /
+            - strong [ref=f10e67]: My Purchases
+        - generic [ref=f10e69]:
+          - combobox "Search products, brands, and stores" [ref=f10e73]
+          - button "Search" [ref=f10e74] [cursor=pointer]
+        - generic [ref=f10e75]:
+          - link "Messages" [ref=f10e76] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages?context=buying
+          - 'link "Cart: 6 items" [ref=f10e79] [cursor=pointer]':
+            - /url: http://127.0.0.1:8000/cart
+            - generic [aria-hidden] [ref=f10e85]: "6"
+          - button "Account menu" [ref=f10e87] [cursor=pointer]:
+            - generic [ref=f10e91]: Hi, Franil
+      - generic [ref=f10e95]:
+        - generic [ref=f10e96]:
+          - generic [ref=f10e97]:
+            - heading "My purchases" [level=1] [ref=f10e98]
+            - paragraph [ref=f10e99]: 7 orders
+          - link "Continue shopping" [ref=f10e100] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/search
+            - text: Continue shopping
+            - generic [aria-hidden] [ref=f10e101]: →
+        - generic [ref=f10e102]:
+          - navigation "Purchase status filters" [ref=f10e103]:
+            - link "All 7 orders" [ref=f10e104] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=all
+              - text: All
+              - generic [ref=f10e105]:
+                - text: "7"
+                - generic [ref=f10e106]: orders
+            - link "To pay" [ref=f10e108] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_pay
+            - link "Awaiting store 7 orders" [ref=f10e109] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=awaiting_confirmation
+              - text: Awaiting store
+              - generic [ref=f10e110]:
+                - text: "7"
+                - generic [ref=f10e111]: orders
+            - link "Preparing" [ref=f10e112] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_dispatch
+            - link "On the way" [ref=f10e113] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_receive
+            - link "Delivered" [ref=f10e114] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=delivered
+            - link "To review" [ref=f10e116] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_review
+            - link "Returns" [ref=f10e117] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=returns
+          - generic [ref=f10e118]:
+            - generic [ref=f10e119]:
+              - generic [ref=f10e120]: Search purchases
+              - searchbox "Search purchases" [ref=f10e122]
+            - button "Search" [ref=f10e123] [cursor=pointer]
+        - region [ref=f10e124]:
+          - heading "All purchases (7)" [level=2] [ref=f10e125]
+          - region "Orders from Oct 15, 2026" [ref=f10e126]:
+            - generic [ref=f10e127]:
+              - heading "Oct 15" [level=3] [ref=f10e128]
+              - paragraph [ref=f10e129]: 1 order
+            - article [ref=f10e131]:
+              - generic [ref=f10e133]:
+                - generic [ref=f10e134]:
+                  - generic [ref=f10e135]:
+                    - generic [ref=f10e136]: Awaiting store
+                    - link "Trail & Tide" [ref=f10e139] [cursor=pointer]:
+                      - /url: http://127.0.0.1:8000/stores/trail-and-tide
+                    - link "Order JM-01M4YH1BKFGHX4FYCV92PH9TJN" [ref=f10e140] [cursor=pointer]:
+                      - /url: http://127.0.0.1:8000/orders/01m4yh1bkg7nrrkgxbrxknb44h
+                      - generic [aria-hidden] [ref=f10e141]: "#…PH9TJN"
+                  - heading "Waiting for Trail & Tide to confirm your order" [level=4] [ref=f10e143]
+                  - paragraph [ref=f10e144]:
+                    - text: You can still change your mind.
+                    - link "Ask to cancel" [ref=f10e145] [cursor=pointer]:
+                      - /url: http://127.0.0.1:8000/orders/01m4yh1bkg7nrrkgxbrxknb44h#order-help
+                  - paragraph [ref=f10e148]: Microfiber Travel Towel
+                  - paragraph [ref=f10e149]: Cash on delivery · Pay on delivery
+                  - generic [ref=f10e150]:
+                    - button "Message seller" [ref=f10e152] [cursor=pointer]
+                    - link "View order" [ref=f10e153] [cursor=pointer]:
+                      - /url: http://127.0.0.1:8000/orders/01m4yh1bkg7nrrkgxbrxknb44h
+                - generic [ref=f10e155]:
+                  - paragraph [ref=f10e156]: Store total
+                  - paragraph [ref=f10e157]: ₱2,229.00
+          - region "Orders from Oct 12, 2026" [ref=f10e158]:
+            - generic [ref=f10e159]:
+              - heading "Oct 12" [level=3] [ref=f10e160]
+              - paragraph [ref=f10e161]: 4 orders
+            - generic [ref=f10e162]:
+              - article [ref=f10e163]:
+                - generic [ref=f10e165]:
+                  - generic [ref=f10e166]:
+                    - generic [ref=f10e167]:
+                      - generic [ref=f10e168]: Awaiting store
+                      - link "Franil Store" [ref=f10e171] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/stores/franil-store
+                      - link "Order JM-01M4QFTBPC7CKN6RNAT7HR71QY" [ref=f10e172] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qftbpd8ght0dx2n36bhkmg
+                        - generic [aria-hidden] [ref=f10e173]: "#…HR71QY"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f10e175]
+                    - paragraph [ref=f10e176]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f10e177] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qftbpd8ght0dx2n36bhkmg#order-help
+                    - paragraph [ref=f10e180]: Tp Link - 300Mbps
+                    - paragraph [ref=f10e181]: Cash on delivery · Pay on delivery
+                    - generic [ref=f10e182]:
+                      - button "Message seller" [ref=f10e184] [cursor=pointer]
+                      - link "View order" [ref=f10e185] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qftbpd8ght0dx2n36bhkmg
+                  - generic [ref=f10e187]:
+                    - paragraph [ref=f10e188]: Store total
+                    - paragraph [ref=f10e189]: ₱25,000.00
+              - article [ref=f10e190]:
+                - generic [ref=f10e192]:
+                  - generic [ref=f10e193]:
+                    - generic [ref=f10e194]:
+                      - generic [ref=f10e195]: Awaiting store
+                      - link "Franil Store" [ref=f10e198] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/stores/franil-store
+                      - link "Order JM-01M4QF1SMB0SK51C411EYHW0HJ" [ref=f10e199] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qf1smb0sk51c411eyhw0hk
+                        - generic [aria-hidden] [ref=f10e200]: "#…YHW0HJ"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f10e202]
+                    - paragraph [ref=f10e203]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f10e204] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qf1smb0sk51c411eyhw0hk#order-help
+                    - paragraph [ref=f10e207]: Tp Link - 300Mbps
+                    - paragraph [ref=f10e208]: Cash on delivery · Pay on delivery
+                    - generic [ref=f10e209]:
+                      - button "Message seller" [ref=f10e211] [cursor=pointer]
+                      - link "View order" [ref=f10e212] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qf1smb0sk51c411eyhw0hk
+                  - generic [ref=f10e214]:
+                    - paragraph [ref=f10e215]: Store total
+                    - paragraph [ref=f10e216]: ₱25,000.00
+              - article [ref=f10e217]:
+                - generic [ref=f10e219]:
+                  - generic [ref=f10e220]:
+                    - generic [ref=f10e221]:
+                      - generic [ref=f10e222]: Awaiting store
+                      - link "Franil Store" [ref=f10e225] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/stores/franil-store
+                      - link "Order JM-01M4QEHMVBE2T64X3108BN1WPG" [ref=f10e226] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qehmvbe2t64x3108bn1wph
+                        - generic [aria-hidden] [ref=f10e227]: "#…BN1WPG"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f10e229]
+                    - paragraph [ref=f10e230]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f10e231] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qehmvbe2t64x3108bn1wph#order-help
+                    - paragraph [ref=f10e234]: Tp Link - 300Mbps
+                    - paragraph [ref=f10e235]: Cash on delivery · Pay on delivery
+                    - generic [ref=f10e236]:
+                      - button "Message seller" [ref=f10e238] [cursor=pointer]
+                      - link "View order" [ref=f10e239] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qehmvbe2t64x3108bn1wph
+                  - generic [ref=f10e241]:
+                    - paragraph [ref=f10e242]: Store total
+                    - paragraph [ref=f10e243]: ₱25,000.00
+              - article [ref=f10e244]:
+                - generic [ref=f10e246]:
+                  - generic [ref=f10e247]:
+                    - generic [ref=f10e248]:
+                      - generic [ref=f10e249]: Awaiting store
+                      - link "Franil Store" [ref=f10e252] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/stores/franil-store
+                      - link "Order JM-01M4QDH0TNP3BTMQ5SR0130YKD" [ref=f10e253] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qdh0tnp3btmq5sr0130yke
+                        - generic [aria-hidden] [ref=f10e254]: "#…130YKD"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f10e256]
+                    - paragraph [ref=f10e257]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f10e258] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qdh0tnp3btmq5sr0130yke#order-help
+                    - paragraph [ref=f10e261]: Tp Link - 300Mbps
+                    - paragraph [ref=f10e262]: Cash on delivery · Pay on delivery
+                    - generic [ref=f10e263]:
+                      - button "Message seller" [ref=f10e265] [cursor=pointer]
+                      - link "View order" [ref=f10e266] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4qdh0tnp3btmq5sr0130yke
+                  - generic [ref=f10e268]:
+                    - paragraph [ref=f10e269]: Store total
+                    - paragraph [ref=f10e270]: ₱25,000.00
+          - region "Orders from Oct 11, 2026" [ref=f10e271]:
+            - generic [ref=f10e272]:
+              - heading "Oct 11" [level=3] [ref=f10e273]
+              - paragraph [ref=f10e274]: 2 orders
+            - generic [ref=f10e275]:
+              - article [ref=f10e276]:
+                - generic [ref=f10e278]:
+                  - generic [ref=f10e279]:
+                    - generic [ref=f10e280]:
+                      - generic [ref=f10e281]: Awaiting store
+                      - link "Franil Store" [ref=f10e284] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/stores/franil-store
+                      - link "Order JM-01M4NHAS2S586H74Q284SYQEAM" [ref=f10e285] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4nhas2s586h74q284syqean
+                        - generic [aria-hidden] [ref=f10e286]: "#…SYQEAM"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f10e288]
+                    - paragraph [ref=f10e289]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f10e290] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4nhas2s586h74q284syqean#order-help
+                    - paragraph [ref=f10e293]: Tp Link - 300Mbps
+                    - paragraph [ref=f10e294]: Cash on delivery · Pay on delivery
+                    - generic [ref=f10e295]:
+                      - button "Message seller" [ref=f10e297] [cursor=pointer]
+                      - link "View order" [ref=f10e298] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4nhas2s586h74q284syqean
+                  - generic [ref=f10e300]:
+                    - paragraph [ref=f10e301]: Store total
+                    - paragraph [ref=f10e302]: ₱75,000.00
+              - article [ref=f10e303]:
+                - generic [ref=f10e305]:
+                  - generic [ref=f10e306]:
+                    - generic [ref=f10e307]:
+                      - generic [ref=f10e308]: Awaiting store
+                      - link "Franil Store" [ref=f10e311] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/stores/franil-store
+                      - link "Order JM-01M4MT8407MW5ACSX1Z0BTW9Z7" [ref=f10e312] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4mt8408jefdgj94nfq0drxs
+                        - generic [aria-hidden] [ref=f10e313]: "#…BTW9Z7"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f10e315]
+                    - paragraph [ref=f10e316]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f10e317] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4mt8408jefdgj94nfq0drxs#order-help
+                    - paragraph [ref=f10e320]: Tp Link - 300Mbps
+                    - paragraph [ref=f10e321]: Cash on delivery · Pay on delivery
+                    - generic [ref=f10e322]:
+                      - button "Message seller" [ref=f10e324] [cursor=pointer]
+                      - link "View order" [ref=f10e325] [cursor=pointer]:
+                        - /url: http://127.0.0.1:8000/orders/01m4mt8408jefdgj94nfq0drxs
+                  - generic [ref=f10e327]:
+                    - paragraph [ref=f10e328]: Store total
+                    - paragraph [ref=f10e329]: ₱50,000.00
+  - region [ref=f10e330]:
+    - heading "Your privacy matters" [level=2] [ref=f10e336]
+    - paragraph [ref=f10e337]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f10e338] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f10e339] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=f10e340]:
+      - button "Reject Optional" [ref=f10e341] [cursor=pointer]
+      - button "Customize" [ref=f10e342] [cursor=pointer]
+      - button "Accept All" [ref=f10e343] [cursor=pointer]

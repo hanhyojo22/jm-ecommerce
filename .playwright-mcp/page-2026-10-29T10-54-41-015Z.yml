@@ -1,0 +1,238 @@
+- generic [ref=f18e2]:
+  - complementary "My account" [ref=f18e3]:
+    - generic [ref=f18e4]:
+      - generic [ref=f18e5]: jm
+      - generic [ref=f18e6]: JMMart
+    - navigation [ref=f18e7]:
+      - link "My purchases" [ref=f18e8] [cursor=pointer]:
+        - /url: "#"
+      - link "My reviews" [ref=f18e13] [cursor=pointer]:
+        - /url: "#"
+      - link "Delivery addresses" [ref=f18e16] [cursor=pointer]:
+        - /url: "#"
+      - link "Messages" [ref=f18e20] [cursor=pointer]:
+        - /url: "#"
+  - generic [ref=f18e23]:
+    - banner [ref=f18e24]:
+      - text: My account
+      - generic [aria-hidden] [ref=f18e25]: /
+      - strong [ref=f18e26]: My purchases
+      - link "Continue shopping" [ref=f18e27] [cursor=pointer]:
+        - /url: "#"
+        - text: Continue shopping
+        - generic [aria-hidden] [ref=f18e28]: →
+    - main [ref=f18e29]:
+      - generic [ref=f18e30]:
+        - generic [ref=f18e31]:
+          - heading "My purchases" [level=1] [ref=f18e32]
+          - paragraph [ref=f18e33]: 23 orders from 9 stores
+        - generic [ref=f18e34]:
+          - generic [ref=f18e35]: Search purchases
+          - searchbox "Search purchases" [ref=f18e36]
+      - region "Waiting on you" [ref=f18e37]:
+        - strong [ref=f18e38]: Waiting on you
+        - link "1 order to pay" [ref=f18e39] [cursor=pointer]:
+          - /url: "#"
+        - link "1 return to answer" [ref=f18e40] [cursor=pointer]:
+          - /url: "#"
+        - link "1 parcel to confirm" [ref=f18e41] [cursor=pointer]:
+          - /url: "#"
+      - group "Purchase status filters" [ref=f18e43]:
+        - button "All 23" [pressed] [ref=f18e44] [cursor=pointer]:
+          - text: All
+          - generic [ref=f18e45]: "23"
+        - button "To pay 1 waiting on you" [ref=f18e47] [cursor=pointer]:
+          - text: To pay
+          - generic [ref=f18e48]:
+            - text: "1"
+            - generic [ref=f18e49]: waiting on you
+        - button "Awaiting store 1" [ref=f18e50] [cursor=pointer]:
+          - text: Awaiting store
+          - generic [ref=f18e51]: "1"
+        - button "Preparing 1" [ref=f18e52] [cursor=pointer]:
+          - text: Preparing
+          - generic [ref=f18e53]: "1"
+        - button "On the way 1" [ref=f18e54] [cursor=pointer]:
+          - text: On the way
+          - generic [ref=f18e55]: "1"
+        - button "Delivered 17" [ref=f18e56] [cursor=pointer]:
+          - text: Delivered
+          - generic [ref=f18e57]: "17"
+        - button "To review 2" [ref=f18e59] [cursor=pointer]:
+          - text: To review
+          - generic [ref=f18e60]: "2"
+        - button "Returns 1 waiting on you" [ref=f18e61] [cursor=pointer]:
+          - text: Returns
+          - generic [ref=f18e62]:
+            - text: "1"
+            - generic [ref=f18e63]: waiting on you
+      - region "Purchases" [ref=f18e64]:
+        - generic [aria-hidden] [ref=f18e65]:
+          - generic [ref=f18e66]: Order
+          - generic [ref=f18e67]: Total
+          - generic [ref=f18e68]: Next step
+        - generic [ref=f18e69]:
+          - generic [ref=f18e70]:
+            - heading "Today Oct 29" [level=2] [ref=f18e71]
+            - paragraph [ref=f18e72]: 2 orders · ₱1,798.00
+          - article [ref=f18e73]:
+            - generic [ref=f18e75]:
+              - generic [ref=f18e76]:
+                - generic [ref=f18e77]: To pay
+                - link "Demo Store" [ref=f18e78] [cursor=pointer]:
+                  - /url: "#"
+                - link "#…Q8W7Y4" [ref=f18e79] [cursor=pointer]:
+                  - /url: "#"
+              - heading "Pay for your Everyday Canvas Tote order" [level=3] [ref=f18e80]
+              - paragraph [ref=f18e81]: Pay ₱499.00 by GCash before Oct 30, 2:14 PM (in 23 hours), then send the reference number. Unpaid orders are cancelled.
+              - generic [ref=f18e82]:
+                - link "Message seller" [ref=f18e83] [cursor=pointer]:
+                  - /url: "#"
+                - link "View order" [ref=f18e84] [cursor=pointer]:
+                  - /url: "#"
+            - generic [ref=f18e85]:
+              - strong [ref=f18e86]: ₱499.00
+              - generic [ref=f18e87]: GCash · To pay
+            - link "Pay store" [ref=f18e89] [cursor=pointer]:
+              - /url: "#"
+          - article [ref=f18e90]:
+            - generic [ref=f18e92]:
+              - generic [ref=f18e93]:
+                - generic [ref=f18e94]: Awaiting store
+                - link "Franil Store" [ref=f18e95] [cursor=pointer]:
+                  - /url: "#"
+                - link "#…N9R2T1" [ref=f18e96] [cursor=pointer]:
+                  - /url: "#"
+              - heading "Waiting for Franil Store to confirm your order" [level=3] [ref=f18e97]
+              - paragraph [ref=f18e98]:
+                - text: You can still change your mind.
+                - link "Ask to cancel" [ref=f18e99] [cursor=pointer]:
+                  - /url: "#"
+              - generic [ref=f18e100]:
+                - link "Message seller" [ref=f18e101] [cursor=pointer]:
+                  - /url: "#"
+                - link "View order" [ref=f18e102] [cursor=pointer]:
+                  - /url: "#"
+            - generic [ref=f18e103]:
+              - strong [ref=f18e104]: ₱1,299.00
+              - generic [ref=f18e105]: Pay on delivery
+        - generic [ref=f18e107]:
+          - generic [ref=f18e108]:
+            - heading "Yesterday Oct 28" [level=2] [ref=f18e109]
+            - paragraph [ref=f18e110]: 2 orders · ₱3,840.00
+          - article [ref=f18e111]:
+            - generic [ref=f18e112]: "+2"
+            - generic [ref=f18e117]:
+              - generic [ref=f18e118]:
+                - generic [ref=f18e119]: On the way
+                - link "Trail & Tide" [ref=f18e120] [cursor=pointer]:
+                  - /url: "#"
+                - link "#…PH9TJN" [ref=f18e121] [cursor=pointer]:
+                  - /url: "#"
+              - heading "Your Microfiber Travel Towel order is on the way" [level=3] [ref=f18e122]
+              - paragraph [ref=f18e123]:
+                - text: Confirm with Order received once it arrives (auto-confirmed Nov 11).
+                - link "Not here yet?" [ref=f18e124] [cursor=pointer]:
+                  - /url: "#"
+              - generic [ref=f18e125]:
+                - link "Message seller" [ref=f18e126] [cursor=pointer]:
+                  - /url: "#"
+                - link "View order" [ref=f18e127] [cursor=pointer]:
+                  - /url: "#"
+            - generic [ref=f18e128]:
+              - strong [ref=f18e129]: ₱2,229.00
+              - generic [ref=f18e130]: Pay on delivery
+            - button "Order received" [ref=f18e132] [cursor=pointer]
+          - article [ref=f18e133]:
+            - generic [ref=f18e138]:
+              - generic [ref=f18e139]:
+                - generic [ref=f18e140]: Preparing
+                - link "Northwind Goods" [ref=f18e141] [cursor=pointer]:
+                  - /url: "#"
+                - link "#…K5V3N9" [ref=f18e142] [cursor=pointer]:
+                  - /url: "#"
+              - heading "Northwind Goods is preparing your Ceramic Pour-Over Set order" [level=3] [ref=f18e143]
+              - paragraph [ref=f18e144]:
+                - text: It will be handed to the courier when ready.
+                - link "Ask to cancel" [ref=f18e145] [cursor=pointer]:
+                  - /url: "#"
+              - generic [ref=f18e146]:
+                - link "Message seller" [ref=f18e147] [cursor=pointer]:
+                  - /url: "#"
+                - link "View order" [ref=f18e148] [cursor=pointer]:
+                  - /url: "#"
+            - generic [ref=f18e149]:
+              - strong [ref=f18e150]: ₱1,611.00
+              - generic [ref=f18e151]: Maya · Paid
+        - generic [ref=f18e153]:
+          - generic [ref=f18e154]:
+            - heading "Oct 21" [level=2] [ref=f18e155]
+            - paragraph [ref=f18e156]: 3 orders · ₱4,276.00
+          - article [ref=f18e157]:
+            - generic [ref=f18e159]:
+              - generic [ref=f18e160]:
+                - generic [ref=f18e161]: Return · your answer
+                - link "Franil Store" [ref=f18e162] [cursor=pointer]:
+                  - /url: "#"
+                - link "#…BN1WPG" [ref=f18e163] [cursor=pointer]:
+                  - /url: "#"
+              - heading "Franil Store answered your return" [level=3] [ref=f18e164]
+              - paragraph [ref=f18e165]: Franil Store offered a replacement. Decide by Oct 31, 5:00 PM on the return page.
+              - generic [ref=f18e166]:
+                - link "Message seller" [ref=f18e167] [cursor=pointer]:
+                  - /url: "#"
+                - link "View order" [ref=f18e168] [cursor=pointer]:
+                  - /url: "#"
+            - generic [ref=f18e169]:
+              - strong [ref=f18e170]: ₱1,299.00
+              - generic [ref=f18e171]: Paid
+            - link "Answer return" [ref=f18e173] [cursor=pointer]:
+              - /url: "#"
+          - article [ref=f18e174]:
+            - generic [ref=f18e176]:
+              - generic [ref=f18e177]:
+                - generic [ref=f18e178]: Delivered
+                - link "Demo Store" [ref=f18e179] [cursor=pointer]:
+                  - /url: "#"
+                - link "#…YHW0HJ" [ref=f18e180] [cursor=pointer]:
+                  - /url: "#"
+              - heading "Your Everyday Canvas Tote order arrived" [level=3] [ref=f18e181]
+              - paragraph [ref=f18e182]:
+                - text: Returns are open until Oct 28.
+                - link "Request return" [ref=f18e183] [cursor=pointer]:
+                  - /url: "#"
+              - generic [ref=f18e184]:
+                - link "Message seller" [ref=f18e185] [cursor=pointer]:
+                  - /url: "#"
+                - link "View order" [ref=f18e186] [cursor=pointer]:
+                  - /url: "#"
+            - generic [ref=f18e187]:
+              - strong [ref=f18e188]: ₱499.00
+              - generic [ref=f18e189]: Paid
+            - link "Write review" [ref=f18e191] [cursor=pointer]:
+              - /url: "#"
+          - article [ref=f18e192]:
+            - generic [ref=f18e197]:
+              - generic [ref=f18e198]:
+                - generic [ref=f18e199]: Cancelled
+                - link "Harbor & Co." [ref=f18e200] [cursor=pointer]:
+                  - /url: "#"
+                - link "#…3108BN" [ref=f18e201] [cursor=pointer]:
+                  - /url: "#"
+              - heading "Harbor & Co. owes you a refund" [level=3] [ref=f18e202]
+              - paragraph [ref=f18e203]:
+                - text: This order was cancelled after you paid. Harbor & Co. owes you ₱2,478.00. Message them first. If it doesn’t arrive,
+                - link "get help from JMMart" [ref=f18e204] [cursor=pointer]:
+                  - /url: "#"
+                - text: .
+              - generic [ref=f18e205]:
+                - link "Message seller" [ref=f18e206] [cursor=pointer]:
+                  - /url: "#"
+                - link "View order" [ref=f18e207] [cursor=pointer]:
+                  - /url: "#"
+            - generic [ref=f18e208]:
+              - strong [ref=f18e209]: ₱2,478.00
+              - generic [ref=f18e210]: Refund due
+        - generic [ref=f18e212]:
+          - generic [ref=f18e213]: Showing 7 of 23 orders
+          - button "Load more" [ref=f18e214] [cursor=pointer]

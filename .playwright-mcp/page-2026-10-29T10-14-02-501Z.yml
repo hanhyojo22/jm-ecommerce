@@ -1,0 +1,260 @@
+- generic [active] [ref=f7e1]:
+  - link "Skip to content" [ref=f7e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f7e4]:
+    - complementary "My account sidebar" [ref=f7e5]:
+      - link "JMMart My account" [ref=f7e7] [cursor=pointer]:
+        - /url: http://localhost/orders
+      - generic [ref=f7e9]:
+        - text: F
+        - generic [ref=f7e10]:
+          - paragraph [ref=f7e11]: Franil Escalicas
+          - paragraph [ref=f7e12]: Customer account
+      - navigation "Customer account navigation" [ref=f7e13]:
+        - paragraph [ref=f7e14]: My account
+        - link "My Purchases" [ref=f7e15] [cursor=pointer]:
+          - /url: http://localhost/orders
+        - link "My Reviews" [ref=f7e20] [cursor=pointer]:
+          - /url: http://localhost/my-reviews
+        - link "Delivery Addresses" [ref=f7e23] [cursor=pointer]:
+          - /url: http://localhost/delivery-addresses
+        - link "Messages" [ref=f7e27] [cursor=pointer]:
+          - /url: http://localhost/messages?context=buying
+        - link "Settings" [ref=f7e30] [cursor=pointer]:
+          - /url: http://localhost/profile
+        - generic [ref=f7e34]:
+          - link "Marketplace" [ref=f7e35] [cursor=pointer]:
+            - /url: http://localhost
+          - link "Start selling" [ref=f7e38] [cursor=pointer]:
+            - /url: http://localhost/start-selling
+      - button "Sign out" [ref=f7e42]
+    - main [ref=f7e46]:
+      - generic [ref=f7e47]:
+        - generic [ref=f7e48]:
+          - generic [ref=f7e49]:
+            - button "Open navigation menu" [ref=f7e50]
+            - button "Toggle My account sidebar" [ref=f7e52]
+            - link "JMMart My account" [ref=f7e54] [cursor=pointer]:
+              - /url: http://localhost/orders
+              - text: My account
+            - generic [ref=f7e55]:
+              - text: My account /
+              - strong [ref=f7e56]: My Purchases
+          - generic [ref=f7e57]:
+            - generic [ref=f7e58]:
+              - combobox "Search products, brands, and stores" [ref=f7e62]
+              - button "Clear search" [ref=f7e63]
+              - button "Search" [ref=f7e65]
+              - text: Searching…
+            - generic [ref=f7e66]:
+              - status [ref=f7e67]: Searching products…
+              - status [ref=f7e68]: No matching products
+              - listbox "Product suggestions"
+              - text: View all results
+          - generic [ref=f7e69]:
+            - link "Messages" [ref=f7e70] [cursor=pointer]:
+              - /url: http://localhost/messages?context=buying
+            - 'link "Cart: 6 items" [ref=f7e73] [cursor=pointer]':
+              - /url: http://localhost/cart
+              - text: "6"
+            - generic [ref=f7e79]:
+              - button "Account menu" [ref=f7e80]: Hi, Franil
+              - generic [ref=f7e84]:
+                - generic [ref=f7e85]:
+                  - text: F
+                  - generic [ref=f7e86]:
+                    - paragraph [ref=f7e87]: Franil Escalicas
+                    - paragraph [ref=f7e88]: escalicasf@gmail.com
+                - navigation "Account links" [ref=f7e89]:
+                  - link "My Purchases" [ref=f7e90] [cursor=pointer]:
+                    - /url: http://localhost/orders
+                  - link "Messages" [ref=f7e91] [cursor=pointer]:
+                    - /url: http://localhost/messages?context=buying
+                  - link "My account" [ref=f7e92] [cursor=pointer]:
+                    - /url: http://localhost/profile
+                - button "Switch AccountGo to Seller Center" [ref=f7e95]
+                - button "Sign out" [ref=f7e102]
+        - button "Close navigation menu" [ref=f7e104]
+        - dialog "My account navigation" [ref=f7e105]:
+          - generic [ref=f7e106]:
+            - link "My account" [ref=f7e107] [cursor=pointer]:
+              - /url: http://localhost/orders
+            - button "Close navigation menu" [ref=f7e108]
+          - navigation "Customer account navigation" [ref=f7e110]:
+            - paragraph [ref=f7e111]: My account
+            - link "My Purchases" [ref=f7e112] [cursor=pointer]:
+              - /url: http://localhost/orders
+            - link "My Reviews" [ref=f7e117] [cursor=pointer]:
+              - /url: http://localhost/my-reviews
+            - link "Delivery Addresses" [ref=f7e120] [cursor=pointer]:
+              - /url: http://localhost/delivery-addresses
+            - link "Messages" [ref=f7e124] [cursor=pointer]:
+              - /url: http://localhost/messages?context=buying
+            - link "Settings" [ref=f7e127] [cursor=pointer]:
+              - /url: http://localhost/profile
+            - generic [ref=f7e131]:
+              - link "Marketplace" [ref=f7e132] [cursor=pointer]:
+                - /url: http://localhost
+              - link "Start selling" [ref=f7e135] [cursor=pointer]:
+                - /url: http://localhost/start-selling
+          - button "Sign out" [ref=f7e139]
+      - generic [ref=f7e146]:
+        - generic [ref=f7e147]:
+          - generic [ref=f7e148]:
+            - heading "My purchases" [level=1] [ref=f7e149]
+            - paragraph [ref=f7e150]: 7 orders
+          - link "Continue shopping" [ref=f7e151] [cursor=pointer]:
+            - /url: http://localhost/search
+            - text: Continue shopping →
+        - generic [ref=f7e152]:
+          - navigation "Purchase status filters" [ref=f7e153]:
+            - link "All 7 orders" [ref=f7e154] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=all
+              - text: All
+              - generic [ref=f7e155]: 7 orders
+            - link "To pay" [ref=f7e156] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=to_pay
+            - link "Awaiting store 7 orders" [ref=f7e157] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=awaiting_confirmation
+              - text: Awaiting store
+              - generic [ref=f7e158]: 7 orders
+            - link "Preparing" [ref=f7e159] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=to_dispatch
+            - link "On the way" [ref=f7e160] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=to_receive
+            - link "Delivered" [ref=f7e161] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=delivered
+            - link "To review" [ref=f7e162] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=to_review
+            - link "Returns" [ref=f7e163] [cursor=pointer]:
+              - /url: http://localhost/orders?tab=returns
+          - generic [ref=f7e164]:
+            - generic [ref=f7e165]:
+              - text: Search purchases
+              - searchbox "Search purchases" [ref=f7e170]
+            - button "Search" [ref=f7e171]
+        - region [ref=f7e172]:
+          - heading "All purchases (7)" [level=2] [ref=f7e173]
+          - region "Orders from Oct 15, 2026" [ref=f7e174]:
+            - generic [ref=f7e175]:
+              - heading "Oct 15" [level=3] [ref=f7e176]
+              - paragraph [ref=f7e177]: 1 order
+            - article [ref=f7e179]:
+              - generic [ref=f7e180]:
+                - generic [ref=f7e181]:
+                  - generic [ref=f7e182]:
+                    - generic [ref=f7e183]: Awaiting store
+                    - link "Trail & Tide" [ref=f7e185] [cursor=pointer]:
+                      - /url: http://localhost/stores/trail-and-tide
+                    - link "Order JM-01M4YH1BKFGHX4FYCV92PH9TJN" [ref=f7e186] [cursor=pointer]:
+                      - /url: http://localhost/orders/01m4yh1bkg7nrrkgxbrxknb44h
+                      - text: "#…PH9TJNOrder JM-01M4YH1BKFGHX4FYCV92PH9TJN"
+                  - heading "Waiting for Trail & Tide to confirm your order" [level=4] [ref=f7e187]
+                  - paragraph [ref=f7e188]:
+                    - text: You can still change your mind.
+                    - link "Ask to cancel" [ref=f7e189] [cursor=pointer]:
+                      - /url: http://localhost/orders/01m4yh1bkg7nrrkgxbrxknb44h#order-help
+                  - paragraph [ref=f7e192]: Microfiber Travel Towel
+                  - paragraph [ref=f7e193]: Cash on delivery · Pay on delivery
+                  - generic [ref=f7e194]:
+                    - button "Message seller" [ref=f7e196]
+                    - link "View order" [ref=f7e197] [cursor=pointer]:
+                      - /url: http://localhost/orders/01m4yh1bkg7nrrkgxbrxknb44h
+                - generic [ref=f7e199]:
+                  - paragraph [ref=f7e200]: Store total
+                  - paragraph [ref=f7e201]: ₱2,229.00
+          - region "Orders from Oct 12, 2026" [ref=f7e202]:
+            - generic [ref=f7e203]:
+              - heading "Oct 12" [level=3] [ref=f7e204]
+              - paragraph [ref=f7e205]: 3 orders
+            - generic [ref=f7e206]:
+              - article [ref=f7e207]:
+                - generic [ref=f7e208]:
+                  - generic [ref=f7e209]:
+                    - generic [ref=f7e210]:
+                      - generic [ref=f7e211]: Awaiting store
+                      - link "Franil Store" [ref=f7e213] [cursor=pointer]:
+                        - /url: http://localhost/stores/franil-store
+                      - link "Order JM-01M4QFTBPC7CKN6RNAT7HR71QY" [ref=f7e214] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qftbpd8ght0dx2n36bhkmg
+                        - text: "#…HR71QYOrder JM-01M4QFTBPC7CKN6RNAT7HR71QY"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f7e215]
+                    - paragraph [ref=f7e216]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f7e217] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qftbpd8ght0dx2n36bhkmg#order-help
+                    - paragraph [ref=f7e220]: Tp Link - 300Mbps
+                    - paragraph [ref=f7e221]: Cash on delivery · Pay on delivery
+                    - generic [ref=f7e222]:
+                      - button "Message seller" [ref=f7e224]
+                      - link "View order" [ref=f7e225] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qftbpd8ght0dx2n36bhkmg
+                  - generic [ref=f7e227]:
+                    - paragraph [ref=f7e228]: Store total
+                    - paragraph [ref=f7e229]: ₱25,000.00
+              - article [ref=f7e230]:
+                - generic [ref=f7e231]:
+                  - generic [ref=f7e232]:
+                    - generic [ref=f7e233]:
+                      - generic [ref=f7e234]: Awaiting store
+                      - link "Franil Store" [ref=f7e236] [cursor=pointer]:
+                        - /url: http://localhost/stores/franil-store
+                      - link "Order JM-01M4QF1SMB0SK51C411EYHW0HJ" [ref=f7e237] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qf1smb0sk51c411eyhw0hk
+                        - text: "#…YHW0HJOrder JM-01M4QF1SMB0SK51C411EYHW0HJ"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f7e238]
+                    - paragraph [ref=f7e239]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f7e240] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qf1smb0sk51c411eyhw0hk#order-help
+                    - paragraph [ref=f7e243]: Tp Link - 300Mbps
+                    - paragraph [ref=f7e244]: Cash on delivery · Pay on delivery
+                    - generic [ref=f7e245]:
+                      - button "Message seller" [ref=f7e247]
+                      - link "View order" [ref=f7e248] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qf1smb0sk51c411eyhw0hk
+                  - generic [ref=f7e250]:
+                    - paragraph [ref=f7e251]: Store total
+                    - paragraph [ref=f7e252]: ₱25,000.00
+              - article [ref=f7e253]:
+                - generic [ref=f7e254]:
+                  - generic [ref=f7e255]:
+                    - generic [ref=f7e256]:
+                      - generic [ref=f7e257]: Awaiting store
+                      - link "Franil Store" [ref=f7e259] [cursor=pointer]:
+                        - /url: http://localhost/stores/franil-store
+                      - link "Order JM-01M4QEHMVBE2T64X3108BN1WPG" [ref=f7e260] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qehmvbe2t64x3108bn1wph
+                        - text: "#…BN1WPGOrder JM-01M4QEHMVBE2T64X3108BN1WPG"
+                    - heading "Waiting for Franil Store to confirm your order" [level=4] [ref=f7e261]
+                    - paragraph [ref=f7e262]:
+                      - text: You can still change your mind.
+                      - link "Ask to cancel" [ref=f7e263] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qehmvbe2t64x3108bn1wph#order-help
+                    - paragraph [ref=f7e266]: Tp Link - 300Mbps
+                    - paragraph [ref=f7e267]: Cash on delivery · Pay on delivery
+                    - generic [ref=f7e268]:
+                      - button "Message seller" [ref=f7e270]
+                      - link "View order" [ref=f7e271] [cursor=pointer]:
+                        - /url: http://localhost/orders/01m4qehmvbe2t64x3108bn1wph
+                  - generic [ref=f7e273]:
+                    - paragraph [ref=f7e274]: Store total
+                    - paragraph [ref=f7e275]: ₱25,000.00
+          - generic [ref=f7e276]:
+            - paragraph [ref=f7e277]: Showing 4 of 7 orders
+            - link "Load more Loading…" [ref=f7e278] [cursor=pointer]:
+              - /url: /mockups/_tmp-p2.html
+  - region [ref=f7e280]:
+    - heading "Your privacy matters" [level=2] [ref=f7e286]
+    - paragraph [ref=f7e287]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f7e288] [cursor=pointer]:
+        - /url: http://localhost/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f7e289] [cursor=pointer]:
+        - /url: http://localhost/privacy-policy
+    - generic [ref=f7e290]:
+      - button "Reject Optional" [ref=f7e291]
+      - button "Customize" [ref=f7e292]
+      - button "Accept All" [ref=f7e293]
+    - alert

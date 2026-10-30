@@ -153,6 +153,8 @@ class ReturnCaseWorkflow
                     $amount = $case->items->reduce(fn (string $sum, ReturnCaseItem $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
                     // An online payment is refunded through PayMongo, so there is no transfer receipt to upload.
                     if ($case->sellerOrder->order->payment?->gateway_payment_id !== null) {
+                        // Refunds from different cases on one store order wait for each other, so the cap below holds.
+                        SellerOrder::query()->whereKey($case->seller_order_id)->lockForUpdate()->first();
                         $refunded = (string) ReturnCaseOutcome::query()->where('kind', 'refund')
                             ->whereHas('returnCase', fn ($query) => $query->where('seller_order_id', $case->seller_order_id))->sum('amount');
                         if (bccomp(bcadd($refunded, $amount, 2), (string) $case->sellerOrder->total, 2) > 0) {

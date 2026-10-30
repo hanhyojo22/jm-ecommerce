@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        
+                                                <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq">
+        <link rel="icon" type="image/svg+xml" href="http://127.0.0.1:8000/favicon.svg">
+        <meta name="clerk-publishable-key" content="pk_test_cHJvbW90ZWQta29hbGEtMTM2My5jbGVyay5hY2NvdW50cy5kZXYk">
+        <meta name="clerk-sign-in-url" content="/sign-in">
+        <meta name="clerk-sign-up-url" content="/sign-up">
+                    
+            <meta name="clerk-session-refresh-endpoint" content="http://127.0.0.1:8000/auth/session">
+                <meta name="reverb-app-key" content="jmmart-test-key">
+        <meta name="reverb-host" content="127.0.0.1">
+        <meta name="reverb-port" content="8080">
+        <meta name="reverb-scheme" content="http">
+
+        <title>Secure checkout · JMMart</title>
+
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+        <!-- Scripts -->
+        <link rel="preload" as="style" href="http://127.0.0.1:8000/build/assets/app-CmbHwg4E.css" /><link rel="modulepreload" as="script" href="http://127.0.0.1:8000/build/assets/app-dAUSb3S4.js" /><link rel="stylesheet" href="http://127.0.0.1:8000/build/assets/app-CmbHwg4E.css" data-navigate-track="reload" /><script type="module" src="http://127.0.0.1:8000/build/assets/app-dAUSb3S4.js" data-navigate-track="reload"></script>        
+                    </head>
+    <body class="bg-canvas font-sans antialiased text-ink">
+        <a href="#main-content" class="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-ink px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Skip to content</a>
+        <div class="min-h-screen bg-canvas">
+                            <aside data-header-promo aria-label="Store announcement" class="border-b border-ink bg-ink text-center text-[13px] text-white">
+    <div class="mx-auto max-w-[1320px] px-[18px] py-2 sm:px-8">
+        <span class="sm:hidden">Free shipping · COD —</span>
+        <span class="hidden sm:inline">Free shipping on every order · Cash on delivery —</span>
+        <a href="http://127.0.0.1:8000/top-products" class="font-semibold text-white underline underline-offset-4 transition hover:text-blue-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">Shop best sellers</a>
+    </div>
+</aside>
+        <header
+        data-header-design="bold-modular"
+        data-header-role="customer"
+        x-data="{
+            accountOpen: false,
+            accountButton: null,
+            drawerOpen: false,
+            menuButton: null,
+            closeDrawer() { this.drawerOpen = false; this.$nextTick(() => this.menuButton?.focus()) },
+            toggleAccount(event) { this.accountButton = event.currentTarget; this.accountOpen = !this.accountOpen },
+            closeAccount() { this.accountOpen = false; this.$nextTick(() => this.accountButton?.focus()) },
+            toggleDrawer(event) { this.menuButton = event.currentTarget; this.drawerOpen = !this.drawerOpen; if (this.drawerOpen) this.$nextTick(() => this.$refs.drawer.querySelector('[data-drawer-focus]')?.focus()) },
+            trap(event) { const items = [...this.$refs.drawer.querySelectorAll('a,button,input')].filter((item) => !item.disabled && item.offsetParent); const first = items[0], last = items.at(-1); if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() } },
+        }"
+        x-init="$watch('drawerOpen', (open) => document.body.classList.toggle('overflow-hidden', open))"
+        @keydown.escape.window="if (drawerOpen) closeDrawer(); if (accountOpen) closeAccount()"
+        class="sticky top-0 z-40 border-b border-line bg-white"
+    >
+        <div class="marketplace-container flex flex-wrap items-center gap-x-5 gap-y-3 py-3.5">
+            <div class="order-1 flex min-w-0 items-center gap-2.5 min-[641px]:order-none">
+                <button type="button" @click="toggleDrawer($event)" :aria-expanded="drawerOpen.toString()" aria-controls="marketplace-drawer" class="min-[641px]:hidden grid size-11 shrink-0 place-items-center rounded-[10px] text-muted transition hover:bg-blue-50 hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Open navigation menu">
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
+                </button>
+                                    <a href="http://127.0.0.1:8000" class="flex min-w-[140px] shrink-0 items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2" aria-label="JMMart marketplace home">
+                        <span class="grid size-8 shrink-0 place-items-center rounded-[8px] bg-brand text-base font-semibold leading-none text-white" aria-hidden="true">jm</span>
+                        <span class="text-2xl font-semibold tracking-[-0.04em] text-ink">JM<span class="text-brand">Mart.</span></span>
+                    </a>
+                            </div>
+
+            <form method="GET" action="http://127.0.0.1:8000/search" x-data="marketplaceSuggestions(&#039;&#039;, &#039;http:\/\/127.0.0.1:8000\/search\/suggestions&#039;, &#039;http:\/\/127.0.0.1:8000\/search&#039;)" @submit="loading = true"  @click.outside="open = false"  class="relative order-3 min-w-0 basis-full min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1">
+                <label for="marketplace-search" class="flex h-11 items-center gap-2 rounded-[10px] border border-line bg-canvas pl-3.5 pr-1.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
+                    <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+<input id="marketplace-search" name="q" aria-label="Search products, brands, and stores"  role="combobox" aria-autocomplete="list" aria-controls="marketplace-search-results" :aria-expanded="open.toString()" :aria-activedescendant="active >= 0 ? 'marketplace-result-' + active : null" @input.debounce.275ms="load()" @focus="load()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter="select($event)" @keydown.escape="open = false"  x-model="query" value="" autocomplete="off" placeholder="Search products and stores" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink placeholder:text-muted focus:ring-0">
+                    <button x-cloak x-show="query.length" type="button" @click="clear(); $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+                    <button type="submit" class="h-9 rounded-[8px] bg-brand px-4 py-0 text-sm font-semibold text-white transition hover:bg-brand-hover">Search</button>
+                    <span x-cloak x-show="loading" class="text-xs font-semibold text-brand">Searching…</span>
+                </label>
+                                    <div x-cloak x-show="open" class="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(28rem,70vh)] overflow-y-auto rounded-xl border border-line bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,.16)]">
+    <p x-show="loading" class="px-3 py-3 text-sm text-muted" role="status">Searching products…</p>
+    <p x-show="!loading && !items.length" class="px-3 py-3 text-sm text-muted" role="status">No matching products</p>
+    <div id="marketplace-search-results" role="listbox" aria-label="Product suggestions"><template x-for="(item, index) in items" :key="item.url">
+        <a :id="'marketplace-result-' + index" :href="item.url" role="option" :aria-selected="(active === index).toString()" @mouseenter="active = index" class="flex min-h-16 items-center gap-3 rounded-lg p-2 text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :class="active === index ? 'bg-blue-50' : 'hover:bg-canvas'">
+            <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-slate-100 text-xs text-muted">
+                <template x-if="item.image"><img :src="item.image" :alt="item.name" class="size-full object-cover"></template>
+                <template x-if="!item.image"><span aria-hidden="true">No image</span></template>
+            </span>
+            <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold" x-text="item.name"></span><span class="block truncate text-xs text-muted" x-text="item.store"></span></span>
+            <span class="shrink-0 text-right"><span class="block text-sm font-semibold tabular-nums" x-text="item.price"></span><span x-show="item.sold_out" class="block text-xs font-medium text-rose-700">Sold out</span></span>
+        </a>
+    </template></div>
+    <a :href="resultsUrl + '?q=' + encodeURIComponent(query)" class="mt-1 flex min-h-10 items-center justify-center rounded-lg border-t border-line px-3 text-sm font-semibold text-brand hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View all results</a>
+</div>
+                            </form>
+
+            <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-2 min-[641px]:order-none min-[641px]:ml-0">
+                                    <a href="http://127.0.0.1:8000/messages" class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages">
+                        <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
+                                            </a>
+                
+                                    <a href="http://127.0.0.1:8000/cart" data-cart-link class="relative grid size-11 place-items-center rounded-[10px] text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Cart: 2 items">
+                        <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
+                        
+                        
+                        <span data-cart-badge aria-hidden="true" class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[5px] text-xs font-semibold leading-none tabular-nums text-white" >2</span>
+                    </a>
+                
+                                    <div class="relative" @click.outside="accountOpen = false">
+                        <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" class="flex min-h-11 max-w-48 items-center gap-2 rounded-[10px] border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand">
+                            <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
+                            <span class="hidden min-[641px]:inline">Hi, Maria</span>
+                        </button>
+                        <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-[16px] border border-line bg-white p-2 shadow-[0_16px_36px_rgba(15,23,42,.14)]">
+                            <div class="flex min-w-0 items-center gap-3 px-2 py-3">
+                                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-semibold text-brand" aria-hidden="true">M</span>
+                                <div class="min-w-0"><p class="truncate text-sm font-semibold text-ink">Maria Santos</p><p class="truncate text-xs text-muted">stroman.alyson@example.org</p></div>
+                            </div>
+                            <nav aria-label="Account links" class="border-t border-line py-1">
+                                                                    <a href="http://127.0.0.1:8000/orders" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
+                                                                                                    <a href="http://127.0.0.1:8000/messages" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
+                                                                <a href="http://127.0.0.1:8000/profile" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My account</a>
+                                                                                            </nav>
+                                                        <div class="border-t border-line pt-1"><button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800">Sign out</button></div>
+                        </div>
+                    </div>
+                            </div>
+        </div>
+
+                    <nav data-header-category-nav class="border-t border-line" aria-label="Marketplace sections">
+                <div class="marketplace-container marketplace-nav-scroll flex min-h-12 items-center gap-6 overflow-x-auto text-sm font-medium text-muted sm:gap-7">
+                    <a href="http://127.0.0.1:8000#shop-by-category" class="inline-flex min-h-12 shrink-0 items-center gap-1 border-b-2 border-brand text-ink transition hover:text-brand">Categories ▾</a>
+                    <a href="http://127.0.0.1:8000/search?sort=newest" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">New Arrivals</a>
+                    <a href="http://127.0.0.1:8000/top-products" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Best Sellers</a>
+                    <a href="http://127.0.0.1:8000#flash-deals" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Deals</a>
+                    <a href="http://127.0.0.1:8000/stores" class="inline-flex min-h-12 shrink-0 items-center transition hover:text-brand">Stores</a>
+                                            <a href="http://127.0.0.1:8000/start-selling" class="inline-flex min-h-12 shrink-0 items-center text-brand transition hover:text-brand-hover">Sell on JMMart</a>
+                                    </div>
+            </nav>
+        
+        <div x-cloak x-show="drawerOpen" x-transition.opacity class="fixed inset-0 z-50 bg-slate-950/35 lg:hidden">
+            <button type="button" @click="closeDrawer" class="h-full w-full" tabindex="-1" aria-label="Close navigation menu"></button>
+        </div>
+        <aside id="marketplace-drawer" x-ref="drawer" x-cloak x-show="drawerOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-end="-translate-x-full" @keydown.tab="trap($event)" class="fixed inset-y-0 left-0 z-[60] flex w-[min(20rem,calc(100vw-2.5rem))] flex-col shadow-[0_16px_32px_rgba(15,23,42,.18)] lg:hidden bg-surface text-ink" role="dialog" aria-modal="true" aria-label="Marketplace navigation">
+            <div class="flex h-[56px] items-center justify-between border-b border-line px-5">
+                <a href="http://127.0.0.1:8000" data-drawer-focus @click="closeDrawer" class="workspace-sidebar-brand">
+                    <svg viewBox="0 0 316 316" xmlns="http://www.w3.org/2000/svg" class="size-8 fill-current text-brand">
+    <path d="M305.8 81.125C305.77 80.995 305.69 80.885 305.65 80.755C305.56 80.525 305.49 80.285 305.37 80.075C305.29 79.935 305.17 79.815 305.07 79.685C304.94 79.515 304.83 79.325 304.68 79.175C304.55 79.045 304.39 78.955 304.25 78.845C304.09 78.715 303.95 78.575 303.77 78.475L251.32 48.275C249.97 47.495 248.31 47.495 246.96 48.275L194.51 78.475C194.33 78.575 194.19 78.725 194.03 78.845C193.89 78.955 193.73 79.045 193.6 79.175C193.45 79.325 193.34 79.515 193.21 79.685C193.11 79.815 192.99 79.935 192.91 80.075C192.79 80.285 192.71 80.525 192.63 80.755C192.58 80.875 192.51 80.995 192.48 81.125C192.38 81.495 192.33 81.875 192.33 82.265V139.625L148.62 164.795V52.575C148.62 52.185 148.57 51.805 148.47 51.435C148.44 51.305 148.36 51.195 148.32 51.065C148.23 50.835 148.16 50.595 148.04 50.385C147.96 50.245 147.84 50.125 147.74 49.995C147.61 49.825 147.5 49.635 147.35 49.485C147.22 49.355 147.06 49.265 146.92 49.155C146.76 49.025 146.62 48.885 146.44 48.785L93.99 18.585C92.64 17.805 90.98 17.805 89.63 18.585L37.18 48.785C37 48.885 36.86 49.035 36.7 49.155C36.56 49.265 36.4 49.355 36.27 49.485C36.12 49.635 36.01 49.825 35.88 49.995C35.78 50.125 35.66 50.245 35.58 50.385C35.46 50.595 35.38 50.835 35.3 51.065C35.25 51.185 35.18 51.305 35.15 51.435C35.05 51.805 35 52.185 35 52.575V232.235C35 233.795 35.84 235.245 37.19 236.025L142.1 296.425C142.33 296.555 142.58 296.635 142.82 296.725C142.93 296.765 143.04 296.835 143.16 296.865C143.53 296.965 143.9 297.015 144.28 297.015C144.66 297.015 145.03 296.965 145.4 296.865C145.5 296.835 145.59 296.775 145.69 296.745C145.95 296.655 146.21 296.565 146.45 296.435L251.36 236.035C252.72 235.255 253.55 233.815 253.55 232.245V174.885L303.81 145.945C305.17 145.165 306 143.725 306 142.155V82.265C305.95 81.875 305.89 81.495 305.8 81.125ZM144.2 227.205L100.57 202.515L146.39 176.135L196.66 147.195L240.33 172.335L208.29 190.625L144.2 227.205ZM244.75 114.995V164.795L226.39 154.225L201.03 139.625V89.825L219.39 100.395L244.75 114.995ZM249.12 57.105L292.81 82.265L249.12 107.425L205.43 82.265L249.12 57.105ZM114.49 184.425L96.13 194.995V85.305L121.49 70.705L139.85 60.135V169.815L114.49 184.425ZM91.76 27.425L135.45 52.585L91.76 77.745L48.07 52.585L91.76 27.425ZM43.67 60.135L62.03 70.705L87.39 85.305V202.545V202.555V202.565C87.39 202.735 87.44 202.895 87.46 203.055C87.49 203.265 87.49 203.485 87.55 203.695V203.705C87.6 203.875 87.69 204.035 87.76 204.195C87.84 204.375 87.89 204.575 87.99 204.745C87.99 204.745 87.99 204.755 88 204.755C88.09 204.905 88.22 205.035 88.33 205.175C88.45 205.335 88.55 205.495 88.69 205.635L88.7 205.645C88.82 205.765 88.98 205.855 89.12 205.965C89.28 206.085 89.42 206.225 89.59 206.325C89.6 206.325 89.6 206.325 89.61 206.335C89.62 206.335 89.62 206.345 89.63 206.345L139.87 234.775V285.065L43.67 229.705V60.135ZM244.75 229.705L148.58 285.075V234.775L219.8 194.115L244.75 179.875V229.705ZM297.2 139.625L253.49 164.795V114.995L278.85 100.395L297.21 89.825V139.625H297.2Z"/>
+</svg>
+                    <span class="workspace-sidebar-brand-name">JMMart</span>
+                </a>
+                <button type="button" @click="closeDrawer" class="workspace-drawer-close grid size-11 place-items-center rounded-[10px] text-muted transition hover:bg-canvas hover:text-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+            </div>
+
+                            <form method="GET" action="http://127.0.0.1:8000/search" x-data="marketplaceSuggestions('', 'http:\/\/127.0.0.1:8000\/search\/suggestions', 'http:\/\/127.0.0.1:8000\/search')" @submit="loading = true" @click.outside="open = false" class="relative border-b border-line px-4 py-4">
+                    <label for="marketplace-search-drawer" class="flex h-11 items-center gap-3 rounded-[10px] border border-line bg-canvas px-3.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
+                        <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+<input id="marketplace-search-drawer" name="q" aria-label="Search products, brands, and stores" role="combobox" aria-autocomplete="list" aria-controls="marketplace-search-results-drawer" :aria-expanded="open.toString()" :aria-activedescendant="active >= 0 ? 'marketplace-drawer-result-' + active : null" @input.debounce.275ms="load()" @focus="load()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter="select($event)" @keydown.escape="open = false" x-model="query" value="" autocomplete="off" placeholder="Search products, brands, and stores" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
+                        <button x-cloak x-show="query.length" type="button" @click="clear(); $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+                    </label>
+                    <div x-cloak x-show="open" class="absolute left-0 right-0 top-full z-50 mt-2 max-h-[min(28rem,70vh)] overflow-y-auto rounded-xl border border-line bg-white p-2 shadow-[0_18px_40px_rgba(15,23,42,.16)]">
+    <p x-show="loading" class="px-3 py-3 text-sm text-muted" role="status">Searching products…</p>
+    <p x-show="!loading && !items.length" class="px-3 py-3 text-sm text-muted" role="status">No matching products</p>
+    <div id="marketplace-search-results-drawer" role="listbox" aria-label="Product suggestions"><template x-for="(item, index) in items" :key="item.url">
+        <a :id="'marketplace-drawer-result-' + index" :href="item.url" role="option" :aria-selected="(active === index).toString()" @mouseenter="active = index" class="flex min-h-16 items-center gap-3 rounded-lg p-2 text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :class="active === index ? 'bg-blue-50' : 'hover:bg-canvas'">
+            <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-md bg-slate-100 text-xs text-muted">
+                <template x-if="item.image"><img :src="item.image" :alt="item.name" class="size-full object-cover"></template>
+                <template x-if="!item.image"><span aria-hidden="true">No image</span></template>
+            </span>
+            <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold" x-text="item.name"></span><span class="block truncate text-xs text-muted" x-text="item.store"></span></span>
+            <span class="shrink-0 text-right"><span class="block text-sm font-semibold tabular-nums" x-text="item.price"></span><span x-show="item.sold_out" class="block text-xs font-medium text-rose-700">Sold out</span></span>
+        </a>
+    </template></div>
+    <a :href="resultsUrl + '?q=' + encodeURIComponent(query)" class="mt-1 flex min-h-10 items-center justify-center rounded-lg border-t border-line px-3 text-sm font-semibold text-brand hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">View all results</a>
+</div>
+                </form>
+            
+                            <nav class="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Mobile marketplace navigation">
+                    <a href="http://127.0.0.1:8000" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Marketplace</a>
+                    <a href="http://127.0.0.1:8000/search?sort=newest" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">New arrivals</a>
+                    <a href="http://127.0.0.1:8000/top-products" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Best sellers</a>
+                    <a href="http://127.0.0.1:8000/stores" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Stores</a>
+                    <a href="http://127.0.0.1:8000#shop-by-category" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Categories</a>
+                                            <a href="http://127.0.0.1:8000/orders" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
+                        <a href="http://127.0.0.1:8000/my-reviews" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
+                                                                <a href="http://127.0.0.1:8000/messages" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
+                                                                <a href="http://127.0.0.1:8000/start-selling" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition hover:bg-blue-50">Start selling</a>
+                                    </nav>
+                <div class="space-y-1 border-t border-line p-4">
+                                            <a href="http://127.0.0.1:8000/profile" @click="closeDrawer" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Account</a>
+                        <button type="button" data-clerk-sign-out @click="closeDrawer" class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800">Sign out</button>
+                                    </div>
+                    </aside>
+    </header>
+            
+            <!-- Page Content -->
+                                            <main id="main-content" tabindex="-1">
+                    <div class="page-shell min-h-[calc(100dvh-4.5rem)] !pt-6 max-sm:!pt-3.5 max-sm:pb-28">
+        <div class="page-container" x-data="{
+            step: 1,
+            done: JSON.parse('[1,0]'),
+            placing: false,
+            summaryOpen: false,
+            method: 'cod',
+            methodLabels: JSON.parse('{\u0022cod\u0022:\u0022Cash on delivery\u0022,\u0022gcash\u0022:\u0022GCash\u0022,\u0022maya\u0022:\u0022Maya\u0022,\u0022card\u0022:\u0022Card\u0022,\u0022bank\u0022:\u0022Bank transfer\u0022}'),
+            get placeLabel() { return this.method === 'cod' ? 'Place order' : 'Place order & pay with ' + this.methodLabels[this.method] },
+            fields: JSON.parse('[\u0022recipient_name\u0022,\u0022phone\u0022,\u0022address_line\u0022,\u0022city\u0022,\u0022province\u0022,\u0022postal_code\u0022]'),
+            addresses: [],
+            choice: 'new',
+            issues: {},
+            messages: {
+                recipient_name: 'Enter the recipient’s full name.',
+                phone: 'Enter a mobile number like 09171234567.',
+                address_line: 'Enter the house number, street, and barangay.',
+                city: 'Enter the city.',
+                province: 'Enter the province.',
+                postal_code: 'Enter a 4-digit postal code.',
+            },
+            addressShort: '',
+            addressFull: '',
+            init() { this.syncAddress() },
+            collapsed(number) { return this.step !== number && this.done.includes(number) },
+            incomplete(id) { const address = this.addresses.find((item) => item.id === id); return ! address || this.fields.some((field) => ! address[field]) },
+            get showFields() { return this.choice === 'new' || this.incomplete(this.choice) },
+            choose(id) {
+                this.choice = id;
+                const address = this.addresses.find((item) => item.id === id);
+                for (const field of this.fields) {
+                    document.getElementById(field).value = address?.[field] ?? '';
+                }
+                this.syncAddress();
+            },
+            syncAddress() {
+                const value = Object.fromEntries(this.fields.map((field) => [field, document.getElementById(field).value.trim()]));
+                this.addressShort = [value.recipient_name, value.address_line, value.city].filter(Boolean).join(' · ');
+                this.addressFull = [[value.recipient_name, value.phone].filter(Boolean).join(' · '), [value.address_line, value.city, value.province, value.postal_code].filter(Boolean).join(', ')].filter(Boolean).join('\n');
+            },
+            open(number, focus = true) {
+                this.syncAddress();
+                this.step = number;
+                if (! focus) return;
+                this.$nextTick(() => {
+                    const head = document.getElementById('step-' + number + '-title');
+                    head.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+                    head.focus({ preventScroll: true });
+                });
+            },
+            complete(number) { if (! this.done.includes(number)) this.done.push(number) },
+            
+            reveal(number, input) {
+                this.open(number, false);
+                this.$nextTick(() => {
+                    input.focus({ preventScroll: true });
+                    input.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+                });
+            },
+            validAddress() {
+                if (this.$refs.form.noValidate) return true;
+                const invalid = this.fields.filter((field) => ! document.getElementById(field).checkValidity());
+                invalid.forEach((field) => this.issues[field] = this.messages[field]);
+                if (invalid.length === 0) return true;
+                this.reveal(1, document.getElementById(invalid[0]));
+                return false;
+            },
+            next() {
+                if (this.step === 1 && this.validAddress()) { this.complete(1); this.open(2) }
+                else if (this.step === 2) { this.complete(2); this.open(3) }
+            },
+            place(event) { if (! this.validAddress()) event.preventDefault() },
+            
+            submit() { if (this.validAddress()) this.$refs.form.requestSubmit() },
+        }">
+            <a href="http://127.0.0.1:8000/cart" class="inline-flex min-h-10 items-center gap-1.5 text-[13px] font-semibold text-brand transition-colors hover:text-brand-hover">
+                <svg class="size-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+                Back to cart
+            </a>
+            <div class="mt-1">
+                <h1 class="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] text-ink max-sm:text-[26px]">Checkout</h1>
+                <p class="mt-1.5 text-sm text-muted">2 items from 2 stores · Free shipping</p>
+            </div>
+
+            <form id="checkout-form" x-ref="form" method="POST" action="http://127.0.0.1:8000/checkout" @submit="placing = true" class="mt-[22px] grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-7">
+                <input type="hidden" name="_token" value="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq" autocomplete="off">                <div class="grid min-w-0 gap-3.5">
+                                                            
+                    
+                    <div class="divide-y divide-line overflow-hidden rounded-[16px] border border-line bg-surface">
+                        <section aria-labelledby="step-1-title">
+    <h2>
+        <button type="button" id="step-1-title" @click="open(1)" :aria-expanded="(step === 1).toString()" aria-controls="step-1-body"
+            class="grid w-full scroll-mt-24 grid-cols-[28px_minmax(0,1fr)_auto] items-start gap-3.5 px-6 py-5 text-left transition-colors duration-150 focus-visible:-outline-offset-2 max-sm:grid-cols-[26px_minmax(0,1fr)_auto] max-sm:gap-3 max-sm:p-4"
+            :class="step === 1 ? 'cursor-default border-b border-[#EEF1F5]' : 'hover:bg-[#FAFBFE]'">
+            <span class="mt-px grid size-7 place-items-center rounded-full border-[1.5px] text-[12.5px] font-semibold tabular-nums leading-none transition-colors duration-200 max-sm:size-[26px]" aria-hidden="true"
+                :class="step === 1 ? 'border-brand bg-brand text-white' : (done.includes(1) ? 'border-[#D6E2FB] bg-[#EEF3FF] text-brand' : 'border-[#CBD4E0] text-muted')">
+                <span x-show="! collapsed(1)">1</span>
+                <svg x-cloak x-show="collapsed(1)" class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-[15.5px] font-semibold leading-[1.35] tracking-[-0.012em] text-ink max-sm:text-[15px]">Delivery address</span>
+                <span x-show="! collapsed(1)" class="mt-[3px] block text-[13.5px] leading-normal text-muted max-sm:text-[13px]">Where should we send your order?</span>
+                <span x-cloak x-show="collapsed(1)" x-text="addressShort" class="mt-[3px] block max-w-[62ch] whitespace-pre-line text-[13.5px] leading-normal text-ink max-sm:text-[13px]"></span>
+            </span>
+            <span x-cloak x-show="collapsed(1)" class="inline-flex items-center gap-0.5 whitespace-nowrap pt-[3px] text-[13.5px] font-semibold text-brand max-sm:text-[13px]">Change<svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg></span>
+            <svg x-show="step !== 1 && ! done.includes(1)" class="size-[18px] self-center justify-self-end text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+        </button>
+    </h2>
+    <div id="step-1-body" x-cloak x-show="step === 1" x-transition:enter="transition-opacity duration-200 ease-out" x-transition:enter-start="opacity-0" class="px-6 pb-6 pt-5 max-sm:px-4 max-sm:pb-[18px] max-sm:pt-4">
+        <div x-show="showFields" @input="syncAddress(); delete issues[$event.target.id]" class="">
+                                <p x-show="choice !== 'new'" class="mb-3.5 text-[13px] text-muted">Fill in any missing details from this older saved address.</p>
+                                
+                                <div class="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-6">
+                                                                            <div class="col-span-2 sm:col-span-3">
+                                            <label for="recipient_name" class="mb-1.5 block text-[13.5px] font-semibold text-ink">Recipient name</label>
+                                            <input id="recipient_name" name="recipient_name" value="" required
+                                                 autocomplete="name" maxlength="150" placeholder="Full name"                                                 aria-invalid="false" aria-describedby="recipient_name-error" :aria-invalid="issues.recipient_name ? 'true' : 'false'" class="min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger">
+                                            <p id="recipient_name-error" x-show="issues.recipient_name" x-text="issues.recipient_name" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger"  style="display: none"  role="alert"></p>
+                                        </div>
+                                                                            <div class="col-span-2 sm:col-span-3">
+                                            <label for="phone" class="mb-1.5 block text-[13.5px] font-semibold text-ink">Mobile number</label>
+                                            <input id="phone" name="phone" value="" required
+                                                 type="tel" autocomplete="tel" pattern="(\+63|0)9[0-9]{9}" maxlength="13" placeholder="09171234567"                                                 aria-invalid="false" aria-describedby="phone-error" :aria-invalid="issues.phone ? 'true' : 'false'" class="min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger">
+                                            <p id="phone-error" x-show="issues.phone" x-text="issues.phone" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger"  style="display: none"  role="alert"></p>
+                                        </div>
+                                                                            <div class="col-span-2 sm:col-span-6">
+                                            <label for="address_line" class="mb-1.5 block text-[13.5px] font-semibold text-ink">Street address</label>
+                                            <input id="address_line" name="address_line" value="" required
+                                                 autocomplete="street-address" maxlength="255" placeholder="House number, street, and barangay"                                                 aria-invalid="false" aria-describedby="address_line-error" :aria-invalid="issues.address_line ? 'true' : 'false'" class="min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger">
+                                            <p id="address_line-error" x-show="issues.address_line" x-text="issues.address_line" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger"  style="display: none"  role="alert"></p>
+                                        </div>
+                                                                            <div class="col-span-2">
+                                            <label for="city" class="mb-1.5 block text-[13.5px] font-semibold text-ink">City</label>
+                                            <input id="city" name="city" value="" required
+                                                 autocomplete="address-level2" maxlength="100"                                                 aria-invalid="false" aria-describedby="city-error" :aria-invalid="issues.city ? 'true' : 'false'" class="min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger">
+                                            <p id="city-error" x-show="issues.city" x-text="issues.city" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger"  style="display: none"  role="alert"></p>
+                                        </div>
+                                                                            <div class="sm:col-span-2">
+                                            <label for="province" class="mb-1.5 block text-[13.5px] font-semibold text-ink">Province</label>
+                                            <input id="province" name="province" value="" required
+                                                 autocomplete="address-level1" maxlength="100"                                                 aria-invalid="false" aria-describedby="province-error" :aria-invalid="issues.province ? 'true' : 'false'" class="min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger">
+                                            <p id="province-error" x-show="issues.province" x-text="issues.province" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger"  style="display: none"  role="alert"></p>
+                                        </div>
+                                                                            <div class="sm:col-span-2">
+                                            <label for="postal_code" class="mb-1.5 block text-[13.5px] font-semibold text-ink">Postal code</label>
+                                            <input id="postal_code" name="postal_code" value="" required
+                                                 inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{4}" maxlength="4"                                                 aria-invalid="false" aria-describedby="postal_code-error" :aria-invalid="issues.postal_code ? 'true' : 'false'" class="min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger">
+                                            <p id="postal_code-error" x-show="issues.postal_code" x-text="issues.postal_code" class="mt-[5px] text-[12.5px] font-medium leading-[1.45] text-danger"  style="display: none"  role="alert"></p>
+                                        </div>
+                                                                    </div>
+                                <p class="mt-3 text-xs text-muted">We'll save this address for your next checkout.</p>
+                            </div>
+
+                            <div class="mt-4 flex items-center justify-between gap-3.5">
+                                <a href="http://127.0.0.1:8000/delivery-addresses" class="inline-flex min-h-10 items-center gap-1.5 text-[13px] font-semibold text-brand transition-colors hover:text-brand-hover">
+                                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                    Manage saved addresses
+                                </a>
+                                <button type="button" @click="next()" class="inline-flex min-h-[46px] items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px max-sm:hidden">Continue to payment</button>
+                            </div>
+    </div>
+</section>
+
+                        <section aria-labelledby="step-2-title">
+    <h2>
+        <button type="button" id="step-2-title" @click="open(2)" :aria-expanded="(step === 2).toString()" aria-controls="step-2-body"
+            class="grid w-full scroll-mt-24 grid-cols-[28px_minmax(0,1fr)_auto] items-start gap-3.5 px-6 py-5 text-left transition-colors duration-150 focus-visible:-outline-offset-2 max-sm:grid-cols-[26px_minmax(0,1fr)_auto] max-sm:gap-3 max-sm:p-4"
+            :class="step === 2 ? 'cursor-default border-b border-[#EEF1F5]' : 'hover:bg-[#FAFBFE]'">
+            <span class="mt-px grid size-7 place-items-center rounded-full border-[1.5px] text-[12.5px] font-semibold tabular-nums leading-none transition-colors duration-200 max-sm:size-[26px]" aria-hidden="true"
+                :class="step === 2 ? 'border-brand bg-brand text-white' : (done.includes(2) ? 'border-[#D6E2FB] bg-[#EEF3FF] text-brand' : 'border-[#CBD4E0] text-muted')">
+                <span x-show="! collapsed(2)">2</span>
+                <svg x-cloak x-show="collapsed(2)" class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-[15.5px] font-semibold leading-[1.35] tracking-[-0.012em] text-ink max-sm:text-[15px]">Payment method</span>
+                <span x-show="! collapsed(2)" class="mt-[3px] block text-[13.5px] leading-normal text-muted max-sm:text-[13px]">Choose how you would like to pay.</span>
+                <span x-cloak x-show="collapsed(2)" x-text="methodLabels[method]" class="mt-[3px] block max-w-[62ch] whitespace-pre-line text-[13.5px] leading-normal text-ink max-sm:text-[13px]"></span>
+            </span>
+            <span x-cloak x-show="collapsed(2)" class="inline-flex items-center gap-0.5 whitespace-nowrap pt-[3px] text-[13.5px] font-semibold text-brand max-sm:text-[13px]">Change<svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg></span>
+            <svg x-show="step !== 2 && ! done.includes(2)" class="size-[18px] self-center justify-self-end text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+        </button>
+    </h2>
+    <div id="step-2-body" x-cloak x-show="step === 2" x-transition:enter="transition-opacity duration-200 ease-out" x-transition:enter-start="opacity-0" class="px-6 pb-6 pt-5 max-sm:px-4 max-sm:pb-[18px] max-sm:pt-4">
+        <fieldset class="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
+                                <legend class="sr-only">Payment method</legend>
+                                                                                                                                            <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-[13px] transition hover:border-[#CBD4E0] has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand">
+                                        <input type="radio" name="payment_method" value="cod" x-model="method" checked class="size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
+                                        <span class="min-w-0"><span class="block text-sm font-semibold leading-[1.35] text-ink">Cash on delivery</span><span class="mt-0.5 block text-[12.5px] leading-[1.45] text-muted">Pay ₱1,798.00 when it arrives.</span></span>
+                                        <span class="grid size-[30px] place-items-center rounded-lg text-xs font-bold leading-none bg-[#EEF3FF] text-brand" aria-hidden="true">
+                                            <svg class="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path stroke-linecap="round" d="M6 9.5h.01M18 14.5h.01"/></svg>                                        </span>
+                                    </label>
+                                                                                                                                            <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-[13px] transition hover:border-[#CBD4E0] has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand">
+                                        <input type="radio" name="payment_method" value="gcash" x-model="method"  class="size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
+                                        <span class="min-w-0"><span class="block text-sm font-semibold leading-[1.35] text-ink">GCash</span><span class="mt-0.5 block text-[12.5px] leading-[1.45] text-muted">Pay now · ₱46.11 payment fee.</span></span>
+                                        <span class="grid size-[30px] place-items-center rounded-lg text-xs font-bold leading-none bg-[#0070F0] text-white" aria-hidden="true">
+                                            G
+                                                M
+                                                <svg class="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6 15h3"/></svg>                                        </span>
+                                    </label>
+                                                                                                                                            <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-[13px] transition hover:border-[#CBD4E0] has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand">
+                                        <input type="radio" name="payment_method" value="maya" x-model="method"  class="size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
+                                        <span class="min-w-0"><span class="block text-sm font-semibold leading-[1.35] text-ink">Maya</span><span class="mt-0.5 block text-[12.5px] leading-[1.45] text-muted">Pay now · ₱40.45 payment fee.</span></span>
+                                        <span class="grid size-[30px] place-items-center rounded-lg text-xs font-bold leading-none bg-[#101820] text-[#3DDC84]" aria-hidden="true">
+                                            M
+                                                <svg class="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6 15h3"/></svg>                                        </span>
+                                    </label>
+                                                                                                                                            <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-line bg-white px-3.5 py-[13px] transition hover:border-[#CBD4E0] has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand">
+                                        <input type="radio" name="payment_method" value="card" x-model="method"  class="size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
+                                        <span class="min-w-0"><span class="block text-sm font-semibold leading-[1.35] text-ink">Credit or debit card</span><span class="mt-0.5 block text-[12.5px] leading-[1.45] text-muted">Pay now · ₱80.76 payment fee.</span></span>
+                                        <span class="grid size-[30px] place-items-center rounded-lg text-xs font-bold leading-none bg-slate-100 text-slate-600" aria-hidden="true">
+                                            <svg class="size-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6 15h3"/></svg>                                        </span>
+                                    </label>
+                                                            </fieldset>
+                            
+                            <div x-show="method === 'cod'" class="mt-3.5 flex items-start gap-[9px] rounded-[10px] border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
+                                <svg class="mt-px size-4 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
+                                <p><strong class="font-semibold text-ink">No card needed.</strong> Hand <strong class="font-semibold text-ink">₱1,798.00</strong> to the courier when your order arrives.</p>
+                            </div>
+
+                                                            <div x-cloak x-show="method !== 'cod'" class="mt-3.5 rounded-xl border border-[#D6E2FB] bg-[#F8FAFF] p-4" role="group" aria-labelledby="online-pay-heading">
+                                    <p id="online-pay-heading" class="text-[13.5px] font-semibold text-ink">One secure payment for all 2 stores</p>
+                                    <p class="mt-1 text-[12.5px] leading-normal text-muted">After you place the order you’ll pay on PayMongo’s secure page. Each store receives its share automatically; there’s nothing to send or confirm yourself.</p>
+                                    <dl class="mt-3 grid gap-1.5 border-t border-[#D6E2FB] pt-3 text-[13px]">
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">Items</dt><dd class="tabular-nums text-ink">₱1,798.00</dd></div>
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">Payment fee <span class="text-xs">(PayMongo)</span></dt><dd class="tabular-nums text-ink"><span x-show="method === 'gcash'">₱46.11</span><span x-show="method === 'maya'">₱40.45</span><span x-show="method === 'card'">₱80.76</span></dd></div>
+                                        <div class="flex justify-between gap-3 font-semibold text-ink"><dt>You pay now</dt><dd class="tabular-nums"><span x-show="method === 'gcash'">₱1,844.11</span><span x-show="method === 'maya'">₱1,838.45</span><span x-show="method === 'card'">₱1,878.76</span></dd></div>
+                                    </dl>
+                                    <p class="mt-2 text-xs leading-normal text-muted">Items are held for 2 hours while you pay. A cancelled store order is refunded to you through PayMongo; the payment fee is not refunded.</p>
+                                </div>
+                            
+                            <div class="mt-5 flex items-center justify-end gap-3.5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-1">
+                                <button type="button" @click="open(1)" class="inline-flex min-h-11 items-center justify-center gap-1.5 text-[13px] font-semibold text-muted transition-colors hover:text-ink">
+                                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+                                    Back to delivery
+                                </button>
+                                <button type="button" @click="next()" class="inline-flex min-h-[46px] items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px max-sm:hidden">Review order</button>
+                            </div>
+    </div>
+</section>
+
+                        <section aria-labelledby="step-3-title">
+    <h2>
+        <button type="button" id="step-3-title" @click="open(3)" :aria-expanded="(step === 3).toString()" aria-controls="step-3-body"
+            class="grid w-full scroll-mt-24 grid-cols-[28px_minmax(0,1fr)_auto] items-start gap-3.5 px-6 py-5 text-left transition-colors duration-150 focus-visible:-outline-offset-2 max-sm:grid-cols-[26px_minmax(0,1fr)_auto] max-sm:gap-3 max-sm:p-4"
+            :class="step === 3 ? 'cursor-default border-b border-[#EEF1F5]' : 'hover:bg-[#FAFBFE]'">
+            <span class="mt-px grid size-7 place-items-center rounded-full border-[1.5px] text-[12.5px] font-semibold tabular-nums leading-none transition-colors duration-200 max-sm:size-[26px]" aria-hidden="true"
+                :class="step === 3 ? 'border-brand bg-brand text-white' : (done.includes(3) ? 'border-[#D6E2FB] bg-[#EEF3FF] text-brand' : 'border-[#CBD4E0] text-muted')">
+                <span x-show="! collapsed(3)">3</span>
+                <svg x-cloak x-show="collapsed(3)" class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-[15.5px] font-semibold leading-[1.35] tracking-[-0.012em] text-ink max-sm:text-[15px]">Review &amp; place order</span>
+                <span x-show="! collapsed(3)" class="mt-[3px] block text-[13.5px] leading-normal text-muted max-sm:text-[13px]">One last look before this goes to the stores.</span>
+                <span x-cloak x-show="collapsed(3)" x-text="&#039;Delivery and payment&#039;" class="mt-[3px] block max-w-[62ch] whitespace-pre-line text-[13.5px] leading-normal text-ink max-sm:text-[13px]"></span>
+            </span>
+            <span x-cloak x-show="collapsed(3)" class="inline-flex items-center gap-0.5 whitespace-nowrap pt-[3px] text-[13.5px] font-semibold text-brand max-sm:text-[13px]">Review<svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg></span>
+            <svg x-show="step !== 3 && ! done.includes(3)" class="size-[18px] self-center justify-self-end text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+        </button>
+    </h2>
+    <div id="step-3-body" x-cloak x-show="step === 3" x-transition:enter="transition-opacity duration-200 ease-out" x-transition:enter-start="opacity-0" class="px-6 pb-6 pt-5 max-sm:px-4 max-sm:pb-[18px] max-sm:pt-4">
+        <dl class="border-t border-line">
+                                <div class="flex items-start justify-between gap-4 border-b border-line py-3">
+                                    <div class="min-w-0"><dt class="text-xs font-medium text-muted">Deliver to</dt><dd class="mt-0.5 max-w-[56ch] whitespace-pre-line text-[13px] leading-normal text-ink" x-text="addressFull"></dd></div>
+                                    <button type="button" @click="open(1)" class="inline-flex min-h-10 shrink-0 items-center text-[12.5px] font-semibold text-brand underline-offset-[3px] hover:text-brand-hover hover:underline">Change</button>
+                                </div>
+                                <div class="flex items-start justify-between gap-4 border-b border-line py-3">
+                                    <div class="min-w-0"><dt class="text-xs font-medium text-muted">Payment</dt><dd class="mt-0.5 text-[13px] leading-normal text-ink" x-text="method === 'cod' ? 'Cash on delivery · Pay when your order arrives' : methodLabels[method] + ' · Pay on PayMongo right after you order'"></dd></div>
+                                    <button type="button" @click="open(2)" class="inline-flex min-h-10 shrink-0 items-center text-[12.5px] font-semibold text-brand underline-offset-[3px] hover:text-brand-hover hover:underline">Change</button>
+                                </div>
+                            </dl>
+
+                            <div class="mt-4">
+                                <label for="delivery_note" class="mb-1.5 block text-[13.5px] font-semibold text-ink">Delivery note <span class="font-normal text-muted">(optional)</span></label>
+                                <textarea id="delivery_note" name="delivery_note" rows="2" maxlength="1000" placeholder="Landmark, gate code, or anything the courier should know"  class="min-h-[46px] w-full rounded-[10px] border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger min-h-[88px] resize-y py-[11px] leading-normal"></textarea>
+                                                            </div>
+
+                            <div class="mt-4 flex gap-[9px] rounded-[10px] border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
+                                <svg class="mt-px size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
+                                <p>Each store confirms delivery timing after receiving your order. Shipping is free.</p>
+                            </div>
+
+                            <div class="mt-5 grid gap-3">
+                                <button type="submit" @click="place($event)" :disabled="placing" class="flex min-h-[46px] w-full items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-sm:hidden" x-text="placing ? 'Placing order…' : (method === 'cod' ? 'Place order · ₱1,798.00' : placeLabel)">Place order · ₱1,798.00</button>
+                                <p class="text-center text-xs leading-normal text-muted max-sm:hidden" x-text="method === 'cod' ? 'You will pay on delivery.' : 'You’ll pay on PayMongo’s secure page next.'">You will pay on delivery.</p>
+                                <button type="button" @click="open(2)" class="inline-flex min-h-11 items-center justify-center gap-1.5 justify-self-center text-[13px] font-semibold text-muted transition-colors hover:text-ink">
+                                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
+                                    Back to payment
+                                </button>
+                            </div>
+    </div>
+</section>
+                    </div>
+                </div>
+
+                <aside class="min-w-0 rounded-[16px] border border-line bg-surface max-lg:order-first lg:sticky lg:top-24" aria-label="Order summary">
+                    <button type="button" @click="summaryOpen = ! summaryOpen" :aria-expanded="summaryOpen.toString()" aria-controls="checkout-summary-body" class="flex w-full items-center justify-between gap-2.5 rounded-[16px] px-4 py-[15px] text-left lg:hidden">
+                        <span><span class="block text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</span><span class="mt-0.5 block text-[12.5px] text-muted">2 items from 2 stores</span></span>
+                        <span class="flex items-center gap-2">
+                            <span class="text-[15px] font-semibold tabular-nums text-ink">₱1,798.00</span>
+                            <svg class="size-[18px] text-muted transition-transform duration-200" :class="summaryOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                        </span>
+                    </button>
+                    <div class="px-5 py-[18px] max-lg:hidden">
+                        <h2 id="checkout-summary-heading" class="text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</h2>
+                        <p class="mt-0.5 text-[12.5px] text-muted">2 items from 2 stores</p>
+                    </div>
+
+                    <div id="checkout-summary-body" class="border-t border-[#EEF1F5] px-5 pb-5 pt-4 max-lg:hidden max-lg:border-line max-sm:p-4" :class="{ 'max-lg:hidden': ! summaryOpen }">
+                                                                                <section class="" aria-labelledby="checkout-store-01m63t4b1z4pd5sp6hg4vthezr">
+                                <h3 id="checkout-store-01m63t4b1z4pd5sp6hg4vthezr" class="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted">
+                                    <svg class="size-[13px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 9h16v11H4zM3 9l1.5-5h15L21 9M9 20v-6h6v6"/></svg>
+                                    Demo Store
+                                </h3>
+                                <ul class="mt-2.5 grid gap-3">
+                                                                            <li class="grid grid-cols-[48px_minmax(0,1fr)_auto] items-start gap-2.5">
+                                            <span class="grid size-12 place-items-center overflow-hidden rounded-[9px] border border-line bg-slate-100"><svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg></span>
+                                            <span class="min-w-0">
+                                                <span class="block text-[13px] font-medium leading-[1.4] text-ink [overflow-wrap:anywhere]">Everyday Canvas Tote</span>
+                                                <span class="mt-0.5 block text-[12.5px] leading-[1.4] text-muted">Qty 1</span>
+                                            </span>
+                                            <span class="whitespace-nowrap pt-px text-[13px] font-semibold tabular-nums text-ink">₱499.00</span>
+                                        </li>
+                                                                    </ul>
+                            </section>
+                                                                                <section class="mt-4 border-t border-line pt-4" aria-labelledby="checkout-store-01m63t4b2e6tdvbh6scwa07cjx">
+                                <h3 id="checkout-store-01m63t4b2e6tdvbh6scwa07cjx" class="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted">
+                                    <svg class="size-[13px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 9h16v11H4zM3 9l1.5-5h15L21 9M9 20v-6h6v6"/></svg>
+                                    Franil Store
+                                </h3>
+                                <ul class="mt-2.5 grid gap-3">
+                                                                            <li class="grid grid-cols-[48px_minmax(0,1fr)_auto] items-start gap-2.5">
+                                            <span class="grid size-12 place-items-center overflow-hidden rounded-[9px] border border-line bg-slate-100"><svg viewBox="0 0 24 24" class="size-6 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m4 18 5-5 3 3 3-3 5 5"/></svg></span>
+                                            <span class="min-w-0">
+                                                <span class="block text-[13px] font-medium leading-[1.4] text-ink [overflow-wrap:anywhere]">TP-Link 300Mbps Router</span>
+                                                <span class="mt-0.5 block text-[12.5px] leading-[1.4] text-muted">Qty 1</span>
+                                            </span>
+                                            <span class="whitespace-nowrap pt-px text-[13px] font-semibold tabular-nums text-ink">₱1,299.00</span>
+                                        </li>
+                                                                    </ul>
+                            </section>
+                        
+                        <dl class="mt-4 grid gap-2 border-t border-dashed border-[#DBE3EF] pt-3.5 text-[13px]">
+                            <div class="flex justify-between gap-3 text-muted"><dt>Subtotal</dt><dd class="tabular-nums text-ink">₱1,798.00</dd></div>
+                            <div class="flex justify-between gap-3 text-muted"><dt>Shipping</dt><dd class="font-semibold text-success">Free</dd></div>
+                            <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-sm font-semibold text-ink"><dt>Total</dt><dd class="text-[20px] leading-none tracking-[-0.025em] tabular-nums">₱1,798.00</dd></div>
+                        </dl>
+                        <p class="mt-3.5 flex items-center gap-1.5 text-[12.5px] leading-[1.4] text-muted">
+                            <svg class="size-[13px] shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
+                            Free shipping · No hidden fees
+                        </p>
+                    </div>
+                </aside>
+
+                
+                <div class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 px-4 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 shadow-[0_-8px_24px_-18px_rgb(15_23_42/35%)] backdrop-blur sm:hidden">
+                    <div class="flex items-center gap-3.5">
+                        <div class="min-w-0">
+                            <p class="text-[11.5px] text-muted">Total to pay</p>
+                            <p class="truncate text-lg/tight font-semibold tracking-[-0.025em] tabular-nums text-ink">₱1,798.00</p>
+                        </div>
+                        <button type="button" @click="step === 3 ? submit() : next()" :disabled="placing" class="ml-auto flex min-h-[46px] min-w-[140px] shrink-0 items-center justify-center rounded-[10px] bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-[380px]:min-w-[118px] max-[380px]:px-3.5" x-text="placing ? 'Placing order…' : ({ 1: 'Continue', 2: 'Review order' }[step] ?? 'Place order')">Continue</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+                </main>
+                                        <footer class="border-t border-line bg-white text-[13px] leading-6 text-muted">
+    <div class="marketplace-container flex flex-col gap-4 py-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <a href="http://127.0.0.1:8000" class="inline-flex items-center text-xl font-bold tracking-[-0.05em] text-ink" aria-label="JMMart marketplace home">
+                <span class="mr-2 grid size-[27px] place-items-center rounded-lg bg-brand text-sm font-bold text-white" aria-hidden="true">jm</span>JM<span class="text-brand">Mart.</span>
+            </a>
+            <span>Good finds. Great local stores.</span>
+        </div>
+        <nav aria-label="Footer" class="flex flex-wrap items-center gap-x-6 gap-y-0">
+            <a href="http://127.0.0.1:8000/terms" class="inline-flex min-h-11 items-center hover:text-brand">Terms</a>
+            <a href="http://127.0.0.1:8000/privacy-policy" class="inline-flex min-h-11 items-center hover:text-brand">Privacy</a>
+            <a href="http://127.0.0.1:8000/cookie-policy" class="inline-flex min-h-11 items-center hover:text-brand">Cookie Policy</a>
+            <button type="button" data-cookie-preferences-open class="min-h-11 hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Preferences</button>
+            <span class="inline-flex min-h-11 items-center">&copy; 2026 JMMart</span>
+        </nav>
+    </div>
+</footer>
+
+                    </div>
+        <div data-cookie-consent data-functional="false" data-save-url="http://127.0.0.1:8000/cookie-preferences" data-csrf="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq">
+            <section data-cookie-banner aria-labelledby="cookie-banner-title" class="fixed inset-x-3 z-[90] mx-auto max-h-[calc(100dvh-6rem)] max-w-[480px] overflow-y-auto rounded-xl border border-line bg-white p-3 shadow-lg bottom-3">
+            <div class="flex items-center gap-2">
+                <span class="grid size-7 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand-hover" aria-hidden="true">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a3 3 0 0 0 3 3 3 3 0 0 0 3 3 3 3 0 0 0 3 3M8 11h.01M12 16h.01M16 13h.01M10 7h.01" stroke-linecap="round"/></svg>
+                </span>
+                <h2 id="cookie-banner-title" class="text-base font-semibold text-ink">Your privacy matters</h2>
+            </div>
+            <p class="mt-1 text-sm leading-5 text-muted">Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences. <a href="http://127.0.0.1:8000/cookie-policy" class="font-semibold text-brand underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Policy</a> · <a href="http://127.0.0.1:8000/privacy-policy" class="font-semibold text-brand underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Privacy Policy</a></p>
+            <div class="mt-2 grid grid-cols-3 gap-2">
+                <button type="button" data-cookie-action="reject" class="relative min-h-9 rounded-md border border-line px-1 py-1 text-xs font-semibold leading-4 text-ink before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reject Optional</button>
+                <button type="button" data-cookie-action="customize" class="relative min-h-9 rounded-md border border-line px-1 py-1 text-xs font-semibold leading-4 text-ink before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Customize</button>
+                <button type="button" data-cookie-action="accept" class="relative min-h-9 rounded-md bg-brand px-1 py-1 text-xs font-semibold leading-4 text-white before:absolute before:-inset-y-1 before:inset-x-0 before:content-[''] hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">Accept All</button>
+            </div>
+            <p data-cookie-error role="alert" class="mt-2 hidden text-sm text-red-700"></p>
+        </section>
+    
+    <dialog data-cookie-dialog aria-labelledby="cookie-dialog-title" class="w-[calc(100%-2rem)] max-w-md max-h-[85dvh] overflow-y-auto rounded-xl border border-line bg-white p-0 text-ink shadow-2xl backdrop:bg-slate-950/50">
+        <div class="border-b border-line px-4 py-3">
+            <div class="flex items-center justify-between gap-3">
+                <h2 id="cookie-dialog-title" class="text-lg font-semibold">Cookie preferences</h2>
+                <button type="button" data-cookie-action="close" aria-label="Close cookie preferences" class="grid size-11 shrink-0 place-items-center rounded-lg text-xl hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">×</button>
+            </div>
+            <p class="text-sm leading-5 text-muted">Choose what JMMart may remember. Essential services stay on.</p>
+        </div>
+        <div class="divide-y divide-line px-4">
+            <section class="py-3">
+                <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Strictly Necessary</h3><span class="text-xs font-semibold text-brand">Always active</span></div>
+                <p class="mt-1 text-sm leading-5 text-muted">Sign-in, security, cart, checkout, and temporary chat drafts.</p>
+            </section>
+            <label class="flex cursor-pointer items-start justify-between gap-3 py-3">
+                <span><span class="block text-sm font-semibold">Functional</span><span class="mt-1 block text-sm leading-5 text-muted">Recently viewed products and Seller Center settings.</span></span>
+                <input type="checkbox" name="functional" class="mt-1 shrink-0 rounded border-line text-brand focus:ring-brand" >
+            </label>
+            <section class="py-3">
+                <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Analytics</h3><input type="checkbox" name="analytics" disabled aria-label="Analytics unavailable" class="shrink-0 rounded border-line"></div>
+                <p class="mt-1 text-sm leading-5 text-muted">Not in use. No analytics tracker is installed.</p>
+            </section>
+            <section class="py-3">
+                <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Marketing</h3><input type="checkbox" name="marketing" disabled aria-label="Marketing unavailable" class="shrink-0 rounded border-line"></div>
+                <p class="mt-1 text-sm leading-5 text-muted">Not in use. No advertising tracker is installed.</p>
+            </section>
+            <p class="py-3 text-xs leading-5 text-muted">Saved for up to 180 days. Read our <a href="http://127.0.0.1:8000/cookie-policy" class="font-semibold text-brand underline">Cookie Policy</a> and <a href="http://127.0.0.1:8000/privacy-policy" class="font-semibold text-brand underline">Privacy Policy</a>.</p>
+            <p data-cookie-error role="alert" class="hidden pb-3 text-sm text-red-700"></p>
+        </div>
+        <div class="flex justify-end gap-2 border-t border-line px-4 py-3">
+            <button type="button" data-cookie-action="reject" class="min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reject Optional</button>
+            <button type="button" data-cookie-action="save" class="min-h-11 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2">Save Preferences</button>
+        </div>
+    </dialog>
+</div>
+        <!-- Livewire Scripts -->
+<script src="http://127.0.0.1:8000/livewire-ad54a448/livewire.js?id=0ae8dee3"   data-csrf="FP56bXuY2u03OrAv32PIvOVjd8bJEGVTd4d2pcgq" data-module-url="http://127.0.0.1:8000/livewire-ad54a448" data-update-uri="http://127.0.0.1:8000/livewire-ad54a448/update" data-navigate-once="true"></script>
+    </body>
+</html>

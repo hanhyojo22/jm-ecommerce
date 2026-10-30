@@ -1,0 +1,167 @@
+- generic [active] [ref=f3e1]:
+  - link "Skip to content" [ref=f3e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f3e3]:
+    - complementary "Store announcement" [ref=f3e4]:
+      - generic [ref=f3e5]:
+        - text: Free shipping · COD —
+        - link "Shop best sellers" [ref=f3e6] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/top-products
+    - banner [ref=f3e7]:
+      - generic [ref=f3e8]:
+        - generic [ref=f3e9]:
+          - button "Open navigation menu" [ref=f3e10] [cursor=pointer]
+          - link "JMMart marketplace home" [ref=f3e13] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000
+            - generic [aria-hidden] [ref=f3e14]: jm
+            - generic [ref=f3e15]: JMMart.
+        - generic [ref=f3e17]:
+          - combobox "Search products, brands, and stores" [ref=f3e21]
+          - button "Search" [ref=f3e22] [cursor=pointer]
+        - generic [ref=f3e23]:
+          - link "Messages" [ref=f3e24] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages
+          - 'link "Cart: 0 items" [ref=f3e27] [cursor=pointer]':
+            - /url: http://127.0.0.1:8000/cart
+          - button "Account menu" [ref=f3e34] [cursor=pointer]
+      - navigation "Marketplace sections" [ref=f3e38]:
+        - generic [ref=f3e39]:
+          - link "Categories ▾" [ref=f3e40] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000#shop-by-category
+          - link "New Arrivals" [ref=f3e41] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/search?sort=newest
+          - link "Best Sellers" [ref=f3e42] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/top-products
+          - link "Deals" [ref=f3e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000#flash-deals
+          - link "Stores" [ref=f3e44] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/stores
+          - link "Sell on JMMart" [ref=f3e45] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/start-selling
+    - main [ref=f3e46]:
+      - generic [ref=f3e48]:
+        - region [ref=f3e49]:
+          - generic [ref=f3e53]:
+            - heading "Order placed" [level=1] [ref=f3e54]
+            - paragraph [ref=f3e55]: Thanks, Franil. Your order is in. The store is getting it ready, and you’ll pay the courier on delivery.
+            - generic [ref=f3e56]:
+              - generic [ref=f3e57]:
+                - generic [ref=f3e58]: Order
+                - generic [ref=f3e59]: JM-01M62P0F33QGCTK2NBRQYFQZPV
+                - button "Copy order number" [ref=f3e60] [cursor=pointer]:
+                  - generic [ref=f3e64]: Copy
+              - generic [ref=f3e65]: Due on delivery ₱15,000.00
+              - generic [ref=f3e66]: Placed Oct 29, 2026 · 1:57 AM
+            - generic [ref=f3e67]:
+              - link "Track order" [ref=f3e68] [cursor=pointer]:
+                - /url: http://127.0.0.1:8000/orders/01m62p0f33qgctk2nbrqyfqzpw
+              - link "Continue shopping" [ref=f3e71] [cursor=pointer]:
+                - /url: http://127.0.0.1:8000
+        - complementary [ref=f3e72]:
+          - generic [ref=f3e74]:
+            - generic [ref=f3e75]:
+              - heading "Order receipt" [level=2] [ref=f3e76]
+              - generic [ref=f3e77]: JMMart
+            - generic [ref=f3e78]:
+              - paragraph [ref=f3e79]: Due on delivery
+              - paragraph [ref=f3e80]: ₱15,000.00
+              - paragraph [ref=f3e81]: Pay the courier when it arrives
+              - generic [ref=f3e86]:
+                - strong [ref=f3e87]: COD
+                - generic [ref=f3e88]: On delivery
+            - generic [ref=f3e89]:
+              - generic [ref=f3e90]:
+                - generic [ref=f3e91]:
+                  - term [ref=f3e92]: Items (1)
+                  - definition [ref=f3e93]: ₱15,000.00
+                - generic [ref=f3e94]:
+                  - term [ref=f3e95]: Shipping
+                  - definition [ref=f3e96]: Free
+                - generic [ref=f3e97]:
+                  - term [ref=f3e98]: Total
+                  - definition [ref=f3e99]: ₱15,000.00
+              - generic [ref=f3e106]:
+                - paragraph [ref=f3e107]: Payment
+                - paragraph [ref=f3e108]: Cash on delivery
+                - paragraph [ref=f3e109]: Prepare ₱15,000.00 for the courier.
+              - generic [ref=f3e110]:
+                - paragraph [ref=f3e111]: Delivering to
+                - generic [ref=f3e112]: Franil Escalicas Juana Osmeña Cebu, Cebu 6000 09479324139
+              - button "Print receipt" [ref=f3e113] [cursor=pointer]
+            - generic [ref=f3e117]:
+              - generic [ref=f3e118]: Order
+              - strong [ref=f3e119]: JM-01M62P0F33QGCTK2NBRQYFQZPV
+        - generic [ref=f3e120]:
+          - region [ref=f3e121]:
+            - heading "What happens next" [level=2] [ref=f3e122]
+            - paragraph [ref=f3e123]: The store packs and ships your items, and your order page updates at each step.
+            - list [ref=f3e124]:
+              - listitem [ref=f3e125]:
+                - paragraph [ref=f3e129]: Order placed
+                - paragraph [ref=f3e130]: Oct 29, 1:57 AM
+              - listitem [ref=f3e131]:
+                - paragraph [ref=f3e133]: Store confirms
+                - paragraph [ref=f3e134]: Each store sets its delivery timing
+              - listitem [ref=f3e135]:
+                - paragraph [ref=f3e137]: Packed & shipped
+              - listitem [ref=f3e138]:
+                - paragraph [ref=f3e140]: Delivered
+                - paragraph [ref=f3e141]: Pay the courier
+          - region [ref=f3e142]:
+            - generic [ref=f3e143]:
+              - heading "Your order" [level=2] [ref=f3e144]
+              - paragraph [ref=f3e145]: 1 item from 1 store
+            - article [ref=f3e147]:
+              - generic [ref=f3e148]:
+                - generic [aria-hidden] [ref=f3e149]: J
+                - generic [ref=f3e150]:
+                  - heading "JM" [level=3] [ref=f3e151]
+                  - paragraph [ref=f3e152]: Ships from this store
+                - generic [ref=f3e153]: Awaiting confirmation
+              - generic [ref=f3e155]:
+                - generic [ref=f3e157]:
+                  - generic [ref=f3e158]: Iphone 18 Fold
+                  - generic [ref=f3e159]: Qty 1
+                - generic [ref=f3e160]: ₱15,000.00
+              - generic [ref=f3e161]:
+                - generic [ref=f3e162]:
+                  - text: Subtotal
+                  - strong [ref=f3e163]: ₱15,000.00
+                - button "Message store" [ref=f3e165] [cursor=pointer]
+          - region [ref=f3e168]:
+            - generic [ref=f3e172]:
+              - heading "Something not right?" [level=2] [ref=f3e173]
+              - paragraph [ref=f3e174]: Message the store from your order page. They can help with items, delivery, or returns.
+            - link "Go to my order" [ref=f3e175] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders/01m62p0f33qgctk2nbrqyfqzpw
+    - contentinfo [ref=f3e178]:
+      - generic [ref=f3e179]:
+        - generic [ref=f3e180]:
+          - link "JMMart marketplace home" [ref=f3e181] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000
+            - generic [aria-hidden] [ref=f3e182]: jm
+            - text: JM
+            - generic [ref=f3e183]: Mart.
+          - generic [ref=f3e184]: Good finds. Great local stores.
+        - navigation "Footer" [ref=f3e185]:
+          - link "Terms" [ref=f3e186] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/terms
+          - link "Privacy" [ref=f3e187] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/privacy-policy
+          - link "Cookie Policy" [ref=f3e188] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/cookie-policy
+          - button "Cookie Preferences" [ref=f3e189] [cursor=pointer]
+          - generic [ref=f3e190]: © 2026 JMMart
+  - region [ref=f3e191]:
+    - heading "Your privacy matters" [level=2] [ref=f3e197]
+    - paragraph [ref=f3e198]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f3e199] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f3e200] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=f3e201]:
+      - button "Reject Optional" [ref=f3e202] [cursor=pointer]
+      - button "Customize" [ref=f3e203] [cursor=pointer]
+      - button "Accept All" [ref=f3e204] [cursor=pointer]

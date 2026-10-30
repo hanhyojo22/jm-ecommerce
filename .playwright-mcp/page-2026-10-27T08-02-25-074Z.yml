@@ -1,0 +1,157 @@
+- generic [ref=f20e1]:
+  - generic [ref=f20e2]:
+    - generic [ref=f20e3]:
+      - text: Seller onboarding · mockup of
+      - code [ref=f20e4]: /start-selling
+      - text: . Click the steps, try the fields.
+    - group "Preview width" [ref=f20e5]:
+      - button "Desktop" [ref=f20e6] [cursor=pointer]
+      - button "Phone" [ref=f20e7] [cursor=pointer]
+  - generic [ref=f20e9]:
+    - banner [ref=f20e10]:
+      - generic [ref=f20e11]:
+        - generic [ref=f20e12]: JM
+        - text: JMMart
+        - generic [ref=f20e13]: · Seller
+      - generic [ref=f20e14]:
+        - generic [ref=f20e15]: Draft saved
+        - link "Exit" [ref=f20e16] [cursor=pointer]:
+          - /url: "#"
+    - generic [ref=f20e17]:
+      - complementary "Application progress" [ref=f20e18]:
+        - generic [ref=f20e19]:
+          - generic [ref=f20e20]: Become a seller
+          - heading "Open your store on JMMart" [level=1] [ref=f20e21]
+          - paragraph [ref=f20e22]: About 10 minutes. Your draft saves at every step, so you can finish later.
+          - generic [ref=f20e27]:
+            - generic [ref=f20e28]: 29% complete
+            - text: Review takes 1–3 business days
+          - navigation [ref=f20e29]:
+            - generic [ref=f20e185]:
+              - generic [ref=f20e186]: About you
+              - list [ref=f20e187]:
+                - listitem [ref=f20e188]:
+                  - button "✓ Seller type Individual or business" [ref=f20e189] [cursor=pointer]:
+                    - generic [ref=f20e190]: ✓
+                    - generic [ref=f20e191]:
+                      - text: Seller type
+                      - generic [ref=f20e192]: Individual or business
+                - listitem [ref=f20e193]:
+                  - button "✓ Your information Name and contact" [ref=f20e194] [cursor=pointer]:
+                    - generic [ref=f20e195]: ✓
+                    - generic [ref=f20e196]:
+                      - text: Your information
+                      - generic [ref=f20e197]: Name and contact
+            - generic [ref=f20e198]:
+              - generic [ref=f20e199]: Your store
+              - list [ref=f20e200]:
+                - listitem [ref=f20e201]:
+                  - button "3 Store Name, link and branding" [ref=f20e202] [cursor=pointer]:
+                    - generic [ref=f20e203]: "3"
+                    - generic [ref=f20e204]:
+                      - text: Store
+                      - generic [ref=f20e205]: Name, link and branding
+                - listitem [ref=f20e206]:
+                  - button "4 Address and fulfillment Pickup and shipping" [ref=f20e207] [cursor=pointer]:
+                    - generic [ref=f20e208]: "4"
+                    - generic [ref=f20e209]:
+                      - text: Address and fulfillment
+                      - generic [ref=f20e210]: Pickup and shipping
+            - generic [ref=f20e211]:
+              - generic [ref=f20e212]: Verify and get paid
+              - list [ref=f20e213]:
+                - listitem [ref=f20e214]:
+                  - button "5 Verification ID and selfie" [ref=f20e215] [cursor=pointer]:
+                    - generic [ref=f20e216]: "5"
+                    - generic [ref=f20e217]:
+                      - text: Verification
+                      - generic [ref=f20e218]: ID and selfie
+                - listitem [ref=f20e219]:
+                  - button "6 Payout Bank or e-wallet" [ref=f20e220] [cursor=pointer]:
+                    - generic [ref=f20e221]: "6"
+                    - generic [ref=f20e222]:
+                      - text: Payout
+                      - generic [ref=f20e223]: Bank or e-wallet
+            - generic [ref=f20e224]:
+              - generic [ref=f20e225]: Submit
+              - list [ref=f20e226]:
+                - listitem [ref=f20e227]:
+                  - button "7 Review and submit Check and accept" [ref=f20e228] [cursor=pointer]:
+                    - generic [ref=f20e229]: "7"
+                    - generic [ref=f20e230]:
+                      - text: Review and submit
+                      - generic [ref=f20e231]: Check and accept
+          - generic [ref=f20e77]:
+            - text: Questions about selling?
+            - link "Read the seller guide" [ref=f20e78] [cursor=pointer]:
+              - /url: "#"
+            - text: or
+            - link "message support" [ref=f20e79] [cursor=pointer]:
+              - /url: "#"
+            - text: .
+      - main [ref=f20e80]:
+        - generic [ref=f20e81]:
+          - text: ✓ ✓ ✓ ✓
+          - generic [ref=f20e232]:
+            - generic [ref=f20e233]:
+              - generic [ref=f20e234]: Step 3 · Your store
+              - heading "Make your storefront" [level=2] [ref=f20e235]
+              - paragraph [ref=f20e236]: This is what buyers see first. You can edit it later in Store settings.
+            - generic [ref=f20e237]:
+              - generic [ref=f20e238]:
+                - generic [ref=f20e239]:
+                  - generic [ref=f20e240]: Store details
+                  - generic [ref=f20e241]:
+                    - generic [ref=f20e242]:
+                      - generic [ref=f20e243]: Store name
+                      - textbox "Store name" [ref=f20e244]: Lumen Home Goods
+                    - generic [ref=f20e245]:
+                      - generic [ref=f20e246]: Store link
+                      - generic [ref=f20e247]:
+                        - generic [ref=f20e248]: jmmart.ph/store/
+                        - textbox "Store link" [ref=f20e249]: lumen-home
+                      - paragraph [ref=f20e250]: Lowercase letters, numbers and hyphens.
+                    - generic [ref=f20e251]:
+                      - generic [ref=f20e252]:
+                        - text: Description
+                        - generic [ref=f20e253]: 84 / 500
+                      - textbox "Description 84 / 500" [ref=f20e254]: Handmade candles, linen and ceramics for calm, cozy homes. Shipped from Quezon City.
+                    - generic [ref=f20e255]:
+                      - generic [ref=f20e256]: Main category
+                      - combobox "Main category" [ref=f20e257]:
+                        - option "Home & Living" [selected]
+                        - option "Fashion"
+                        - option "Beauty"
+                        - option "Electronics"
+                    - generic [ref=f20e258]:
+                      - generic [ref=f20e259]: Support contact
+                      - textbox "Support contact" [ref=f20e260]: hello@lumenhome.ph
+                - generic [ref=f20e261]:
+                  - generic [ref=f20e262]: Branding
+                  - generic [ref=f20e263]: JPG, PNG or WebP. Square logo, wide banner.
+                  - generic [ref=f20e264]:
+                    - generic [ref=f20e265] [cursor=pointer]:
+                      - generic [ref=f20e269]:
+                        - generic [ref=f20e270]: Logo
+                        - text: lumen-logo.png · 120 KB
+                      - generic [ref=f20e271]: Replace
+                    - generic [ref=f20e272] [cursor=pointer]:
+                      - generic [ref=f20e276]:
+                        - generic [ref=f20e277]: Banner
+                        - text: Tap to upload
+                      - generic [ref=f20e278]: Optional
+              - generic "Storefront preview" [ref=f20e279]:
+                - generic [ref=f20e282]:
+                  - generic [ref=f20e283]: L
+                  - generic [ref=f20e284]: Lumen Home Goods
+                  - generic [ref=f20e285]: jmmart.ph/store/lumen-home
+                  - generic [ref=f20e286]: Handmade candles, linen and ceramics for calm, cozy homes. Shipped from Quezon City.
+                  - generic [ref=f20e287]:
+                    - generic [ref=f20e288]: Home & Living
+                    - generic [ref=f20e289]: New seller
+                - generic [ref=f20e290]: Live preview
+          - text: ✓ ✓ ✓ ✓ ✓ ✓ ✓
+          - generic [ref=f20e116]:
+            - generic [ref=f20e117]: Your progress saves when you continue.
+            - button "Back" [ref=f20e184] [cursor=pointer]
+            - button "Save and continue" [active] [ref=f20e118] [cursor=pointer]

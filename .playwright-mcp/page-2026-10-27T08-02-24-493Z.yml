@@ -1,0 +1,116 @@
+- generic [ref=f20e1]:
+  - generic [ref=f20e2]:
+    - generic [ref=f20e3]:
+      - text: Seller onboarding · mockup of
+      - code [ref=f20e4]: /start-selling
+      - text: . Click the steps, try the fields.
+    - group "Preview width" [ref=f20e5]:
+      - button "Desktop" [ref=f20e6] [cursor=pointer]
+      - button "Phone" [ref=f20e7] [cursor=pointer]
+  - generic [ref=f20e9]:
+    - banner [ref=f20e10]:
+      - generic [ref=f20e11]:
+        - generic [ref=f20e12]: JM
+        - text: JMMart
+        - generic [ref=f20e13]: · Seller
+      - generic [ref=f20e14]:
+        - generic [ref=f20e15]: Saving…
+        - link "Exit" [ref=f20e16] [cursor=pointer]:
+          - /url: "#"
+    - generic [ref=f20e17]:
+      - complementary "Application progress" [ref=f20e18]:
+        - generic [ref=f20e19]:
+          - generic [ref=f20e20]: Become a seller
+          - heading "Open your store on JMMart" [level=1] [ref=f20e21]
+          - paragraph [ref=f20e22]: About 10 minutes. Your draft saves at every step, so you can finish later.
+          - generic [ref=f20e27]:
+            - generic [ref=f20e28]: 14% complete
+            - text: Review takes 1–3 business days
+          - navigation [ref=f20e29]:
+            - generic [ref=f20e119]:
+              - generic [ref=f20e120]: About you
+              - list [ref=f20e121]:
+                - listitem [ref=f20e122]:
+                  - button "✓ Seller type Individual or business" [ref=f20e123] [cursor=pointer]:
+                    - generic [ref=f20e124]: ✓
+                    - generic [ref=f20e125]:
+                      - text: Seller type
+                      - generic [ref=f20e126]: Individual or business
+                - listitem [ref=f20e127]:
+                  - button "2 Your information Name and contact" [ref=f20e128] [cursor=pointer]:
+                    - generic [ref=f20e129]: "2"
+                    - generic [ref=f20e130]:
+                      - text: Your information
+                      - generic [ref=f20e131]: Name and contact
+            - generic [ref=f20e132]:
+              - generic [ref=f20e133]: Your store
+              - list [ref=f20e134]:
+                - listitem [ref=f20e135]:
+                  - button "3 Store Name, link and branding" [ref=f20e136] [cursor=pointer]:
+                    - generic [ref=f20e137]: "3"
+                    - generic [ref=f20e138]:
+                      - text: Store
+                      - generic [ref=f20e139]: Name, link and branding
+                - listitem [ref=f20e140]:
+                  - button "4 Address and fulfillment Pickup and shipping" [ref=f20e141] [cursor=pointer]:
+                    - generic [ref=f20e142]: "4"
+                    - generic [ref=f20e143]:
+                      - text: Address and fulfillment
+                      - generic [ref=f20e144]: Pickup and shipping
+            - generic [ref=f20e145]:
+              - generic [ref=f20e146]: Verify and get paid
+              - list [ref=f20e147]:
+                - listitem [ref=f20e148]:
+                  - button "5 Verification ID and selfie" [ref=f20e149] [cursor=pointer]:
+                    - generic [ref=f20e150]: "5"
+                    - generic [ref=f20e151]:
+                      - text: Verification
+                      - generic [ref=f20e152]: ID and selfie
+                - listitem [ref=f20e153]:
+                  - button "6 Payout Bank or e-wallet" [ref=f20e154] [cursor=pointer]:
+                    - generic [ref=f20e155]: "6"
+                    - generic [ref=f20e156]:
+                      - text: Payout
+                      - generic [ref=f20e157]: Bank or e-wallet
+            - generic [ref=f20e158]:
+              - generic [ref=f20e159]: Submit
+              - list [ref=f20e160]:
+                - listitem [ref=f20e161]:
+                  - button "7 Review and submit Check and accept" [ref=f20e162] [cursor=pointer]:
+                    - generic [ref=f20e163]: "7"
+                    - generic [ref=f20e164]:
+                      - text: Review and submit
+                      - generic [ref=f20e165]: Check and accept
+          - generic [ref=f20e77]:
+            - text: Questions about selling?
+            - link "Read the seller guide" [ref=f20e78] [cursor=pointer]:
+              - /url: "#"
+            - text: or
+            - link "message support" [ref=f20e79] [cursor=pointer]:
+              - /url: "#"
+            - text: .
+      - main [ref=f20e80]:
+        - generic [ref=f20e81]:
+          - text: ✓ ✓ ✓ ✓
+          - generic [ref=f20e166]:
+            - generic [ref=f20e167]:
+              - generic [ref=f20e168]: Step 2 · About you
+              - heading "Your information" [level=2] [ref=f20e169]
+              - paragraph [ref=f20e170]: Use the name on your government ID. Buyers won't see it.
+            - generic [ref=f20e172]:
+              - generic [ref=f20e173]:
+                - generic [ref=f20e174]: Full legal name
+                - textbox "Full legal name" [ref=f20e175]: Maria Santos Dela Cruz
+              - generic [ref=f20e176]:
+                - generic [ref=f20e177]: Mobile number
+                - generic [ref=f20e178]:
+                  - generic [ref=f20e179]: "+63"
+                  - textbox "Mobile number" [ref=f20e180]: 917 555 0142
+              - generic [ref=f20e181]:
+                - generic [ref=f20e182]: Date of birth
+                - textbox "Date of birth" [ref=f20e183]: 1994-03-12
+          - text: ✓ ✓ ✓ ✓ ✓ ✓ ✓
+          - generic [ref=f20e116]:
+            - generic [ref=f20e117]: Your progress saves when you continue.
+            - button "Back" [ref=f20e184] [cursor=pointer]
+            - button "Save and continue" [active] [ref=f20e118] [cursor=pointer]

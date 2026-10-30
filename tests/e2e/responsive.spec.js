@@ -14,9 +14,10 @@ test('customer finds purchases and opens order actions at each viewport', async 
             await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
         }
         await expect(page.getByRole('heading', { name: 'My purchases', exact: true })).toBeVisible();
-        const purchase = page.getByRole('article').filter({ hasText: 'QA-REVIEW-001' });
+        // The card's only link is the card itself; its aria-label carries the order number.
+        const purchase = page.locator('article').filter({ has: page.getByRole('link', { name: /order QA-REVIEW-001/ }) });
         await expect(purchase).toContainText('QA Canvas Tote');
-        await expect(purchase).toContainText('Cash on delivery');
+        await expect(purchase).toContainText('Delivered');
         const filters = page.getByRole('navigation', { name: 'Purchase status filters' });
         // Inactive tabs drop a zero count, so each label may or may not carry a number.
         await expect(filters.getByRole('link')).toHaveText([
@@ -30,19 +31,20 @@ test('customer finds purchases and opens order actions at each viewport', async 
             /^\s*Returns(\s+\d+ orders?)?\s*$/,
         ]);
         await expect(filters.getByRole('link', { name: /^All/ })).toHaveAttribute('aria-current', 'page');
-        const rowsOrder = page.getByRole('article').filter({ hasText: 'QA-ROWS-001' });
-        const items = rowsOrder.locator('[id^="purchase-items-"]');
-        const chatRow = items.locator(':scope > div').filter({ hasText: 'QA Chat Sample' });
+        const rowsOrder = page.locator('article').filter({ has: page.getByRole('link', { name: /order QA-ROWS-001/ }) });
+        const items = rowsOrder.locator('ul');
+        const chatRow = items.locator('li').filter({ hasText: 'QA Chat Sample' });
         await expect(chatRow).toContainText('Blue / Medium');
-        await expect(chatRow).toContainText('Qty 2');
-        await expect(chatRow).toContainText('₱49.98');
+        await expect(chatRow).toContainText('Qty: 2');
+        await expect(chatRow).toContainText('₱24.99');
         // A single extra row is shown outright rather than hidden behind a toggle.
         await expect(items.getByRole('button', { name: /more item/ })).toHaveCount(0);
         await expect(items.getByText('QA Retired Pouch')).toBeVisible();
         await expect(items.getByRole('link', { name: 'QA Retired Pouch' })).toHaveCount(0);
-        await expect(items.locator(':scope > div').filter({ hasText: 'QA Retired Pouch' }).getByText('Product image unavailable')).toHaveCount(1);
+        // Items without a stored photo fall back to the bag glyph, so there is no broken image or noise.
+        await expect(items.locator('li').filter({ hasText: 'QA Retired Pouch' }).getByText('Product image unavailable')).toHaveCount(0);
         if (testInfo.project.name === 'mobile-chromium') {
-            await expect(chatRow.getByText('₱49.98', { exact: true })).toBeVisible();
+            await expect(chatRow).toContainText('₱24.99');
         }
         if (testInfo.project.name === 'mobile-chromium') {
             expect(await filters.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
@@ -55,32 +57,32 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(filters.getByRole('link', { name: /^Delivered/ })).toHaveAttribute('aria-current', 'page');
         await expect(purchase).toBeVisible();
         await expect(rowsOrder).toBeVisible();
-        await expect(rowsOrder.getByRole('link', { name: 'Write review' })).toBeVisible();
-        await expect(rowsOrder.getByRole('link', { name: 'Request return' })).toBeVisible();
+        await expect(rowsOrder.getByText('QA Chat Sample')).toBeVisible();
         await filters.getByRole('link', { name: /^To review/ }).click();
         await expect(rowsOrder).toBeVisible();
         await expect(purchase).toHaveCount(0);
-        await expect(rowsOrder.getByRole('link', { name: 'Write review' })).toBeVisible();
+        await expect(rowsOrder.getByText('QA Chat Sample')).toBeVisible();
         await filters.getByRole('link', { name: /^Returns/ }).click();
         await expect(filters.getByRole('link', { name: /^Returns/ })).toHaveAttribute('aria-current', 'page');
         await expect(rowsOrder).toHaveCount(0);
         await filters.getByRole('link', { name: /^All/ }).click();
         await expect(rowsOrder).toBeVisible();
         await page.getByRole('searchbox', { name: 'Search purchases', exact: true }).fill('QA-REVIEW-001');
-        await page.locator('[data-purchases]').getByRole('button', { name: 'Search', exact: true }).click();
+        await page.getByRole('searchbox', { name: 'Search purchases', exact: true }).press('Enter');
         await expect(page).toHaveURL(/search=QA-REVIEW-001/);
         await expect(purchase).toBeVisible();
         await filters.getByRole('link', { name: /^Awaiting store/ }).click();
         await expect(page.getByRole('heading', { name: 'No purchases match “QA-REVIEW-001” in Awaiting store' })).toBeVisible();
         await expect(page.getByRole('searchbox', { name: 'Search purchases', exact: true })).toHaveValue('QA-REVIEW-001');
         await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
-        await purchase.getByRole('link', { name: 'View order', exact: true }).click();
+        await purchase.getByRole('link').click();
         await expect(page.getByRole('heading', { name: 'Order details', exact: true })).toBeVisible();
         await page.goto('/orders');
-        await rowsOrder.getByRole('link', { name: 'Request return' }).click();
+        await rowsOrder.getByRole('link').click();
         await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
         await page.goto('/orders');
-        await purchase.getByRole('button', { name: 'Message seller', exact: true }).click();
+        await purchase.getByRole('link').click();
+        await page.getByRole('button', { name: 'Message seller' }).first().click();
         await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
     } finally {
         await context.close();
@@ -616,13 +618,14 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
         // One sidebar column for both workspaces, then each page takes the measure its content reads at.
         const purchases = await measure(customer.page, '/orders');
         expect(purchases.sidebar).toBe(sidebar);
-        expect(purchases.width).toBe(1400);
+        // The orders list reads as one ledger line, so its measure is 1080 (app.css account measures).
+        expect(purchases.width).toBe(1080);
         expect(purchases.leftSlack).toBe(purchases.rightSlack);
 
         // The details page drills into that list and holds the same measure.
-        const orderHref = await customer.page.getByRole('link', { name: 'View order', exact: true }).first().getAttribute('href');
+        const orderHref = await customer.page.getByRole('article').first().getByRole('link').getAttribute('href');
         const details = await measure(customer.page, orderHref);
-        expect(details.width).toBe(1400);
+        expect(details.width).toBe(1080);
         expect(details.leftSlack).toBe(details.rightSlack);
 
         // Messages gives the two-panel chat the whole content column.

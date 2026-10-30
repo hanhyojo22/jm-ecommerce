@@ -1,0 +1,130 @@
+- generic [active] [ref=f12e1]:
+  - link "Skip to content" [ref=f12e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f12e4]:
+    - complementary "My account sidebar" [ref=f12e5]:
+      - link "JMMart My account" [ref=f12e7] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/orders
+        - generic [ref=f12e8]:
+          - generic [ref=f12e9]: JMMart
+          - generic [ref=f12e10]: My account
+      - generic [ref=f12e11]:
+        - generic [aria-hidden] [ref=f12e12]: F
+        - generic [ref=f12e13]:
+          - paragraph [ref=f12e14]: Franil Escalicas
+          - paragraph [ref=f12e15]: Customer account
+      - navigation "Customer account navigation" [ref=f12e16]:
+        - paragraph [ref=f12e17]: My account
+        - link "My Purchases" [ref=f12e18] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/orders
+        - link "My Reviews" [ref=f12e24] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/my-reviews
+        - link "Delivery Addresses" [ref=f12e28] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/delivery-addresses
+        - link "Messages" [ref=f12e33] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/messages?context=buying
+        - link "Settings" [ref=f12e37] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/profile
+        - generic [ref=f12e42]:
+          - link "Marketplace" [ref=f12e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000
+          - link "Start selling" [ref=f12e47] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/start-selling
+      - button "Sign out" [ref=f12e52] [cursor=pointer]
+    - main [ref=f12e57]:
+      - generic [ref=f12e59]:
+        - generic [ref=f12e60]:
+          - button "Toggle My account sidebar" [ref=f12e61] [cursor=pointer]
+          - generic [ref=f12e64]:
+            - generic [ref=f12e65]: My account
+            - generic [aria-hidden] [ref=f12e66]: /
+            - strong [ref=f12e67]: My Purchases
+        - generic [ref=f12e69]:
+          - combobox "Search products, brands, and stores" [ref=f12e73]
+          - button "Search" [ref=f12e74] [cursor=pointer]
+        - generic [ref=f12e75]:
+          - link "Messages" [ref=f12e76] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages?context=buying
+          - 'link "Cart: 6 items" [ref=f12e79] [cursor=pointer]':
+            - /url: http://127.0.0.1:8000/cart
+            - generic [aria-hidden] [ref=f12e85]: "6"
+          - button "Account menu" [ref=f12e87] [cursor=pointer]:
+            - generic [ref=f12e91]: Hi, Franil
+      - generic [ref=f12e95]:
+        - generic [ref=f12e96]:
+          - heading "My purchases" [level=1] [ref=f12e98]
+          - link "Continue shopping" [ref=f12e99] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/search
+            - text: Continue shopping
+            - generic [aria-hidden] [ref=f12e100]: →
+        - generic [ref=f12e101]:
+          - navigation "Purchase status filters" [ref=f12e102]:
+            - link "All 7 orders" [ref=f12e103] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=all
+              - text: All
+              - generic [ref=f12e104]:
+                - text: "7"
+                - generic [ref=f12e105]: orders
+            - link "To pay 2 orders, waiting on you" [ref=f12e107] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_pay
+              - text: To pay
+              - generic [ref=f12e108]:
+                - text: "2"
+                - generic [ref=f12e109]: orders, waiting on you
+            - link "Awaiting store 7 orders" [ref=f12e110] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=awaiting_confirmation
+              - text: Awaiting store
+              - generic [ref=f12e111]:
+                - text: "7"
+                - generic [ref=f12e112]: orders
+            - link "Preparing" [ref=f12e113] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_dispatch
+            - link "On the way 3 orders" [ref=f12e114] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_receive
+              - text: On the way
+              - generic [ref=f12e115]:
+                - text: "3"
+                - generic [ref=f12e116]: orders
+            - link "Delivered 4 orders" [ref=f12e117] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=delivered
+              - text: Delivered
+              - generic [ref=f12e118]:
+                - text: "4"
+                - generic [ref=f12e119]: orders
+            - link "To review 2 orders" [ref=f12e121] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=to_review
+              - text: To review
+              - generic [ref=f12e122]:
+                - text: "2"
+                - generic [ref=f12e123]: orders
+            - link "Returns 1 order, waiting on you" [ref=f12e124] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders?tab=returns
+              - text: Returns
+              - generic [ref=f12e125]:
+                - text: "1"
+                - generic [ref=f12e126]: order, waiting on you
+          - generic [ref=f12e127]:
+            - generic [ref=f12e128]:
+              - generic [ref=f12e129]: Search purchases
+              - searchbox "Search purchases" [ref=f12e131]
+            - button "Search" [ref=f12e132] [cursor=pointer]
+        - region [ref=f12e133]:
+          - heading "On the way purchases (0)" [level=2] [ref=f12e134]
+          - generic [ref=f12e135]:
+            - heading "Nothing on the way" [level=3] [ref=f12e136]
+            - paragraph [ref=f12e137]: Shipped orders appear here until you confirm they arrived.
+            - link "View all purchases" [ref=f12e138] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/orders
+  - region [ref=f12e139]:
+    - heading "Your privacy matters" [level=2] [ref=f12e145]
+    - paragraph [ref=f12e146]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f12e147] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f12e148] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=f12e149]:
+      - button "Reject Optional" [ref=f12e150] [cursor=pointer]
+      - button "Customize" [ref=f12e151] [cursor=pointer]
+      - button "Accept All" [ref=f12e152] [cursor=pointer]

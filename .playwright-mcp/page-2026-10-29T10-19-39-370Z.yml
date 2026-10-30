@@ -1,0 +1,115 @@
+- generic [active] [ref=f9e1]:
+  - link "Skip to content" [ref=f9e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f9e4]:
+    - complementary "My account sidebar" [ref=f9e5]:
+      - link "JMMart My account" [ref=f9e7] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/orders
+        - generic [ref=f9e8]:
+          - generic [ref=f9e9]: JMMart
+          - generic [ref=f9e10]: My account
+      - generic [ref=f9e11]:
+        - generic [aria-hidden] [ref=f9e12]: F
+        - generic [ref=f9e13]:
+          - paragraph [ref=f9e14]: Franil Escalicas
+          - paragraph [ref=f9e15]: Customer account
+      - navigation "Customer account navigation" [ref=f9e16]:
+        - paragraph [ref=f9e17]: My account
+        - link "My Purchases" [ref=f9e18] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/orders
+        - link "My Reviews" [ref=f9e24] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/my-reviews
+        - link "Delivery Addresses" [ref=f9e28] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/delivery-addresses
+        - link "Messages" [ref=f9e33] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/messages?context=buying
+        - link "Settings" [ref=f9e37] [cursor=pointer]:
+          - /url: http://127.0.0.1:8000/profile
+        - generic [ref=f9e42]:
+          - link "Marketplace" [ref=f9e43] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000
+          - link "Start selling" [ref=f9e47] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/start-selling
+      - button "Sign out" [ref=f9e52] [cursor=pointer]
+    - main [ref=f9e57]:
+      - generic [ref=f9e59]:
+        - generic [ref=f9e60]:
+          - button "Toggle My account sidebar" [ref=f9e61] [cursor=pointer]
+          - generic [ref=f9e64]:
+            - generic [ref=f9e65]: My account
+            - generic [aria-hidden] [ref=f9e66]: /
+            - strong [ref=f9e67]: My Purchases
+        - generic [ref=f9e69]:
+          - combobox "Search products, brands, and stores" [ref=f9e73]
+          - button "Search" [ref=f9e74] [cursor=pointer]
+        - generic [ref=f9e75]:
+          - link "Messages" [ref=f9e76] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/messages?context=buying
+          - 'link "Cart: 6 items" [ref=f9e79] [cursor=pointer]':
+            - /url: http://127.0.0.1:8000/cart
+            - generic [aria-hidden] [ref=f9e85]: "6"
+          - button "Account menu" [ref=f9e87] [cursor=pointer]:
+            - generic [ref=f9e91]: Hi, Franil
+      - generic [ref=f9e95]:
+        - generic [ref=f9e96]:
+          - generic [ref=f9e97]:
+            - heading "My purchases" [level=1] [ref=f9e98]
+            - paragraph [ref=f9e99]: 7 orders
+          - link "Continue shopping" [ref=f9e100] [cursor=pointer]:
+            - /url: http://127.0.0.1:8000/search
+            - text: Continue shopping
+            - generic [aria-hidden] [ref=f9e101]: →
+        - generic [ref=f9e102]:
+          - text: $tabCounts['to_pay'] > 0, 'returns' => isset($attentionCounts['returns'])])
+          - navigation "Purchase status filters" [ref=f9e103]:
+            - text: "@foreach ($tabs as $key => $label) @if (in_array($key, ['to_pay', 'to_review'], true))@endif"
+            - 'link "$tab === $key, ''border-transparent text-muted hover:border-line hover:text-ink'' => $tab !== $key, ]) @if ($tab === $key) aria-current=\"page\" x-init=\"$el.parentElement.scrollLeft = Math.max(0, $el.offsetLeft - 24)\" @endif> {{ $label }} @if ($buyerTurn[$key] ?? false) {{ $tabCounts[$key] }} {{ Str::plural(''order'', $tabCounts[$key]) }}, waiting on you @elseif ($tabCounts[$key] > 0 || $tab === $key) $tab === $key, ''text-muted'' => $tab !== $key])>{{ $tabCounts[$key] }} {{ Str::plural(''order'', $tabCounts[$key]) }} @endif" [ref=f9e105] [cursor=pointer]':
+              - /url: "{{ route('orders.index', [...request()->except('tab', 'page'), 'tab' => $key]) }}"
+              - text: "$tab === $key, 'border-transparent text-muted hover:border-line hover:text-ink' => $tab !== $key, ]) @if ($tab === $key) aria-current=\"page\" x-init=\"$el.parentElement.scrollLeft = Math.max(0, $el.offsetLeft - 24)\" @endif> {{ $label }} @if ($buyerTurn[$key] ?? false)"
+              - generic [ref=f9e106]:
+                - text: "{{ $tabCounts[$key] }}"
+                - generic [ref=f9e107]: "{{ Str::plural('order', $tabCounts[$key]) }}, waiting on you"
+              - text: "@elseif ($tabCounts[$key] > 0 || $tab === $key)"
+              - generic [ref=f9e108]:
+                - text: "$tab === $key, 'text-muted' => $tab !== $key])>{{ $tabCounts[$key] }}"
+                - generic [ref=f9e109]: "{{ Str::plural('order', $tabCounts[$key]) }}"
+              - text: "@endif"
+            - text: "@endforeach"
+          - generic [ref=f9e110]:
+            - text: "@if ($tab !== 'all') @endif @if (filled($filters['status'] ?? null)) @endif"
+            - generic:
+              - generic [ref=f9e111]: Search purchases
+              - generic:
+                - searchbox "Search purchases" [invalid] [ref=f9e112]: "{{ $search }}"
+                - text: "@if ($search !== '')"
+                - link "Clear search" [ref=f9e113] [cursor=pointer]:
+                  - /url: "{{ route('orders.index', request()->except('search', 'page')) }}"
+                - text: "@endif"
+            - button "Search" [ref=f9e116] [cursor=pointer]
+        - text: "@if (filled($filters['status'] ?? null) && isset($statusStyles[$filters['status']]))"
+        - paragraph [ref=f9e117]:
+          - text: "Filtered to checkouts marked {{ $statusStyles[$filters['status']][0] }} ·"
+          - link "Show all" [ref=f9e118] [cursor=pointer]:
+            - /url: "{{ route('orders.index', request()->except('status', 'page')) }}"
+        - text: "@endif"
+        - region [ref=f9e121]:
+          - 'heading "{{ $tabs[$tab] }} purchases{{ $search !== '''' ? '' matching “''.$search.''”'' : '''' }} ({{ $sellerOrders->total() }})" [level=2] [ref=f9e122]'
+          - text: "@php $orderGroups = $sellerOrders->getCollection() ->groupBy(fn ($sellerOrder): string => $sellerOrder->order->created_at->toDateString()) ->sortKeysDesc(); ?>"
+          - generic [ref=f9e123]:
+            - heading "Your first purchase starts here" [level=3] [ref=f9e124]
+            - paragraph [ref=f9e125]: Your orders and delivery updates will appear here.
+            - link "Browse products" [ref=f9e126] [cursor=pointer]:
+              - /url: http://127.0.0.1:8000/search
+  - region [ref=f9e127]:
+    - heading "Your privacy matters" [level=2] [ref=f9e133]
+    - paragraph [ref=f9e134]:
+      - text: Sign-in, cart and checkout need cookies. Choose whether to save browsing preferences.
+      - link "Cookie Policy" [ref=f9e135] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/cookie-policy
+      - text: ·
+      - link "Privacy Policy" [ref=f9e136] [cursor=pointer]:
+        - /url: http://127.0.0.1:8000/privacy-policy
+    - generic [ref=f9e137]:
+      - button "Reject Optional" [ref=f9e138] [cursor=pointer]
+      - button "Customize" [ref=f9e139] [cursor=pointer]
+      - button "Accept All" [ref=f9e140] [cursor=pointer]

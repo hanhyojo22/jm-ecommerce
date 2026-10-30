@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>My purchases · footer cleanup review</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ------------------------------------------------------------------
+           JMMart My purchases - review mockup for the order-card footer.
+           Tokens mirror resources/css/app.css. Only the footer area of the
+           card changes; store bar, item lines, and totals stay as they are.
+           ------------------------------------------------------------------ */
+        :root {
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --paper: #f1f5f9;
+            --sunken: #f8fafc;
+            --ink: #182c48;
+            --muted: #596b83;
+            --border: #e3e8f1;
+            --border-strong: #cbd4e0;
+            --line-soft: #eef1f5;
+            --accent: #205bf4;
+            --accent-hover: #1d4ed8;
+            --accent-wash: #eef3ff;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html { background: var(--bg); }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "cv11", "ss01";
+        }
+        h1, h2, h3, p { margin: 0; }
+        a { color: inherit; text-decoration: none; }
+        button { font: inherit; color: inherit; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+        .num { font-variant-numeric: tabular-nums; }
+
+        .demo { max-width: 880px; margin: 0 auto; padding: 32px 24px 96px; }
+        .demo > header h1 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+        .demo > header p { margin-top: 4px; max-width: 70ch; color: var(--muted); font-size: 13px; }
+
+        .label { display: flex; align-items: baseline; gap: 10px; margin: 34px 0 4px; }
+        .label h2 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+        .label .tag {
+            padding: 2px 9px;
+            border: 1px solid var(--accent);
+            border-radius: 999px;
+            background: var(--accent-wash);
+            color: var(--accent-hover);
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .label .tag.neutral { border-color: var(--border-strong); background: var(--sunken); color: var(--muted); }
+        .label + .hint { margin: 0 0 14px; color: var(--muted); font-size: 12.5px; }
+
+        /* ------------------------------------------------------------------
+           Order card (mirrors the live My purchases card)
+           ------------------------------------------------------------------ */
+        .card { overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px rgb(24 44 72 / 4%); }
+
+        .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--line-soft); }
+        .bar-left { display: flex; min-width: 0; align-items: center; gap: 10px; }
+        .bar-left > svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+        .bar .store { font-size: 14px; font-weight: 600; color: var(--ink); }
+        .bar .store:hover { color: var(--accent-hover); }
+        .bar .ref { font-size: 12px; font-weight: 500; color: var(--muted); }
+        .bar .ref:hover { color: var(--ink); }
+        .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: var(--sunken); color: var(--ink); font-size: 12px; font-weight: 600; flex: none; }
+        .pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+        .pill.is-moving i { background: var(--accent); }
+
+        .items { padding: 4px 0 8px; }
+        .item { display: grid; grid-template-columns: 72px minmax(0, 1fr) 110px 74px; align-items: center; gap: 16px; padding: 12px 24px; }
+        .thumb { display: grid; width: 72px; height: 72px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--paper); place-items: center; }
+        .thumb svg { width: 22px; height: 22px; color: #94a3b8; }
+        .item .name { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 14px; line-height: 20px; color: var(--ink); }
+        .item .variant { margin-top: 4px; font-size: 12px; color: var(--muted); }
+        .item .amount { font-size: 14px; color: var(--ink); }
+        .item .qty { font-size: 14px; color: var(--ink); text-align: right; }
+        .item .qty .k { color: var(--muted); }
+
+        .foot { display: grid; grid-template-columns: minmax(0, 1fr) 136px 152px; gap: 12px 20px; padding: 14px 24px; border-top: 1px solid var(--line-soft); align-items: start; }
+        .total { text-align: right; }
+        .total strong { display: block; font-size: 15px; font-weight: 600; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+        .total span { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+        .no-action { min-height: 1px; }
+
+        /* Today's footer, kept for comparison. */
+        .headline { margin-top: 2px; font-size: 15px; font-weight: 600; line-height: 22px; letter-spacing: -.01em; }
+        .note { max-width: 62ch; margin-top: 2px; font-size: 13px; line-height: 20px; color: var(--muted); }
+        .note a { color: var(--accent); font-weight: 600; }
+        .note a:hover { text-decoration: underline; text-underline-offset: 2px; }
+        .quiet { display: flex; flex-wrap: wrap; gap: 0 16px; margin-top: 6px; }
+        .quiet a { display: inline-flex; min-height: 32px; align-items: center; font-size: 12px; font-weight: 600; color: var(--muted); transition: color .15s ease; }
+        .quiet a:hover { color: var(--accent-hover); }
+
+        /* Proposed: highlighted action buttons. */
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px; align-items: center; }
+        .btn {
+            display: inline-flex;
+            min-height: 40px;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 0 16px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+        }
+        .btn-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+        .btn-primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+        .btn-outline { border-color: var(--border-strong); background: var(--surface); color: var(--ink); }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent-hover); }
+
+        .endnote { margin-top: 36px; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--sunken); color: var(--muted); font-size: 12.5px; line-height: 20px; }
+        .endnote strong { color: var(--ink); font-weight: 600; }
+
+        /* ------------------------------------------------------------------
+           Responsive: below 860px totals and buttons stack, buttons stretch.
+           ------------------------------------------------------------------ */
+        @media (max-width: 860px) {
+            .demo { padding: 24px 16px 80px; }
+            .bar { padding: 12px 16px; }
+            .item { grid-template-columns: 64px minmax(0, 1fr) auto; }
+            .item .qty { grid-column: 2; justify-self: start; margin-top: 2px; }
+            .item .amount { grid-column: 3; grid-row: 2; text-align: right; }
+            .row-detail { grid-column: 2; margin-top: 2px; }
+            .foot { grid-template-columns: minmax(0, 1fr); }
+            .total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 2px; text-align: left; }
+            .total span { margin-top: 0; }
+            .no-action { display: none; }
+            .actions .btn { flex: 1 1 100%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="demo">
+    <header>
+        <h1>My purchases — order card footer (review)</h1>
+        <p>The store bar, item lines, and totals don't change — only the footer. Today's version is on top for reference, then two proposed treatments with the status wording removed and the "Message seller" / "View order" actions turned into real buttons.</p>
+    </header>
+
+    <!-- ================================================================ -->
+    <!-- Current footer, for comparison                                   -->
+    <!-- ================================================================ -->
+    <div class="label"><h2>Current</h2><span class="tag neutral">Reference · unchanged</span></div>
+    <p class="hint">The card as it renders today: headline wording, helper note, then quiet text links.</p>
+
+    <article class="card">
+        <div class="bar">
+            <div class="bar-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                <a href="#" class="store">JM</a>
+                <a href="#" class="ref num">#…7K3M2X</a>
+            </div>
+            <span class="pill"><i aria-hidden="true"></i>Awaiting store</span>
+        </div>
+        <div class="items">
+            <div class="item">
+                <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div>
+                    <p class="name">Portable Bluetooth Speaker, 20W Stereo Output</p>
+                    <p class="variant">Black · Standard</p>
+                </div>
+                <p class="amount num">₱3,350.00</p>
+                <p class="qty"><span class="k">Qty:</span> 2</p>
+            </div>
+        </div>
+        <div class="foot">
+            <div>
+                <h3 class="headline">Waiting for JM to confirm your order</h3>
+                <p class="note">You can still change your mind. <a href="#">Ask to cancel</a></p>
+                <div class="quiet"><a href="#">Message seller</a><a href="#">View order</a></div>
+            </div>
+            <div class="total"><strong>₱6,700.00</strong><span>Pay on delivery</span></div>
+            <div class="no-action" aria-hidden="true"></div>
+        </div>
+    </article>
+
+    <!-- ================================================================ -->
+    <!-- Variant A: primary + outline buttons                             -->
+    <!-- ================================================================ -->
+    <div class="label"><h2>Variant A</h2><span class="tag">Proposed</span></div>
+    <p class="hint">No wording at all — only the two actions, and "Message seller" becomes the filled button.</p>
+
+    <article class="card">
+        <div class="bar">
+            <div class="bar-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                <a href="#" class="store">JM</a>
+                <a href="#" class="ref num">#…7K3M2X</a>
+            </div>
+            <span class="pill"><i aria-hidden="true"></i>Awaiting store</span>
+        </div>
+        <div class="items">
+            <div class="item">
+                <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div>
+                    <p class="name">Portable Bluetooth Speaker, 20W Stereo Output</p>
+                    <p class="variant">Black · Standard</p>
+                </div>
+                <p class="amount num">₱3,350.00</p>
+                <p class="qty"><span class="k">Qty:</span> 2</p>
+            </div>
+        </div>
+        <div class="foot">
+            <div class="actions">
+                <button type="button" class="btn btn-primary">Message seller</button>
+                <button type="button" class="btn btn-outline">View order</button>
+            </div>
+            <div class="total"><strong>₱6,700.00</strong><span>Pay on delivery</span></div>
+            <div class="no-action" aria-hidden="true"></div>
+        </div>
+    </article>
+
+    <div class="label"><h2>Variant A · another order state</h2><span class="tag">Proposed</span></div>
+    <p class="hint">When there's a real next step, it keeps its filled button on the right: the footer stays calm, no wording.</p>
+
+    <article class="card">
+        <div class="bar">
+            <div class="bar-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                <a href="#" class="store">JM</a>
+                <a href="#" class="ref num">#…Q8P5V1</a>
+            </div>
+            <span class="pill is-moving"><i aria-hidden="true"></i>On the way</span>
+        </div>
+        <div class="items">
+            <div class="item">
+                <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div>
+                    <p class="name">USB-C Fast Charging Cable, 1m Braided</p>
+                    <p class="variant">White · 1 meter</p>
+                </div>
+                <p class="amount num">₱1,075.00</p>
+                <p class="qty"><span class="k">Qty:</span> 2</p>
+            </div>
+        </div>
+        <div class="foot">
+            <div class="actions">
+                <button type="button" class="btn btn-primary">Message seller</button>
+                <button type="button" class="btn btn-outline">View order</button>
+            </div>
+            <div class="total"><strong>₱2,150.00</strong><span>Maya · <strong style="font-weight:600">Paid</strong></span></div>
+            <div class="actions"><button type="button" class="btn btn-primary" style="width:100%">Order received</button></div>
+        </div>
+    </article>
+
+    <!-- ================================================================ -->
+    <!-- Variant B: both buttons outlined                                 -->
+    <!-- ================================================================ -->
+    <div class="label"><h2>Variant B</h2><span class="tag">Proposed</span></div>
+    <p class="hint">Same clean footer, but both actions are outlined buttons so neither reads as "primary".</p>
+
+    <article class="card">
+        <div class="bar">
+            <div class="bar-left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                <a href="#" class="store">JM</a>
+                <a href="#" class="ref num">#…7K3M2X</a>
+            </div>
+            <span class="pill"><i aria-hidden="true"></i>Awaiting store</span>
+        </div>
+        <div class="items">
+            <div class="item">
+                <div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div>
+                    <p class="name">Portable Bluetooth Speaker, 20W Stereo Output</p>
+                    <p class="variant">Black · Standard</p>
+                </div>
+                <p class="amount num">₱3,350.00</p>
+                <p class="qty"><span class="k">Qty:</span> 2</p>
+            </div>
+        </div>
+        <div class="foot">
+            <div class="actions">
+                <button type="button" class="btn btn-outline">Message seller</button>
+                <button type="button" class="btn btn-outline">View order</button>
+            </div>
+            <div class="total"><strong>₱6,700.00</strong><span>Pay on delivery</span></div>
+            <div class="no-action" aria-hidden="true"></div>
+        </div>
+    </article>
+
+    <div class="endnote">
+        <strong>Note before implementing.</strong> The removed wording also carries some live information per state: "Ask to cancel" (pending/preparing orders), the pay-by deadline for unpaid orders, return-window dates, and return instructions. All of that still exists on the order page, reachable through "View order" — none of it is implemented twice here. On phones, the buttons stretch full-width and the total moves under them.
+    </div>
+</div>
+</body>
+</html>

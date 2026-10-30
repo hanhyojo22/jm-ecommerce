@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Decision dialog &middot; JMMart mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" rel="stylesheet">
+    <style>
+        /* ------------------------------------------------------------------
+           JMMart shared decision dialog (resources/js/app.js) - design mockup.
+           One dialog, four real asks from the seller workspace: ship, cancel,
+           bulk confirm, record cash. Inter everywhere: this component lives
+           inside the app, not a lookout surface.
+           ------------------------------------------------------------------ */
+        :root {
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --paper: #f1f5f9;
+            --ink: #182c48;
+            --muted: #596b83;
+            --border: #e3e8f1;
+            --border-strong: #cbd4e0;
+            --line-soft: #eef1f5;
+            --accent: #205bf4;
+            --accent-hover: #1d4ed8;
+            --accent-wash: #eef3ff;
+            --accent-line: #d6e2fb;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --danger-wash: #fff5f5;
+            --danger-line: #f3c7cd;
+            --money: #166534;
+            --money-hover: #14532d;
+            --money-wash: #f1faf4;
+            --money-line: #bfe3cc;
+            --navy: #111f33;
+            --navy-text: #c5d1e0;
+            --navy-muted: #8ea2ba;
+            --shadow-card: 0 1px 2px rgb(24 44 72 / 4%);
+        }
+
+        *,
+        *::before,
+        *::after { box-sizing: border-box; }
+
+        html { background: var(--bg); scrollbar-color: #b7c2d3 transparent; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        ::selection { background: #dbeafe; }
+        h1, h2, p, dl, dd { margin: 0; }
+        ul { margin: 0; padding: 0; list-style: none; }
+        a { color: inherit; text-decoration: none; }
+        button { font: inherit; color: inherit; }
+        svg { display: block; }
+
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* ------------------------------------------------------------------
+           Scene: the Seller Center orders list the dialog interrupts
+           ------------------------------------------------------------------ */
+        .scene {
+            display: grid;
+            grid-template-columns: 232px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 10px 8px 14px;
+            background: var(--navy);
+            color: var(--navy-text);
+        }
+
+        .scene .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            color: #fff;
+        }
+
+        .scene .brand b {
+            display: grid;
+            width: 32px;
+            height: 32px;
+            flex: none;
+            place-items: center;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .scene .brand strong { display: block; font-size: 15px; line-height: 1.2; }
+        .scene .brand small {
+            display: block;
+            margin-top: 2px;
+            color: var(--navy-muted);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .who {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 4px 10px;
+            padding: 10px;
+            border: 1px solid rgb(255 255 255 / 8%);
+            border-radius: 12px;
+            background: rgb(255 255 255 / 4%);
+        }
+
+        .who b {
+            display: grid;
+            width: 30px;
+            height: 30px;
+            flex: none;
+            place-items: center;
+            border-radius: 9px;
+            background: #fff;
+            color: var(--navy);
+            font-size: 13px;
+        }
+
+        .who strong { display: block; color: #fff; font-size: 12.5px; }
+        .who small { display: block; color: var(--navy-muted); font-size: 11px; }
+
+        .nav { display: flex; flex-direction: column; gap: 2px; }
+
+        .nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 42px;
+            padding: 0 12px;
+            border-radius: 10px;
+            color: var(--navy-text);
+            font-size: 13.5px;
+            font-weight: 500;
+        }
+
+        .nav a[aria-current="page"] { background: #fff; color: var(--navy); font-weight: 600; }
+
+        .nav .badge {
+            margin-left: auto;
+            display: grid;
+            place-items: center;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .nav svg, .side-foot svg { width: 18px; height: 18px; flex: none; }
+
+        .side-foot {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid rgb(255 255 255 / 8%);
+        }
+
+        /* Main column */
+        .main { display: flex; flex-direction: column; min-width: 0; }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 13px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+
+        .crumb { font-size: 13px; color: var(--muted); }
+        .crumb b { color: var(--ink); font-weight: 600; }
+
+        .search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: min(360px, 34vw);
+            margin-left: auto;
+            padding: 9px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg);
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .search svg { width: 16px; height: 16px; flex: none; }
+
+        .avatar {
+            display: grid;
+            width: 34px;
+            height: 34px;
+            flex: none;
+            place-items: center;
+            border-radius: 50%;
+            background: var(--accent-wash);
+            color: var(--accent-hover);
+            font-size: 12.5px;
+            font-weight: 700;
+        }
+
+        .pagehead {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 24px 0 16px;
+        }
+
+        .pagehead h1 {
+            font-size: 27px;
+            font-weight: 650;
+            letter-spacing: -.03em;
+            line-height: 1.1;
+        }
+
+        .pagehead .filter {
+            display: flex;
+            gap: 2px;
+            padding: 3px;
+            border-radius: 10px;
+            background: #edf1f7;
+        }
+
+        .pagehead .filter span {
+            padding: 6px 11px;
+            border-radius: 7px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .pagehead .filter span.on {
+            background: #fff;
+            color: var(--ink);
+            box-shadow: 0 1px 2px rgb(16 24 40 / 10%);
+        }
+
+        .board { flex: 1; padding-bottom: 40px; }
+
+        .bulkbar {
+            display: flex;
+            align-items: center;
+            gap: 8px 16px;
+            padding: 9px 16px;
+            border-bottom: 1px solid var(--line-soft);
+            background: #f8fafc;
+            font-size: 12.5px;
+            color: var(--muted);
+        }
+
+        .scbtn {
+            display: inline-flex;
+            align-items: center;
+            height: 30px;
+            padding: 0 12px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 11.5px;
+            font-weight: 650;
+        }
+
+        .list { margin-top: 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-card); overflow: hidden; }
+
+        .lhead {
+            display: grid;
+            grid-template-columns: 26px minmax(0, 1fr) 190px 96px 122px;
+            gap: 14px;
+            padding: 9px 16px;
+            border-bottom: 1px solid var(--border);
+            background: #f8fafc;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+
+        .lhead span:nth-child(n+3) { text-align: right; }
+
+        .rowline {
+            display: grid;
+            grid-template-columns: 26px minmax(0, 1fr) 190px 96px 122px;
+            gap: 14px;
+            align-items: center;
+            min-height: 58px;
+            padding: 9px 16px;
+            border-bottom: 1px solid var(--line-soft);
+        }
+
+        .rowline:last-child { border-bottom: 0; }
+
+        .box {
+            display: grid;
+            width: 16px;
+            height: 16px;
+            place-items: center;
+            border: 1.5px solid var(--border-strong);
+            border-radius: 5px;
+            background: #fff;
+        }
+
+        .box.on { border-color: var(--accent); background: var(--accent); }
+
+        .box svg { width: 9px; height: 9px; color: #fff; opacity: 0; }
+        .box.on svg { opacity: 1; }
+
+        .oitem strong { display: block; font-size: 13.5px; font-weight: 650; letter-spacing: -.005em; font-variant-numeric: tabular-nums; }
+        .oitem small { display: block; margin-top: 1px; color: var(--muted); font-size: 12px; }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .status::before { content: ""; width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
+        .status.s-confirmed { border-color: var(--accent-line); background: var(--accent-wash); color: var(--accent-hover); }
+        .status.s-pending { border-color: #f4d9a8; background: #fffaf0; color: #b45309; }
+        .status.s-delivered { border-color: var(--money-line); background: var(--money-wash); color: var(--money); }
+
+        .money-cell { text-align: right; }
+        .money-cell strong { display: block; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+        .money-cell small { display: block; margin-top: 1px; color: var(--muted); font-size: 11px; text-align: right; }
+
+        .items-cell, .when-cell { color: var(--muted); font-size: 12px; text-align: right; }
+
+        /* ------------------------------------------------------------------
+           Overlay: scrim + the decision card
+           ------------------------------------------------------------------ */
+        .scrim {
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: rgb(15 23 42 / 55%);
+            backdrop-filter: blur(1.5px);
+            animation: scrim-in .2s ease-out both;
+        }
+
+        @keyframes scrim-in { from { opacity: 0; } }
+
+        .decision-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            pointer-events: none;
+        }
+
+        .decision {
+            pointer-events: auto;
+            width: min(440px, 100%);
+            border: 1px solid rgb(255 255 255 / 60%);
+            border-radius: 20px;
+            background: var(--surface);
+            box-shadow:
+                0 40px 80px -24px rgb(15 23 42 / 45%),
+                0 6px 16px -8px rgb(15 23 42 / 28%);
+            transform: translateY(12px) scale(.97);
+            animation: card-in .26s cubic-bezier(.16, 1, .3, 1) both;
+        }
+
+        @keyframes card-in {
+            from { opacity: 0; transform: translateY(14px) scale(.965); }
+        }
+
+        /* Tone */
+        .decision[data-tone="default"] { --tone: var(--accent); --tone-hover: var(--accent-hover); --tone-wash: var(--accent-wash); --tone-line: var(--accent-line); }
+        .decision[data-tone="danger"] { --tone: var(--danger); --tone-hover: var(--danger-hover); --tone-wash: var(--danger-wash); --tone-line: var(--danger-line); }
+        .decision[data-tone="money"] { --tone: var(--money); --tone-hover: var(--money-hover); --tone-wash: var(--money-wash); --tone-line: var(--money-line); }
+
+        .decision-head { position: relative; padding: 22px 24px 0; }
+
+        .decision-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            display: grid;
+            width: 30px;
+            height: 30px;
+            place-items: center;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            transition: background-color .14s ease, color .14s ease;
+        }
+
+        .decision-close:hover { background: var(--paper); color: var(--ink); }
+        .decision-close svg { width: 15px; height: 15px; }
+
+        .decision-icon {
+            display: grid;
+            width: 40px;
+            height: 40px;
+            place-items: center;
+            border: 1px solid var(--tone-line);
+            border-radius: 11px;
+            background: var(--tone-wash);
+            color: var(--tone);
+        }
+
+        .decision-icon svg { width: 20px; height: 20px; }
+
+        .decision-title {
+            margin-top: 14px;
+            font-size: 20px;
+            font-weight: 650;
+            letter-spacing: -.02em;
+            line-height: 1.25;
+            text-wrap: balance;
+        }
+
+        .decision-message {
+            max-width: 46ch;
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 13.5px;
+            line-height: 1.55;
+            text-wrap: pretty;
+        }
+
+        /* The handoff: one status handed to the next. The arrow draws, the
+           destination plate lands. That is the dialog's single authored moment. */
+        .handoff {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 13px 24px;
+            border-block: 1px solid var(--tone-line);
+            background: var(--tone-wash);
+        }
+
+        .plate {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 11px;
+            border-radius: 7px;
+            font-size: 12.5px;
+            font-weight: 650;
+            letter-spacing: -.005em;
+            white-space: nowrap;
+        }
+
+        .plate-from {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: #3f5470;
+        }
+
+        .plate-to {
+            background: var(--tone);
+            color: #fff;
+            animation: plate-in .34s .12s cubic-bezier(.3, 1.5, .5, 1) both;
+        }
+
+        .plate-to svg {
+            width: 11px;
+            height: 11px;
+        }
+
+        @keyframes plate-in {
+            from { opacity: 0; transform: scale(.82); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .handoff-arrow {
+            display: flex;
+            flex: none;
+            align-items: center;
+            color: var(--tone);
+        }
+
+        .handoff-arrow .bar {
+            display: block;
+            width: 20px;
+            height: 2px;
+            border-radius: 1px;
+            background: currentColor;
+            transform-origin: left center;
+            animation: bar-grow .3s .08s cubic-bezier(.16, 1, .3, 1) both;
+        }
+
+        .handoff-arrow svg {
+            width: 12px;
+            height: 12px;
+            margin-left: -2px;
+        }
+
+        @keyframes bar-grow { from { transform: scaleX(0); } }
+
+        .facts { padding: 14px 24px 18px; }
+
+        .fact-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: end;
+            gap: 12px 20px;
+        }
+
+        .fact-label {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+        }
+
+        .fact-order {
+            margin-top: 3px;
+            font-size: 13.5px;
+            font-weight: 650;
+            letter-spacing: .005em;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .fact-amount {
+            margin-top: 3px;
+            font-size: 17px;
+            font-weight: 650;
+            letter-spacing: -.02em;
+            line-height: 1.1;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .fact-orders { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+        .decision-foot {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            padding: 14px 24px 20px;
+            border-top: 1px solid var(--line-soft);
+            background: #fbfcfe;
+            border-radius: 0 0 20px 20px;
+        }
+
+        .decision-foot button {
+            min-height: 44px;
+            border: 0;
+            border-radius: 10px;
+            padding: 12px 14px;
+            font-size: 13.5px;
+            font-weight: 650;
+            cursor: pointer;
+            transition: background-color .15s ease, border-color .15s ease, transform .1s ease;
+        }
+
+        .decision-foot button:active { transform: translateY(1px); }
+
+        .btn-dismiss {
+            border: 1.5px solid var(--border-strong);
+            background: var(--surface);
+            color: var(--ink);
+        }
+
+        .btn-dismiss:hover { border-color: #b4bfd0; }
+        .btn-dismiss:focus-visible { outline-color: var(--tone); }
+
+        .btn-commit {
+            background: var(--tone);
+            color: #fff;
+            box-shadow: inset 0 -2px 0 rgb(0 0 0 / 16%);
+        }
+
+        .btn-commit:hover { background: var(--tone-hover); }
+        .btn-commit:focus-visible { outline-color: var(--tone); }
+
+        /* ------------------------------------------------------------------
+           Mockup preview chrome
+           ------------------------------------------------------------------ */
+        .preview-bar {
+            position: sticky;
+            top: 0;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px 10px;
+            padding: 8px 16px;
+            background: var(--navy);
+            color: var(--navy-text);
+            font-size: 11px;
+        }
+
+        .preview-label {
+            color: #8fb7ff;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .segmented {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+            padding: 4px;
+            border-radius: 9px;
+            background: rgb(255 255 255 / 8%);
+        }
+
+        .segmented button {
+            min-height: 30px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            padding: 0 12px;
+            color: var(--navy-text);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .segmented button[aria-pressed="true"] { background: #fff; color: var(--ink); }
+        .segmented button:focus-visible { outline-color: #8fb7ff; }
+
+        .preview-note { color: var(--navy-muted); font-size: 11px; white-space: nowrap; }
+
+        .reopen {
+            display: none;
+            align-items: center;
+            min-height: 30px;
+            border: 1px solid rgb(255 255 255 / 24%);
+            border-radius: 7px;
+            padding: 0 12px;
+            background: rgb(255 255 255 / 8%);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .reopen:hover { background: rgb(255 255 255 / 16%); }
+        body[data-open="false"] .reopen { display: inline-flex; }
+
+        /* ------------------------------------------------------------------
+           Responsive
+           ------------------------------------------------------------------ */
+        @media (max-width: 900px) {
+            .scene { grid-template-columns: minmax(0, 1fr); }
+            .sidebar { display: none; }
+            .search { width: min(300px, 50vw); }
+            .lhead, .rowline { grid-template-columns: 26px minmax(0, 1fr) 96px 122px; }
+            .lhead :nth-child(3), .rowline .items-cell { display: none; }
+        }
+
+        @media (max-width: 679px) {
+            .topbar { padding: 13px 16px; }
+            .search { display: none; }
+            .pagehead h1 { font-size: 23px; }
+            .pagehead .filter { display: none; }
+            .lhead, .rowline { grid-template-columns: 26px minmax(0, 1fr) auto auto; padding-inline: 14px; gap: 10px; }
+            .money-cell { min-width: 64px; }
+        }
+
+        /* The dialog docks to the bottom on phones: reach arrives with the thumb,
+           and the safe choice stays above the committing one. */
+        @media (max-width: 519px) {
+            .decision-layer { place-items: end stretch; align-items: end; padding: 12px; }
+            .decision {
+                width: 100%;
+                border-radius: 20px 20px 0 0;
+                transform-origin: bottom center;
+            }
+            .decision-head { padding: 22px 20px 0; }
+            .handoff { padding: 13px 20px; }
+            .facts { padding: 13px 20px 16px; }
+            .decision-foot {
+                grid-template-columns: 1fr;
+                padding: 12px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+                border-radius: 0;
+            }
+            .decision-close { top: 16px; right: 16px; }
+
+            /* The docked card hides the mockup chrome it doesn't need. */
+            .preview-label, .preview-note { display: none; }
+            .segmented { width: 100%; max-width: none; }
+            .segmented button { flex: 1 1 auto; padding: 0 8px; }
+            .plate-from { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .scrim, .decision, .plate-to, .handoff-arrow .bar { animation: none; }
+            .decision { transform: none; }
+        }
+    </style>
+</head>
+<body data-open="true">
+
+<div class="preview-bar" role="group" aria-label="Mockup preview state">
+    <span class="preview-label">Modal preview</span>
+    <div class="segmented">
+        <button type="button" data-variant="cancel" aria-pressed="true">Cancel order</button>
+        <button type="button" data-variant="ship" aria-pressed="false">Mark as shipped</button>
+        <button type="button" data-variant="bulk" aria-pressed="false">Confirm 4 orders</button>
+        <button type="button" data-variant="cash" aria-pressed="false">Record cash</button>
+    </div>
+    <button type="button" class="reopen" data-reopen>Reopen dialog</button>
+    <span class="preview-note">Not live</span>
+</div>
+
+<div class="scene" id="scene">
+    <aside class="sidebar" aria-label="Seller Center">
+        <a class="brand" href="#"><b aria-hidden="true">jm</b><span><strong>JMMart.</strong><small>Seller Center</small></span></a>
+        <div class="who"><b aria-hidden="true">D</b><div><strong>Demo Store</strong><small>Active store</small></div></div>
+        <nav class="nav" aria-label="Seller Center pages">
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M9 15v-4m3 4V8m3 7v-2"/></svg>Overview</a>
+            <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16l-1.2 12.2H5.2Z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg>Orders<span class="badge">4</span></a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Products</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18"/></svg>Earnings</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v4.2"/><path d="M12 15.8h.01"/></svg>Store settings</a>
+        </nav>
+        <div class="side-foot">
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>Account</a>
+            <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 12H3"/><path d="m8 17-5-5 5-5"/><path d="M12 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-6"/></svg>Sign out</a>
+        </div>
+    </aside>
+
+    <div class="main">
+        <div class="topbar">
+            <p class="crumb">Seller Center <span aria-hidden="true">/</span> <b>Orders</b></p>
+            <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg><span>Search order number or customer</span></div>
+            <span class="avatar" aria-hidden="true">MT</span>
+        </div>
+
+        <div class="pagehead">
+            <h1>Orders</h1>
+            <div class="filter" aria-hidden="true">
+                <span class="on">All 14</span><span>Pending 4</span><span>Shipped 2</span><span>Delivered 6</span><span>Cancelled 1</span>
+            </div>
+        </div>
+
+        <div class="board">
+            <div class="list">
+                <div class="bulkbar">
+                    <span>4 selected</span>
+                    <button type="button" class="scbtn" data-open-dialog aria-haspopup="dialog">Confirm 4 orders</button>
+                    <span>Buyers are notified when their orders are confirmed.</span>
+                </div>
+                <div class="lhead" aria-hidden="true">
+                    <span></span><span>Order</span><span>Items</span><span>Paid</span><span>Status</span>
+                </div>
+                <div class="rowline"><span class="box on" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg></span><p class="oitem"><strong>JM-&hellip;9R2T1X8B</strong><small>Maria Santos &middot; 2 items</small></p><p class="items-cell">Tote, router</p><p class="money-cell"><strong>&#8369;1,798.00</strong><small>Pending</small></p><span class="status s-confirmed">Confirmed</span></div>
+                <div class="rowline"><span class="box on" aria-hidden="true"></span><p class="oitem"><strong>JM-&hellip;4K8M2A1D</strong><small>Paolo Reyes &middot; 1 item</small></p><p class="items-cell">Rice cooker</p><p class="money-cell"><strong>&#8369;845.00</strong><small>Pending</small></p><span class="status s-pending">Pending</span></div>
+                <div class="rowline"><span class="box on" aria-hidden="true"></span><p class="oitem"><strong>JM-&hellip;7B3N6C5E</strong><small>Ana Lim &middot; 3 items</small></p><p class="items-cell">Bottles, mat</p><p class="money-cell"><strong>&#8369;2,310.00</strong><small>Pending</small></p><span class="status s-pending">Pending</span></div>
+                <div class="rowline"><span class="box" aria-hidden="true"></span><p class="oitem"><strong>JM-&hellip;2F9J4H1L</strong><small>Kat Mendoza &middot; 1 item</small></p><p class="items-cell">Fan</p><p class="money-cell"><strong>&#8369;1,120.00</strong><small>Oct 28</small></p><span class="status s-delivered">Delivered</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="scrim" data-scrim hidden></div>
+
+<div class="decision-layer" data-layer hidden>
+    <section class="decision" role="dialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-message" data-tone="danger">
+        <div class="decision-head">
+            <button type="button" class="decision-close" data-close aria-label="Close without answering">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            </button>
+            <span class="decision-icon" data-icon aria-hidden="true"></span>
+            <h2 class="decision-title" id="dlg-title" data-title>Cancel this order?</h2>
+            <p class="decision-message" id="dlg-message" data-message>Only your store&rsquo;s part of the checkout is cancelled and its item stock is restored. This can&rsquo;t be undone.</p>
+        </div>
+
+        <div class="handoff" role="group" data-handoff aria-label="Changes from Pending to Cancelled">
+            <span class="plate plate-from" data-from>Pending</span>
+            <span class="handoff-arrow" aria-hidden="true"><span class="bar"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12" data-chev><path d="m9 6 6 6-6 6"/></svg></span>
+            <span class="plate plate-to" data-to><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-mark><path d="M6 4h9l5 5v11H6Z"/><path d="M15 4v5h5"/></svg>Cancelled</span>
+        </div>
+
+        <div class="facts">
+            <div class="fact-grid">
+                <div>
+                    <p class="fact-label" data-fact-label>Order</p>
+                    <p class="fact-order" data-fact-order>JM-&hellip;9R2T1X8B</p>
+                    <p class="fact-orders" data-fact-extra hidden>JM-&hellip;9R2T1X8B, JM-&hellip;4K8M2A1D, JM-&hellip;7B3N6C5E and 1 more</p>
+                </div>
+                <div>
+                    <p class="fact-label" data-amount-label>Amount</p>
+                    <p class="fact-amount" data-amount>&#8369;1,798.00</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="decision-foot">
+            <button type="button" class="btn-dismiss" data-dismiss>Keep order</button>
+            <button type="button" class="btn-commit" data-commit>Cancel order</button>
+        </div>
+    </section>
+</div>
+
+<script>
+    (function () {
+        'use strict';
+
+        var body = document.body;
+        var scene = document.getElementById('scene');
+        var scrim = document.querySelector('[data-scrim]');
+        var layer = document.querySelector('[data-layer]');
+        var card = layer.querySelector('.decision');
+        var variantButtons = Array.prototype.slice.call(document.querySelectorAll('[data-variant]'));
+        var icons = {
+            cancel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg>',
+            ship: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h11v10H3Z"/><path d="M14 10h3.6L21 13.4V17h-7"/><circle cx="7.5" cy="19" r="1.7"/><circle cx="16.8" cy="19" r="1.7"/></svg>',
+            bulk: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m5.5 17.4 6.5 3.6 6.5-3.6"/></svg>',
+            cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.2"/><path d="M6.5 10h.01M17.5 14h.01"/></svg>'
+        };
+        var checks = {
+            cancel: '<svg viewBox="0 0 24 24" data-mark fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+            ship: '<svg viewBox="0 0 24 24" data-mark fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>',
+            bulk: '<svg viewBox="0 0 24 24" data-mark fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>',
+            cash: '<svg viewBox="0 0 24 24" data-mark fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>'
+        };
+        var variants = {
+            cancel: {
+                tone: 'danger',
+                title: 'Cancel this order?',
+                message: 'Only your store\u2019s part of the checkout is cancelled and its item stock is restored. This can\u2019t be undone.',
+                order: 'JM-\u20269R2T1X8B',
+                amount: '\u20b11,798.00',
+                from: 'Confirmed',
+                to: 'Cancelled',
+                dismiss: 'Keep order',
+                commit: 'Cancel order',
+                focus: 'dismiss'
+            },
+            ship: {
+                tone: 'default',
+                title: 'Mark this order as shipped?',
+                message: 'Your customer is told the parcel has left your store. Do this only once it\u2019s with your courier.',
+                order: 'JM-\u20269R2T1X8B',
+                amount: '\u20b11,798.00',
+                from: 'Confirmed',
+                to: 'Shipped',
+                dismiss: 'Not yet',
+                commit: 'Mark as shipped',
+                focus: 'commit'
+            },
+            bulk: {
+                tone: 'default',
+                title: 'Confirm 4 pending orders?',
+                message: 'They move to confirmed and the buyers are notified.',
+                order: '4 orders',
+                amount: null,
+                extra: 'JM-\u20269R2T1X8B, JM-\u20264K8M2A1D, JM-\u20267B3N6C5E and 1 more',
+                from: 'Pending',
+                to: 'Confirmed',
+                dismiss: 'Not now',
+                commit: 'Confirm 4 orders',
+                focus: 'commit'
+            },
+            cash: {
+                tone: 'money',
+                title: 'Record cash collected?',
+                message: 'Confirm your store received \u20b11,798.00 in cash for this order. Record only cash you actually have.',
+                order: 'JM-\u20269R2T1X8B',
+                amount: '\u20b11,798.00',
+                from: 'Unpaid',
+                to: 'Paid',
+                dismiss: 'Not yet',
+                commit: 'Record cash',
+                focus: 'commit'
+            }
+        };
+
+        var el = {
+            icon: card.querySelector('[data-icon]'),
+            title: card.querySelector('[data-title]'),
+            message: card.querySelector('[data-message]'),
+            handoff: card.querySelector('[data-handoff]'),
+            from: card.querySelector('[data-from]'),
+            to: card.querySelector('[data-to]'),
+            mark: card.querySelector('[data-mark]'),
+            factLabel: card.querySelector('[data-fact-label]'),
+            factOrder: card.querySelector('[data-fact-order]'),
+            factExtra: card.querySelector('[data-fact-extra]'),
+            amountLabel: card.querySelector('[data-amount-label]'),
+            amount: card.querySelector('[data-amount]'),
+            dismiss: card.querySelector('[data-dismiss]'),
+            commit: card.querySelector('[data-commit]')
+        };
+        var current;
+
+        function applyVariant(name, replay) {
+            current = name;
+            var data = variants[name];
+
+            // Replays clone the destination plate, so cached refs go stale.
+            // Re-query before every write so content lands on the live node.
+            el.to = card.querySelector('[data-to]');
+            el.mark = card.querySelector('[data-mark]');
+
+            card.dataset.tone = data.tone;
+            el.icon.innerHTML = icons[name];
+            el.title.textContent = data.title;
+            el.message.textContent = data.message;
+            el.factLabel.textContent = data.amount ? 'Order' : 'Orders';
+            el.factOrder.textContent = data.order;
+            el.factExtra.hidden = !data.extra;
+            if (data.extra) { el.factExtra.textContent = data.extra; }
+            el.amountLabel.hidden = el.amount.hidden = !data.amount;
+            if (data.amount) { el.amount.textContent = data.amount; }
+            el.from.textContent = data.from;
+            el.to.innerHTML = checks[name] + data.to;
+            el.dismiss.textContent = data.dismiss;
+            el.commit.textContent = data.commit;
+            el.handoff.setAttribute('aria-label', 'Changes from ' + data.from + ' to ' + data.to);
+
+            if (replay) { replayMoment(); }
+        }
+
+        function replayMoment() {
+            // Fresh queries: swapping the plate's innerHTML detaches the previous nodes.
+            [card.querySelector('[data-mark]'), card.querySelector('[data-to]'), card.querySelector('.handoff-arrow .bar')]
+                .forEach(function (node) {
+                    if (!node || !node.parentNode) { return; }
+                    var clone = node.cloneNode(true);
+                    node.parentNode.replaceChild(clone, node);
+                });
+        }
+
+        function openDecision(name, replay) {
+            var focusFirst;
+            if (name) { applyVariant(name, replay); }
+
+            scene.inert = true;
+            scrim.hidden = false;
+            layer.hidden = false;
+            body.dataset.open = 'true';
+
+            focusFirst = variants[current].focus === 'dismiss' ? el.dismiss : el.commit;
+            // The safe choice receives focus; :focus-visible stays quiet on pointer use.
+            focusFirst.focus({ focusVisible: false });
+        }
+
+        function closeDecision() {
+            scene.inert = false;
+            scrim.hidden = true;
+            layer.hidden = true;
+            body.dataset.open = 'false';
+        }
+
+        variantButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                variantButtons.forEach(function (other) {
+                    other.setAttribute('aria-pressed', String(other === button));
+                });
+                applyVariant(button.dataset.variant, layer.hidden === false);
+                if (layer.hidden) { openDecision(); }
+            });
+        });
+
+        document.querySelector('[data-reopen]').addEventListener('click', function () {
+            openDecision(current, true);
+        });
+
+        document.querySelector('[data-open-dialog]').addEventListener('click', function () {
+            openDecision('bulk', true);
+        });
+
+        layer.addEventListener('click', function (event) {
+            if (event.target === layer) { closeDecision(); } // Real backdrop behaviour, hand-built for the mockup.
+        });
+
+        scrim.addEventListener('click', closeDecision);
+        card.querySelector('[data-close]').addEventListener('click', closeDecision);
+        el.dismiss.addEventListener('click', closeDecision);
+        el.commit.addEventListener('click', closeDecision);
+
+        document.addEventListener('keydown', function (event) {
+            if (layer.hidden) { return; }
+
+            if (event.key === 'Escape') {
+                closeDecision();
+                return;
+            }
+
+            if (event.key !== 'Tab') { return; }
+
+            var focusables = Array.prototype.slice.call(layer.querySelectorAll('button:not([hidden])'))
+                .filter(function (node) { return node.offsetParent !== null; });
+
+            if (!focusables.length) { return; }
+
+            var first = focusables[0];
+            var last = focusables[focusables.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
+
+        applyVariant('cancel', false);
+        openDecision('cancel', false);
+    })();
+</script>
+</body>
+</html>

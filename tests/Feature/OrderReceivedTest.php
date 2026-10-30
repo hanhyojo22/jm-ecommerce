@@ -38,7 +38,8 @@ class OrderReceivedTest extends TestCase
         $processing = $this->sellerOrder($store, 'processing', '200.00');
 
         $this->actingAs(User::factory()->create())->post(route('orders.received', $shipped))->assertNotFound();
-        $this->actingAs($processing->order->user)->post(route('orders.received', $processing))->assertSessionHasErrors('status');
+        // The buyer endpoint rethrows any invalid transition as one guide message.
+        $this->actingAs($processing->order->user)->post(route('orders.received', $processing))->assertSessionHasErrors('received');
 
         $this->assertSame('shipped', $shipped->fresh()->status);
         $this->assertSame('processing', $processing->fresh()->status);
