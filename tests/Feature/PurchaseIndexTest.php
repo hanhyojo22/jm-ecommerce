@@ -177,6 +177,19 @@ class PurchaseIndexTest extends TestCase
             ->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 11);
     }
 
+    public function test_each_purchase_card_offers_a_chat_with_the_store(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer, 'CHAT-001', '10.00');
+        $sellerOrder = $this->sellerOrder($order, 'Chatty Store', 'delivered', '10.00');
+
+        $this->actingAs($buyer)->get(route('orders.index'))
+            ->assertOk()
+            ->assertSee('Chat with seller')
+            ->assertSee(route('messages.seller-orders.start', $sellerOrder), false)
+            ->assertSee('about Chatty Store, order CHAT-001');
+    }
+
     public function test_each_purchase_offers_only_the_buyers_next_step(): void
     {
         $buyer = User::factory()->create();

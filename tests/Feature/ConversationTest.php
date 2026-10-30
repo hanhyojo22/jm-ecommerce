@@ -12,6 +12,7 @@ use App\Livewire\Chat\Thread;
 use App\Models\BlockedUser;
 use App\Models\Conversation;
 use App\Models\ConversationReadState;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -93,6 +94,45 @@ class ConversationTest extends TestCase
 
         $this->assertSame(1, Conversation::count());
         $this->assertDatabaseHas('conversations', ['buyer_id' => $buyer->id, 'product_id' => $product->id, 'store_id' => $product->store_id]);
+    }
+
+    public function test_buyer_starts_one_conversation_from_their_own_seller_order(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $otherBuyer = User::factory()->create(['email_verified_at' => now()]);
+        $product = $this->product();
+        $order = Order::create([
+            'user_id' => $buyer->id,
+            'number' => 'CHAT-ORDER-001',
+            'status' => 'pending',
+            'recipient_name' => 'Buyer',
+            'phone' => '+639171234567',
+            'address_line' => '1 Market Street',
+            'city' => 'Manila',
+            'subtotal' => '199.00',
+            'shipping_amount' => '0.00',
+            'total' => '199.00',
+        ]);
+        $sellerOrder = $order->sellerOrders()->create([
+            'tenant_id' => $product->tenant_id,
+            'store_id' => $product->store_id,
+            'status' => 'pending',
+            'subtotal' => '199.00',
+            'shipping_amount' => '0.00',
+            'total' => '199.00',
+        ]);
+
+        $this->actingAs($buyer)->post(route('messages.seller-orders.start', $sellerOrder))->assertRedirect();
+        $this->actingAs($buyer)->post(route('messages.seller-orders.start', $sellerOrder))->assertRedirect();
+
+        $this->assertSame(1, Conversation::count());
+        $this->assertDatabaseHas('conversations', [
+            'buyer_id' => $buyer->id,
+            'store_id' => $product->store_id,
+            'seller_order_id' => $sellerOrder->id,
+        ]);
+
+        $this->actingAs($otherBuyer)->post(route('messages.seller-orders.start', $sellerOrder))->assertNotFound();
     }
 
     public function test_product_conversation_start_is_rate_limited(): void

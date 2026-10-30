@@ -40,6 +40,10 @@
         $outlineAction = 'inline-flex min-h-11 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-meta font-semibold text-ink transition-colors hover:border-brand hover:text-brand-hover lg:min-h-10';
         $inlineLink = 'font-semibold text-brand underline-offset-2 hover:text-brand-hover hover:underline';
         $rowLink = 'inline-flex min-h-11 items-center text-xs font-semibold text-muted transition-colors hover:text-brand-hover lg:min-h-8';
+        // The chat chip stays quiet beside the store name and only takes the brand colour under the pointer,
+        // so the order's own state keeps the loudest mark on the row. On a phone it drops its label to an
+        // icon so the store name, order number, and status still fit on one line.
+        $chatAction = 'inline-flex min-h-11 w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-surface px-0 text-meta font-semibold text-ink transition-colors duration-150 hover:border-brand hover:bg-brand hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:w-auto sm:px-2.5 lg:min-h-10';
     @endphp
 
     <x-marketplace.account-shell active="orders">
@@ -257,6 +261,14 @@
                                             <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
                                             <a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="truncate text-sm font-semibold text-ink hover:text-brand-hover">{{ $store }}</a>
                                             <a id="purchase-number-{{ $sellerOrder->id }}" href="{{ route('orders.show', $order) }}" class="inline-flex min-h-6 items-center text-xs font-medium tabular-nums text-muted underline-offset-2 hover:text-ink hover:underline"><span aria-hidden="true">#…{{ $shortNumber }}</span><span class="sr-only">Order {{ $order->number }}</span></a>
+                                            <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}">
+                                                @csrf
+                                                <button type="submit" class="{{ $chatAction }}">
+                                                    <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-4.7 7.6 8.38 8.38 0 0 1-3.8.9 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+                                                    <span class="sr-only sm:not-sr-only">Chat with seller</span>
+                                                    <span class="sr-only"> about {{ $store }}, order {{ $order->number }}</span>
+                                                </button>
+                                            </form>
                                         </div>
                                         <span @class(['inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-sunken)] px-3 py-1 text-xs font-semibold', $overlayText])>
                                             <span class="size-[7px] rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
@@ -352,7 +364,6 @@
                                             @endunless
 
                                         <div class="mt-1 flex flex-wrap items-center gap-x-4">
-                                            <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}">@csrf<button type="submit" class="{{ $rowLink }}">Message seller</button></form>
                                             <a href="{{ route('orders.show', $order) }}" class="{{ $rowLink }}">View order</a>
                                             @if ($viewReturnHref)
                                                 <a href="{{ $viewReturnHref }}" class="{{ $rowLink }}">View return</a>
