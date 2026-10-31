@@ -156,7 +156,7 @@ class OrderController extends Controller
         $order = $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment');
 
         if ($request->header('X-Order-Modal')) {
-            return view('marketplace.orders._modal', ['order' => $order]);
+            return view('marketplace.orders._modal-ledger', ['order' => $order]);
         }
 
         return view('marketplace.orders.show', ['order' => $order]);

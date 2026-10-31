@@ -77,4 +77,44 @@ class OrderDetailsTest extends TestCase
         $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => $status, 'subtotal' => '299.00', 'shipping_amount' => '0.00', 'total' => '299.00']);
         $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $productName, 'sku' => $product->sku, 'unit_price' => '299.00', 'quantity' => 1, 'line_total' => '299.00']);
     }
+
+    public function test_order_modal_returns_the_compact_ledger_body(): void
+    {
+        $buyer = User::factory()->create();
+        $order = Order::create([
+            'user_id' => $buyer->id,
+            'number' => 'LEDGER-1',
+            'status' => 'delivered',
+            'recipient_name' => 'Ava Buyer',
+            'phone' => '+639****4567',
+            'address_line' => '1 Market Street',
+            'city' => 'Manila',
+            'subtotal' => '598.00',
+            'shipping_amount' => '0.00',
+            'total' => '598.00',
+        ]);
+        $order->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '598.00']);
+
+        $suffix = str()->lower(str()->random(6));
+        $tenant = Tenant::create(['name' => 'Ledger Store', 'slug' => 'ledger-'.$suffix, 'status' => 'active']);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Ledger Store', 'slug' => 'store-'.$suffix, 'phone' => '+639****4567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
+        $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => 'delivered', 'subtotal' => '598.00', 'shipping_amount' => '0.00', 'total' => '598.00']);
+        $order->sellerOrders->first()->items()->create(['product_name' => 'Canvas Tote', 'sku' => 'TOTE-001', 'unit_price' => '598.00', 'quantity' => 1, 'line_total' => '598.00']);
+
+        $response = $this->actingAs($buyer)
+            ->withHeader('X-Order-Modal', '1')
+            ->get(route('orders.show', $order));
+
+        $response->assertSee('Order details')
+            ->assertSee('LEDGER-1')
+            ->assertSee('Ava Buyer')
+            ->assertSee('1 Market Street')
+            ->assertSee('Delivery & payment')
+            ->assertSee('Store subtotal')
+            ->assertSee('Total')
+            ->assertSee('Open full page')
+            ->assertSee('Done')
+            // The compact ledger is read-only and carries no shipment action.
+            ->assertDontSee('Mark as shipped');
+    }
 }

@@ -59,6 +59,92 @@
         .buyer-modal-foot .done-btn:hover { background: var(--color-accent-hover); }
         .buyer-modal-foot .contents { display: contents; }
     </style>
+    /* ============================================================
+       Compact ledger order-details dialog (alternative compact-ledger variant)
+       ============================================================ */
+    .buyer-order-dialog--ledger {
+        width: min(560px, calc(100vw - 32px));
+        max-height: calc(100vh - 32px);
+    }
+    @media (max-width: 640px) {
+        .buyer-order-dialog--ledger {
+            width: 100vw;
+            max-width: 100vw;
+            height: 100dvh;
+            max-height: 100dvh;
+            border-radius: 0;
+            margin: 0;
+        }
+        .buyer-order-dialog--ledger::backdrop {
+            background: transparent;
+            backdrop-filter: none;
+        }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .buyer-order-dialog--ledger[open] { animation: none; }
+    }
+    .dlg-head { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 22px 14px; border-bottom: 1px solid var(--color-border); }
+    .dlg-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
+    .dlg-title { margin-top: 3px; font-size: 18px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; }
+    .dlg-meta { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-muted); }
+    .dlg-meta .sep { color: var(--color-border-strong); }
+    .dlg-meta .status { font-weight: 600; color: var(--color-success); display: inline-flex; align-items: center; gap: 5px; }
+    .dlg-meta .status i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); }
+    .close-btn { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); cursor: pointer; transition: background .15s, color .15s; }
+    .close-btn:hover { background: var(--color-sunken); color: var(--color-fg); }
+    .close-btn svg { width: 17px; height: 17px; }
+    .dlg-journey { flex: 0 0 auto; padding: 12px 22px; border-bottom: 1px solid var(--color-border); background: var(--color-sunken); }
+    .journey-line { display: flex; align-items: center; font-size: 11.5px; font-weight: 600; color: var(--color-muted); }
+    .journey-line .seg { flex: 1; height: 2px; background: var(--color-border-strong); margin: 0 6px; }
+    .journey-line .seg.done { background: var(--color-accent); }
+    .journey-line .step { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .journey-line .step.done { color: var(--color-fg); }
+    .journey-line .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-border-strong); }
+    .journey-line .step.done .dot { background: var(--color-accent); }
+    .journey-line .step.final.done .dot { background: var(--color-success); }
+    .journey-dates { margin-top: 6px; display: flex; justify-content: space-between; font-size: 10.5px; color: var(--color-muted); }
+    .dlg-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px 22px 18px; }
+    .block { border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); overflow: hidden; }
+    .block + .block { margin-top: 12px; }
+    .block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--color-line-soft); background: var(--color-sunken); }
+    .block-store { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+    .block-store-avatar { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; background: #eef3ff; color: var(--color-accent-hover); font-size: 12px; font-weight: 700; }
+    .block-state { font-size: 11.5px; font-weight: 600; color: var(--color-success); display: inline-flex; align-items: center; gap: 5px; }
+    .block-state i { width: 5px; height: 5px; border-radius: 50%; background: var(--color-success); }
+    .msg-seller { font-size: 12px; font-weight: 600; color: var(--color-accent); }
+    .items { list-style: none; padding: 0; margin: 0; }
+    .item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--color-line-soft); }
+    .item:first-child { border-top: 0; }
+    .item-thumb { width: 40px; height: 40px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-paper); overflow: hidden; position: relative; }
+    .item-thumb svg { position: absolute; inset: 0; margin: auto; width: 16px; height: 16px; color: #94a3b8; }
+    .item-name { font-size: 13px; font-weight: 500; color: var(--color-fg); line-height: 1.35; }
+    .item-variant { font-size: 11.5px; color: var(--color-muted); margin-top: 1px; }
+    .item-money { text-align: right; font-size: 12.5px; color: var(--color-muted); white-space: nowrap; }
+    .item-money strong { display: block; color: var(--color-fg); font-weight: 600; font-size: 13px; }
+    .block-foot { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-top: 1px solid var(--color-line-soft); background: var(--color-sunken); font-size: 12.5px; }
+    .block-foot .label { color: var(--color-muted); }
+    .block-foot .value { font-weight: 600; color: var(--color-fg); }
+    .kv { display: grid; gap: 8px; font-size: 12.5px; }
+    .kv-row { display: flex; justify-content: space-between; gap: 12px; }
+    .kv-row dt { color: var(--color-muted); }
+    .kv-row dd { color: var(--color-fg); font-weight: 500; text-align: right; }
+    .kv-row dd.addr { text-align: left; color: var(--color-muted); line-height: 1.45; }
+    .kv-row dd.addr strong { color: var(--color-fg); font-weight: 600; }
+    .total-row { margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: baseline; }
+    .total-row dt { font-size: 13px; font-weight: 600; color: var(--color-fg); }
+    .total-row dd { font-size: 18px; font-weight: 600; letter-spacing: -.02em; color: var(--color-fg); }
+    .dlg-foot { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 22px; border-top: 1px solid var(--color-border); background: var(--color-surface); }
+    .open-full { font-size: 12.5px; font-weight: 600; color: var(--color-muted); transition: color .15s; }
+    .open-full:hover { color: var(--color-accent); }
+    .done-btn { min-height: 36px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--color-accent); color: #fff; font-size: 13px; font-weight: 600; transition: background .15s; cursor: pointer; }
+    .done-btn:hover { background: var(--color-accent-hover); }
+    .num { font-variant-numeric: tabular-nums; }
+    @media (max-width: 480px) {
+        .dlg-foot { flex-direction: column-reverse; align-items: stretch; }
+        .dlg-foot .open-full { text-align: center; }
+        .done-btn { width: 100%; }
+    }
+    </style>
     @php
 
         $statusStyles = [
@@ -418,7 +504,7 @@
                 @endif
             </section>
 
-            <dialog x-ref="modal" class="buyer-order-dialog" aria-labelledby="order-modal-title" @close="closed()" @click="if ($event.target === $refs.modal) close()">
+            <dialog x-ref="modal" class="buyer-order-dialog buyer-order-dialog--ledger" aria-labelledby="dlgTitle" @close="closed()" @click="if ($event.target === $refs.modal) close()">
                 <div x-show="loading && ! html" class="buyer-modal-body" role="status"><span class="sr-only">Loading order</span><div class="animate-pulse space-y-4"><div class="h-5 w-48 rounded-md bg-[#eef1f5]"></div><div class="h-24 rounded-lg bg-[#f5f7fa]"></div></div></div>
                 <div x-show="failed" x-cloak class="buyer-modal-body text-center" role="alert"><p class="font-semibold text-ink">We couldn't load this order.</p><p class="mt-1 text-sm text-muted">Check your connection and try again, or open the full order page.</p><div class="mt-4 flex justify-center gap-2"><button type="button" class="min-h-10 rounded-lg border border-line bg-surface px-3 text-sm font-semibold text-ink" @click="close()">Close</button><button type="button" class="min-h-10 rounded-lg border border-line bg-surface px-3 text-sm font-semibold text-ink" @click="open(current, 'none')">Try again</button><a :href="showUrl.replace('__ORDER__', current)" class="min-h-10 rounded-lg bg-brand px-3 text-sm font-semibold text-white">Open full page</a></div></div>
                 <div x-show="html" x-html="html" class="contents" :data-stale="String(shown !== current)"></div>
