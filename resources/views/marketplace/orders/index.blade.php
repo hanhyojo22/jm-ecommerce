@@ -269,7 +269,7 @@
                     if (! this.trigger) { this.trigger = document.activeElement }
                     this.current = id; this.loading = true; this.failed = false;
                     if (this.cache[id]) { this.html = this.cache[id]; this.shown = id }
-                    if (! this.$refs.modal.open) { this.$refs.modal.showModal(); document.body.style.overflow = 'hidden' }
+                    if (! this.$refs.modal.open) { this.$refs.modal.showModal(); document.documentElement.style.overflow = 'hidden'; document.documentElement.style.scrollbarGutter = 'stable'; }
                     const url = new URL(location.href); url.searchParams.set('order', id);
                     if (history === 'push' && ! this.pushed) { window.history.pushState({ order: id }, '', url); this.pushed = true } else if (history !== 'none') { window.history.replaceState({ order: id }, '', url) }
                     try {
@@ -286,7 +286,8 @@
                 close() { if (this.$refs.modal.open) { this.$refs.modal.close() } },
                 closed() {
                     this.loading = false; this.current = null; this.shown = null; this.html = '';
-                    document.body.style.overflow = '';
+                    document.documentElement.style.overflow = '';
+                    document.documentElement.style.scrollbarGutter = '';
                     const trigger = this.trigger; this.trigger = null;
                     this.$nextTick(() => trigger?.focus?.());
                     const url = new URL(location.href);

@@ -663,3 +663,51 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
         await customer.context.close();
     }
 });
+
+test('order modal keeps the account sidebar and scroll position', async ({ browser }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'Sidebar only exists on desktop');
+
+    const customer = await openAsRole(browser, 'customer');
+
+    try {
+        await customer.page.setViewportSize({ width: 1280, height: 600 });
+        await customer.page.goto('/orders');
+        const sidebar = customer.page.locator('aside[aria-label="My account sidebar"]');
+        await expect(sidebar).toBeVisible();
+
+        await customer.page.evaluate(() => {
+            document.querySelector('#purchases').insertAdjacentHTML('afterbegin', '<div style="height:420px"></div>');
+        });
+
+        const order = customer.page.locator('article').filter({ has: customer.page.getByRole('link', { name: /order QA-ROWS-001/ }) });
+        const link = order.getByRole('link', { name: 'Order QA-ROWS-001', exact: true });
+        await link.scrollIntoViewIfNeeded();
+        await customer.page.waitForTimeout(150);
+
+        const snapshot = () => customer.page.evaluate(() => {
+            const rect = document.querySelector('aside[aria-label="My account sidebar"]').getBoundingClientRect();
+            return {
+                scrollY: Math.round(window.scrollY),
+                sidebar: [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width)],
+            };
+        });
+
+        const before = await snapshot();
+
+        await link.click();
+        await expect(customer.page.getByRole('dialog')).toBeVisible();
+        await expect(customer.page.getByRole('heading', { name: 'Order #QA-ROWS-001', exact: true })).toBeVisible();
+        expect(await snapshot()).toEqual(before);
+
+        await customer.page.mouse.move(20, 300);
+        await customer.page.mouse.wheel(0, 400);
+        await customer.page.waitForTimeout(200);
+        expect(await snapshot()).toEqual(before);
+
+        await customer.page.getByRole('button', { name: 'Close order details' }).click();
+        await expect(customer.page.getByRole('dialog')).toBeHidden();
+        expect(await snapshot()).toEqual(before);
+    } finally {
+        await customer.context.close();
+    }
+});
