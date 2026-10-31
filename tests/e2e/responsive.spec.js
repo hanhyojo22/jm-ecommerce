@@ -77,7 +77,7 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
         // The card's header and rows all lead to the order; the order number is the unambiguous target.
         await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
-        await expect(page.getByRole('heading', { name: 'Order details', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Order #QA-REVIEW-001', exact: true })).toBeVisible();
         await page.goto('/orders');
         await rowsOrder.getByRole('link', { name: 'Order QA-ROWS-001', exact: true }).click();
         await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
