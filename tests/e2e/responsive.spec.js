@@ -78,6 +78,9 @@ test('customer finds purchases and opens order actions at each viewport', async 
         // The card's header and rows all lead to the order; the order number is the unambiguous target.
         await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'Order #QA-REVIEW-001', exact: true })).toBeVisible();
+        await page.getByRole('button', { name: 'Close order details' }).click();
+        await expect(page.getByRole('dialog')).toBeHidden();
+        await expect(purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true })).toBeFocused();
         await page.goto('/orders');
         await rowsOrder.getByRole('link', { name: 'Order QA-ROWS-001', exact: true }).click();
         await expect(page.getByRole('dialog')).toBeVisible();
