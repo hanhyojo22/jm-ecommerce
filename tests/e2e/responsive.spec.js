@@ -89,6 +89,7 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
         await page.goto('/orders');
         await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
+        await page.locator('.open-full').click();
         await page.getByRole('button', { name: 'Message seller' }).first().click();
         await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
     } finally {

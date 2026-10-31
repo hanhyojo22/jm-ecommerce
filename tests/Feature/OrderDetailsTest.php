@@ -105,13 +105,16 @@ class OrderDetailsTest extends TestCase
             ->withHeader('X-Order-Modal', '1')
             ->get(route('orders.show', $order));
 
-        $response->assertSee('Order details')
-            ->assertSee('LEDGER-1')
+        $response->assertSee('Order #LEDGER-1')
+            ->assertSee('Placed')
+            ->assertSee('Confirmed')
+            ->assertSee('Shipped')
+            ->assertSee('Delivered')
+            ->assertSee('Canvas Tote')
             ->assertSee('Ava Buyer')
             ->assertSee('1 Market Street')
-            ->assertSee('Delivery & payment')
-            ->assertSee('Store subtotal')
             ->assertSee('Total')
+            ->assertSee('Cash on delivery · Paid')
             ->assertSee('Open full page')
             ->assertSee('Done')
             // The compact ledger is read-only and carries no shipment action.

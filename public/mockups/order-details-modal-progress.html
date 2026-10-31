@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>My purchases · clean order details modal (mockup)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:#f6f8fc; --surface:#fff; --paper:#f1f5f9; --sunken:#f8fafc;
+            --ink:#182c48; --muted:#596b83; --border:#e3e8f1; --border-strong:#cbd4e0; --line-soft:#eef1f5;
+            --accent:#205bf4; --accent-hover:#1d4ed8; --success:#166534;
+            --sidebar:#111f33; --sidebar-text:#c5d1e0; --sidebar-muted:#8ea2ba; --sidebar-line:rgb(255 255 255 / 8%); --sidebar-selected:rgb(255 255 255 / 9%); --sidebar-hover:rgb(255 255 255 / 6%);
+        }
+        *,*::before,*::after{box-sizing:border-box} html,body{margin:0}
+        body{background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01";overflow-x:clip}
+        ::selection{background:#dbeafe;color:var(--ink)} h1,h2,h3,p,dl,dd{margin:0} a{color:inherit;text-decoration:none} button{font:inherit}
+        :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px} .num{font-variant-numeric:tabular-nums}
+        .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+        /* workspace shell */
+        .workspace{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+        @media(max-width:1023px){.workspace{grid-template-columns:1fr}.sidebar{display:none}}
+        .sidebar{background:var(--sidebar);color:var(--sidebar-text);padding:12px 8px;position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--sidebar-line)}
+        .sidebar-brand{display:inline-flex;align-items:center;gap:10px;padding:8px 12px 16px}
+        .brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;font-size:14px}
+        .sidebar-brand-name{display:block;font-size:14px;font-weight:600;color:#fff} .sidebar-brand-meta{display:block;font-size:11px;color:var(--sidebar-muted)}
+        .sidebar-card{margin:0 4px 12px;padding:10px 12px;border-radius:8px;background:var(--sidebar-selected);display:flex;align-items:center;gap:10px}
+        .sidebar-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgb(32 91 244 / 18%);color:#93b4ff;font-size:13px;font-weight:600}
+        .sidebar-card-name{font-size:13px;font-weight:600;color:#fff} .sidebar-card-meta{font-size:11px;color:var(--sidebar-muted)}
+        .nav-label{padding:6px 12px 4px;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--sidebar-muted)}
+        .nav-link{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 12px;border-radius:6px;color:var(--sidebar-text);font-size:14px;font-weight:500;transition:background .15s,color .15s}
+        .nav-link:hover{background:var(--sidebar-hover);color:#fff} .nav-link[aria-current='page']{background:var(--sidebar-selected);color:#fff;font-weight:600}
+        .nav-link svg{width:18px;height:18px;flex:none} .sidebar-foot{margin-top:12px;padding-top:12px;border-top:1px solid var(--sidebar-line)}
+        .main{min-width:0;background:var(--bg)}
+        .topbar{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--border)}
+        .topbar-inner{max-width:1400px;margin:0 auto;padding:10px 32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+        @media(max-width:1099px){.topbar-inner{padding:10px 25px}} @media(max-width:599px){.topbar-inner{padding:10px 24px}}
+        .crumb{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)} .crumb strong{color:var(--ink);font-weight:600} .crumb-sep{color:var(--border-strong)}
+        .searchbox{flex:1 1 240px;min-width:0;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:6px;background:var(--sunken);color:var(--muted)}
+        .searchbox input{flex:1;border:0;background:transparent;font:inherit;color:var(--ink);outline:none}
+        .topbar-actions{display:flex;align-items:center;gap:4px;margin-left:auto}
+        .topbar-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:6px;color:var(--ink)} .topbar-icon:hover{background:var(--sunken)} .topbar-icon svg{width:22px;height:22px}
+        .page{max-width:1080px;margin:0 auto;padding:24px 32px 32px} @media(max-width:1099px){.page{padding:24px 25px 32px}} @media(max-width:599px){.page{padding:24px 24px 32px}}
+        .page h1{font-size:26px;font-weight:600;letter-spacing:-.025em;line-height:1.12} .page .subtitle{margin-top:4px;font-size:14px;color:var(--muted)}
+        .tabs{display:flex;gap:2px;margin-top:20px;border-bottom:1px solid var(--border);overflow-x:auto} .tab{padding:10px 10px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap} .tab.is-active{color:var(--ink);border-color:var(--accent)}
+        .card{margin-top:16px;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:0 1px 2px rgb(24 44 72 / 4%);overflow:hidden}
+        .card-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:1px solid var(--line-soft)}
+        .card-store{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600} .card-meta{margin-top:2px;font-size:12px;color:var(--muted)} .card-meta span{padding:0 4px;color:var(--border-strong)}
+        .state{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600} .state i{width:6px;height:6px;border-radius:50%} .state.is-good{color:var(--success)} .state.is-good i{background:var(--success)}
+        .icon-btn{width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer} .icon-btn:hover{background:var(--sunken);color:var(--ink)} .icon-btn svg{width:18px;height:18px}
+        .item-row-link{display:grid;grid-template-columns:56px minmax(0,1fr) 108px 44px;align-items:start;column-gap:16px;padding:14px 20px;transition:background .15s} .item-row-link+.item-row-link{border-top:1px solid var(--line-soft)} .item-row-link:hover{background:var(--sunken)}
+        .thumb{width:56px;height:56px;border-radius:6px;border:1px solid var(--border);background:var(--paper);overflow:hidden;position:relative} .thumb svg{position:absolute;inset:0;margin:auto;width:20px;height:20px;color:#94a3b8}
+        .item-name{font-size:14px;line-height:20px;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden} .item-variant{margin-top:2px;font-size:12px;color:var(--muted)}
+        .item-amount{font-size:14px;text-align:right;white-space:nowrap} .item-qty{font-size:13px;color:var(--muted);text-align:right;white-space:nowrap}
+        .more-row{display:flex;align-items:center;gap:6px;padding:10px 20px 11px 92px;border-top:1px solid var(--line-soft);font-size:13px;font-weight:600;color:var(--muted);transition:background .15s,color .15s} .more-row:hover{background:var(--sunken);color:var(--accent-hover)} .more-row svg{width:14px;height:14px}
+
+        /* ---------------- Clean ledger dialog ---------------- */
+        dialog.order-dialog{
+            position:fixed;inset:0;margin:auto;
+            width:min(520px,calc(100vw - 32px));
+            max-height:calc(100dvh - 32px);
+            display:flex;flex-direction:column;
+            border:0;border-radius:16px;padding:0;
+            background:var(--surface);color:var(--ink);
+            box-shadow:0 24px 60px rgb(15 23 42 / 16%),0 2px 6px rgb(15 23 42 / 5%);
+            overflow:hidden;
+        }
+        dialog.order-dialog:not([open]){display:none}
+        dialog.order-dialog[open]{animation:dialog-in .16s ease-out}
+        @keyframes dialog-in{from{opacity:0;transform:translateY(6px) scale(.99)}to{opacity:1;transform:none}}
+        dialog.order-dialog::backdrop{background:rgb(15 23 42 / 40%);backdrop-filter:blur(2px)}
+        @media(max-width:640px){
+            dialog.order-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0}
+            dialog.order-dialog::backdrop{background:transparent;backdrop-filter:none}
+        }
+        @media(prefers-reduced-motion:reduce){dialog.order-dialog[open]{animation:none}}
+
+        .clean-head{flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:22px 24px 14px}
+        .clean-title{font-size:20px;font-weight:600;letter-spacing:-.025em;line-height:1.2}
+        .clean-status{display:inline-flex;align-items:center;gap:6px;margin-top:7px;font-size:12px;font-weight:600;color:var(--success)}
+        .clean-status i{width:6px;height:6px;border-radius:50%;background:currentColor}
+        .clean-meta{margin-top:5px;font-size:12px;color:var(--muted)}
+        .close-btn{flex:none;width:44px;height:44px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s}
+        .close-btn:hover{background:var(--sunken);color:var(--ink)} .close-btn svg{width:18px;height:18px}
+
+        .clean-journey{flex:0 0 auto;padding:0 24px 18px}
+        .tracker{position:relative;display:flex;margin:0;padding:0;list-style:none}
+        .tracker::before{content:'';position:absolute;top:14px;left:14px;right:14px;height:2px;border-radius:1px;background:var(--line-soft)}
+        .tracker::after{content:'';position:absolute;top:14px;left:14px;height:2px;border-radius:1px;background:var(--accent);width:calc((100% - 28px) * var(--progress,1))}
+        .tracker-step{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+        .node{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--muted);transition:background .2s,border-color .2s,color .2s}
+        .node svg{width:14px;height:14px}
+        .tracker-step.done .node{background:var(--accent);border-color:var(--accent);color:#fff}
+        .tracker-step.current .node{box-shadow:0 0 0 4px rgb(32 91 244 / 12%)}
+        .tracker-step.final.done .node{background:var(--success);border-color:var(--success)}
+        .tracker-step.current:not(.final) .node{animation:node-pulse 2s ease-out infinite}
+        @keyframes node-pulse{0%,100%{box-shadow:0 0 0 4px rgb(32 91 244 / 12%)}50%{box-shadow:0 0 0 7px rgb(32 91 244 / 0%)}}
+        .label{font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;line-height:1.3}
+        .tracker-step.done .label{color:var(--ink)}
+        .tracker-step.current .label{color:var(--accent)}
+        .tracker-step.final.done .label{color:var(--success)}
+        @media(prefers-reduced-motion:reduce){.tracker-step.current:not(.final) .node{animation:none}}
+
+        .clean-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 24px 18px;overscroll-behavior:contain}
+        .clean-store{font-size:13px;font-weight:600;color:var(--ink);padding-bottom:8px}
+        .clean-items{list-style:none;padding:0;margin:0}
+        .clean-item{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:start;padding:11px 0;border-top:1px solid var(--line-soft)}
+        .clean-item:first-child{border-top:1px solid var(--line-soft)}
+        .item-thumb{width:40px;height:40px;border-radius:6px;border:1px solid var(--border);background:var(--paper);overflow:hidden;position:relative}
+        .item-thumb svg{position:absolute;inset:0;margin:auto;width:16px;height:16px;color:#94a3b8}
+        .item-info{min-width:0}
+        .item-title{font-size:13px;font-weight:500;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+        .item-sub{margin-top:2px;font-size:11.5px;color:var(--muted)}
+        .item-price{text-align:right;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+        .item-price span{display:block;margin-top:2px;font-size:11.5px;font-weight:400;color:var(--muted)}
+
+        .clean-section{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-soft)}
+        .clean-label{font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+        .clean-address{margin-top:7px;font-size:12.5px;line-height:1.6;color:var(--muted)}
+        .clean-address strong{display:block;font-weight:600;color:var(--ink)}
+        .clean-total{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid var(--border-strong)}
+        .clean-total .label{font-size:13px;font-weight:600;color:var(--ink)}
+        .clean-total .value{font-size:21px;font-weight:600;letter-spacing:-.03em;color:var(--ink)}
+        .clean-pay{margin-top:5px;font-size:12px;color:var(--muted);text-align:right}
+
+        .clean-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 24px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line-soft)}
+        .open-full{display:inline-flex;align-items:center;min-height:44px;font-size:12.5px;font-weight:600;color:var(--muted);touch-action:manipulation;transition:color .15s}
+        .open-full:hover{color:var(--accent)}
+        .done-btn{min-height:44px;padding:0 20px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation;transition:background .15s,transform .1s}
+        .done-btn:hover{background:var(--accent-hover)} .done-btn:active{transform:scale(.98)}
+        @media(max-width:480px){.clean-foot{flex-direction:column-reverse;align-items:stretch}.clean-foot .open-full{justify-content:center}.done-btn{width:100%}}
+
+        .chip{position:fixed;left:16px;bottom:16px;z-index:60;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgb(15 23 42 / 88%);color:#fff;font-size:12px;font-weight:500;box-shadow:0 6px 20px rgb(15 23 42 / 25%)}
+        .chip button{border:0;background:transparent;color:#93b4ff;font-size:12px;font-weight:600;cursor:pointer;padding:0} .chip button:hover{color:#fff;text-decoration:underline}
+    </style>
+</head>
+<body>
+<div class="workspace" id="workspace">
+    <aside class="sidebar" aria-label="My account sidebar">
+        <a href="#" class="sidebar-brand"><span class="brand-mark" aria-hidden="true">jm</span><span><span class="sidebar-brand-name">JMMart</span><span class="sidebar-brand-meta">My account</span></span></a>
+        <div class="sidebar-card"><span class="sidebar-avatar" aria-hidden="true">Q</span><div><p class="sidebar-card-name">QA Customer</p><p class="sidebar-card-meta">Customer account</p></div></div>
+        <p class="nav-label">My account</p>
+        <a href="#" class="nav-link" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.5 12h10L21 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg><span>My Purchases</span></a>
+        <a href="#" class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><span>My Reviews</span></a>
+        <a href="#" class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12Z"/><circle cx="12" cy="9" r="2"/></svg><span>Delivery Addresses</span></a>
+        <a href="#" class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z"/></svg><span>Messages</span></a>
+        <a href="#" class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></a>
+        <div class="sidebar-foot"><a href="#" class="nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg><span>Marketplace</span></a></div>
+    </aside>
+    <div class="main">
+        <header class="topbar"><div class="topbar-inner">
+            <div class="crumb"><span>My account</span><span class="crumb-sep" aria-hidden="true">/</span><strong>My purchases</strong></div>
+            <label class="searchbox"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" placeholder="Order #, store, or item" aria-label="Search purchases"></label>
+            <div class="topbar-actions">
+                <a class="topbar-icon" href="#" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg></a>
+                <a class="topbar-icon" href="#" aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg></a>
+                <button class="topbar-icon" aria-label="Account menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></button>
+            </div>
+        </div></header>
+        <div class="page">
+            <h1>My purchases</h1>
+            <p class="subtitle">12 orders · <a href="#" style="color:var(--accent);font-weight:600">Continue shopping →</a></p>
+            <nav class="tabs" aria-label="Purchase status filters"><a class="tab is-active" href="#">All</a><a class="tab" href="#">To pay</a><a class="tab" href="#">Preparing</a><a class="tab" href="#">On the way</a><a class="tab" href="#">Delivered</a><a class="tab" href="#">To review</a></nav>
+            <div class="card" data-open-modal>
+                <div class="card-bar">
+                    <div>
+                        <div class="card-store"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--muted)"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg><a href="#" style="color:inherit">QA Northwind Store</a></div>
+                        <p class="card-meta num">#…ROWS-001<span>·</span>4 items<span>·</span>₱80.97</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px"><span class="state is-good"><i aria-hidden="true"></i>Delivered</span><button class="icon-btn" type="button" aria-label="Chat with QA Northwind Store"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-4.7 7.6 8.38 8.38 0 0 1-3.8.9 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg></button></div>
+                </div>
+                <a class="item-row-link" href="#" aria-label="View QA Canvas Tote"><div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div><div><p class="item-name">QA Canvas Tote</p><p class="item-variant">One size</p></div><p class="item-amount num">₱19.99</p><p class="item-qty num"><span aria-hidden="true">×</span>1</p></a>
+                <a class="item-row-link" href="#" aria-label="View QA Chat Sample"><div class="thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div><div><p class="item-name">QA Chat Sample</p><p class="item-variant">Blue / Medium</p></div><p class="item-amount num">₱24.99</p><p class="item-qty num"><span aria-hidden="true">×</span>2</p></a>
+                <a class="more-row" href="#" aria-label="View 2 more items"><span aria-hidden="true">+</span> 2 more items<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></a>
+            </div>
+            <p style="margin-top:18px;font-size:12.5px;color:var(--muted)">Clean variant: no eyebrow, no dates, no per-store meta, no subtotal or notes. Just the receipt.</p>
+        </div>
+    </div>
+</div>
+
+<dialog class="order-dialog" id="orderDialog" aria-labelledby="dlgTitle">
+    <div class="clean-head">
+        <div>
+            <h1 class="clean-title" id="dlgTitle">Order #QA-ROWS-001</h1>
+            <p class="clean-status"><i aria-hidden="true"></i>Delivered</p>
+            <p class="clean-meta">Placed Oct 28, 2026</p>
+        </div>
+        <button class="close-btn" type="button" id="closeBtn" aria-label="Close order details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+
+    <div class="clean-journey" aria-label="Order progress">
+        <ol class="tracker" style="--progress:1">
+            <li class="tracker-step done"><span class="node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span class="label">Placed</span></li>
+            <li class="tracker-step done"><span class="node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></span><span class="label">Confirmed</span></li>
+            <li class="tracker-step done"><span class="node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg></span><span class="label">Shipped</span></li>
+            <li class="tracker-step done final current" aria-current="step"><span class="node" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10 12 4l8 6v9a1 1 0 0 1-1 1h-5v-5h-4v5H5a1 1 0 0 1-1-1z"/></svg></span><span class="label">Delivered<span class="sr-only"> (current step)</span></span></li>
+        </ol>
+    </div>
+
+    <div class="clean-body">
+        <p class="clean-store">QA Northwind Store</p>
+        <ul class="clean-items">
+            <li class="clean-item">
+                <div class="item-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div class="item-info"><p class="item-title">QA Canvas Tote</p><p class="item-sub">One size</p></div>
+                <p class="item-price num">₱19.99<span>×1</span></p>
+            </li>
+            <li class="clean-item">
+                <div class="item-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div class="item-info"><p class="item-title">QA Chat Sample</p><p class="item-sub">Blue / Medium</p></div>
+                <p class="item-price num">₱24.99<span>×2</span></p>
+            </li>
+            <li class="clean-item">
+                <div class="item-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div class="item-info"><p class="item-title">QA Archived Accessory</p></div>
+                <p class="item-price num">₱5.00<span>×1</span></p>
+            </li>
+            <li class="clean-item">
+                <div class="item-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg></div>
+                <div class="item-info"><p class="item-title">QA Retired Pouch</p></div>
+                <p class="item-price num">₱6.00<span>×1</span></p>
+            </li>
+        </ul>
+
+        <div class="clean-section">
+            <p class="clean-label">Delivery</p>
+            <p class="clean-address"><strong>QA Customer</strong>10 QA Street, Manila<br>+639171234567</p>
+        </div>
+
+        <div class="clean-total"><span class="label">Total</span><strong class="value num">₱80.97</strong></div>
+        <p class="clean-pay">Cash on delivery · Paid</p>
+    </div>
+
+    <div class="clean-foot">
+        <a class="open-full" href="#">Open full page ↗</a>
+        <button class="done-btn" type="button" id="doneBtn">Done</button>
+    </div>
+</dialog>
+
+<div class="chip" id="chip"><span>Mockup · modern tracker</span><button type="button" id="reopenBtn">Reopen</button></div>
+
+<script>
+    const dialog=document.getElementById('orderDialog');const closeBtn=document.getElementById('closeBtn');const doneBtn=document.getElementById('doneBtn');const reopenBtn=document.getElementById('reopenBtn');const workspace=document.getElementById('workspace');
+    function open(){if(!dialog.open)dialog.showModal();workspace.setAttribute('aria-hidden','true');workspace.style.pointerEvents='none';workspace.style.filter='saturate(.92)'}
+    function close(){if(dialog.open)dialog.close();workspace.removeAttribute('aria-hidden');workspace.style.pointerEvents='';workspace.style.filter=''}
+    open();
+    closeBtn.addEventListener('click',close);doneBtn.addEventListener('click',close);reopenBtn.addEventListener('click',open);
+    dialog.addEventListener('click',e=>{const r=dialog.getBoundingClientRect();if(!(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom))close()});
+    dialog.addEventListener('close',()=>{reopenBtn.textContent='Reopen';workspace.removeAttribute('aria-hidden');workspace.style.pointerEvents='';workspace.style.filter=''});
+    document.querySelectorAll('[data-open-modal],.item-row-link,.more-row').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();open()}));
+</script>
+</body>
+</html>
