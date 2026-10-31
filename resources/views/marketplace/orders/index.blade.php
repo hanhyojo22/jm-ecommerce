@@ -129,7 +129,7 @@
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
             {{-- Each order is its own card: a store bar and its item rows, where every product name keeps a
-                 two-row area so long names wrap instead of stretching the row. --}}
+                 two-row area and breaks after six words on wide screens instead of stretching the row. --}}
             <section id="purchases" class="mt-5 scroll-mt-24 flex flex-col gap-6" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
@@ -206,7 +206,12 @@
 
                                     <ul class="divide-y divide-line-soft">
                                         @foreach ($items as $item)
-                                            @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
+                                            @php
+                                                $itemThumb = $item->image_path ?? $item->product?->thumbnail?->path;
+                                                $nameWords = preg_split('/\s+/', trim($item->product_name), -1, PREG_SPLIT_NO_EMPTY);
+                                                $nameFirstLine = implode(' ', array_slice($nameWords, 0, 6));
+                                                $nameRemaining = implode(' ', array_slice($nameWords, 6));
+                                            @endphp
                                             <li>
                                                 <a href="{{ route('orders.show', $order) }}" aria-label="View {{ $item->product_name }} in order {{ $order->number }} from {{ $store }}" class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-4 px-4 py-4 transition-colors hover:bg-[var(--color-sunken)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:grid-cols-[80px_minmax(0,1fr)_120px_80px] lg:px-6">
                                                     <div class="relative size-16 overflow-hidden rounded-md border border-line bg-paper sm:size-20">
@@ -217,7 +222,7 @@
                                                         @endif
                                                     </div>
                                                     <div class="min-w-0">
-                                                        <p class="line-clamp-2 min-h-10 break-words text-sm leading-5 text-ink">{{ $item->product_name }}</p>
+                                                        <p class="line-clamp-2 min-h-10 break-words text-sm leading-5 text-ink">{{ $nameFirstLine }}@if ($nameRemaining !== '') <br class="hidden lg:block">{{ $nameRemaining }}@endif</p>
                                                         @if ($item->variant_label)
                                                             <p class="mt-1 text-xs text-muted">{{ $item->variant_label }}</p>
                                                         @endif
