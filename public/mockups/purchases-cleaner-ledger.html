@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>My purchases · day ledger review</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ------------------------------------------------------------------
+           JMMart My purchases - review mockup B: one day, one sheet.
+           Orders are hairline-separated ledger entries. Total sits top right,
+           status moves into the quiet meta line, item photos shrink to 44px.
+           Tokens mirror resources/css/app.css.
+           ------------------------------------------------------------------ */
+        :root {
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --paper: #f1f5f9;
+            --sunken: #f8fafc;
+            --ink: #182c48;
+            --muted: #596b83;
+            --border: #e3e8f1;
+            --border-strong: #cbd4e0;
+            --line-soft: #eef1f5;
+            --accent: #205bf4;
+            --accent-hover: #1d4ed8;
+            --success: #166534;
+            --warning: #f59e0b;
+            --warning-text: #b45309;
+            --danger: #dc2626;
+            --danger-text: #b91c1c;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html { background: var(--bg); scrollbar-color: #c3cede var(--bg); }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "cv11", "ss01";
+        }
+        ::selection { background: #dbeafe; color: var(--ink); }
+        ::-webkit-scrollbar { width: 12px; height: 12px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { border: 3px solid var(--bg); border-radius: 999px; background: #c3cede; }
+        h1, h2, h3, p { margin: 0; }
+        a { color: inherit; text-decoration: none; }
+        button { font: inherit; }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+        .num { font-variant-numeric: tabular-nums; }
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .demo { max-width: 1000px; margin: 0 auto; padding: 32px 24px 96px; }
+        .demo > header h1 { font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+        .demo > header p { margin-top: 5px; max-width: 76ch; color: var(--muted); font-size: 13px; }
+        .demo > header .tag {
+            display: inline-flex;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border: 1px solid rgb(32 91 244 / 40%);
+            border-radius: 999px;
+            background: #eef3ff;
+            color: var(--accent-hover);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0;
+            vertical-align: 3px;
+        }
+
+        .group { margin-top: 28px; }
+        .day { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 2px 10px; }
+        .day h2 { font-size: 13px; font-weight: 600; letter-spacing: -.01em; }
+        .day h2 span { margin-left: 6px; color: var(--muted); font-weight: 500; }
+        .day p { font-size: 12px; color: var(--muted); }
+
+        /* One sheet per day, orders divided by a hairline. */
+        .sheet {
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            box-shadow: 0 1px 2px rgb(24 44 72 / 4%);
+        }
+        .order { padding: 14px 20px 12px; }
+        .order + .order { border-top: 1px solid var(--line-soft); }
+
+        .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+        .who { min-width: 0; }
+        .store-line { display: flex; min-width: 0; align-items: center; gap: 8px; }
+        .store-line > svg { width: 16px; height: 16px; flex: none; color: var(--muted); }
+        .store {
+            overflow: hidden;
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 600;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transition: color .15s ease;
+        }
+        .store:hover { color: var(--accent-hover); }
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0 6px;
+            margin-top: 1px;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 18px;
+        }
+        .meta .sep { color: var(--border-strong); }
+        .state {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--ink);
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .state i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+        .state.is-moving { color: var(--ink); }
+        .state.is-moving i { background: var(--accent); }
+        .state.is-good { color: var(--success); }
+        .state.is-good i { background: var(--success); }
+        .state.is-warn { color: var(--warning-text); }
+        .state.is-warn i { background: var(--warning); }
+        .state.is-stopped { color: var(--danger-text); }
+        .state.is-stopped i { background: var(--danger); }
+
+        .head-right { display: flex; flex: none; align-items: center; gap: 6px; }
+        .total { color: var(--ink); font-size: 14px; font-weight: 600; letter-spacing: -.005em; text-align: right; white-space: nowrap; }
+        .icon-btn {
+            display: grid;
+            width: 30px;
+            height: 30px;
+            place-items: center;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .icon-btn:hover { background: var(--sunken); color: var(--ink); }
+        .icon-btn svg { width: 17px; height: 17px; }
+
+        /* Compact rows: smaller photo, no per-item price, qty on the right. */
+        .items { margin-top: 7px; }
+        .item {
+            display: grid;
+            grid-template-columns: 44px minmax(0, 1fr) auto;
+            align-items: start;
+            column-gap: 12px;
+            margin: 0 -20px;
+            padding: 8px 20px;
+            transition: background-color .15s ease;
+        }
+        .item:hover { background: var(--sunken); }
+        .item:hover .name { color: var(--accent-hover); }
+        .thumb {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--paper);
+        }
+        .thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .thumb svg { position: absolute; inset: 0; margin: auto; width: 18px; height: 18px; color: #94a3b8; }
+        .name {
+            display: -webkit-box;
+            min-height: 40px;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            color: var(--ink);
+            font-size: 14px;
+            line-height: 20px;
+            transition: color .15s ease;
+            overflow-wrap: anywhere;
+        }
+        .name br { display: none; }
+        @media (min-width: 721px) {
+            .name br { display: block; }
+        }
+        .variant { margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 18px; }
+        .qty { padding-top: 1px; color: var(--muted); font-size: 12.5px; line-height: 20px; white-space: nowrap; }
+
+        .more {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 0 -20px;
+            padding: 6px 20px 9px 76px;
+            color: var(--muted);
+            font-size: 12.5px;
+            font-weight: 600;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .more:hover { background: var(--sunken); color: var(--accent-hover); }
+        .more svg { width: 13px; height: 13px; }
+
+        .endnote {
+            margin-top: 32px;
+            padding: 16px 18px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface);
+            color: var(--muted);
+            font-size: 12.5px;
+            line-height: 20px;
+        }
+        .endnote h2 { margin-bottom: 8px; color: var(--ink); font-size: 13px; font-weight: 600; }
+        .endnote ul { margin: 0; padding-left: 18px; }
+        .endnote li + li { margin-top: 3px; }
+        .endnote strong { color: var(--ink); font-weight: 600; }
+        .endnote .tradeoff { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+        .endnote .tradeoff strong { color: var(--warning-text); }
+
+        @media (max-width: 720px) {
+            .demo { padding: 24px 16px 80px; }
+            .order { padding: 12px 16px 10px; }
+            .head { gap: 10px; }
+            .meta { gap: 0 5px; font-size: 11.5px; }
+            .total { font-size: 13.5px; }
+            .item { margin-inline: -16px; padding-inline: 16px; }
+            .more { margin-inline: -16px; padding-left: 72px; }
+        }
+
+        @media (max-width: 420px) {
+            .store-line > svg { display: none; }
+            .head-right { gap: 2px; }
+            .icon-btn { width: 28px; height: 28px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: .01ms !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="demo">
+    <header>
+        <h1>My purchases — day ledger <span class="tag">Variant B</span></h1>
+        <p>The alternative direction: one white sheet per day instead of a card per order. Orders are separated by a hairline, the order total moves to the top right, and per-item prices leave the list so product names get more room.</p>
+    </header>
+
+    <div class="group">
+        <div class="day">
+            <h2>Today <span>Oct 30</span></h2>
+            <p class="num">2 orders · ₱8,850.00</p>
+        </div>
+
+        <div class="sheet">
+            <article class="order" aria-label="Order Q8W7Y4 from JM">
+                <header class="head">
+                    <div class="who">
+                        <div class="store-line">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                            <a href="#" class="store">JM</a>
+                        </div>
+                        <p class="meta num">
+                            <span>#…Q8W7Y4</span>
+                            <span class="sep" aria-hidden="true">·</span>
+                            <span class="state"><i aria-hidden="true"></i>Awaiting store</span>
+                        </p>
+                    </div>
+                    <div class="head-right">
+                        <p class="total num">₱6,700.00</p>
+                        <button class="icon-btn" type="button" title="Chat with JM" aria-label="Chat with JM">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-4.7 7.6 8.38 8.38 0 0 1-3.8.9 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+                        </button>
+                    </div>
+                </header>
+                <div class="items">
+                    <a class="item" href="#" aria-label="View Portable Bluetooth Speaker, 20W Stereo Output, IPX7 Waterproof in order Q8W7Y4">
+                        <div class="thumb">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                        </div>
+                        <div>
+                            <p class="name">Portable Bluetooth Speaker, 20W Stereo Output, <br>IPX7 Waterproof</p>
+                            <p class="variant">Black, Standard</p>
+                        </div>
+                        <p class="qty num"><span aria-hidden="true">×</span>2<span class="sr-only"> quantity, 2</span></p>
+                    </a>
+                </div>
+            </article>
+
+            <article class="order" aria-label="Order PH9TJN from JM">
+                <header class="head">
+                    <div class="who">
+                        <div class="store-line">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                            <a href="#" class="store">JM</a>
+                        </div>
+                        <p class="meta num">
+                            <span>#…PH9TJN</span>
+                            <span class="sep" aria-hidden="true">·</span>
+                            <span class="state is-moving"><i aria-hidden="true"></i>On the way</span>
+                        </p>
+                    </div>
+                    <div class="head-right">
+                        <p class="total num">₱2,150.00</p>
+                        <button class="icon-btn" type="button" title="Chat with JM" aria-label="Chat with JM">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-4.7 7.6 8.38 8.38 0 0 1-3.8.9 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+                        </button>
+                    </div>
+                </header>
+                <div class="items">
+                    <a class="item" href="#" aria-label="View USB-C Fast Charging Cable, 1m Braided Nylon in order PH9TJN">
+                        <div class="thumb">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                        </div>
+                        <div>
+                            <p class="name">USB-C Fast Charging Cable, 1m Braided <br>Nylon</p>
+                            <p class="variant">White, 1 meter</p>
+                        </div>
+                        <p class="qty num"><span aria-hidden="true">×</span>2<span class="sr-only"> quantity, 2</span></p>
+                    </a>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="group">
+        <div class="day">
+            <h2>Oct 28</h2>
+            <p class="num">1 order · ₱246.06</p>
+        </div>
+
+        <div class="sheet">
+            <article class="order" aria-label="Order W2R8K3 from Moso">
+                <header class="head">
+                    <div class="who">
+                        <div class="store-line">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                            <a href="#" class="store">Moso</a>
+                        </div>
+                        <p class="meta num">
+                            <span>#…W2R8K3</span>
+                            <span class="sep" aria-hidden="true">·</span>
+                            <span class="state is-good"><i aria-hidden="true"></i>Delivered</span>
+                        </p>
+                    </div>
+                    <div class="head-right">
+                        <p class="total num">₱246.06</p>
+                        <button class="icon-btn" type="button" title="Chat with Moso" aria-label="Chat with Moso">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-4.7 7.6 8.38 8.38 0 0 1-3.8.9 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+                        </button>
+                    </div>
+                </header>
+                <div class="items">
+                    <a class="item" href="#" aria-label="View MOSO KINGBA Men's Round Neck Dri-Fit T-Shirt in black, size M, in order W2R8K3">
+                        <div class="thumb">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23f4f6fa'/%3E%3Cpath d='M20 18L28 14C30 19 42 19 44 14L52 18L50 27L46 25L46 56L26 56L26 25L22 27Z' fill='%23262a30'/%3E%3C/svg%3E" alt="" width="72" height="72">
+                        </div>
+                        <div>
+                            <p class="name">MOSO KINGBA Men's Round Neck Dri-Fit <br>T-Shirt Crew Neck Sports Training Tee, Lightweight Quick-Dry Performance Shirt</p>
+                            <p class="variant">Black, M</p>
+                        </div>
+                        <p class="qty num"><span aria-hidden="true">×</span>1<span class="sr-only"> quantity, 1</span></p>
+                    </a>
+                    <a class="item" href="#" aria-label="View MOSO KINGBA Men's Round Neck Dri-Fit T-Shirt in army, size M, in order W2R8K3">
+                        <div class="thumb">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Crect width='72' height='72' fill='%23f1f4ec'/%3E%3Cpath d='M20 18L28 14C30 19 42 19 44 14L52 18L50 27L46 25L46 56L26 56L26 25L22 27Z' fill='%235d6b40'/%3E%3C/svg%3E" alt="" width="72" height="72">
+                        </div>
+                        <div>
+                            <p class="name">MOSO KINGBA Men's Round Neck Dri-Fit <br>T-Shirt Crew Neck Sports Training Tee, Lightweight Quick-Dry Performance Shirt</p>
+                            <p class="variant">Army, M</p>
+                        </div>
+                        <p class="qty num"><span aria-hidden="true">×</span>1<span class="sr-only"> quantity, 1</span></p>
+                    </a>
+                    <a class="more" href="#" aria-label="View 1 more item in order W2R8K3">
+                        <span aria-hidden="true">+</span> 1 more item
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                    </a>
+                </div>
+            </article>
+        </div>
+    </div>
+
+    <div class="endnote">
+        <h2>What Variant B changes</h2>
+        <ul>
+            <li><strong>One sheet per day:</strong> orders share a single bordered surface and a hairline divider, instead of each carrying its own border and shadow.</li>
+            <li><strong>Total up top:</strong> the order total sits at the top right, where the eye already lands, and the status moves into the quiet meta line with the order number.</li>
+            <li><strong>No per-item price:</strong> rows keep only the photo, two-row name, variant, and quantity, so names get noticeably more width.</li>
+            <li><strong>Six-word break:</strong> on wide screens, product names break after the sixth word so long names start with a balanced two-line rhythm before the clamp. Phones keep natural wrapping to avoid clipping words.</li>
+            <li><strong>44px photos:</strong> smaller than Variant A, which tightens each row and lets more of the list fit on a phone.</li>
+            <li><strong>Chat:</strong> still one icon-only ghost button beside the total.</li>
+        </ul>
+        <p class="tradeoff"><strong>Trade-off:</strong> unit prices are no longer visible in the list — buyers see them on the order page. Variant A keeps the per-item price and separate cards if that matters more.</p>
+    </div>
+</div>
+</body>
+</html>
