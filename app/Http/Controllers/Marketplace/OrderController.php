@@ -6,7 +6,6 @@ use App\Actions\StartOnlinePayment;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\ReturnCase;
 use App\Models\SellerOrder;
@@ -83,7 +82,6 @@ class OrderController extends Controller
                 'items.product:id,store_id,slug',
                 'items.product.thumbnail',
                 'items.product.store:id,slug',
-                'items.review:id,order_item_id',
                 'issues' => fn ($query) => $query->latest(),
                 'returnCases' => fn ($query) => $query->latest('id'),
             ])
@@ -99,14 +97,6 @@ class OrderController extends Controller
             // "Load more" reads ?page=N as "the first N batches", so back and refresh rebuild the same list.
             ->paginate(10 * $loadedBatches, ['*'], 'page', 1);
 
-        $reviewableItemIds = [];
-        foreach ($sellerOrders as $sellerOrder) {
-            if ($sellerOrder->status === 'delivered' && ! in_array($sellerOrder->tenant_id, $ownedTenantIds, true)) {
-                $reviewableItemIds[$sellerOrder->id] = $sellerOrder->items
-                    ->first(fn (OrderItem $item): bool => $item->product_id !== null && $item->review === null)?->id;
-            }
-        }
-
         return view('marketplace.orders.index', [
             'sellerOrders' => $sellerOrders,
             'loadMoreUrl' => $sellerOrders->hasMorePages() && $loadedBatches < 50 ? $request->fullUrlWithQuery(['page' => $loadedBatches + 1]) : null,
@@ -115,7 +105,6 @@ class OrderController extends Controller
             'tabs' => $tabs,
             'tabCounts' => $tabCounts,
             'attentionCounts' => $attentionCounts,
-            'reviewableItemIds' => $reviewableItemIds,
         ]);
     }
 

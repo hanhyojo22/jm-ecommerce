@@ -20,8 +20,6 @@
         ];
         $search = trim($filters['search'] ?? '');
         $hasFilters = $search !== '' || filled($filters['status'] ?? null);
-        $returnDays = (int) config('marketplace.orders.return_window_days');
-        $returnDecisions = ['offered', 'rejected', 'awaiting_confirmation', 'awaiting_return'];
         $waitingOnYou = array_diff_key($attentionCounts, ['to_receive' => true]);
         $attentionLabel = fn (string $key, int $count): string => match ($key) {
             'to_pay' => $count.' to pay',
@@ -39,7 +37,6 @@
         $primaryAction = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3.5 text-meta font-semibold text-white transition-colors hover:bg-brand-hover lg:min-h-10';
         $outlineAction = 'inline-flex min-h-11 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-meta font-semibold text-ink transition-colors hover:border-brand hover:text-brand-hover lg:min-h-10';
         $inlineLink = 'font-semibold text-brand underline-offset-2 hover:text-brand-hover hover:underline';
-        $rowLink = 'inline-flex min-h-11 items-center text-xs font-semibold text-muted transition-colors hover:text-brand-hover lg:min-h-8';
         // The chat chip stays quiet beside the store name and only takes the brand colour under the pointer,
         // so the order's own state keeps the loudest mark on the row. On a phone it drops its label to an
         // icon so the store name, order number, and status still fit on one line.
@@ -157,67 +154,25 @@
                                 @php
                                     $order = $sellerOrder->order;
                                     $store = $sellerOrder->store->name;
-                                    $returnIssue = $sellerOrder->issues->firstWhere('type', 'return_refund');
                                     $cancelRequest = $sellerOrder->issues->first(fn ($issue): bool => $issue->type === 'cancellation' && $issue->status === 'open');
-                                    $cancelledAtRequest = $sellerOrder->status === 'cancelled' && $sellerOrder->issues->contains(fn ($issue): bool => $issue->type === 'cancellation' && $issue->status === 'resolved');
-                                    $returnCases = $sellerOrder->returnCases;
-                                    $returnCase = $returnCases->first();
-                                    // A missed deadline flips the turn: a late store can be escalated, a late buyer may see the case closed.
+                                    $returnCase = $sellerOrder->returnCases->first();
+                                    // A missed deadline flips the pill to the turn that matters now.
                                     $returnOverdue = $returnCase?->isOverdue() ?? false;
                                     $storeLate = $returnOverdue && $returnCase->status === 'awaiting_seller';
                                     // Only answering an offer or rejection has a hard buyer cutoff; a late send-back can still be recorded.
                                     $buyerLate = $returnOverdue && in_array($returnCase->status, ['offered', 'rejected'], true);
                                     $storeMissed = $returnOverdue && in_array($returnCase->status, ['awaiting_seller', 'awaiting_receipt', 'awaiting_fulfillment'], true);
-                                    $returnDecision = ($returnCase && in_array($returnCase->status, $returnDecisions, true) && ! $buyerLate) || $storeLate;
-                                    $returnFinished = $returnCase && in_array($returnCase->status, ['completed', 'denied', 'closed'], true);
-                                    $returnOpen = $returnCases->isNotEmpty() || ($returnIssue && ($tab === 'returns' || $returnIssue->status === 'open'));
-                                    $reviewableItemId = $reviewableItemIds[$sellerOrder->id] ?? null;
-                                    $method = $order->payment?->method;
                                     $isDirect = $order->payment?->isOnline() ?? false;
                                     $needsPayment = $isDirect && $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null;
-                                    // The same deadline orders:cancel-unpaid enforces, so the buyer sees it before it passes.
-                                    $payBy = $needsPayment ? $order->created_at->copy()->addHours((int) config('marketplace.online_payment.payment_hours')) : null;
-                                    // A paid store order that was cancelled is refunded through PayMongo; until that lands it is due.
-                                    $refundDue = $sellerOrder->status === 'cancelled' && $isDirect && $sellerOrder->gateway_refund_id === null && $sellerOrder->cod_collected_at !== null;
-                                    $paymentState = match (true) {
-                                        $sellerOrder->status === 'cancelled' => $sellerOrder->gateway_refund_id ? 'Refunded' : ($refundDue ? 'Refund due' : null),
-                                        ! $isDirect => $sellerOrder->cod_collected_at ? 'Paid' : 'Pay on delivery',
-                                        $sellerOrder->cod_collected_at !== null => 'Paid',
-                                        default => 'To pay',
-                                    };
-                                    $returnEndsAt = $sellerOrder->status === 'delivered' ? $sellerOrder->delivered_at?->copy()->addDays($returnDays) : null;
-                                    $canReturn = $returnEndsAt && now()->lessThanOrEqualTo($returnEndsAt);
-                                    // The closed-window note fades out after two weeks so old history isn't a wall of the same line.
-                                    $returnClosedRecently = $returnEndsAt && ! $canReturn && $returnEndsAt->diffInDays(now()) <= 14;
-                                    $returnSoon = $canReturn && ($returnEndsAt->isToday() || $returnEndsAt->isTomorrow());
                                     [$statusLabel, $statusDot, $statusText] = $statusStyles[$sellerOrder->status];
                                     if ($needsPayment) {
                                         [$statusLabel, $statusDot, $statusText] = ['To pay', 'bg-warning', 'text-warning-text'];
                                     } elseif ($cancelRequest) {
                                         [$statusLabel, $statusDot, $statusText] = ['Cancel requested', 'bg-warning', 'text-warning-text'];
                                     }
-                                    // One filled button per order, and only when the buyer has something to do.
-                                    $nextAction = match (true) {
-                                        $needsPayment => ['Pay now', route('orders.pay', $order)],
-                                        $sellerOrder->status === 'shipped' => ['Order received', null],
-                                        $storeLate => ['Ask JMMart to step in', route('returns.show', $returnCase)],
-                                        $returnDecision => [match ($returnCase->status) { 'awaiting_return' => 'Send item back', 'awaiting_confirmation' => 'Confirm outcome', default => 'Answer return' }, route('returns.show', $returnCase)],
-                                        (bool) $reviewableItemId => ['Write review', route('orders.show', $order).'#review-item-'.$reviewableItemId],
-                                        default => null,
-                                    };
-                                    $alsoReview = $reviewableItemId && $nextAction && $nextAction[0] !== 'Write review';
-                                    // A return the store or JMMart is handling stays reachable, but not as the next step.
-                                    $viewReturnHref = match (true) {
-                                        $returnDecision => null,
-                                        $returnCase !== null => route('returns.show', $returnCase),
-                                        (bool) $returnOpen => route('orders.show', $order).'#order-help',
-                                        default => null,
-                                    };
                                     $items = $sellerOrder->items;
-                                    $leadItemName = $items->first()?->product_name;
-                                    $orderLabel = $leadItemName ? $leadItemName.' order' : 'order';
                                     $shortNumber = Str::upper(Str::substr($order->number, -6));
-                                    // The badge is the order's own state; buyer/store lateness replaces it with the turn that matters now.
+                                    // The pill is the order's own state; buyer/store lateness replaces it with the turn that matters now.
                                     $overlayLabel = $statusLabel;
                                     $overlayDot = $statusDot;
                                     $overlayText = $statusText;
@@ -226,36 +181,9 @@
                                     } elseif ($storeMissed) {
                                         [$overlayLabel, $overlayDot, $overlayText] = [$storeLate ? 'Store missed its deadline' : 'Store is running late', $storeLate ? 'bg-warning' : 'bg-muted', $storeLate ? 'text-warning-text' : 'text-ink'];
                                     }
-                                    // The headline names the event, so the timeline reads as activity rather than a list of cards.
-                                    $headline = match (true) {
-                                        $refundDue => $store.' owes you a refund',
-                                        $sellerOrder->status === 'cancelled' => 'Your '.$orderLabel.' was cancelled',
-                                        $cancelRequest => 'Waiting for '.$store.' to answer your cancellation',
-                                        $needsPayment => 'Pay for your '.$orderLabel,
-                                        $storeLate => $store.' missed its return deadline',
-                                        $buyerLate => 'Your return response window has passed',
-                                        $storeMissed => $store.' missed a return deadline',
-                                        $returnCase?->status === 'appealed' => 'JMMart is reviewing your return',
-                                        $returnCase?->status === 'awaiting_receipt' => 'Your return is on its way to '.$store,
-                                        $returnCase?->status === 'awaiting_fulfillment' => 'Waiting for '.$store.' to send your '.($returnCase->remedy ?? 'remedy'),
-                                        $returnCase?->status === 'awaiting_return' => 'Send your '.($leadItemName ?? 'item').' back to '.$store,
-                                        $returnCase?->status === 'awaiting_confirmation' => 'Confirm your '.($returnCase->remedy ?? 'remedy').' from '.$store,
-                                        $returnDecision => $store.' answered your return',
-                                        $returnFinished => 'Your return is '.($returnCase->status === 'completed' ? 'complete' : ($returnCase->status === 'denied' ? 'denied' : 'closed')),
-                                        $returnCase?->status === 'awaiting_seller' => 'Waiting for '.$store.' to answer your return',
-                                        $returnOpen => 'Your return with '.$store.' is in progress',
-                                        $sellerOrder->status === 'shipped' => 'Your '.$orderLabel.' is on the way',
-                                        in_array($sellerOrder->status, ['confirmed', 'processing'], true) => $store.' is preparing your '.$orderLabel,
-                                        $sellerOrder->status === 'pending' => 'Waiting for '.$store.' to confirm your order',
-                                        $sellerOrder->status === 'delivered' && $reviewableItemId => 'Your '.$orderLabel.' arrived',
-                                        $sellerOrder->status === 'delivered' => 'Your '.$orderLabel.' was delivered',
-                                        default => $store.' order update',
-                                    };
-                                    $isUrgent = $needsPayment || $returnDecision || $refundDue || $storeLate;
-                                    $noteIsUrgent = $needsPayment || $returnSoon || $refundDue || $returnDecision;
                                 @endphp
 
-                                <article class="overflow-hidden rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-labelledby="purchase-{{ $sellerOrder->id }} purchase-number-{{ $sellerOrder->id }}">
+                                <article class="overflow-hidden rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-label="Order {{ $order->number }} from {{ $store }}">
                                     <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3 lg:px-6">
                                         <div class="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
                                             <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
@@ -279,125 +207,30 @@
                                     <ul class="divide-y divide-line-soft">
                                         @foreach ($items as $item)
                                             @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
-                                            <li class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-4 px-4 py-4 sm:grid-cols-[80px_minmax(0,1fr)_120px_80px] lg:px-6">
-                                                <div class="relative size-16 overflow-hidden rounded-md border border-line bg-paper sm:size-20">
-                                                    @if ($itemThumb)
-                                                        <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="80" height="80" loading="lazy" class="size-full object-cover">
-                                                    @else
-                                                        <svg class="absolute inset-0 m-auto size-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
-                                                    @endif
-                                                </div>
-                                                <div class="min-w-0">
-                                                    <p class="line-clamp-2 text-sm leading-5 text-ink">{{ $item->product_name }}</p>
-                                                    @if ($item->variant_label)
-                                                        <p class="mt-1 text-xs text-muted">{{ $item->variant_label }}</p>
-                                                    @endif
-                                                </div>
-                                                <div class="col-start-2 mt-1.5 flex gap-4 text-sm sm:contents">
-                                                    <p class="tabular-nums text-ink sm:mt-0"><span class="sr-only">Price </span>₱{{ number_format($item->unit_price, 2) }}</p>
-                                                    <p class="tabular-nums text-ink"><span class="text-muted">Qty:</span> {{ $item->quantity }}</p>
-                                                </div>
+                                            <li>
+                                                <a href="{{ route('orders.show', $order) }}" aria-label="View {{ $item->product_name }} in order {{ $order->number }} from {{ $store }}" class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-4 px-4 py-4 transition-colors hover:bg-[var(--color-sunken)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:grid-cols-[80px_minmax(0,1fr)_120px_80px] lg:px-6">
+                                                    <div class="relative size-16 overflow-hidden rounded-md border border-line bg-paper sm:size-20">
+                                                        @if ($itemThumb)
+                                                            <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="80" height="80" loading="lazy" class="size-full object-cover">
+                                                        @else
+                                                            <svg class="absolute inset-0 m-auto size-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                                                        @endif
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <p class="line-clamp-2 text-sm leading-5 text-ink">{{ $item->product_name }}</p>
+                                                        @if ($item->variant_label)
+                                                            <p class="mt-1 text-xs text-muted">{{ $item->variant_label }}</p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="col-start-2 mt-1.5 flex gap-4 text-sm sm:contents">
+                                                        <p class="tabular-nums text-ink sm:mt-0"><span class="sr-only">Price </span>₱{{ number_format($item->unit_price, 2) }}</p>
+                                                        <p class="tabular-nums text-ink"><span class="text-muted">Qty:</span> {{ $item->quantity }}</p>
+                                                    </div>
+                                                </a>
                                             </li>
                                         @endforeach
                                     </ul>
 
-                                    <div class="grid gap-x-5 gap-y-3 border-t border-line-soft px-4 py-3.5 lg:grid-cols-[minmax(0,1fr)_136px_152px] lg:px-6">
-                                    <div class="min-w-0">
-                                            @if (! $buyerLate && ! $storeMissed && $returnCase && ($tab === 'returns' || ! $returnFinished))
-                                                <x-returns.status-badge :status="$returnCase->status" buyer class="mt-2" />
-                                            @elseif ($tab === 'returns' && $returnIssue)
-                                                <p class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-warning-text"><span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>Return request open</p>
-                                            @endif
-
-                                            <h4 id="purchase-{{ $sellerOrder->id }}" class="mt-1 text-[15px] font-semibold leading-snug tracking-[-0.01em] text-ink">{{ $headline }}</h4>
-
-                                            @unless ($needsPayment && $payBy?->isPast())
-                                                <p @class(['mt-0.5 max-w-[62ch] text-meta leading-5', 'text-warning-text' => $noteIsUrgent, 'text-muted' => ! $noteIsUrgent])>
-                                                    @if ($refundDue)
-                                                        This order was cancelled after you paid. Your ₱{{ number_format($sellerOrder->total, 2) }} refund through PayMongo hasn’t gone through yet. If it doesn’t arrive, <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">get help from JMMart</a>.
-                                                    @elseif ($sellerOrder->status === 'cancelled')
-                                                        {{ $cancelledAtRequest ? 'Cancelled at your request.' : 'This order was cancelled.' }}@if ($sellerOrder->gateway_refund_id) Your payment was refunded to your {{ \App\Models\Payment::METHOD_LABELS[$method] ?? 'account' }}.@endif
-                                                    @elseif ($cancelRequest)
-                                                        You asked {{ $store }} to cancel. Its reply will show on the <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">order page</a>.
-                                                    @elseif ($needsPayment)
-                                                        Pay with {{ \App\Models\Payment::METHOD_LABELS[$method] }} before {{ $payBy->format('M j, g:i A') }}{{ $payBy->isFuture() && now()->diffInHours($payBy) < 24 ? ' ('.$payBy->diffForHumans(['parts' => 1]).')' : '' }}. Unpaid orders are cancelled and the items released.
-                                                    @elseif ($sellerOrder->status === 'pending')
-                                                        You can still change your mind. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Ask to cancel</a>
-                                                    @elseif (in_array($sellerOrder->status, ['confirmed', 'processing'], true))
-                                                        {{ $sellerOrder->status === 'confirmed' ? 'It will be handed to the courier when ready.' : 'It’s almost ready to ship.' }}@if ($sellerOrder->status === 'confirmed') <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Ask to cancel</a>@endif
-                                                    @elseif ($sellerOrder->status === 'shipped')
-                                                        Confirm with Order received once it arrives{{ $sellerOrder->shipped_at ? ' (auto-confirmed '.$sellerOrder->shipped_at->copy()->addDays((int) config('marketplace.orders.auto_deliver_days'))->format('M j').')' : '' }}. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Not here yet?</a>
-                                                    @elseif ($storeLate)
-                                                        {{ $store }} didn’t respond by {{ $returnCase->respond_by->format('M j, g:i A') }}. You can now ask JMMart to review your return.
-                                                    @elseif ($buyerLate)
-                                                        Your deadline to respond passed {{ $returnCase->deadline()->format('M j') }}. JMMart may close this return without a remedy; to still respond, contact support from the return page.
-                                                    @elseif ($storeMissed)
-                                                        {{ $store }} missed its {{ $returnCase->deadline()->format('M j') }} deadline. JMMart support can step in; details are on the return page.
-                                                    @elseif ($returnCase?->status === 'appealed')
-                                                        JMMart support is reviewing your return. Updates show on the return page.
-                                                    @elseif ($returnCase?->status === 'awaiting_receipt' && $returnCase->return_by)
-                                                        You sent the item back. {{ $store }} has until {{ $returnCase->return_by->format('M j') }} to confirm it arrived.
-                                                    @elseif ($returnCase?->status === 'awaiting_fulfillment' && $returnCase->fulfill_by)
-                                                        {{ $store }} has until {{ $returnCase->fulfill_by->format('M j') }} to send your {{ $returnCase->remedy ?? 'remedy' }}.
-                                                    @elseif ($returnCase?->status === 'awaiting_return')
-                                                        @if ($returnCase->return_by?->isPast())
-                                                            Your {{ $returnCase->return_by->format('M j') }} send-back date passed. Record the handoff now; until you do, JMMart may close this return without a remedy.
-                                                        @else
-                                                            Send the item back to {{ $store }}@if ($returnCase->return_by) by {{ $returnCase->return_by->format('M j') }}@endif, then record the handoff on the return page.
-                                                        @endif
-                                                    @elseif ($returnCase?->status === 'awaiting_confirmation')
-                                                        {{ $store }} recorded your {{ $returnCase->remedy ?? 'remedy' }}. {{ $returnCase->buyer_respond_by === null ? 'Confirm you got it, or dispute it, on the return page.' : ($returnCase->buyer_respond_by->isFuture() ? 'Confirm you got it, or dispute it, by '.$returnCase->buyer_respond_by->format('M j, g:i A').'.' : 'Your confirmation window has passed, so JMMart may close this as complete. Dispute it on the return page if it didn’t arrive.') }}
-                                                    @elseif ($returnDecision)
-                                                        {{ $store }} answered your return. {{ $returnCase->buyer_respond_by ? 'Decide by '.$returnCase->buyer_respond_by->format('M j, g:i A').' on the return page.' : 'Decide on the return page.' }}
-                                                    @elseif ($returnFinished)
-                                                        Your return is {{ $returnCase->status === 'completed' ? 'complete' : ($returnCase->status === 'denied' ? 'closed: the claim was denied' : 'closed') }}. Details are on the return page.
-                                                    @elseif ($returnCase?->status === 'awaiting_seller' && $returnCase->respond_by)
-                                                        Your return request is with {{ $store }}, which has until {{ $returnCase->respond_by->format('M j, g:i A') }} to respond.
-                                                    @elseif ($returnOpen)
-                                                        Your return request is with {{ $store }}. Follow it on the return page.
-                                                    @elseif ($canReturn)
-                                                        {{ $returnSoon ? 'Returns close '.($returnEndsAt->isToday() ? 'today' : 'tomorrow').' at '.$returnEndsAt->format('g:i A').'.' : 'Returns are open until '.$returnEndsAt->format('M j').'.' }} <a href="{{ route('orders.show', $order) }}#returns" class="{{ $inlineLink }}">Request return</a>
-                                                    @elseif ($returnClosedRecently)
-                                                        The {{ $returnDays }}-day return window has closed. <a href="{{ route('orders.show', $order) }}#order-help" class="{{ $inlineLink }}">Contact support</a> if something’s wrong.
-                                                    @endif
-                                                </p>
-                                            @endunless
-
-                                        <div class="mt-1 flex flex-wrap items-center gap-x-4">
-                                            <a href="{{ route('orders.show', $order) }}" class="{{ $rowLink }}">View order</a>
-                                            @if ($viewReturnHref)
-                                                <a href="{{ $viewReturnHref }}" class="{{ $rowLink }}">View return</a>
-                                            @endif
-                                            @if ($alsoReview)
-                                                <a href="{{ route('orders.show', $order) }}#review-item-{{ $reviewableItemId }}" class="{{ $rowLink }}">Write review</a>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-wrap items-baseline justify-between gap-x-3 lg:block lg:text-right">
-                                        <p class="text-[15px] font-semibold tabular-nums tracking-[-0.01em] text-ink"><span class="sr-only">Store total </span>₱{{ number_format($sellerOrder->total, 2) }}</p>
-                                        <p class="text-xs text-muted lg:mt-0.5">{{-- Cash on delivery is implied by its own state, so only a wallet names its method. --}}@if ($isDirect || ! $paymentState){{ \App\Models\Payment::METHOD_LABELS[$method] ?? 'Payment' }}@endif @if ($paymentState)@if ($isDirect)<span aria-hidden="true">·</span> @endif<span @class(['font-semibold', 'text-warning-text' => in_array($paymentState, ['To pay', 'Refund due'], true), 'text-success' => in_array($paymentState, ['Paid', 'Refunded'], true), 'text-ink' => in_array($paymentState, ['Reference sent', 'Pay on delivery'], true)])>{{ $paymentState }}</span>@endif</p>
-                                        @if ($order->seller_orders_count > 1)
-                                            <p class="w-full text-xs text-muted lg:mt-0.5">Checkout total ₱{{ number_format($order->total, 2) }} across {{ $order->seller_orders_count }} stores</p>
-                                        @endif
-                                    </div>
-
-                                    <div class="lg:pt-0.5">
-                                        @if ($nextAction && $nextAction[1] !== null)
-                                            <a href="{{ $nextAction[1] }}" class="{{ $nextAction[0] === 'Write review' ? $outlineAction : $primaryAction }} w-full whitespace-nowrap">{{ $nextAction[0] }}</a>
-                                        @elseif ($nextAction && $nextAction[1] === null)
-                                            {{--
-                                                Confirming starts the return window and closes delivery, so the first press asks and the
-                                                second posts. Without Alpine the button is a plain submit, so it still works.
-                                            --}}
-                                                    <form method="POST" action="{{ route('orders.received', $sellerOrder) }}" x-data="{ confirming: false, sending: false }" @submit="sending = true" @pageshow.window="sending = false; confirming = false" @keydown.escape="if (confirming) { confirming = false; $nextTick(() => $refs.received.focus()) }" class="flex w-full flex-col gap-1.5" role="group" aria-label="Confirm {{ $store }} order received">
-                                                        @csrf
-                                                        <span x-cloak x-show="confirming" id="received-note-{{ $sellerOrder->id }}" class="text-xs leading-4 text-ink">Got the parcel? You’ll have {{ $returnDays }} days to request a return.</span>
-                                                        <button type="button" x-cloak x-show="confirming" @click="confirming = false; $nextTick(() => $refs.received.focus())" class="{{ $outlineAction }} w-full">Not yet</button>
-                                                        <button type="submit" x-ref="received" @click="if (! confirming) { $event.preventDefault(); confirming = true }" :disabled="sending" :aria-describedby="confirming ? 'received-note-{{ $sellerOrder->id }}' : null" class="{{ $primaryAction }} w-full disabled:cursor-wait disabled:opacity-70" x-text="sending ? 'Saving…' : (confirming ? 'Yes, received' : 'Order received')">Order received</button>
-                                                    </form>
-                                        @endif
-                                    </div>
-                                    </div>
                                 </article>
                             @endforeach
                     </section>
