@@ -128,8 +128,8 @@
             <x-input-error :messages="$errors->get('tab')" class="mt-2" />
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
-            {{-- Each order is its own card: a store bar, its item lines, then a footer whose total and next-step
-                 columns line up down the page. --}}
+            {{-- Each order is its own card: a store bar and its item rows, where every product name keeps a
+                 two-row area so long names wrap instead of stretching the row. --}}
             <section id="purchases" class="mt-5 scroll-mt-24 flex flex-col gap-6" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
@@ -217,7 +217,7 @@
                                                         @endif
                                                     </div>
                                                     <div class="min-w-0">
-                                                        <p class="line-clamp-2 text-sm leading-5 text-ink">{{ $item->product_name }}</p>
+                                                        <p class="line-clamp-2 min-h-10 break-words text-sm leading-5 text-ink">{{ $item->product_name }}</p>
                                                         @if ($item->variant_label)
                                                             <p class="mt-1 text-xs text-muted">{{ $item->variant_label }}</p>
                                                         @endif
