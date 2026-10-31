@@ -80,6 +80,9 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(page.getByRole('heading', { name: 'Order #QA-REVIEW-001', exact: true })).toBeVisible();
         await page.goto('/orders');
         await rowsOrder.getByRole('link', { name: 'Order QA-ROWS-001', exact: true }).click();
+        await expect(page.getByRole('dialog')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Order #QA-ROWS-001', exact: true })).toBeVisible();
+        await page.locator('.open-full').click();
         await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
         await page.goto('/orders');
         await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();

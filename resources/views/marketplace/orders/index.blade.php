@@ -1,64 +1,13 @@
 <x-app-layout>
     <style>
         dialog.buyer-order-dialog { position: fixed; inset: 0; margin: auto; width: min(920px, calc(100vw - 40px)); max-height: calc(100vh - 40px); display: flex; flex-direction: column; border: 0; border-radius: 14px; padding: 0; background: #fff; color: var(--color-fg); box-shadow: 0 24px 64px rgb(15 23 42 / 18%), 0 2px 8px rgb(15 23 42 / 6%); overflow: hidden; }
+        dialog.buyer-order-dialog:not([open]) { display: none; }
         dialog.buyer-order-dialog[open] { animation: buyer-dialog-in .18s ease-out; }
         @keyframes buyer-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
         dialog.buyer-order-dialog::backdrop { background: rgb(15 23 42 / 46%); backdrop-filter: blur(2px); }
         @media (max-width: 760px) { dialog.buyer-order-dialog { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; margin: 0; } dialog.buyer-order-dialog::backdrop { background: transparent; backdrop-filter: none; } }
         @media (prefers-reduced-motion: reduce) { dialog.buyer-order-dialog[open] { animation: none; } }
-        .buyer-modal-head { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 28px 16px; border-bottom: 1px solid var(--color-border); }
-        .buyer-modal-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
-        .buyer-modal-title { margin-top: 4px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; line-height: 1.2; }
-        .buyer-modal-meta { margin-top: 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--color-muted); }
-        .buyer-modal-meta .sep { color: var(--color-border-strong); }
-        .buyer-modal-meta .status { font-weight: 600; color: var(--color-success); display: inline-flex; align-items: center; gap: 5px; }
-        .buyer-modal-meta .status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); }
-        .buyer-modal-close { width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); cursor: pointer; transition: background .15s, color .15s; }
-        .buyer-modal-close:hover { background: var(--color-sunken); color: var(--color-fg); }
-        .buyer-modal-close svg { width: 18px; height: 18px; }
         .buyer-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px 28px 24px; }
-        .buyer-modal-grid { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 28px; align-items: start; }
-        @media (max-width: 760px) { .buyer-modal-grid { grid-template-columns: 1fr; gap: 20px; } }
-        .buyer-modal-journey { position: sticky; top: 0; }
-        .buyer-modal-journey .journey-title { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 14px; }
-        .buyer-modal-journey .vstep { position: relative; display: grid; grid-template-columns: 16px 1fr; gap: 10px; padding-bottom: 18px; }
-        .buyer-modal-journey .vstep:last-child { padding-bottom: 0; }
-        .buyer-modal-journey .vstep::before { content: ''; position: absolute; left: 7px; top: 14px; bottom: 0; width: 2px; background: var(--color-border-strong); }
-        .buyer-modal-journey .vstep:last-child::before { display: none; }
-        .buyer-modal-journey .vstep.done::before { background: var(--color-accent); }
-        .buyer-modal-journey .vdot { width: 14px; height: 14px; border-radius: 50%; background: var(--color-border-strong); border: 3px solid #fff; box-shadow: 0 0 0 1px var(--color-border-strong); margin-top: 1px; z-index: 1; }
-        .buyer-modal-journey .vstep.done .vdot { background: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
-        .buyer-modal-journey .vstep.done.is-final .vdot { background: var(--color-success); box-shadow: 0 0 0 1px var(--color-success); }
-        .buyer-modal-journey .vlabel { font-size: 12.5px; font-weight: 600; color: var(--color-muted); }
-        .buyer-modal-journey .vstep.done .vlabel { color: var(--color-fg); }
-        .buyer-modal-journey .vtime { margin-top: 2px; font-size: 11px; color: var(--color-muted); }
-        .buyer-modal-section { margin-top: 16px; border: 1px solid var(--color-border); border-radius: 10px; background: #fff; padding: 14px; }
-        .buyer-modal-section h3 { font-size: 12.5px; font-weight: 600; color: var(--color-fg); margin-bottom: 8px; }
-        .buyer-modal-section dl { display: grid; gap: 8px; font-size: 12.5px; }
-        .buyer-modal-section dt { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--color-muted); }
-        .buyer-modal-section dd { margin-top: 2px; color: var(--color-fg); line-height: 1.5; }
-        .buyer-modal-section .addr { color: var(--color-muted); }
-        .buyer-modal-section .addr strong { color: var(--color-fg); font-weight: 600; }
-        .buyer-modal-summary { margin-top: 16px; border: 1px solid var(--color-border); border-radius: 10px; background: #fff; padding: 14px; }
-        .buyer-modal-summary h3 { font-size: 12.5px; font-weight: 600; color: var(--color-fg); }
-        .buyer-modal-summary dl { margin-top: 10px; display: grid; gap: 8px; font-size: 12.5px; }
-        .buyer-modal-summary .row { display: flex; justify-content: space-between; gap: 12px; }
-        .buyer-modal-summary .row dt { color: var(--color-muted); }
-        .buyer-modal-summary .row dd { color: var(--color-fg); font-weight: 500; }
-        .buyer-modal-summary .total-row { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-        .buyer-modal-summary .total-row dt { font-size: 13px; font-weight: 600; color: var(--color-fg); }
-        .buyer-modal-summary .total-row dd { font-size: 19px; font-weight: 600; letter-spacing: -.02em; color: var(--color-fg); }
-        .buyer-modal-summary .pay { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; }
-        .buyer-modal-summary .pay .label { color: var(--color-muted); }
-        .buyer-modal-summary .pay .value { font-weight: 600; color: var(--color-fg); display: inline-flex; align-items: center; gap: 6px; }
-        .buyer-modal-summary .pay .value i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-success); }
-        .buyer-modal-foot { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 28px; border-top: 1px solid var(--color-border); background: #fff; }
-        .buyer-modal-foot .open-full { font-size: 12.5px; font-weight: 600; color: var(--color-muted); transition: color .15s; }
-        .buyer-modal-foot .open-full:hover { color: var(--color-accent); }
-        .buyer-modal-foot .done-btn { min-height: 40px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--color-accent); color: #fff; font-size: 13.5px; font-weight: 600; transition: background .15s; cursor: pointer; }
-        .buyer-modal-foot .done-btn:hover { background: var(--color-accent-hover); }
-        .buyer-modal-foot .contents { display: contents; }
-    </style>
     /* ============================================================
        Compact ledger order-details dialog (alternative compact-ledger variant)
        ============================================================ */
@@ -111,7 +60,8 @@
     .block-store-avatar { width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center; background: #eef3ff; color: var(--color-accent-hover); font-size: 12px; font-weight: 700; }
     .block-state { font-size: 11.5px; font-weight: 600; color: var(--color-success); display: inline-flex; align-items: center; gap: 5px; }
     .block-state i { width: 5px; height: 5px; border-radius: 50%; background: var(--color-success); }
-    .msg-seller { font-size: 12px; font-weight: 600; color: var(--color-accent); }
+    .msg-seller { font-size: 12px; font-weight: 600; color: var(--color-accent); background: transparent; border: 0; padding: 0; cursor: pointer; }
+    .msg-seller:hover { color: var(--color-accent-hover); text-decoration: underline; text-underline-offset: 2px; }
     .items { list-style: none; padding: 0; margin: 0; }
     .item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--color-line-soft); }
     .item:first-child { border-top: 0; }
@@ -287,7 +237,7 @@
                     window.addEventListener('popstate', () => { const id = new URLSearchParams(location.search).get('order'); this.pushed = false; id ? this.open(id, 'none') : this.close() });
                 },
                 load(id) {
-                    return this.pending[id] ??= fetch(this.showUrl.replace('__ORDER__', id), { headers: { 'X-Order-Modal': '1', 'X-Requires-Session': '1', Accept: 'text/html' } })
+                    return this.pending[id] ??= fetch(this.showUrl.replace('__ORDER__', id), { credentials: 'same-origin', headers: { 'X-Order-Modal': '1', 'X-Requires-Session': '1', Accept: 'text/html' } })
                         .then(async (response) => { if (! response.ok || response.redirected) { throw new Error('Order unavailable') } return this.cache[id] = await response.text() })
                         .finally(() => delete this.pending[id]);
                 },
