@@ -37,10 +37,9 @@
         $primaryAction = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3.5 text-meta font-semibold text-white transition-colors hover:bg-brand-hover lg:min-h-10';
         $outlineAction = 'inline-flex min-h-11 items-center justify-center rounded-lg border border-line bg-surface px-3.5 text-meta font-semibold text-ink transition-colors hover:border-brand hover:text-brand-hover lg:min-h-10';
         $inlineLink = 'font-semibold text-brand underline-offset-2 hover:text-brand-hover hover:underline';
-        // The chat chip stays quiet beside the store name and only takes the brand colour under the pointer,
-        // so the order's own state keeps the loudest mark on the row. On a phone it drops its label to an
-        // icon so the store name, order number, and status still fit on one line.
-        $chatAction = 'inline-flex min-h-11 w-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-[var(--color-border-strong)] bg-surface px-0 text-meta font-semibold text-ink transition-colors duration-150 hover:border-brand hover:bg-brand hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand sm:w-auto sm:px-2.5 lg:min-h-10';
+        // Chat is a quiet icon beside the state: a full 44px target on phones, a compact 32px ghost on
+        // wide screens. Its label lives in the tooltip and accessible name so the store bar stays calm.
+        $chatAction = 'inline-grid size-11 shrink-0 place-items-center rounded-lg text-muted transition-colors duration-150 hover:bg-[var(--color-sunken)] hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:size-8';
     @endphp
 
     <x-marketplace.account-shell active="orders">
@@ -128,8 +127,9 @@
             <x-input-error :messages="$errors->get('tab')" class="mt-2" />
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
-            {{-- Each order is its own card: a store bar and its item rows, where every product name keeps a
-                 two-row area and breaks after six words on wide screens instead of stretching the row. --}}
+            {{-- Each order is its own card: a quiet store bar with the total, then the first two item rows.
+                 Every product name keeps a two-row area and breaks after six words on wide screens, and
+                 longer orders end with a single "+ N more items" link into the order. --}}
             <section id="purchases" class="mt-5 scroll-mt-24 flex flex-col gap-6" aria-labelledby="purchase-results-heading">
                 <h2 id="purchase-results-heading" class="sr-only">{{ $tabs[$tab] }} purchases{{ $search !== '' ? ' matching “'.$search.'”' : '' }} ({{ $sellerOrders->total() }})</h2>
 
@@ -171,6 +171,8 @@
                                         [$statusLabel, $statusDot, $statusText] = ['Cancel requested', 'bg-warning', 'text-warning-text'];
                                     }
                                     $items = $sellerOrder->items;
+                                    $itemCount = $items->count();
+                                    $remainingItems = max($itemCount - 2, 0);
                                     $shortNumber = Str::upper(Str::substr($order->number, -6));
                                     // The pill is the order's own state; buyer/store lateness replaces it with the turn that matters now.
                                     $overlayLabel = $statusLabel;
@@ -184,28 +186,36 @@
                                 @endphp
 
                                 <article class="overflow-hidden rounded-lg border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)]" aria-label="Order {{ $order->number }} from {{ $store }}">
-                                    <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3 lg:px-6">
-                                        <div class="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
-                                            <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
-                                            <a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="truncate text-sm font-semibold text-ink hover:text-brand-hover">{{ $store }}</a>
-                                            <a id="purchase-number-{{ $sellerOrder->id }}" href="{{ route('orders.show', $order) }}" class="inline-flex min-h-6 items-center text-xs font-medium tabular-nums text-muted underline-offset-2 hover:text-ink hover:underline"><span aria-hidden="true">#…{{ $shortNumber }}</span><span class="sr-only">Order {{ $order->number }}</span></a>
+                                    <header class="flex items-center justify-between gap-4 border-b border-line-soft px-4 py-2.5 lg:px-6">
+                                        <div class="min-w-0">
+                                            <div class="flex min-w-0 items-center gap-2">
+                                                <svg class="size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                                                <a href="{{ route('catalog.store', $sellerOrder->store->slug) }}" class="truncate text-sm font-semibold text-ink hover:text-brand-hover">{{ $store }}</a>
+                                            </div>
+                                            <p class="mt-px flex flex-wrap items-center gap-x-1.5 text-xs tabular-nums text-muted">
+                                                <a id="purchase-number-{{ $sellerOrder->id }}" href="{{ route('orders.show', $order) }}" class="inline-flex min-h-6 items-center underline-offset-2 hover:text-ink hover:underline"><span aria-hidden="true">#…{{ $shortNumber }}</span><span class="sr-only">Order {{ $order->number }}</span></a>
+                                                <span aria-hidden="true" class="text-[var(--color-border-strong)]">·</span>
+                                                <span>{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</span>
+                                                <span aria-hidden="true" class="text-[var(--color-border-strong)]">·</span>
+                                                <span>₱{{ number_format($sellerOrder->total, 2) }}</span>
+                                            </p>
+                                        </div>
+                                        <div class="flex shrink-0 items-center gap-2.5">
+                                            <span @class(['inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-semibold', $overlayText])>
+                                                <span class="size-1.5 rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
+                                                {{ $overlayLabel }}
+                                            </span>
                                             <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}">
                                                 @csrf
-                                                <button type="submit" class="{{ $chatAction }}">
+                                                <button type="submit" class="{{ $chatAction }}" title="Chat with {{ $store }}" aria-label="Chat with {{ $store }}, order {{ $order->number }}">
                                                     <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-4.7 7.6 8.38 8.38 0 0 1-3.8.9 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
-                                                    <span class="sr-only sm:not-sr-only">Chat with seller</span>
-                                                    <span class="sr-only"> about {{ $store }}, order {{ $order->number }}</span>
                                                 </button>
                                             </form>
                                         </div>
-                                        <span @class(['inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-sunken)] px-3 py-1 text-xs font-semibold', $overlayText])>
-                                            <span class="size-[7px] rounded-full {{ $overlayDot }}" aria-hidden="true"></span>
-                                            {{ $overlayLabel }}
-                                        </span>
                                     </header>
 
                                     <ul class="divide-y divide-line-soft">
-                                        @foreach ($items as $item)
+                                        @foreach ($items->take(2) as $item)
                                             @php
                                                 $itemThumb = $item->image_path ?? $item->product?->thumbnail?->path;
                                                 $nameWords = preg_split('/\s+/', trim($item->product_name), -1, PREG_SPLIT_NO_EMPTY);
@@ -213,27 +223,39 @@
                                                 $nameRemaining = implode(' ', array_slice($nameWords, 6));
                                             @endphp
                                             <li>
-                                                <a href="{{ route('orders.show', $order) }}" aria-label="View {{ $item->product_name }} in order {{ $order->number }} from {{ $store }}" class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-4 px-4 py-4 transition-colors hover:bg-[var(--color-sunken)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:grid-cols-[80px_minmax(0,1fr)_120px_80px] lg:px-6">
-                                                    <div class="relative size-16 overflow-hidden rounded-md border border-line bg-paper sm:size-20">
+                                                <a href="{{ route('orders.show', $order) }}" aria-label="View {{ $item->product_name }} in order {{ $order->number }} from {{ $store }}" class="group grid grid-cols-[56px_minmax(0,1fr)] gap-x-4 px-4 py-3.5 transition-colors hover:bg-[var(--color-sunken)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:grid-cols-[56px_minmax(0,1fr)_108px_44px] lg:px-6">
+                                                    <div class="relative size-14 overflow-hidden rounded-md border border-line bg-paper">
                                                         @if ($itemThumb)
-                                                            <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="80" height="80" loading="lazy" class="size-full object-cover">
+                                                            <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="56" height="56" loading="lazy" class="size-full object-cover">
                                                         @else
                                                             <svg class="absolute inset-0 m-auto size-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
                                                         @endif
                                                     </div>
                                                     <div class="min-w-0">
-                                                        <p class="line-clamp-2 min-h-10 break-words text-sm leading-5 text-ink">{{ $nameFirstLine }}@if ($nameRemaining !== '') <br class="hidden lg:block">{{ $nameRemaining }}@endif</p>
+                                                        <p class="line-clamp-2 min-h-10 break-words text-sm leading-5 text-ink transition-colors group-hover:text-brand-hover">{{ $nameFirstLine }}@if ($nameRemaining !== '') <br class="hidden lg:block">{{ $nameRemaining }}@endif</p>
                                                         @if ($item->variant_label)
-                                                            <p class="mt-1 text-xs text-muted">{{ $item->variant_label }}</p>
+                                                            <p class="mt-0.5 text-xs leading-[18px] text-muted">{{ $item->variant_label }}</p>
                                                         @endif
                                                     </div>
-                                                    <div class="col-start-2 mt-1.5 flex gap-4 text-sm sm:contents">
-                                                        <p class="tabular-nums text-ink sm:mt-0"><span class="sr-only">Price </span>₱{{ number_format($item->unit_price, 2) }}</p>
-                                                        <p class="tabular-nums text-ink"><span class="text-muted">Qty:</span> {{ $item->quantity }}</p>
+                                                    <div class="col-start-2 mt-1 flex items-baseline justify-between gap-4 sm:contents">
+                                                        <p class="tabular-nums text-sm text-ink sm:col-start-3 sm:pt-px sm:text-right"><span class="sr-only">Price </span>₱{{ number_format($item->unit_price, 2) }}</p>
+                                                        <p class="tabular-nums text-[13px] text-muted sm:col-start-4 sm:pt-px sm:text-right"><span aria-hidden="true">×</span>{{ $item->quantity }}<span class="sr-only"> quantity, {{ $item->quantity }}</span></p>
                                                     </div>
                                                 </a>
                                             </li>
                                         @endforeach
+                                        @if ($remainingItems > 0)
+                                            <li>
+                                                <a href="{{ route('orders.show', $order) }}" aria-label="View {{ $remainingItems }} more {{ Str::plural('item', $remainingItems) }} in order {{ $order->number }} from {{ $store }}" class="grid grid-cols-[56px_minmax(0,1fr)] items-center gap-x-4 px-4 py-2.5 text-[13px] font-semibold text-muted transition-colors hover:bg-[var(--color-sunken)] hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand lg:px-6">
+                                                    <span aria-hidden="true"></span>
+                                                    <span class="flex items-center gap-1.5">
+                                                        <span aria-hidden="true">+</span>
+                                                        {{ $remainingItems }} more {{ Str::plural('item', $remainingItems) }}
+                                                        <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                                                    </span>
+                                                </a>
+                                            </li>
+                                        @endif
                                     </ul>
 
                                 </article>

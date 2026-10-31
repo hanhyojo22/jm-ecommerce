@@ -173,9 +173,36 @@ class PurchaseIndexTest extends TestCase
 
         $this->actingAs($buyer)->get(route('orders.index'))
             ->assertOk()
-            ->assertSee('Chat with seller')
+            ->assertSee('Chat with Chatty Store, order CHAT-001')
             ->assertSee(route('messages.seller-orders.start', $sellerOrder), false)
-            ->assertSee('about Chatty Store, order CHAT-001');
+            ->assertDontSee('Chat with seller');
+    }
+
+    public function test_purchase_cards_show_two_items_and_link_the_rest_to_the_order(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer, 'MANY-001', '30.00');
+        $sellerOrder = $this->sellerOrder($order, 'Bundle Store', 'delivered', '30.00');
+
+        foreach (['Second Bundle Item', 'Third Bundle Item'] as $index => $name) {
+            $sellerOrder->items()->create([
+                'product_id' => $sellerOrder->items->first()->product_id,
+                'product_name' => $name,
+                'sku' => 'BUNDLE-'.($index + 2),
+                'unit_price' => '10.00',
+                'quantity' => 1,
+                'line_total' => '10.00',
+            ]);
+        }
+
+        $this->actingAs($buyer)->get(route('orders.index'))
+            ->assertOk()
+            ->assertSee('3 items')
+            ->assertSee('Bundle Store Product')
+            ->assertSee('Second Bundle Item')
+            ->assertDontSee('Third Bundle Item')
+            ->assertSee('1 more item')
+            ->assertSee(route('orders.show', $order), false);
     }
 
     public function test_purchase_pills_report_state_while_actions_live_on_the_order_page(): void

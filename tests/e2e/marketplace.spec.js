@@ -8,7 +8,7 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
     try {
         await buyer.page.goto('/orders');
         await rejectOptionalCookies(buyer.page);
-        await buyer.page.locator('article').filter({ has: buyer.page.getByRole('link', { name: /order QA-REVIEW-001/ }) }).getByRole('link').click();
+        await buyer.page.locator('article').filter({ has: buyer.page.getByRole('link', { name: /order QA-REVIEW-001/ }) }).getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
         const returns = buyer.page.locator('#returns');
         await returns.getByRole('spinbutton').fill('1');
         await returns.getByLabel('Details').fill('The item arrived damaged and I need help.');

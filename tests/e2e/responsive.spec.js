@@ -14,7 +14,7 @@ test('customer finds purchases and opens order actions at each viewport', async 
             await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
         }
         await expect(page.getByRole('heading', { name: 'My purchases', exact: true })).toBeVisible();
-        // The card's only link is the card itself; its aria-label carries the order number.
+        // The order number, each visible item, and the "more" link all lead to the order page.
         const purchase = page.locator('article').filter({ has: page.getByRole('link', { name: /order QA-REVIEW-001/ }) });
         await expect(purchase).toContainText('QA Canvas Tote');
         await expect(purchase).toContainText('Delivered');
@@ -35,14 +35,14 @@ test('customer finds purchases and opens order actions at each viewport', async 
         const items = rowsOrder.locator('ul');
         const chatRow = items.locator('li').filter({ hasText: 'QA Chat Sample' });
         await expect(chatRow).toContainText('Blue / Medium');
-        await expect(chatRow).toContainText('Qty: 2');
+        await expect(chatRow).toContainText('×2');
         await expect(chatRow).toContainText('₱24.99');
-        // A single extra row is shown outright rather than hidden behind a toggle.
-        await expect(items.getByRole('button', { name: /more item/ })).toHaveCount(0);
-        await expect(items.getByText('QA Retired Pouch')).toBeVisible();
-        await expect(items.getByRole('link', { name: 'QA Retired Pouch' })).toHaveCount(0);
+        // Only the first two rows are listed; the rest sit behind one link into the order.
+        await expect(items.locator('li')).toHaveCount(3);
+        await expect(items.getByText('QA Retired Pouch')).toHaveCount(0);
+        await expect(items.getByRole('link', { name: /2 more items .*QA-ROWS-001/ })).toBeVisible();
         // Items without a stored photo fall back to the bag glyph, so there is no broken image or noise.
-        await expect(items.locator('li').filter({ hasText: 'QA Retired Pouch' }).getByText('Product image unavailable')).toHaveCount(0);
+        await expect(items.locator('li').filter({ hasText: 'QA Chat Sample' }).getByText('Product image unavailable')).toHaveCount(0);
         if (testInfo.project.name === 'mobile-chromium') {
             await expect(chatRow).toContainText('₱24.99');
         }
@@ -75,13 +75,14 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(page.getByRole('heading', { name: 'No purchases match “QA-REVIEW-001” in Awaiting store' })).toBeVisible();
         await expect(page.getByRole('searchbox', { name: 'Search purchases', exact: true })).toHaveValue('QA-REVIEW-001');
         await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
-        await purchase.getByRole('link').click();
+        // The card's header and rows all lead to the order; the order number is the unambiguous target.
+        await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'Order details', exact: true })).toBeVisible();
         await page.goto('/orders');
-        await rowsOrder.getByRole('link').click();
+        await rowsOrder.getByRole('link', { name: 'Order QA-ROWS-001', exact: true }).click();
         await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
         await page.goto('/orders');
-        await purchase.getByRole('link').click();
+        await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
         await page.getByRole('button', { name: 'Message seller' }).first().click();
         await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
     } finally {
@@ -623,7 +624,7 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
         expect(purchases.leftSlack).toBe(purchases.rightSlack);
 
         // The details page drills into that list and holds the same measure.
-        const orderHref = await customer.page.getByRole('article').first().getByRole('link').getAttribute('href');
+        const orderHref = await customer.page.getByRole('article').first().getByRole('link', { name: /^Order / }).getAttribute('href');
         const details = await measure(customer.page, orderHref);
         expect(details.width).toBe(1080);
         expect(details.leftSlack).toBe(details.rightSlack);
