@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handoff mockup B — The marketplace arrives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg: #f6f8fc;
+        --surface: #fff;
+        --ink: #182c48;
+        --muted: #596b83;
+        --line: #e3e8f1;
+        --brand: #205bf4;
+        --skeleton: #e9eef6;
+        --skeleton-deep: #dfe6f0;
+    }
+
+    body {
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ---------- marketplace chrome, already real ---------- */
+    .site-header { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line); background: var(--surface); }
+
+    .header-inner {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        width: 100%;
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 12px 18px;
+    }
+
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+    .brand .mark-tile { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 600; }
+
+    .search {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-height: 40px;
+        padding: 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--bg);
+        color: #8294ab;
+        font-size: 13px;
+    }
+    .search svg { width: 16px; height: 16px; flex: 0 0 auto; }
+
+    .header-actions { display: flex; align-items: center; gap: 18px; font-size: 13px; font-weight: 500; color: var(--muted); }
+    .header-actions .cart { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); }
+    .header-actions .cart svg { width: 18px; height: 18px; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--skeleton-deep); }
+
+    /* The hand-off owns one hairline across the top of the page. */
+    .handoff-progress { height: 2px; background: #e8eef8; overflow: hidden; }
+    .handoff-progress span { display: block; width: 58%; height: 100%; background: var(--brand); transition: width .5s ease; }
+
+    /* ---------- the arriving page ---------- */
+    .page { width: 100%; max-width: 1320px; margin: 0 auto; padding: 22px 18px 40px; }
+
+    .chips { display: flex; gap: 8px; overflow: hidden; margin-bottom: 22px; }
+    .chip { height: 30px; border-radius: 999px; background: var(--skeleton); }
+    .chip:nth-child(1) { width: 86px; }
+    .chip:nth-child(2) { width: 112px; }
+    .chip:nth-child(3) { width: 96px; }
+    .chip:nth-child(4) { width: 78px; }
+    .chip:nth-child(5) { width: 124px; }
+
+    .hero {
+        display: grid;
+        grid-template-columns: 1.05fr 1fr;
+        min-height: 240px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+    }
+    .hero-copy { padding: 32px; }
+    .bar { height: 14px; border-radius: 4px; background: var(--skeleton); }
+    .bar + .bar { margin-top: 10px; }
+    .hero-copy .bar:nth-child(1) { width: 64%; height: 22px; }
+    .hero-copy .bar:nth-child(2) { width: 84%; }
+    .hero-copy .bar:nth-child(3) { width: 52%; }
+    .hero-copy .bar:nth-child(4) { width: 120px; height: 36px; margin-top: 22px; border-radius: 6px; background: var(--skeleton-deep); }
+    .hero-art { background: linear-gradient(135deg, #e9eff9, #dfe9f7 60%, #d5e3f6); }
+
+    .row-head { display: flex; align-items: flex-end; justify-content: space-between; margin: 34px 0 16px; }
+    .row-head .bar { width: 180px; height: 18px; }
+    .row-head .bar + .bar { width: 72px; height: 12px; }
+
+    .product-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .card .thumb { height: 150px; background: linear-gradient(150deg, #eef3fa, #e2eaf5); }
+    .card .body { padding: 12px; }
+    .card .bar:nth-child(1) { width: 78%; }
+    .card .bar:nth-child(2) { width: 46%; height: 12px; }
+
+    .shimmer { position: relative; overflow: hidden; }
+    .shimmer::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 55%) 50%, transparent 80%);
+        transform: translateX(-100%);
+        animation: sweep 1.8s ease-in-out infinite;
+    }
+
+    @keyframes sweep { to { transform: translateX(100%); } }
+
+    /* ---------- the hand-off toast ---------- */
+    .toast {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 40;
+        width: 372px;
+        max-width: calc(100vw - 32px);
+        padding: 16px 18px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        box-shadow: 0 24px 48px -24px rgb(24 44 72 / 40%), 0 2px 6px rgb(24 44 72 / 6%);
+    }
+
+    .toast-head { display: flex; gap: 12px; }
+
+    .spinner {
+        flex: 0 0 auto;
+        width: 22px;
+        height: 22px;
+        margin-top: 1px;
+        border-radius: 50%;
+        background: conic-gradient(var(--brand) 0deg 96deg, #dbe6fb 96deg 360deg);
+        animation: spin 1.1s linear infinite;
+    }
+    .spinner::after { content: ""; display: block; width: 15px; height: 15px; margin: 3.5px; border-radius: 50%; background: #fff; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    h1 { font-size: 15px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
+    .status { margin-top: 2px; font-size: 13px; color: var(--muted); }
+
+    .steps { display: flex; gap: 6px; margin-top: 14px; }
+    .steps span { height: 3px; flex: 1; border-radius: 999px; background: #e2e9f3; }
+    .steps span.done { background: #a9c4f3; }
+    .steps span.active { background: var(--brand); }
+
+    .toast p.note { margin-top: 12px; font-size: 12px; line-height: 1.55; color: var(--muted); }
+    .restart { display: inline-flex; align-items: center; min-height: 36px; margin-top: 6px; font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: underline; text-decoration-color: #c3ccda; text-underline-offset: 3px; }
+    .restart:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+    @media (max-width: 900px) {
+        .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .hero { grid-template-columns: 1fr; }
+        .hero-art { display: none; }
+        .header-inner { flex-wrap: wrap; gap: 12px; }
+        .search { order: 3; flex-basis: 100%; }
+    }
+
+    @media (max-width: 640px) {
+        .page { padding: 16px 12px 150px; }
+        .hero-copy { padding: 20px; }
+        .toast { right: 12px; left: 12px; bottom: 12px; width: auto; }
+        .header-actions a, .avatar { display: none; }
+    }
+</style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-inner">
+            <a class="brand" href="#" aria-label="JMMart marketplace home">
+                <span class="mark-tile" aria-hidden="true">JM</span>
+                JMMart
+            </a>
+            <div class="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg>
+                <span>Search products, stores, and categories</span>
+            </div>
+            <div class="header-actions">
+                <a href="#">Start selling</a>
+                <span class="cart" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                </span>
+                <span class="avatar" aria-hidden="true"></span>
+            </div>
+        </div>
+        <div class="handoff-progress" aria-hidden="true"><span></span></div>
+    </header>
+
+    <main class="page" aria-hidden="true">
+        <div class="chips">
+            <span class="chip shimmer"></span>
+            <span class="chip shimmer"></span>
+            <span class="chip shimmer"></span>
+            <span class="chip shimmer"></span>
+            <span class="chip shimmer"></span>
+        </div>
+
+        <section class="hero">
+            <div class="hero-copy">
+                <div class="bar shimmer"></div>
+                <div class="bar shimmer"></div>
+                <div class="bar shimmer"></div>
+                <div class="bar shimmer"></div>
+            </div>
+            <div class="hero-art"></div>
+        </section>
+
+        <div class="row-head">
+            <div class="bar shimmer"></div>
+            <div class="bar shimmer"></div>
+        </div>
+
+        <section class="product-grid">
+            <article class="card"><div class="thumb shimmer"></div><div class="body"><div class="bar shimmer"></div><div class="bar shimmer"></div></div></article>
+            <article class="card"><div class="thumb shimmer"></div><div class="body"><div class="bar shimmer"></div><div class="bar shimmer"></div></div></article>
+            <article class="card"><div class="thumb shimmer"></div><div class="body"><div class="bar shimmer"></div><div class="bar shimmer"></div></div></article>
+            <article class="card"><div class="thumb shimmer"></div><div class="body"><div class="bar shimmer"></div><div class="bar shimmer"></div></div></article>
+        </section>
+    </main>
+
+    <aside class="toast" role="status" aria-live="polite">
+        <div class="toast-head">
+            <span class="spinner" aria-hidden="true"></span>
+            <div>
+                <h1>Finishing your sign-in</h1>
+                <p class="status">Confirming your account with Clerk…</p>
+            </div>
+        </div>
+
+        <div class="steps" aria-hidden="true">
+            <span class="done"></span>
+            <span class="active"></span>
+            <span></span>
+        </div>
+
+        <p class="note">You’ll be back in the marketplace in a moment. Nothing is charged or changed while you wait.</p>
+        <a class="restart" href="#">Taking longer than expected? Sign in again</a>
+    </aside>
+</body>
+</html>

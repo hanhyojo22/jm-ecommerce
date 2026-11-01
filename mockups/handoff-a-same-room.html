@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handoff mockup A — The same room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg: #f6f8fc;
+        --surface: #fff;
+        --ink: #182c48;
+        --muted: #596b83;
+        --line: #e3e8f1;
+        --brand: #205bf4;
+        --brand-soft: #e8f0ff;
+    }
+
+    html, body { min-height: 100%; }
+
+    body {
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: var(--ink);
+        background: var(--surface);
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .split { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+
+    /* ---------- brand panel ---------- */
+    .brand-panel {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 40px 48px;
+        color: #fff;
+        background: linear-gradient(158deg, #163a86 0%, #10234d 58%, #0b1a3c 100%);
+    }
+
+    .brand-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+            radial-gradient(72% 58% at 88% -6%, rgb(59 130 246 / 26%), transparent 68%),
+            radial-gradient(58% 46% at 2% 102%, rgb(29 78 216 / 24%), transparent 72%);
+    }
+
+    .brand { position: relative; display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+    .mark-tile { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: #fff; color: #10234d; font-size: 13px; font-weight: 600; }
+
+    .brand-copy { position: relative; margin: auto 0; max-width: 27rem; padding: 48px 0; }
+    .brand-copy h2 { font-size: 30px; font-weight: 600; line-height: 1.18; letter-spacing: -.035em; text-wrap: balance; }
+    .brand-copy > p { margin-top: 10px; font-size: 15px; line-height: 1.6; color: #b9cbe8; }
+
+    .benefits { list-style: none; margin-top: 28px; }
+    .benefits li { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid rgb(255 255 255 / 10%); }
+    .benefits li:first-child { border-top: 0; padding-top: 0; }
+    .benefit-icon { display: grid; place-items: center; flex: 0 0 auto; width: 38px; height: 38px; border-radius: 6px; background: rgb(255 255 255 / 10%); color: #93b4f5; }
+    .benefit-icon svg { width: 19px; height: 19px; }
+    .benefits b { display: block; font-size: 14px; font-weight: 600; }
+    .benefits span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.55; color: #9db2d4; }
+
+    .trust { position: relative; display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 500; color: #8fa6cb; }
+    .trust svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+    /* ---------- hand-off panel ---------- */
+    .auth-panel { display: flex; align-items: center; justify-content: center; padding: 48px 24px; background: var(--surface); }
+    .auth-inner { width: 100%; max-width: 392px; }
+
+    h1 { font-size: 32px; font-weight: 600; line-height: 1.1; letter-spacing: -.03em; text-wrap: balance; }
+    .lede { margin-top: 10px; font-size: 15px; line-height: 1.6; color: var(--muted); }
+
+    .timeline { list-style: none; position: relative; margin-top: 34px; padding-left: 40px; }
+
+    .step { position: relative; padding-bottom: 28px; }
+    .step:last-child { padding-bottom: 0; }
+    .step:not(:last-child)::before { content: ""; position: absolute; left: -29px; top: 25px; bottom: 0; width: 2px; background: var(--line); }
+    .step.done:not(:last-child)::before { background: #c3d6f8; }
+
+    .step-mark {
+        position: absolute;
+        left: -40px;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid var(--line);
+        color: transparent;
+    }
+    .step-mark svg { width: 13px; height: 13px; }
+
+    .step.done .step-mark { border-color: var(--brand-soft); background: var(--brand-soft); color: var(--brand); }
+
+    .step.active .step-mark { border-color: transparent; background: conic-gradient(var(--brand) 0deg 96deg, #d9e5fb 96deg 360deg); animation: spin 1.1s linear infinite; }
+    .step.active .step-mark::after { content: ""; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .step-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+    .step.pending .step-title { font-weight: 500; color: var(--muted); }
+    .step-desc { margin-top: 3px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+    .step.active .step-title { color: var(--brand); }
+
+    .note { margin-top: 30px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+
+    .restart { display: inline-flex; align-items: center; min-height: 44px; margin-top: 18px; font-size: 14px; font-weight: 500; color: var(--muted); text-decoration: underline; text-decoration-color: #c3ccda; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+    .restart:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+    /* ---------- mobile ---------- */
+    .mobile-brand { display: none; }
+
+    @media (max-width: 1023px) {
+        .split { grid-template-columns: 1fr; }
+        .brand-panel { display: none; }
+
+        .mobile-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px;
+            color: #fff;
+            background: linear-gradient(120deg, #163a86, #10234d);
+        }
+        .mobile-brand p { font-size: 13px; line-height: 1.4; color: #c3d4ef; }
+        .mobile-brand strong { color: #fff; font-weight: 600; }
+
+        .auth-panel { align-items: flex-start; padding: 40px 18px 56px; }
+        h1 { font-size: 28px; }
+    }
+</style>
+</head>
+<body>
+    <div class="mobile-brand">
+        <span class="mark-tile" aria-hidden="true">JM</span>
+        <p><strong>JMMart</strong> — protected checkout, order tracking, and direct seller chat.</p>
+    </div>
+
+    <div class="split">
+        <aside class="brand-panel">
+            <a class="brand" href="#" aria-label="JMMart marketplace home">
+                <span class="mark-tile" aria-hidden="true">JM</span>
+                JMMart
+            </a>
+
+            <div class="brand-copy">
+                <h2>Everything you need, from sellers you can check.</h2>
+                <p>Your account keeps the cart, the orders, and the conversation in one place.</p>
+
+                <ul class="benefits">
+                    <li>
+                        <span class="benefit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.5 4.5h2l2.2 10.2h9.1l2.2-7.4H7"/></svg></span>
+                        <div><b>Cart that waits for you</b><span>Add now, decide later — it’s there on your next visit.</span></div>
+                    </li>
+                    <li>
+                        <span class="benefit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/></svg></span>
+                        <div><b>Track every order</b><span>From confirmed to delivered, per seller, in one list.</span></div>
+                    </li>
+                    <li>
+                        <span class="benefit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/></svg></span>
+                        <div><b>Message the seller</b><span>Ask about stock or delivery before you commit.</span></div>
+                    </li>
+                </ul>
+            </div>
+
+            <p class="trust">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="m9.2 12.2 2 2 3.6-3.8"/></svg>
+                Payments are processed on verified stores only
+            </p>
+        </aside>
+
+        <main class="auth-panel">
+            <div class="auth-inner">
+                <h1>Finishing your sign-in</h1>
+                <p class="lede">This usually takes a moment. We’re checking, confirming, then securing your account.</p>
+
+                <ol class="timeline">
+                    <li class="step done">
+                        <span class="step-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.5 4.5L19 7"/></svg></span>
+                        <p class="step-title">Check your sign-in</p>
+                        <p class="step-desc">Reading the session your browser already holds.</p>
+                    </li>
+                    <li class="step active">
+                        <span class="step-mark" aria-hidden="true"></span>
+                        <p class="step-title">Confirm your account with Clerk</p>
+                        <p class="step-desc">Clerk verifies you and hands JMMart a session token.</p>
+                    </li>
+                    <li class="step pending">
+                        <span class="step-mark" aria-hidden="true"></span>
+                        <p class="step-title">Secure your JMMart session</p>
+                        <p class="step-desc">Linking that verified identity to your marketplace account.</p>
+                    </li>
+                </ol>
+
+                <p class="note">You’ll be back in the marketplace in a moment. Nothing is charged or changed while you wait.</p>
+
+                <a class="restart" href="#">Taking longer than expected? Sign in again</a>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
