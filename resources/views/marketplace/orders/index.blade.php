@@ -87,6 +87,22 @@
         .done-btn:active { transform: scale(.98); }
         .num { font-variant-numeric: tabular-nums; }
 
+        /* Purchase cards carry the order's journey inline, so "where is it" answers without opening. */
+        .purchase-journey { display: flex; margin: 0; padding: 14px 16px 12px; list-style: none; }
+        .purchase-step { position: relative; z-index: 1; display: flex; flex: 1; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+        .purchase-step::before { content: ''; position: absolute; top: 10px; left: 50%; right: -50%; height: 2px; background: var(--color-line-soft); }
+        .purchase-step:last-child::before { display: none; }
+        .purchase-step.is-done::before { background: #b9cdf2; }
+        .purchase-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 21px; height: 21px; border: 2px solid var(--color-border-strong); border-radius: 50%; background: var(--color-surface); color: transparent; }
+        .purchase-dot svg { width: 11px; height: 11px; }
+        .purchase-step.is-done .purchase-dot { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+        .purchase-step.is-current .purchase-dot { border-color: var(--color-accent); color: var(--color-accent); box-shadow: 0 0 0 4px rgb(32 91 244 / 12%); }
+        .purchase-step.is-current.is-pay .purchase-dot { border-color: #f59e0b; color: var(--color-warning-text); box-shadow: 0 0 0 4px rgb(245 158 11 / 14%); }
+        .purchase-step-label { overflow: hidden; max-width: 100%; font-size: 11px; font-weight: 600; line-height: 1.3; color: var(--color-muted); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+        .purchase-step.is-done .purchase-step-label { color: var(--color-fg); }
+        .purchase-step.is-current .purchase-step-label { color: var(--color-accent); }
+        .purchase-step.is-current.is-pay .purchase-step-label { color: var(--color-warning-text); }
+
         .sk { display: grid; gap: 12px; }
         .sk-line, .sk-block { border-radius: 6px; background: var(--color-line-soft); animation: sk-pulse 1.2s ease-in-out infinite; }
         .sk-line { height: 12px; }
@@ -251,9 +267,8 @@
             <x-input-error :messages="$errors->get('tab')" class="mt-2" />
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
-            {{-- Each order is its own card: a quiet store bar with the total, then the first two item rows.
-                 Every product name keeps a two-row area and breaks after six words on wide screens, and
-                 longer orders end with a single "+ N more items" link into the order. --}}
+            {{-- Each order is its own card: a quiet store bar with the status, then the order's journey,
+                 a thumbnail stack with the order summary, and one contextual note and action. --}}
             <div x-data="{
                 current: null, shown: null, html: '', loading: false, failed: false, pushed: false, cache: {}, pending: {}, warmTimer: null, trigger: null,
                 ids: @js($sellerOrders->pluck('order.id')->unique()->values()),
@@ -344,6 +359,42 @@
                                     }
                                     $items = $sellerOrder->items;
                                     $shortNumber = Str::upper(Str::substr($order->number, -6));
+                                    $itemCount = $items->sum('quantity');
+                                    $firstItem = $items->first();
+                                    $status = $sellerOrder->status;
+                                    $reached = match ($status) {
+                                        'delivered' => 4,
+                                        'shipped' => 3,
+                                        'confirmed', 'processing' => 2,
+                                        'pending' => 1,
+                                        default => 0,
+                                    };
+                                    $journeySteps = $needsPayment
+                                        ? ['Payment due', 'Confirmed', 'Shipped', 'Delivered']
+                                        : ['Confirmed', 'Packed', 'Shipped', 'Delivered'];
+                                    $journeyMeta = match (true) {
+                                        $needsPayment => 'Payment pending',
+                                        $status === 'pending' => 'Awaiting store',
+                                        in_array($status, ['confirmed', 'processing'], true) => 'Preparing',
+                                        $status === 'shipped' => 'On the way',
+                                        $status === 'delivered' => $sellerOrder->delivered_at ? 'Delivered '.$sellerOrder->delivered_at->format('M j') : 'Delivered',
+                                        $status === 'cancelled' => 'Cancelled',
+                                        default => '',
+                                    };
+                                    $journeyNote = match (true) {
+                                        $needsPayment => 'Pay before the store can prepare it',
+                                        $status === 'pending' => 'Waiting for the store to confirm',
+                                        in_array($status, ['confirmed', 'processing'], true) => 'The store is preparing your order',
+                                        $status === 'shipped' => 'On the way to you',
+                                        $status === 'delivered' => 'Review the items you received',
+                                        $status === 'cancelled' => 'This order was cancelled',
+                                        default => '',
+                                    };
+                                    $journeyAction = match (true) {
+                                        $needsPayment => 'Pay in order',
+                                        $status === 'shipped' => 'Track order',
+                                        default => 'View order',
+                                    };
                                     // The pill is the order's own state; buyer/store lateness replaces it with the turn that matters now.
                                     $overlayLabel = $statusLabel;
                                     $overlayVariant = $statusVariant;
@@ -360,7 +411,7 @@
                                         href="{{ route('orders.show', $order) }}"
                                         @click.prevent="open(@js($order->id))"
                                         @pointerenter="warm(@js($order->id))"
-                                        aria-label="Order {{ $order->number }} from {{ $store }}, {{ $overlayLabel }}, ₱{{ number_format($sellerOrder->total, 2) }}"
+                                        aria-label="Order {{ $order->number }} from {{ $store }}, {{ $overlayLabel }}, {{ $itemCount }} {{ Str::plural('item', $itemCount) }}, ₱{{ number_format($sellerOrder->total, 2) }}"
                                         class="block overflow-hidden rounded-[10px] border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)] transition duration-150 hover:border-[var(--color-border-strong)] hover:shadow-[0_2px_10px_rgb(24_44_72/9%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                                     >
                                         <div class="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
@@ -379,41 +430,61 @@
                                             </span>
                                         </div>
 
-                                        <div class="hidden border-b border-line bg-canvas px-4 py-2 sm:grid sm:grid-cols-[48px_minmax(0,1fr)_84px_84px] sm:gap-x-3.5" aria-hidden="true">
-                                            <span></span>
-                                            <span class="text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Product</span>
-                                            <span class="text-right text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Qty</span>
-                                            <span class="text-right text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Total</span>
-                                        </div>
+                                        {{-- Where the order is, in one glance. Cancelled orders have no journey to show. --}}
+                                        @if ($status !== 'cancelled')
+                                            <ol class="purchase-journey" aria-label="Order progress: {{ implode(', ', $journeySteps) }}">
+                                                @foreach ($journeySteps as $index => $stepLabel)
+                                                    @php
+                                                        $step = $index + 1;
+                                                        $stepDone = $step < $reached || ($status === 'delivered' && $step === $reached);
+                                                        $stepCurrent = $step === $reached && $status !== 'delivered';
+                                                    @endphp
+                                                    <li @class([
+                                                        'purchase-step',
+                                                        'is-done' => $stepDone,
+                                                        'is-current' => $stepCurrent,
+                                                        'is-pay' => $stepCurrent && $needsPayment,
+                                                    ])>
+                                                        <span class="purchase-dot">
+                                                            @if ($stepDone)
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+                                                            @endif
+                                                        </span>
+                                                        <span class="purchase-step-label">{{ $stepLabel }}</span>
+                                                        <span class="sr-only">{{ $stepDone ? 'done' : ($stepCurrent ? 'current step' : 'not yet') }}</span>
+                                                    </li>
+                                                @endforeach
+                                            </ol>
+                                        @endif
 
-                                        <ul>
-                                            @foreach ($items as $item)
-                                                @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
-                                                <li class="grid grid-cols-[48px_minmax(0,1fr)] items-center gap-x-3.5 gap-y-1.5 border-b border-line-soft px-4 py-3 last:border-b-0 sm:grid-cols-[48px_minmax(0,1fr)_84px_84px]">
-                                                    <div class="relative size-12 overflow-hidden rounded-md border border-line-soft bg-paper">
+                                        <div class="flex items-center gap-3 border-t border-line-soft px-4 py-3">
+                                            <div class="flex shrink-0" aria-hidden="true">
+                                                @foreach ($items->take(2) as $item)
+                                                    @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
+                                                    <span @class(['relative size-10 overflow-hidden rounded-[7px] border-2 border-white bg-paper', '-ml-3' => ! $loop->first])>
                                                         @if ($itemThumb)
-                                                            <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="48" height="48" loading="lazy" class="size-full object-cover">
+                                                            <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="40" height="40" loading="lazy" class="size-full object-cover">
                                                         @else
                                                             <svg class="absolute inset-0 m-auto size-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
                                                         @endif
-                                                    </div>
-                                                    <div class="min-w-0">
-                                                        <p class="truncate text-[13px] font-semibold leading-[17px] text-ink">{{ $item->product_name }}</p>
-                                                        @if ($item->variant_label)
-                                                            <p class="mt-0.5 truncate text-[11.5px] leading-[15px] text-brand">{{ $item->variant_label }}</p>
-                                                        @endif
-                                                    </div>
-                                                    <div class="col-start-2 flex items-baseline justify-between gap-4 sm:contents">
-                                                        <p class="text-[12.5px] tabular-nums text-muted sm:col-start-3 sm:pt-1 sm:text-right sm:text-[13px] sm:text-ink"><span class="text-muted">Qty: </span>{{ $item->quantity }}<span class="sr-only"> items</span></p>
-                                                        <p class="text-[13px] font-semibold tabular-nums text-ink sm:col-start-4 sm:pt-1 sm:text-right"><span class="sr-only">Line total </span>₱{{ number_format($item->line_total, 2) }}</p>
-                                                    </div>
-                                                </li>
-                                            @endforeach
-                                        </ul>
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-[12.5px] leading-[17px] text-ink">{{ $firstItem?->product_name ?? 'Order items' }}@if ($items->count() > 1) and {{ $items->count() - 1 }} more @endif</p>
+                                                <p class="mt-0.5 truncate text-[11.5px] leading-[15px] text-muted">{{ $journeyMeta }}</p>
+                                            </div>
+                                            <div class="shrink-0 text-right">
+                                                <p class="text-sm font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</p>
+                                                <p class="text-[11px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</p>
+                                            </div>
+                                        </div>
 
-                                        <div class="flex items-center justify-end gap-2 border-t border-line px-4 py-2.5">
-                                            <span class="text-[11.5px] font-medium text-muted">Order total</span>
-                                            <span class="text-sm font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</span>
+                                        <div class="flex items-center justify-between gap-3 border-t border-line-soft bg-[#fbfcfe] px-4 py-2.5">
+                                            <p class="min-w-0 truncate text-[11.5px] text-muted">{{ $journeyNote }}</p>
+                                            <span class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-brand">{{ $journeyAction }}
+                                                <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                                            </span>
                                         </div>
                                     </a>
                                 </article>

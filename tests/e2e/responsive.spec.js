@@ -32,19 +32,18 @@ test('customer finds purchases and opens order actions at each viewport', async 
         ]);
         await expect(filters.getByRole('link', { name: /^All/ })).toHaveAttribute('aria-current', 'page');
         const rowsOrder = page.locator('article[data-order-number="QA-ROWS-001"]');
-        const items = rowsOrder.locator('ul');
-        const chatRow = items.locator('li').filter({ hasText: 'QA Chat Sample' });
-        await expect(chatRow).toContainText('Blue / Medium');
-        await expect(chatRow).toContainText('Qty: 2');
-        await expect(chatRow).toContainText('₱49.98');
-        // Every item row is listed now; nothing sits behind a "more" link.
-        await expect(items.locator('li')).toHaveCount(4);
-        await expect(items.getByText('QA Retired Pouch')).toBeVisible();
-        // Items without a stored photo fall back to the bag glyph, so there is no broken image or noise.
-        await expect(items.locator('li').filter({ hasText: 'QA Chat Sample' }).getByText('Product image unavailable')).toHaveCount(0);
-        if (testInfo.project.name === 'mobile-chromium') {
-            await expect(chatRow).toContainText('₱49.98');
-        }
+        // The card now answers "where is my order" and summarises the items instead of listing them.
+        const journey = rowsOrder.getByRole('list', { name: /^Order progress/ });
+        await expect(journey.getByRole('listitem')).toHaveCount(4);
+        await expect(journey).toContainText('Confirmed');
+        await expect(journey).toContainText('Packed');
+        await expect(journey).toContainText('Shipped');
+        await expect(journey).toContainText('Delivered');
+        await expect(rowsOrder).toContainText('QA Canvas Tote and 3 more');
+        await expect(rowsOrder).toContainText('5 items');
+        await expect(rowsOrder).toContainText('₱80.97');
+        // The rest of the order waits in the dialog; nothing is buried behind a "more" link.
+        await expect(rowsOrder).not.toContainText('QA Chat Sample');
         if (testInfo.project.name === 'mobile-chromium') {
             expect(await filters.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
         }
@@ -56,11 +55,11 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(filters.getByRole('link', { name: /^Delivered/ })).toHaveAttribute('aria-current', 'page');
         await expect(purchase).toBeVisible();
         await expect(rowsOrder).toBeVisible();
-        await expect(rowsOrder.getByText('QA Chat Sample')).toBeVisible();
+        await expect(rowsOrder).toContainText('QA Canvas Tote and 3 more');
         await filters.getByRole('link', { name: /^To review/ }).click();
         await expect(rowsOrder).toBeVisible();
         await expect(purchase).toHaveCount(0);
-        await expect(rowsOrder.getByText('QA Chat Sample')).toBeVisible();
+        await expect(rowsOrder).toContainText('QA Canvas Tote and 3 more');
         await filters.getByRole('link', { name: /^Returns/ }).click();
         await expect(filters.getByRole('link', { name: /^Returns/ })).toHaveAttribute('aria-current', 'page');
         await expect(rowsOrder).toHaveCount(0);
@@ -671,6 +670,11 @@ test('order modal keeps the account sidebar and scroll position', async ({ brows
     try {
         await customer.page.setViewportSize({ width: 1280, height: 600 });
         await customer.page.goto('/orders');
+        const rejectCookies = customer.page.getByRole('button', { name: 'Reject Optional', exact: true }).first();
+        if (await rejectCookies.isVisible()) {
+            await rejectCookies.click();
+            await expect(customer.page.locator('[data-cookie-banner]')).toHaveCount(0);
+        }
         const sidebar = customer.page.locator('aside[aria-label="My account sidebar"]');
         await expect(sidebar).toBeVisible();
 
@@ -678,8 +682,8 @@ test('order modal keeps the account sidebar and scroll position', async ({ brows
             document.querySelector('#purchases').insertAdjacentHTML('afterbegin', '<div style="height:420px"></div>');
         });
 
-        const order = customer.page.locator('article').filter({ has: customer.page.getByRole('link', { name: /order QA-ROWS-001/ }) });
-        const link = order.getByRole('link', { name: 'Order QA-ROWS-001', exact: true });
+        const order = customer.page.locator('article').filter({ has: customer.page.getByRole('link', { name: /^Order QA-ROWS-001/ }) });
+        const link = order.getByRole('link', { name: /^Order QA-ROWS-001/ });
         await link.scrollIntoViewIfNeeded();
         await customer.page.waitForTimeout(150);
 
