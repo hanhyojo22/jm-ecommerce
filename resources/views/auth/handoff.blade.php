@@ -12,80 +12,107 @@
     @include('partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-[#10234d] font-sans text-white antialiased">
-    {{-- The held breath between Clerk's form and the marketplace: same navy as the sign-in panel. --}}
-    <div class="relative isolate flex min-h-screen flex-col overflow-hidden bg-[linear-gradient(158deg,#163a86_0%,#10234d_58%,#0b1a3c_100%)]">
-        <span class="handoff-glow" aria-hidden="true"></span>
-
-        <header class="relative z-10 px-[18px] pt-6 sm:px-8 lg:px-12 lg:pt-9">
-            <a href="{{ route('catalog.index') }}" class="inline-flex items-center gap-2.5 font-display text-lg font-semibold tracking-[-0.02em] text-white" aria-label="JMMart marketplace home">
-                <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-semibold text-[#10234d]" aria-hidden="true">JM</span>
+<body class="min-h-screen overflow-hidden bg-canvas font-sans text-ink antialiased">
+    {{-- The marketplace is already behind the dialog; it settles and blurs while the hand-off runs. --}}
+    <div class="handoff-scene" aria-hidden="true">
+        <header class="flex items-center gap-4 border-b border-line bg-white px-6 py-4">
+            <span class="flex shrink-0 items-center gap-2.5 text-[15px] font-semibold">
+                <span class="grid size-8 place-items-center rounded-lg bg-brand text-[11px] font-semibold text-white">JM</span>
                 JMMart
-            </a>
+            </span>
+            <span class="h-10 flex-1 rounded-md border border-line bg-canvas"></span>
+            <span class="h-10 w-28 rounded-md border border-line bg-white"></span>
+            <span class="size-9 shrink-0 rounded-full bg-[#dfe6f0]"></span>
         </header>
 
-        <main class="relative z-10 flex flex-1 items-center px-[18px] py-12 sm:px-8 lg:px-12">
-            <div class="w-full max-w-[34rem]">
-                <section
-                    data-clerk-session-handoff
-                    data-handoff-stage="load"
-                    data-session-endpoint="{{ route('clerk.handoff.complete') }}"
-                    data-redirect-url="{{ $afterAuthUrl }}"
-                    data-sign-in-url="{{ $signInUrl ?? route('login') }}"
-                    role="status"
-                    aria-live="polite"
-                    class="handoff-wait relative"
-                >
-                    <div class="handoff-rail" aria-hidden="true">
-                        <span class="handoff-seg" data-handoff-seg data-state="active"><span class="handoff-fill"></span></span>
-                        <span class="handoff-seg" data-handoff-seg data-state="idle"><span class="handoff-fill"></span></span>
-                        <span class="handoff-seg" data-handoff-seg data-state="idle"><span class="handoff-fill"></span></span>
+        <div class="mx-auto w-full max-w-[1320px] px-6 py-6">
+            <div class="flex gap-2">
+                <span class="h-7 w-24 rounded-full bg-white"></span>
+                <span class="h-7 w-28 rounded-full bg-white"></span>
+                <span class="h-7 w-20 rounded-full bg-white"></span>
+                <span class="h-7 w-24 rounded-full bg-white"></span>
+            </div>
+
+            <div class="mt-5 h-52 rounded-lg border border-line bg-[linear-gradient(140deg,#eaf1fa,#dce8f7)]"></div>
+
+            <div class="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                @for ($card = 0; $card < 4; $card++)
+                    <div class="overflow-hidden rounded-lg border border-line bg-white">
+                        <div class="h-36 bg-[linear-gradient(150deg,#eef3fa,#e2eaf5)]"></div>
+                        <div class="space-y-2 p-3">
+                            <span class="block h-3.5 w-3/4 rounded bg-[#e9eef6]"></span>
+                            <span class="block h-3 w-2/5 rounded bg-[#eef1f5]"></span>
+                        </div>
                     </div>
+                @endfor
+            </div>
+        </div>
+    </div>
 
-                    <h1 class="mt-7 text-balance font-display text-[2.25rem] font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-[2.6rem] lg:text-[3.2rem]">Finishing your sign-in</h1>
-                    <p data-handoff-status class="mt-3.5 text-[15px] leading-relaxed text-[#d5e2f5] sm:text-base">Checking your sign-in…</p>
-                    <p class="mt-5 max-w-[38ch] text-[13px] leading-relaxed text-[#a6bad9]">You’ll be back in the marketplace in a moment. Nothing is charged or changed while you wait.</p>
+    <div class="handoff-scrim" aria-hidden="true"></div>
 
-                    <a
-                        href="{{ $signInUrl ?? route('login') }}"
-                        class="handoff-restart absolute left-0 top-full mt-5 inline-flex min-h-11 items-center text-sm font-medium text-[#b3c6e2] underline decoration-white/25 underline-offset-4 transition hover:text-white hover:decoration-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-4 focus-visible:ring-offset-[#132a56]"
-                    >Taking longer than expected? Sign in again</a>
-                </section>
+    <main class="handoff-stage">
+        <div class="handoff-modal" role="dialog" aria-labelledby="handoff-heading" tabindex="-1" data-handoff-modal>
+            <div
+                data-clerk-session-handoff
+                data-handoff-stage="load"
+                data-session-endpoint="{{ route('clerk.handoff.complete') }}"
+                data-redirect-url="{{ $afterAuthUrl }}"
+                data-sign-in-url="{{ $signInUrl ?? route('login') }}"
+            >
+                <span class="handoff-spinner" aria-hidden="true"></span>
 
-                <div
-                    data-clerk-handoff-error
-                    hidden
-                    role="alert"
-                    class="max-w-[27rem] rounded-lg bg-white p-6 text-left text-ink shadow-[0_32px_72px_-36px_rgba(3,10,26,.85)]"
-                >
-                    <span class="grid size-9 place-items-center rounded-full bg-danger/10 text-danger" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="size-[18px]"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v5"/><circle cx="12" cy="16.5" r=".9" fill="currentColor" stroke="none"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.2 3.2 16.4A2 2 0 0 0 4.9 19.4h14.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/></svg>
-                    </span>
-                    <h1 data-clerk-handoff-error-title class="mt-4 text-xl font-semibold leading-snug text-ink">We could not finish signing you in.</h1>
-                    <p class="mt-1.5 text-sm leading-relaxed text-muted">The hand-off did not complete. Check your connection, then try again — nothing has been changed yet.</p>
-                    <div class="mt-5 flex flex-col gap-2.5 sm:flex-row">
-                        <a href="{{ $signInUrl ?? route('login') }}" class="inline-flex min-h-11 items-center justify-center rounded-md border border-transparent bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">Return to sign in</a>
-                        <button type="button" data-clerk-handoff-retry class="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">Try again</button>
-                    </div>
+                <h1 id="handoff-heading" class="mt-5 font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em]">Finishing your sign-in</h1>
+                <p class="mt-1.5 text-sm leading-relaxed text-muted">
+                    <span data-handoff-status role="status" aria-live="polite">Checking your sign-in…</span>
+                </p>
+
+                <div class="handoff-rail" aria-hidden="true">
+                    <span class="handoff-seg" data-handoff-seg data-state="active"></span>
+                    <span class="handoff-seg" data-handoff-seg data-state="pending"></span>
+                    <span class="handoff-seg" data-handoff-seg data-state="pending"></span>
                 </div>
 
-                <noscript><p class="mt-6 text-sm leading-relaxed text-[#93a9cd]">JavaScript is required to finish signing in. Please enable JavaScript and try again.</p></noscript>
+                <p class="mt-5 text-[13px] leading-relaxed text-muted">You’ll be back in the marketplace in a moment. Nothing is charged or changed while you wait.</p>
+
+                <a
+                    href="{{ $signInUrl ?? route('login') }}"
+                    class="mt-1 inline-flex min-h-11 items-center text-[13px] font-medium text-muted underline decoration-line underline-offset-4 transition hover:text-ink hover:decoration-ink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                >Taking longer than expected? Sign in again</a>
             </div>
-        </main>
-    </div>
+
+            <div
+                data-clerk-handoff-error
+                hidden
+                role="alert"
+            >
+                <span class="mx-auto grid size-10 place-items-center rounded-full bg-danger/10 text-danger" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="size-[18px]"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v5"/><circle cx="12" cy="16.5" r=".9" fill="currentColor" stroke="none"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.2 3.2 16.4A2 2 0 0 0 4.9 19.4h14.2a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/></svg>
+                </span>
+                <h1 data-clerk-handoff-error-title id="handoff-error-heading" tabindex="-1" class="mt-4 text-lg font-semibold leading-snug text-ink outline-none">We could not finish signing you in.</h1>
+                <p class="mt-1.5 text-[13px] leading-relaxed text-muted">The hand-off did not complete. Check your connection, then try again — nothing has been changed yet.</p>
+                <div class="mt-5 flex flex-col gap-2.5">
+                    <a href="{{ $signInUrl ?? route('login') }}" class="inline-flex min-h-11 items-center justify-center rounded-md border border-transparent bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">Return to sign in</a>
+                    <button type="button" data-clerk-handoff-retry class="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">Try again</button>
+                </div>
+            </div>
+
+            <noscript><p class="mt-5 text-[13px] leading-relaxed text-muted">JavaScript is required to finish signing in. Please enable JavaScript and try again.</p></noscript>
+        </div>
+    </main>
 
     <x-cookie-consent />
 
     <script>
         /*
          * Finishing a hand-off needs the page bundle, Clerk and the server to answer in turn.
-         * Any of them stalling would leave the progress above turning with nothing to explain
-         * it, so this deadline — which needs no bundle of its own — shows the way out instead.
-         * The bundle extends it as each step is reached, so only a hand-off that is genuinely
-         * stuck is called stuck; one that finishes later simply navigates away.
+         * Any of them stalling would leave the dialog spinning with nothing to explain it, so
+         * this deadline — which needs no bundle of its own — shows the way out instead. The
+         * bundle extends it as each step is reached, so only a hand-off that is genuinely stuck
+         * is called stuck; one that finishes later simply navigates away.
          *
-         * The three segments and the line under the heading follow the same steps the bundle
-         * actually takes. Until it reports one, the page claims only that it is loading.
+         * The rail and the line above it follow the steps the bundle actually takes. Until it
+         * reports one, the dialog claims only that it is checking the sign-in it arrived with.
          */
         (() => {
             const handoff = document.querySelector('[data-clerk-session-handoff]');
@@ -93,6 +120,7 @@
             const title = error?.querySelector('[data-clerk-handoff-error-title]');
             const status = handoff?.querySelector('[data-handoff-status]');
             const segments = [...(handoff?.querySelectorAll('[data-handoff-seg]') ?? [])];
+            const modal = document.querySelector('[data-handoff-modal]');
 
             const steps = ['load', 'session', 'server'];
             const labels = {
@@ -111,7 +139,7 @@
 
                 handoff.setAttribute('data-handoff-stage', name);
                 segments.forEach((segment, position) => {
-                    segment.dataset.state = position < reached ? 'done' : position === reached ? 'active' : 'idle';
+                    segment.dataset.state = position < reached ? 'done' : position === reached ? 'active' : 'pending';
                 });
 
                 if (status) {
@@ -132,6 +160,8 @@
 
                 handoff.setAttribute('hidden', '');
                 error.removeAttribute('hidden');
+                modal?.setAttribute('aria-labelledby', 'handoff-error-heading');
+                title?.focus({ preventScroll: true });
             };
 
             let timer = window.setTimeout(fail, 15_000);
@@ -150,6 +180,8 @@
             };
 
             error?.querySelector('[data-clerk-handoff-retry]')?.addEventListener('click', () => window.location.reload());
+
+            modal?.focus({ preventScroll: true });
         })();
     </script>
 </body>

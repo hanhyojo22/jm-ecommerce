@@ -336,10 +336,16 @@ const renderClerkHandoffError = (message = 'We could not finish signing you in.'
 
     /*
      * The page ships the error block next to the spinner so that a bundle which never ran still
-     * leaves a way out. Shown from here directly rather than through the page's own deadline:
-     * that script is the one piece of this page nothing else can stand in for, so this error
-     * path must not depend on it having run.
+     * leaves a way out. When the page's own state object exists, it owns the swap so the dialog
+     * label and focus follow the error; when it does not — a blocked inline script — this path
+     * must not depend on it, so the swap happens here directly.
      */
+    if (typeof window.clerkHandoffState?.fail === 'function') {
+        window.clerkHandoffState.fail(message);
+
+        return;
+    }
+
     window.clerkHandoffState?.finish();
 
     const errorBlock = document.querySelector('[data-clerk-handoff-error]');
