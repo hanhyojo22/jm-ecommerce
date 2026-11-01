@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Shopping cart — compact cards (review)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #f6f8fc;
+        --surface: #fff;
+        --canvas: #f8fafc;
+        --ink: #182c48;
+        --muted: #596b83;
+        --line: #e3e8f1;
+        --line-soft: #eef1f5;
+        --brand: #205bf4;
+        --brand-hover: #1d4ed8;
+        --success: #166534;
+        --thumb: 56px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    h1, h2, h3, p { margin: 0; }
+    .num { font-variant-numeric: tabular-nums; }
+    button { font-family: inherit; }
+
+    /* App chrome, so the cart is judged inside the real room. */
+    .topbar { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line); background: #fff; }
+    .topbar-inner { display: flex; align-items: center; gap: 16px; max-width: 1320px; margin: 0 auto; padding: 12px 18px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; letter-spacing: -.02em; }
+    .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--brand); color: #fff; font-size: 12px; font-weight: 600; }
+    .search { display: flex; flex: 1; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: #8294ab; font-size: 13px; }
+    .search svg { width: 16px; height: 16px; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    .icon-btn { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 6px; background: transparent; color: var(--ink); }
+    .icon-btn svg { width: 21px; height: 21px; }
+    .account { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 13px; font-weight: 500; }
+
+    .page { max-width: 1320px; margin: 0 auto; padding: 34px 18px 72px; }
+    .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    h1 { font-size: 28px; font-weight: 600; letter-spacing: -.03em; }
+    .lede { margin-top: 4px; font-size: 13px; color: var(--muted); }
+    .continue { font-size: 13px; font-weight: 600; color: var(--brand); }
+
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: 32px; margin-top: 24px; align-items: start; }
+
+    .selectbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .check { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; }
+    .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--brand); }
+    .selectbar .count { font-size: 13px; color: var(--muted); }
+    .selectbar .remove { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 13px; font-weight: 600; }
+
+    .seller { overflow: hidden; margin-top: 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .seller:first-of-type { margin-top: 0; }
+    .seller-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--line); background: rgb(246 248 252 / 70%); }
+    .seller-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .sold { font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .seller-name { display: block; font-size: 13px; font-weight: 600; color: var(--brand); }
+    .seller-count { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+    .item { display: grid; grid-template-columns: 18px var(--thumb) minmax(0, 1fr) minmax(9rem, auto); align-items: start; gap: 16px; padding: 14px 16px; border-top: 1px solid var(--line); }
+    .item:first-of-type { border-top: 0; }
+    .item .check { align-self: start; margin-top: calc((var(--thumb) - 18px) / 2); }
+    .item .check input { width: 18px; height: 18px; }
+
+    .thumb { display: block; position: relative; width: var(--thumb); height: var(--thumb); overflow: hidden; border: 1px solid var(--line-soft); border-radius: 6px; background: #f1f5f9; }
+    .thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .thumb .fallback { position: absolute; inset: 0; display: grid; place-items: center; color: #94a3b8; }
+    .thumb .fallback svg { width: 45%; height: 45%; }
+
+    .item-copy { min-width: 0; }
+    .item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .item-text { display: flex; flex-direction: column; justify-content: center; min-height: var(--thumb); }
+    .item-total-mobile { display: none; }
+    .item-name { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 17px; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+    .item-variant { overflow: hidden; margin-top: 2px; font-size: 11.5px; font-weight: 500; line-height: 15px; color: var(--brand); text-overflow: ellipsis; white-space: nowrap; }
+    .item-stock { margin-top: 6px; font-size: 11px; font-weight: 600; color: var(--success); }
+
+    .item-aside { display: flex; flex-direction: column; align-items: flex-end; align-self: center; gap: 6px; }
+    .line-total { font-size: 14px; font-weight: 600; }
+    .controls { display: flex; align-items: center; gap: 8px; }
+    .stepper { display: inline-flex; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+    .stepper button { width: 28px; height: 28px; border: 0; background: none; color: var(--muted); font-size: 13px; }
+    .stepper span { display: grid; place-items: center; min-width: 28px; height: 28px; border-inline: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+    .trash { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); }
+    .trash svg { width: 15px; height: 15px; }
+    .trash:hover { background: #fff1f2; color: #b91c1c; }
+
+    .mobile-controls { display: none; }
+
+    .summary { position: sticky; top: 92px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .summary h2 { font-size: 16px; font-weight: 600; letter-spacing: -.02em; }
+    .summary-rows { margin-top: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+    .summary-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+    .summary-row + .summary-row { margin-top: 12px; }
+    .summary-row .free { font-weight: 600; color: var(--success); }
+    .summary-total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 18px; font-size: 14px; font-weight: 600; }
+    .summary-total strong { font-size: 22px; font-weight: 600; letter-spacing: -.04em; }
+    .checkout { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; margin-top: 20px; border: 0; border-radius: 6px; background: var(--brand); color: #fff; font-size: 13px; font-weight: 600; }
+    .summary-note { margin-top: 14px; text-align: center; font-size: 11.5px; color: var(--muted); }
+
+    /* Review switch, not part of the cart. */
+    .review-bar { position: fixed; bottom: 14px; left: 50%; z-index: 40; display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: rgb(255 255 255 / 94%); box-shadow: 0 10px 28px rgb(24 44 72 / 12%); transform: translateX(-50%); }
+    .review-bar span { padding: 0 8px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #94a3b8; }
+    .review-bar button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+    .review-bar button[aria-pressed="true"] { background: #eef2f8; color: var(--ink); }
+
+    body[data-size="current"] { --thumb: 112px; }
+
+    @media (max-width: 1000px) {
+        .grid { grid-template-columns: 1fr; }
+        .summary { display: none; }
+    }
+
+    @media (max-width: 720px) {
+        .topbar-inner { flex-wrap: wrap; row-gap: 10px; }
+        .search { order: 3; flex-basis: 100%; white-space: nowrap; overflow: hidden; }
+        .search span { overflow: hidden; text-overflow: ellipsis; }
+    }
+
+    @media (max-width: 640px) {
+        body { --thumb: 48px; }
+        .page { padding: 24px 12px 60px; }
+        h1 { font-size: 22px; }
+        .item { grid-template-columns: 18px var(--thumb) minmax(0, 1fr); gap: 12px; padding: 12px; }
+        .seller-head { padding: 12px; }
+        .selectbar { padding: 12px; }
+        .item-aside { display: none; }
+        .item-text { min-height: 0; }
+        .item-total-mobile { display: block; font-size: 13px; font-weight: 600; }
+        .mobile-controls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+        .mobile-controls .stepper button { width: 28px; height: 28px; }
+        .mobile-controls .stepper span { height: 28px; min-width: 28px; }
+        .mobile-controls .trash { width: 28px; height: 28px; }
+        .topbar-actions .account span { display: none; }
+    }
+</style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <a class="brand" href="#"><span class="brand-mark">JM</span> JMMart</a>
+            <div class="search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg>
+                <span>Search products and stores</span>
+            </div>
+            <div class="topbar-actions">
+                <button class="icon-btn" aria-label="Messages">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>
+                </button>
+                <button class="icon-btn" aria-label="Cart, 3 items">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg>
+                </button>
+                <span class="account">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+                    <span>Hi, JM</span>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main class="page">
+        <div class="page-head">
+            <div>
+                <h1>Shopping cart</h1>
+                <p class="lede">3 items · Grouped by seller</p>
+            </div>
+            <a class="continue" href="#">Continue shopping</a>
+        </div>
+
+        <div class="grid">
+            <section aria-label="Cart items grouped by seller">
+                <div class="selectbar">
+                    <label class="check"><input type="checkbox" checked> Select all</label>
+                    <p class="count">3 of 3 selected</p>
+                    <button class="remove" type="button">Remove selected</button>
+                </div>
+
+                <section class="seller" aria-label="QA Northwind Store">
+                    <div class="seller-head">
+                        <div class="seller-id">
+                            <input type="checkbox" checked aria-label="Select all items from QA Northwind Store" style="width:18px;height:18px;accent-color:var(--brand)">
+                            <a class="seller-name" href="#">QA Northwind Store</a>
+                        </div>
+                        <p class="seller-count">3 items</p>
+                    </div>
+
+                    <article class="item">
+                        <label class="check"><input type="checkbox" checked aria-label="Select QA Canvas Tote"></label>
+                        <a class="thumb" href="#" aria-label="View QA Canvas Tote">
+                            <svg class="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                        </a>
+                        <div class="item-copy">
+                            <div class="item-top">
+                                <div class="item-text">
+                                    <h2 class="item-name">QA Canvas Tote</h2>
+                                </div>
+                                <p class="item-total-mobile num">₱19.99</p>
+                            </div>
+                            <div class="mobile-controls">
+                                <div class="stepper"><button type="button" aria-label="Reduce quantity">−</button><span>1</span><button type="button" aria-label="Increase quantity">+</button></div>
+                                <button class="trash" type="button" aria-label="Remove QA Canvas Tote">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="item-aside">
+                            <p class="line-total num">₱19.99</p>
+                            <div class="controls">
+                                <div class="stepper"><button type="button" aria-label="Reduce quantity">−</button><span>1</span><button type="button" aria-label="Increase quantity">+</button></div>
+                                <button class="trash" type="button" aria-label="Remove QA Canvas Tote">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="item">
+                        <label class="check"><input type="checkbox" checked aria-label="Select QA Chat Sample"></label>
+                        <a class="thumb" href="#" aria-label="View QA Chat Sample">
+                            <svg class="fallback" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                        </a>
+                        <div class="item-copy">
+                            <div class="item-top">
+                                <div class="item-text">
+                                    <h2 class="item-name">QA Chat Sample</h2>
+                                    <p class="item-variant">Blue / Medium</p>
+                                </div>
+                                <p class="item-total-mobile num">₱49.98</p>
+                            </div>
+                            <div class="mobile-controls">
+                                <div class="stepper"><button type="button" aria-label="Reduce quantity">−</button><span>2</span><button type="button" aria-label="Increase quantity">+</button></div>
+                                <button class="trash" type="button" aria-label="Remove QA Chat Sample">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="item-aside">
+                            <p class="line-total num">₱49.98</p>
+                            <div class="controls">
+                                <div class="stepper"><button type="button" aria-label="Reduce quantity">−</button><span>2</span><button type="button" aria-label="Increase quantity">+</button></div>
+                                <button class="trash" type="button" aria-label="Remove QA Chat Sample">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+            </section>
+
+            <aside class="summary" aria-label="Order summary">
+                <h2>Order summary</h2>
+                <div class="summary-rows">
+                    <p class="summary-row"><span>Subtotal (3 items)</span><span class="num">₱69.97</span></p>
+                    <p class="summary-row"><span>Shipping</span><span class="free">Free</span></p>
+                </div>
+                <p class="summary-total"><span>Total</span><strong class="num">₱69.97</strong></p>
+                <button class="checkout" type="button">Check out (3)</button>
+                <p class="summary-note">Cash on delivery · Free shipping · No hidden fees</p>
+            </aside>
+        </div>
+    </main>
+</body>
+</html>
