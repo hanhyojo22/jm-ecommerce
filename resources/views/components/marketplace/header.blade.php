@@ -144,12 +144,21 @@
                             </div>
                             <nav aria-label="Account links" class="border-t border-line py-1">
                                 @if ($isBuyer && ! $isSellerWorkspace)
-                                    <a href="{{ route('orders.index') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
+                                    <a href="{{ route('orders.index') }}" class="flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">
+                                        <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z" /><path d="m4 7.5 8 4.5 8-4.5M12 12v9" /></svg>
+                                        My Purchases
+                                    </a>
                                 @endif
                                 @if ($canUseMessages)
-                                    <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
+                                    <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">
+                                        <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
+                                        Messages
+                                    </a>
                                 @endif
-                                <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">My account</a>
+                                <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">
+                                    <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
+                                    My account
+                                </a>
                                 @if ($user->account_type === 'seller' && ! $sellerTenant)
                                     <a href="{{ route('seller-application.create') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition hover:bg-canvas">{{ $sellerEntry }}</a>
                                 @endif
@@ -170,7 +179,7 @@
                                     </form>
                                 </div>
                             @endif
-                            <div class="border-t border-line pt-1"><button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800">Sign out</button></div>
+                            <div class="border-t border-line pt-1"><button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium text-muted transition hover:bg-rose-50 hover:text-rose-800"><svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="m10 17 5-5-5-5M15 12H3" /></svg>Sign out</button></div>
                         </div>
                     </div>
                 @else
