@@ -79,14 +79,14 @@
                                             @foreach ($storeItems as $item)
                                                 @php($availableStock = $item->variant?->stock_quantity ?? $item->product->stock_quantity)
                                                 @php($isUnavailable = ! $item->isAvailable())
-                                                <article class="grid grid-cols-[auto_3rem_minmax(0,1fr)] gap-x-3 gap-y-4 p-3 sm:grid-cols-[auto_3.5rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:px-4 sm:py-3.5 {{ $isUnavailable ? 'bg-canvas/40' : '' }}">
+                                                <article class="grid grid-cols-[auto_3.5rem_minmax(0,1fr)] gap-x-3 gap-y-4 p-3 sm:grid-cols-[auto_4rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:px-4 sm:py-3.5 {{ $isUnavailable ? 'bg-canvas/40' : '' }}">
                                                     <div class="flex items-start">
-                                                        <input type="checkbox" id="select-{{ $item->id }}" @checked($item->selected) x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="mt-[14px] size-5 shrink-0 rounded-md border-line text-brand focus:ring-brand disabled:opacity-40 sm:mt-[18px]">
+                                                        <input type="checkbox" id="select-{{ $item->id }}" @checked($item->selected) x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="mt-[18px] size-5 shrink-0 rounded-md border-line text-brand focus:ring-brand disabled:opacity-40 sm:mt-[22px]">
                                                     </div>
 
                                                     <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-md border border-line-soft bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $isUnavailable ? 'opacity-60' : '' }}">
                                                         @if ($item->imagePath())
-                                                            <img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="{{ $item->product->name }}" width="56" height="56" loading="lazy" class="h-full w-full object-cover">
+                                                            <img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="{{ $item->product->name }}" width="64" height="64" loading="lazy" class="h-full w-full object-cover">
                                                         @else
                                                             <div class="grid h-full place-items-center text-lg font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($store->name, 0, 1)) }}</div>
                                                         @endif
@@ -94,7 +94,7 @@
 
                                                     <div class="min-w-0">
                                                         <div class="flex items-start justify-between gap-3">
-                                                            <div class="flex min-h-[48px] min-w-0 flex-col justify-center sm:min-h-[56px]">
+                                                            <div class="flex min-w-0 flex-col">
                                                                 <h3 class="truncate text-[13px] font-semibold leading-[17px] text-ink"><a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $item->product->name }}</a></h3>
                                                                 @if ($item->variant)<p class="mt-0.5 truncate text-[11.5px] font-medium leading-[15px] text-brand">{{ $item->variant->label() }}</p>@endif
                                                             </div>
@@ -123,7 +123,7 @@
                                                         </div>
                                                     </div>
 
-                                                    <div class="hidden sm:flex sm:flex-col sm:items-end sm:gap-1.5 sm:self-center">
+                                                    <div class="hidden sm:flex sm:flex-col sm:items-end sm:gap-1.5 sm:self-start">
                                                         <p class="text-right text-sm font-semibold tabular-nums text-ink">₱{{ number_format($item->line_total, 2) }}</p>
                                                         <div class="flex items-center gap-2">
                                                         <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex items-center overflow-hidden rounded-md border border-line bg-surface">
