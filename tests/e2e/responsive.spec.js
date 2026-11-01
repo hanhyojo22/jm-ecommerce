@@ -32,18 +32,24 @@ test('customer finds purchases and opens order actions at each viewport', async 
         ]);
         await expect(filters.getByRole('link', { name: /^All/ })).toHaveAttribute('aria-current', 'page');
         const rowsOrder = page.locator('article[data-order-number="QA-ROWS-001"]');
-        // The card now answers "where is my order" and summarises the items instead of listing them.
+        // The card answers "where is my order" up top, then lists every item in the order.
         const journey = rowsOrder.getByRole('list', { name: /^Order progress/ });
         await expect(journey.getByRole('listitem')).toHaveCount(4);
         await expect(journey).toContainText('Confirmed');
         await expect(journey).toContainText('Packed');
         await expect(journey).toContainText('Shipped');
         await expect(journey).toContainText('Delivered');
-        await expect(rowsOrder).toContainText('QA Canvas Tote and 3 more');
+        const items = rowsOrder.locator('ul');
+        const chatRow = items.locator('li').filter({ hasText: 'QA Chat Sample' });
+        await expect(chatRow).toContainText('Blue / Medium');
+        await expect(chatRow).toContainText('Qty: 2');
+        await expect(chatRow).toContainText('₱49.98');
+        await expect(items.locator('li')).toHaveCount(4);
+        await expect(items.getByText('QA Retired Pouch')).toBeVisible();
         await expect(rowsOrder).toContainText('5 items');
+        await expect(rowsOrder).toContainText('Order total');
         await expect(rowsOrder).toContainText('₱80.97');
-        // The rest of the order waits in the dialog; nothing is buried behind a "more" link.
-        await expect(rowsOrder).not.toContainText('QA Chat Sample');
+        await expect(rowsOrder).not.toContainText('QA Canvas Tote and 3 more');
         if (testInfo.project.name === 'mobile-chromium') {
             expect(await filters.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
         }
@@ -55,11 +61,11 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(filters.getByRole('link', { name: /^Delivered/ })).toHaveAttribute('aria-current', 'page');
         await expect(purchase).toBeVisible();
         await expect(rowsOrder).toBeVisible();
-        await expect(rowsOrder).toContainText('QA Canvas Tote and 3 more');
+        await expect(rowsOrder.getByText('QA Chat Sample')).toBeVisible();
         await filters.getByRole('link', { name: /^To review/ }).click();
         await expect(rowsOrder).toBeVisible();
         await expect(purchase).toHaveCount(0);
-        await expect(rowsOrder).toContainText('QA Canvas Tote and 3 more');
+        await expect(rowsOrder.getByText('QA Chat Sample')).toBeVisible();
         await filters.getByRole('link', { name: /^Returns/ }).click();
         await expect(filters.getByRole('link', { name: /^Returns/ })).toHaveAttribute('aria-current', 'page');
         await expect(rowsOrder).toHaveCount(0);

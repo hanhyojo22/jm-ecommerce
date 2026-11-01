@@ -180,7 +180,7 @@ class PurchaseIndexTest extends TestCase
             ->assertDontSee(route('messages.seller-orders.start', $sellerOrder), false);
     }
 
-    public function test_purchase_cards_summarise_the_order_instead_of_listing_every_item(): void
+    public function test_purchase_cards_list_every_item_in_the_order(): void
     {
         $buyer = User::factory()->create();
         $order = $this->order($buyer, 'MANY-001', '30.00');
@@ -199,13 +199,12 @@ class PurchaseIndexTest extends TestCase
 
         $this->actingAs($buyer)->get(route('orders.index'))
             ->assertOk()
-            ->assertSee('Bundle Store Product and 2 more')
+            ->assertSee('Bundle Store Product')
+            ->assertSee('Second Bundle Item')
+            ->assertSee('Third Bundle Item')
             ->assertSee('3 items')
             ->assertSee('₱30.00')
-            // One summary row replaces the per-item list, so the rest of the order waits in the dialog.
-            ->assertDontSee('Second Bundle Item')
-            ->assertDontSee('Third Bundle Item')
-            ->assertDontSee('1 more item')
+            ->assertDontSee('and 2 more')
             ->assertSee(route('orders.show', $order), false);
     }
 

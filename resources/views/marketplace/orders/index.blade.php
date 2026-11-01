@@ -268,7 +268,7 @@
             <x-input-error :messages="$errors->get('status')" class="mt-2" />
 
             {{-- Each order is its own card: a quiet store bar with the status, then the order's journey,
-                 a thumbnail stack with the order summary, and one contextual note and action. --}}
+                 every item in the order, the order total, and one contextual note and action. --}}
             <div x-data="{
                 current: null, shown: null, html: '', loading: false, failed: false, pushed: false, cache: {}, pending: {}, warmTimer: null, trigger: null,
                 ids: @js($sellerOrders->pluck('order.id')->unique()->values()),
@@ -358,7 +358,6 @@
                                     $items = $sellerOrder->items;
                                     $shortNumber = Str::upper(Str::substr($order->number, -6));
                                     $itemCount = $items->sum('quantity');
-                                    $firstItem = $items->first();
                                     $status = $sellerOrder->status;
                                     $reached = match ($status) {
                                         'delivered' => 4,
@@ -370,15 +369,6 @@
                                     $journeySteps = $needsPayment
                                         ? ['Payment due', 'Confirmed', 'Shipped', 'Delivered']
                                         : ['Confirmed', 'Packed', 'Shipped', 'Delivered'];
-                                    $journeyMeta = match (true) {
-                                        $needsPayment => 'Payment pending',
-                                        $status === 'pending' => 'Awaiting store',
-                                        in_array($status, ['confirmed', 'processing'], true) => 'Preparing',
-                                        $status === 'shipped' => 'On the way',
-                                        $status === 'delivered' => $sellerOrder->delivered_at ? 'Delivered '.$sellerOrder->delivered_at->format('M j') : 'Delivered',
-                                        $status === 'cancelled' => 'Cancelled',
-                                        default => '',
-                                    };
                                     $journeyNote = match (true) {
                                         $needsPayment => 'Pay before the store can prepare it',
                                         $status === 'pending' => 'Waiting for the store to confirm',
@@ -455,27 +445,37 @@
                                             </ol>
                                         @endif
 
-                                        <div class="flex items-center gap-3 border-t border-line-soft px-4 py-3">
-                                            <div class="flex shrink-0" aria-hidden="true">
-                                                @foreach ($items->take(2) as $item)
-                                                    @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
-                                                    <span @class(['relative size-10 overflow-hidden rounded-[7px] border-2 border-white bg-paper', '-ml-3' => ! $loop->first])>
+                                        <ul @class(['border-t border-line-soft' => $status !== 'cancelled'])>
+                                            @foreach ($items as $item)
+                                                @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
+                                                <li class="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 border-b border-line-soft px-4 py-3 last:border-b-0 sm:grid-cols-[40px_minmax(0,1fr)_64px_96px]">
+                                                    <div class="relative size-10 overflow-hidden rounded-md border border-line-soft bg-paper">
                                                         @if ($itemThumb)
                                                             <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="40" height="40" loading="lazy" class="size-full object-cover">
                                                         @else
                                                             <svg class="absolute inset-0 m-auto size-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
                                                         @endif
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                            <div class="min-w-0 flex-1">
-                                                <p class="truncate text-[12.5px] leading-[17px] text-ink">{{ $firstItem?->product_name ?? 'Order items' }}@if ($items->count() > 1) and {{ $items->count() - 1 }} more @endif</p>
-                                                <p class="mt-0.5 truncate text-[11.5px] leading-[15px] text-muted">{{ $journeyMeta }}</p>
-                                            </div>
-                                            <div class="shrink-0 text-right">
-                                                <p class="text-sm font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</p>
-                                                <p class="text-[11px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</p>
-                                            </div>
+                                                    </div>
+                                                    <div class="min-w-0">
+                                                        <p class="truncate text-[13px] font-semibold leading-[17px] text-ink">{{ $item->product_name }}</p>
+                                                        @if ($item->variant_label)
+                                                            <p class="mt-0.5 truncate text-[11.5px] leading-[15px] text-brand">{{ $item->variant_label }}</p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="col-start-2 flex items-baseline justify-between gap-4 sm:contents">
+                                                        <p class="text-[12.5px] tabular-nums text-muted sm:col-start-3 sm:text-right sm:text-[13px] sm:text-ink"><span class="text-muted">Qty: </span>{{ $item->quantity }}<span class="sr-only"> items</span></p>
+                                                        <p class="text-[13px] font-semibold tabular-nums text-ink sm:col-start-4 sm:text-right"><span class="sr-only">Line total </span>₱{{ number_format($item->line_total, 2) }}</p>
+                                                    </div>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+
+                                        <div class="flex items-baseline justify-between gap-3 border-t border-line px-4 py-2.5 sm:justify-end sm:gap-4">
+                                            <span class="text-[11.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</span>
+                                            <span class="inline-flex items-baseline gap-2">
+                                                <span class="text-[11.5px] font-medium text-muted">Order total</span>
+                                                <b class="text-sm font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</b>
+                                            </span>
                                         </div>
 
                                         <div class="flex items-center justify-between gap-3 border-t border-line-soft bg-[#fbfcfe] px-4 py-2.5">
