@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign-in hand-off — mockup round</title>
+<title>Sign-in hand-off — mockup rounds</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -12,33 +12,73 @@
     body { min-height: 100vh; padding: 56px 24px 72px; font-family: Inter, system-ui, sans-serif; color: #182c48; background: #f6f8fc; -webkit-font-smoothing: antialiased; }
     main { max-width: 960px; margin: 0 auto; }
     h1 { font-size: 30px; font-weight: 600; letter-spacing: -.03em; }
-    .lede { margin-top: 8px; max-width: 62ch; font-size: 15px; line-height: 1.6; color: #596b83; }
-    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 34px; }
+    .lede { margin-top: 8px; max-width: 64ch; font-size: 15px; line-height: 1.6; color: #596b83; }
+    .round { margin-top: 44px; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #8294ab; }
+    .round-lede { margin-top: 6px; max-width: 64ch; font-size: 14px; line-height: 1.6; color: #596b83; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid #e3e8f1; border-radius: 8px; background: #fff; }
     .card a.art { display: block; aspect-ratio: 4 / 3; overflow: hidden; background: #eef2f8; }
-    .card img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+    .card img { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
     .card .body { display: flex; flex: 1; flex-direction: column; padding: 16px; }
     .tag { align-self: flex-start; margin-bottom: 10px; padding: 2px 8px; border-radius: 999px; background: #e8f0ff; color: #1d4ed8; font-size: 11px; font-weight: 600; }
+    .tag.neutral { background: #eef1f5; color: #596b83; }
     .card h2 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
     .card p { flex: 1; margin-top: 6px; font-size: 13px; line-height: 1.6; color: #596b83; }
     .card .open { margin-top: 14px; font-size: 13px; font-weight: 600; color: #205bf4; }
-    .card.neutral .tag { background: #eef1f5; color: #596b83; }
-    .foot { margin-top: 28px; font-size: 12px; line-height: 1.6; color: #596b83; }
-    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    .foot { margin-top: 32px; font-size: 12px; line-height: 1.6; color: #596b83; }
+    @media (max-width: 760px) { .grid, .grid.two { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
     <main>
-        <h1>Sign-in hand-off — mockup round</h1>
-        <p class="lede">Three directions for the page that appears after Clerk signs you in. All share the same job: explain the wait, show real progress, and keep a way out if it stalls. One is recommended; nothing is built yet.</p>
+        <h1>Sign-in hand-off — mockup rounds</h1>
+        <p class="lede">Round one explored three full-page directions. A was chosen, built, then replaced by the modal that ships today. Round two makes the JMMart logo the only indicator and, in F, drops the card and the backdrop entirely — mockups only, not built.</p>
+
+        <p class="round">Round two — logo only (mockups, not built)</p>
+        <p class="round-lede">The stepper is gone and the JMMart mark is the only indicator. F strips the dialog away entirely — no card, no backdrop page, no note — and carries all three states: waiting, a quiet way out after six seconds, and a failure that replaces the lines in place.</p>
+
+        <div class="grid">
+            <article class="card">
+                <a class="art" href="handoff-f-states.html" aria-label="Open mockup F"><img src="shots/handoff-f-thumb.png" alt=""></a>
+                <div class="body">
+                    <span class="tag">Chosen</span>
+                    <h2>F · Logo ring, all three states</h2>
+                    <p>Full-bleed white, the blue JMMart mark with one thin arc, the heading, the live step. After six seconds a quiet way out appears; a failed hand-off swaps in place for the error with <b>Try again</b> and <b>Return to sign in</b> — no card at any point.</p>
+                    <a class="open" href="handoff-f-states.html">Open mockup F →</a>
+                </div>
+            </article>
+
+            <article class="card">
+                <a class="art" href="handoff-d-logo-ring.html" aria-label="Open mockup D"><img src="shots/handoff-d-thumb.png" alt=""></a>
+                <div class="body">
+                    <span class="tag neutral">Earlier</span>
+                    <h2>D · Logo ring in the modal</h2>
+                    <p>The same logo spinner, still inside the white dialog over the blurred marketplace, with the note and the escape link.</p>
+                    <a class="open" href="handoff-d-logo-ring.html">Open mockup D →</a>
+                </div>
+            </article>
+
+            <article class="card">
+                <a class="art" href="handoff-e-logo-breathe.html" aria-label="Open mockup E"><img src="shots/handoff-e-thumb.png" alt=""></a>
+                <div class="body">
+                    <span class="tag neutral">Quietest</span>
+                    <h2>E · Logo breathing</h2>
+                    <p>The logo alone, fading and settling gently — no ring, no rotation. Calmest of the three, though the wait is less obviously active.</p>
+                    <a class="open" href="handoff-e-logo-breathe.html">Open mockup E →</a>
+                </div>
+            </article>
+        </div>
+
+        <p class="round">Round one — full-page directions (superseded)</p>
 
         <div class="grid">
             <article class="card">
                 <a class="art" href="handoff-a-same-room.html" aria-label="Open mockup A"><img src="shots/handoff-a-desktop.png" alt=""></a>
                 <div class="body">
-                    <span class="tag">Recommended</span>
+                    <span class="tag neutral">Chosen</span>
                     <h2>A · The same room</h2>
-                    <p>Continues the sign-in page exactly: the navy promise panel stays, and the white panel where the Clerk form sat becomes the hand-off. Three real steps on a rail, one live at a time.</p>
+                    <p>Continues the sign-in page exactly: the navy promise panel stays, and the white panel where the Clerk form sat becomes the hand-off with three real steps on a rail.</p>
                     <a class="open" href="handoff-a-same-room.html">Open mockup A →</a>
                 </div>
             </article>
@@ -46,9 +86,9 @@
             <article class="card">
                 <a class="art" href="handoff-b-marketplace-arrives.html" aria-label="Open mockup B"><img src="shots/handoff-b-desktop.png" alt=""></a>
                 <div class="body">
-                    <span class="tag">Boldest</span>
+                    <span class="tag neutral">Alternate</span>
                     <h2>B · The marketplace arrives</h2>
-                    <p>Don’t show a waiting page — show the destination. The real header plus a skeleton storefront load behind a compact status card that carries the steps and the escape hatch.</p>
+                    <p>The real header plus a skeleton storefront load behind a compact status card that carries the steps and the escape hatch.</p>
                     <a class="open" href="handoff-b-marketplace-arrives.html">Open mockup B →</a>
                 </div>
             </article>
@@ -56,15 +96,15 @@
             <article class="card">
                 <a class="art" href="handoff-c-quiet-threshold.html" aria-label="Open mockup C"><img src="shots/handoff-c-desktop.png" alt=""></a>
                 <div class="body">
-                    <span class="tag">Calmest</span>
+                    <span class="tag neutral">Alternate</span>
                     <h2>C · The quiet threshold</h2>
-                    <p>The current navy screen, recomposed: centred type, the three steps laid flat as a labelled rail, and a single hairline of progress. Least movement from what ships today.</p>
+                    <p>Centred navy screen with the three steps laid flat as a labelled rail. Closest to the first shipped version.</p>
                     <a class="open" href="handoff-c-quiet-threshold.html">Open mockup C →</a>
                 </div>
             </article>
         </div>
 
-        <p class="foot">Mockups are standalone HTML with the same palette and Inter as the app; the Clerk hand-off itself, the deadline, and the failure card already exist and would be carried over unchanged. Error states are not pictured.</p>
+        <p class="foot">The shipped page today is the modal with the stepper and spinner. F, D and E are concepts only, so nothing on the live site changes until you confirm a build. Screenshots live in <code>shots/</code>.</p>
     </main>
 </body>
 </html>

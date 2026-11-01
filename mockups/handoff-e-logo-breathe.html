@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modal mockup E — logo breathing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg: #f6f8fc;
+        --surface: #fff;
+        --ink: #182c48;
+        --muted: #596b83;
+        --line: #e3e8f1;
+        --brand: #205bf4;
+    }
+
+    body {
+        min-height: 100vh;
+        overflow: hidden;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ---------- the marketplace behind the dialog ---------- */
+    .scene {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        background: var(--bg);
+        filter: blur(6px);
+        transform: scale(1.02);
+        pointer-events: none;
+    }
+
+    .scene-header { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--line); background: #fff; }
+    .scene-brand { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+    .scene-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 600; }
+    .scene-search { flex: 1; height: 40px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+    .scene-action { width: 112px; height: 40px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+    .scene-avatar { width: 36px; height: 36px; border-radius: 50%; background: #dfe6f0; }
+
+    .scene-body { max-width: 1320px; margin: 0 auto; padding: 24px; }
+    .scene-chips { display: flex; gap: 8px; }
+    .scene-chip { height: 28px; border-radius: 999px; background: #fff; }
+    .scene-hero { height: 208px; margin-top: 20px; border: 1px solid var(--line); border-radius: 8px; background: linear-gradient(140deg, #eaf1fa, #dce8f7); }
+    .scene-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 28px; }
+    .scene-card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+    .scene-thumb { height: 144px; background: linear-gradient(150deg, #eef3fa, #e2eaf5); }
+    .scene-lines { padding: 12px; }
+    .scene-line { height: 14px; border-radius: 4px; background: #e9eef6; }
+    .scene-line + .scene-line { width: 40%; height: 12px; margin-top: 8px; background: #eef1f5; }
+
+    .scrim { position: fixed; inset: 0; background: rgb(10 18 34 / 42%); }
+
+    /* ---------- the dialog ---------- */
+    .stage { position: relative; z-index: 10; display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 40px 16px; }
+
+    .modal {
+        width: 100%;
+        max-width: 400px;
+        padding: 28px;
+        border-radius: 12px;
+        background: var(--surface);
+        box-shadow: 0 40px 80px -32px rgb(9 17 33 / 45%), 0 8px 24px rgb(9 17 33 / 8%);
+        text-align: center;
+        animation: modal-in .24s cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    @keyframes modal-in {
+        from { opacity: 0; transform: translateY(8px) scale(.985); }
+    }
+
+    /* The logo is the indicator: nothing turns, the mark itself breathes while the hand-off runs. */
+    .logo-pulse {
+        display: inline-grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--brand);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -.02em;
+        animation: breathe 1.9s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: .68; transform: scale(.94); }
+    }
+
+    h1 { margin-top: 20px; font-size: 1.3rem; font-weight: 600; line-height: 1.25; letter-spacing: -.02em; }
+    .status { margin-top: 6px; font-size: 14px; color: var(--muted); }
+    .note { margin-top: 20px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+    .restart { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: underline; text-decoration-color: #c3ccda; text-underline-offset: 4px; }
+    .restart:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+    @media (max-width: 640px) {
+        .scene-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .modal { padding: 24px; }
+        .stage { padding: 32px 16px; }
+    }
+</style>
+</head>
+<body>
+    <div class="scene" aria-hidden="true">
+        <header class="scene-header">
+            <span class="scene-brand"><span class="scene-mark">JM</span> JMMart</span>
+            <span class="scene-search"></span>
+            <span class="scene-action"></span>
+            <span class="scene-avatar"></span>
+        </header>
+        <div class="scene-body">
+            <div class="scene-chips">
+                <span class="scene-chip" style="width:96px"></span>
+                <span class="scene-chip" style="width:112px"></span>
+                <span class="scene-chip" style="width:80px"></span>
+                <span class="scene-chip" style="width:96px"></span>
+            </div>
+            <div class="scene-hero"></div>
+            <div class="scene-grid">
+                <article class="scene-card"><div class="scene-thumb"></div><div class="scene-lines"><div class="scene-line"></div><div class="scene-line"></div></div></article>
+                <article class="scene-card"><div class="scene-thumb"></div><div class="scene-lines"><div class="scene-line"></div><div class="scene-line"></div></div></article>
+                <article class="scene-card"><div class="scene-thumb"></div><div class="scene-lines"><div class="scene-line"></div><div class="scene-line"></div></div></article>
+                <article class="scene-card"><div class="scene-thumb"></div><div class="scene-lines"><div class="scene-line"></div><div class="scene-line"></div></div></article>
+            </div>
+        </div>
+    </div>
+
+    <div class="scrim" aria-hidden="true"></div>
+
+    <main class="stage">
+        <div class="modal" role="dialog" aria-labelledby="handoff-heading">
+            <span class="logo-pulse" aria-hidden="true">JM</span>
+
+            <h1 id="handoff-heading">Finishing your sign-in</h1>
+            <p class="status">Securing your JMMart session…</p>
+
+            <p class="note">You’ll be back in the marketplace in a moment. Nothing is charged or changed while you wait.</p>
+
+            <a class="restart" href="#">Taking longer than expected? Sign in again</a>
+        </div>
+    </main>
+</body>
+</html>

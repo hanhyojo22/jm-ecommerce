@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup F — waiting, escape, and error</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --ink: #182c48;
+        --muted: #596b83;
+        --dim: #64748b;
+        --brand: #205bf4;
+        --line: #e3e8f1;
+    }
+
+    html, body { min-height: 100%; }
+
+    body {
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: var(--ink);
+        background: #fff;
+        -webkit-font-smoothing: antialiased;
+        line-height: 1.5;
+    }
+
+    .ground {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .moment {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 26rem;
+        text-align: center;
+        animation: settle .5s cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    @keyframes settle {
+        from { opacity: 0; transform: translateY(6px); }
+    }
+
+    /* ---------- the mark ---------- */
+    .logo-spin { position: relative; display: inline-grid; place-items: center; width: 76px; height: 76px; }
+
+    .logo-spin::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(from 0deg, transparent 0 52%, var(--brand) 52% 100%);
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+        mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+        animation: spin 1s linear infinite;
+    }
+
+    .logo-spin.is-stopped::before {
+        background: var(--line);
+        animation: none;
+    }
+
+    .logo-tile {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: var(--brand);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -.02em;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    h1 {
+        margin-top: 24px;
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1.3;
+        letter-spacing: -.02em;
+        text-wrap: balance;
+    }
+
+    .status { margin-top: 6px; font-size: 14px; line-height: 1.6; color: var(--muted); text-wrap: pretty; }
+    .note { margin-top: 4px; font-size: 12px; line-height: 1.6; color: var(--dim); }
+
+    /* ---------- the wait ---------- */
+    .escape {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        margin-top: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+        text-decoration: underline;
+        text-decoration-color: #c3ccda;
+        text-underline-offset: 4px;
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity .3s ease;
+    }
+
+    .escape:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+    /* A stalled hand-off gets a way out instead of waiting for the deadline. */
+    body[data-state="late"] .escape,
+    body[data-state="error"] .escape {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* ---------- the failure ---------- */
+    .error { display: none; width: 100%; flex-direction: column; align-items: center; }
+
+    body[data-state="error"] .wait,
+    body[data-state="error"] .escape { display: none; }
+
+    body[data-state="error"] .error { display: flex; }
+
+    .actions { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 22px; }
+
+    .btn-primary {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 22px;
+        border: 0;
+        border-radius: 6px;
+        background: var(--brand);
+        color: #fff;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .btn-primary:hover { background: #1d4ed8; }
+
+    .btn-quiet {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        padding: 0 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--muted);
+        text-decoration: underline;
+        text-decoration-color: #c3ccda;
+        text-underline-offset: 4px;
+    }
+
+    .btn-quiet:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+    :focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+    /* ---------- mockup chrome, not part of the design ---------- */
+    .mock-controls {
+        position: fixed;
+        bottom: 14px;
+        left: 50%;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgb(255 255 255 / 92%);
+        box-shadow: 0 6px 18px rgb(24 44 72 / 8%);
+        transform: translateX(-50%);
+        backdrop-filter: blur(6px);
+    }
+
+    .mock-controls span { padding: 0 8px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #94a3b8; }
+
+    .mock-controls button {
+        min-height: 30px;
+        padding: 0 10px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--muted);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .mock-controls button[aria-pressed="true"] { background: #eef2f8; color: var(--ink); }
+
+    @media (max-width: 640px) {
+        body { padding: 24px; }
+        h1 { font-size: 20px; }
+        .logo-spin { width: 68px; height: 68px; }
+        .moment { max-width: 20rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .moment { animation: none; }
+        .logo-spin::before { animation-duration: 2.4s; }
+    }
+</style>
+</head>
+<body data-state="waiting">
+    <div class="ground" aria-hidden="true"></div>
+
+    <main class="moment">
+        <div class="wait">
+            <span class="logo-spin" aria-hidden="true">
+                <span class="logo-tile">JM</span>
+            </span>
+
+            <h1>Finishing your sign-in</h1>
+            <p class="status">Securing your JMMart session…</p>
+        </div>
+
+        <a class="escape" href="#">Taking longer than expected? Sign in again</a>
+
+        <div class="error">
+            <span class="logo-spin is-stopped" aria-hidden="true">
+                <span class="logo-tile">JM</span>
+            </span>
+
+            <h1>We could not finish signing you in.</h1>
+            <p class="status">The hand-off did not complete. Check your connection, then try again.</p>
+            <p class="note">Nothing has been changed yet.</p>
+
+            <div class="actions">
+                <button type="button" class="btn-primary">Try again</button>
+                <a class="btn-quiet" href="#">Return to sign in</a>
+            </div>
+        </div>
+    </main>
+
+    <div class="mock-controls" aria-label="Mockup states">
+        <span>Mockup</span>
+        <button type="button" data-mock-state="waiting" aria-pressed="true">Waiting</button>
+        <button type="button" data-mock-state="late" aria-pressed="false">Escape</button>
+        <button type="button" data-mock-state="error" aria-pressed="false">Error</button>
+    </div>
+
+    <script>
+        const applyState = (state) => {
+            document.body.dataset.state = state;
+            document.querySelectorAll('[data-mock-state]').forEach((button) => {
+                button.setAttribute('aria-pressed', String(button.dataset.mockState === state));
+            });
+        };
+
+        const requested = window.location.hash.replace('#', '');
+        applyState(['waiting', 'late', 'error'].includes(requested) ? requested : 'waiting');
+
+        document.querySelectorAll('[data-mock-state]').forEach((button) => {
+            button.addEventListener('click', () => applyState(button.dataset.mockState));
+        });
+
+        /* Mockup chrome, not part of the design: strip it from captures. */
+        if (new URLSearchParams(window.location.search).get('chrome') === 'off') {
+            document.querySelector('.mock-controls').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
