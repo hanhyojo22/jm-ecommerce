@@ -82,21 +82,21 @@
                                             @foreach ($storeItems as $item)
                                                 @php($availableStock = $item->variant?->stock_quantity ?? $item->product->stock_quantity)
                                                 @php($isUnavailable = ! $item->isAvailable())
-                                                <article class="grid grid-cols-[auto_5rem_minmax(0,1fr)] gap-x-3 gap-y-4 p-4 sm:grid-cols-[auto_7rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:p-5 {{ $isUnavailable ? 'bg-canvas/40' : '' }}">
-                                                    <div class="flex items-center">
-                                                        <input type="checkbox" id="select-{{ $item->id }}" @checked($item->selected) x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="size-5 shrink-0 rounded-md border-line text-brand focus:ring-brand disabled:opacity-40">
+                                                <article class="grid grid-cols-[auto_3rem_minmax(0,1fr)] gap-x-3 gap-y-4 p-4 sm:grid-cols-[auto_3.5rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:p-5 {{ $isUnavailable ? 'bg-canvas/40' : '' }}">
+                                                    <div class="flex items-start">
+                                                        <input type="checkbox" id="select-{{ $item->id }}" @checked($item->selected) x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="mt-[14px] size-5 shrink-0 rounded-md border-line text-brand focus:ring-brand disabled:opacity-40 sm:mt-[18px]">
                                                     </div>
 
-                                                    <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-lg bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $isUnavailable ? 'opacity-60' : '' }}">
+                                                    <a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" aria-label="View {{ $item->product->name }}" class="aspect-square overflow-hidden rounded-md border border-line-soft bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 {{ $isUnavailable ? 'opacity-60' : '' }}">
                                                         @if ($item->imagePath())
-                                                            <img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="{{ $item->product->name }}" width="96" height="96" loading="lazy" class="h-full w-full object-cover">
+                                                            <img src="{{ Storage::disk('product_images')->url($item->imagePath()) }}" alt="{{ $item->product->name }}" width="56" height="56" loading="lazy" class="h-full w-full object-cover">
                                                         @else
                                                             <div class="grid h-full place-items-center text-lg font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($store->name, 0, 1)) }}</div>
                                                         @endif
                                                     </a>
 
                                                     <div class="min-w-0">
-                                                        <h4 class="break-words text-sm font-semibold leading-5 text-ink sm:text-base"><a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $item->product->name }}</a></h4>
+                                                        <h3 class="break-words text-sm font-semibold leading-5 text-ink sm:text-base"><a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $item->product->name }}</a></h3>
                                                         @if ($item->variant)<p class="mt-1 text-xs font-medium text-brand">{{ $item->variant->label() }}</p>@endif
                                                         <p class="mt-1 text-sm text-muted">₱{{ number_format($item->unitPrice(), 2) }} each</p>
                                                         @if ($isUnavailable)
