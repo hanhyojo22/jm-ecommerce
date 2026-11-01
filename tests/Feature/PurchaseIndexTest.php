@@ -202,7 +202,6 @@ class PurchaseIndexTest extends TestCase
             ->assertSee('Bundle Store Product')
             ->assertSee('Second Bundle Item')
             ->assertSee('Third Bundle Item')
-            ->assertSee('3 items')
             ->assertSee('₱30.00')
             ->assertDontSee('and 2 more')
             ->assertSee(route('orders.show', $order), false);

@@ -356,7 +356,6 @@
                                         [$statusLabel, $statusVariant] = ['Cancel requested', 'warn'];
                                     }
                                     $items = $sellerOrder->items;
-                                    $shortNumber = Str::upper(Str::substr($order->number, -6));
                                     $itemCount = $items->sum('quantity');
                                     $status = $sellerOrder->status;
                                     $reached = match ($status) {
@@ -410,7 +409,6 @@
                                                     <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
                                                 @endif
                                                 <span class="truncate text-[13px] font-semibold text-ink">{{ $store }}</span>
-                                                <span class="hidden shrink-0 text-[11.5px] font-medium tabular-nums text-muted sm:inline">#…{{ $shortNumber }}</span>
                                             </div>
                                             <span @class(['inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold', $pillClass])>
                                                 <span class="size-[7px] rounded-full {{ $pillDot }}" aria-hidden="true"></span>
@@ -470,12 +468,9 @@
                                             @endforeach
                                         </ul>
 
-                                        <div class="flex items-baseline justify-between gap-3 border-t border-line px-4 py-2.5 sm:justify-end sm:gap-4">
-                                            <span class="text-[11.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</span>
-                                            <span class="inline-flex items-baseline gap-2">
-                                                <span class="text-[11.5px] font-medium text-muted">Order total</span>
-                                                <b class="text-sm font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</b>
-                                            </span>
+                                        <div class="flex items-baseline justify-end gap-2 border-t border-line px-4 py-2.5">
+                                            <span class="text-[11.5px] font-medium text-muted">Order total</span>
+                                            <b class="text-sm font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</b>
                                         </div>
 
                                         <div class="flex items-center justify-between gap-3 border-t border-line-soft bg-[#fbfcfe] px-4 py-2.5">

@@ -46,7 +46,7 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(chatRow).toContainText('₱49.98');
         await expect(items.locator('li')).toHaveCount(4);
         await expect(items.getByText('QA Retired Pouch')).toBeVisible();
-        await expect(rowsOrder).toContainText('5 items');
+        await expect(rowsOrder).not.toContainText('5 items');
         await expect(rowsOrder).toContainText('Order total');
         await expect(rowsOrder).toContainText('₱80.97');
         await expect(rowsOrder).not.toContainText('QA Canvas Tote and 3 more');
