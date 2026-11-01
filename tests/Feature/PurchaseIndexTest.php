@@ -165,7 +165,7 @@ class PurchaseIndexTest extends TestCase
             ->assertViewHas('sellerOrders', fn ($sellerOrders): bool => $sellerOrders->count() === 11);
     }
 
-    public function test_each_purchase_card_offers_a_chat_with_the_store(): void
+    public function test_each_purchase_card_links_to_the_order_and_not_to_a_list_chat_action(): void
     {
         $buyer = User::factory()->create();
         $order = $this->order($buyer, 'CHAT-001', '10.00');
@@ -173,12 +173,13 @@ class PurchaseIndexTest extends TestCase
 
         $this->actingAs($buyer)->get(route('orders.index'))
             ->assertOk()
-            ->assertSee('Chat with Chatty Store, order CHAT-001')
-            ->assertSee(route('messages.seller-orders.start', $sellerOrder), false)
-            ->assertDontSee('Chat with seller');
+            ->assertSee(route('orders.show', $order), false)
+            // The card itself is the way in; chat now starts from the order, not the list.
+            ->assertDontSee('Chat with Chatty Store, order CHAT-001')
+            ->assertDontSee(route('messages.seller-orders.start', $sellerOrder), false);
     }
 
-    public function test_purchase_cards_show_two_items_and_link_the_rest_to_the_order(): void
+    public function test_purchase_cards_show_every_item_in_the_order(): void
     {
         $buyer = User::factory()->create();
         $order = $this->order($buyer, 'MANY-001', '30.00');
@@ -197,11 +198,10 @@ class PurchaseIndexTest extends TestCase
 
         $this->actingAs($buyer)->get(route('orders.index'))
             ->assertOk()
-            ->assertSee('3 items')
             ->assertSee('Bundle Store Product')
             ->assertSee('Second Bundle Item')
-            ->assertDontSee('Third Bundle Item')
-            ->assertSee('1 more item')
+            ->assertSee('Third Bundle Item')
+            ->assertDontSee('1 more item')
             ->assertSee(route('orders.show', $order), false);
     }
 

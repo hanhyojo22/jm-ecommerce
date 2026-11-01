@@ -14,8 +14,8 @@ test('customer finds purchases and opens order actions at each viewport', async 
             await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
         }
         await expect(page.getByRole('heading', { name: 'My purchases', exact: true })).toBeVisible();
-        // The order number, each visible item, and the "more" link all lead to the order page.
-        const purchase = page.locator('article').filter({ has: page.getByRole('link', { name: /order QA-REVIEW-001/ }) });
+        // The whole card is one link into the order page; the number identifies the card for tests.
+        const purchase = page.locator('article[data-order-number="QA-REVIEW-001"]');
         await expect(purchase).toContainText('QA Canvas Tote');
         await expect(purchase).toContainText('Delivered');
         const filters = page.getByRole('navigation', { name: 'Purchase status filters' });
@@ -31,16 +31,15 @@ test('customer finds purchases and opens order actions at each viewport', async 
             /^\s*Returns(\s+\d+ orders?)?\s*$/,
         ]);
         await expect(filters.getByRole('link', { name: /^All/ })).toHaveAttribute('aria-current', 'page');
-        const rowsOrder = page.locator('article').filter({ has: page.getByRole('link', { name: /order QA-ROWS-001/ }) });
+        const rowsOrder = page.locator('article[data-order-number="QA-ROWS-001"]');
         const items = rowsOrder.locator('ul');
         const chatRow = items.locator('li').filter({ hasText: 'QA Chat Sample' });
         await expect(chatRow).toContainText('Blue / Medium');
-        await expect(chatRow).toContainText('×2');
+        await expect(chatRow).toContainText('Qty: 2');
         await expect(chatRow).toContainText('₱24.99');
-        // Only the first two rows are listed; the rest sit behind one link into the order.
-        await expect(items.locator('li')).toHaveCount(3);
-        await expect(items.getByText('QA Retired Pouch')).toHaveCount(0);
-        await expect(items.getByRole('link', { name: /2 more items .*QA-ROWS-001/ })).toBeVisible();
+        // Every item row is listed now; nothing sits behind a "more" link.
+        await expect(items.locator('li')).toHaveCount(4);
+        await expect(items.getByText('QA Retired Pouch')).toBeVisible();
         // Items without a stored photo fall back to the bag glyph, so there is no broken image or noise.
         await expect(items.locator('li').filter({ hasText: 'QA Chat Sample' }).getByText('Product image unavailable')).toHaveCount(0);
         if (testInfo.project.name === 'mobile-chromium') {
@@ -75,20 +74,20 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(page.getByRole('heading', { name: 'No purchases match “QA-REVIEW-001” in Awaiting store' })).toBeVisible();
         await expect(page.getByRole('searchbox', { name: 'Search purchases', exact: true })).toHaveValue('QA-REVIEW-001');
         await page.getByRole('link', { name: 'Reset filters', exact: true }).click();
-        // The card's header and rows all lead to the order; the order number is the unambiguous target.
-        await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
+        // The whole card is the target now; the order page still opens in the details dialog.
+        await purchase.getByRole('link', { name: /^Order QA-REVIEW-001/ }).click();
         await expect(page.getByRole('heading', { name: 'Order #QA-REVIEW-001', exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Close order details' }).click();
         await expect(page.getByRole('dialog')).toBeHidden();
-        await expect(purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true })).toBeFocused();
+        await expect(purchase.getByRole('link', { name: /^Order QA-REVIEW-001/ })).toBeFocused();
         await page.goto('/orders');
-        await rowsOrder.getByRole('link', { name: 'Order QA-ROWS-001', exact: true }).click();
+        await rowsOrder.getByRole('link', { name: /^Order QA-ROWS-001/ }).click();
         await expect(page.getByRole('dialog')).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Order #QA-ROWS-001', exact: true })).toBeVisible();
         await page.locator('.open-full').click();
         await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
         await page.goto('/orders');
-        await purchase.getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
+        await purchase.getByRole('link', { name: /^Order QA-REVIEW-001/ }).click();
         await page.locator('.open-full').click();
         await page.getByRole('button', { name: 'Message seller' }).first().click();
         await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
