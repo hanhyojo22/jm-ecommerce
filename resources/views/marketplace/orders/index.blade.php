@@ -343,6 +343,7 @@
                                         [$statusLabel, $statusVariant] = ['Cancel requested', 'warn'];
                                     }
                                     $items = $sellerOrder->items;
+                                    $shortNumber = Str::upper(Str::substr($order->number, -6));
                                     // The pill is the order's own state; buyer/store lateness replaces it with the turn that matters now.
                                     $overlayLabel = $statusLabel;
                                     $overlayVariant = $statusVariant;
@@ -362,14 +363,15 @@
                                         aria-label="Order {{ $order->number }} from {{ $store }}, {{ $overlayLabel }}, ₱{{ number_format($sellerOrder->total, 2) }}"
                                         class="block overflow-hidden rounded-[10px] border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)] transition duration-150 hover:border-[var(--color-border-strong)] hover:shadow-[0_2px_10px_rgb(24_44_72/9%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                                     >
-                                        <div class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3 sm:px-6">
+                                        <div class="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
                                             <div class="flex min-w-0 items-center gap-2.5">
                                                 @if ($sellerOrder->store->logo_path)
                                                     <img src="{{ Storage::disk('public')->url($sellerOrder->store->logo_path) }}" alt="" width="24" height="24" loading="lazy" class="size-6 shrink-0 rounded-md border border-line bg-white object-cover">
                                                 @else
                                                     <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
                                                 @endif
-                                                <span class="truncate text-sm font-semibold text-ink">{{ $store }}</span>
+                                                <span class="truncate text-[13px] font-semibold text-ink">{{ $store }}</span>
+                                                <span class="hidden shrink-0 text-[11.5px] font-medium tabular-nums text-muted sm:inline">#…{{ $shortNumber }}</span>
                                             </div>
                                             <span @class(['inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold', $pillClass])>
                                                 <span class="size-[7px] rounded-full {{ $pillDot }}" aria-hidden="true"></span>
@@ -377,28 +379,42 @@
                                             </span>
                                         </div>
 
-                                        <ul class="px-4 pb-1.5 pt-1 sm:px-6">
+                                        <div class="hidden border-b border-line bg-canvas px-4 py-2 sm:grid sm:grid-cols-[48px_minmax(0,1fr)_84px_84px] sm:gap-x-3.5" aria-hidden="true">
+                                            <span></span>
+                                            <span class="text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Product</span>
+                                            <span class="text-right text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Qty</span>
+                                            <span class="text-right text-[10px] font-semibold uppercase tracking-[0.11em] text-muted">Total</span>
+                                        </div>
+
+                                        <ul>
                                             @foreach ($items as $item)
                                                 @php($itemThumb = $item->image_path ?? $item->product?->thumbnail?->path)
-                                                <li class="grid grid-cols-[64px_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-4 sm:grid-cols-[72px_minmax(0,1fr)_104px_96px] sm:gap-x-6">
-                                                    <div class="relative row-span-2 size-16 overflow-hidden rounded-lg border border-line bg-paper sm:row-span-1 sm:size-[72px]">
+                                                <li class="grid grid-cols-[48px_minmax(0,1fr)] items-center gap-x-3.5 gap-y-1.5 border-b border-line-soft px-4 py-3 last:border-b-0 sm:grid-cols-[48px_minmax(0,1fr)_84px_84px]">
+                                                    <div class="relative size-12 overflow-hidden rounded-md border border-line-soft bg-paper">
                                                         @if ($itemThumb)
-                                                            <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="72" height="72" loading="lazy" class="size-full object-cover">
+                                                            <img src="{{ Storage::disk('product_images')->url($itemThumb) }}" alt="" width="48" height="48" loading="lazy" class="size-full object-cover">
                                                         @else
-                                                            <svg class="absolute inset-0 m-auto size-[22px] text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                                                            <svg class="absolute inset-0 m-auto size-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
                                                         @endif
                                                     </div>
                                                     <div class="min-w-0">
-                                                        <p class="line-clamp-2 break-words text-sm leading-5 text-ink">{{ $item->product_name }}</p>
+                                                        <p class="truncate text-[13px] font-semibold leading-[17px] text-ink">{{ $item->product_name }}</p>
                                                         @if ($item->variant_label)
-                                                            <p class="mt-1 text-[12.5px] leading-[18px] text-muted">{{ $item->variant_label }}</p>
+                                                            <p class="mt-0.5 truncate text-[11.5px] leading-[15px] text-brand">{{ $item->variant_label }}</p>
                                                         @endif
                                                     </div>
-                                                    <p class="col-start-2 row-start-2 justify-self-start text-[13px] tabular-nums text-ink sm:col-start-3 sm:row-start-1 sm:justify-self-end sm:text-sm"><span class="sr-only">Price </span>₱{{ number_format($item->unit_price, 2) }}</p>
-                                                    <p class="col-start-3 row-start-2 justify-self-end text-[13px] tabular-nums text-ink sm:col-start-4 sm:row-start-1 sm:text-sm"><span class="text-muted">Qty:</span> {{ $item->quantity }}<span class="sr-only"> quantity, {{ $item->quantity }}</span></p>
+                                                    <div class="col-start-2 flex items-baseline justify-between gap-4 sm:contents">
+                                                        <p class="text-[12.5px] tabular-nums text-muted sm:col-start-3 sm:pt-1 sm:text-right sm:text-[13px] sm:text-ink"><span class="text-muted">Qty: </span>{{ $item->quantity }}<span class="sr-only"> items</span></p>
+                                                        <p class="text-[13px] font-semibold tabular-nums text-ink sm:col-start-4 sm:pt-1 sm:text-right"><span class="sr-only">Line total </span>₱{{ number_format($item->line_total, 2) }}</p>
+                                                    </div>
                                                 </li>
                                             @endforeach
                                         </ul>
+
+                                        <div class="flex items-center justify-end gap-2 border-t border-line px-4 py-2.5">
+                                            <span class="text-[11.5px] font-medium text-muted">Order total</span>
+                                            <span class="text-sm font-semibold tabular-nums text-ink">₱{{ number_format($sellerOrder->total, 2) }}</span>
+                                        </div>
                                     </a>
                                 </article>
                             @endforeach

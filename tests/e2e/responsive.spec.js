@@ -36,14 +36,14 @@ test('customer finds purchases and opens order actions at each viewport', async 
         const chatRow = items.locator('li').filter({ hasText: 'QA Chat Sample' });
         await expect(chatRow).toContainText('Blue / Medium');
         await expect(chatRow).toContainText('Qty: 2');
-        await expect(chatRow).toContainText('₱24.99');
+        await expect(chatRow).toContainText('₱49.98');
         // Every item row is listed now; nothing sits behind a "more" link.
         await expect(items.locator('li')).toHaveCount(4);
         await expect(items.getByText('QA Retired Pouch')).toBeVisible();
         // Items without a stored photo fall back to the bag glyph, so there is no broken image or noise.
         await expect(items.locator('li').filter({ hasText: 'QA Chat Sample' }).getByText('Product image unavailable')).toHaveCount(0);
         if (testInfo.project.name === 'mobile-chromium') {
-            await expect(chatRow).toContainText('₱24.99');
+            await expect(chatRow).toContainText('₱49.98');
         }
         if (testInfo.project.name === 'mobile-chromium') {
             expect(await filters.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
