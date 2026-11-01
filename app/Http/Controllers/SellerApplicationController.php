@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\StorePublicImage;
 use App\Http\Requests\StoreSellerApplicationRequest;
 use App\Models\AuditLog;
+use App\Models\Category;
 use App\Models\SellerApplication;
 use App\Models\Store;
 use App\Models\User;
@@ -49,6 +50,7 @@ class SellerApplicationController extends Controller
 
         return view('seller-applications.create', [
             'application' => $user->sellerApplications()->latest()->first(),
+            'categories' => Category::query()->where('is_active', true)->orderBy('name')->pluck('name'),
             'workspaceUnavailable' => $membership !== null,
             'workspaceSuspended' => $workspaceSuspended,
             'suspensionAppeal' => $suspensionAppeal,
@@ -90,32 +92,73 @@ class SellerApplicationController extends Controller
             if ($step === 3) {
                 $request->merge(['store_slug' => Str::slug($request->input('store_slug', ''))]);
             }
+
+            $partial = $request->boolean('draft');
+
+            if ($partial) {
+                /*
+                 * A draft keeps whatever has been typed so far. Required rules only bind when the
+                 * step is continued, so they drop out here, while format, size and type checks stay
+                 * on any value that was actually sent. Empty inputs are left out entirely so a
+                 * draft can never wipe a value that is already saved.
+                 */
+                $rules = array_map(function (array $fieldRules): array {
+                    $fieldRules = array_values(array_filter(
+                        $fieldRules,
+                        fn ($rule): bool => ! is_string($rule) || ! str_starts_with($rule, 'required'),
+                    ));
+
+                    if (! in_array('nullable', $fieldRules, true)) {
+                        $fieldRules[] = 'nullable';
+                    }
+
+                    return $fieldRules;
+                }, $rules);
+
+                $request->replace(collect($request->all())
+                    ->reject(fn ($value): bool => $value === null || $value === '')
+                    ->all());
+            }
+
             $data = $request->validate($rules);
-            if ($step === 4 && ($data['same_addresses'] ?? false)) {
+            if ($step === 4 && ($data['same_addresses'] ?? false) && isset($data['address_line'], $data['barangay'], $data['city'], $data['province'], $data['region'], $data['postal_code'])) {
                 $data['pickup_address'] = $data['return_address'] = $data['address_line'].', '.$data['barangay'].', '.$data['city'].', '.$data['province'].', '.$data['region'].' '.$data['postal_code'];
                 if (mb_strlen($data['pickup_address']) > 255) {
                     throw ValidationException::withMessages(['address_line' => 'The combined address must be 255 characters or fewer.']);
                 }
             }
             unset($data['same_addresses']);
-            if ($step === 3 && preg_match('/\\b(official|jmmart|admin|support|fuck|shit|scam)\\b/i', $data['store_name'])) {
+            if ($step === 3 && isset($data['store_name']) && preg_match('/\\b(official|jmmart|admin|support|fuck|shit|scam)\\b/i', $data['store_name'])) {
                 throw ValidationException::withMessages(['store_name' => 'Choose a name that does not imply marketplace affiliation.']);
             }
-            if ($step === 3 && preg_match('/(^|-)(official|jmmart|admin|support|fuck|shit|scam)(-|$)/', $data['store_slug'])) {
+            if ($step === 3 && isset($data['store_slug']) && preg_match('/(^|-)(official|jmmart|admin|support|fuck|shit|scam)(-|$)/', $data['store_slug'])) {
                 throw ValidationException::withMessages(['store_slug' => 'Choose a different storefront URL.']);
             }
-            if ($step === 3 && (SellerApplication::query()->whereRaw('LOWER(store_name) = ?', [mb_strtolower($data['store_name'])])->whereKeyNot($application->id)->exists() || Store::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($data['store_name'])])->exists())) {
+            if ($step === 3 && isset($data['store_name']) && (SellerApplication::query()->whereRaw('LOWER(store_name) = ?', [mb_strtolower($data['store_name'])])->whereKeyNot($application->id)->exists() || Store::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($data['store_name'])])->exists())) {
                 throw ValidationException::withMessages(['store_name' => 'This store name is already taken.']);
             }
-            $sellerTypeChanged = $step === 1 && $application->seller_type !== null && $application->seller_type !== $data['seller_type'];
+            $sellerTypeChanged = $step === 1 && $application->seller_type !== null && isset($data['seller_type']) && $application->seller_type !== $data['seller_type'];
             if ($step === 6) {
                 $accountNumber = $data['account_number'] ?? null;
                 unset($data['account_number']);
-                $data['name_requires_review'] = ! in_array(mb_strtolower(trim($data['holder_name'])), [mb_strtolower(trim($application->seller_name ?? '')), mb_strtolower(trim($application->business_name ?? ''))], true);
+
+                if (isset($data['holder_name']) || $application->payoutProfile !== null) {
+                    $holder = mb_strtolower(trim((string) ($data['holder_name'] ?? $application->payoutProfile?->holder_name)));
+                    $owners = array_values(array_filter([
+                        mb_strtolower(trim((string) $application->seller_name)),
+                        mb_strtolower(trim((string) $application->business_name)),
+                    ]));
+
+                    $data['name_requires_review'] = ! in_array($holder, $owners, true);
+                }
+
                 if (filled($accountNumber)) {
                     $data['account_number'] = $accountNumber;
                 }
-                ($application->payoutProfile ?? $application->payoutProfile()->make())->fill($data)->save();
+
+                if ($data !== []) {
+                    ($application->payoutProfile ?? $application->payoutProfile()->make())->fill($data)->save();
+                }
             } else {
                 foreach (['logo', 'banner', 'id_front', 'id_back', 'selfie', 'business_registration', 'bir_certificate'] as $upload) {
                     // Only a file this step validated is stored; any other is ignored, never saved unchecked.
@@ -146,7 +189,9 @@ class SellerApplicationController extends Controller
             if ($sellerTypeChanged) {
                 $completed = array_values(array_diff($completed, [2, 5, 6]));
             }
-            $completed[] = $step;
+            if (! $partial) {
+                $completed[] = $step;
+            }
             $application->completed_steps = array_values(array_unique($completed));
             $application->status ??= 'draft';
             try {
@@ -165,10 +210,16 @@ class SellerApplicationController extends Controller
             });
 
             $exit = $request->boolean('exit');
-            $redirect = $exit
-                ? route('profile.edit')
-                : route('seller-application.create', ['step' => $step + 1]);
+            $redirect = $partial
+                ? ($exit ? route('profile.edit') : route('seller-application.create', ['step' => $step]))
+                : ($exit ? route('profile.edit') : route('seller-application.create', ['step' => $step + 1]));
+
             if ($request->expectsJson()) {
+                if ($partial && ! $exit) {
+                    // Autosave: nothing navigates, so the page only needs to know it landed.
+                    return response()->json(['saved_at' => now()->toIso8601String()]);
+                }
+
                 session()->flash('status', $exit ? 'Draft saved. You can finish your application anytime.' : 'Draft saved.');
 
                 return response()->json(['redirect' => $redirect]);
@@ -176,6 +227,32 @@ class SellerApplicationController extends Controller
 
             return redirect($redirect)->with('status', $exit ? 'Draft saved. You can finish your application anytime.' : 'Draft saved.');
         });
+    }
+
+    public function storeLink(Request $request): JsonResponse
+    {
+        $slug = Str::slug((string) $request->query('slug', ''));
+
+        if (mb_strlen($slug) < 3) {
+            return response()->json(['available' => false, 'message' => 'Use at least 3 letters or numbers.']);
+        }
+
+        if (in_array($slug, ['admin', 'seller', 'support', 'jmmart', 'official', 'help', 'login'], true)) {
+            return response()->json(['available' => false, 'message' => 'That link is reserved.']);
+        }
+
+        $application = $request->user()->sellerApplications()->latest()->first();
+
+        $taken = SellerApplication::query()
+            ->where('store_slug', $slug)
+            ->when($application, fn ($query) => $query->whereKeyNot($application->id))
+            ->exists()
+            || Store::query()->where('slug', $slug)->exists();
+
+        return response()->json([
+            'available' => ! $taken,
+            'message' => $taken ? 'That link is already taken.' : 'Available.',
+        ]);
     }
 
     public function store(StoreSellerApplicationRequest $request): RedirectResponse

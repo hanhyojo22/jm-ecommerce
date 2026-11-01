@@ -229,6 +229,15 @@
     display: none;
 }
 
+/* Below 480px the topbar save state is hidden for space; this is the same message, in the rail. */
+.onboarding-mobile-save {
+    display: none;
+    margin: 8px 0 0;
+    color: var(--color-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .onboarding-progress-row {
     display: flex;
     align-items: baseline;
@@ -1803,8 +1812,17 @@
         gap: 6px;
     }
 
-    .onboarding-review-actions .onboarding-edit {
+    .onboarding-edit {
+        min-height: 44px;
+        padding: 0 8px;
         font-size: 11.5px;
+    }
+
+    .onboarding-policy a {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        padding-inline: 8px;
     }
 
     .onboarding-policy {
@@ -1817,6 +1835,10 @@
 }
 
 @media (max-width: 480px) {
+    .onboarding-mobile-save {
+        display: block;
+    }
+
     .onboarding-save-state {
         display: none;
     }
@@ -1833,7 +1855,7 @@
 
     .onboarding-dot-link {
         width: 100%;
-        max-width: 38px;
+        max-width: 44px;
         aspect-ratio: 1;
         height: auto;
     }

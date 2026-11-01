@@ -17,14 +17,14 @@
                 </span>
                 <span class="onboarding-upload-copy">
                     <span class="onboarding-upload-title">{{ $label }}@if (! $saved && ($required ?? false))<span class="onboarding-required-tag">Required</span>@elseif (! $saved && ($requiredWhen ?? false))<span x-show="{{ $requiredWhen }}" class="onboarding-required-tag">Required</span>@endif</span>
-                    <span class="onboarding-upload-help" x-text="fileName || @js($saved ? 'Saved' : ($help ?? 'Tap to choose a file'))">{{ $saved ? 'Saved' : ($help ?? 'Tap to choose a file') }}</span>
+                    <span class="onboarding-upload-help" x-text="fileName || @js($saved ? 'Saved' : ($help ?? 'Choose a file'))">{{ $saved ? 'Saved' : ($help ?? 'Choose a file') }}</span>
                 </span>
                 <span class="onboarding-upload-action" aria-hidden="true">{{ $saved ? 'Replace' : 'Upload' }}</span>
             </label>
             <img x-cloak x-show="preview" :src="preview" alt="Selected image preview" class="onboarding-upload-preview">
         </div>
     @else
-        <label for="{{ $name }}" class="mb-1.5 block text-sm font-semibold text-ink">{{ $label }}</label>
+        <label for="{{ $name }}" class="mb-1.5 block text-sm font-semibold text-ink">{{ $label }}@if ($required ?? false)<span class="onboarding-required-tag">Required</span>@elseif ($requiredWhen ?? false)<span x-show="{{ $requiredWhen }}" class="onboarding-required-tag">Required</span>@endif</label>
         @if ($textarea ?? false)
             <textarea id="{{ $name }}" name="{{ $name }}" rows="4" @if ($required ?? false) required @endif @if ($maxlength ?? false) maxlength="{{ $maxlength }}" @endif class="field-control">{{ old($name, $value) }}</textarea>
         @elseif ($prefix ?? false)
@@ -33,7 +33,7 @@
                 <input id="{{ $name }}" name="{{ $name }}" type="{{ $type }}" value="{{ old($name, $value) }}" @if ($required ?? false) required @endif class="block min-h-11 w-full min-w-0 border-0 text-sm text-ink focus:ring-0">
             </div>
         @else
-            <input id="{{ $name }}" name="{{ $name }}" type="{{ $type }}" value="{{ old($name, $value instanceof \Carbon\CarbonInterface ? $value->toDateString() : $value) }}" @if ($required ?? false) required @endif @if ($requiredWhen ?? false) :required="{{ $requiredWhen }}" @endif @if ($inputmode ?? false) inputmode="{{ $inputmode }}" @endif @if ($placeholder ?? false) placeholder="{{ $placeholder }}" @endif class="field-control">
+            <input id="{{ $name }}" name="{{ $name }}" type="{{ $type }}" value="{{ old($name, $value instanceof \Carbon\CarbonInterface ? $value->toDateString() : $value) }}" @if ($required ?? false) required @endif @if ($requiredWhen ?? false) :required="{{ $requiredWhen }}" @endif @if ($inputmode ?? false) inputmode="{{ $inputmode }}" @endif @if ($list ?? false) list="{{ $list }}" @endif @if ($placeholder ?? false) placeholder="{{ $placeholder }}" @endif class="field-control">
         @endif
         @if ($help ?? false)<p class="mt-1.5 text-xs text-muted">{{ $help }}</p>@endif
     @endif

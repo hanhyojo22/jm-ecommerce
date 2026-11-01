@@ -16,7 +16,8 @@ test('customer applies, admin approves and suspends, and rejected applicant sees
         await customer.page.getByRole('button', { name: 'Save and continue' }).click();
         await expect(customer.page).toHaveURL(/step=2/);
         await customer.page.getByRole('button', { name: 'Save & exit' }).click();
-        await expect(customer.page.getByText('This step isn’t complete, so it can’t be saved yet.')).toBeVisible();
+        await expect(customer.page).toHaveURL(/\/profile/);
+        await customer.page.goto('/start-selling?step=2');
         await customer.page.getByLabel('Full legal name').fill('QA Customer');
         await customer.page.getByLabel('Mobile number').fill('+639171234567');
         await customer.page.getByLabel('Date of birth').fill('1990-01-01');

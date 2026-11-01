@@ -20,6 +20,6 @@ class PayoutProfile extends Model
 
     public function maskedAccountNumber(): string
     {
-        return '•••• '.substr($this->account_number, -4);
+        return filled($this->account_number) ? '•••• '.substr($this->account_number, -4) : 'Not set';
     }
 }

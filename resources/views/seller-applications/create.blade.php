@@ -11,6 +11,7 @@
         ];
         $step = min(7, max(1, (int) request('step', 1)));
         $completed = $application?->completed_steps ?? [];
+        $canDraft = $step === 1 || in_array(1, $completed, true);
         $editable = ! $workspaceUnavailable && (! $application || in_array($application->status, ['draft', 'more_information_required'], true));
         if ($application?->status === 'more_information_required' && $step <= 6 && ! in_array($step, $application->correction_steps ?? [], true)) { $step = 7; }
         $completedCount = count(array_intersect(range(1, 6), $completed));
@@ -29,7 +30,7 @@
     <div
         @class(['onboarding-app', 'min-h-screen'])
         @if ($editable && $step <= 6)
-            x-data="{ saving: false, exitBlocked: false, uploadProgress: 0, uploadError: '', validationErrors: [], saveAndExit() { const form = this.$refs.stepForm; this.exitBlocked = false; if (! form.checkValidity()) { this.exitBlocked = true; form.reportValidity(); return; } this.send(form, true); }, save(event) { this.send(event.target, false); }, send(form, exit) { this.saving = true; this.exitBlocked = false; this.uploadError = ''; this.validationErrors = []; const data = new FormData(form); if (exit) data.set('exit', '1'); const request = new XMLHttpRequest(); request.open('POST', form.action); request.setRequestHeader('Accept', 'application/json'); request.upload.onprogress = (progress) => { if (progress.lengthComputable) this.uploadProgress = Math.round(progress.loaded / progress.total * 100) }; request.onload = () => { if (request.status === 200) { window.location.assign(JSON.parse(request.responseText).redirect); return; } this.saving = false; if (request.status === 422) { this.exitBlocked = exit; this.validationErrors = Object.values(JSON.parse(request.responseText).errors).flat(); this.$nextTick(() => this.$refs.formErrors?.focus()); } else { this.uploadError = request.status === 419 ? 'Your session expired. Refresh the page, then save this step again.' : (request.status === 429 ? 'Too many saves in a minute. Wait a moment, then try again.' : 'Could not save this step. Please try again.'); } }; request.onerror = () => { this.saving = false; this.uploadError = 'Upload failed. Please check your connection and retry.'; }; request.send(data); } }"
+            x-data="{ saving: false, draftSaving: false, draftSavedAt: '', draftFailed: false, exitBlocked: false, uploadProgress: 0, uploadError: '', validationErrors: [], lastDraftAt: 0, canDraft: @js($canDraft), slugMessage: '', slugAvailable: false, saveAndExit() { this.exitBlocked = false; this.send(this.$refs.stepForm, { exit: true, draft: true }); }, save(event) { this.send(event.target, { exit: false, draft: false }); }, autosave() { if (! this.canDraft || this.saving || this.exitBlocked) return; if (Date.now() - this.lastDraftAt < 5000) return; this.send(this.$refs.stepForm, { exit: false, draft: true, silent: true }); }, checkSlug(value) { this.slugMessage = ''; if (! value || value.length < 3) return; fetch('{{ route('seller-application.store-link') }}?slug=' + encodeURIComponent(value), { headers: { Accept: 'application/json' } }).then((response) => response.ok ? response.json() : null).then((result) => { if (! result) return; this.slugAvailable = result.available; this.slugMessage = result.message; }).catch(() => {}); }, send(form, { exit = false, draft = false, silent = false } = {}) { if (silent) { this.draftSaving = true; this.draftFailed = false; } else { this.saving = true; this.exitBlocked = false; this.uploadError = ''; this.validationErrors = []; } const data = new FormData(form); if (draft && ! exit) { [...form.querySelectorAll('input[type=file]')].forEach((input) => data.delete(input.name)); } if (exit) data.set('exit', '1'); if (draft) data.set('draft', '1'); const request = new XMLHttpRequest(); request.open('POST', form.action); request.setRequestHeader('Accept', 'application/json'); request.upload.onprogress = (progress) => { if (! silent && progress.lengthComputable) this.uploadProgress = Math.round(progress.loaded / progress.total * 100) }; request.onload = () => { if (request.status === 200) { const result = JSON.parse(request.responseText); this.draftSaving = false; if (result.redirect) { window.location.assign(result.redirect); return; } this.lastDraftAt = Date.now(); this.draftSavedAt = new Date(result.saved_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); return; } this.draftSaving = false; if (silent) { this.draftFailed = true; return; } this.saving = false; if (request.status === 422) { this.exitBlocked = exit; this.validationErrors = Object.values(JSON.parse(request.responseText).errors).flat(); this.$nextTick(() => this.$refs.formErrors?.focus()); } else { this.uploadError = request.status === 419 ? 'Your session expired. Refresh the page, then save this step again.' : (request.status === 429 ? 'Too many saves in a minute. Wait a moment, then try again.' : 'Could not save this step. Please try again.'); } }; request.onerror = () => { this.draftSaving = false; if (silent) { this.draftFailed = true; return; } this.saving = false; this.uploadError = 'Upload failed. Please check your connection and retry.'; }; request.send(data); } }"
         @endif
     >
         <header class="onboarding-topbar">
@@ -44,8 +45,9 @@
                     @if ($editable && $step <= 6)
                         <span class="onboarding-save-state" aria-live="polite">
                             <span class="onboarding-save-dot" aria-hidden="true"></span>
-                            <span x-show="!saving">Draft saves when you continue</span>
-                            <span x-cloak x-show="saving">Saving draft…</span>
+                            <span x-show="!saving && !draftSaving && !draftFailed" x-text="draftSavedAt ? 'Draft saved ' + draftSavedAt : 'Your answers save as you go'">Your answers save as you go</span>
+                            <span x-cloak x-show="saving || draftSaving">Saving…</span>
+                            <span x-cloak x-show="!saving && !draftSaving && draftFailed">Draft not saved</span>
                         </span>
                         <button type="button" class="onboarding-topbar-button" :disabled="saving" @click="saveAndExit()">
                             <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10" /></svg>
@@ -131,14 +133,17 @@
                         <h1 id="state-title">Application {{ str_replace('_', ' ', $application->status) }}</h1>
                         <p class="onboarding-state-lead">Store: {{ $application->store_name }}. {{ $application->status === 'rejected' ? 'This application wasn’t approved. You can keep shopping on JMMart as usual.' : 'You can keep shopping on JMMart as usual.' }}</p>
                         @if ($application->review_note)<p class="mt-3 rounded-md bg-canvas p-3 text-sm">@if ($application->status === 'rejected')<strong>Reason:</strong> @endif{{ $application->review_note }}</p>@endif
-                        <ol class="onboarding-timeline" aria-label="Application status timeline">
-                            @foreach ($application->statusHistory()->oldest()->get() as $event)
-                                <li class="is-done">
-                                    <span class="onboarding-timeline-dot" aria-hidden="true"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7" /></svg></span>
-                                    <div><strong>{{ str_replace('_', ' ', ucfirst($event->to_status)) }}</strong><span>{{ $event->created_at->format('M j, Y g:i A') }}</span></div>
-                                </li>
-                            @endforeach
-                        </ol>
+                        @php($statusEvents = $application->statusHistory()->oldest()->get())
+                        @if ($statusEvents->isNotEmpty())
+                            <ol class="onboarding-timeline" aria-label="Application status timeline">
+                                @foreach ($statusEvents as $event)
+                                    <li class="is-done">
+                                        <span class="onboarding-timeline-dot" aria-hidden="true"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7" /></svg></span>
+                                        <div><strong>{{ str_replace('_', ' ', ucfirst($event->to_status)) }}</strong><span>{{ $event->created_at->format('M j, Y g:i A') }}</span></div>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        @endif
                         <div class="onboarding-state-actions">
                             <a href="{{ route('catalog.index') }}" class="onboarding-button onboarding-button--primary">Continue shopping</a>
                             <a href="{{ route('profile.edit') }}" class="onboarding-button onboarding-button--quiet">View account</a>
@@ -163,7 +168,7 @@
                             <span>{{ $progress }}%</span>
                         </div>
                         <div class="onboarding-progress-copy">
-                            <span class="onboarding-progress-label">Application</span>
+                            <span class="onboarding-progress-label">Completed</span>
                             <strong>Step {{ $step }} of 7</strong>
                             <span>{{ $completedCount }} of 6 steps complete</span>
                         </div>
@@ -194,6 +199,11 @@
                                 @endif
                             @endforeach
                         </div>
+                        <p class="onboarding-mobile-save" aria-live="polite">
+                            <span x-show="!saving && !draftSaving && !draftFailed" x-text="draftSavedAt ? 'Draft saved ' + draftSavedAt : 'Drafts save as you go'">Drafts save as you go</span>
+                            <span x-cloak x-show="saving || draftSaving">Saving…</span>
+                            <span x-cloak x-show="!saving && !draftSaving && draftFailed">Draft not saved</span>
+                        </p>
                     </div>
 
                     <nav class="onboarding-steps" aria-label="Application progress">
@@ -217,7 +227,7 @@
                                     </span>
                                 </a>
                             @else
-                                <span class="onboarding-step" role="link" aria-disabled="true" title="{{ $lockedNote }}" @if ($number === $step) aria-current="step" @endif @if ($done) data-done="true" @endif>
+                                <span class="onboarding-step" aria-disabled="true" title="{{ $lockedNote }}" @if ($number === $step) aria-current="step" @endif @if ($done) data-done="true" @endif>
                                     <span aria-hidden="true" class="onboarding-step-dot">
                                         @if ($done)
                                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7" /></svg>
@@ -260,14 +270,13 @@
                     @endif
 
                     <header class="onboarding-step-head">
-                        <p class="onboarding-kicker">{{ $steps[$step]['phase'] }} · Step {{ $step }}</p>
                         <h2 id="step-title">{{ $steps[$step]['title'] }}</h2>
                         <p class="onboarding-intro">{{ $steps[$step]['intro'] }}</p>
                     </header>
 
                     @if ($step < 7)
-                        <form id="seller-step-form" x-ref="stepForm" method="POST" enctype="multipart/form-data" action="{{ route('seller-application.step', $step) }}" @submit.prevent="save($event)">@csrf
-                            <div x-cloak x-show="validationErrors.length || uploadError || exitBlocked" x-ref="formErrors" tabindex="-1" role="alert" class="mb-5 rounded-md border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p x-text="uploadError"></p><template x-for="error in validationErrors"><p x-text="error"></p></template><p x-show="exitBlocked" class="mt-2">This step isn’t complete, so it can’t be saved yet. Finish it, or <a href="{{ route('profile.edit') }}" class="font-semibold underline underline-offset-2">leave without saving this step</a>. Your earlier steps are already saved.</p></div>
+                        <form id="seller-step-form" x-ref="stepForm" method="POST" enctype="multipart/form-data" action="{{ route('seller-application.step', $step) }}" @input.debounce.1500ms="autosave()" @submit.prevent="save($event)">@csrf
+                            <div x-cloak x-show="validationErrors.length || uploadError || exitBlocked" x-ref="formErrors" tabindex="-1" role="alert" class="mb-5 rounded-md border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p x-text="uploadError"></p><template x-for="error in validationErrors"><p x-text="error"></p></template><p x-show="exitBlocked" class="mt-2">Some answers need fixing before this draft can be saved. Fix them, or <a href="{{ route('profile.edit') }}" class="font-semibold underline underline-offset-2">leave without saving this step</a>. Your earlier answers are already saved.</p></div>
 
                             @if ($step === 1)
                                 <div role="radiogroup" aria-label="Seller type">
@@ -333,10 +342,18 @@
                                                 <p>Keep it clear and specific — buyers scan these first.</p>
                                             </div>
                                             <div class="onboarding-grid">
+                                                <datalist id="store-category-options">
+                                                    @foreach ($categories as $category)
+                                                        <option value="{{ $category }}"></option>
+                                                    @endforeach
+                                                </datalist>
                                                 @include('seller-applications.field', ['name' => 'store_name', 'label' => 'Store name', 'required' => true, 'class' => 'onboarding-span-2'])
-                                                @include('seller-applications.field', ['name' => 'store_slug', 'label' => 'Store link', 'required' => true, 'prefix' => '/stores/', 'help' => 'Lowercase letters, numbers and hyphens.', 'class' => 'onboarding-span-2'])
+                                                <div class="onboarding-span-2" @input.debounce.600ms="if ($event.target.name === 'store_slug') checkSlug($event.target.value)">
+                                                    @include('seller-applications.field', ['name' => 'store_slug', 'label' => 'Store link', 'required' => true, 'prefix' => '/stores/', 'help' => 'Lowercase letters, numbers and hyphens. Must be unique.'])
+                                                    <p x-cloak x-show="slugMessage" x-text="slugMessage" class="mt-1 text-xs" :class="slugAvailable ? 'text-success' : 'text-danger'"></p>
+                                                </div>
                                                 @include('seller-applications.field', ['name' => 'store_description', 'label' => 'Store description', 'textarea' => true, 'required' => true, 'maxlength' => 2000, 'class' => 'onboarding-span-2'])
-                                                @include('seller-applications.field', ['name' => 'store_category', 'label' => 'Primary product category', 'required' => true, 'placeholder' => 'Home and living'])
+                                                @include('seller-applications.field', ['name' => 'store_category', 'label' => 'Primary product category', 'required' => true, 'placeholder' => 'Home and living', 'list' => 'store-category-options', 'help' => 'Start typing to match a category buyers browse.'])
                                                 @include('seller-applications.field', ['name' => 'support_contact', 'label' => 'Customer support contact', 'required' => true])
                                             </div>
                                         </section>
@@ -496,7 +513,7 @@
                             <div x-cloak x-show="saving && uploadProgress > 0" role="status" class="mt-4 text-sm text-muted"><label for="upload-progress" class="font-semibold">Upload progress: <span x-text="uploadProgress"></span>%</label><progress id="upload-progress" :value="uploadProgress" max="100" class="mt-2 block w-full"></progress></div>
 
                             <div class="onboarding-actions">
-                                <p class="onboarding-save-hint">Your progress saves when you continue.</p>
+                                <p class="onboarding-save-hint">Your answers save as you go.</p>
                                 <div class="onboarding-action-buttons">
                                     @if ($step > 1)
                                         <a href="{{ route('seller-application.create', ['step' => $step - 1]) }}" class="onboarding-button onboarding-button--quiet">Back</a>
@@ -576,7 +593,7 @@
                                 </div>
                                 <dl class="onboarding-review-grid">
                                     <div><dt>Government ID</dt><dd>{{ $application?->id_type ? ($idTypes[$application->id_type] ?? ucfirst(str_replace('_', ' ', $application->id_type))) : 'Not completed' }}</dd></div>
-                                    <div><dt>Payout method</dt><dd>{{ $payout ? ucfirst($payout->method).' · '.$payout->maskedAccountNumber() : 'Not completed' }}</dd></div>
+                                    <div><dt>Payout method</dt><dd>{{ $payout?->method && filled($payout->account_number) ? ucfirst($payout->method).' · '.$payout->maskedAccountNumber() : 'Not completed' }}</dd></div>
                                     <div><dt>Documents</dt><dd>{{ $documentCount }} uploaded</dd></div>
                                     <div><dt>Account holder</dt><dd>{{ $payout?->holder_name ?: 'Not completed' }}</dd></div>
                                 </dl>

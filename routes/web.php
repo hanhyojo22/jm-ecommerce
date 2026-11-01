@@ -120,8 +120,9 @@ Route::post('/profile/workspace', WorkspacePreferenceController::class)
 
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/start-selling', [SellerApplicationController::class, 'create'])->name('seller-application.create');
+    Route::get('/start-selling/store-link', [SellerApplicationController::class, 'storeLink'])->middleware('throttle:30,1')->name('seller-application.store-link');
     Route::post('/start-selling', [SellerApplicationController::class, 'store'])->middleware('throttle:10,1')->name('seller-application.store');
-    Route::post('/start-selling/steps/{step}', [SellerApplicationController::class, 'saveStep'])->middleware('throttle:10,1')->whereNumber('step')->name('seller-application.step');
+    Route::post('/start-selling/steps/{step}', [SellerApplicationController::class, 'saveStep'])->middleware('throttle:30,1')->whereNumber('step')->name('seller-application.step');
 });
 
 Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function (): void {

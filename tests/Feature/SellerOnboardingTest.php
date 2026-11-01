@@ -252,6 +252,85 @@ class SellerOnboardingTest extends TestCase
         $this->assertNull($tenant->fresh()->platform_fee_accepted_at);
     }
 
+    public function test_a_partial_draft_saves_answers_without_completing_the_step(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+
+        $first = $this->actingAs($buyer)
+            ->postJson(route('seller-application.step', 1), ['seller_type' => 'individual', 'draft' => '1'])
+            ->assertOk()
+            ->assertJsonMissingPath('redirect');
+        $this->assertNotEmpty($first->json('saved_at'));
+
+        $application = $buyer->sellerApplications()->firstOrFail();
+        $this->assertSame('individual', $application->seller_type);
+        $this->assertSame([], $application->completed_steps ?? []);
+
+        // Continuing the step is what completes and advances it.
+        $this->actingAs($buyer)
+            ->postJson(route('seller-application.step', 1), ['seller_type' => 'individual'])
+            ->assertOk()
+            ->assertJsonStructure(['redirect']);
+        $this->assertContains(1, $application->fresh()->completed_steps);
+
+        $this->actingAs($buyer)
+            ->postJson(route('seller-application.step', 2), ['seller_name' => 'Ava Draft', 'draft' => '1'])
+            ->assertOk()
+            ->assertJsonMissingPath('redirect');
+
+        $application->refresh();
+        $this->assertSame('Ava Draft', $application->seller_name);
+        $this->assertNotContains(2, $application->completed_steps ?? []);
+
+        // A malformed value is still refused, even in a draft.
+        $this->actingAs($buyer)
+            ->postJson(route('seller-application.step', 2), ['phone' => '123', 'draft' => '1'])
+            ->assertStatus(422);
+
+        $this->actingAs($buyer)
+            ->postJson(route('seller-application.step', 2), ['seller_name' => 'Ava Seller', 'phone' => '+639171234567', 'date_of_birth' => '1990-01-01'])
+            ->assertOk()
+            ->assertJsonStructure(['redirect']);
+
+        $this->assertContains(2, $application->fresh()->completed_steps);
+
+        // A payout draft can record a provider before an account number exists.
+        $this->actingAs($buyer)
+            ->postJson(route('seller-application.step', 6), ['provider' => 'Test Bank', 'draft' => '1'])
+            ->assertOk();
+
+        $this->assertSame('Test Bank', $application->fresh()->payoutProfile?->provider);
+    }
+
+    public function test_store_link_check_reports_format_reserved_and_taken_links(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $other = User::factory()->create(['email_verified_at' => now()]);
+
+        $other->sellerApplications()->create(['store_name' => 'Taken Goods', 'store_slug' => 'taken-shop', 'status' => 'draft']);
+        $buyer->sellerApplications()->create(['store_name' => 'My Goods', 'store_slug' => 'my-shop', 'status' => 'draft']);
+
+        $this->actingAs($buyer)->getJson(route('seller-application.store-link', ['slug' => 'ab']))
+            ->assertOk()
+            ->assertJson(['available' => false]);
+
+        $this->actingAs($buyer)->getJson(route('seller-application.store-link', ['slug' => 'support']))
+            ->assertOk()
+            ->assertJson(['available' => false]);
+
+        $this->actingAs($buyer)->getJson(route('seller-application.store-link', ['slug' => 'taken-shop']))
+            ->assertOk()
+            ->assertJson(['available' => false, 'message' => 'That link is already taken.']);
+
+        $this->actingAs($buyer)->getJson(route('seller-application.store-link', ['slug' => 'my-shop']))
+            ->assertOk()
+            ->assertJson(['available' => true, 'message' => 'Available.']);
+
+        $this->actingAs($buyer)->getJson(route('seller-application.store-link', ['slug' => 'Fresh Shop']))
+            ->assertOk()
+            ->assertJson(['available' => true, 'message' => 'Available.']);
+    }
+
     public function test_suspension_blocks_product_creation_and_preserves_records(): void
     {
         $admin = User::factory()->administrator()->create();
