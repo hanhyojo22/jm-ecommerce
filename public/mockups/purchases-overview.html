@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Purchases direction 3 — The overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="purchases-redesign.css">
+<style>
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+    .stat { padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .stat .n { font-size: 24px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; }
+    .stat .l { margin-top: 3px; font-size: 12px; color: var(--muted); }
+    .stat.warn { border-color: #f4d9a8; background: #fffaf0; }
+    .stat.warn .n { color: var(--warning); }
+    .stat.moving .n { color: var(--brand); }
+    .stat.good .n { color: var(--success); }
+
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+    .toolbar h2 { font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+    .toolbar p { margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
+    .table-wrap { margin-top: 10px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 9px 14px; border-bottom: 1px solid var(--line); background: var(--canvas); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .1em; text-align: left; text-transform: uppercase; }
+    th.r, td.r { text-align: right; }
+    td { padding: 13px 14px; border-bottom: 1px solid var(--line-soft); font-size: 12.5px; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover td { background: #fbfcfe; }
+    .order-name { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+    .order-sub { margin-top: 2px; font-size: 11px; color: var(--muted); }
+    .seller { font-size: 12px; color: var(--muted); }
+    .total-cell { font-size: 13px; font-weight: 600; }
+    .placed { font-size: 11.5px; color: var(--muted); }
+    .table-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; border-top: 1px solid var(--line); background: #fbfcfe; font-size: 11.5px; color: var(--muted); }
+    .table-foot a { font-weight: 600; color: var(--brand); }
+
+    .empty-note { margin-top: 14px; font-size: 11.5px; color: var(--muted); }
+
+    @media (max-width: 900px) {
+        .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        th:nth-child(2), td:nth-child(2) { display: none; }
+    }
+    @media (max-width: 720px) {
+        .table-wrap { border: 0; background: transparent; overflow: visible; }
+        table, tbody { display: block; }
+        thead { display: none; }
+        tbody { display: grid; gap: 10px; }
+        tbody tr { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+        tbody tr:hover td { background: transparent; }
+        td { display: block; padding: 0; border: 0; }
+        td:nth-child(1) { grid-column: 1 / -1; }
+        td:nth-child(2) { display: none; }
+        td:nth-child(3) { grid-column: 2; grid-row: 2; justify-self: end; display: block; }
+        td:nth-child(4) { display: none; }
+        td:nth-child(5) { grid-column: 1; grid-row: 2; }
+        td:nth-child(6) { grid-column: 1 / -1; grid-row: 3; }
+        .table-foot { border: 0; background: transparent; padding: 12px 2px 0; }
+    }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="#"><span class="brand-mark">JM</span> JMMart</a>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg> Search products and stores</div>
+    <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg></button>
+        <button class="icon-btn" aria-label="Cart, 2 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg></button>
+        <span class="account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span>Hi, JM</span></span>
+    </div>
+</div></header>
+
+<main class="page">
+    <div class="head">
+        <div><h1>My purchases</h1><p class="lede">3 orders since Sep 12 · Continue shopping →</p></div>
+        <div class="head-tools"><span class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg> Order #, store, or item</span></div>
+    </div>
+
+    <section class="stats" aria-label="Order overview">
+        <a class="stat warn" href="#"><p class="n num">1</p><p class="l">Needs payment</p></a>
+        <a class="stat moving" href="#"><p class="n num">1</p><p class="l">On the way</p></a>
+        <a class="stat good" href="#"><p class="n num">2</p><p class="l">Delivered</p></a>
+        <a class="stat" href="#"><p class="n num">0</p><p class="l">Returns open</p></a>
+    </section>
+
+    <nav class="tabs" aria-label="Purchase status filters">
+        <a class="tab is-active" href="#">All <b>3</b></a>
+        <a class="tab" href="#">To pay <b>1</b></a>
+        <a class="tab" href="#">On the way <b>1</b></a>
+        <a class="tab" href="#">Delivered <b>1</b></a>
+        <a class="tab" href="#">Returns</a>
+    </nav>
+
+    <div class="toolbar">
+        <div><h2>Recent orders</h2><p>Newest first · all sellers</p></div>
+        <span class="pill">3 orders</span>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Order</th><th>Seller</th><th>Status</th><th class="r">Items</th><th class="r">Total</th><th class="r">Placed</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><p class="order-name">QA Canvas Tote and 2 more</p><p class="order-sub">#QA-1240</p></td>
+                    <td class="seller">QA Northwind Store</td>
+                    <td><span class="pill warn"><i aria-hidden="true"></i>To pay</span></td>
+                    <td class="r num">3</td>
+                    <td class="r total-cell num">₱69.97</td>
+                    <td class="r placed">Today</td>
+                </tr>
+                <tr>
+                    <td><p class="order-name">QA Variant Speaker and 1 more</p><p class="order-sub">#QA-2150</p></td>
+                    <td class="seller">Moso</td>
+                    <td><span class="pill moving"><i aria-hidden="true"></i>On the way</span></td>
+                    <td class="r num">2</td>
+                    <td class="r total-cell num">₱20.00</td>
+                    <td class="r placed">Today</td>
+                </tr>
+                <tr>
+                    <td><p class="order-name">QA Archived Accessory and 3 more</p><p class="order-sub">#QA-2761</p></td>
+                    <td class="seller">QA Northwind Store</td>
+                    <td><span class="pill good"><i aria-hidden="true"></i>Delivered</span></td>
+                    <td class="r num">4</td>
+                    <td class="r total-cell num">₱80.97</td>
+                    <td class="r placed">Oct 28</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="table-foot"><span>Showing 3 of 3 orders</span><a href="#">Order history →</a></div>
+    </div>
+
+    <p class="empty-note">Ready to buy again? The items you order most sit at the top of the marketplace.</p>
+</main>
+</body>
+</html>

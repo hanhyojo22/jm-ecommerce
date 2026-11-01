@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Purchases direction 1 — The journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="purchases-redesign.css">
+<style>
+    .waiting { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin-top: 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12.5px; }
+    .waiting strong { font-weight: 600; }
+    .waiting a { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+    .waiting .warn { color: var(--warning); }
+    .waiting .move { color: var(--brand); }
+    .waiting i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .order { display: block; margin-top: 12px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); transition: border-color .15s ease, box-shadow .18s cubic-bezier(.22,.61,.36,1); }
+    .order:hover { border-color: #cbd4e0; box-shadow: 0 2px 10px rgb(24 44 72 / 9%); }
+    .order-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); }
+    .store { display: flex; min-width: 0; align-items: center; gap: 10px; }
+    .store svg { width: 17px; height: 17px; flex: none; color: var(--muted); }
+    .store b { overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .store span { color: var(--muted); font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+    .journey { padding: 16px 16px 12px; }
+    .steps { position: relative; display: flex; margin: 0; padding: 0; list-style: none; }
+    .step { position: relative; z-index: 1; display: flex; flex: 1; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+    .step::before { content: ""; position: absolute; top: 10px; left: 50%; right: -50%; height: 2px; background: var(--line); }
+    .step:last-child::before { display: none; }
+    .step.done::before { background: #b9cdf2; }
+    .dot { position: relative; z-index: 1; display: grid; place-items: center; width: 21px; height: 21px; border: 2px solid var(--line); border-radius: 50%; background: #fff; color: transparent; }
+    .dot svg { width: 11px; height: 11px; }
+    .step.done .dot { border-color: var(--brand); background: var(--brand); color: #fff; }
+    .step.current .dot { border-color: var(--brand); color: var(--brand); box-shadow: 0 0 0 4px rgb(32 91 244 / 12%); }
+    .step.current.pay .dot { border-color: #f59e0b; color: var(--warning); box-shadow: 0 0 0 4px rgb(245 158 11 / 14%); }
+    .label { overflow: hidden; max-width: 100%; font-size: 10.5px; font-weight: 600; line-height: 1.3; color: var(--muted); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+    .step.done .label { color: var(--ink); }
+    .step.current .label { color: var(--brand); }
+    .step.current.pay .label { color: var(--warning); }
+    .items { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line-soft); }
+    .stack { display: flex; flex: none; }
+    .stack .thumb { width: 40px; height: 40px; border: 2px solid #fff; border-radius: 7px; }
+    .stack .thumb + .thumb { margin-left: -12px; }
+    .items-copy { min-width: 0; flex: 1; }
+    .items-copy p { overflow: hidden; font-size: 12.5px; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+    .items-copy span { display: block; margin-top: 1px; font-size: 11.5px; color: var(--muted); }
+    .total { flex: none; text-align: right; }
+    .total b { display: block; font-size: 14px; font-weight: 600; }
+    .total span { font-size: 11px; color: var(--muted); }
+    .order-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line-soft); background: #fbfcfe; }
+    .order-foot p { font-size: 11.5px; color: var(--muted); }
+    .order-foot a { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--brand); }
+    .order-foot svg { width: 14px; height: 14px; }
+    @media (max-width: 760px) {
+        .journey { padding: 14px 12px 10px; }
+        .order-head, .items, .order-foot { padding-inline: 12px; }
+        .label { font-size: 9.5px; }
+        .step::before { top: 10px; }
+        .waiting { margin-top: 12px; }
+    }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="#"><span class="brand-mark">JM</span> JMMart</a>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg> Search products and stores</div>
+    <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg></button>
+        <button class="icon-btn" aria-label="Cart, 2 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg></button>
+        <span class="account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span>Hi, JM</span></span>
+    </div>
+</div></header>
+
+<main class="page">
+    <div class="head">
+        <div><h1>My purchases</h1><p class="lede">3 orders · Continue shopping →</p></div>
+        <div class="head-tools"><span class="searchbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg> Order #, store, or item</span></div>
+    </div>
+
+    <nav class="tabs" aria-label="Purchase status filters">
+        <a class="tab is-active" href="#">All <b>3</b></a>
+        <a class="tab" href="#">To pay <b>1</b></a>
+        <a class="tab" href="#">Awaiting store</a>
+        <a class="tab" href="#">Preparing</a>
+        <a class="tab" href="#">On the way <b>1</b></a>
+        <a class="tab" href="#">Delivered <b>1</b></a>
+        <a class="tab" href="#">To review</a>
+        <a class="tab" href="#">Returns</a>
+    </nav>
+
+    <div class="waiting">
+        <strong>Waiting on you</strong>
+        <a class="warn" href="#"><i aria-hidden="true"></i>1 to pay</a>
+        <a class="move" href="#"><i aria-hidden="true"></i>1 on the way to you</a>
+    </div>
+
+    <div class="day"><h2>Today <span>Nov 1</span></h2><p class="num">2 orders · ₱89.97</p></div>
+
+    <a class="order" href="#" aria-label="Moso order QA-2150, on the way, ₱20.00">
+        <div class="order-head">
+            <div class="store"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg><b>Moso</b><span>QA-2150</span></div>
+            <span class="pill moving"><i aria-hidden="true"></i>On the way</span>
+        </div>
+        <div class="journey">
+            <ol class="steps" aria-label="Order progress">
+                <li class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span class="label">Confirmed</span></li>
+                <li class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span class="label">Packed</span></li>
+                <li class="step current"><span class="dot"></span><span class="label">Shipped</span></li>
+                <li class="step"><span class="dot"></span><span class="label">Delivered</span></li>
+            </ol>
+        </div>
+        <div class="items">
+            <div class="stack">
+                <span class="thumb"><img src="../images/categories/electronics.png" alt=""></span>
+                <span class="thumb"><img src="../images/categories/fashion.png" alt=""></span>
+            </div>
+            <div class="items-copy"><p>QA Variant Speaker and 1 more</p><span>Expected Nov 4</span></div>
+            <div class="total"><b class="num">₱20.00</b><span>2 items</span></div>
+        </div>
+        <div class="order-foot"><p>Courier pickup from the store</p><span class="btn-link">Track order <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg></span></div>
+    </a>
+
+    <a class="order" href="#" aria-label="QA Northwind Store order QA-1240, payment pending, ₱69.97">
+        <div class="order-head">
+            <div class="store"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg><b>QA Northwind Store</b><span>QA-1240</span></div>
+            <span class="pill warn"><i aria-hidden="true"></i>To pay</span>
+        </div>
+        <div class="journey">
+            <ol class="steps" aria-label="Order progress">
+                <li class="step current pay"><span class="dot"></span><span class="label">Payment due</span></li>
+                <li class="step"><span class="dot"></span><span class="label">Confirmed</span></li>
+                <li class="step"><span class="dot"></span><span class="label">Shipped</span></li>
+                <li class="step"><span class="dot"></span><span class="label">Delivered</span></li>
+            </ol>
+        </div>
+        <div class="items">
+            <div class="stack">
+                <span class="thumb"><img src="../images/categories/fashion.png" alt=""></span>
+                <span class="thumb"><img src="../images/categories/electronics.png" alt=""></span>
+            </div>
+            <div class="items-copy"><p>QA Canvas Tote and 2 more</p><span>Send payment to the store</span></div>
+            <div class="total"><b class="num">₱69.97</b><span>3 items</span></div>
+        </div>
+        <div class="order-foot"><p>Pay before the store can prepare it</p><span class="btn-link">Pay now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg></span></div>
+    </a>
+
+    <div class="day"><h2>Oct 28</h2><p class="num">1 order · ₱80.97</p></div>
+
+    <a class="order" href="#" aria-label="QA Northwind Store order QA-2761, delivered, ₱80.97">
+        <div class="order-head">
+            <div class="store"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg><b>QA Northwind Store</b><span>QA-2761</span></div>
+            <span class="pill good"><i aria-hidden="true"></i>Delivered</span>
+        </div>
+        <div class="journey">
+            <ol class="steps" aria-label="Order progress">
+                <li class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span class="label">Confirmed</span></li>
+                <li class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span class="label">Packed</span></li>
+                <li class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span class="label">Shipped</span></li>
+                <li class="step done"><span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span class="label">Delivered</span></li>
+            </ol>
+        </div>
+        <div class="items">
+            <div class="stack">
+                <span class="thumb"><img src="../images/categories/fashion.png" alt=""></span>
+                <span class="thumb"><img src="../images/categories/bags-accessories.png" alt=""></span>
+            </div>
+            <div class="items-copy"><p>QA Archived Accessory and 3 more</p><span>Delivered Oct 30</span></div>
+            <div class="total"><b class="num">₱80.97</b><span>4 items</span></div>
+        </div>
+        <div class="order-foot"><p>Review the items you received</p><span class="btn-link">View order <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg></span></div>
+    </a>
+</main>
+</body>
+</html>
