@@ -580,6 +580,112 @@
     margin: 1.5rem;
 }
 
+/*
+ * The sign-in hand-off is the one page a visitor reaches with work still in flight, so it says
+ * where it is rather than just turning. Three segments track the steps app.js really takes
+ * (bundle, session token, server session) and the line beneath the heading names the current
+ * one; the restart link appears once a wait has gone on long enough to need a way out.
+ */
+.handoff-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(72% 58% at 88% -6%, rgb(59 130 246 / 26%), transparent 68%),
+        radial-gradient(58% 46% at 2% 102%, rgb(29 78 216 / 24%), transparent 72%);
+}
+
+.handoff-rail {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .625rem;
+    max-width: 16rem;
+}
+
+.handoff-seg {
+    position: relative;
+    display: block;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 14%);
+}
+
+.handoff-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: #fff;
+    opacity: .9;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform .5s cubic-bezier(.16, 1, .3, 1);
+}
+
+.handoff-seg[data-state='done'] .handoff-fill {
+    transform: scaleX(1);
+    opacity: .78;
+}
+
+.handoff-seg[data-state='active'] .handoff-fill {
+    background: linear-gradient(90deg, rgb(255 255 255 / 55%), #fff 45%, rgb(255 255 255 / 55%));
+    background-size: 220% 100%;
+    opacity: 1;
+    transform: scaleX(1);
+    animation: handoff-sweep 1.5s linear infinite;
+}
+
+@keyframes handoff-sweep {
+    from { background-position: 130% 0; }
+    to { background-position: -130% 0; }
+}
+
+.handoff-wait {
+    animation: handoff-enter .6s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+@keyframes handoff-enter {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+}
+
+/* A stalled bundle must not leave the visitor with only the 15-second deadline to reach for. */
+.handoff-restart {
+    visibility: hidden;
+    opacity: 0;
+    animation: handoff-restart-in .4s ease-out 6s forwards;
+}
+
+@keyframes handoff-restart-in {
+    to {
+        visibility: visible;
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .handoff-wait,
+    .handoff-restart {
+        animation: none;
+    }
+
+    .handoff-restart {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .handoff-fill {
+        transition: none;
+    }
+
+    .handoff-seg[data-state='active'] .handoff-fill {
+        background: rgb(255 255 255 / 82%);
+        animation: none;
+    }
+}
+
 /* One page padding across every account page, rather than a per-page guess. */
 .customer-workspace .page-shell {
     padding-top: 24px;

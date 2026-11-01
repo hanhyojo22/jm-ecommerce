@@ -379,6 +379,7 @@ const completeClerkHandoff = async (clerk) => {
         return;
     }
 
+    window.clerkHandoffState?.stage('session');
     window.clerkHandoffState?.extend(clerkHandoffTokenTimeout + clerkHandoffDeadlineSlack);
 
     const sessionToken = await withTimeout(
@@ -391,6 +392,7 @@ const completeClerkHandoff = async (clerk) => {
         throw new Error('Clerk did not provide a session token for the sign-in handoff.');
     }
 
+    window.clerkHandoffState?.stage('server');
     window.clerkHandoffState?.extend(clerkHandoffPostTimeout + clerkHandoffDeadlineSlack);
 
     const abort = new AbortController();
@@ -426,6 +428,7 @@ const completeClerkHandoff = async (clerk) => {
         throw new Error('Laravel returned an invalid sign-in destination.');
     }
 
+    window.clerkHandoffState?.stage('done');
     window.clerkHandoffState?.finish();
     window.location.assign(result.redirect);
 };
