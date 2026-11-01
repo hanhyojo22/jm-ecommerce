@@ -258,21 +258,21 @@ class PurchaseIndexTest extends TestCase
         $unpaid->update(['status' => 'cancelled', 'cod_collected_at' => now()]);
         $this->get(route('orders.index'))->assertOk()
             ->assertSee('Cancelled')
-            ->assertSee('1 refund to chase')
+            ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['refunds'] === 1)
             ->assertDontSee('Refund due')
             ->assertDontSee('refund through PayMongo');
 
         $answered = $this->sellerOrder($this->order($buyer, 'RET-001', '5.00'), 'Answered Store', 'delivered', '5.00');
         ReturnCase::create(['seller_order_id' => $answered->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'offered', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The item arrived broken.']);
         $this->get(route('orders.index'))->assertOk()
-            ->assertSee('1 return needs you')
+            ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['returns'] === 1)
             ->assertDontSee('Answer return')
             ->assertDontSee('Answered Store answered your return.');
 
         $sendBack = $this->sellerOrder($this->order($buyer, 'RET-002', '6.00'), 'Return Store', 'delivered', '6.00');
         ReturnCase::create(['seller_order_id' => $sendBack->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'awaiting_return', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The item arrived broken.', 'return_by' => now()->addDays(7)]);
         $this->get(route('orders.index'))->assertOk()
-            ->assertSee('2 returns need you')
+            ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['returns'] === 2)
             ->assertDontSee('Send item back')
             ->assertDontSee('Send the item back to Return Store');
 
@@ -281,7 +281,7 @@ class PurchaseIndexTest extends TestCase
         ReturnCase::create(['seller_order_id' => $lateStore->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'awaiting_seller', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'details' => 'The item arrived broken.', 'respond_by' => now()->subHour()]);
         $sendBack->returnCases()->update(['return_by' => now()->subDay()]);
         $this->get(route('orders.index'))->assertOk()
-            ->assertSee('3 returns need you')
+            ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['returns'] === 3)
             ->assertSee('Store missed its deadline')
             ->assertDontSee('Ask JMMart to step in')
             ->assertDontSee('send-back date passed. Record the handoff now');
@@ -290,17 +290,17 @@ class PurchaseIndexTest extends TestCase
         $outcome = $this->sellerOrder($this->order($buyer, 'RET-004', '8.00'), 'Outcome Store', 'delivered', '8.00');
         ReturnCase::create(['seller_order_id' => $outcome->id, 'buyer_id' => $buyer->id, 'opened_by' => $buyer->id, 'status' => 'awaiting_confirmation', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'The item arrived broken.', 'buyer_respond_by' => now()->subDay()]);
         $this->get(route('orders.index'))->assertOk()
-            ->assertSee('4 returns need you')
+            ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['returns'] === 4)
             ->assertDontSee('Confirm outcome')
             ->assertDontSee('Outcome Store recorded your refund.');
         $outcome->returnCases()->update(['buyer_respond_by' => now()->addDays(2)]);
         $this->get(route('orders.index'))->assertOk()
-            ->assertSee('4 returns need you');
+            ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['returns'] === 4);
 
         // An offer left past its answer date can no longer be accepted, so it stops asking the buyer to decide.
         $answered->returnCases()->update(['buyer_respond_by' => now()->subDay()]);
         $this->get(route('orders.index'))->assertOk()
-            ->assertSee('3 returns need you')
+            ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['returns'] === 3)
             ->assertSee('Response window passed')
             ->assertDontSee('Your deadline to respond passed');
     }

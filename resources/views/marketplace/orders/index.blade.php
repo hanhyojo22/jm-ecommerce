@@ -163,18 +163,6 @@
         ];
         $search = trim($filters['search'] ?? '');
         $hasFilters = $search !== '' || filled($filters['status'] ?? null);
-        $waitingOnYou = array_diff_key($attentionCounts, ['to_receive' => true]);
-        $attentionLabel = fn (string $key, int $count): string => match ($key) {
-            'to_pay' => $count.' to pay',
-            'returns' => $count.' '.Str::plural('return', $count).' '.($count === 1 ? 'needs' : 'need').' you',
-            'refunds' => $count.' '.Str::plural('refund', $count).' to chase',
-        };
-        $attentionHref = fn (string $key): string => match ($key) {
-            'to_pay' => route('orders.index', ['tab' => 'to_pay']),
-            'returns' => route('orders.index', ['tab' => 'returns']),
-            // Refunds due already lead the All list, so the link only has to reach it.
-            'refunds' => '#purchases',
-        };
         // Compact sizes only where a fine pointer is likely; phones and tablets keep 44px targets.
         $quietAction = 'inline-flex min-h-11 items-center rounded-md px-1.5 text-meta font-semibold text-brand underline-offset-2 transition-colors hover:text-brand-hover hover:underline lg:min-h-10';
         $primaryAction = 'inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3.5 text-meta font-semibold text-white transition-colors hover:bg-brand-hover lg:min-h-10';
@@ -207,26 +195,6 @@
                     <x-input-error id="purchase-search-error" :messages="$errors->get('search')" class="mt-2" />
                 </form>
             </header>
-
-            {{-- What waits on the buyer, in one strip that shares the list's inner edge. It turns warm only
-                 when something is the buyer's to do; parcels on the way alone stay neutral. --}}
-            @if ($attentionCounts !== [] && $tab === 'all' && ! $hasFilters)
-                <div role="region" aria-label="Waiting on you" @class([
-                    'mt-5 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border px-4 py-2.5 text-meta lg:px-6',
-                    'border-[var(--color-warning-line)] bg-[var(--color-warning-wash)]' => $waitingOnYou !== [],
-                    'border-line bg-surface' => $waitingOnYou === [],
-                ])>
-                    @if ($waitingOnYou !== [])
-                        <strong class="font-semibold text-ink">Waiting on you</strong>
-                        @foreach ($waitingOnYou as $key => $count)
-                            <a href="{{ $attentionHref($key) }}" class="inline-flex min-h-8 items-center gap-1.5 font-semibold text-warning-text underline-offset-2 hover:underline"><span class="size-1.5 rounded-full bg-warning" aria-hidden="true"></span>{{ $attentionLabel($key, $count) }}</a>
-                        @endforeach
-                    @endif
-                    @isset ($attentionCounts['to_receive'])
-                        <a href="{{ route('orders.index', ['tab' => 'to_receive']) }}" class="inline-flex min-h-8 items-center gap-1.5 font-semibold text-brand underline-offset-2 hover:underline"><span class="size-1.5 rounded-full bg-brand" aria-hidden="true"></span>{{ $attentionCounts['to_receive'] }} on the way to you</a>
-                    @endisset
-                </div>
-            @endif
 
             @if (session('status'))
                 <p role="status" class="mt-3 rounded-md border border-[var(--color-success-line)] bg-[var(--color-success-wash)] px-3.5 py-2.5 text-meta font-medium text-success">{{ session('status') }}</p>
