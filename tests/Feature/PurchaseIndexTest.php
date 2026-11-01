@@ -12,6 +12,7 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PurchaseIndexTest extends TestCase
@@ -203,6 +204,22 @@ class PurchaseIndexTest extends TestCase
             ->assertSee('Third Bundle Item')
             ->assertDontSee('1 more item')
             ->assertSee(route('orders.show', $order), false);
+    }
+
+    public function test_purchase_cards_show_the_store_logo_when_one_exists(): void
+    {
+        Storage::fake('public');
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer, 'LOGO-001', '10.00');
+        $sellerOrder = $this->sellerOrder($order, 'Logo Store', 'delivered', '10.00');
+        $sellerOrder->store->update(['logo_path' => 'stores/logo.png']);
+
+        $this->actingAs($buyer)->get(route('orders.index'))
+            ->assertOk()
+            ->assertSee(Storage::disk('public')->url('stores/logo.png'), false)
+            ->assertSee('Logo Store')
+            // The hanger is only the fallback; a store with a logo never shows it.
+            ->assertDontSee('M4 9.5 5.5 4h13L20 9.5', false);
     }
 
     public function test_purchase_pills_report_state_while_actions_live_on_the_order_page(): void
