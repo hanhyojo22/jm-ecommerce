@@ -43,7 +43,7 @@
                         <section aria-labelledby="cart-items">
                             <h2 id="cart-items" class="sr-only">Cart items grouped by seller</h2>
 
-                            <div class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--radius-surface)] border border-line bg-surface px-4 py-3 sm:px-5">
+                            <div class="mb-3.5 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-[var(--radius-surface)] border border-line bg-surface p-3 sm:px-4 sm:py-3.5">
                                 <label class="inline-flex min-h-11 cursor-pointer items-center gap-3 text-sm font-semibold text-ink">
                                     <input type="checkbox" data-select-all @checked($allSelected) x-bind:checked="allSelected" x-on:change="toggleAll()" @disabled($availableItems->isEmpty()) class="size-5 shrink-0 rounded-md border-line text-brand focus:ring-brand disabled:opacity-40">
                                     Select all
@@ -67,13 +67,10 @@
                                     @endphp
 
                                     <section class="overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface" aria-labelledby="store-{{ $store->id }}">
-                                        <div class="flex items-center justify-between gap-4 border-b border-line bg-canvas/70 px-4 py-3 sm:px-5">
+                                        <div class="flex items-center justify-between gap-4 border-b border-line bg-canvas/70 p-3 sm:px-4 sm:py-3.5">
                                             <div class="flex min-w-0 items-center gap-3">
                                                 <input type="checkbox" data-store-checkbox="{{ $storeId }}" @checked($storeAllSelected) x-on:change="toggleStore('{{ $storeId }}')" @disabled($storeSelectable->isEmpty()) aria-label="Select all items from {{ $store->name }}" class="size-5 shrink-0 rounded-md border-line text-brand focus:ring-brand disabled:opacity-40">
-                                                <div class="min-w-0">
-                                                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-muted">Sold by</p>
-                                                    <a id="store-{{ $store->id }}" href="{{ route('catalog.store', $store->slug) }}" class="mt-0.5 block truncate text-sm font-semibold text-brand transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $store->name }}</a>
-                                                </div>
+                                                <a id="store-{{ $store->id }}" href="{{ route('catalog.store', $store->slug) }}" class="min-w-0 truncate text-sm font-semibold text-brand transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $store->name }}</a>
                                             </div>
                                             <p class="shrink-0 text-xs font-semibold text-muted">{{ $storeItems->sum('quantity') }} {{ Str::plural('item', $storeItems->sum('quantity')) }}</p>
                                         </div>
@@ -82,7 +79,7 @@
                                             @foreach ($storeItems as $item)
                                                 @php($availableStock = $item->variant?->stock_quantity ?? $item->product->stock_quantity)
                                                 @php($isUnavailable = ! $item->isAvailable())
-                                                <article class="grid grid-cols-[auto_3rem_minmax(0,1fr)] gap-x-3 gap-y-4 p-4 sm:grid-cols-[auto_3.5rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:p-5 {{ $isUnavailable ? 'bg-canvas/40' : '' }}">
+                                                <article class="grid grid-cols-[auto_3rem_minmax(0,1fr)] gap-x-3 gap-y-4 p-3 sm:grid-cols-[auto_3.5rem_minmax(0,1fr)_auto] sm:gap-x-4 sm:px-4 sm:py-3.5 {{ $isUnavailable ? 'bg-canvas/40' : '' }}">
                                                     <div class="flex items-start">
                                                         <input type="checkbox" id="select-{{ $item->id }}" @checked($item->selected) x-bind:checked="isSelected('{{ $item->id }}')" x-on:change="toggleItem('{{ $item->id }}')" @disabled($isUnavailable) aria-label="Select {{ $item->product->name }}" class="mt-[14px] size-5 shrink-0 rounded-md border-line text-brand focus:ring-brand disabled:opacity-40 sm:mt-[18px]">
                                                     </div>
@@ -96,49 +93,51 @@
                                                     </a>
 
                                                     <div class="min-w-0">
-                                                        <h3 class="break-words text-sm font-semibold leading-5 text-ink sm:text-base"><a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $item->product->name }}</a></h3>
-                                                        @if ($item->variant)<p class="mt-1 text-xs font-medium text-brand">{{ $item->variant->label() }}</p>@endif
-                                                        <p class="mt-1 text-sm text-muted">₱{{ number_format($item->unitPrice(), 2) }} each</p>
+                                                        <div class="flex items-start justify-between gap-3">
+                                                            <div class="flex min-h-[48px] min-w-0 flex-col justify-center sm:min-h-[56px]">
+                                                                <h3 class="truncate text-[13px] font-semibold leading-[17px] text-ink"><a href="{{ route('catalog.show', [$item->product->store->slug, $item->product->slug]) }}" class="transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">{{ $item->product->name }}</a></h3>
+                                                                @if ($item->variant)<p class="mt-0.5 truncate text-[11.5px] font-medium leading-[15px] text-brand">{{ $item->variant->label() }}</p>@endif
+                                                            </div>
+                                                            <p class="shrink-0 text-[13px] font-semibold tabular-nums text-ink sm:hidden">₱{{ number_format($item->line_total, 2) }}</p>
+                                                        </div>
+
                                                         @if ($isUnavailable)
                                                             <p class="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">{{ $item->product_variant_id === null && $item->product->variants->isNotEmpty() ? 'Choose a color and size again' : ($item->product->status !== 'active' || ($item->product_variant_id !== null && $item->variant === null) ? 'No longer available' : ($availableStock < 1 ? 'Sold out' : 'Only '.$availableStock.' available')) }}</p>
-                                                        @else
-                                                            <p class="mt-2 text-xs font-semibold text-success">In stock</p>
                                                         @endif
 
-                                                        <div class="mt-4 flex items-center gap-2 sm:hidden">
-                                                            <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-md border border-line bg-surface">
+                                                        <div class="mt-2 flex items-center justify-end gap-2 sm:hidden">
+                                                            <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex items-center overflow-hidden rounded-md border border-line bg-surface">
                                                                 @csrf
                                                                 @method('PATCH')
-                                                                <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
-                                                                <span class="grid h-11 min-w-10 place-items-center border-x border-line text-sm font-semibold">{{ $item->quantity }}</span>
-                                                                <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
+                                                                <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid size-7 place-items-center text-sm text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
+                                                                <span class="grid h-7 min-w-7 place-items-center border-x border-line text-xs font-semibold">{{ $item->quantity }}</span>
+                                                                <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid size-7 place-items-center text-sm text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
                                                             </form>
-                                                            <p class="ml-auto shrink-0 whitespace-nowrap text-sm font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
                                                             <form method="POST" action="{{ route('cart.destroy', $item) }}">
                                                                 @csrf
                                                                 @method('DELETE')
-                                                                <button type="submit" title="Remove" aria-label="Remove {{ $item->product->name }} from your cart" class="grid size-11 shrink-0 place-items-center rounded-md text-muted transition hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
-                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                                                <button type="submit" title="Remove" aria-label="Remove {{ $item->product->name }} from your cart" class="grid size-7 shrink-0 place-items-center rounded-md text-muted transition hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
+                                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
                                                                 </button>
                                                             </form>
                                                         </div>
                                                     </div>
 
-                                                    <div class="hidden min-w-36 items-end justify-between gap-4 sm:flex sm:flex-col">
-                                                        <p class="text-right text-base font-semibold text-ink">₱{{ number_format($item->line_total, 2) }}</p>
-                                                        <div class="flex items-center gap-1.5">
-                                                        <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex min-h-11 items-center overflow-hidden rounded-md border border-line bg-surface">
+                                                    <div class="hidden sm:flex sm:flex-col sm:items-end sm:gap-1.5 sm:self-center">
+                                                        <p class="text-right text-sm font-semibold tabular-nums text-ink">₱{{ number_format($item->line_total, 2) }}</p>
+                                                        <div class="flex items-center gap-2">
+                                                        <form method="POST" action="{{ route('cart.update', $item) }}" class="inline-flex items-center overflow-hidden rounded-md border border-line bg-surface">
                                                             @csrf
                                                             @method('PATCH')
-                                                            <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
-                                                            <span class="grid h-11 min-w-10 place-items-center border-x border-line text-sm font-semibold">{{ $item->quantity }}</span>
-                                                            <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid h-11 w-11 place-items-center text-lg text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
+                                                            <button name="quantity" value="{{ $item->quantity - 1 }}" @disabled($item->quantity <= 1) class="grid size-7 place-items-center text-sm text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Reduce quantity">−</button>
+                                                            <span class="grid h-7 min-w-7 place-items-center border-x border-line text-xs font-semibold">{{ $item->quantity }}</span>
+                                                            <button name="quantity" value="{{ $item->quantity + 1 }}" @disabled($item->quantity >= $availableStock || $isUnavailable) class="grid size-7 place-items-center text-sm text-muted transition hover:bg-canvas disabled:text-slate-300" aria-label="Increase quantity">+</button>
                                                         </form>
                                                         <form method="POST" action="{{ route('cart.destroy', $item) }}">
                                                             @csrf
                                                             @method('DELETE')
-                                                            <button type="submit" title="Remove" aria-label="Remove {{ $item->product->name }} from your cart" class="grid size-11 place-items-center rounded-md text-muted transition hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
-                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
+                                                            <button type="submit" title="Remove" aria-label="Remove {{ $item->product->name }} from your cart" class="grid size-7 place-items-center rounded-md text-muted transition hover:bg-red-50 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/><path stroke-linecap="round" d="M10.4 11v6M13.6 11v6"/></svg>
                                                             </button>
                                                         </form>
                                                         </div>
@@ -152,7 +151,7 @@
                         </section>
 
                         <aside class="hidden lg:sticky lg:top-24 lg:block lg:self-start">
-                            <div class="rounded-[var(--radius-surface)] border border-line bg-surface p-5 sm:p-6">
+                            <div class="rounded-[var(--radius-surface)] border border-line bg-surface p-3 sm:px-4 sm:py-3.5">
                                 <h3 class="text-lg font-semibold tracking-[-0.02em] text-ink">Order summary</h3>
                                 <div class="mt-5 space-y-3 border-b border-line pb-5 text-sm">
                                     @php($selectedQuantity = $items->where('selected', true)->sum('quantity'))
