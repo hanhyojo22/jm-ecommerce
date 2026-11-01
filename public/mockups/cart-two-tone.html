@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Cart direction 4 — Two-tone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cart-redesign.css">
+<style>
+    .split { display: grid; grid-template-columns: minmax(0, 1fr) 380px; min-height: calc(100vh - 65px); }
+    .main { padding: 34px 28px 72px; }
+    .main-inner { max-width: 880px; margin-left: auto; }
+    .selectbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 22px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .selectbar .count { font-size: 13px; color: var(--muted); }
+    .selectbar .remove { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+    .group { margin-top: 22px; }
+    .group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 2px 8px; }
+    .group-name { font-size: 12.5px; font-weight: 600; color: var(--brand); }
+    .group-count { font-size: 11.5px; color: var(--muted); }
+    .rows { border-top: 1px solid var(--line); }
+    .row { display: grid; grid-template-columns: 18px 56px minmax(0, 1fr) auto; gap: 14px; align-items: start; padding: 13px 2px; border-bottom: 1px solid var(--line); }
+    .row .check { margin-top: 19px; }
+    .row .thumb { width: 56px; height: 56px; }
+    .copy { min-width: 0; }
+    .name { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 17px; text-overflow: ellipsis; white-space: nowrap; }
+    .variant { margin-top: 2px; font-size: 11.5px; line-height: 15px; color: var(--brand); }
+    .controls { display: flex; align-items: center; gap: 8px; }
+    .line { font-size: 13px; font-weight: 600; }
+    .mobile-controls { display: none; }
+    .rail { position: sticky; top: 65px; align-self: start; min-height: calc(100vh - 65px); padding: 40px 32px; color: #fff; background: linear-gradient(160deg, #163a86 0%, #10234d 58%, #0b1a3c 100%); }
+    .rail::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(70% 46% at 86% -8%, rgb(59 130 246 / 28%), transparent 68%); }
+    .rail-inner { position: relative; }
+    .rail h2 { font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: #9db2d4; }
+    .stores { margin-top: 6px; font-size: 12px; color: #c3d4ef; }
+    .lines { margin-top: 22px; padding-top: 18px; border-top: 1px solid rgb(255 255 255 / 16%); }
+    .lines div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: #b9cbe8; }
+    .lines div + div { margin-top: 10px; }
+    .free { font-weight: 600; color: #fff; }
+    .total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 18px; font-size: 13px; color: #b9cbe8; }
+    .total strong { font-size: 34px; font-weight: 600; letter-spacing: -.04em; color: #fff; }
+    .checkout { width: 100%; margin-top: 20px; border-color: #fff; background: #fff; color: var(--navy-deep); }
+    .trust { margin-top: 18px; display: grid; gap: 10px; }
+    .trust p { display: flex; align-items: center; gap: 8px; font-size: 11.5px; line-height: 1.5; color: #b9cbe8; }
+    .trust svg { width: 14px; height: 14px; flex: none; color: #93b4f5; }
+    .mobile-bar { position: fixed; inset-inline: 0; bottom: 0; z-index: 30; align-items: center; gap: 12px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(160deg, #163a86, #10234d); color: #fff; }
+    .mobile-bar .total { flex: 1; margin: 0; color: #b9cbe8; }
+    .mobile-bar .total strong { font-size: 20px; color: #fff; }
+    .mobile-bar .btn { min-height: 44px; border-color: #fff; background: #fff; color: var(--navy-deep); }
+    @media (max-width: 1100px) { .split { grid-template-columns: minmax(0, 1fr) 320px; } }
+    @media (max-width: 900px) {
+        .split { grid-template-columns: 1fr; }
+        .main { padding: 24px 12px 110px; }
+        .rail { display: none; }
+        .mobile-bar { display: flex; }
+        .row { grid-template-columns: 18px 56px minmax(0, 1fr); gap: 12px; padding: 12px 0; }
+        .row > .controls { display: none; }
+        .mobile-controls { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .mobile-controls .line { margin-left: auto; }
+        .selectbar { margin-top: 16px; padding: 12px; }
+    }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="#"><span class="brand-mark">JM</span> JMMart</a>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg> Search products and stores</div>
+    <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg></button>
+        <button class="icon-btn" aria-label="Cart, 4 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg></button>
+        <span class="account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span>Hi, JM</span></span>
+    </div>
+</div></header>
+
+<div class="split">
+    <main class="main">
+        <div class="main-inner">
+            <div class="head">
+                <div><h1>Shopping cart</h1><p class="lede">4 items · Grouped by seller</p></div>
+                <a class="continue" href="#">Continue shopping</a>
+            </div>
+
+            <div class="selectbar">
+                <label class="check"><input type="checkbox" checked> Select all</label>
+                <p class="count">4 of 4 selected</p>
+                <button class="remove" type="button">Remove selected</button>
+            </div>
+
+            <section class="group" aria-label="QA Northwind Store">
+                <div class="group-head"><a class="group-name" href="#">QA Northwind Store</a><span class="group-count">3 items</span></div>
+                <div class="rows">
+                    <div class="row">
+                        <label class="check"><input type="checkbox" checked aria-label="Select QA Canvas Tote"></label>
+                        <a class="thumb" href="#" aria-label="View QA Canvas Tote"><img src="../images/categories/fashion.png" alt=""></a>
+                        <div class="copy">
+                            <p class="name">QA Canvas Tote</p>
+                            <div class="mobile-controls">
+                                <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                                <p class="line num">₱19.99</p>
+                                <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                            </div>
+                        </div>
+                        <div class="controls">
+                            <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                            <p class="line num">₱19.99</p>
+                            <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <label class="check"><input type="checkbox" checked aria-label="Select QA Chat Sample"></label>
+                        <a class="thumb" href="#" aria-label="View QA Chat Sample"><img src="../images/categories/electronics.png" alt=""></a>
+                        <div class="copy">
+                            <p class="name">QA Chat Sample</p>
+                            <p class="variant">Blue / Medium</p>
+                            <div class="mobile-controls">
+                                <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>2</span><button type="button" aria-label="Increase">+</button></div>
+                                <p class="line num">₱49.98</p>
+                                <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                            </div>
+                        </div>
+                        <div class="controls">
+                            <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>2</span><button type="button" aria-label="Increase">+</button></div>
+                            <p class="line num">₱49.98</p>
+                            <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="group" aria-label="Moso">
+                <div class="group-head"><a class="group-name" href="#">Moso</a><span class="group-count">1 item</span></div>
+                <div class="rows">
+                    <div class="row">
+                        <label class="check"><input type="checkbox" checked aria-label="Select QA Retired Pouch"></label>
+                        <a class="thumb" href="#" aria-label="View QA Retired Pouch"><img src="../images/categories/bags-accessories.png" alt=""></a>
+                        <div class="copy">
+                            <p class="name">QA Retired Pouch</p>
+                            <div class="mobile-controls">
+                                <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                                <p class="line num">₱6.00</p>
+                                <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                            </div>
+                        </div>
+                        <div class="controls">
+                            <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                            <p class="line num">₱6.00</p>
+                            <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <aside class="rail" aria-label="Order summary">
+        <div class="rail-inner">
+            <h2>Order summary</h2>
+            <p class="stores">4 items from 2 stores</p>
+            <div class="lines">
+                <div><span>Subtotal</span><span class="num">₱75.97</span></div>
+                <div><span>Shipping</span><span class="free">Free</span></div>
+            </div>
+            <p class="total"><span>Total</span><strong class="num">₱75.97</strong></p>
+            <button class="btn checkout" type="button">Check out (4)</button>
+            <div class="trust">
+                <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z"/></svg>Pay on delivery, in cash, when the store hands it over.</p>
+                <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M3 7h18v12H3z"/><path d="M3 11h18"/></svg>Free shipping on every order — no hidden fees.</p>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<div class="mobile-bar">
+    <label class="check"><input type="checkbox" checked> All</label>
+    <p class="total"><span>Total</span><strong class="num">₱75.97</strong></p>
+    <button class="btn" type="button">Check out</button>
+</div>
+</body>
+</html>

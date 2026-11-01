@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Cart direction 1 — The ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cart-redesign.css">
+<style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: 28px; margin-top: 22px; align-items: start; }
+    .sheet { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .sheet-top { display: flex; align-items: center; gap: 16px; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+    .sheet-top .count { font-size: 13px; color: var(--muted); }
+    .sheet-top .remove { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+    .cols { display: grid; grid-template-columns: 18px 48px minmax(0, 1fr) 84px 84px 28px; gap: 14px; padding: 9px 16px; border-bottom: 1px solid var(--line); background: var(--canvas); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .11em; text-transform: uppercase; }
+    .cols .r { text-align: right; }
+    .group { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 16px; border-block: 1px solid var(--line); background: rgb(246 248 252 / 80%); }
+    .group:first-of-type { border-top: 0; }
+    .group .name { font-size: 12.5px; font-weight: 600; color: var(--brand); }
+    .group .count { font-size: 11.5px; color: var(--muted); }
+    .row { display: grid; grid-template-columns: 18px 48px minmax(0, 1fr) 84px 84px 28px; gap: 14px; align-items: start; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+    .row:last-child { border-bottom: 0; }
+    .row .check { align-self: start; margin-top: 15px; }
+    .row .thumb { width: 48px; height: 48px; }
+    .copy { min-width: 0; }
+    .name { font-size: 13px; font-weight: 600; line-height: 17px; }
+    .variant { margin-top: 2px; font-size: 11.5px; color: var(--brand); }
+    .qty { display: flex; justify-content: flex-end; }
+    .line { text-align: right; font-size: 13px; font-weight: 600; padding-top: 6px; }
+    .row > .trash { margin-top: 4px; }
+    .mobile-controls { display: none; }
+    .receipt { position: sticky; top: 90px; padding: 18px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .receipt h2 { font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+    .lines { margin: 16px 0 0; padding: 0 0 14px; border-bottom: 1px solid var(--line); }
+    .lines div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+    .lines div + div { margin-top: 10px; }
+    .free { font-weight: 600; color: var(--success); }
+    .total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px; font-size: 14px; font-weight: 600; }
+    .total strong { font-size: 22px; letter-spacing: -.04em; }
+    .checkout { width: 100%; margin-top: 16px; }
+    .summary-note { margin-top: 12px; }
+    .mobile-bar { position: fixed; inset-inline: 0; bottom: 0; z-index: 30; align-items: center; gap: 12px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #fff; }
+    .mobile-bar .total { flex: 1; margin: 0; }
+    .mobile-bar .btn { min-height: 44px; }
+    @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } .receipt { display: none; } .mobile-bar { display: flex; } }
+    @media (max-width: 720px) {
+        .cols { display: none; }
+        .row { grid-template-columns: 18px 48px minmax(0, 1fr); gap: 12px; padding: 12px; }
+        .row > .qty, .row > .line, .row > .trash { display: none; }
+        .row .check { margin-top: 15px; }
+        .mobile-controls { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .mobile-controls .line { margin-left: auto; padding: 0; }
+        .group { padding: 10px 12px; }
+        .sheet-top { padding: 12px; }
+    }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="#"><span class="brand-mark">JM</span> JMMart</a>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg> Search products and stores</div>
+    <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg></button>
+        <button class="icon-btn" aria-label="Cart, 4 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg></button>
+        <span class="account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span>Hi, JM</span></span>
+    </div>
+</div></header>
+
+<main class="page">
+    <div class="head">
+        <div><h1>Shopping cart</h1><p class="lede">4 items · Grouped by seller</p></div>
+        <a class="continue" href="#">Continue shopping</a>
+    </div>
+
+    <div class="layout">
+        <section aria-label="Cart items grouped by seller">
+            <div class="sheet">
+                <div class="sheet-top">
+                    <label class="check"><input type="checkbox" checked> Select all</label>
+                    <p class="count">4 of 4 selected</p>
+                    <button class="remove" type="button">Remove selected</button>
+                </div>
+
+                <div class="cols" aria-hidden="true">
+                    <span></span><span>Product</span><span></span><span class="r">Qty</span><span class="r">Total</span><span></span>
+                </div>
+
+                <div class="group"><span class="name">QA Northwind Store</span><span class="count">3 items</span></div>
+
+                <div class="row">
+                    <label class="check"><input type="checkbox" checked aria-label="Select QA Canvas Tote"></label>
+                    <a class="thumb" href="#" aria-label="View QA Canvas Tote"><img src="../images/categories/fashion.png" alt=""></a>
+                    <div class="copy">
+                        <p class="name">QA Canvas Tote</p>
+                        <div class="mobile-controls">
+                            <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                            <p class="line num">₱19.99</p>
+                            <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="qty"><div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div></div>
+                    <p class="line num">₱19.99</p>
+                    <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                </div>
+
+                <div class="row">
+                    <label class="check"><input type="checkbox" checked aria-label="Select QA Chat Sample"></label>
+                    <a class="thumb" href="#" aria-label="View QA Chat Sample"><img src="../images/categories/electronics.png" alt=""></a>
+                    <div class="copy">
+                        <p class="name">QA Chat Sample</p>
+                        <p class="variant">Blue / Medium</p>
+                        <div class="mobile-controls">
+                            <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>2</span><button type="button" aria-label="Increase">+</button></div>
+                            <p class="line num">₱49.98</p>
+                            <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="qty"><div class="stepper"><button type="button" aria-label="Reduce">−</button><span>2</span><button type="button" aria-label="Increase">+</button></div></div>
+                    <p class="line num">₱49.98</p>
+                    <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                </div>
+
+                <div class="group"><span class="name">Moso</span><span class="count">1 item</span></div>
+
+                <div class="row">
+                    <label class="check"><input type="checkbox" checked aria-label="Select QA Retired Pouch"></label>
+                    <a class="thumb" href="#" aria-label="View QA Retired Pouch"><img src="../images/categories/bags-accessories.png" alt=""></a>
+                    <div class="copy">
+                        <p class="name">QA Retired Pouch</p>
+                        <div class="mobile-controls">
+                            <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                            <p class="line num">₱6.00</p>
+                            <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                    </div>
+                    <div class="qty"><div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div></div>
+                    <p class="line num">₱6.00</p>
+                    <button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                </div>
+            </div>
+        </section>
+
+        <aside class="receipt" aria-label="Order summary">
+            <h2>Order summary</h2>
+            <div class="lines">
+                <div><span>Subtotal (4 items)</span><span class="num">₱75.97</span></div>
+                <div><span>Shipping</span><span class="free">Free</span></div>
+            </div>
+            <p class="total"><span>Total</span><strong class="num">₱75.97</strong></p>
+            <button class="btn btn-primary checkout" type="button">Check out (4)</button>
+            <p class="summary-note">Cash on delivery · Free shipping · No hidden fees</p>
+        </aside>
+    </div>
+</main>
+
+<div class="mobile-bar">
+    <label class="check"><input type="checkbox" checked> All</label>
+    <p class="total"><span>Total</span><strong class="num">₱75.97</strong></p>
+    <button class="btn btn-primary" type="button">Check out</button>
+</div>
+</body>
+</html>

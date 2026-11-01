@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Cart direction 2 — The shelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cart-redesign.css">
+<style>
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: 28px; margin-top: 22px; align-items: start; }
+    .selectbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .selectbar .count { font-size: 13px; color: var(--muted); }
+    .selectbar .remove { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+    .seller + .seller { margin-top: 24px; }
+    .seller:first-of-type { margin-top: 16px; }
+    .seller-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 2px 10px; }
+    .seller-name { font-size: 13px; font-weight: 600; color: var(--brand); }
+    .seller-count { font-size: 11.5px; color: var(--muted); }
+    .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .tile { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .tile-media { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: #eef2f8; }
+    .tile-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .tile-check { position: absolute; top: 10px; left: 10px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; background: rgb(255 255 255 / 92%); box-shadow: 0 1px 3px rgb(24 44 72 / 14%); }
+    .tile-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--brand); }
+    .tile-trash { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 6px; background: rgb(255 255 255 / 92%); box-shadow: 0 1px 3px rgb(24 44 72 / 14%); }
+    .tile-trash svg { width: 14px; height: 14px; }
+    .tile-body { display: flex; flex: 1; flex-direction: column; gap: 2px; padding: 12px 12px 10px; }
+    .tile-name { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 17px; text-overflow: ellipsis; white-space: nowrap; }
+    .tile-variant { overflow: hidden; font-size: 11.5px; line-height: 15px; color: var(--brand); text-overflow: ellipsis; white-space: nowrap; }
+    .tile-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 10px; }
+    .tile-price { font-size: 13px; font-weight: 600; }
+    .receipt { position: sticky; top: 90px; padding: 18px 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+    .receipt h2 { font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+    .stores { margin-top: 4px; font-size: 11.5px; color: var(--muted); }
+    .lines { margin: 16px 0 0; padding: 0 0 14px; border-bottom: 1px solid var(--line); }
+    .lines div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+    .lines div + div { margin-top: 10px; }
+    .free { font-weight: 600; color: var(--success); }
+    .total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px; font-size: 14px; font-weight: 600; }
+    .total strong { font-size: 22px; letter-spacing: -.04em; }
+    .checkout { width: 100%; margin-top: 16px; }
+    .summary-note { margin-top: 12px; }
+    .mobile-bar { position: fixed; inset-inline: 0; bottom: 0; z-index: 30; align-items: center; gap: 12px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: #fff; }
+    .mobile-bar .total { flex: 1; margin: 0; }
+    .mobile-bar .btn { min-height: 44px; }
+    @media (max-width: 1200px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } .receipt { display: none; } .mobile-bar { display: flex; } }
+    @media (max-width: 720px) {
+        .tiles { gap: 10px; }
+        .tile-body { padding: 10px; }
+        .tile-check, .tile-trash { top: 8px; width: 24px; height: 24px; }
+        .tile-check { left: 8px; }
+        .tile-trash { right: 8px; }
+        .selectbar { padding: 12px; }
+    }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="topbar-inner">
+    <a class="brand" href="#"><span class="brand-mark">JM</span> JMMart</a>
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-4-4"/></svg> Search products and stores</div>
+    <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg></button>
+        <button class="icon-btn" aria-label="Cart, 4 items"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z"/><circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg></button>
+        <span class="account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg><span>Hi, JM</span></span>
+    </div>
+</div></header>
+
+<main class="page">
+    <div class="head">
+        <div><h1>Shopping cart</h1><p class="lede">4 items · Grouped by seller</p></div>
+        <a class="continue" href="#">Continue shopping</a>
+    </div>
+
+    <div class="layout">
+        <section aria-label="Cart items grouped by seller">
+            <div class="selectbar">
+                <label class="check"><input type="checkbox" checked> Select all</label>
+                <p class="count">4 of 4 selected</p>
+                <button class="remove" type="button">Remove selected</button>
+            </div>
+
+            <section class="seller" aria-label="QA Northwind Store">
+                <div class="seller-head"><a class="seller-name" href="#">QA Northwind Store</a><span class="seller-count">3 items</span></div>
+                <div class="tiles">
+                    <article class="tile">
+                        <div class="tile-media">
+                            <img src="../images/categories/fashion.png" alt="QA Canvas Tote">
+                            <label class="tile-check"><input type="checkbox" checked aria-label="Select QA Canvas Tote"></label>
+                            <button class="trash tile-trash" type="button" aria-label="Remove QA Canvas Tote"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                        <div class="tile-body">
+                            <p class="tile-name">QA Canvas Tote</p>
+                            <div class="tile-foot">
+                                <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                                <span class="tile-price num">₱19.99</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="tile">
+                        <div class="tile-media">
+                            <img src="../images/categories/electronics.png" alt="QA Chat Sample">
+                            <label class="tile-check"><input type="checkbox" checked aria-label="Select QA Chat Sample"></label>
+                            <button class="trash tile-trash" type="button" aria-label="Remove QA Chat Sample"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                        <div class="tile-body">
+                            <p class="tile-name">QA Chat Sample</p>
+                            <p class="tile-variant">Blue / Medium</p>
+                            <div class="tile-foot">
+                                <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>2</span><button type="button" aria-label="Increase">+</button></div>
+                                <span class="tile-price num">₱49.98</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="seller" aria-label="Moso">
+                <div class="seller-head"><a class="seller-name" href="#">Moso</a><span class="seller-count">1 item</span></div>
+                <div class="tiles">
+                    <article class="tile">
+                        <div class="tile-media">
+                            <img src="../images/categories/bags-accessories.png" alt="QA Retired Pouch">
+                            <label class="tile-check"><input type="checkbox" checked aria-label="Select QA Retired Pouch"></label>
+                            <button class="trash tile-trash" type="button" aria-label="Remove QA Retired Pouch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9.5 7V5.6a1.6 1.6 0 0 1 1.6-1.6h1.8a1.6 1.6 0 0 1 1.6 1.6V7M6.6 7l.8 12.1a2 2 0 0 0 2 1.9h5.2a2 2 0 0 0 2-1.9L17.4 7"/></svg></button>
+                        </div>
+                        <div class="tile-body">
+                            <p class="tile-name">QA Retired Pouch</p>
+                            <div class="tile-foot">
+                                <div class="stepper"><button type="button" aria-label="Reduce">−</button><span>1</span><button type="button" aria-label="Increase">+</button></div>
+                                <span class="tile-price num">₱6.00</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </section>
+
+        <aside class="receipt" aria-label="Order summary">
+            <h2>Order summary</h2>
+            <p class="stores">4 items from 2 stores</p>
+            <div class="lines">
+                <div><span>Subtotal</span><span class="num">₱75.97</span></div>
+                <div><span>Shipping</span><span class="free">Free</span></div>
+            </div>
+            <p class="total"><span>Total</span><strong class="num">₱75.97</strong></p>
+            <button class="btn btn-primary checkout" type="button">Check out (4)</button>
+            <p class="summary-note">Cash on delivery · Free shipping · No hidden fees</p>
+        </aside>
+    </div>
+</main>
+
+<div class="mobile-bar">
+    <label class="check"><input type="checkbox" checked> All</label>
+    <p class="total"><span>Total</span><strong class="num">₱75.97</strong></p>
+    <button class="btn btn-primary" type="button">Check out</button>
+</div>
+</body>
+</html>
