@@ -1,91 +1,196 @@
 <x-app-layout>
     <style>
-        /* Clean ledger order-details dialog. Tokens come from resources/css/app.css. */
-        dialog.buyer-order-dialog { position: fixed; inset: 0; margin: auto; width: min(920px, calc(100vw - 40px)); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; border: 0; border-radius: 16px; padding: 0; background: #fff; color: var(--color-fg); box-shadow: 0 24px 64px rgb(15 23 42 / 16%), 0 2px 8px rgb(15 23 42 / 5%); overflow: hidden; }
+        /* Quiet dossier order-details dialog. Tokens come from resources/css/app.css. */
+        dialog.buyer-order-dialog { position: fixed; inset: 0; margin: auto; width: min(760px, calc(100vw - 40px)); max-height: calc(100dvh - 40px); display: flex; flex-direction: column; border: 0; border-radius: 16px; padding: 0; background: var(--color-surface); color: var(--color-fg); box-shadow: 0 36px 90px rgb(15 23 42 / 24%), 0 4px 16px rgb(15 23 42 / 8%); overflow: hidden; }
         dialog.buyer-order-dialog:not([open]) { display: none; }
-        dialog.buyer-order-dialog[open] { animation: buyer-dialog-in .18s ease-out; }
-        @keyframes buyer-dialog-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }
-        dialog.buyer-order-dialog::backdrop { background: rgb(15 23 42 / 40%); backdrop-filter: blur(2px); }
-        @media (max-width: 760px) { dialog.buyer-order-dialog { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; margin: 0; } dialog.buyer-order-dialog::backdrop { background: transparent; backdrop-filter: none; } }
+        dialog.buyer-order-dialog[open] { animation: buyer-dialog-in .2s cubic-bezier(.2, .8, .2, 1); }
+        @keyframes buyer-dialog-in { from { opacity: 0; transform: translateY(10px) scale(.986); } to { opacity: 1; transform: none; } }
+        dialog.buyer-order-dialog::backdrop { background: rgb(15 23 42 / 44%); backdrop-filter: blur(2px); }
+        @media (max-width: 720px) {
+            dialog.buyer-order-dialog { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; margin: 0; }
+            dialog.buyer-order-dialog::backdrop { background: transparent; backdrop-filter: none; }
+        }
         @media (prefers-reduced-motion: reduce) { dialog.buyer-order-dialog[open] { animation: none; } }
 
-        dialog.buyer-order-dialog.buyer-order-dialog--ledger { width: min(520px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); }
-        @media (max-width: 640px) {
-            dialog.buyer-order-dialog.buyer-order-dialog--ledger { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; margin: 0; }
-            dialog.buyer-order-dialog.buyer-order-dialog--ledger::backdrop { background: transparent; backdrop-filter: none; }
+        dialog.buyer-order-dialog .buyer-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px 24px 24px; overscroll-behavior: contain; }
+
+        dialog.buyer-order-dialog .dialog-head { flex: none; padding: 20px 24px 0; background: linear-gradient(180deg, #fff 0%, #fbfcff 100%); border-bottom: 1px solid var(--color-line-soft); }
+        dialog.buyer-order-dialog .dialog-head.no-tracker { padding-bottom: 18px; }
+        dialog.buyer-order-dialog .head-top { display: flex; align-items: flex-start; gap: 12px; }
+        dialog.buyer-order-dialog .head-id { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
+        dialog.buyer-order-dialog .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--color-muted); white-space: nowrap; }
+        dialog.buyer-order-dialog .eyebrow svg { width: 14px; height: 14px; flex: none; }
+        dialog.buyer-order-dialog .order-ref { font-size: 12px; font-weight: 650; letter-spacing: -.01em; color: var(--color-fg); white-space: nowrap; }
+        dialog.buyer-order-dialog .copy-ref { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; transition: background .15s, color .15s; }
+        dialog.buyer-order-dialog .copy-ref:hover { background: var(--color-sunken); color: var(--color-fg); }
+        dialog.buyer-order-dialog .copy-ref.is-copied { color: var(--color-success); background: var(--color-success-wash); }
+        dialog.buyer-order-dialog .copy-ref svg { width: 14px; height: 14px; }
+        dialog.buyer-order-dialog .head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; flex: none; }
+        dialog.buyer-order-dialog .icon-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; transition: background .15s, color .15s; }
+        dialog.buyer-order-dialog .icon-btn:hover { background: var(--color-sunken); color: var(--color-fg); }
+        dialog.buyer-order-dialog .icon-btn svg { width: 18px; height: 18px; }
+
+        dialog.buyer-order-dialog .head-status { display: flex; align-items: flex-start; gap: 12px; margin-top: 12px; }
+        dialog.buyer-order-dialog .status-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 12px; }
+        dialog.buyer-order-dialog .status-icon svg { width: 21px; height: 21px; }
+        dialog.buyer-order-dialog .status-icon.moving { background: var(--color-info-wash); color: var(--color-accent); }
+        dialog.buyer-order-dialog .status-icon.good { background: var(--color-success-wash); color: var(--color-success); }
+        dialog.buyer-order-dialog .status-icon.warn { background: var(--color-warning-wash); color: var(--color-warning-text); }
+        dialog.buyer-order-dialog .status-icon.danger { background: var(--color-danger-wash); color: var(--color-danger); }
+        dialog.buyer-order-dialog .status-copy { min-width: 0; flex: 1; }
+        dialog.buyer-order-dialog .status-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        dialog.buyer-order-dialog .status-title { font-size: 22px; font-weight: 650; line-height: 1.18; letter-spacing: -.025em; color: var(--color-fg); text-wrap: balance; }
+        dialog.buyer-order-dialog .status-sub { max-width: 58ch; margin-top: 4px; font-size: 12.5px; line-height: 1.5; color: var(--color-muted); }
+        dialog.buyer-order-dialog .head-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-top: 7px; font-size: 11.5px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .meta-dot { padding: 0 6px; color: var(--color-border-strong); }
+
+        dialog.buyer-order-dialog .pill { display: inline-flex; align-items: center; gap: 5px; flex: none; max-width: 100%; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
+        dialog.buyer-order-dialog .pill i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+        dialog.buyer-order-dialog .pill-neutral { background: var(--color-sunken); color: var(--color-muted); box-shadow: inset 0 0 0 1px var(--color-line-soft); }
+        dialog.buyer-order-dialog .pill-moving { background: var(--color-info-wash); color: var(--color-accent-hover); box-shadow: inset 0 0 0 1px var(--color-info-line); }
+        dialog.buyer-order-dialog .pill-good { background: var(--color-success-wash); color: var(--color-success); box-shadow: inset 0 0 0 1px var(--color-success-line); }
+        dialog.buyer-order-dialog .pill-warn { background: var(--color-warning-wash); color: var(--color-warning-text); box-shadow: inset 0 0 0 1px var(--color-warning-line); }
+        dialog.buyer-order-dialog .pill-danger { background: var(--color-danger-wash); color: var(--color-danger); box-shadow: inset 0 0 0 1px var(--color-danger-line); }
+
+        dialog.buyer-order-dialog .tracker { display: grid; grid-template-columns: repeat(var(--steps, 4), minmax(0, 1fr)); margin: 15px 0 0; padding: 0; list-style: none; }
+        dialog.buyer-order-dialog .tracker-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; text-align: center; }
+        dialog.buyer-order-dialog .tracker-step::before { content: ''; position: absolute; top: 11px; right: 50%; z-index: 0; width: 100%; height: 2px; background: var(--color-line-soft); }
+        dialog.buyer-order-dialog .tracker-step:first-child::before { display: none; }
+        dialog.buyer-order-dialog .tracker-step.done::before, dialog.buyer-order-dialog .tracker-step.current::before { background: #b9cdf2; }
+        dialog.buyer-order-dialog .tracker-step.partial::before { background: linear-gradient(90deg, #b9cdf2 50%, var(--color-line-soft) 50%); }
+        dialog.buyer-order-dialog .node { position: relative; z-index: 1; display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid var(--color-border-strong); border-radius: 50%; background: var(--color-surface); color: transparent; transition: background .18s, border-color .18s, color .18s; }
+        dialog.buyer-order-dialog .node svg { width: 12px; height: 12px; }
+        dialog.buyer-order-dialog .tracker-step.done .node { border-color: var(--color-accent); background: var(--color-accent); color: #fff; }
+        dialog.buyer-order-dialog .tracker-step.current .node { border-color: var(--color-accent); color: var(--color-accent); box-shadow: 0 0 0 4px var(--color-info-wash); }
+        dialog.buyer-order-dialog .tracker-step.current .node::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        dialog.buyer-order-dialog .tracker-step.partial .node { border-color: var(--color-success); background: conic-gradient(var(--color-success) 0 50%, #fff 50% 100%); box-shadow: inset 0 0 0 3px #fff; }
+        dialog.buyer-order-dialog .tracker-step.done.final .node { border-color: var(--color-success); background: var(--color-success); }
+        dialog.buyer-order-dialog .tracker-step.done.final .step-label { color: var(--color-success); }
+        dialog.buyer-order-dialog .step-label { overflow: hidden; max-width: 100%; font-size: 10.5px; font-weight: 650; line-height: 1.25; color: var(--color-muted); text-overflow: ellipsis; white-space: nowrap; }
+        dialog.buyer-order-dialog .tracker-step.done .step-label { color: var(--color-fg); }
+        dialog.buyer-order-dialog .tracker-step.current .step-label { color: var(--color-accent-hover); }
+        dialog.buyer-order-dialog .step-date { font-size: 9.5px; font-weight: 500; line-height: 1.2; color: var(--color-muted); white-space: nowrap; }
+
+        dialog.buyer-order-dialog .dialog-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px 22px; background: var(--color-surface); overscroll-behavior: contain; }
+        dialog.buyer-order-dialog .dialog-foot { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: #fff; }
+        dialog.buyer-order-dialog .foot-left { display: flex; align-items: center; gap: 7px; min-width: 0; margin-right: auto; }
+        dialog.buyer-order-dialog .foot-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+        dialog.buyer-order-dialog .foot-help { font-size: 11.5px; color: var(--color-muted); white-space: nowrap; }
+        dialog.buyer-order-dialog .foot-help a { font-weight: 600; color: var(--color-accent); text-underline-offset: 2px; }
+        dialog.buyer-order-dialog .foot-help a:hover { text-decoration: underline; }
+
+        dialog.buyer-order-dialog .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 0 13px; border: 1px solid transparent; border-radius: 8px; font-size: 12.5px; font-weight: 650; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer; touch-action: manipulation; transition: background .15s, border-color .15s, color .15s, transform .1s; }
+        dialog.buyer-order-dialog .btn svg { width: 15px; height: 15px; flex: none; }
+        dialog.buyer-order-dialog .btn:active { transform: translateY(1px); }
+        dialog.buyer-order-dialog .btn-primary { background: var(--color-accent); color: #fff; box-shadow: 0 1px 2px rgb(32 91 244 / 22%); }
+        dialog.buyer-order-dialog .btn-primary:hover { background: var(--color-accent-hover); }
+        dialog.buyer-order-dialog .btn-outline { border-color: var(--color-border); background: #fff; color: var(--color-fg); }
+        dialog.buyer-order-dialog .btn-outline:hover { border-color: var(--color-border-strong); background: var(--color-sunken); }
+        dialog.buyer-order-dialog .btn-ghost { background: transparent; color: var(--color-muted); }
+        dialog.buyer-order-dialog .btn-ghost:hover { background: var(--color-sunken); color: var(--color-fg); }
+        dialog.buyer-order-dialog .btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+        dialog.buyer-order-dialog .notice { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; padding: 11px 13px; border: 1px solid; border-radius: 10px; }
+        dialog.buyer-order-dialog .notice-warn { border-color: var(--color-warning-line); background: var(--color-warning-wash); }
+        dialog.buyer-order-dialog .notice-danger { border-color: var(--color-danger-line); background: var(--color-danger-wash); }
+        dialog.buyer-order-dialog .notice-info { border-color: var(--color-info-line); background: var(--color-info-wash); }
+        dialog.buyer-order-dialog .notice-icon { display: grid; place-items: center; width: 20px; height: 20px; flex: none; margin-top: 1px; }
+        dialog.buyer-order-dialog .notice-icon svg { width: 18px; height: 18px; }
+        dialog.buyer-order-dialog .notice-warn .notice-icon { color: var(--color-warning-text); }
+        dialog.buyer-order-dialog .notice-danger .notice-icon { color: var(--color-danger); }
+        dialog.buyer-order-dialog .notice-info .notice-icon { color: var(--color-accent); }
+        dialog.buyer-order-dialog .notice-body { flex: 1; min-width: 180px; }
+        dialog.buyer-order-dialog .notice-title { font-size: 12.5px; font-weight: 650; line-height: 1.4; color: var(--color-fg); }
+        dialog.buyer-order-dialog .notice-copy { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--color-muted); }
+        dialog.buyer-order-dialog .notice-copy a { font-weight: 650; color: var(--color-accent); text-underline-offset: 2px; }
+        dialog.buyer-order-dialog .notice-copy a:hover { text-decoration: underline; }
+        dialog.buyer-order-dialog .notice-action { margin-left: 30px; }
+
+        dialog.buyer-order-dialog .cancelled-line { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; padding: 9px 12px; border-radius: 8px; background: var(--color-danger-wash); color: var(--color-danger); font-size: 12px; font-weight: 600; }
+        dialog.buyer-order-dialog .cancelled-line svg { width: 15px; height: 15px; flex: none; }
+
+        dialog.buyer-order-dialog .shipments { display: flex; flex-direction: column; gap: 10px; }
+        dialog.buyer-order-dialog .shipment { overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: #fff; }
+        dialog.buyer-order-dialog .shipment-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 13px; background: var(--color-sunken); border-bottom: 1px solid var(--color-line-soft); }
+        dialog.buyer-order-dialog .store-mark { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--mark-bg, #e8eef8); color: var(--mark-ink, #31507c); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; }
+        dialog.buyer-order-dialog .store-copy { min-width: 0; flex: 1; }
+        dialog.buyer-order-dialog .store-name { overflow: hidden; font-size: 12.5px; font-weight: 650; line-height: 1.3; color: var(--color-fg); text-overflow: ellipsis; white-space: nowrap; }
+        dialog.buyer-order-dialog .store-meta { margin-top: 1px; font-size: 11px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .shipment .pill { margin-left: auto; }
+        dialog.buyer-order-dialog .item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 11px 13px; }
+        dialog.buyer-order-dialog .item + .item { border-top: 1px solid var(--color-line-soft); }
+        dialog.buyer-order-dialog .thumb { position: relative; display: block; width: 44px; height: 44px; overflow: hidden; border: 1px solid var(--color-line-soft); border-radius: 8px; background: var(--color-paper); }
+        dialog.buyer-order-dialog .thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        dialog.buyer-order-dialog .thumb svg { display: block; width: 100%; height: 100%; color: #94a3b8; }
+        dialog.buyer-order-dialog .item-copy { min-width: 0; }
+        dialog.buyer-order-dialog .item-title { font-size: 12.5px; font-weight: 600; line-height: 1.35; color: var(--color-fg); overflow-wrap: anywhere; }
+        dialog.buyer-order-dialog .item-meta { margin-top: 1px; font-size: 11px; line-height: 1.45; color: var(--color-muted); overflow-wrap: anywhere; }
+        dialog.buyer-order-dialog .item-amount { align-self: start; padding-top: 1px; font-size: 12.5px; font-weight: 650; text-align: right; white-space: nowrap; color: var(--color-fg); }
+        dialog.buyer-order-dialog .shipment-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 13px; border-top: 1px solid var(--color-line-soft); background: #fcfdff; }
+        dialog.buyer-order-dialog .subtotal-label { font-size: 11px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .subtotal-value { font-size: 12.5px; font-weight: 650; color: var(--color-fg); }
+        dialog.buyer-order-dialog .shipment-action { margin-left: auto; }
+
+        dialog.buyer-order-dialog .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        dialog.buyer-order-dialog .fact { min-width: 0; padding: 13px; border: 1px solid var(--color-border); border-radius: 12px; }
+        dialog.buyer-order-dialog .fact-label { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--color-muted); }
+        dialog.buyer-order-dialog .fact-label svg { width: 14px; height: 14px; }
+        dialog.buyer-order-dialog .fact-main { margin-top: 7px; font-size: 12.5px; font-weight: 650; line-height: 1.4; color: var(--color-fg); }
+        dialog.buyer-order-dialog .fact-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; font-size: 11.5px; line-height: 1.5; color: var(--color-muted); overflow-wrap: anywhere; }
+        dialog.buyer-order-dialog .fact-note { margin-top: 8px; padding: 7px 9px; border-radius: 7px; background: var(--color-sunken); border-left: 2px solid var(--color-border-strong); font-size: 11.5px; line-height: 1.5; color: var(--color-muted); }
+        dialog.buyer-order-dialog .dot { display: inline-block; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
+        dialog.buyer-order-dialog .dot-good { color: var(--color-success); background: var(--color-success); }
+        dialog.buyer-order-dialog .dot-warn { color: var(--color-warning-text); background: var(--color-warning); }
+        dialog.buyer-order-dialog .dot-neutral { color: var(--color-muted); background: var(--color-muted); }
+        dialog.buyer-order-dialog .dot-danger { color: var(--color-danger); background: var(--color-danger); }
+        dialog.buyer-order-dialog .copy-mini { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; }
+        dialog.buyer-order-dialog .copy-mini:hover { background: var(--color-sunken); color: var(--color-fg); }
+        dialog.buyer-order-dialog .copy-mini.is-copied { color: var(--color-success); }
+        dialog.buyer-order-dialog .copy-mini svg { width: 12px; height: 12px; }
+
+        dialog.buyer-order-dialog .receipt { margin-top: 14px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; }
+        dialog.buyer-order-dialog .receipt-rows { margin: 0; padding: 12px 14px; }
+        dialog.buyer-order-dialog .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12px; }
+        dialog.buyer-order-dialog .row + .row { margin-top: 6px; }
+        dialog.buyer-order-dialog .row dt { color: var(--color-muted); }
+        dialog.buyer-order-dialog .row dd { margin: 0; font-weight: 600; color: var(--color-fg); }
+        dialog.buyer-order-dialog .receipt-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--color-border); background: var(--color-sunken); }
+        dialog.buyer-order-dialog .receipt-total .label { font-size: 12.5px; font-weight: 600; color: var(--color-fg); }
+        dialog.buyer-order-dialog .receipt-total .value { font-size: 24px; font-weight: 650; line-height: 1; letter-spacing: -.035em; color: var(--color-fg); }
+        dialog.buyer-order-dialog .receipt-note { display: flex; align-items: center; gap: 6px; padding: 0 14px 12px; background: var(--color-sunken); font-size: 11px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .receipt-note svg { width: 13px; height: 13px; flex: none; }
+        dialog.buyer-order-dialog .num { font-variant-numeric: tabular-nums; }
+
+        @media (max-width: 720px) {
+            dialog.buyer-order-dialog .dialog-head { padding: 44px 16px 0; }
+            dialog.buyer-order-dialog .dialog-head.no-tracker { padding-bottom: 16px; }
+            dialog.buyer-order-dialog .dialog-body { padding: 14px 16px 16px; }
+            dialog.buyer-order-dialog .dialog-foot { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 16px 20px; }
+            dialog.buyer-order-dialog .foot-left { margin-right: 0; width: 100%; }
+            dialog.buyer-order-dialog .foot-actions { width: 100%; }
+            dialog.buyer-order-dialog .foot-actions .btn { flex: 1; min-height: 44px; }
+            dialog.buyer-order-dialog .foot-help { display: none; }
+            dialog.buyer-order-dialog .icon-btn { width: 44px; height: 44px; }
+            dialog.buyer-order-dialog .copy-ref { width: 32px; height: 32px; }
+            dialog.buyer-order-dialog .status-icon { width: 40px; height: 40px; border-radius: 11px; }
+            dialog.buyer-order-dialog .status-title { font-size: 20px; }
+            dialog.buyer-order-dialog .status-sub { font-size: 12px; }
+            dialog.buyer-order-dialog .step-label { font-size: 9.5px; }
+            dialog.buyer-order-dialog .step-date { display: none; }
+            dialog.buyer-order-dialog .tracker-step::before { top: 10px; }
+            dialog.buyer-order-dialog .node { width: 22px; height: 22px; }
+            dialog.buyer-order-dialog .node svg { width: 11px; height: 11px; }
+            dialog.buyer-order-dialog .facts { grid-template-columns: 1fr; }
+            dialog.buyer-order-dialog .notice-action { margin-left: 0; width: 100%; min-height: 44px; }
+            dialog.buyer-order-dialog .head-meta { font-size: 11px; }
         }
-
-        .buyer-modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px 24px 24px; overscroll-behavior: contain; }
-
-        .clean-head { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 22px 24px 14px; }
-        .clean-title { font-size: 20px; font-weight: 600; letter-spacing: -.025em; line-height: 1.2; }
-        .clean-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 7px; font-size: 12px; font-weight: 600; }
-        .clean-status i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-        .clean-meta { margin-top: 5px; font-size: 12px; color: var(--color-muted); }
-        .is-good { color: var(--color-success); }
-        .is-moving { color: var(--color-accent-hover); }
-        .is-warn { color: var(--color-warning-text); }
-        .is-stopped { color: var(--color-danger); }
-        .is-muted { color: var(--color-muted); }
-        .close-btn { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; transition: background .15s, color .15s; }
-        .close-btn:hover { background: var(--color-sunken); color: var(--color-fg); }
-        .close-btn svg { width: 18px; height: 18px; }
-
-        .clean-notice { margin: 0 24px 16px; padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-sunken); }
-        .clean-notice.is-danger { border-color: var(--color-danger-line); background: var(--color-danger-wash); }
-        .clean-notice.is-warning { border-color: var(--color-warning-line); background: var(--color-warning-wash); }
-        .clean-notice p { font-size: 12.5px; line-height: 1.5; color: var(--color-muted); }
-        .clean-notice .title { margin-bottom: 2px; font-weight: 600; color: var(--color-fg); }
-        .clean-notice a { display: inline-flex; align-items: center; min-height: 44px; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--color-accent); }
-        .clean-notice a:hover { color: var(--color-accent-hover); text-decoration: underline; text-underline-offset: 2px; }
-
-        .clean-journey { flex: 0 0 auto; padding: 0 24px 18px; }
-        .tracker { position: relative; display: flex; margin: 0; padding: 0; list-style: none; }
-        .tracker::before { content: ''; position: absolute; top: 14px; left: 14px; right: 14px; height: 2px; border-radius: 1px; background: var(--color-line-soft); }
-        .tracker::after { content: ''; position: absolute; top: 14px; left: 14px; height: 2px; border-radius: 1px; background: var(--color-accent); width: calc((100% - 28px) * var(--progress, 1)); }
-        .tracker-step { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; }
-        .node { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--color-border-strong); background: var(--color-surface); color: var(--color-muted); transition: background .2s, border-color .2s, color .2s; }
-        .node svg { width: 14px; height: 14px; }
-        .tracker-step.done .node { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
-        .tracker-step.current .node { box-shadow: 0 0 0 4px rgb(32 91 244 / 12%); }
-        .tracker-step.final.done .node { background: var(--color-success); border-color: var(--color-success); }
-        .tracker-step.current:not(.final) .node { animation: node-pulse 2s ease-out infinite; }
-        @keyframes node-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgb(32 91 244 / 12%); } 50% { box-shadow: 0 0 0 7px rgb(32 91 244 / 0%); } }
-        .label { font-size: 10.5px; font-weight: 600; color: var(--color-muted); text-align: center; line-height: 1.3; }
-        .tracker-step.done .label { color: var(--color-fg); }
-        .tracker-step.current .label { color: var(--color-accent); }
-        .tracker-step.final.done .label { color: var(--color-success); }
-        @media (prefers-reduced-motion: reduce) { .tracker-step.current:not(.final) .node { animation: none; } }
-
-        .clean-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 24px 18px; overscroll-behavior: contain; }
-        .clean-store { font-size: 13px; font-weight: 600; color: var(--color-fg); padding-bottom: 8px; }
-        .clean-items { list-style: none; padding: 0; margin: 0; }
-        .clean-item { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 11px 0; border-top: 1px solid var(--color-line-soft); }
-        .item-thumb { width: 40px; height: 40px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-paper); overflow: hidden; position: relative; }
-        .item-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .item-thumb svg { position: absolute; inset: 0; margin: auto; width: 16px; height: 16px; color: #94a3b8; }
-        .item-info { min-width: 0; }
-        .item-title { font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--color-fg); overflow-wrap: anywhere; }
-        .item-sub { margin-top: 2px; font-size: 11.5px; color: var(--color-muted); }
-        .item-price { text-align: right; font-size: 13px; font-weight: 600; color: var(--color-fg); white-space: nowrap; }
-        .item-price span { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: var(--color-muted); }
-
-        .clean-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--color-line-soft); }
-        .clean-label { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
-        .clean-address { margin-top: 7px; font-size: 12.5px; line-height: 1.6; color: var(--color-muted); }
-        .clean-address strong { display: block; font-weight: 600; color: var(--color-fg); }
-        .clean-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--color-border-strong); }
-        .clean-total .label { font-size: 13px; font-weight: 600; color: var(--color-fg); }
-        .clean-total .value { font-size: 21px; font-weight: 600; letter-spacing: -.03em; color: var(--color-fg); }
-        .clean-pay { margin-top: 5px; font-size: 12px; color: var(--color-muted); text-align: right; }
-
-        .clean-foot { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-line-soft); }
-        .open-full { display: inline-flex; align-items: center; min-height: 44px; font-size: 12.5px; font-weight: 600; color: var(--color-muted); touch-action: manipulation; transition: color .15s; }
-        .open-full:hover { color: var(--color-accent); }
-        .done-btn { min-height: 44px; padding: 0 20px; border: 0; border-radius: 8px; background: var(--color-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; touch-action: manipulation; transition: background .15s, transform .1s; }
-        .done-btn:hover { background: var(--color-accent-hover); }
-        .done-btn:active { transform: scale(.98); }
-        .num { font-variant-numeric: tabular-nums; }
+        @media (max-width: 400px) {
+            dialog.buyer-order-dialog .shipment-action { width: 100%; margin-left: 0; }
+            dialog.buyer-order-dialog .shipment-action .btn { width: 100%; min-height: 40px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            dialog.buyer-order-dialog .copy-ref, dialog.buyer-order-dialog .icon-btn, dialog.buyer-order-dialog .btn, dialog.buyer-order-dialog .node { transition: none; }
+        }
 
         /* Purchase cards carry the order's journey inline, so "where is it" answers without opening. */
         .purchase-journey { display: flex; margin: 0; padding: 14px 16px 12px; list-style: none; }
@@ -113,22 +218,6 @@
         @keyframes sk-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
         @media (prefers-reduced-motion: reduce) { .sk-line, .sk-block, .sk-journey { animation: none; } }
 
-        @media (max-width: 640px) {
-            .clean-head { padding: 18px 20px 12px; }
-            .clean-title { font-size: 18px; }
-            .clean-journey { padding: 0 20px 16px; }
-            .clean-body { padding: 0 20px 16px; }
-            .clean-notice { margin-inline: 20px; }
-            .clean-foot { padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); }
-        }
-        @media (max-width: 480px) {
-            .clean-foot { flex-direction: column-reverse; align-items: stretch; }
-            .clean-foot .open-full { justify-content: center; }
-            .done-btn { width: 100%; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .close-btn, .done-btn, .open-full, .node { transition: none; }
-        }
     </style>
 
 
@@ -504,7 +593,7 @@
                 @endif
             </section>
 
-            <dialog x-ref="modal" class="buyer-order-dialog buyer-order-dialog--ledger" aria-labelledby="dlgTitle" aria-describedby="dlgMeta" aria-label="Order details" @close="closed()" @click="if ($event.target === $refs.modal) close()">
+            <dialog x-ref="modal" class="buyer-order-dialog" aria-labelledby="dlgTitle" aria-describedby="dlgMeta" aria-label="Order details" @close="closed()" @click="if ($event.target === $refs.modal) close()">
                 <div x-show="loading && ! html" class="buyer-modal-body" role="status" aria-live="polite" aria-busy="true">
                     <span class="sr-only">Loading order details</span>
                     <div class="sk">
