@@ -24,6 +24,8 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _composer = TextEditingController();
+  final _scrollController = ScrollController();
+  final List<_PendingMessage> _pending = [];
 
   late final ReverbClient _reverb;
   StreamSubscription<ReverbEvent>? _events;
@@ -32,7 +34,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Timer? _typingTimer;
   Timer? _reconnectTimer;
   bool _typing = false;
-  bool _sending = false;
   bool _markingRead = false;
   bool _live = false;
   DateTime? _lastTypingSent;
@@ -58,6 +59,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _events?.cancel();
     _states?.cancel();
     _composer.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -185,38 +187,102 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _send() async {
     final body = _composer.text.trim();
 
-    if (body.isEmpty || _sending) {
+    if (body.isEmpty) {
       return;
     }
 
-    setState(() => _sending = true);
+    final item = _PendingMessage(
+      clientId: const Uuid().v4(),
+      body: body,
+      createdAt: DateTime.now(),
+    );
+
+    setState(() => _pending.add(item));
+    _composer.clear();
+    _scrollToLatest();
+    await _sendPending(item);
+  }
+
+  Future<void> _sendPending(_PendingMessage item) async {
+    if (!mounted ||
+        item.status == _PendingStatus.sending ||
+        item.status == _PendingStatus.sent) {
+      return;
+    }
+
+    setState(() => item.status = _PendingStatus.sending);
 
     try {
       await ref
           .read(apiClientProvider)
           .sendMessage(
             conversationId: widget.conversationId,
-            body: body,
-            clientMessageId: const Uuid().v4(),
+            body: item.body,
+            clientMessageId: item.clientId,
           );
 
       if (!mounted) {
         return;
       }
 
-      _composer.clear();
-      _refresh();
+      setState(() => item.status = _PendingStatus.sent);
+      ref.invalidate(conversationsProvider);
+
+      try {
+        final rows = await ref.refresh(
+          messagesProvider(widget.conversationId).future,
+        );
+
+        if (mounted) {
+          _reconcilePending(rows);
+        }
+      } catch (_) {
+        // The sent bubble stays until the next refresh succeeds.
+      }
+
       await _markRead();
     } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
+      if (!mounted) {
+        return;
       }
-    } finally {
+
+      setState(() => item.status = _PendingStatus.failed);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.friendly)));
+    } catch (_) {
       if (mounted) {
-        setState(() => _sending = false);
+        setState(() => item.status = _PendingStatus.failed);
       }
     }
+  }
+
+  void _reconcilePending(List<ChatMessage> messages) {
+    final confirmed = messages
+        .map((message) => message.clientMessageId)
+        .whereType<String>()
+        .toSet();
+
+    if (!_pending.any((item) => confirmed.contains(item.clientId))) {
+      return;
+    }
+
+    setState(
+      () => _pending.removeWhere((item) => confirmed.contains(item.clientId)),
+    );
+  }
+
+  void _scrollToLatest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) {
+        return;
+      }
+
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   @override
@@ -233,8 +299,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ref.listen<AsyncValue<List<ChatMessage>>>(
       messagesProvider(widget.conversationId),
       (previous, next) {
-        if (next.hasValue && next.value!.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
+        if (next.hasValue) {
+          _reconcilePending(next.value!);
+
+          if (next.value!.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
+          }
         }
       },
     );
@@ -321,14 +391,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   const SizedBox(width: 6),
                   IconButton.filled(
-                    onPressed: _sending ? null : _send,
-                    icon: _sending
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send_rounded),
+                    onPressed: _send,
+                    icon: const Icon(Icons.send_rounded),
                   ),
                 ],
               ),
@@ -340,9 +404,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _body(AsyncValue<List<ChatMessage>> messages, ThemeData theme) {
-    final data = messages.value;
+    final loaded = messages.value;
+    final pending = _pending.reversed.toList(growable: false);
 
-    if (data == null) {
+    if (loaded == null && pending.isEmpty) {
       if (messages.hasError) {
         return ErrorView(
           error: messages.error!,
@@ -354,7 +419,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (data.isEmpty) {
+    final data = loaded ?? const <ChatMessage>[];
+
+    if (data.isEmpty && pending.isEmpty) {
       return const EmptyState(
         icon: Icons.waving_hand_outlined,
         title: 'Say hello',
@@ -363,14 +430,139 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       reverse: true,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-      itemCount: data.length,
+      itemCount: data.length + pending.length,
       itemBuilder: (context, index) {
-        final message = data[data.length - 1 - index];
+        if (index < pending.length) {
+          final item = pending[index];
+
+          return _PendingBubble(
+            pending: item,
+            onRetry: item.status == _PendingStatus.failed
+                ? () => _sendPending(item)
+                : null,
+          );
+        }
+
+        final message = data[data.length - 1 - (index - pending.length)];
 
         return _Bubble(message: message);
       },
+    );
+  }
+}
+
+enum _PendingStatus { queued, sending, sent, failed }
+
+class _PendingMessage {
+  _PendingMessage({
+    required this.clientId,
+    required this.body,
+    required this.createdAt,
+  });
+
+  final String clientId;
+  final String body;
+  final DateTime createdAt;
+  _PendingStatus status = _PendingStatus.queued;
+}
+
+class _PendingBubble extends StatelessWidget {
+  const _PendingBubble({required this.pending, this.onRetry});
+
+  final _PendingMessage pending;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final failed = pending.status == _PendingStatus.failed;
+    final foreground = failed
+        ? theme.colorScheme.onErrorContainer
+        : theme.colorScheme.onPrimary;
+    final statusColor = foreground.withValues(alpha: 0.7);
+
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        ),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+        decoration: BoxDecoration(
+          color: failed
+              ? theme.colorScheme.errorContainer
+              : theme.colorScheme.primary,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(4),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              pending.body,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: foreground,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (pending.status == _PendingStatus.failed)
+                  Icon(Icons.error_outline_rounded, size: 12, color: foreground)
+                else if (pending.status == _PendingStatus.sent)
+                  Icon(Icons.check_rounded, size: 12, color: statusColor)
+                else
+                  SizedBox(
+                    width: 9,
+                    height: 9,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.4,
+                      color: statusColor,
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                Text(
+                  switch (pending.status) {
+                    _PendingStatus.sent => 'Sent',
+                    _PendingStatus.failed => 'Not sent',
+                    _PendingStatus.queued ||
+                    _PendingStatus.sending => 'Sending…',
+                  },
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: statusColor,
+                    fontSize: 10,
+                  ),
+                ),
+                if (failed) ...[
+                  const SizedBox(width: 10),
+                  InkWell(
+                    onTap: onRetry,
+                    child: Text(
+                      'Retry',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: foreground,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
