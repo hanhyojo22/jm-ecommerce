@@ -69,7 +69,10 @@ flutter build apk --debug
   HTTPS and remove `android:usesCleartextTraffic` before a production release.
 - Chat uses Reverb private channels through `POST /api/v1/broadcasting/auth`
   with the Clerk bearer token. If the socket cannot connect, the thread falls
-  back to polling every 15 seconds.
+  back to polling every 15 seconds. Native WebSockets send no browser Origin, so
+  the server must allow the app's `REVERB_ORIGIN` (`localhost,127.0.0.1` in the
+  example `.env`). Pass `--dart-define=REVERB_ORIGIN=http://your-host:8000` when
+  the server allows a different origin.
 - PayMongo checkout opens in the external browser. Passing an app-specific
   `success_url`/`cancel_url` is supported by the API and can be wired once the
   return deep link is defined.

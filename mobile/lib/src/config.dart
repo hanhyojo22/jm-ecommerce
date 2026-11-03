@@ -32,6 +32,13 @@ class AppConfig {
     defaultValue: false,
   );
 
+  /// Native WebSocket clients send no Origin, which Reverb rejects unless the
+  /// server allows this value. Keep it in sync with REVERB_ALLOWED_ORIGINS.
+  static const String reverbOrigin = String.fromEnvironment(
+    'REVERB_ORIGIN',
+    defaultValue: 'http://127.0.0.1:8000',
+  );
+
   static bool get hasClerk => clerkPublishableKey.isNotEmpty;
 
   static bool get hasReverb => reverbKey.isNotEmpty;

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 enum ReverbState { disconnected, connecting, connected, failed }
@@ -27,6 +28,7 @@ class ReverbClient {
     required this.host,
     required this.port,
     required this.useTls,
+    required this.origin,
     required this.authorize,
   });
 
@@ -34,6 +36,7 @@ class ReverbClient {
   final String host;
   final int port;
   final bool useTls;
+  final String origin;
   final Future<String> Function(String socketId, String channelName) authorize;
 
   WebSocketChannel? _channel;
@@ -79,7 +82,11 @@ class ReverbClient {
 
     _states.add(ReverbState.connecting);
 
-    final channel = WebSocketChannel.connect(uri);
+    final channel = IOWebSocketChannel.connect(
+      uri,
+      headers: {'Origin': origin},
+      connectTimeout: const Duration(seconds: 10),
+    );
     _channel = channel;
     _subscription = channel.stream.listen(
       _onMessage,

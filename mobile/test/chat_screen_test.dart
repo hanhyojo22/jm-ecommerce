@@ -175,6 +175,7 @@ class _FakeReverbClient extends ReverbClient {
         host: 'localhost',
         port: 1,
         useTls: false,
+        origin: 'http://127.0.0.1:8000',
         authorize: (socketId, channelName) async => '',
       );
 

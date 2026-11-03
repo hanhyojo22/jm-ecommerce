@@ -26,6 +26,7 @@ final reverbProvider = Provider.autoDispose<ReverbClient>((ref) {
     host: AppConfig.reverbHost,
     port: AppConfig.reverbPort,
     useTls: AppConfig.reverbUseTls,
+    origin: AppConfig.reverbOrigin,
     authorize: (socketId, channelName) =>
         api.broadcastAuth(socketId: socketId, channelName: channelName),
   );
