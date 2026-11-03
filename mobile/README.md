@@ -59,6 +59,12 @@ flutter build apk --debug
 
 ## Notes
 
+- Clerk is initialized once in `lib/main.dart` before `runApp`, and its state is
+  injected into the root Riverpod scope. This keeps the bearer token available
+  to every route, including pushed detail screens.
+- On a Clerk development instance, sign up or sign in with a
+  `+clerk_test@example.com` address and use `424242` for the email or two-step
+  code. Sign-in on a new emulator may ask for that second code.
 - Cleartext HTTP is enabled in `AndroidManifest.xml` for local development. Use
   HTTPS and remove `android:usesCleartextTraffic` before a production release.
 - Chat uses Reverb private channels through `POST /api/v1/broadcasting/auth`

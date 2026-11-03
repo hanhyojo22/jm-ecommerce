@@ -1,8 +1,6 @@
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/auth_providers.dart';
 import '../widgets/shell.dart';
 
 class AuthGate extends StatelessWidget {
@@ -12,10 +10,7 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClerkAuthBuilder(
       signedOutBuilder: (context, auth) => const SignInScreen(),
-      signedInBuilder: (context, auth) => ProviderScope(
-        overrides: [clerkAuthProvider.overrideWithValue(auth)],
-        child: const AppShell(),
-      ),
+      signedInBuilder: (context, auth) => const AppShell(),
     );
   }
 }

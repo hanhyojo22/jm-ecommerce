@@ -6,11 +6,13 @@ import 'router.dart';
 import 'theme.dart';
 
 class JmMartApp extends StatelessWidget {
-  const JmMartApp({super.key});
+  const JmMartApp({super.key, this.authState});
+
+  final ClerkAuthState? authState;
 
   @override
   Widget build(BuildContext context) {
-    if (!AppConfig.hasClerk) {
+    if (!AppConfig.hasClerk || authState == null) {
       return MaterialApp(
         title: 'JMMart',
         theme: buildAppTheme(),
@@ -20,14 +22,15 @@ class JmMartApp extends StatelessWidget {
     }
 
     return ClerkAuth(
-      config: ClerkAuthConfig(publishableKey: AppConfig.clerkPublishableKey),
-      child: ClerkErrorListener(
-        child: MaterialApp.router(
-          title: 'JMMart',
-          theme: buildAppTheme(),
-          debugShowCheckedModeBanner: false,
-          routerConfig: appRouter,
-        ),
+      authState: authState,
+      child: MaterialApp.router(
+        title: 'JMMart',
+        theme: buildAppTheme(),
+        debugShowCheckedModeBanner: false,
+        routerConfig: appRouter,
+        // ClerkErrorListener needs MaterialApp's ScaffoldMessenger.
+        builder: (context, child) =>
+            ClerkErrorListener(child: child ?? const SizedBox.shrink()),
       ),
     );
   }
