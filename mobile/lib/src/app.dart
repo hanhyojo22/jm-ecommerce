@@ -1,0 +1,76 @@
+import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:flutter/material.dart';
+
+import 'config.dart';
+import 'router.dart';
+import 'theme.dart';
+
+class JmMartApp extends StatelessWidget {
+  const JmMartApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AppConfig.hasClerk) {
+      return MaterialApp(
+        title: 'JMMart',
+        theme: buildAppTheme(),
+        debugShowCheckedModeBanner: false,
+        home: const MissingConfigScreen(),
+      );
+    }
+
+    return ClerkAuth(
+      config: ClerkAuthConfig(publishableKey: AppConfig.clerkPublishableKey),
+      child: ClerkErrorListener(
+        child: MaterialApp.router(
+          title: 'JMMart',
+          theme: buildAppTheme(),
+          debugShowCheckedModeBanner: false,
+          routerConfig: appRouter,
+        ),
+      ),
+    );
+  }
+}
+
+class MissingConfigScreen extends StatelessWidget {
+  const MissingConfigScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.settings_suggest_outlined,
+                size: 56,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Clerk is not configured',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Build or run the app with your Clerk publishable key:\n\n'
+                'flutter run --dart-define=CLERK_PUBLISHABLE_KEY=pk_test_... '
+                '--dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1',
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Current API: ${AppConfig.apiBaseUrl}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
