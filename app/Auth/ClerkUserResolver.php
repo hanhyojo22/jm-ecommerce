@@ -4,6 +4,7 @@ namespace App\Auth;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -98,14 +99,29 @@ class ClerkUserResolver
             return null;
         }
 
-        $user = User::query()->create([
-            'clerk_user_id' => $identity->id,
-            'name' => $identity->name ?? Str::before($identity->email, '@'),
-            'email' => $identity->email,
-            'password' => Str::random(64),
-            'account_type' => 'buyer',
-            'is_active' => true,
-        ]);
+        try {
+            $user = User::query()->create([
+                'clerk_user_id' => $identity->id,
+                'name' => $identity->name ?? Str::before($identity->email, '@'),
+                'email' => $identity->email,
+                'password' => Str::random(64),
+                'account_type' => 'buyer',
+                'is_active' => true,
+            ]);
+        } catch (UniqueConstraintViolationException $exception) {
+            /*
+             * Two first requests for the same Clerk identity can both reach this insert.
+             * The unique clerk_user_id index lets one win; the other reads the winner's
+             * row instead of failing the sign-in with a 500.
+             */
+            $existing = User::query()->where('clerk_user_id', $identity->id)->first();
+
+            if ($existing === null) {
+                throw $exception;
+            }
+
+            return $existing->is_active ? $existing : null;
+        }
 
         $user->forceFill(['email_verified_at' => now()])->save();
 

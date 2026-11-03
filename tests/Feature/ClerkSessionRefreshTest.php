@@ -159,10 +159,16 @@ class ClerkSessionRefreshTest extends TestCase
             ->assertCookieExpired('__session');
     }
 
-    public function test_every_protected_route_refuses_an_expired_session_without_replaying_writes(): void
+    public function test_every_protected_web_route_refuses_an_expired_session_without_replaying_writes(): void
     {
         foreach (Route::getRoutes() as $route) {
             if (! in_array('auth', $route->gatherMiddleware(), true)) {
+                continue;
+            }
+
+            // API clients get a JSON 401 from the exception handler; the browser bridge
+            // only exists for the Blade surface.
+            if (str_starts_with($route->uri(), 'api/')) {
                 continue;
             }
 

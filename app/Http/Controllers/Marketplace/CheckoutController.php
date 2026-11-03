@@ -91,9 +91,15 @@ class CheckoutController extends Controller
             'postal_code' => ['required', 'regex:/^\d{4}$/'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
+            'client_request_id' => ['nullable', 'string', 'max:100'],
         ]);
         $paymentMethod = $data['payment_method'] ?? 'cod';
-        $order = $checkout->handle($request->user(), Arr::except($data, ['payment_method']), $paymentMethod);
+        $order = $checkout->handle(
+            $request->user(),
+            Arr::except($data, ['payment_method', 'client_request_id']),
+            $paymentMethod,
+            $data['client_request_id'] ?? null,
+        );
         $paymentNote = $paymentMethod === 'cod'
             ? 'payable on delivery. Each store confirms its delivery timing.'
             : 'to be paid by '.Payment::METHOD_LABELS[$paymentMethod].'. If you left the payment page, pay from your order page so the stores can confirm and ship.';
@@ -104,18 +110,22 @@ class CheckoutController extends Controller
          * Place order and seeing it. The order does not depend on the mail, so it is sent once the
          * response is already on its way. A failure is still reported and still does not fail the
          * order; a queued job would add retries if the receipt ever has to be guaranteed.
+         *
+         * A replayed checkout already sent its receipt on the first attempt.
          */
-        defer(function () use ($mailer, $buyer, $order, $paymentNote): void {
-            try {
-                $mailer->send(
-                    $buyer,
-                    "JMMart order {$order->number} received",
-                    "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, {$paymentNote}\n\nTrack your order or request help: ".route('orders.show', $order),
-                );
-            } catch (\Throwable $exception) {
-                report($exception);
-            }
-        });
+        if ($order->wasRecentlyCreated) {
+            defer(function () use ($mailer, $buyer, $order, $paymentNote): void {
+                try {
+                    $mailer->send(
+                        $buyer,
+                        "JMMart order {$order->number} received",
+                        "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, {$paymentNote}\n\nTrack your order or request help: ".route('orders.show', $order),
+                    );
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            });
+        }
 
         return $paymentMethod === 'cod' ? to_route('orders.placed', $order) : to_route('orders.pay', $order);
     }

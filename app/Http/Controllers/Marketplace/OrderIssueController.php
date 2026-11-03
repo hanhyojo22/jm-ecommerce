@@ -14,7 +14,7 @@ class OrderIssueController extends Controller
 {
     public function store(Request $request, SellerOrder $sellerOrder): RedirectResponse
     {
-        abort_unless($sellerOrder->order()->where('user_id', $request->user()->id)->exists(), 404);
+        $this->authorize('openIssue', $sellerOrder);
 
         $data = $request->validate([
             'type' => ['required', 'in:cancellation,delivery,other'],

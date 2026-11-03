@@ -4,10 +4,13 @@ namespace App\Policies;
 
 use App\Models\Conversation;
 use App\Models\User;
+use App\Policies\Concerns\ChecksTenantMembership;
 use Illuminate\Auth\Access\Response;
 
 class ConversationPolicy
 {
+    use ChecksTenantMembership;
+
     /**
      * Determine whether the user can view any models.
      */
@@ -56,12 +59,6 @@ class ConversationPolicy
 
         $conversation->loadMissing('store');
 
-        return $user->tenantMemberships()
-            ->where('tenant_id', $conversation->store->tenant_id)
-            ->whereIn('role', ['owner', 'manager', 'staff'])
-            ->whereHas('tenant', fn ($query) => $query
-                ->where('status', 'active')
-                ->whereHas('store', fn ($store) => $store->where('status', 'active')))
-            ->exists();
+        return $this->isActiveTenantMember($user, $conversation->store?->tenant_id);
     }
 }

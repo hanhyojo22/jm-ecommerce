@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -15,145 +16,223 @@ class CheckoutCart
     /**
      * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      * @param  'cod'|'gcash'|'maya'|'card'  $paymentMethod  an online method is paid through one PayMongo checkout opened right after this
+     * @param  ?string  $clientRequestId  a caller-generated key that makes a retried checkout return the original order
      */
-    public function handle(User $user, array $delivery, string $paymentMethod = 'cod'): Order
+    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null): Order
     {
         abort_unless($user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(), 403);
 
-        return DB::transaction(function () use ($user, $delivery, $paymentMethod): Order {
-            $cart = Cart::query()
-                ->where('user_id', $user->id)
-                ->lockForUpdate()
-                ->first();
+        $clientRequestId = $clientRequestId !== null ? trim($clientRequestId) : null;
 
-            if ($cart === null) {
-                throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
+        if ($clientRequestId === '') {
+            $clientRequestId = null;
+        }
+
+        $fingerprint = $clientRequestId === null ? null : $this->fingerprint($delivery, $paymentMethod);
+
+        if ($clientRequestId !== null) {
+            $existing = $this->existingOrder($user, $clientRequestId);
+
+            if ($existing !== null) {
+                return $this->replay($existing, $fingerprint);
             }
+        }
 
-            // The cart lock above serializes this buyer's checkouts, so two tabs cannot both slip past.
-            // A prepaid order cannot be refused at the door, so the limit is for COD only.
-            if ($paymentMethod === 'cod' && $user->hasReachedCodOrderLimit()) {
-                throw ValidationException::withMessages(['cart' => 'Because cash-on-delivery parcels were refused recently, you can have one order in progress at a time. You can place this order once your current one is delivered.']);
-            }
+        try {
+            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint): Order {
+                $cart = Cart::query()
+                    ->where('user_id', $user->id)
+                    ->lockForUpdate()
+                    ->first();
 
-            $items = $cart->items()
-                ->where('selected', true)
-                ->orderBy('product_id')
-                ->orderBy('variant_key')
-                ->lockForUpdate()
-                ->get();
-
-            if ($items->isEmpty()) {
-                throw ValidationException::withMessages(['cart' => 'Select an item to check out.']);
-            }
-
-            $products = Product::query()
-                ->with(['store', 'tenant'])
-                ->whereIn('id', $items->pluck('product_id'))
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
-
-            $managedTenantIds = $user->tenantMemberships()->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all();
-
-            $lines = $items->map(function ($item) use ($products, $managedTenantIds, $paymentMethod): array {
-                $product = $products->get($item->product_id);
-
-                $variant = $product !== null && $item->product_variant_id !== null
-                    ? $product->variants()->lockForUpdate()->find($item->product_variant_id)
-                    : null;
-
-                if ($product !== null && in_array($product->tenant_id, $managedTenantIds, true)) {
-                    throw ValidationException::withMessages(['cart' => 'Remove products from stores you manage before checking out.']);
+                if ($cart === null) {
+                    throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
                 }
 
-                if (
-                    $product === null
-                    || $product->status !== 'active'
-                    || $product->store->status !== 'active'
-                    || $product->tenant->status !== 'active'
-                    || $product->stock_quantity < $item->quantity
-                    || ($item->product_variant_id !== null && ($variant === null || $variant->stock_quantity < $item->quantity))
-                    || ($item->product_variant_id === null && $product->variants()->exists())
-                ) {
-                    throw ValidationException::withMessages(['cart' => 'A product in your cart is unavailable.']);
+                // The cart lock above serializes this buyer's checkouts, so two tabs cannot both slip past.
+                // A prepaid order cannot be refused at the door, so the limit is for COD only.
+                if ($paymentMethod === 'cod' && $user->hasReachedCodOrderLimit()) {
+                    throw ValidationException::withMessages(['cart' => 'Because cash-on-delivery parcels were refused recently, you can have one order in progress at a time. You can place this order once your current one is delivered.']);
                 }
 
-                if ($paymentMethod !== 'cod' && ! $product->store->acceptsOnlinePayments()) {
-                    throw ValidationException::withMessages(['payment_method' => "{$product->store->name} does not take online payments yet. Choose cash on delivery."]);
+                $items = $cart->items()
+                    ->where('selected', true)
+                    ->orderBy('product_id')
+                    ->orderBy('variant_key')
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($items->isEmpty()) {
+                    throw ValidationException::withMessages(['cart' => 'Select an item to check out.']);
                 }
 
-                $product->decrement('stock_quantity', $item->quantity);
-                $variant?->decrement('stock_quantity', $item->quantity);
+                $products = Product::query()
+                    ->with(['store', 'tenant'])
+                    ->whereIn('id', $items->pluck('product_id'))
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
-                $unitPrice = (string) ($variant?->price ?? $product->price);
+                $managedTenantIds = $user->tenantMemberships()->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all();
 
-                return [
-                    'product' => $product,
-                    'variant' => $variant,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $unitPrice,
-                    'image_path' => (filled($variant?->color) ? $product->images()->where('color', $variant->color)->value('path') : null) ?? $product->images()->value('path'),
-                    'total' => bcmul($unitPrice, (string) $item->quantity, 2),
-                ];
-            });
+                $lines = $items->map(function ($item) use ($products, $managedTenantIds, $paymentMethod): array {
+                    $product = $products->get($item->product_id);
 
-            $total = $this->sumTotals($lines->pluck('total')->all());
+                    $variant = $product !== null && $item->product_variant_id !== null
+                        ? $product->variants()->lockForUpdate()->find($item->product_variant_id)
+                        : null;
 
-            if (bccomp($total, '9999999999.99', 2) > 0) {
-                throw ValidationException::withMessages([
-                    'cart' => 'Your cart total exceeds the maximum order amount.',
-                ]);
-            }
-
-            $order = Order::query()->create([
-                ...$delivery,
-                'user_id' => $user->id,
-                'number' => 'JM-'.Str::upper((string) Str::ulid()),
-                'subtotal' => $total,
-                'shipping_amount' => '0.00',
-                'total' => $total,
-            ]);
-            $user->deliveryAddresses()->firstOrCreate(collect($delivery)->except('delivery_note')->all());
-
-            $lines->groupBy(fn (array $line): string => $line['product']->store_id)
-                ->each(function ($storeLines) use ($order): void {
-                    $firstLine = $storeLines->first();
-                    $subtotal = $this->sumTotals($storeLines->pluck('total')->all());
-
-                    $sellerOrder = $order->sellerOrders()->create([
-                        'tenant_id' => $firstLine['product']->tenant_id,
-                        'store_id' => $firstLine['product']->store_id,
-                        'subtotal' => $subtotal,
-                        'shipping_amount' => '0.00',
-                        'total' => $subtotal,
-                    ]);
-
-                    foreach ($storeLines as $line) {
-                        $sellerOrder->items()->create([
-                            'product_id' => $line['product']->id,
-                            'product_variant_id' => $line['variant']?->id,
-                            'product_name' => $line['product']->name,
-                            'sku' => $line['variant']?->sku ?? $line['product']->sku,
-                            'variant_label' => $line['variant']?->label(),
-                            'unit_price' => $line['unit_price'],
-                            'image_path' => $line['image_path'],
-                            'quantity' => $line['quantity'],
-                            'line_total' => $line['total'],
-                        ]);
+                    if ($product !== null && in_array($product->tenant_id, $managedTenantIds, true)) {
+                        throw ValidationException::withMessages(['cart' => 'Remove products from stores you manage before checking out.']);
                     }
+
+                    if (
+                        $product === null
+                        || $product->status !== 'active'
+                        || $product->store->status !== 'active'
+                        || $product->tenant->status !== 'active'
+                        || $product->stock_quantity < $item->quantity
+                        || ($item->product_variant_id !== null && ($variant === null || $variant->stock_quantity < $item->quantity))
+                        || ($item->product_variant_id === null && $product->variants()->exists())
+                    ) {
+                        throw ValidationException::withMessages(['cart' => 'A product in your cart is unavailable.']);
+                    }
+
+                    if ($paymentMethod !== 'cod' && ! $product->store->acceptsOnlinePayments()) {
+                        throw ValidationException::withMessages(['payment_method' => "{$product->store->name} does not take online payments yet. Choose cash on delivery."]);
+                    }
+
+                    $product->decrement('stock_quantity', $item->quantity);
+                    $variant?->decrement('stock_quantity', $item->quantity);
+
+                    $unitPrice = (string) ($variant?->price ?? $product->price);
+
+                    return [
+                        'product' => $product,
+                        'variant' => $variant,
+                        'quantity' => $item->quantity,
+                        'unit_price' => $unitPrice,
+                        'image_path' => (filled($variant?->color) ? $product->images()->where('color', $variant->color)->value('path') : null) ?? $product->images()->value('path'),
+                        'total' => bcmul($unitPrice, (string) $item->quantity, 2),
+                    ];
                 });
 
-            $order->payment()->create([
-                'method' => $paymentMethod,
-                'amount' => $total,
-                'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($total, $paymentMethod),
-            ]);
-            $cart->items()->whereKey($items->modelKeys())->delete();
+                $total = $this->sumTotals($lines->pluck('total')->all());
 
-            return $order;
-        });
+                if (bccomp($total, '9999999999.99', 2) > 0) {
+                    throw ValidationException::withMessages([
+                        'cart' => 'Your cart total exceeds the maximum order amount.',
+                    ]);
+                }
+
+                $order = Order::query()->create([
+                    ...$delivery,
+                    'user_id' => $user->id,
+                    'number' => 'JM-'.Str::upper((string) Str::ulid()),
+                    'client_request_id' => $clientRequestId,
+                    'client_request_hash' => $fingerprint,
+                    'subtotal' => $total,
+                    'shipping_amount' => '0.00',
+                    'total' => $total,
+                ]);
+                $user->deliveryAddresses()->firstOrCreate(collect($delivery)->except('delivery_note')->all());
+
+                $lines->groupBy(fn (array $line): string => $line['product']->store_id)
+                    ->each(function ($storeLines) use ($order): void {
+                        $firstLine = $storeLines->first();
+                        $subtotal = $this->sumTotals($storeLines->pluck('total')->all());
+
+                        $sellerOrder = $order->sellerOrders()->create([
+                            'tenant_id' => $firstLine['product']->tenant_id,
+                            'store_id' => $firstLine['product']->store_id,
+                            'subtotal' => $subtotal,
+                            'shipping_amount' => '0.00',
+                            'total' => $subtotal,
+                        ]);
+
+                        foreach ($storeLines as $line) {
+                            $sellerOrder->items()->create([
+                                'product_id' => $line['product']->id,
+                                'product_variant_id' => $line['variant']?->id,
+                                'product_name' => $line['product']->name,
+                                'sku' => $line['variant']?->sku ?? $line['product']->sku,
+                                'variant_label' => $line['variant']?->label(),
+                                'unit_price' => $line['unit_price'],
+                                'image_path' => $line['image_path'],
+                                'quantity' => $line['quantity'],
+                                'line_total' => $line['total'],
+                            ]);
+                        }
+                    });
+
+                $order->payment()->create([
+                    'method' => $paymentMethod,
+                    'amount' => $total,
+                    'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($total, $paymentMethod),
+                ]);
+                $cart->items()->whereKey($items->modelKeys())->delete();
+
+                return $order;
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            /*
+             * Two first attempts with the same key can pass the lookup above together. The
+             * unique index lets one win; the loser replays the winner's order instead of
+             * surfacing a 500 or charging the buyer twice.
+             */
+            if ($clientRequestId === null) {
+                throw $exception;
+            }
+
+            $existing = $this->existingOrder($user, $clientRequestId);
+
+            if ($existing === null) {
+                throw $exception;
+            }
+
+            return $this->replay($existing, $fingerprint);
+        }
+    }
+
+    private function existingOrder(User $user, string $clientRequestId): ?Order
+    {
+        return Order::query()
+            ->where('user_id', $user->id)
+            ->where('client_request_id', $clientRequestId)
+            ->first();
+    }
+
+    private function replay(Order $order, ?string $fingerprint): Order
+    {
+        if ($fingerprint !== null && ! hash_equals((string) $order->client_request_hash, $fingerprint)) {
+            throw ValidationException::withMessages([
+                'client_request_id' => 'This request identifier was already used for a different checkout.',
+            ]);
+        }
+
+        return $order;
+    }
+
+    /**
+     * The checkout payload, minus the cart, so a retry with the same details matches.
+     *
+     * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
+     */
+    private function fingerprint(array $delivery, string $paymentMethod): string
+    {
+        $normalized = [
+            'recipient_name' => trim((string) ($delivery['recipient_name'] ?? '')),
+            'phone' => trim((string) ($delivery['phone'] ?? '')),
+            'address_line' => trim((string) ($delivery['address_line'] ?? '')),
+            'city' => trim((string) ($delivery['city'] ?? '')),
+            'province' => trim((string) ($delivery['province'] ?? '')),
+            'postal_code' => trim((string) ($delivery['postal_code'] ?? '')),
+            'delivery_note' => trim((string) ($delivery['delivery_note'] ?? '')),
+            'payment_method' => $paymentMethod,
+        ];
+
+        return hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR));
     }
 
     /**

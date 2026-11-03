@@ -70,6 +70,12 @@ class AppServiceProvider extends ServiceProvider
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));
 
+        // The mobile client polls a handful of endpoints; 60 requests a minute leaves room
+        // for normal browsing without letting a leaked token hammer the API.
+        RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(60)->by(
+            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+        ));
+
         RateLimiter::for('admin-mutations', fn (Request $request): Limit => Limit::perMinute(20)->by(
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));

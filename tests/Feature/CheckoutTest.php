@@ -575,6 +575,65 @@ class CheckoutTest extends TestCase
             ->assertSee('href="#city"', false);
     }
 
+    public function test_a_retried_checkout_with_the_same_request_id_returns_the_original_order(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 2]);
+        $payload = [...$this->delivery(), 'client_request_id' => 'checkout-retry-1'];
+
+        $this->actingAs($buyer)->post(route('checkout.store'), $payload)->assertRedirect();
+        $order = Order::query()->sole();
+
+        $this->actingAs($buyer)
+            ->post(route('checkout.store'), $payload)
+            ->assertRedirect(route('orders.placed', $order));
+
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseCount('seller_orders', 1);
+        $this->assertSame(3, $product->refresh()->stock_quantity);
+    }
+
+    public function test_a_reused_request_id_with_different_delivery_details_is_rejected(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'client_request_id' => 'checkout-retry-2',
+        ])->assertRedirect();
+
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'city' => 'Cebu City',
+            'client_request_id' => 'checkout-retry-2',
+        ])->assertSessionHasErrors('client_request_id');
+
+        $this->assertDatabaseCount('orders', 1);
+        $this->assertDatabaseHas('orders', ['city' => 'Manila']);
+        $this->assertSame(4, $product->refresh()->stock_quantity);
+    }
+
+    public function test_the_same_request_id_from_two_buyers_places_two_orders(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $first = User::factory()->create(['email_verified_at' => now()]);
+        $second = User::factory()->create(['email_verified_at' => now()]);
+        $payload = [...$this->delivery(), 'client_request_id' => 'shared-key'];
+
+        $this->actingAs($first)->post(route('cart.store', $product), ['quantity' => 1]);
+        $this->actingAs($first)->post(route('checkout.store'), $payload)->assertRedirect();
+
+        $this->actingAs($second)->post(route('cart.store', $product), ['quantity' => 1]);
+        $this->actingAs($second)->post(route('checkout.store'), $payload)->assertRedirect();
+
+        $this->assertDatabaseCount('orders', 2);
+        $this->assertDatabaseCount('seller_orders', 2);
+        $this->assertEqualsCanonicalizing([$first->id, $second->id], Order::query()->pluck('user_id')->all());
+    }
+
     private function sellerProduct(string $price, int $stock): array
     {
         $seller = User::factory()->seller()->create(['email_verified_at' => now()]);

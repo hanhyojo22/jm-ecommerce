@@ -26,14 +26,14 @@ class DeliveryAddressController extends Controller
 
     public function edit(Request $request, DeliveryAddress $deliveryAddress): View
     {
-        abort_unless($deliveryAddress->user_id === $request->user()->id, 404);
+        $this->authorize('view', $deliveryAddress);
 
         return view('marketplace.delivery-addresses.edit', ['address' => $deliveryAddress]);
     }
 
     public function update(Request $request, DeliveryAddress $deliveryAddress): RedirectResponse
     {
-        abort_unless($deliveryAddress->user_id === $request->user()->id, 404);
+        $this->authorize('update', $deliveryAddress);
         $deliveryAddress->update($this->validatedAddress($request));
 
         return to_route('delivery-addresses.index')->with('status', 'Delivery address updated.');
@@ -41,7 +41,7 @@ class DeliveryAddressController extends Controller
 
     public function destroy(Request $request, DeliveryAddress $deliveryAddress): RedirectResponse
     {
-        abort_unless($deliveryAddress->user_id === $request->user()->id, 404);
+        $this->authorize('delete', $deliveryAddress);
         $deliveryAddress->delete();
 
         return to_route('delivery-addresses.index')->with('status', 'Delivery address removed.');

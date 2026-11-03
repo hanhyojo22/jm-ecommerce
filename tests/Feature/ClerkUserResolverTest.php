@@ -8,6 +8,8 @@ use App\Auth\ClerkUserResolver;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ClerkUserResolverTest extends TestCase
@@ -159,6 +161,43 @@ class ClerkUserResolverTest extends TestCase
         $this->assertSame('buyer', $user->account_type);
         $this->assertSame('user_buyer', $user->clerk_user_id);
         $this->assertNotNull($user->email_verified_at);
+    }
+
+    public function test_a_concurrent_first_sign_in_reuses_the_row_created_by_the_other_request(): void
+    {
+        $resolver = new ClerkUserResolver(new FakeClerkSessionVerifier(
+            new ClerkIdentity('user_race'),
+            new ClerkIdentity('user_race', 'race@example.com', true, 'Race Buyer'),
+        ));
+
+        $inserted = false;
+        User::creating(function (User $user) use (&$inserted): void {
+            if ($inserted || $user->clerk_user_id !== 'user_race') {
+                return;
+            }
+
+            $inserted = true;
+
+            DB::table('users')->insert([
+                'id' => (string) Str::ulid(),
+                'clerk_user_id' => 'user_race',
+                'name' => 'Winning Request',
+                'email' => 'race@example.com',
+                'password' => 'not-a-real-password',
+                'account_type' => 'buyer',
+                'is_active' => true,
+                'email_verified_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        $user = $resolver->resolve(Request::create('/'));
+
+        $this->assertNotNull($user);
+        $this->assertSame('Winning Request', $user->name);
+        $this->assertSame('user_race', $user->clerk_user_id);
+        $this->assertDatabaseCount('users', 1);
     }
 
     public function test_an_unverified_local_user_is_sent_to_the_clerk_profile_instead_of_a_removed_breeze_route(): void

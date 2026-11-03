@@ -98,7 +98,7 @@ class CartController extends Controller
 
     public function update(Request $request, CartItem $cartItem): RedirectResponse
     {
-        abort_unless($cartItem->cart()->where('user_id', $request->user()->id)->exists(), 404);
+        $this->authorize('update', $cartItem);
 
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:100']]);
 
@@ -130,7 +130,7 @@ class CartController extends Controller
 
     public function destroy(Request $request, CartItem $cartItem): RedirectResponse
     {
-        abort_unless($cartItem->cart->user_id === $request->user()->id, 404);
+        $this->authorize('delete', $cartItem);
 
         $removedCartItem = [
             'product_id' => $cartItem->product_id,

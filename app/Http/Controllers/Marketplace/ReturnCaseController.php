@@ -16,7 +16,7 @@ class ReturnCaseController extends Controller
 {
     public function store(Request $request, SellerOrder $sellerOrder, ReturnCaseWorkflow $workflow): RedirectResponse
     {
-        abort_unless($sellerOrder->order()->where('user_id', $request->user()->id)->exists(), 404);
+        $this->authorize('openReturn', $sellerOrder);
         $data = $request->validate([
             'reason' => ['required', 'in:damaged,defective,wrong_item,misdescribed'],
             'requested_remedy' => ['required', 'in:refund,replacement'],
@@ -35,7 +35,7 @@ class ReturnCaseController extends Controller
 
     public function show(Request $request, ReturnCase $returnCase): View
     {
-        abort_unless($returnCase->buyer_id === $request->user()->id, 404);
+        $this->authorize('view', $returnCase);
         $returnCase->load('sellerOrder.order', 'sellerOrder.store', 'buyer', 'items.orderItem', 'events.actor', 'evidence.uploader', 'outcome');
 
         return view('returns.show', ['case' => $returnCase, 'role' => 'buyer']);
@@ -43,7 +43,7 @@ class ReturnCaseController extends Controller
 
     public function update(Request $request, ReturnCase $returnCase, ReturnCaseWorkflow $workflow): RedirectResponse
     {
-        abort_unless($returnCase->buyer_id === $request->user()->id, 404);
+        $this->authorize('respond', $returnCase);
         $data = $request->validate([
             'action' => ['required', 'in:accept,appeal,handoff,confirm'],
             'note' => ['required_if:action,appeal', 'nullable', 'string', 'min:10', 'max:2000'],
@@ -57,17 +57,7 @@ class ReturnCaseController extends Controller
     public function evidence(Request $request, ReturnCase $returnCase, ReturnCaseEvidence $evidence)
     {
         abort_unless($evidence->return_case_id === $returnCase->id, 404);
-
-        $sellerTenant = $request->user()->account_type === 'seller'
-            ? $request->user()->sellerTenant()
-            : null;
-
-        abort_unless(
-            $returnCase->buyer_id === $request->user()->id
-            || $request->user()->isPlatformAdministrator()
-            || ($sellerTenant !== null && $sellerTenant->id === $returnCase->sellerOrder->tenant_id),
-            404,
-        );
+        $this->authorize('view', $returnCase);
 
         return Storage::disk('chat_attachments')->download($evidence->path, $evidence->original_name);
     }

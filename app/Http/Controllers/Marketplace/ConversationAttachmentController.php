@@ -94,8 +94,7 @@ class ConversationAttachmentController extends Controller
 
     public function show(Request $request, MessageAttachment $attachment): StreamedResponse
     {
-        $attachment->loadMissing('message.conversation');
-        $this->authorize('view', $attachment->message->conversation);
+        $this->authorize('view', $attachment);
         abort_unless($attachment->status === 'available', 404);
 
         if (in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true) || ($attachment->mime_type === 'application/pdf' && $request->boolean('preview'))) {

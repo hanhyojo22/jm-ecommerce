@@ -21,6 +21,8 @@ class OrderController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->authorize('viewAny', Order::class);
+
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:pending,confirmed,processing,shipped,delivered,cancelled'],
@@ -151,7 +153,7 @@ class OrderController extends Controller
 
     public function show(Request $request, Order $order): View
     {
-        abort_unless($order->user_id === $request->user()->id, 404);
+        $this->authorize('view', $order);
 
         $order = $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment');
 
@@ -168,7 +170,7 @@ class OrderController extends Controller
      */
     public function placed(Request $request, Order $order): RedirectResponse|View
     {
-        abort_unless($order->user_id === $request->user()->id, 404);
+        $this->authorize('view', $order);
         $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'payment');
 
         if ($order->sellerOrders->contains(fn (SellerOrder $sellerOrder): bool => $sellerOrder->status !== 'pending')) {
@@ -184,7 +186,7 @@ class OrderController extends Controller
      */
     public function pay(Request $request, Order $order, StartOnlinePayment $startOnlinePayment): RedirectResponse|SymfonyRedirect
     {
-        abort_unless($order->user_id === $request->user()->id, 404);
+        $this->authorize('pay', $order);
 
         try {
             return redirect()->away($startOnlinePayment->handle($order));
@@ -218,7 +220,7 @@ class OrderController extends Controller
      */
     public function received(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
-        abort_unless($sellerOrder->order()->value('user_id') === $request->user()->id, 404);
+        $this->authorize('receive', $sellerOrder);
 
         try {
             $updateStatus->handle($sellerOrder, 'delivered', $request->user(), $request->ip());
