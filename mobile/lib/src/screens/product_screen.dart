@@ -90,6 +90,14 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     return stock > 100 ? 100 : stock;
   }
 
+  bool get _canAdd {
+    final variant = _variant;
+
+    return product.inStock &&
+        (!product.requiresVariantSelection || _variantId != null) &&
+        (variant == null || variant.inStock);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -190,6 +198,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                     url: images[index].url,
                     width: double.infinity,
                     radius: 0,
+                    cacheWidth: 1200,
                   ),
                 ),
               ),
@@ -313,13 +322,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                       product.store!.name,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    subtitle: Text(
-                      [
-                        product.store!.city,
-                        'Visit store',
-                      ].whereType<String>().join(' · '),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
+                    subtitle: Text(product.store!.city ?? 'Marketplace store'),
                   ),
                 ),
               if (product.variants.isNotEmpty) ...[
@@ -387,7 +390,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
               ),
               const SizedBox(height: 20),
               FilledButton.icon(
-                onPressed: product.inStock && !_adding ? _addToCart : null,
+                onPressed: _canAdd && !_adding ? _addToCart : null,
                 icon: _adding
                     ? const SizedBox(
                         width: 18,
@@ -395,7 +398,13 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.add_shopping_cart),
-                label: Text(product.inStock ? 'Add to cart' : 'Out of stock'),
+                label: Text(
+                  !product.inStock || (_variant != null && !_variant!.inStock)
+                      ? 'Out of stock'
+                      : (product.requiresVariantSelection && _variantId == null
+                            ? 'Choose an option'
+                            : 'Add to cart'),
+                ),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(

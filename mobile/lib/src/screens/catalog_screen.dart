@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../models/models.dart';
 import '../providers/catalog_providers.dart';
 import '../widgets/common.dart';
 
@@ -40,104 +39,118 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final categories = ref.watch(categoriesProvider);
     final theme = Theme.of(context);
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(productsProvider);
-        ref.invalidate(categoriesProvider);
-        await ref.read(productsProvider.future);
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.axis == Axis.vertical &&
+            notification.metrics.extentAfter < 500) {
+          unawaited(ref.read(productsProvider.notifier).loadMore());
+        }
+
+        return false;
       },
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: TextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                onSubmitted: (value) =>
-                    ref.read(catalogFilterProvider.notifier).setQuery(value),
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Search products, stores, brands',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  suffixIcon: filter.query.isEmpty
-                      ? null
-                      : IconButton(
-                          onPressed: () {
-                            _searchController.clear();
-                            ref
-                                .read(catalogFilterProvider.notifier)
-                                .setQuery('');
-                          },
-                          icon: const Icon(Icons.close_rounded),
-                        ),
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(productsProvider);
+          ref.invalidate(categoriesProvider);
+          await ref.read(productsProvider.future);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              sliver: SliverToBoxAdapter(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  onSubmitted: (value) =>
+                      ref.read(catalogFilterProvider.notifier).setQuery(value),
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    hintText: 'Search products, stores, brands',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: filter.query.isEmpty
+                        ? null
+                        : IconButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              ref
+                                  .read(catalogFilterProvider.notifier)
+                                  .setQuery('');
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                  ),
                 ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 56,
-              child: categories.value == null
-                  ? const SizedBox.shrink()
-                  : ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: const Text('All'),
-                            selected: filter.category == null,
-                            onSelected: (_) => ref
-                                .read(catalogFilterProvider.notifier)
-                                .setCategory(null),
-                          ),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 56,
+                child: categories.value == null
+                    ? const SizedBox.shrink()
+                    : ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
                         ),
-                        ...?categories.value?.map(
-                          (category) => Padding(
+                        children: [
+                          Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: ChoiceChip(
-                              label: Text(category.name),
-                              selected: filter.category == category.slug,
-                              onSelected: (selected) => ref
+                              label: const Text('All'),
+                              selected: filter.category == null,
+                              onSelected: (_) => ref
                                   .read(catalogFilterProvider.notifier)
-                                  .setCategory(selected ? category.slug : null),
+                                  .setCategory(null),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          ...?categories.value?.map(
+                            (category) => Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(category.name),
+                                selected: filter.category == category.slug,
+                                onSelected: (selected) => ref
+                                    .read(catalogFilterProvider.notifier)
+                                    .setCategory(
+                                      selected ? category.slug : null,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
-          ),
-          ...switch (products) {
-            AsyncData(:final value) => _productSlivers(value, theme),
-            AsyncError(:final error) => [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: ErrorView(
-                  error: error,
-                  onRetry: () => ref.invalidate(productsProvider),
+            ...switch (products) {
+              AsyncData(:final value) => _productSlivers(value, theme),
+              AsyncError(:final error) => [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: ErrorView(
+                    error: error,
+                    onRetry: () => ref.invalidate(productsProvider),
+                  ),
                 ),
-              ),
-            ],
-            _ => const [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ],
-          },
-        ],
+              ],
+              _ => const [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              ],
+            },
+          ],
+        ),
       ),
     );
   }
 
-  List<Widget> _productSlivers(List<Product> products, ThemeData theme) {
+  List<Widget> _productSlivers(ProductFeed feed, ThemeData theme) {
+    final products = feed.products;
+
     if (products.isEmpty) {
       return [
         SliverFillRemaining(
@@ -165,7 +178,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
         sliver: SliverToBoxAdapter(
           child: Text(
-            '${products.length} products',
+            '${feed.total > 0 ? feed.total : products.length} products',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -193,6 +206,18 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           }, childCount: products.length),
         ),
       ),
+      if (feed.loadingMore)
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: 28),
+            child: Center(
+              child: SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+        ),
     ];
   }
 }

@@ -43,13 +43,111 @@ final catalogFilterProvider =
       CatalogFilterNotifier.new,
     );
 
-final productsProvider = FutureProvider.autoDispose<List<Product>>((ref) {
-  final filter = ref.watch(catalogFilterProvider);
+const catalogPageSize = 20;
 
-  return ref
-      .watch(apiClientProvider)
-      .products(query: filter.query, category: filter.category);
-});
+class ProductFeed {
+  const ProductFeed({
+    required this.filter,
+    required this.products,
+    required this.page,
+    required this.lastPage,
+    required this.total,
+    this.loadingMore = false,
+  });
+
+  final CatalogFilter filter;
+  final List<Product> products;
+  final int page;
+  final int lastPage;
+  final int total;
+  final bool loadingMore;
+
+  bool get hasMore => page < lastPage;
+
+  ProductFeed copyWith({
+    List<Product>? products,
+    int? page,
+    int? lastPage,
+    int? total,
+    bool? loadingMore,
+  }) => ProductFeed(
+    filter: filter,
+    products: products ?? this.products,
+    page: page ?? this.page,
+    lastPage: lastPage ?? this.lastPage,
+    total: total ?? this.total,
+    loadingMore: loadingMore ?? this.loadingMore,
+  );
+}
+
+class ProductsNotifier extends AsyncNotifier<ProductFeed> {
+  @override
+  Future<ProductFeed> build() async {
+    final filter = ref.watch(catalogFilterProvider);
+    final page = await ref
+        .watch(apiClientProvider)
+        .products(
+          query: filter.query,
+          category: filter.category,
+          perPage: catalogPageSize,
+        );
+
+    return ProductFeed(
+      filter: filter,
+      products: page.products,
+      page: page.page,
+      lastPage: page.lastPage,
+      total: page.total,
+    );
+  }
+
+  Future<void> loadMore() async {
+    final current = state.value;
+
+    if (current == null ||
+        state.isLoading ||
+        current.loadingMore ||
+        !current.hasMore) {
+      return;
+    }
+
+    state = AsyncData(current.copyWith(loadingMore: true));
+
+    try {
+      final next = await ref
+          .read(apiClientProvider)
+          .products(
+            query: current.filter.query,
+            category: current.filter.category,
+            page: current.page + 1,
+            perPage: catalogPageSize,
+          );
+
+      if (ref.read(catalogFilterProvider) != current.filter) {
+        return;
+      }
+
+      state = AsyncData(
+        ProductFeed(
+          filter: current.filter,
+          products: [...current.products, ...next.products],
+          page: next.page,
+          lastPage: next.lastPage,
+          total: next.total,
+        ),
+      );
+    } catch (_) {
+      if (ref.read(catalogFilterProvider) == current.filter) {
+        state = AsyncData(current.copyWith(loadingMore: false));
+      }
+    }
+  }
+}
+
+final productsProvider =
+    AsyncNotifierProvider.autoDispose<ProductsNotifier, ProductFeed>(
+      ProductsNotifier.new,
+    );
 
 final categoriesProvider = FutureProvider.autoDispose<List<Category>>(
   (ref) => ref.watch(apiClientProvider).categories(),

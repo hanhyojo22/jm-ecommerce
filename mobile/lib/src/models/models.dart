@@ -276,6 +276,22 @@ class Product {
   }
 }
 
+class ProductPage {
+  const ProductPage({
+    required this.products,
+    required this.page,
+    required this.lastPage,
+    required this.total,
+  });
+
+  final List<Product> products;
+  final int page;
+  final int lastPage;
+  final int total;
+
+  bool get hasMore => page < lastPage;
+}
+
 class CartLine {
   const CartLine({
     required this.id,

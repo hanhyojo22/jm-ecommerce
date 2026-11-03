@@ -73,26 +73,36 @@ class ApiClient {
   Future<Account> me() async =>
       Account.fromJson(mapOf(await _data('GET', '/me')));
 
-  Future<List<Product>> products({
+  Future<ProductPage> products({
     String? query,
     String? category,
     String? sort,
     int page = 1,
-    int perPage = 12,
+    int perPage = 20,
   }) async {
-    final body = await _data(
-      'GET',
-      '/products',
-      query: {
-        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-        if (category != null && category.isNotEmpty) 'category': category,
-        if (sort != null && sort.isNotEmpty) 'sort': sort,
-        'page': page,
-        'per_page': perPage,
-      },
+    final body = mapOf(
+      await _raw(
+        'GET',
+        '/products',
+        query: {
+          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+          if (category != null && category.isNotEmpty) 'category': category,
+          if (sort != null && sort.isNotEmpty) 'sort': sort,
+          'page': page,
+          'per_page': perPage,
+        },
+      ),
     );
+    final meta = mapOf(body['meta']);
 
-    return listOf(body).map(Product.fromJson).toList(growable: false);
+    return ProductPage(
+      products: listOf(body['data'])
+          .map(Product.fromJson)
+          .toList(growable: false),
+      page: integer(meta['current_page'], page),
+      lastPage: integer(meta['last_page'], page),
+      total: integer(meta['total']),
+    );
   }
 
   Future<List<Product>> suggestedProducts(String query) async {
@@ -225,6 +235,7 @@ class ApiClient {
       '/orders',
       query: {
         'tab': tab,
+        'per_page': 50,
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );
@@ -287,6 +298,7 @@ class ApiClient {
       'GET',
       '/conversations',
       query: {
+        'per_page': 50,
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       },
     );

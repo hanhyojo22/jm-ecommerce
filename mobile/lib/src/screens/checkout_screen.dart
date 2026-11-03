@@ -87,12 +87,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Address? _address(CheckoutQuote quote) {
-    if (!_useNewAddress && _selectedAddressId != null) {
+    if (!_useNewAddress) {
       for (final address in quote.addresses) {
         if (address.id == _selectedAddressId) {
           return address;
         }
       }
+
+      return null;
     }
 
     return Address(
@@ -161,6 +163,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
   }
 
+  String _total(CheckoutQuote quote) => addMoney(
+    quote.subtotal,
+    quote.paymentOptions[_paymentMethod]?.fee ?? '0.00',
+  );
+
   void _snack(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -212,7 +219,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text('Place order · ${money(value.subtotal)}'),
+                        : Text('Place order · ${money(_total(value))}'),
                   ),
                 ),
               ),
@@ -489,8 +496,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _totalsCard(CheckoutQuote quote) {
     final fee = quote.paymentOptions[_paymentMethod]?.fee ?? '0.00';
-    final total =
-        (double.tryParse(quote.subtotal) ?? 0) + (double.tryParse(fee) ?? 0);
+    final total = _total(quote);
 
     return Card(
       child: Padding(
@@ -540,7 +546,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                 ),
                 Text(
-                  money(total.toStringAsFixed(2)),
+                  money(total),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: Theme.of(context).colorScheme.primary,

@@ -30,6 +30,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   StreamSubscription<ReverbState>? _states;
   Timer? _poll;
   Timer? _typingTimer;
+  Timer? _reconnectTimer;
   bool _typing = false;
   bool _sending = false;
   bool _markingRead = false;
@@ -41,11 +42,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _reverb = ref.read(reverbProvider);
     _events = _reverb.events.listen(_onReverbEvent);
-    _states = _reverb.states.listen((state) {
-      if (mounted) {
-        setState(() => _live = state == ReverbState.connected);
-      }
-    });
+    _states = _reverb.states.listen(_onReverbState);
 
     unawaited(_connectReverb());
     _poll = Timer.periodic(const Duration(seconds: 15), (_) => _refresh());
@@ -57,6 +54,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void dispose() {
     _poll?.cancel();
     _typingTimer?.cancel();
+    _reconnectTimer?.cancel();
     _events?.cancel();
     _states?.cancel();
     _composer.dispose();
@@ -70,10 +68,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       );
     } catch (_) {
       // REST polling keeps the thread usable when the socket is unavailable.
+      _scheduleReconnect();
     }
   }
 
+  void _onReverbState(ReverbState state) {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _live = state == ReverbState.connected);
+
+    if (state == ReverbState.connected) {
+      _reconnectTimer?.cancel();
+      return;
+    }
+
+    if (state == ReverbState.disconnected || state == ReverbState.failed) {
+      _scheduleReconnect();
+    }
+  }
+
+  void _scheduleReconnect() {
+    if (!mounted || _reconnectTimer?.isActive == true) {
+      return;
+    }
+
+    _reconnectTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) {
+        unawaited(_connectReverb());
+      }
+    });
+  }
+
   void _onReverbEvent(ReverbEvent event) {
+    if (!mounted) {
+      return;
+    }
+
     if (event.type == 'message.created' || event.event == 'message.created') {
       _refresh();
       return;
@@ -101,6 +133,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _refresh() {
+    if (!mounted) {
+      return;
+    }
+
     ref.invalidate(messagesProvider(widget.conversationId));
     ref.invalidate(conversationsProvider);
   }
@@ -114,7 +150,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     try {
       await ref.read(apiClientProvider).markRead(widget.conversationId);
-      ref.invalidate(conversationsProvider);
+
+      if (mounted) {
+        ref.invalidate(conversationsProvider);
+      }
     } catch (_) {
       // A read receipt is not worth blocking the thread for.
     } finally {
@@ -160,6 +199,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             body: body,
             clientMessageId: const Uuid().v4(),
           );
+
+      if (!mounted) {
+        return;
+      }
+
       _composer.clear();
       _refresh();
       await _markRead();

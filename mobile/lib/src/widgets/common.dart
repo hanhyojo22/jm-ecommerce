@@ -136,6 +136,7 @@ class NetworkThumb extends StatelessWidget {
     this.height,
     this.radius = 14,
     this.fit = BoxFit.cover,
+    this.cacheWidth,
   });
 
   final String? url;
@@ -143,6 +144,7 @@ class NetworkThumb extends StatelessWidget {
   final double? height;
   final double radius;
   final BoxFit fit;
+  final int? cacheWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -163,6 +165,12 @@ class NetworkThumb extends StatelessWidget {
       );
     }
 
+    final memCacheWidth =
+        cacheWidth ??
+        (width != null && width!.isFinite
+            ? (width! * MediaQuery.devicePixelRatioOf(context)).round()
+            : null);
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: CachedNetworkImage(
@@ -170,6 +178,8 @@ class NetworkThumb extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        memCacheWidth: memCacheWidth,
+        fadeInDuration: const Duration(milliseconds: 180),
         placeholder: (context, value) => placeholder,
         errorWidget: (context, value, error) => placeholder,
       ),
@@ -195,13 +205,11 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Hero(
-                tag: 'product-${product.id}',
-                child: NetworkThumb(
-                  url: product.thumbnailUrl,
-                  width: double.infinity,
-                  radius: 0,
-                ),
+              child: NetworkThumb(
+                url: product.thumbnailUrl,
+                width: double.infinity,
+                radius: 0,
+                cacheWidth: 600,
               ),
             ),
             Padding(

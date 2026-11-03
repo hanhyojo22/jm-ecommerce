@@ -339,6 +339,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       }
 
       ref.invalidate(orderProvider(widget.orderId));
+      ref.invalidate(ordersProvider);
     } on ApiException catch (error) {
       if (mounted) {
         _snack(error.friendly);

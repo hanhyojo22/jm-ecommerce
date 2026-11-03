@@ -49,11 +49,11 @@ class CartNotifier extends AsyncNotifier<Cart> {
   }
 }
 
-final cartProvider = AsyncNotifierProvider<CartNotifier, Cart>(
+final cartProvider = AsyncNotifierProvider.autoDispose<CartNotifier, Cart>(
   CartNotifier.new,
 );
 
-final cartCountProvider = Provider<int>((ref) {
+final cartCountProvider = Provider.autoDispose<int>((ref) {
   final cart = ref.watch(cartProvider).value;
 
   return cart?.lines.length ?? 0;

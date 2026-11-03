@@ -8,6 +8,34 @@ final _peso = NumberFormat.currency(
 
 String money(String? value) => _peso.format(double.tryParse(value ?? '') ?? 0);
 
+/// Adds two decimal money strings without floating-point rounding.
+String addMoney(String a, String b) {
+  final cents = _minorUnits(a) + _minorUnits(b);
+  final sign = cents < 0 ? '-' : '';
+  final absolute = cents.abs();
+
+  return '$sign${absolute ~/ 100}.${(absolute % 100).toString().padLeft(2, '0')}';
+}
+
+int _minorUnits(String value) {
+  final cleaned = value.trim().replaceAll(',', '');
+
+  if (cleaned.isEmpty) {
+    return 0;
+  }
+
+  final negative = cleaned.startsWith('-');
+  final unsigned = negative ? cleaned.substring(1) : cleaned;
+  final parts = unsigned.split('.');
+  final whole = int.tryParse(parts.first) ?? 0;
+  final fraction = parts.length > 1
+      ? parts[1].padRight(2, '0').substring(0, 2)
+      : '00';
+  final cents = whole * 100 + (int.tryParse(fraction) ?? 0);
+
+  return negative ? -cents : cents;
+}
+
 String shortDate(String? iso) {
   final date = DateTime.tryParse(iso ?? '')?.toLocal();
 

@@ -38,9 +38,9 @@ class ReverbClient {
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _subscription;
+  Completer<void>? _connected;
   final _events = StreamController<ReverbEvent>.broadcast();
   final _states = StreamController<ReverbState>.broadcast();
-  final _connected = Completer<void>();
   final _subscribed = <String>{};
   String? _socketId;
   bool _disposed = false;
@@ -49,15 +49,21 @@ class ReverbClient {
 
   Stream<ReverbState> get states => _states.stream;
 
-  bool get isConnected => _socketId != null;
+  bool get isConnected => _socketId != null && _channel != null;
 
   Future<void> connectAndSubscribe(String channelName) async {
+    if (_disposed) {
+      throw StateError('Reverb client is disposed.');
+    }
+
     if (_channel == null) {
       await _connect();
     }
 
-    if (!_connected.isCompleted) {
-      await _connected.future.timeout(const Duration(seconds: 12));
+    final connected = _connected;
+
+    if (connected != null && !connected.isCompleted) {
+      await connected.future.timeout(const Duration(seconds: 12));
     }
 
     await _subscribe(channelName);
@@ -68,6 +74,8 @@ class ReverbClient {
     final uri = Uri.parse(
       '$scheme://$host:$port/app/$key?protocol=7&client=flutter&version=1.0',
     );
+    final connected = Completer<void>();
+    _connected = connected;
 
     _states.add(ReverbState.connecting);
 
@@ -80,30 +88,51 @@ class ReverbClient {
       cancelOnError: false,
     );
 
-    await channel.ready;
+    try {
+      await channel.ready;
+    } catch (error) {
+      _resetConnection(close: true);
+
+      if (!connected.isCompleted) {
+        connected.completeError(error);
+      }
+
+      _states.add(ReverbState.failed);
+      rethrow;
+    }
   }
 
   void _onMessage(dynamic raw) {
-    final decoded = jsonDecode('$raw');
+    if (_disposed) {
+      return;
+    }
 
-    if (decoded is! Map) {
+    final decoded = _decode(raw);
+
+    if (decoded == null) {
       return;
     }
 
     final event = '${decoded['event'] ?? ''}';
-    final data = decoded['data'];
+    final payload = _decode(decoded['data']);
 
     if (event == 'pusher:connection_established') {
-      final payload = data is String ? jsonDecode(data) : data;
-
-      if (payload is Map) {
+      if (payload != null) {
         _socketId = payload['socket_id'] as String?;
+      }
+
+      if (_socketId == null) {
+        _fail('Reverb did not return a socket id.');
+
+        return;
       }
 
       _states.add(ReverbState.connected);
 
-      if (!_connected.isCompleted) {
-        _connected.complete();
+      final connected = _connected;
+
+      if (connected != null && !connected.isCompleted) {
+        connected.complete();
       }
 
       return;
@@ -116,7 +145,7 @@ class ReverbClient {
     }
 
     if (event == 'pusher:error') {
-      _fail(data ?? 'Reverb returned an error.');
+      _fail(payload?['message'] ?? 'Reverb returned an error.');
 
       return;
     }
@@ -125,15 +154,8 @@ class ReverbClient {
       return;
     }
 
-    final payload = data is String ? jsonDecode(data) : data;
-
-    if (payload is Map) {
-      _events.add(
-        ReverbEvent(
-          event,
-          payload.map((key, value) => MapEntry('$key', value)),
-        ),
-      );
+    if (payload != null) {
+      _events.add(ReverbEvent(event, payload));
     }
   }
 
@@ -164,21 +186,68 @@ class ReverbClient {
   }
 
   void _send(Map<String, dynamic> payload) {
+    if (_disposed || _channel == null) {
+      return;
+    }
+
     _channel?.sink.add(jsonEncode(payload));
   }
 
   void _fail(Object error) {
+    if (_disposed) {
+      return;
+    }
+
     _states.add(ReverbState.failed);
 
-    if (!_connected.isCompleted) {
-      _connected.completeError(error);
+    final connected = _connected;
+
+    if (connected != null && !connected.isCompleted) {
+      connected.completeError(error);
     }
+
+    _resetConnection(close: true);
   }
 
   void _onDone() {
+    if (_disposed) {
+      return;
+    }
+
     _states.add(ReverbState.disconnected);
+    _resetConnection();
+
+    final connected = _connected;
+
+    if (connected != null && !connected.isCompleted) {
+      connected.completeError(StateError('Reverb socket closed.'));
+    }
+  }
+
+  void _resetConnection({bool close = false}) {
+    final channel = _channel;
+    _channel = null;
+    _subscription = null;
     _socketId = null;
     _subscribed.clear();
+
+    if (close) {
+      unawaited(channel?.sink.close());
+    }
+  }
+
+  Map<String, dynamic>? _decode(dynamic raw) {
+    try {
+      final decoded = raw is String ? jsonDecode(raw) : raw;
+
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry('$key', value));
+      }
+    } catch (_) {
+      // A malformed frame should not tear down the socket.
+    }
+
+    return null;
   }
 
   Future<void> dispose() async {
@@ -186,12 +255,10 @@ class ReverbClient {
       return;
     }
 
+    final subscription = _subscription;
     _disposed = true;
-    await _subscription?.cancel();
-    await _channel?.sink.close();
-    _channel = null;
-    _socketId = null;
-    _subscribed.clear();
+    _resetConnection(close: true);
+    await subscription?.cancel();
     await _events.close();
     await _states.close();
   }

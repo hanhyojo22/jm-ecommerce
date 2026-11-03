@@ -9,16 +9,25 @@ import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
 
-class ShellTabNotifier extends Notifier<int> {
-  @override
-  int build() => 0;
+class ShellTabState {
+  const ShellTabState({required this.index, required this.loaded});
 
-  void select(int index) => state = index;
+  final int index;
+  final Set<int> loaded;
 }
 
-final shellTabProvider = NotifierProvider<ShellTabNotifier, int>(
-  ShellTabNotifier.new,
-);
+class ShellTabNotifier extends Notifier<ShellTabState> {
+  @override
+  ShellTabState build() => const ShellTabState(index: 0, loaded: {0});
+
+  void select(int index) =>
+      state = ShellTabState(index: index, loaded: {...state.loaded, index});
+}
+
+final shellTabProvider =
+    NotifierProvider.autoDispose<ShellTabNotifier, ShellTabState>(
+      ShellTabNotifier.new,
+    );
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key});
@@ -33,7 +42,8 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final index = ref.watch(shellTabProvider);
+    final tab = ref.watch(shellTabProvider);
+    final index = tab.index;
     final cartCount = ref.watch(cartCountProvider);
     final unread =
         ref
@@ -60,12 +70,21 @@ class AppShell extends ConsumerWidget {
       ),
       body: IndexedStack(
         index: index,
-        children: const [
-          CatalogScreen(),
-          CartScreen(),
-          OrdersScreen(),
-          MessagesScreen(),
-          AccountScreen(),
+        children: [
+          const CatalogScreen(),
+          if (tab.loaded.contains(1)) const CartScreen() else const SizedBox(),
+          if (tab.loaded.contains(2))
+            const OrdersScreen()
+          else
+            const SizedBox(),
+          if (tab.loaded.contains(3))
+            const MessagesScreen()
+          else
+            const SizedBox(),
+          if (tab.loaded.contains(4))
+            const AccountScreen()
+          else
+            const SizedBox(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
