@@ -103,6 +103,7 @@ class CheckoutApiTest extends TestCase
                     'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_test_1'],
                 ],
             ]),
+            'https://api.paymongo.com/v1/checkout_sessions/*' => Http::response([]),
         ]);
 
         [$buyer, $product] = $this->cartWithProduct(online: true);
@@ -114,16 +115,28 @@ class CheckoutApiTest extends TestCase
             ->assertJsonPath('data.payment_methods.maya.available', true);
 
         $this->actingAs($buyer)
-            ->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'gcash'])
+            ->postJson('/api/v1/checkout', [
+                ...$this->delivery(),
+                'payment_method' => 'gcash',
+                'success_url' => 'https://app.jmmart.test/payment/success',
+                'cancel_url' => 'https://app.jmmart.test/payment/cancel',
+            ])
             ->assertCreated()
             ->assertJsonPath('data.payment.method', 'gcash')
             ->assertJsonPath('data.can_pay', true)
             ->assertJsonPath('data.payment_url', 'https://checkout.paymongo.com/cs_test_1');
 
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.paymongo.com/v1/checkout_sessions'
+            && $request['data']['attributes']['success_url'] === 'https://app.jmmart.test/payment/success'
+            && $request['data']['attributes']['cancel_url'] === 'https://app.jmmart.test/payment/cancel');
+
         $order = Order::query()->sole();
 
         $this->actingAs($buyer)
-            ->postJson("/api/v1/orders/{$order->id}/pay")
+            ->postJson("/api/v1/orders/{$order->id}/pay", [
+                'success_url' => 'https://app.jmmart.test/payment/success',
+                'cancel_url' => 'https://app.jmmart.test/payment/cancel',
+            ])
             ->assertOk()
             ->assertJsonPath('data.payment_url', 'https://checkout.paymongo.com/cs_test_1');
 

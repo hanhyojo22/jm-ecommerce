@@ -21,8 +21,11 @@ class StartOnlinePayment
      * Each store's share (its total less JMMart's fee) is split to the store's PayMongo account and
      * JMMart keeps the remainder. PayMongo takes its own fee before splitting, so the buyer pays a
      * fee line sized to cover it; see config('marketplace.online_payment.fees').
+     *
+     * The app passes its own return URLs so a finished checkout comes back to the app
+     * instead of the web order page. The web leaves them null and keeps its routes.
      */
-    public function handle(Order $order): string
+    public function handle(Order $order, ?string $successUrl = null, ?string $cancelUrl = null): string
     {
         $order->loadMissing(['payment', 'sellerOrders.store', 'sellerOrders.tenant', 'sellerOrders.items']);
         $payment = $order->payment;
@@ -42,8 +45,8 @@ class StartOnlinePayment
         $session = $this->payMongo->createCheckoutSession([
             'line_items' => [...$this->lineItems($sellerOrders), ['name' => 'Payment fee', 'amount' => PayMongo::centavos($fee), 'currency' => 'PHP', 'quantity' => 1]],
             'payment_method_types' => [Payment::PAYMONGO_TYPES[$payment->method]],
-            'success_url' => route('orders.placed', $order),
-            'cancel_url' => route('orders.show', $order),
+            'success_url' => $successUrl ?? route('orders.placed', $order),
+            'cancel_url' => $cancelUrl ?? route('orders.show', $order),
             'reference_number' => $order->number,
             'description' => "JMMart order {$order->number}",
             'metadata' => ['order_id' => $order->id, 'payment_id' => $payment->id],

@@ -117,12 +117,14 @@ class CheckoutController extends Controller
             'delivery_note' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
             'client_request_id' => ['nullable', 'string', 'max:100'],
+            'success_url' => ['nullable', 'url:http,https'],
+            'cancel_url' => ['nullable', 'url:http,https'],
         ]);
 
         $paymentMethod = $data['payment_method'] ?? 'cod';
         $order = $checkout->handle(
             $request->user(),
-            Arr::except($data, ['payment_method', 'client_request_id']),
+            Arr::except($data, ['payment_method', 'client_request_id', 'success_url', 'cancel_url']),
             $paymentMethod,
             $data['client_request_id'] ?? null,
         );
@@ -136,7 +138,11 @@ class CheckoutController extends Controller
 
         if ($paymentMethod !== 'cod') {
             try {
-                $paymentUrl = $startOnlinePayment->handle($order);
+                $paymentUrl = $startOnlinePayment->handle(
+                    $order,
+                    $data['success_url'] ?? null,
+                    $data['cancel_url'] ?? null,
+                );
             } catch (ValidationException $exception) {
                 $paymentError = $exception->getMessage();
             } catch (Throwable $exception) {

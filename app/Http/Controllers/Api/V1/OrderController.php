@@ -85,8 +85,17 @@ class OrderController extends Controller
     {
         $this->authorize('pay', $order);
 
+        $data = $request->validate([
+            'success_url' => ['nullable', 'url:http,https'],
+            'cancel_url' => ['nullable', 'url:http,https'],
+        ]);
+
         try {
-            $url = $startOnlinePayment->handle($order);
+            $url = $startOnlinePayment->handle(
+                $order,
+                $data['success_url'] ?? null,
+                $data['cancel_url'] ?? null,
+            );
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {
