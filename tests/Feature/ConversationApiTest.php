@@ -189,6 +189,69 @@ class ConversationApiTest extends TestCase
         $this->get($url.'tampered')->assertForbidden();
     }
 
+    public function test_a_pdf_attachment_signed_url_opens_inline_for_mobile_viewers(): void
+    {
+        Storage::fake('chat_attachments');
+        [$buyer, , $conversation] = $this->conversation();
+
+        $response = $this->actingAs($buyer)
+            ->post(
+                "/api/v1/conversations/{$conversation->id}/attachments",
+                [
+                    'attachment' => UploadedFile::fake()->createWithContent(
+                        'receipt.pdf',
+                        "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF",
+                    ),
+                    'client_message_id' => (string) Str::uuid(),
+                ],
+                ['Accept' => 'application/json'],
+            )
+            ->assertCreated()
+            ->assertJsonPath('data.attachments.0.mime_type', 'application/pdf')
+            ->assertJsonPath('data.attachments.0.is_image', false);
+
+        $url = $response->json('data.attachments.0.url');
+        $this->assertIsString($url);
+        $this->assertStringContainsString('preview=1', $url);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertHeaderContains('Content-Disposition', 'inline');
+
+        $this->get($url.'tampered')->assertForbidden();
+    }
+
+    public function test_a_signed_attachment_url_returns_not_found_when_the_stored_file_is_missing(): void
+    {
+        Storage::fake('chat_attachments');
+        [$buyer, $seller, $conversation] = $this->conversation();
+
+        $message = $conversation->messages()->create([
+            'sender_id' => $seller->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'file',
+            'body' => '',
+        ]);
+        $message->attachments()->create([
+            'uploaded_by' => $seller->id,
+            'disk' => 'chat_attachments',
+            'path' => 'chat/missing.pdf',
+            'original_name' => 'missing.pdf',
+            'mime_type' => 'application/pdf',
+            'byte_size' => 12,
+            'status' => 'available',
+        ]);
+
+        $url = $this->actingAs($buyer)
+            ->getJson("/api/v1/conversations/{$conversation->id}/messages")
+            ->assertOk()
+            ->json('data.0.attachments.0.url');
+
+        $this->assertIsString($url);
+        $this->get($url)->assertNotFound();
+    }
+
     public function test_an_authenticated_buyer_can_join_a_private_channel(): void
     {
         config()->set('broadcasting.default', 'reverb');

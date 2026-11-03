@@ -17,11 +17,15 @@ class MessageAttachmentController extends Controller
     {
         abort_unless($attachment->status === 'available', 404);
 
+        $disk = Storage::disk($attachment->disk);
+
+        abort_unless($disk->exists($attachment->path), 404);
+
         if (
             in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true)
             || ($attachment->mime_type === 'application/pdf' && $request->boolean('preview'))
         ) {
-            return Storage::disk($attachment->disk)->response(
+            return $disk->response(
                 $attachment->path,
                 $attachment->original_name,
                 [
@@ -32,6 +36,6 @@ class MessageAttachmentController extends Controller
             );
         }
 
-        return Storage::disk($attachment->disk)->download($attachment->path, $attachment->original_name);
+        return $disk->download($attachment->path, $attachment->original_name);
     }
 }
