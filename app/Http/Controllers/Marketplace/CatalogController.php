@@ -365,17 +365,11 @@ class CatalogController extends Controller
 
     private function publishedProducts(): Builder
     {
-        return Product::query()
-            ->with('store:id,name,slug,status')
-            ->where('status', 'active')
-            ->whereHas('store', fn ($query) => $query->where('status', 'active'))
-            ->whereHas('tenant', fn ($query) => $query->where('status', 'active'));
+        return CatalogQuery::publishedProducts();
     }
 
     private function publicStores(): Builder
     {
-        return Store::query()
-            ->where('status', 'active')
-            ->whereHas('tenant', fn ($query) => $query->where('status', 'active'));
+        return CatalogQuery::publicStores();
     }
 }

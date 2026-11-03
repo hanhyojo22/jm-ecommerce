@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Actions\AddProductToCart;
+use App\Actions\UpdateCartItemQuantity;
+use App\Actions\UpdateCartSelection;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -43,31 +45,14 @@ class CartController extends Controller
     /**
      * Replace the buyer's selection with the given cart item ids.
      */
-    public function updateSelection(Request $request): JsonResponse
+    public function updateSelection(Request $request, UpdateCartSelection $updateSelection): JsonResponse
     {
         $data = $request->validate([
             'selected' => ['present', 'array'],
             'selected.*' => ['ulid'],
         ]);
 
-        $cart = $request->user()->cart()->first();
-
-        if ($cart === null) {
-            return response()->json(['selected_count' => 0, 'subtotal' => '0.00']);
-        }
-
-        $selectedIds = $cart->items()->whereKey($data['selected'])->pluck('id');
-
-        $cart->items()->whereKey($selectedIds)->update(['selected' => true]);
-        $cart->items()->whereKeyNot($selectedIds)->update(['selected' => false]);
-
-        return response()->json([
-            'selected_count' => $selectedIds->count(),
-            'subtotal' => $this->subtotal($cart->load([
-                'items.product:id,tenant_id,store_id,name,slug,price,stock_quantity,status',
-                'items.variant',
-            ])),
-        ]);
+        return response()->json($updateSelection->handle($request->user(), $data['selected']));
     }
 
     public function destroySelected(Request $request): RedirectResponse
@@ -96,34 +81,13 @@ class CartController extends Controller
         return to_route('cart.index')->with('status', 'Added to your cart.');
     }
 
-    public function update(Request $request, CartItem $cartItem): RedirectResponse
+    public function update(Request $request, CartItem $cartItem, UpdateCartItemQuantity $updateQuantity): RedirectResponse
     {
         $this->authorize('update', $cartItem);
 
         $data = $request->validate(['quantity' => ['required', 'integer', 'min:1', 'max:100']]);
 
-        $product = Product::query()
-            ->with(['store', 'tenant'])
-            ->findOrFail($cartItem->product_id);
-
-        if ($request->user()->isMemberOfTenant($product->tenant_id)) {
-            throw ValidationException::withMessages(['cart' => 'You cannot buy products from a store you manage.']);
-        }
-
-        $variant = $cartItem->product_variant_id !== null ? $product->variants()->find($cartItem->product_variant_id) : null;
-        $availableStock = $variant?->stock_quantity ?? $product->stock_quantity;
-        if (
-            $product->status !== 'active'
-            || $product->store->status !== 'active'
-            || $product->tenant->status !== 'active'
-            || ($cartItem->product_variant_id !== null && $variant === null)
-            || ($cartItem->product_variant_id === null && $product->variants()->exists())
-            || $availableStock < $data['quantity']
-        ) {
-            throw ValidationException::withMessages(['quantity' => 'This product is not currently available in that quantity.']);
-        }
-
-        $cartItem->update(['quantity' => $data['quantity']]);
+        $updateQuantity->handle($request->user(), $cartItem, $data['quantity']);
 
         return to_route('cart.index')->with('status', 'Cart updated.');
     }

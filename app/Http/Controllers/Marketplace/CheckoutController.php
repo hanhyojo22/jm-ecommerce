@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Actions\CheckoutCart;
+use App\Actions\SendOrderReceipt;
 use App\Actions\StartOnlinePayment;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
-use App\Services\GmailOrderMailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -80,7 +80,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request, CheckoutCart $checkout, GmailOrderMailer $mailer): RedirectResponse
+    public function store(Request $request, CheckoutCart $checkout, SendOrderReceipt $sendReceipt): RedirectResponse
     {
         $data = $request->validate([
             'recipient_name' => ['required', 'string', 'max:150'],
@@ -105,27 +105,7 @@ class CheckoutController extends Controller
             : 'to be paid by '.Payment::METHOD_LABELS[$paymentMethod].'. If you left the payment page, pay from your order page so the stores can confirm and ship.';
         $buyer = $request->user();
 
-        /*
-         * Two calls to Google, each allowed eight seconds, used to sit between the buyer pressing
-         * Place order and seeing it. The order does not depend on the mail, so it is sent once the
-         * response is already on its way. A failure is still reported and still does not fail the
-         * order; a queued job would add retries if the receipt ever has to be guaranteed.
-         *
-         * A replayed checkout already sent its receipt on the first attempt.
-         */
-        if ($order->wasRecentlyCreated) {
-            defer(function () use ($mailer, $buyer, $order, $paymentNote): void {
-                try {
-                    $mailer->send(
-                        $buyer,
-                        "JMMart order {$order->number} received",
-                        "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, {$paymentNote}\n\nTrack your order or request help: ".route('orders.show', $order),
-                    );
-                } catch (\Throwable $exception) {
-                    report($exception);
-                }
-            });
-        }
+        $sendReceipt->handle($buyer, $order, $paymentNote);
 
         return $paymentMethod === 'cod' ? to_route('orders.placed', $order) : to_route('orders.pay', $order);
     }

@@ -2,19 +2,14 @@
 
 namespace App\Http\Controllers\Marketplace;
 
-use App\Actions\StorePublicImage;
+use App\Actions\PublishProductReview;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductReviewRequest;
 use App\Models\OrderItem;
 use App\Models\ProductReview;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use RuntimeException;
-use Throwable;
 
 class ProductReviewController extends Controller
 {
@@ -27,76 +22,37 @@ class ProductReviewController extends Controller
         ]);
     }
 
-    public function store(StoreProductReviewRequest $request, OrderItem $orderItem, StorePublicImage $storePublicImage): RedirectResponse
+    public function store(StoreProductReviewRequest $request, OrderItem $orderItem, PublishProductReview $publish): RedirectResponse
     {
         $orderItem = $this->eligibleItem($request, $orderItem);
-        $data = $request->validated();
-        $photoPaths = $this->storePhotos($request->file('photos', []), $storePublicImage);
 
-        try {
-            DB::transaction(function () use ($request, $orderItem, $data, $photoPaths): void {
-                $review = ProductReview::query()->create([
-                    'product_id' => $orderItem->product_id,
-                    'order_item_id' => $orderItem->id,
-                    'user_id' => $request->user()->id,
-                    'rating' => $data['rating'],
-                    'title' => $data['title'] ?? null,
-                    'body' => $data['body'] ?? null,
-                ]);
-
-                foreach ($photoPaths as $position => $path) {
-                    $review->photos()->create(['path' => $path, 'position' => $position]);
-                }
-            });
-        } catch (Throwable $exception) {
-            $this->deletePhotos($photoPaths);
-
-            throw $exception;
-        }
+        $publish->create(
+            $orderItem,
+            $request->user(),
+            $request->validated(),
+            $request->file('photos', []),
+        );
 
         return to_route('orders.show', $orderItem->sellerOrder->order_id)->with('status', 'Your review was published.');
     }
 
-    public function update(StoreProductReviewRequest $request, ProductReview $review, StorePublicImage $storePublicImage): RedirectResponse
+    public function update(StoreProductReviewRequest $request, ProductReview $review, PublishProductReview $publish): RedirectResponse
     {
         $this->authorize('update', $review);
-        $data = $request->validated();
-        $photoPaths = $this->storePhotos($request->file('photos', []), $storePublicImage);
 
-        try {
-            DB::transaction(function () use ($review, $data, $photoPaths): void {
-                $review = ProductReview::query()->lockForUpdate()->findOrFail($review->id);
-                $nextPosition = $review->photos()->count();
-                $review->update([
-                    'rating' => $data['rating'],
-                    'title' => $data['title'] ?? null,
-                    'body' => $data['body'] ?? null,
-                ]);
-
-                foreach ($photoPaths as $position => $path) {
-                    $review->photos()->create(['path' => $path, 'position' => $nextPosition + $position]);
-                }
-            });
-        } catch (Throwable $exception) {
-            $this->deletePhotos($photoPaths);
-
-            throw $exception;
-        }
+        $publish->update(
+            $review,
+            $request->validated(),
+            $request->file('photos', []),
+        );
 
         return back()->with('status', 'Your review was updated.');
     }
 
-    public function destroy(Request $request, ProductReview $review): RedirectResponse
+    public function destroy(Request $request, ProductReview $review, PublishProductReview $publish): RedirectResponse
     {
         $this->authorize('delete', $review);
-        $photoPaths = DB::transaction(function () use ($review): array {
-            $review = ProductReview::query()->lockForUpdate()->findOrFail($review->id);
-            $photoPaths = $review->photos()->pluck('path')->all();
-            $review->delete();
-
-            return $photoPaths;
-        });
-        $this->deletePhotos($photoPaths);
+        $publish->delete($review);
 
         return back()->with('status', 'Your review was deleted.');
     }
@@ -128,43 +84,5 @@ class ProductReviewController extends Controller
         );
 
         return $orderItem;
-    }
-
-    /**
-     * @param  array<int, UploadedFile>  $photos
-     * @return array<int, string>
-     */
-    private function storePhotos(array $photos, StorePublicImage $storePublicImage): array
-    {
-        $paths = [];
-
-        try {
-            foreach ($photos as $photo) {
-                $path = $storePublicImage->handle($photo, 'product-reviews', 'public');
-                if (! is_string($path) || $path === '') {
-                    throw new RuntimeException('Review photo storage failed.');
-                }
-
-                $paths[] = $path;
-            }
-        } catch (Throwable $exception) {
-            $this->deletePhotos($paths);
-
-            throw $exception;
-        }
-
-        return $paths;
-    }
-
-    /** @param  array<int, string>  $paths */
-    private function deletePhotos(array $paths): void
-    {
-        foreach ($paths as $path) {
-            try {
-                Storage::disk('public')->delete($path);
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        }
     }
 }

@@ -11,6 +11,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -105,5 +106,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 429 => ApiError::response('rate.limited', 'Too many requests. Try again shortly.', 429),
                 default => null,
             };
+        });
+
+        /*
+         * Last resort for the API: an unexpected failure still returns the same
+         * envelope and the request id, never a framework debug page.
+         */
+        $exceptions->render(function (Throwable $exception, Request $request) {
+            if (! $request->is('api/*') || $exception instanceof HttpException || $exception instanceof HttpResponseException) {
+                return null;
+            }
+
+            return ApiError::response('server.error', 'Something went wrong. Please try again.', 500);
         });
     })->create();

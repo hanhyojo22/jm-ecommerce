@@ -38,9 +38,13 @@ class ConversationPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function send(User $user, Conversation $conversation): bool
+    public function send(User $user, Conversation $conversation): bool|Response
     {
-        return $this->canView($user, $conversation) && ! $conversation->isBlocked();
+        if (! $this->canView($user, $conversation)) {
+            return Response::denyAsNotFound();
+        }
+
+        return ! $conversation->isBlocked();
     }
 
     private function canView(User $user, Conversation $conversation): bool

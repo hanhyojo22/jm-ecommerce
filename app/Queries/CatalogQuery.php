@@ -90,7 +90,7 @@ class CatalogQuery
      *     brands: Collection<int, string>
      * }
      */
-    public static function search(array $filters, ?Store $seller = null): array
+    public static function search(array $filters, ?Store $seller = null, int $perPage = 12): array
     {
         $search = trim($filters['q'] ?? '');
         $searchTerm = '%'.Str::lower($search).'%';
@@ -160,7 +160,7 @@ class CatalogQuery
         $categories->each(fn (Category $category) => $category->setAttribute('product_count', $categoryCounts->get($category->id, 0)));
 
         return [
-            'products' => $products->paginate(12)->withQueryString(),
+            'products' => $products->paginate($perPage)->withQueryString(),
             'categories' => $categories,
             'brands' => $brands,
         ];
@@ -202,12 +202,25 @@ class CatalogQuery
         ];
     }
 
-    private static function publishedProducts(): Builder
+    /**
+     * Products a shopper may see: published, inside an active store and tenant.
+     */
+    public static function publishedProducts(): Builder
     {
         return Product::query()
             ->with('store:id,name,slug,status')
             ->where('status', 'active')
             ->whereHas('store', fn ($query) => $query->where('status', 'active'))
+            ->whereHas('tenant', fn ($query) => $query->where('status', 'active'));
+    }
+
+    /**
+     * Stores a shopper may see. A suspended store or tenant disappears from the catalog.
+     */
+    public static function publicStores(): Builder
+    {
+        return Store::query()
+            ->where('status', 'active')
             ->whereHas('tenant', fn ($query) => $query->where('status', 'active'));
     }
 }

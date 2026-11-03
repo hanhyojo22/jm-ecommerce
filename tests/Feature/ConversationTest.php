@@ -632,7 +632,7 @@ class ConversationTest extends TestCase
         $this->actingAs($otherBuyer)->post(route('messages.attachments.store', $conversation), [
             'client_message_id' => (string) str()->uuid(),
             'attachment' => UploadedFile::fake()->createWithContent('receipt.pdf', "%PDF-1.4\n%%EOF"),
-        ])->assertForbidden();
+        ])->assertNotFound();
 
         $this->assertDatabaseCount('conversation_messages', 0);
         $this->assertDatabaseCount('message_attachments', 0);

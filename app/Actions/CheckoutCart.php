@@ -130,6 +130,7 @@ class CheckoutCart
                     ...$delivery,
                     'user_id' => $user->id,
                     'number' => 'JM-'.Str::upper((string) Str::ulid()),
+                    'status' => 'pending',
                     'client_request_id' => $clientRequestId,
                     'client_request_hash' => $fingerprint,
                     'subtotal' => $total,
@@ -146,6 +147,7 @@ class CheckoutCart
                         $sellerOrder = $order->sellerOrders()->create([
                             'tenant_id' => $firstLine['product']->tenant_id,
                             'store_id' => $firstLine['product']->store_id,
+                            'status' => 'pending',
                             'subtotal' => $subtotal,
                             'shipping_amount' => '0.00',
                             'total' => $subtotal,
@@ -168,6 +170,7 @@ class CheckoutCart
 
                 $order->payment()->create([
                     'method' => $paymentMethod,
+                    'status' => 'pending',
                     'amount' => $total,
                     'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($total, $paymentMethod),
                 ]);

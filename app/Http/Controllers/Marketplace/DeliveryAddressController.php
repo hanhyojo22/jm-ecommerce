@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DeliveryAddressRequest;
 use App\Models\DeliveryAddress;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,9 +18,9 @@ class DeliveryAddressController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(DeliveryAddressRequest $request): RedirectResponse
     {
-        $request->user()->deliveryAddresses()->create($this->validatedAddress($request));
+        $request->user()->deliveryAddresses()->create($request->validated());
 
         return to_route('delivery-addresses.index')->with('status', 'Delivery address saved.');
     }
@@ -31,10 +32,10 @@ class DeliveryAddressController extends Controller
         return view('marketplace.delivery-addresses.edit', ['address' => $deliveryAddress]);
     }
 
-    public function update(Request $request, DeliveryAddress $deliveryAddress): RedirectResponse
+    public function update(DeliveryAddressRequest $request, DeliveryAddress $deliveryAddress): RedirectResponse
     {
         $this->authorize('update', $deliveryAddress);
-        $deliveryAddress->update($this->validatedAddress($request));
+        $deliveryAddress->update($request->validated());
 
         return to_route('delivery-addresses.index')->with('status', 'Delivery address updated.');
     }
@@ -45,18 +46,5 @@ class DeliveryAddressController extends Controller
         $deliveryAddress->delete();
 
         return to_route('delivery-addresses.index')->with('status', 'Delivery address removed.');
-    }
-
-    /** @return array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string} */
-    private function validatedAddress(Request $request): array
-    {
-        return $request->validate([
-            'recipient_name' => ['required', 'string', 'max:150'],
-            'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
-            'address_line' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:100'],
-            'province' => ['required', 'string', 'max:100'],
-            'postal_code' => ['required', 'regex:/^\d{4}$/'],
-        ]);
     }
 }

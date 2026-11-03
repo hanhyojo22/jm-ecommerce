@@ -2,13 +2,11 @@
 
 namespace App\Livewire\Chat;
 
+use App\Actions\MarkConversationRead;
 use App\Actions\SendConversationMessage;
-use App\Events\ConversationInboxChanged;
-use App\Events\ConversationReceiptUpdated;
 use App\Events\TypingStatusChanged;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
-use App\Models\ConversationReadState;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -174,46 +172,10 @@ class Thread extends Component
     {
         Gate::authorize('view', $this->conversation);
 
-        $latestIncomingMessage = $this->conversation->messages()
-            ->where('sender_id', '!=', auth()->id())
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->first();
-        if ($latestIncomingMessage === null) {
-            return;
-        }
-        if (! $this->viewingHistory) {
-            $this->appendMessageId($latestIncomingMessage->id);
-        }
+        $result = app(MarkConversationRead::class)->handle($this->conversation, auth()->user());
 
-        $state = ConversationReadState::query()->firstOrCreate([
-            'conversation_id' => $this->conversation->id,
-            'user_id' => auth()->id(),
-        ]);
-        $receipts = [];
-
-        if ($state->last_delivered_message_id !== $latestIncomingMessage->id) {
-            $state->forceFill(['last_delivered_message_id' => $latestIncomingMessage->id, 'last_delivered_at' => now()]);
-            $receipts[] = 'message.delivered';
-        }
-
-        if ($state->last_read_message_id !== $latestIncomingMessage->id) {
-            $state->forceFill(['last_read_message_id' => $latestIncomingMessage->id, 'last_read_at' => now()]);
-            $receipts[] = 'message.read';
-        }
-
-        if ($receipts === []) {
-            return;
-        }
-
-        $state->save();
-
-        foreach ($receipts as $receipt) {
-            ConversationReceiptUpdated::dispatch($state, $receipt, $latestIncomingMessage->id);
-        }
-
-        if (in_array('message.read', $receipts, true)) {
-            ConversationInboxChanged::dispatch($this->conversation, (string) auth()->id());
+        if ($result['message'] !== null && ! $this->viewingHistory) {
+            $this->appendMessageId($result['message']->id);
         }
     }
 

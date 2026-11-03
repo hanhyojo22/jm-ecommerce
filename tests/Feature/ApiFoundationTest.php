@@ -7,6 +7,8 @@ use App\Auth\ClerkSessionVerifier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use RuntimeException;
 use Tests\TestCase;
 
 class ApiFoundationTest extends TestCase
@@ -61,6 +63,16 @@ class ApiFoundationTest extends TestCase
         $this->getJson('/api/v1/does-not-exist')
             ->assertNotFound()
             ->assertJsonPath('error.code', 'resource.not_found')
+            ->assertHeader('X-Request-Id');
+    }
+
+    public function test_an_unexpected_api_error_still_uses_the_error_contract(): void
+    {
+        Route::middleware('api')->get('/api/v1/boom', fn () => throw new RuntimeException('boom'));
+
+        $this->getJson('/api/v1/boom')
+            ->assertInternalServerError()
+            ->assertJsonPath('error.code', 'server.error')
             ->assertHeader('X-Request-Id');
     }
 
