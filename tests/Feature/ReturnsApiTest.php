@@ -12,6 +12,8 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ReturnsApiTest extends TestCase
@@ -118,6 +120,30 @@ class ReturnsApiTest extends TestCase
             ->assertJsonPath('error.fields.type.0', 'This order is already being prepared or delivered. Ask for order help instead.');
 
         $this->assertDatabaseCount('order_issues', 0);
+    }
+
+    public function test_return_evidence_is_served_through_a_signed_url(): void
+    {
+        Storage::fake('chat_attachments');
+        [$buyer, $sellerOrder, $item] = $this->deliveredOrder();
+
+        $response = $this->actingAs($buyer)->post(
+            "/api/v1/orders/seller-orders/{$sellerOrder->id}/returns",
+            [
+                'reason' => 'damaged',
+                'requested_remedy' => 'refund',
+                'details' => 'The item arrived with a cracked body.',
+                'items' => [['order_item_id' => $item->id, 'quantity' => 1]],
+                'photos' => [UploadedFile::fake()->image('crack.jpg', 20, 20)],
+            ],
+            ['Accept' => 'application/json'],
+        )->assertCreated();
+
+        $url = $response->json('data.evidence.0.url');
+
+        $this->assertIsString($url);
+        $this->get($url)->assertOk();
+        $this->get($url.'tampered')->assertForbidden();
     }
 
     /**
