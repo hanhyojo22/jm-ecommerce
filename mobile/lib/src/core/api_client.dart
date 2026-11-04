@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../models/models.dart';
 import 'api_exception.dart';
+import 'attachment_picker.dart';
 
 typedef TokenProvider = Future<String?> Function();
 
@@ -338,6 +339,29 @@ class ApiClient {
         'POST',
         '/conversations/$conversationId/messages',
         data: {'body': body, 'client_message_id': clientMessageId},
+      ),
+    ),
+  );
+
+  Future<ChatMessage> sendAttachment({
+    required String conversationId,
+    required PickedAttachment attachment,
+    required String clientMessageId,
+    String body = '',
+  }) async => ChatMessage.fromJson(
+    mapOf(
+      await _data(
+        'POST',
+        '/conversations/$conversationId/attachments',
+        data: FormData.fromMap({
+          'attachment': MultipartFile.fromBytes(
+            attachment.bytes,
+            filename: attachment.name,
+            contentType: DioMediaType.parse(attachment.mimeType),
+          ),
+          'client_message_id': clientMessageId,
+          if (body.trim().isNotEmpty) 'body': body.trim(),
+        }),
       ),
     ),
   );

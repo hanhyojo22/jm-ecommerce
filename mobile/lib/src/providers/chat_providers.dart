@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config.dart';
+import '../core/attachment_picker.dart';
 import '../core/reverb_client.dart';
 import '../models/models.dart';
 import 'auth_providers.dart';
@@ -18,6 +19,10 @@ final messagesProvider = FutureProvider.autoDispose
     .family<List<ChatMessage>, String>(
       (ref, id) => ref.watch(apiClientProvider).messages(id),
     );
+
+final attachmentPickerProvider = Provider<AttachmentPicker>(
+  (ref) => const FilePickerAttachmentPicker(),
+);
 
 final reverbProvider = Provider.autoDispose<ReverbClient>((ref) {
   final api = ref.watch(apiClientProvider);

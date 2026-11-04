@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/api_exception.dart';
+import '../core/attachment_picker.dart';
 import '../core/formatters.dart';
 import '../core/reverb_client.dart';
 import '../models/models.dart';
@@ -35,6 +36,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Timer? _reconnectTimer;
   bool _typing = false;
   bool _markingRead = false;
+  bool _pickingAttachment = false;
   bool _live = false;
   DateTime? _lastTypingSent;
 
@@ -203,6 +205,111 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     await _sendPending(item);
   }
 
+  Future<void> _showAttachmentSheet() async {
+    if (_pickingAttachment) {
+      return;
+    }
+
+    final kind = await showModalBottomSheet<_AttachmentKind>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Photo'),
+              subtitle: const Text('JPG, PNG, or WebP up to 5 MB'),
+              onTap: () => Navigator.pop(context, _AttachmentKind.photo),
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: const Text('Document'),
+              subtitle: const Text('PDF up to 5 MB'),
+              onTap: () => Navigator.pop(context, _AttachmentKind.document),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (kind == null || !mounted) {
+      return;
+    }
+
+    await _pickAttachment(kind);
+  }
+
+  Future<void> _pickAttachment(_AttachmentKind kind) async {
+    setState(() => _pickingAttachment = true);
+
+    PickedAttachment? attachment;
+
+    try {
+      final picker = ref.read(attachmentPickerProvider);
+      attachment = kind == _AttachmentKind.photo
+          ? await picker.pickImage()
+          : await picker.pickDocument();
+    } on AttachmentTooLargeException {
+      _showAttachmentError('Choose a file smaller than 5 MB.');
+      return;
+    } catch (_) {
+      _showAttachmentError('Could not open the file picker. Please try again.');
+      return;
+    } finally {
+      if (mounted) {
+        setState(() => _pickingAttachment = false);
+      }
+    }
+
+    if (attachment == null || !mounted) {
+      return;
+    }
+
+    final problem = _attachmentProblem(attachment);
+
+    if (problem != null) {
+      _showAttachmentError(problem);
+      return;
+    }
+
+    final item = _PendingMessage(
+      clientId: const Uuid().v4(),
+      body: '',
+      createdAt: DateTime.now(),
+      attachment: attachment,
+    );
+
+    setState(() => _pending.add(item));
+    _scrollToLatest();
+    await _sendPending(item);
+  }
+
+  String? _attachmentProblem(PickedAttachment attachment) {
+    const allowedExtensions = {'jpg', 'jpeg', 'png', 'webp', 'pdf'};
+
+    if (!allowedExtensions.contains(attachment.extension)) {
+      return 'Choose a JPG, PNG, WebP, or PDF file.';
+    }
+
+    if (attachment.bytes.length > maxChatAttachmentBytes) {
+      return 'Choose a file smaller than 5 MB.';
+    }
+
+    return null;
+  }
+
+  void _showAttachmentError(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _sendPending(_PendingMessage item) async {
     if (!mounted ||
         item.status == _PendingStatus.sending ||
@@ -213,13 +320,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     setState(() => item.status = _PendingStatus.sending);
 
     try {
-      await ref
-          .read(apiClientProvider)
-          .sendMessage(
-            conversationId: widget.conversationId,
-            body: item.body,
-            clientMessageId: item.clientId,
-          );
+      final api = ref.read(apiClientProvider);
+      final attachment = item.attachment;
+
+      if (attachment == null) {
+        await api.sendMessage(
+          conversationId: widget.conversationId,
+          body: item.body,
+          clientMessageId: item.clientId,
+        );
+      } else {
+        await api.sendAttachment(
+          conversationId: widget.conversationId,
+          attachment: attachment,
+          clientMessageId: item.clientId,
+        );
+      }
 
       if (!mounted) {
         return;
@@ -363,7 +479,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           SafeArea(
             top: false,
             child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+              padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(
@@ -373,6 +489,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  IconButton(
+                    onPressed: _pickingAttachment ? null : _showAttachmentSheet,
+                    tooltip: 'Attach photo or document',
+                    icon: _pickingAttachment
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.attach_file_rounded),
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _composer,
@@ -434,11 +561,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       reverse: true,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
       itemCount: data.length + pending.length,
+      // The list is reversed and new messages are inserted at index zero, so
+      // every existing child changes index on refresh. Without this callback
+      // Flutter reuses each child element for the message that moved into its
+      // old index, and the image widget keeps painting the previous image.
+      findChildIndexCallback: (key) {
+        if (key is! ValueKey<String>) {
+          return null;
+        }
+
+        final value = key.value;
+
+        if (value.startsWith('pending-')) {
+          final clientId = value.substring('pending-'.length);
+          final index = pending.indexWhere((item) => item.clientId == clientId);
+
+          return index == -1 ? null : index;
+        }
+
+        if (value.startsWith('message-')) {
+          final messageId = value.substring('message-'.length);
+          final index = data.indexWhere((message) => message.id == messageId);
+
+          return index == -1 ? null : pending.length + data.length - 1 - index;
+        }
+
+        return null;
+      },
       itemBuilder: (context, index) {
         if (index < pending.length) {
           final item = pending[index];
 
           return _PendingBubble(
+            key: ValueKey('pending-${item.clientId}'),
             pending: item,
             onRetry: item.status == _PendingStatus.failed
                 ? () => _sendPending(item)
@@ -448,7 +603,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
         final message = data[data.length - 1 - (index - pending.length)];
 
-        return _Bubble(message: message);
+        return _Bubble(
+          key: ValueKey('message-${message.id}'),
+          message: message,
+        );
       },
     );
   }
@@ -456,21 +614,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 enum _PendingStatus { queued, sending, sent, failed }
 
+enum _AttachmentKind { photo, document }
+
 class _PendingMessage {
   _PendingMessage({
     required this.clientId,
     required this.body,
     required this.createdAt,
+    this.attachment,
   });
 
   final String clientId;
   final String body;
   final DateTime createdAt;
+  final PickedAttachment? attachment;
   _PendingStatus status = _PendingStatus.queued;
 }
 
 class _PendingBubble extends StatelessWidget {
-  const _PendingBubble({required this.pending, this.onRetry});
+  const _PendingBubble({super.key, required this.pending, this.onRetry});
 
   final _PendingMessage pending;
   final VoidCallback? onRetry;
@@ -506,13 +668,22 @@ class _PendingBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              pending.body,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: foreground,
-                height: 1.4,
+            if (pending.attachment != null) ...[
+              _PendingAttachmentPreview(
+                attachment: pending.attachment!,
+                clientId: pending.clientId,
+                foreground: foreground,
               ),
-            ),
+              if (pending.body.trim().isNotEmpty) const SizedBox(height: 6),
+            ],
+            if (pending.body.trim().isNotEmpty)
+              Text(
+                pending.body,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: foreground,
+                  height: 1.4,
+                ),
+              ),
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -567,8 +738,58 @@ class _PendingBubble extends StatelessWidget {
   }
 }
 
+class _PendingAttachmentPreview extends StatelessWidget {
+  const _PendingAttachmentPreview({
+    required this.attachment,
+    required this.clientId,
+    required this.foreground,
+  });
+
+  final PickedAttachment attachment;
+  final String clientId;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!attachment.isImage) {
+      return _document(context);
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.memory(
+        attachment.bytes,
+        key: ValueKey('pending-image-$clientId'),
+        width: 190,
+        height: 150,
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (context, error, stackTrace) => _document(context),
+      ),
+    );
+  }
+
+  Widget _document(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.picture_as_pdf_outlined, size: 20, color: foreground),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            attachment.name,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: foreground),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message});
+  const _Bubble({super.key, required this.message});
 
   final ChatMessage message;
 
