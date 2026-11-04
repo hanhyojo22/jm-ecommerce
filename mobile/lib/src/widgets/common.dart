@@ -137,6 +137,7 @@ class NetworkThumb extends StatelessWidget {
     this.radius = 14,
     this.fit = BoxFit.cover,
     this.cacheWidth,
+    this.cacheKey,
   });
 
   final String? url;
@@ -145,6 +146,9 @@ class NetworkThumb extends StatelessWidget {
   final double radius;
   final BoxFit fit;
   final int? cacheWidth;
+
+  /// Stable key for immutable media whose signed URL changes between fetches.
+  final String? cacheKey;
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +179,8 @@ class NetworkThumb extends StatelessWidget {
       borderRadius: BorderRadius.circular(radius),
       child: CachedNetworkImage(
         imageUrl: url!,
+        cacheKey: cacheKey,
+        useOldImageOnUrlChange: cacheKey != null,
         width: width,
         height: height,
         fit: fit,

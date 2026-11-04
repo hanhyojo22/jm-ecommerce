@@ -189,6 +189,36 @@ class ConversationApiTest extends TestCase
         $this->get($url.'tampered')->assertForbidden();
     }
 
+    public function test_attachment_urls_stay_stable_between_message_reads(): void
+    {
+        Storage::fake('chat_attachments');
+        $this->travelTo('2026-11-03 13:15:00');
+        [$buyer, , $conversation] = $this->conversation();
+
+        $this->actingAs($buyer)
+            ->post(
+                "/api/v1/conversations/{$conversation->id}/attachments",
+                [
+                    'attachment' => UploadedFile::fake()->image('receipt.jpg', 20, 20),
+                    'client_message_id' => (string) Str::uuid(),
+                ],
+                ['Accept' => 'application/json'],
+            )
+            ->assertCreated();
+
+        $first = $this->actingAs($buyer)
+            ->getJson("/api/v1/conversations/{$conversation->id}/messages")
+            ->json('data.0.attachments.0.url');
+        $second = $this->actingAs($buyer)
+            ->getJson("/api/v1/conversations/{$conversation->id}/messages")
+            ->json('data.0.attachments.0.url');
+
+        $this->assertIsString($first);
+        $this->assertSame($first, $second);
+
+        $this->travelBack();
+    }
+
     public function test_a_pdf_attachment_signed_url_opens_inline_for_mobile_viewers(): void
     {
         Storage::fake('chat_attachments');

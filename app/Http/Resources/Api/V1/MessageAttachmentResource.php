@@ -27,6 +27,10 @@ class MessageAttachmentResource extends JsonResource
             $parameters['preview'] = 1;
         }
 
+        // Round the expiry to the hour so repeated message reads reuse the same
+        // URL and client image caches do not reload on every poll.
+        $expiresAt = now()->startOfHour()->addHours(2);
+
         return [
             'id' => $this->id,
             'name' => $this->original_name,
@@ -34,7 +38,7 @@ class MessageAttachmentResource extends JsonResource
             'byte_size' => (int) $this->byte_size,
             'is_image' => str_starts_with((string) $this->mime_type, 'image/'),
             'url' => $this->status === 'available'
-                ? URL::temporarySignedRoute('api.v1.media.attachments.show', now()->addHour(), $parameters)
+                ? URL::temporarySignedRoute('api.v1.media.attachments.show', $expiresAt, $parameters)
                 : null,
         ];
     }

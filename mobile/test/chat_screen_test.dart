@@ -10,6 +10,7 @@ import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/chat_providers.dart';
 import 'package:jmmart/src/screens/chat_screen.dart';
+import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
   testWidgets(
@@ -79,6 +80,59 @@ void main() {
 
     await _disposeChat(tester);
   });
+
+  testWidgets('chat images keep a stable cache key when the signed URL changes', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      _message(
+        id: 'message-1',
+        clientMessageId: null,
+        body: '',
+        attachments: [
+          ChatAttachment(
+            id: 'attachment-1',
+            name: 'maya.png',
+            mimeType: 'image/png',
+            url: 'http://localhost/media/attachment-1?signature=first',
+            isImage: true,
+          ),
+        ],
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    final first = tester.widget<NetworkThumb>(find.byType(NetworkThumb));
+    expect(first.cacheKey, 'chat-attachment-attachment-1');
+
+    api.serverMessages = [
+      _message(
+        id: 'message-1',
+        clientMessageId: null,
+        body: '',
+        attachments: [
+          ChatAttachment(
+            id: 'attachment-1',
+            name: 'maya.png',
+            mimeType: 'image/png',
+            url: 'http://localhost/media/attachment-1?signature=second',
+            isImage: true,
+          ),
+        ],
+      ),
+    ];
+
+    await tester.pump(const Duration(seconds: 15));
+    await tester.pump();
+
+    final second = tester.widget<NetworkThumb>(find.byType(NetworkThumb));
+    expect(second.url, contains('signature=second'));
+    expect(second.cacheKey, 'chat-attachment-attachment-1');
+
+    await _disposeChat(tester);
+  });
 }
 
 Future<void> _pumpChat(WidgetTester tester, _FakeApiClient api) async {
@@ -112,6 +166,7 @@ ChatMessage _message({
   required String id,
   required String? clientMessageId,
   required String body,
+  List<ChatAttachment> attachments = const [],
 }) {
   return ChatMessage(
     id: id,
@@ -121,6 +176,7 @@ ChatMessage _message({
     body: body,
     clientMessageId: clientMessageId,
     createdAt: DateTime.now().toUtc().toIso8601String(),
+    attachments: attachments,
   );
 }
 

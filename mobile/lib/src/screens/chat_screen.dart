@@ -629,6 +629,7 @@ class _Bubble extends StatelessWidget {
                 child: attachment.isImage && attachment.url != null
                     ? NetworkThumb(
                         url: attachment.url,
+                        cacheKey: 'chat-attachment-${attachment.id}',
                         width: 190,
                         height: 150,
                         radius: 10,
