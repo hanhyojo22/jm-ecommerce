@@ -645,6 +645,8 @@ class _PendingBubble extends StatelessWidget {
         ? theme.colorScheme.onErrorContainer
         : theme.colorScheme.onPrimary;
     final statusColor = foreground.withValues(alpha: 0.7);
+    final compactImage =
+        pending.attachment?.isImage == true && pending.body.trim().isEmpty;
 
     return Align(
       alignment: Alignment.centerRight,
@@ -653,7 +655,9 @@ class _PendingBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+        padding: compactImage
+            ? const EdgeInsets.all(3)
+            : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
         decoration: BoxDecoration(
           color: failed
               ? theme.colorScheme.errorContainer
@@ -684,52 +688,60 @@ class _PendingBubble extends StatelessWidget {
                   height: 1.4,
                 ),
               ),
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (pending.status == _PendingStatus.failed)
-                  Icon(Icons.error_outline_rounded, size: 12, color: foreground)
-                else if (pending.status == _PendingStatus.sent)
-                  Icon(Icons.check_rounded, size: 12, color: statusColor)
-                else
-                  SizedBox(
-                    width: 9,
-                    height: 9,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.4,
-                      color: statusColor,
-                    ),
-                  ),
-                const SizedBox(width: 4),
-                Text(
-                  switch (pending.status) {
-                    _PendingStatus.sent => 'Sent',
-                    _PendingStatus.failed => 'Not sent',
-                    _PendingStatus.queued ||
-                    _PendingStatus.sending => 'Sending…',
-                  },
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: statusColor,
-                    fontSize: 10,
-                  ),
-                ),
-                if (failed) ...[
-                  const SizedBox(width: 10),
-                  InkWell(
-                    onTap: onRetry,
-                    child: Text(
-                      'Retry',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: foreground,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        decoration: TextDecoration.underline,
+            Padding(
+              padding: compactImage
+                  ? const EdgeInsets.fromLTRB(7, 5, 7, 4)
+                  : const EdgeInsets.only(top: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (pending.status == _PendingStatus.failed)
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 12,
+                      color: foreground,
+                    )
+                  else if (pending.status == _PendingStatus.sent)
+                    Icon(Icons.check_rounded, size: 12, color: statusColor)
+                  else
+                    SizedBox(
+                      width: 9,
+                      height: 9,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.4,
+                        color: statusColor,
                       ),
                     ),
+                  const SizedBox(width: 4),
+                  Text(
+                    switch (pending.status) {
+                      _PendingStatus.sent => 'Sent',
+                      _PendingStatus.failed => 'Not sent',
+                      _PendingStatus.queued ||
+                      _PendingStatus.sending => 'Sending…',
+                    },
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: statusColor,
+                      fontSize: 10,
+                    ),
                   ),
+                  if (failed) ...[
+                    const SizedBox(width: 10),
+                    InkWell(
+                      onTap: onRetry,
+                      child: Text(
+                        'Retry',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: foreground,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ),
@@ -801,6 +813,10 @@ class _Bubble extends StatelessWidget {
     final foreground = mine
         ? theme.colorScheme.onPrimary
         : theme.colorScheme.onSurface;
+    final compactImage =
+        message.body.trim().isEmpty &&
+        message.attachments.length == 1 &&
+        message.attachments.single.isImage;
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -809,7 +825,9 @@ class _Bubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+        padding: compactImage
+            ? const EdgeInsets.all(3)
+            : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
         decoration: BoxDecoration(
           color: background,
           borderRadius: BorderRadius.only(
@@ -827,7 +845,9 @@ class _Bubble extends StatelessWidget {
           children: [
             if (!mine && message.senderName != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: compactImage
+                    ? const EdgeInsets.fromLTRB(7, 5, 7, 5)
+                    : const EdgeInsets.only(bottom: 4),
                 child: Text(
                   message.senderName!,
                   style: theme.textTheme.labelSmall?.copyWith(
@@ -846,7 +866,7 @@ class _Bubble extends StatelessWidget {
               ),
             ...message.attachments.map(
               (attachment) => Padding(
-                padding: const EdgeInsets.only(top: 6),
+                padding: EdgeInsets.only(top: compactImage ? 0 : 6),
                 child: attachment.isImage && attachment.url != null
                     ? NetworkThumb(
                         url: attachment.url,
@@ -886,12 +906,17 @@ class _Bubble extends StatelessWidget {
                       ),
               ),
             ),
-            const SizedBox(height: 3),
-            Text(
-              dateTime(message.createdAt),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: foreground.withValues(alpha: 0.65),
-                fontSize: 10,
+            SizedBox(height: compactImage ? 5 : 3),
+            Padding(
+              padding: compactImage
+                  ? const EdgeInsets.fromLTRB(7, 0, 7, 4)
+                  : EdgeInsets.zero,
+              child: Text(
+                dateTime(message.createdAt),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: foreground.withValues(alpha: 0.65),
+                  fontSize: 10,
+                ),
               ),
             ),
           ],
