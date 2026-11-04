@@ -288,13 +288,25 @@ class ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   if (product.store != null)
-                    Text(
-                      product.store!.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    Row(
+                      children: [
+                        StoreAvatar(
+                          name: product.store!.name,
+                          logoUrl: product.store!.logoUrl,
+                          radius: 9,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            product.store!.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   const SizedBox(height: 8),
                   Row(

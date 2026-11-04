@@ -313,10 +313,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
               if (product.store != null)
                 Card(
                   child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      foregroundColor: theme.colorScheme.onPrimaryContainer,
-                      child: Text(initials(product.store!.name)),
+                    leading: StoreAvatar(
+                      name: product.store!.name,
+                      logoUrl: product.store!.logoUrl,
                     ),
                     title: Text(
                       product.store!.name,

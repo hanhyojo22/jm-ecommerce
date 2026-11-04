@@ -10,6 +10,7 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class CatalogApiTest extends TestCase
@@ -19,6 +20,7 @@ class CatalogApiTest extends TestCase
     public function test_the_public_catalog_lists_only_published_products(): void
     {
         $visible = $this->product(['name' => 'Cedar Lamp']);
+        $visible->store->update(['logo_path' => 'store-logos/cedar-lamp.png']);
         $this->product(['name' => 'Cedar Draft', 'status' => 'draft']);
         $this->product(['name' => 'Cedar Suspended Store'], 'active', 'suspended');
         $this->product(['name' => 'Cedar Suspended Tenant'], 'suspended');
@@ -28,6 +30,7 @@ class CatalogApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $visible->id)
             ->assertJsonPath('data.0.name', 'Cedar Lamp')
+            ->assertJsonPath('data.0.store.logo_url', Storage::disk('public')->url('store-logos/cedar-lamp.png'))
             ->assertJsonPath('meta.per_page', 12);
     }
 

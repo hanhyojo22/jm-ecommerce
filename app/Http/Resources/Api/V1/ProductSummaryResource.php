@@ -38,6 +38,9 @@ class ProductSummaryResource extends JsonResource
                 'id' => $this->store->id,
                 'name' => $this->store->name,
                 'slug' => $this->store->slug,
+                'logo_url' => $this->store->logo_path === null
+                    ? null
+                    : Storage::disk('public')->url($this->store->logo_path),
             ]),
             'category' => $this->whenLoaded('category', fn (): ?array => $this->category === null ? null : [
                 'id' => $this->category->id,
