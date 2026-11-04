@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>JMMart · Order details modals — quiet dossier mockup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f6f8fc;
+            --surface: #ffffff;
+            --paper: #f1f5f9;
+            --sunken: #f8fafc;
+            --ink: #182c48;
+            --muted: #596b83;
+            --border: #e3e8f1;
+            --border-strong: #cbd4e0;
+            --line-soft: #eef1f5;
+            --accent: #205bf4;
+            --accent-hover: #1d4ed8;
+            --accent-wash: #eef3ff;
+            --accent-line: #d6e2fb;
+            --success: #166534;
+            --success-wash: #f1faf4;
+            --success-line: #bfe3cc;
+            --warning-text: #b45309;
+            --warning-wash: #fffaf0;
+            --warning-line: #f4d9a8;
+            --danger: #dc2626;
+            --danger-wash: #fff5f5;
+            --danger-line: #f3c7cd;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { margin: 0; }
+        body {
+            min-height: 100vh;
+            background: #eef2f8;
+            color: var(--ink);
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            font-feature-settings: "cv11", "ss01";
+            overflow-x: clip;
+        }
+        h1, h2, h3, p, dl, dd { margin: 0; }
+        ul, ol { margin: 0; padding: 0; list-style: none; }
+        button { font: inherit; color: inherit; }
+        a { color: inherit; text-decoration: none; }
+        ::selection { background: #dbeafe; color: var(--ink); }
+        .num { font-variant-numeric: tabular-nums; }
+        .sr-only {
+            position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+            overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+        }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+        [hidden] { display: none !important; }
+
+        /* ---- Mockup chrome ------------------------------------------------ */
+        .lab-bar {
+            position: sticky; top: 0; z-index: 60;
+            display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+            padding: 10px 20px;
+            background: rgb(255 255 255 / 92%);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(14px);
+        }
+        .lab-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+        .brand-mark {
+            display: grid; place-items: center; width: 32px; height: 32px; flex: none;
+            border-radius: 9px; background: var(--accent); color: #fff;
+            font-size: 13px; font-weight: 700; letter-spacing: -.02em;
+            box-shadow: 0 1px 2px rgb(32 91 244 / 30%);
+        }
+        .lab-brand h1 { font-size: 14px; font-weight: 650; line-height: 1.25; letter-spacing: -.01em; }
+        .lab-kicker { margin-top: 1px; font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+        .lab-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+        .seg {
+            display: inline-flex; align-items: center; gap: 2px; padding: 3px;
+            border: 1px solid var(--border); border-radius: 9px; background: var(--sunken);
+        }
+        .seg button {
+            min-height: 30px; padding: 0 11px; border: 0; border-radius: 6px;
+            background: transparent; color: var(--muted); font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: background .15s, color .15s, box-shadow .15s;
+        }
+        .seg button:hover { color: var(--ink); }
+        .seg button[aria-pressed="true"] {
+            background: #fff; color: var(--ink);
+            box-shadow: 0 1px 2px rgb(24 44 72 / 10%), inset 0 0 0 1px rgb(227 232 241 / 80%);
+        }
+        .seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .field-inline { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 600; color: var(--muted); }
+        .field-inline select {
+            min-height: 36px; padding: 0 28px 0 10px; border: 1px solid var(--border); border-radius: 8px;
+            background: #fff; color: var(--ink); font-size: 12px; font-weight: 600; cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23596b83' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 9px center;
+        }
+        .field-inline select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .notes-btn {
+            display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 13px;
+            border: 1px solid var(--border); border-radius: 8px; background: #fff;
+            color: var(--ink); font-size: 12px; font-weight: 650; cursor: pointer;
+            transition: background .15s, border-color .15s, color .15s;
+        }
+        .notes-btn:hover { border-color: var(--border-strong); background: var(--sunken); }
+        .notes-btn[aria-pressed="true"] { border-color: var(--accent-line); background: var(--accent-wash); color: var(--accent-hover); }
+        .notes-btn svg { width: 15px; height: 15px; }
+        .lab-note { width: 100%; font-size: 11px; color: var(--muted); }
+        .lab-note b { color: var(--ink); font-weight: 600; }
+
+        /* ---- Stage -------------------------------------------------------- */
+        .lab-stage {
+            position: relative; isolation: isolate;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: calc(100dvh - 58px); padding: 36px 20px 30px;
+            overflow: hidden; background: #eef2f8;
+        }
+        .stage-scrim {
+            position: absolute; inset: 0; z-index: 1;
+            background: rgb(15 23 42 / 44%); backdrop-filter: blur(2px);
+            transition: background .2s;
+        }
+        .lab-stage.is-phone .stage-scrim { background: rgb(15 23 42 / 16%); backdrop-filter: none; }
+        .mock-page {
+            position: absolute; inset: 0; z-index: 0; overflow: hidden;
+            background: var(--bg); color: var(--muted); pointer-events: none;
+        }
+        .mock-topbar {
+            display: flex; align-items: center; gap: 14px;
+            height: 56px; padding: 0 28px; background: #fff; border-bottom: 1px solid var(--border);
+        }
+        .mock-dot { width: 26px; height: 26px; border-radius: 7px; background: #dce6f7; }
+        .mock-bar { height: 9px; border-radius: 999px; background: #e5eaf2; }
+        .mock-bar.w1 { width: 116px; }
+        .mock-bar.w2 { width: 72px; }
+        .mock-bar.w3 { width: 44px; }
+        .mock-topbar .mock-bar:nth-of-type(1) { margin-left: auto; }
+        .mock-shell { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; max-width: 1060px; margin: 0 auto; padding: 30px 28px; }
+        .mock-nav { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+        .mock-nav .mock-bar { width: 70%; }
+        .mock-nav .mock-bar:nth-child(2n) { width: 56%; }
+        .mock-main { min-width: 0; }
+        .mock-title { width: 210px; height: 24px; border-radius: 7px; background: #dfe6f0; }
+        .mock-sub { width: 330px; height: 10px; margin-top: 10px; border-radius: 999px; background: #e5eaf2; }
+        .mock-tabs { display: flex; gap: 18px; margin-top: 22px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .mock-tabs span { display: block; width: 62px; height: 9px; border-radius: 999px; background: #e5eaf2; }
+        .mock-tabs span:first-child { background: #c6d4ea; }
+        .mock-order { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+        .mock-order-row { display: flex; align-items: center; gap: 10px; }
+        .mock-order-row .mock-bar:first-child { width: 150px; }
+        .mock-order-row .mock-bar:last-child { width: 76px; margin-left: auto; background: #dce6f7; }
+        .mock-items { display: grid; gap: 9px; margin-top: 14px; }
+        .mock-item { display: grid; grid-template-columns: 40px minmax(0, 1fr) 70px; gap: 10px; align-items: center; }
+        .mock-thumb { width: 40px; height: 40px; border-radius: 6px; background: #edf1f6; }
+        .mock-item .mock-bar { width: 68%; }
+        .mock-item .mock-bar:last-child { width: 100%; margin-left: 0; }
+        .phone-bg { position: absolute; inset: 0; z-index: 0; padding: 64px 18px 20px; background: var(--bg); overflow: hidden; }
+        .phone-bg .mock-bar { background: #e2e8f1; }
+
+        .stage-content {
+            position: relative; z-index: 2;
+            display: flex; flex-direction: column; align-items: center; gap: 13px;
+            width: 100%; min-width: 0;
+        }
+        .stage-caption {
+            font-size: 11px; font-weight: 600; letter-spacing: .03em;
+            color: rgb(255 255 255 / 74%); text-align: center;
+        }
+        .lab-stage.is-phone .stage-caption { color: var(--muted); }
+        .desktop-view { display: flex; justify-content: center; width: 100%; min-width: 0; }
+        .phone-view { display: flex; flex-direction: column; align-items: center; gap: 13px; }
+
+        .device {
+            position: relative; width: 390px; max-width: calc(100vw - 24px); height: 844px;
+            padding: 10px; border-radius: 54px;
+            background: linear-gradient(150deg, #263449, #0b1220 55%, #1c2a3d);
+            box-shadow: 0 40px 90px rgb(15 23 42 / 38%), inset 0 0 0 1px rgb(255 255 255 / 16%);
+        }
+        .device-screen {
+            position: relative; width: 100%; height: 100%; overflow: hidden;
+            border-radius: 44px; background: var(--bg);
+        }
+        .device-screen::after {
+            content: ''; position: absolute; left: 50%; bottom: 8px; z-index: 9;
+            width: 118px; height: 4px; border-radius: 999px; background: #0f172a; opacity: .32;
+            transform: translateX(-50%); pointer-events: none;
+        }
+        .device-notch {
+            position: absolute; top: 10px; left: 50%; z-index: 8;
+            width: 104px; height: 26px; border-radius: 999px; background: #0b1220;
+            transform: translateX(-50%); pointer-events: none;
+        }
+        .sheet-host { position: absolute; inset: 0; z-index: 4; background: rgb(15 23 42 / 28%); }
+
+        .toast {
+            position: fixed; left: 50%; bottom: 24px; z-index: 120;
+            max-width: calc(100vw - 32px); padding: 9px 15px; border-radius: 999px;
+            background: #111f33; color: #fff; font-size: 12.5px; font-weight: 600;
+            box-shadow: 0 12px 30px rgb(15 23 42 / 28%);
+            opacity: 0; transform: translate(-50%, 10px); pointer-events: none;
+            transition: opacity .18s ease, transform .18s ease;
+        }
+        .toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+        @media (max-width: 1100px) {
+            .lab-controls { margin-left: 0; width: 100%; }
+            .lab-brand { margin-right: auto; }
+        }
+        @media (max-width: 760px) {
+            .lab-bar { padding: 9px 12px; gap: 8px; }
+            .lab-brand h1 { font-size: 13px; }
+            .lab-controls { gap: 6px; }
+            .seg button { padding: 0 9px; }
+            .field-inline span { display: none; }
+            .lab-stage { padding: 16px 8px 22px; min-height: calc(100dvh - 92px); }
+            .mock-shell { grid-template-columns: 1fr; }
+            .mock-nav { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+        }
+        /* ---- Dialog shell ------------------------------------------------ */
+        .dialog {
+            --dialog-w: 760px;
+            position: relative;
+            display: flex; flex-direction: column;
+            width: min(var(--dialog-w), calc(100vw - 40px));
+            max-height: calc(100dvh - 118px);
+            overflow: hidden;
+            border: 1px solid rgb(255 255 255 / 70%);
+            border-radius: 16px;
+            background: var(--surface);
+            box-shadow: 0 36px 90px rgb(15 23 42 / 34%), 0 4px 16px rgb(15 23 42 / 10%);
+            animation: dialog-in .22s cubic-bezier(.2, .8, .2, 1);
+        }
+        .buyer-dialog { --dialog-w: 760px; }
+        .seller-dialog { --dialog-w: 940px; }
+        @keyframes dialog-in {
+            from { opacity: 0; transform: translateY(10px) scale(.986); }
+            to { opacity: 1; transform: none; }
+        }
+        @keyframes sheet-in {
+            from { opacity: 0; transform: translateY(26px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .dialog-head {
+            flex: none;
+            padding: 20px 24px 0;
+            background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+            border-bottom: 1px solid var(--line-soft);
+        }
+        .head-top { display: flex; align-items: flex-start; gap: 12px; }
+        .head-id { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
+        .eyebrow {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 10.5px; font-weight: 700; letter-spacing: .13em;
+            text-transform: uppercase; color: var(--muted); white-space: nowrap;
+        }
+        .eyebrow svg { width: 14px; height: 14px; flex: none; }
+        .order-ref { font-size: 12px; font-weight: 650; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; }
+        .copy-ref {
+            display: inline-grid; place-items: center; width: 28px; height: 28px;
+            border: 0; border-radius: 6px; background: transparent;
+            color: var(--muted); cursor: pointer; touch-action: manipulation;
+            transition: background .15s, color .15s;
+        }
+        .copy-ref:hover { background: var(--sunken); color: var(--ink); }
+        .copy-ref.is-copied { color: var(--success); background: var(--success-wash); }
+        .copy-ref svg { width: 14px; height: 14px; }
+        .head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; flex: none; }
+        .icon-btn {
+            display: grid; place-items: center; width: 36px; height: 36px;
+            border: 0; border-radius: 8px; background: transparent;
+            color: var(--muted); cursor: pointer; touch-action: manipulation;
+            transition: background .15s, color .15s;
+        }
+        .icon-btn:hover { background: var(--sunken); color: var(--ink); }
+        .icon-btn:disabled { opacity: .32; cursor: default; background: transparent; }
+        .icon-btn svg { width: 18px; height: 18px; }
+
+        .head-status { display: flex; align-items: flex-start; gap: 12px; margin-top: 12px; }
+        .status-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 12px; }
+        .status-icon svg { width: 21px; height: 21px; }
+        .status-icon.moving { background: var(--accent-wash); color: var(--accent); }
+        .status-icon.good { background: var(--success-wash); color: var(--success); }
+        .status-icon.warn { background: var(--warning-wash); color: var(--warning-text); }
+        .status-icon.danger { background: var(--danger-wash); color: var(--danger); }
+        .status-copy { min-width: 0; flex: 1; }
+        .status-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .status-line h2 { font-size: 22px; font-weight: 650; line-height: 1.18; letter-spacing: -.025em; color: var(--ink); text-wrap: balance; }
+        .status-sub { max-width: 58ch; margin-top: 4px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+        .head-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-top: 7px; font-size: 11.5px; color: var(--muted); }
+        .meta-dot { padding: 0 6px; color: var(--border-strong); }
+
+        .pill {
+            display: inline-flex; align-items: center; gap: 5px; flex: none;
+            max-width: 100%; padding: 3px 8px; border-radius: 999px;
+            font-size: 10.5px; font-weight: 650; line-height: 1.4; white-space: nowrap;
+        }
+        .pill i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+        .pill-neutral { background: var(--sunken); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line-soft); }
+        .pill-moving { background: var(--accent-wash); color: var(--accent-hover); box-shadow: inset 0 0 0 1px var(--accent-line); }
+        .pill-good { background: var(--success-wash); color: var(--success); box-shadow: inset 0 0 0 1px var(--success-line); }
+        .pill-warn { background: var(--warning-wash); color: var(--warning-text); box-shadow: inset 0 0 0 1px var(--warning-line); }
+        .pill-danger { background: var(--danger-wash); color: var(--danger); box-shadow: inset 0 0 0 1px var(--danger-line); }
+
+        /* ---- Journey tracker --------------------------------------------- */
+        .tracker { display: grid; grid-template-columns: repeat(var(--steps, 4), minmax(0, 1fr)); margin-top: 15px; padding: 0; }
+        .tracker-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; text-align: center; }
+        .tracker-step::before {
+            content: ''; position: absolute; top: 11px; right: 50%; z-index: 0;
+            width: 100%; height: 2px; background: var(--line-soft);
+        }
+        .tracker-step:first-child::before { display: none; }
+        .tracker-step.done::before, .tracker-step.current::before { background: #b9cdf2; }
+        .tracker-step.partial::before { background: linear-gradient(90deg, #b9cdf2 50%, var(--line-soft) 50%); }
+        .node {
+            position: relative; z-index: 1;
+            display: grid; place-items: center; width: 24px; height: 24px;
+            border: 2px solid var(--border-strong); border-radius: 50%;
+            background: var(--surface); color: transparent;
+            transition: background .18s, border-color .18s, color .18s;
+        }
+        .node svg { width: 12px; height: 12px; }
+        .tracker-step.done .node { border-color: var(--accent); background: var(--accent); color: #fff; }
+        .tracker-step.current .node { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px var(--accent-wash); }
+        .tracker-step.current .node::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .tracker-step.partial .node {
+            border-color: var(--success);
+            background: conic-gradient(var(--success) 0 50%, #fff 50% 100%);
+            box-shadow: inset 0 0 0 3px #fff;
+        }
+        .tracker-step.done.final .node { border-color: var(--success); background: var(--success); }
+        .tracker-step.done.final .step-label { color: var(--success); }
+        .step-label {
+            overflow: hidden; max-width: 100%;
+            font-size: 10.5px; font-weight: 650; line-height: 1.25;
+            color: var(--muted); text-overflow: ellipsis; white-space: nowrap;
+        }
+        .tracker-step.done .step-label { color: var(--ink); }
+        .tracker-step.current .step-label { color: var(--accent-hover); }
+        .step-date { font-size: 9.5px; font-weight: 500; line-height: 1.2; color: var(--muted); white-space: nowrap; }
+        /* ---- Body and footer --------------------------------------------- */
+        .dialog-body {
+            flex: 1; min-height: 0; overflow-y: auto;
+            padding: 18px 24px 22px;
+            background: var(--surface);
+            overscroll-behavior: contain;
+        }
+        .dialog-foot {
+            display: flex; align-items: center; gap: 8px; flex: none;
+            padding: 12px 24px calc(12px + env(safe-area-inset-bottom));
+            border-top: 1px solid var(--line);
+            background: #fff;
+        }
+        .foot-left { display: flex; align-items: center; gap: 7px; min-width: 0; margin-right: auto; }
+        .foot-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+        .foot-help { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+        .foot-help a { font-weight: 600; color: var(--accent); text-underline-offset: 2px; }
+        .foot-help a:hover { text-decoration: underline; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            min-height: 38px; padding: 0 13px;
+            border: 1px solid transparent; border-radius: 8px;
+            font-size: 12.5px; font-weight: 650; line-height: 1; white-space: nowrap;
+            cursor: pointer; touch-action: manipulation;
+            transition: background .15s, border-color .15s, color .15s, transform .1s;
+        }
+        .btn svg { width: 15px; height: 15px; flex: none; }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px rgb(32 91 244 / 22%); }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-outline { border-color: var(--border); background: #fff; color: var(--ink); }
+        .btn-outline:hover { border-color: var(--border-strong); background: var(--sunken); }
+        .btn-ghost { background: transparent; color: var(--muted); }
+        .btn-ghost:hover { background: var(--sunken); color: var(--ink); }
+        .btn-danger { background: transparent; color: var(--danger); }
+        .btn-danger:hover { background: var(--danger-wash); }
+        .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+        /* ---- Mobile sheet ------------------------------------------------- */
+        .dialog.is-sheet {
+            width: 100%; height: 100%; max-height: none;
+            border: 0; border-radius: 0; box-shadow: none;
+            animation: sheet-in .24s cubic-bezier(.2, .8, .2, 1);
+        }
+        .is-sheet .dialog-head { padding: 44px 16px 0; }
+        .is-sheet .dialog-body { padding: 14px 16px 16px; }
+        .is-sheet .dialog-foot { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 16px 20px; }
+        .is-sheet .foot-left { margin-right: 0; width: 100%; }
+        .is-sheet .foot-actions { width: 100%; }
+        .is-sheet .foot-actions .btn { flex: 1; min-height: 44px; }
+        .is-sheet .foot-left .btn { min-height: 44px; }
+        .is-sheet .foot-help { display: none; }
+        .is-sheet .icon-btn { width: 44px; height: 44px; }
+        .is-sheet .copy-ref { width: 32px; height: 32px; }
+        .is-sheet .status-icon { width: 40px; height: 40px; border-radius: 11px; }
+        .is-sheet .status-line h2 { font-size: 20px; }
+        .is-sheet .status-sub { font-size: 12px; }
+        .is-sheet .step-label { font-size: 9.5px; }
+        .is-sheet .step-date { display: none; }
+        .is-sheet .tracker-step::before { top: 10px; }
+        .is-sheet .node { width: 22px; height: 22px; }
+        .is-sheet .node svg { width: 11px; height: 11px; }
+        .is-sheet .more-btn span { display: none; }
+        .is-sheet .more-btn { width: 44px; padding: 0; }
+        .is-sheet .head-nav { display: none; }
+        .is-sheet .seller-grid { grid-template-columns: 1fr; }
+        .is-sheet .rail { grid-template-columns: 1fr; }
+        .is-sheet .facts { grid-template-columns: 1fr; }
+        .is-sheet .shipment-foot .btn { min-height: 36px; }
+        .is-sheet .notice-action { margin-left: 0; width: 100%; min-height: 44px; }
+        .is-sheet .status-line { gap: 6px; }
+        .is-sheet .head-meta { font-size: 11px; }
+        .is-sheet .more-menu { width: 210px; }
+        /* ---- Notices ------------------------------------------------------ */
+        .notice {
+            display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
+            margin-bottom: 14px; padding: 11px 13px;
+            border: 1px solid; border-radius: 10px;
+        }
+        .notice-warn { border-color: var(--warning-line); background: var(--warning-wash); }
+        .notice-danger { border-color: var(--danger-line); background: var(--danger-wash); }
+        .notice-info { border-color: var(--accent-line); background: var(--accent-wash); }
+        .notice-icon { display: grid; place-items: center; width: 20px; height: 20px; flex: none; margin-top: 1px; }
+        .notice-icon svg { width: 18px; height: 18px; }
+        .notice-warn .notice-icon { color: var(--warning-text); }
+        .notice-danger .notice-icon { color: var(--danger); }
+        .notice-info .notice-icon { color: var(--accent); }
+        .notice-body { flex: 1; min-width: 180px; }
+        .notice-title { font-size: 12.5px; font-weight: 650; line-height: 1.4; color: var(--ink); }
+        .notice-copy { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+        .notice-copy a { font-weight: 650; color: var(--accent); text-underline-offset: 2px; }
+        .notice-copy a:hover { text-decoration: underline; }
+        .notice-action { margin-left: 30px; }
+        .notice-line { font-size: 12px; line-height: 1.5; color: var(--muted); }
+        .notice-line a { font-weight: 650; color: var(--accent); }
+
+        .cancelled-line {
+            display: flex; align-items: center; gap: 7px; margin-bottom: 14px;
+            padding: 9px 12px; border-radius: 8px; background: var(--danger-wash);
+            color: var(--danger); font-size: 12px; font-weight: 600;
+        }
+        .cancelled-line svg { width: 15px; height: 15px; flex: none; }
+
+        /* ---- Buyer shipments --------------------------------------------- */
+        .shipments { display: flex; flex-direction: column; gap: 10px; }
+        .shipment { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+        .shipment-head {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 10px 13px; background: var(--sunken); border-bottom: 1px solid var(--line-soft);
+        }
+        .store-mark {
+            display: grid; place-items: center; width: 30px; height: 30px; flex: none;
+            border-radius: 8px; background: var(--mark-bg, #e8eef8); color: var(--mark-ink, #31507c);
+            font-size: 10.5px; font-weight: 700; letter-spacing: .02em;
+        }
+        .store-copy { min-width: 0; flex: 1; }
+        .store-name { overflow: hidden; font-size: 12.5px; font-weight: 650; line-height: 1.3; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+        .store-meta { margin-top: 1px; font-size: 11px; color: var(--muted); }
+        .shipment .pill { margin-left: auto; }
+        .item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 11px 13px; }
+        .item + .item { border-top: 1px solid var(--line-soft); }
+        .thumb {
+            position: relative; display: block; width: 44px; height: 44px; overflow: hidden;
+            border: 1px solid var(--line-soft); border-radius: 8px; background: var(--paper);
+        }
+        .thumb svg { display: block; width: 100%; height: 100%; }
+        .item-copy { min-width: 0; }
+        .item-title { font-size: 12.5px; font-weight: 600; line-height: 1.35; color: var(--ink); overflow-wrap: anywhere; }
+        .item-meta { margin-top: 1px; font-size: 11px; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+        .item-amount { align-self: start; padding-top: 1px; font-size: 12.5px; font-weight: 650; text-align: right; white-space: nowrap; color: var(--ink); }
+        .shipment-foot {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            padding: 9px 13px; border-top: 1px solid var(--line-soft); background: #fcfdff;
+        }
+        .subtotal-label { font-size: 11px; color: var(--muted); }
+        .subtotal-value { font-size: 12.5px; font-weight: 650; color: var(--ink); }
+        .shipment-action { margin-left: auto; }
+        .shipments.is-muted .thumb { opacity: .55; }
+        .shipments.is-muted .item-title { color: var(--muted); }
+
+        /* ---- Facts / receipt --------------------------------------------- */
+        .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        .fact { min-width: 0; padding: 13px; border: 1px solid var(--border); border-radius: var(--radius); }
+        .fact-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 10px; font-weight: 700; letter-spacing: .11em;
+            text-transform: uppercase; color: var(--muted);
+        }
+        .fact-label svg { width: 14px; height: 14px; }
+        .fact-main { margin-top: 7px; font-size: 12.5px; font-weight: 650; line-height: 1.4; color: var(--ink); }
+        .fact-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; font-size: 11.5px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+        .fact-note { margin-top: 8px; padding: 7px 9px; border-radius: 7px; background: var(--sunken); border-left: 2px solid var(--border-strong); font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+        .dot { display: inline-block; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
+        .dot-good { color: var(--success); background: var(--success); }
+        .dot-warn { color: var(--warning-text); background: var(--warning); }
+        .dot-neutral { color: var(--muted); background: var(--muted); }
+        .copy-mini {
+            display: inline-grid; place-items: center; width: 24px; height: 24px;
+            border: 0; border-radius: 5px; background: transparent; color: var(--muted);
+            cursor: pointer; touch-action: manipulation;
+        }
+        .copy-mini:hover { background: var(--sunken); color: var(--ink); }
+        .copy-mini.is-copied { color: var(--success); }
+        .copy-mini svg { width: 12px; height: 12px; }
+
+        .receipt { margin-top: 14px; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); }
+        .receipt-rows { padding: 12px 14px; }
+        .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12px; }
+        .row + .row { margin-top: 6px; }
+        .row dt { color: var(--muted); }
+        .row dd { font-weight: 600; color: var(--ink); }
+        .receipt-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--border); background: var(--sunken); }
+        .receipt-total .label { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+        .receipt-total .value { font-size: 24px; font-weight: 650; line-height: 1; letter-spacing: -.035em; color: var(--ink); }
+        .receipt-note { display: flex; align-items: center; gap: 6px; padding: 0 14px 12px; background: var(--sunken); font-size: 11px; color: var(--muted); }
+        .receipt-note svg { width: 13px; height: 13px; flex: none; }
+
+        /* ---- Seller layout ----------------------------------------------- */
+        .seller-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(276px, .78fr); gap: 14px; align-items: start; }
+        .seller-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+        .next-card { padding: 14px 15px; border: 1px solid var(--accent-line); border-radius: var(--radius); background: linear-gradient(180deg, #f6f9ff 0%, #fff 100%); }
+        .next-eyebrow { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--accent-hover); }
+        .next-eyebrow svg { width: 14px; height: 14px; }
+        .next-title { margin-top: 6px; font-size: 15px; font-weight: 650; line-height: 1.3; letter-spacing: -.01em; color: var(--ink); }
+        .next-copy { margin-top: 3px; font-size: 12px; line-height: 1.55; color: var(--muted); }
+        .next-note { display: flex; align-items: center; gap: 6px; margin-top: 9px; font-size: 11px; color: var(--muted); }
+        .next-note svg { width: 13px; height: 13px; flex: none; }
+
+        .card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+        .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 13px; border-bottom: 1px solid var(--line-soft); }
+        .card-title { font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--muted); }
+        .card-title b { color: var(--ink); font-weight: 700; }
+        .card-hint { font-size: 11px; color: var(--muted); }
+        .card .item { padding: 10px 13px; }
+        .card .item + .item { border-top: 1px solid var(--line-soft); }
+
+        .rail { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .rail-card { padding: 13px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+        .rail-label { font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--muted); }
+        .rail-summary { margin-top: 9px; }
+        .rail-total { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line-soft); }
+        .rail-total .label { font-size: 12px; font-weight: 650; color: var(--ink); }
+        .rail-total .value { font-size: 21px; font-weight: 650; line-height: 1; letter-spacing: -.03em; color: var(--ink); }
+        .rail-pay { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 7px; font-size: 11px; color: var(--muted); }
+        .rail-name { margin-top: 7px; font-size: 12.5px; font-weight: 650; color: var(--ink); }
+        .rail-line { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 1px; font-size: 11.5px; line-height: 1.5; color: var(--muted); overflow-wrap: anywhere; }
+        .rail-note { margin-top: 8px; padding: 7px 9px; border-left: 2px solid var(--border-strong); border-radius: 0 6px 6px 0; background: var(--sunken); font-size: 11px; line-height: 1.5; color: var(--muted); }
+
+        /* ---- More menu ---------------------------------------------------- */
+        .more-wrap { position: relative; }
+        .more-btn { gap: 5px; }
+        .more-menu {
+            position: absolute; left: 0; bottom: calc(100% + 8px); z-index: 30;
+            width: 224px; padding: 5px;
+            border: 1px solid var(--border); border-radius: 10px; background: #fff;
+            box-shadow: 0 18px 44px rgb(15 23 42 / 18%), 0 2px 8px rgb(15 23 42 / 6%);
+            animation: menu-in .14s ease-out;
+        }
+        @keyframes menu-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+        .menu-item {
+            display: flex; align-items: center; gap: 9px; width: 100%;
+            min-height: 38px; padding: 0 9px; border: 0; border-radius: 7px;
+            background: transparent; color: var(--ink); font-size: 12px; font-weight: 600;
+            text-align: left; cursor: pointer;
+        }
+        .menu-item:hover { background: var(--sunken); }
+        .menu-item svg { width: 15px; height: 15px; flex: none; color: var(--muted); }
+        .menu-item.is-danger { color: var(--danger); }
+        .menu-item.is-danger svg { color: var(--danger); }
+        .menu-item.is-danger:hover { background: var(--danger-wash); }
+        .menu-sep { height: 1px; margin: 4px 7px; background: var(--line-soft); }
+
+        @media (max-width: 860px) {
+            .seller-grid { grid-template-columns: 1fr; }
+            .rail { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+        }
+        @media (max-width: 640px) {
+            .facts { grid-template-columns: 1fr; }
+            .rail { grid-template-columns: 1fr; }
+            .notice-action { margin-left: 30px; }
+        }
+        /* ---- Notes / handoff ---------------------------------------------- */
+        .notes {
+            border-top: 1px solid var(--border);
+            background: var(--bg);
+        }
+        .notes-inner { max-width: 1120px; margin: 0 auto; padding: 40px 28px 56px; }
+        .notes-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--accent-hover); }
+        .notes h2 { margin-top: 4px; font-size: 26px; font-weight: 650; letter-spacing: -.03em; line-height: 1.15; }
+        .notes-lede { max-width: 66ch; margin-top: 8px; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
+        .notes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+        .note-card {
+            padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: #fff;
+            cursor: default; transition: border-color .15s, box-shadow .15s;
+        }
+        .note-card:hover, .note-card:focus-visible { border-color: #c4b5fd; box-shadow: 0 0 0 3px rgb(124 58 237 / 8%); }
+        .note-num {
+            display: inline-grid; place-items: center; width: 22px; height: 22px;
+            border-radius: 6px; background: #f3efff; color: #6d28d9;
+            font-size: 10.5px; font-weight: 700;
+        }
+        .note-card h3 { margin-top: 10px; font-size: 13px; font-weight: 650; letter-spacing: -.01em; }
+        .note-card p { margin-top: 5px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+        .note-card code { padding: 1px 4px; border-radius: 4px; background: var(--sunken); font-size: 10.5px; }
+        .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+        .spec-card { padding: 18px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+        .spec-card h3 { font-size: 11px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--muted); }
+        .spec-list { display: grid; gap: 7px; margin-top: 11px; }
+        .spec-list li { display: flex; gap: 8px; font-size: 12px; line-height: 1.55; color: var(--muted); }
+        .spec-list b { color: var(--ink); font-weight: 600; }
+        .spec-list li::before { content: ''; width: 4px; height: 4px; flex: none; margin-top: 7px; border-radius: 50%; background: var(--border-strong); }
+        .swatches { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .swatch { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+        .swatch i { width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgb(15 23 42 / 8%); }
+        .notes-foot { margin-top: 18px; font-size: 11px; line-height: 1.6; color: var(--muted); }
+
+        /* Notes open as a drawer so the dialog stays visible while a note is hovered. */
+        .notes {
+            position: fixed; top: var(--bar-h, 58px); right: 0; bottom: 0; z-index: 55;
+            width: 390px; max-width: 100vw; overflow-y: auto; overscroll-behavior: contain;
+            border-top: 1px solid var(--border); border-left: 1px solid var(--border);
+            box-shadow: -24px 0 70px rgb(15 23 42 / 14%);
+        }
+        .notes-inner { max-width: none; padding: 24px 20px 40px; }
+        .notes h2 { font-size: 21px; }
+        .notes-grid, .spec-grid { grid-template-columns: 1fr; }
+        body.notes-open { overflow: hidden; }
+        body.notes-open .stage-content { padding-right: 390px; }
+        .stage-content { transition: padding-right .2s ease; }
+        @media (max-width: 1200px) {
+            .notes { width: 340px; }
+            body.notes-open .stage-content { padding-right: 340px; }
+        }
+        @media (max-width: 900px) {
+            .notes { width: 100vw; }
+            body.notes-open .stage-content { padding-right: 0; }
+        }
+
+        .dialog { max-width: 100%; }
+        .dialog-head.no-tracker { padding-bottom: 18px; }
+        .card.is-muted .thumb { opacity: .55; }
+        .card.is-muted .item-title { color: var(--muted); }
+        .device { height: min(844px, calc(100dvh - 124px)); }
+
+        [data-note].is-highlighted {
+            outline: 2px dashed #7c3aed;
+            outline-offset: 3px;
+            border-radius: 12px;
+            background-color: rgb(124 58 237 / 3%);
+        }
+        .notes-hint { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 11px; font-weight: 600; color: #6d28d9; }
+        .notes-hint svg { width: 14px; height: 14px; }
+
+        @media (max-width: 900px) {
+            .notes-grid { grid-template-columns: 1fr 1fr; }
+            .spec-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .notes-inner { padding: 28px 16px 42px; }
+            .notes h2 { font-size: 22px; }
+            .notes-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="lab">
+    <header class="lab-bar">
+        <div class="lab-brand">
+            <span class="brand-mark" aria-hidden="true">J</span>
+            <div>
+                <p class="lab-kicker">JMMart · Design lab</p>
+                <h1>Order details modals — quiet dossier</h1>
+            </div>
+        </div>
+        <div class="lab-controls">
+            <div class="seg" role="group" aria-label="Audience">
+                <button type="button" data-role="buyer" aria-pressed="true">Buyer</button>
+                <button type="button" data-role="seller" aria-pressed="false">Seller</button>
+            </div>
+            <label class="field-inline" for="state-select"><span>State</span>
+                <select id="state-select"></select>
+            </label>
+            <div class="seg" role="group" aria-label="Preview size">
+                <button type="button" data-viewport="desktop" aria-pressed="true">Desktop</button>
+                <button type="button" data-viewport="phone" aria-pressed="false">Phone</button>
+            </div>
+            <button type="button" class="notes-btn" id="notes-toggle" aria-pressed="false" aria-controls="notes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg>
+                Notes
+            </button>
+        </div>
+    </header>
+
+    <main class="lab-stage" id="stage">
+        <div class="mock-page" aria-hidden="true">
+            <div class="mock-topbar">
+                <span class="mock-dot"></span>
+                <span class="mock-bar w1"></span>
+                <span class="mock-bar w2"></span>
+                <span class="mock-bar w3"></span>
+            </div>
+            <div class="mock-shell">
+                <aside class="mock-nav">
+                    <span class="mock-dot"></span>
+                    <span class="mock-bar"></span>
+                    <span class="mock-bar"></span>
+                    <span class="mock-bar"></span>
+                    <span class="mock-bar"></span>
+                </aside>
+                <div class="mock-main">
+                    <div class="mock-title"></div>
+                    <div class="mock-sub"></div>
+                    <div class="mock-tabs"><span></span><span></span><span></span><span></span></div>
+                    <div class="mock-order">
+                        <div class="mock-order-row"><span class="mock-bar"></span><span class="mock-bar"></span></div>
+                        <div class="mock-items">
+                            <div class="mock-item"><span class="mock-thumb"></span><span class="mock-bar"></span><span class="mock-bar"></span></div>
+                            <div class="mock-item"><span class="mock-thumb"></span><span class="mock-bar"></span><span class="mock-bar"></span></div>
+                        </div>
+                    </div>
+                    <div class="mock-order">
+                        <div class="mock-order-row"><span class="mock-bar"></span><span class="mock-bar"></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="phone-bg" hidden>
+                <div class="mock-title"></div>
+                <div class="mock-sub"></div>
+                <div class="mock-tabs"><span></span><span></span><span></span></div>
+                <div class="mock-order">
+                    <div class="mock-order-row"><span class="mock-bar"></span><span class="mock-bar"></span></div>
+                    <div class="mock-items">
+                        <div class="mock-item"><span class="mock-thumb"></span><span class="mock-bar"></span><span class="mock-bar"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="stage-scrim" aria-hidden="true"></div>
+
+        <div class="stage-content">
+            <div class="desktop-view" id="desktop-view">
+                <div id="dialog-host"></div>
+            </div>
+            <div class="phone-view" id="phone-view" hidden>
+                <div class="device">
+                    <div class="device-notch" aria-hidden="true"></div>
+                    <div class="device-screen">
+                        <div class="phone-bg" aria-hidden="true">
+                            <div class="mock-title"></div>
+                            <div class="mock-sub"></div>
+                            <div class="mock-tabs"><span></span><span></span><span></span></div>
+                            <div class="mock-order">
+                                <div class="mock-order-row"><span class="mock-bar"></span><span class="mock-bar"></span></div>
+                            </div>
+                        </div>
+                        <div class="sheet-host" id="sheet-host"></div>
+                    </div>
+                </div>
+            </div>
+            <p class="stage-caption" id="stage-caption">Buyer · In progress · 760 px</p>
+        </div>
+    </main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<section class="notes" id="notes" hidden>
+    <div class="notes-inner">
+        <p class="notes-kicker">Handoff notes</p>
+        <h2>The same receipt, read in one glance</h2>
+        <p class="notes-lede">The redesign keeps JMMart’s quiet blue-and-navy ledger language but reorganises the dialog around the three questions people actually open it for: where is my order, what do I owe or need to do, and who has it. Hover or focus a note to highlight the part of the mockup it describes.</p>
+        <p class="notes-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/></svg>
+            Notes are interactive — hover or tab to a card.
+        </p>
+
+        <div class="notes-grid">
+            <article class="note-card" tabindex="0" data-note-target="header">
+                <span class="note-num">1</span>
+                <h3>Status first, before the receipt</h3>
+                <p>The first line answers what is happening and what comes next. Status is carried by an icon, a label, and a dot — never colour alone. The order reference is short, but the full ULID is one copy away.</p>
+            </article>
+            <article class="note-card" tabindex="0" data-note-target="tracker">
+                <span class="note-num">2</span>
+                <h3>A journey with honest dates</h3>
+                <p>Four stages for buyers, five for sellers. Dates appear only where the data exists — <code>created_at</code>, <code>shipped_at</code>, <code>delivered_at</code>. A split order shows “1 of 2” as a half-filled node instead of pretending one parcel represents both stores.</p>
+            </article>
+            <article class="note-card" tabindex="0" data-note-target="shipments">
+                <span class="note-num">3</span>
+                <h3>Shipments, not a flat item list</h3>
+                <p>Each store’s part keeps its own status, items, subtotal, and action. A buyer can confirm one parcel without touching the other. That is the real shape of a multi-store order, and it removes the “which items arrived?” question.</p>
+            </article>
+            <article class="note-card" tabindex="0" data-note-target="receipt">
+                <span class="note-num">4</span>
+                <h3>Money in one unmissable block</h3>
+                <p>Subtotal, shipping, then the total as the largest number in the dialog. Payment state sits directly beneath it. Tabular numerals keep every amount aligned, and per-store subtotals reconcile to the order total above.</p>
+            </article>
+            <article class="note-card" tabindex="0" data-note-target="facts">
+                <span class="note-num">5</span>
+                <h3>Read-only facts stay quiet</h3>
+                <p>Delivery and payment are reference information, not actions. They share one calm two-column band with copy buttons only where copying is useful: the phone and the order number.</p>
+            </article>
+            <article class="note-card" tabindex="0" data-note-target="next">
+                <span class="note-num">6</span>
+                <h3>Seller: one next step, stated plainly</h3>
+                <p>The seller modal leads with the single transition that moves the order forward. Guidance lives in the panel; the button lives in the footer. No competing toolbar, and no step that hides behind an icon.</p>
+            </article>
+            <article class="note-card" tabindex="0" data-note-target="rail">
+                <span class="note-num">7</span>
+                <h3>Seller: facts in a rail</h3>
+                <p>Items stay the main story. Payout, payment state, delivery address, and the buyer’s note sit in a narrower rail, so the seller can scan the order without the money disappearing below the fold.</p>
+            </article>
+            <article class="note-card" tabindex="0" data-note-target="footer">
+                <span class="note-num">8</span>
+                <h3>Actions have rank</h3>
+                <p>One blue primary action, quiet outline secondaries, and destructive actions behind <b>More</b> — separated from the button people press most. On a phone the primary action becomes a full-width 44px target above the safe-area inset.</p>
+            </article>
+        </div>
+
+        <div class="spec-grid">
+            <article class="spec-card">
+                <h3>Direction and tokens</h3>
+                <div class="swatches">
+                    <span class="swatch"><i style="background:#205bf4"></i>brand</span>
+                    <span class="swatch"><i style="background:#182c48"></i>ink</span>
+                    <span class="swatch"><i style="background:#596b83"></i>muted</span>
+                    <span class="swatch"><i style="background:#f8fafc"></i>sunken</span>
+                    <span class="swatch"><i style="background:#b45309"></i>waiting</span>
+                    <span class="swatch"><i style="background:#166534"></i>done</span>
+                    <span class="swatch"><i style="background:#dc2626"></i>stopped</span>
+                </div>
+                <ul class="spec-list">
+                    <li><b>Widths</b> — buyer 760px, seller 940px; full-height sheet under 720px.</li>
+                    <li><b>Type</b> — Inter throughout; 10–11px uppercase labels, 12–13px body, 20–24px totals. Tabular numerals for every amount.</li>
+                    <li><b>Surfaces</b> — white sheet, hairline dividers, sunken receipt band. Colour is reserved for state and the one primary action.</li>
+                    <li><b>Motion</b> — 220ms enter with an 8–10px lift and 0.986 scale; exit is shorter. All of it disappears under <code>prefers-reduced-motion</code>.</li>
+                </ul>
+            </article>
+            <article class="spec-card">
+                <h3>Build notes</h3>
+                <ul class="spec-list">
+                    <li>The per-store <b>Confirm received</b> button maps to the existing <code>orders.received</code> endpoint on <code>seller_orders</code>; the modal already receives every seller order.</li>
+                    <li>Step dates must come from real columns. Confirmed and processing have no timestamps today, so those labels stay dateless rather than inventing a timeline.</li>
+                    <li>The seller <b>More</b> menu is where cancel, report failed delivery, and open full page belong; those actions keep their existing routes and confirmation dialogs.</li>
+                    <li>Refund copy should render only from real payment state, not from order status alone. This mockup shows the happiest path.</li>
+                    <li>Production keeps <code>&lt;dialog&gt;</code>, Escape and backdrop dismissal, focus return, and the existing fetch/popstate behaviour.</li>
+                </ul>
+            </article>
+        </div>
+        <p class="notes-foot">Mockup only — no Blade, route, or database file has been changed. Buyer and seller states are illustrative; amounts and names are fictional. The next step is to pick a direction, then port the shell and one state at a time.</p>
+    </div>
+</section>
+<script>
+        const ICONS = {
+            close: '<path d="M6 6l12 12M18 6 6 18"/>',
+            'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+            'chevron-right': '<path d="m9 6 6 6-6 6"/>',
+            copy: '<rect x="9" y="9" width="10" height="10" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h8"/>',
+            check: '<path d="m5 12.5 4.5 4.5L19 7"/>',
+            truck: '<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>',
+            card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/>',
+            'check-circle': '<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
+            'x-circle': '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
+            box: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
+            bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 20h4"/>',
+            banknote: '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9h.01M18 15h.01"/>',
+            star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3Z"/>',
+            chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+            external: '<path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>',
+            more: '<path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="2.6"/>',
+            help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.7"/><path d="M12 17h.01"/>',
+            'map-pin': '<path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/>',
+            clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+            flag: '<path d="M5 21V4"/><path d="M5 5h11l-2 4 2 4H5"/>',
+            refresh: '<path d="M20 11a8 8 0 0 0-14.5-4L4 9"/><path d="M4 4v5h5"/><path d="M4 13a8 8 0 0 0 14.5 4L20 15"/><path d="M20 20v-5h-5"/>',
+            alert: '<path d="M12 3 21 20H3L12 3Z"/><path d="M12 9v5M12 17h.01"/>',
+            info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+            receipt: '<path d="M5 3h14v18l-3-2-2 2-2-2-2 2-3-2V3Z"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+            shield: '<path d="m12 3 7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/>',
+            'arrow-right': '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+            user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+            phone: '<path d="M7 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L16 12l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 5 5a2 2 0 0 1 2-2Z"/>',
+            calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>'
+        };
+
+        const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+
+        const ART = {
+            throw: '<rect width="48" height="48" fill="#efe8df"/><rect x="9" y="13" width="30" height="9" rx="3" fill="#dcc9b1"/><rect x="7" y="21" width="34" height="9" rx="3" fill="#cbb18f"/><rect x="10" y="29" width="28" height="7" rx="3" fill="#b99772"/><path d="M12 26.5h24M13 24.5h22" stroke="#a98660" stroke-width="1" opacity=".55"/><path d="M12 35.5h24" stroke="#a98660" stroke-width="1" opacity=".35"/>',
+            mugs: '<rect width="48" height="48" fill="#ece6df"/><path d="M9 16h13v15a4 4 0 0 1-4 4h-5a4 4 0 0 1-4-4V16Z" fill="#a98264"/><path d="M22 20h4a4 4 0 0 1 0 8h-4" stroke="#a98264" stroke-width="2.4"/><path d="M27 18h12v13a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V18Z" fill="#c8a184"/><path d="M39 21h2a3.5 3.5 0 0 1 0 7h-2" stroke="#c8a184" stroke-width="2.4"/><path d="M9 16h13M27 18h12" stroke="#8c6852" stroke-width="2"/><path d="M13 20v3M17 20v3" stroke="#f4ece4" stroke-width="1.2" opacity=".5"/>',
+            board: '<rect width="48" height="48" fill="#eef0e5"/><rect x="16" y="7" width="16" height="34" rx="8" fill="#bd925d"/><circle cx="24" cy="13" r="2.6" fill="#eef0e5"/><path d="M21 20h6M20 26h8M20 32h7" stroke="#a17848" stroke-width="1.3" stroke-linecap="round"/><path d="M24 7v34" stroke="#b08652" stroke-width="1" opacity=".4"/>'
+        };
+
+        const thumb = (kind) => `<span class="thumb" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none">${ART[kind] || ''}</svg></span>`;
+        const peso = (amount) => '₱' + Number(amount).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const esc = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const pill = (label, tone) => `<span class="pill pill-${tone}"><i aria-hidden="true"></i>${label}</span>`;
+        const copyBtn = (value, label) => `<button type="button" class="copy-mini" data-copy="${esc(value)}" data-copy-label="${esc(label)}" aria-label="Copy ${esc(label)}" title="Copy ${esc(label)}">${icon('copy')}</button>`;
+
+        const tracker = (steps) => {
+            if (!steps.length) return '';
+            return `<ol class="tracker" data-note="tracker" style="--steps:${steps.length}" aria-label="Order progress">
+                ${steps.map((step) => `<li class="tracker-step ${step.state}${step.final ? ' final' : ''}" ${step.state === 'current' ? 'aria-current="step"' : ''}>
+                    <span class="node">${step.state === 'done' ? icon('check') : ''}</span>
+                    <span class="step-label">${step.label}${step.state === 'current' ? '<span class="sr-only"> (current step)</span>' : ''}</span>
+                    ${step.date ? `<span class="step-date">${step.date}</span>` : ''}
+                </li>`).join('')}
+            </ol>`;
+        };
+
+        const itemRow = (item) => `<li class="item">
+            ${thumb(item.art)}
+            <div class="item-copy">
+                <p class="item-title">${item.name}</p>
+                ${(item.meta || []).map((line) => `<p class="item-meta">${line}</p>`).join('')}
+            </div>
+            <span class="item-amount num">${peso(item.total)}</span>
+        </li>`;
+
+        const noticeBox = (notice) => `<section class="notice notice-${notice.tone}">
+            <span class="notice-icon">${icon(notice.icon)}</span>
+            <div class="notice-body">
+                <p class="notice-title">${notice.title}</p>
+                <p class="notice-copy">${notice.copy}${notice.link ? ` <a href="#" data-mock-action${notice.linkToast ? ` data-toast="${esc(notice.linkToast)}"` : ''}>${notice.link}</a>` : ''}</p>
+            </div>
+            ${notice.action ? `<button type="button" class="btn btn-primary notice-action" data-mock-action${notice.actionToast ? ` data-toast="${esc(notice.actionToast)}"` : ''}>${notice.action}</button>` : ''}
+        </section>`;
+
+        const shipmentCard = (store) => `<section class="shipment">
+            <header class="shipment-head">
+                <span class="store-mark" style="--mark-bg:${store.markBg};--mark-ink:${store.markInk}" aria-hidden="true">${store.initials}</span>
+                <div class="store-copy">
+                    <p class="store-name">${store.name}</p>
+                    <p class="store-meta">${store.meta}</p>
+                </div>
+                ${pill(store.status, store.tone)}
+            </header>
+            <ul>${store.items.map(itemRow).join('')}</ul>
+            <footer class="shipment-foot">
+                <span class="subtotal-label">Store subtotal</span>
+                <strong class="subtotal-value num">${peso(store.subtotal)}</strong>
+                ${store.action ? `<button type="button" class="btn btn-outline shipment-action" data-mock-action${store.action.toast ? ` data-toast="${esc(store.action.toast)}"` : ''}>${icon(store.action.icon)}${store.action.label}</button>` : ''}
+            </footer>
+        </section>`;
+
+        const facts = (delivery, payment) => `<div class="facts">
+            <section class="fact">
+                <p class="fact-label">${icon('map-pin')}Delivery</p>
+                <p class="fact-main">${delivery.name}</p>
+                <p class="fact-line">${delivery.phone}${copyBtn(delivery.phone, 'phone number')}</p>
+                <p class="fact-line">${delivery.address}</p>
+                ${delivery.note ? `<p class="fact-note">“${delivery.note}”</p>` : ''}
+            </section>
+            <section class="fact">
+                <p class="fact-label">${icon('card')}Payment</p>
+                <p class="fact-main">${payment.method}</p>
+                <p class="fact-line"><span class="dot dot-${payment.tone}"></span>${payment.status} · ${payment.line}</p>
+                ${payment.note ? `<p class="fact-line">${payment.note}</p>` : ''}
+            </section>
+        </div>`;
+
+        const receiptBlock = (totals, note) => `<section class="receipt">
+            <dl class="receipt-rows">
+                <div class="row"><dt>Subtotal</dt><dd class="num">${peso(totals.subtotal)}</dd></div>
+                <div class="row"><dt>Shipping</dt><dd class="num">${totals.shipping ? peso(totals.shipping) : 'Free'}</dd></div>
+            </dl>
+            <div class="receipt-total">
+                <span class="label">${totals.label || 'Order total'}</span>
+                <strong class="value num">${peso(totals.total)}</strong>
+            </div>
+            ${note ? `<p class="receipt-note">${icon(note.icon)}${note.text}</p>` : ''}
+        </section>`;
+
+        const BUYER_DELIVERY = {
+            name: 'Maria Santos',
+            phone: '+63 917 555 0142',
+            address: '24 Mabini St., Brgy. Poblacion, Makati City, Metro Manila 1210',
+            note: 'Please leave at the guardhouse if I’m not home.'
+        };
+
+        const auroraBase = {
+            initials: 'AH',
+            markBg: '#e8eef8',
+            markInk: '#31507c',
+            name: 'Aurora Home',
+            items: [
+                { name: 'Linen Weave Throw', art: 'throw', meta: ['Sand · 130 × 170 cm', 'Qty 1 × ₱1,450.00'], total: 1450 },
+                { name: 'Stoneware Mug, Set of 2', art: 'mugs', meta: ['Clay', 'Qty 2 × ₱274.00'], total: 548 }
+            ],
+            subtotal: 1998
+        };
+
+        const luntianBase = {
+            initials: 'LL',
+            markBg: '#e9f1e8',
+            markInk: '#3f6240',
+            name: 'Luntian Living',
+            items: [
+                { name: 'Bamboo Serving Board', art: 'board', meta: ['Medium · 30 × 20 cm', 'Qty 1 × ₱750.00'], total: 750 }
+            ],
+            subtotal: 750
+        };
+
+        const BUYER = {
+            progress: {
+                label: 'In progress',
+                tone: 'moving',
+                icon: 'truck',
+                title: 'Order in progress',
+                sub: 'Aurora Home is on the way. Luntian Living was delivered Nov 1.',
+                fullRef: 'JM-01J9Z8K4M2X7QF2K9D4N3PQR5S',
+                shortRef: 'JM-…4N3PQR5S',
+                meta: ['Placed Oct 30, 2026 · 10:42 AM', '3 items', '₱2,748.00'],
+                pill: { label: '1 of 2 delivered', tone: 'neutral' },
+                steps: [
+                    { label: 'Placed', state: 'done', date: 'Oct 30' },
+                    { label: 'Confirmed', state: 'done' },
+                    { label: 'Shipped', state: 'current', date: 'Nov 1' },
+                    { label: 'Delivered', state: 'partial', date: '1 of 2' }
+                ],
+                notice: null,
+                stores: [
+                    { ...auroraBase, meta: 'Shipped Nov 1', status: 'On the way', tone: 'moving', action: { label: 'Confirm received', icon: 'check', toast: 'Mockup only — this posts orders.received for Aurora Home.' } },
+                    { ...luntianBase, meta: 'Delivered Nov 1', status: 'Delivered', tone: 'good', action: { label: 'Review items', icon: 'star', toast: 'Mockup only — this opens the review form for Luntian Living.' } }
+                ],
+                delivery: BUYER_DELIVERY,
+                payment: { method: 'GCash', status: 'Paid', line: 'Oct 30, 2026 · 10:43 AM', tone: 'good', note: 'Via PayMongo' },
+                totals: { subtotal: 2748, shipping: 0, total: 2748, label: 'Order total' },
+                receiptNote: { icon: 'check', text: 'Paid in full via GCash · Oct 30' },
+                foot: {
+                    help: 'Need help with this order? <a href="#" data-mock-action data-toast="Mockup only — support would open with this order attached.">Contact support</a>',
+                    secondary: { label: 'Open full order', icon: 'external', style: 'ghost', toast: 'Mockup only — this opens the full order page.' },
+                    primary: { label: 'Done', style: 'primary', toast: 'Mockup only — Done closes the dialog and returns focus to the order card.' }
+                }
+            },
+            due: {
+                label: 'Payment due',
+                tone: 'warn',
+                icon: 'card',
+                title: 'Payment needed',
+                sub: 'Pay ₱2,748.00 to keep your items reserved.',
+                fullRef: 'JM-01J9Z8K4M2X7QF2K9D4N3PQR5S',
+                shortRef: 'JM-…4N3PQR5S',
+                meta: ['Placed Oct 30, 2026 · 10:42 AM', '3 items', '₱2,748.00'],
+                pill: { label: 'Payment due', tone: 'warn' },
+                steps: [
+                    { label: 'Placed', state: 'done', date: 'Oct 30' },
+                    { label: 'Confirmed', state: 'current' },
+                    { label: 'Shipped', state: 'upcoming' },
+                    { label: 'Delivered', state: 'upcoming' }
+                ],
+                notice: {
+                    tone: 'warn',
+                    icon: 'clock',
+                    title: 'Pay ₱2,748.00 to confirm this order',
+                    copy: 'Your items are reserved until 12:42 PM today. Unpaid orders are cancelled and stock is released.',
+                    action: 'Pay now',
+                    actionToast: 'Mockup only — this opens PayMongo checkout for this order.'
+                },
+                stores: [
+                    { ...auroraBase, meta: 'Reserved until 12:42 PM', status: 'Waiting for payment', tone: 'warn' },
+                    { ...luntianBase, meta: 'Reserved until 12:42 PM', status: 'Waiting for payment', tone: 'warn' }
+                ],
+                delivery: BUYER_DELIVERY,
+                payment: { method: 'GCash', status: 'Awaiting payment', line: 'Due by 12:42 PM today', tone: 'warn', note: 'Via PayMongo' },
+                totals: { subtotal: 2748, shipping: 0, total: 2748, label: 'Order total' },
+                receiptNote: { icon: 'clock', text: 'Payment due by 12:42 PM today' },
+                foot: {
+                    help: 'Need help with this order? <a href="#" data-mock-action data-toast="Mockup only — support would open with this order attached.">Contact support</a>',
+                    secondary: { label: 'Open full order', icon: 'external', style: 'ghost', toast: 'Mockup only — this opens the full order page.' },
+                    primary: { label: 'Done', style: 'outline', toast: 'Mockup only — Done closes the dialog and returns focus to the order card.' }
+                }
+            },
+            delivered: {
+                label: 'Delivered',
+                tone: 'good',
+                icon: 'check-circle',
+                title: 'Delivered',
+                sub: 'Both stores delivered on Nov 1. Review what you received.',
+                fullRef: 'JM-01J9Z8K4M2X7QF2K9D4N3PQR5S',
+                shortRef: 'JM-…4N3PQR5S',
+                meta: ['Placed Oct 30, 2026 · 10:42 AM', '3 items', '₱2,748.00'],
+                pill: { label: 'Delivered', tone: 'good' },
+                steps: [
+                    { label: 'Placed', state: 'done', date: 'Oct 30' },
+                    { label: 'Confirmed', state: 'done' },
+                    { label: 'Shipped', state: 'done', date: 'Nov 1' },
+                    { label: 'Delivered', state: 'done', final: true, date: 'Nov 1' }
+                ],
+                notice: null,
+                stores: [
+                    { ...auroraBase, meta: 'Delivered Nov 1', status: 'Delivered', tone: 'good', action: { label: 'Review items', icon: 'star', toast: 'Mockup only — this opens the review form for Aurora Home.' } },
+                    { ...luntianBase, meta: 'Delivered Nov 1', status: 'Delivered', tone: 'good', action: { label: 'Review items', icon: 'star', toast: 'Mockup only — this opens the review form for Luntian Living.' } }
+                ],
+                delivery: BUYER_DELIVERY,
+                payment: { method: 'GCash', status: 'Paid', line: 'Oct 30, 2026 · 10:43 AM', tone: 'good', note: 'Via PayMongo' },
+                totals: { subtotal: 2748, shipping: 0, total: 2748, label: 'Order total' },
+                receiptNote: { icon: 'check', text: 'Paid in full via GCash · Oct 30' },
+                foot: {
+                    help: 'Need help with this order? <a href="#" data-mock-action data-toast="Mockup only — support would open with this order attached.">Contact support</a>',
+                    secondary: { label: 'Open full order', icon: 'external', style: 'ghost', toast: 'Mockup only — this opens the full order page.' },
+                    primary: { label: 'Review your items', style: 'primary', toast: 'Mockup only — this opens the review form for both stores.' }
+                }
+            },
+            cancelled: {
+                label: 'Cancelled',
+                tone: 'danger',
+                icon: 'x-circle',
+                title: 'Order cancelled',
+                sub: 'The stores restored stock. Any online payment is refunded.',
+                fullRef: 'JM-01J9Z8K4M2X7QF2K9D4N3PQR5S',
+                shortRef: 'JM-…4N3PQR5S',
+                meta: ['Cancelled Nov 2, 2026', '3 items', '₱2,748.00'],
+                pill: { label: 'Cancelled', tone: 'danger' },
+                steps: [],
+                cancelledLine: 'Cancelled Nov 2, 2026 · refund sent to GCash',
+                notice: {
+                    tone: 'info',
+                    icon: 'refresh',
+                    title: 'Refund on its way',
+                    copy: '₱2,748.00 was refunded to GCash on Nov 2. It can take 3–5 business days to appear.',
+                    link: 'Refund help',
+                    linkToast: 'Mockup only — this opens the refund help article.'
+                },
+                stores: [
+                    { ...auroraBase, meta: 'Cancelled Nov 2 · stock restored', status: 'Cancelled', tone: 'danger' },
+                    { ...luntianBase, meta: 'Cancelled Nov 2 · stock restored', status: 'Cancelled', tone: 'danger' }
+                ],
+                delivery: BUYER_DELIVERY,
+                payment: { method: 'GCash', status: 'Refund sent', line: 'Nov 2, 2026', tone: 'neutral', note: 'Via PayMongo' },
+                totals: { subtotal: 2748, shipping: 0, total: 2748, label: 'Order total' },
+                receiptNote: { icon: 'refresh', text: 'Refunded to GCash · Nov 2' },
+                foot: {
+                    help: 'Need help with this order? <a href="#" data-mock-action data-toast="Mockup only — support would open with this order attached.">Contact support</a>',
+                    secondary: { label: 'Open full order', icon: 'external', style: 'ghost', toast: 'Mockup only — this opens the full order page.' },
+                    primary: { label: 'Done', style: 'primary', toast: 'Mockup only — Done closes the dialog and returns focus to the order card.' }
+                }
+            }
+        };
+
+        const SELLER_DELIVERY = {
+            name: 'Maria Santos',
+            phone: '+63 917 555 0142',
+            address: '24 Mabini St., Brgy. Poblacion, Makati City, Metro Manila 1210',
+            note: 'Please leave at the guardhouse if I’m not home.'
+        };
+
+        const SELLER_ITEMS = [
+            { name: 'Linen Weave Throw', art: 'throw', meta: ['Sand · 130 × 170 cm', 'Qty 1 × ₱1,450.00'], total: 1450 },
+            { name: 'Stoneware Mug, Set of 2', art: 'mugs', meta: ['Clay', 'Qty 2 × ₱274.00'], total: 548 }
+        ];
+
+        const SELLER_TOTALS = { subtotal: 1998, shipping: 0, total: 1998, label: 'Your total' };
+        const SELLER_FULL_REF = 'JM-01J9Z8K4M2X7QF2K9DC6H7V9KX';
+        const SELLER_SHORT_REF = 'JM-…C6H7V9KX';
+
+        const sellerMore = {
+            copy: { label: 'Copy order number', icon: 'copy', copy: true },
+            full: { label: 'Open full page', icon: 'external', toast: 'Mockup only — this opens the existing seller order page.' },
+            cancel: { label: 'Cancel order', icon: 'x-circle', danger: true, toast: 'Mockup only — this opens the existing cancellation confirmation.' },
+            issue: { label: 'Report an issue', icon: 'flag', toast: 'Mockup only — this opens the existing issue form.' }
+        };
+
+        const SELLER = {
+            new: {
+                label: 'New order',
+                tone: 'moving',
+                icon: 'bell',
+                title: 'New order',
+                sub: 'Maria Santos paid by GCash. Confirm to start preparing.',
+                fullRef: SELLER_FULL_REF,
+                shortRef: SELLER_SHORT_REF,
+                meta: ['Placed Oct 31, 2026 · 9:18 AM', '2 items', '₱1,998.00'],
+                pill: { label: 'Awaiting confirmation', tone: 'moving' },
+                steps: [
+                    { label: 'Placed', state: 'current', date: 'Oct 31' },
+                    { label: 'Confirmed', state: 'upcoming' },
+                    { label: 'Processing', state: 'upcoming' },
+                    { label: 'Shipped', state: 'upcoming' },
+                    { label: 'Delivered', state: 'upcoming' }
+                ],
+                next: {
+                    eyebrow: 'Next step',
+                    icon: 'check-circle',
+                    title: 'Confirm this order',
+                    copy: 'Confirming accepts the order and tells Maria you are preparing it. Stock is already reserved for you.',
+                    note: { icon: 'clock', text: 'Payment confirmed via PayMongo · Oct 31' }
+                },
+                notice: null,
+                items: SELLER_ITEMS,
+                itemsHint: 'Stock reserved',
+                delivery: SELLER_DELIVERY,
+                payment: { method: 'GCash', status: 'Paid', line: 'Oct 31, 2026 · 9:19 AM', tone: 'good', note: 'Via PayMongo' },
+                totals: SELLER_TOTALS,
+                foot: {
+                    help: 'Esc to close · ← → to switch orders',
+                    more: [sellerMore.copy, sellerMore.full, { separator: true }, sellerMore.cancel],
+                    secondary: { label: 'Message buyer', icon: 'chat', style: 'outline', toast: 'Mockup only — this opens the conversation with Maria Santos.' },
+                    primary: { label: 'Confirm order', icon: 'check', style: 'primary', toast: 'Mockup only — this posts seller.orders.update with status “confirmed”.' }
+                }
+            },
+            preparing: {
+                label: 'Preparing',
+                tone: 'moving',
+                icon: 'box',
+                title: 'Preparing your order',
+                sub: '2 items are packed. Mark shipped once the courier has the parcel.',
+                fullRef: SELLER_FULL_REF,
+                shortRef: SELLER_SHORT_REF,
+                meta: ['Placed Oct 31, 2026 · 9:18 AM', '2 items', '₱1,998.00'],
+                pill: { label: 'Processing', tone: 'moving' },
+                steps: [
+                    { label: 'Placed', state: 'done', date: 'Oct 31' },
+                    { label: 'Confirmed', state: 'done' },
+                    { label: 'Processing', state: 'current' },
+                    { label: 'Shipped', state: 'upcoming' },
+                    { label: 'Delivered', state: 'upcoming' }
+                ],
+                next: {
+                    eyebrow: 'Next step',
+                    icon: 'truck',
+                    title: 'Hand the parcel to your courier',
+                    copy: 'Mark shipped only after the parcel has left your store. The buyer is notified and the delivery clock starts.',
+                    note: { icon: 'bell', text: 'Maria is notified when you mark it shipped.' }
+                },
+                notice: null,
+                items: SELLER_ITEMS,
+                itemsHint: 'Stock reserved',
+                delivery: SELLER_DELIVERY,
+                payment: { method: 'GCash', status: 'Paid', line: 'Oct 31, 2026 · 9:19 AM', tone: 'good', note: 'Via PayMongo' },
+                totals: SELLER_TOTALS,
+                foot: {
+                    help: 'Esc to close · ← → to switch orders',
+                    more: [sellerMore.copy, sellerMore.full, { separator: true }, sellerMore.cancel],
+                    secondary: { label: 'Message buyer', icon: 'chat', style: 'outline', toast: 'Mockup only — this opens the conversation with Maria Santos.' },
+                    primary: { label: 'Mark as shipped', icon: 'truck', style: 'primary', toast: 'Mockup only — this posts seller.orders.update with status “shipped”.' }
+                }
+            },
+            cash: {
+                label: 'Cash to collect',
+                tone: 'warn',
+                icon: 'banknote',
+                title: 'Delivered',
+                sub: 'The buyer has the parcel. Record the cash once you have it.',
+                fullRef: SELLER_FULL_REF,
+                shortRef: SELLER_SHORT_REF,
+                meta: ['Delivered Nov 2, 2026', '2 items', '₱1,998.00'],
+                pill: { label: 'Cash to collect', tone: 'warn' },
+                steps: [
+                    { label: 'Placed', state: 'done', date: 'Oct 31' },
+                    { label: 'Confirmed', state: 'done' },
+                    { label: 'Processing', state: 'done' },
+                    { label: 'Shipped', state: 'done', date: 'Nov 1' },
+                    { label: 'Delivered', state: 'done', final: true, date: 'Nov 2' }
+                ],
+                next: {
+                    eyebrow: 'Next step',
+                    icon: 'banknote',
+                    title: 'Record cash collected',
+                    copy: 'Confirm you received ₱1,998.00 from Maria Santos. Only record cash you actually have.',
+                    note: { icon: 'shield', text: 'This closes your side of the order.' }
+                },
+                notice: null,
+                items: SELLER_ITEMS,
+                itemsHint: 'Delivered',
+                delivery: SELLER_DELIVERY,
+                payment: { method: 'Cash on delivery', status: 'Cash due', line: 'Collect on delivery', tone: 'warn', note: 'Record only cash you actually have' },
+                totals: SELLER_TOTALS,
+                foot: {
+                    help: 'Esc to close · ← → to switch orders',
+                    more: [sellerMore.copy, sellerMore.full, { separator: true }, sellerMore.issue],
+                    secondary: { label: 'Message buyer', icon: 'chat', style: 'outline', toast: 'Mockup only — this opens the conversation with Maria Santos.' },
+                    primary: { label: 'Record cash collected', icon: 'banknote', style: 'primary', toast: 'Mockup only — this posts seller.orders.cod-collection.' }
+                }
+            },
+            cancelled: {
+                label: 'Cancelled',
+                tone: 'danger',
+                icon: 'x-circle',
+                title: 'Order cancelled',
+                sub: 'Your part of the order was cancelled and stock was restored.',
+                fullRef: SELLER_FULL_REF,
+                shortRef: SELLER_SHORT_REF,
+                meta: ['Cancelled Nov 2, 2026', '2 items', '₱1,998.00'],
+                pill: { label: 'Cancelled', tone: 'danger' },
+                steps: [],
+                next: null,
+                notice: {
+                    tone: 'danger',
+                    icon: 'x-circle',
+                    title: 'This order was cancelled',
+                    copy: 'Only Aurora Home’s part was cancelled. Both items were returned to stock and the buyer was notified.'
+                },
+                items: SELLER_ITEMS,
+                itemsHint: 'Stock restored',
+                muted: true,
+                delivery: SELLER_DELIVERY,
+                payment: { method: 'GCash', status: 'Refund sent', line: 'Nov 2, 2026', tone: 'neutral', note: 'Via PayMongo' },
+                totals: SELLER_TOTALS,
+                foot: {
+                    help: 'Esc to close · ← → to switch orders',
+                    more: [sellerMore.copy, { separator: true }, sellerMore.issue],
+                    secondary: { label: 'Message buyer', icon: 'chat', style: 'outline', toast: 'Mockup only — this opens the conversation with Maria Santos.' },
+                    primary: { label: 'Open full page', icon: 'external', style: 'primary', toast: 'Mockup only — this opens the existing seller order page.' }
+                }
+            }
+        };
+
+        const actionButton = (action) => {
+            if (!action) return '';
+            const message = action.toast || `Mockup only — “${action.label}” is not wired here.`;
+            return `<button type="button" class="btn btn-${action.style || 'outline'}" data-mock-action data-toast="${esc(message)}">${action.icon ? icon(action.icon) : ''}${action.label}</button>`;
+        };
+
+        const moreMenu = (items, fullRef) => {
+            if (!items?.length) return '';
+            const entries = items.map((item) => {
+                if (item.separator) return '<div class="menu-sep" role="separator"></div>';
+                const attrs = item.copy
+                    ? `data-copy="${esc(fullRef)}" data-copy-label="Order number"`
+                    : `data-mock-action data-toast="${esc(item.toast || `Mockup only — “${item.label}” is not wired here.`)}"`;
+                return `<button type="button" class="menu-item${item.danger ? ' is-danger' : ''}" role="menuitem" ${attrs}>${icon(item.icon)}${item.label}</button>`;
+            }).join('');
+            return `<div class="more-wrap">
+                <button type="button" class="btn btn-outline more-btn" data-more aria-haspopup="menu" aria-expanded="false" aria-label="More order actions">${icon('more')}<span>More</span></button>
+                <div class="more-menu" role="menu" hidden>${entries}</div>
+            </div>`;
+        };
+
+        const dialogFooter = (data, role) => `<footer class="dialog-foot" data-note="footer">
+            <div class="foot-left">
+                ${role === 'seller' ? moreMenu(data.foot.more, data.fullRef) : ''}
+                <span class="foot-help">${data.foot.help || ''}</span>
+            </div>
+            <div class="foot-actions">
+                ${actionButton(data.foot.secondary)}
+                ${actionButton(data.foot.primary)}
+            </div>
+        </footer>`;
+
+        const header = (data, role) => `<header class="dialog-head${data.steps?.length ? '' : ' no-tracker'}" data-note="header">
+            <div class="head-top">
+                <div class="head-id">
+                    <span class="eyebrow">${icon(role === 'seller' ? 'box' : 'receipt')}${role === 'seller' ? 'Seller order' : 'Order'}</span>
+                    <span class="order-ref" title="${esc(data.fullRef)}">${data.shortRef}</span>
+                    <button type="button" class="copy-ref" data-copy="${esc(data.fullRef)}" data-copy-label="Order number" aria-label="Copy full order number" title="Copy full order number">${icon('copy')}</button>
+                </div>
+                <div class="head-actions">
+                    ${role === 'seller' ? `<button type="button" class="icon-btn head-nav" data-mock-action data-toast="Mockup only — this switches to the previous seller order." aria-label="Previous order">${icon('chevron-left')}</button>
+                    <button type="button" class="icon-btn head-nav" data-mock-action data-toast="Mockup only — this switches to the next seller order." aria-label="Next order">${icon('chevron-right')}</button>` : ''}
+                    <button type="button" class="icon-btn" data-mock-action data-toast="Mockup only — in production this closes the dialog and returns focus to the order card." aria-label="Close order details">${icon('close')}</button>
+                </div>
+            </div>
+            <div class="head-status">
+                <span class="status-icon ${data.tone}">${icon(data.icon)}</span>
+                <div class="status-copy">
+                    <div class="status-line">
+                        <h2 id="order-modal-title">${data.title}</h2>
+                        ${data.pill ? pill(data.pill.label, data.pill.tone) : ''}
+                    </div>
+                    <p class="status-sub">${data.sub}</p>
+                    <p class="head-meta">${(data.meta || []).map((item, index) => `${index ? '<span class="meta-dot" aria-hidden="true">·</span>' : ''}${item}`).join('')}</p>
+                </div>
+            </div>
+            ${tracker(data.steps || [])}
+        </header>`;
+
+        const buyerBody = (data) => `<div class="dialog-body">
+            ${data.cancelledLine ? `<p class="cancelled-line">${icon('x-circle')}${data.cancelledLine}</p>` : ''}
+            ${data.notice ? noticeBox(data.notice) : ''}
+            <div class="shipments${data.muted ? ' is-muted' : ''}" data-note="shipments">${data.stores.map(shipmentCard).join('')}</div>
+            <div data-note="facts">${facts(data.delivery, data.payment)}</div>
+            <div data-note="receipt">${receiptBlock(data.totals, data.receiptNote)}</div>
+        </div>`;
+
+        const buyerDialog = (data, sheet) => `<article class="dialog buyer-dialog${sheet ? ' is-sheet' : ''}" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+            ${header(data, 'buyer')}
+            ${buyerBody(data)}
+            ${dialogFooter(data, 'buyer')}
+        </article>`;
+
+        const sellerNext = (next) => `<section class="next-card" data-note="next">
+            <p class="next-eyebrow">${icon(next.icon || 'arrow-right')}${next.eyebrow || 'Next step'}</p>
+            <h3 class="next-title">${next.title}</h3>
+            <p class="next-copy">${next.copy}</p>
+            ${next.note ? `<p class="next-note">${icon(next.note.icon)}${next.note.text}</p>` : ''}
+        </section>`;
+
+        const sellerItems = (data) => `<section class="card${data.muted ? ' is-muted' : ''}">
+            <header class="card-head">
+                <p class="card-title">Items <b>(${data.items.length})</b></p>
+                <span class="card-hint">${data.itemsHint || (data.muted ? 'Stock restored' : 'Stock reserved')}</span>
+            </header>
+            <ul>${data.items.map(itemRow).join('')}</ul>
+        </section>`;
+
+        const sellerSummary = (data) => `<section class="rail-card" data-note="receipt">
+            <p class="rail-label">Order summary</p>
+            <dl class="rail-summary">
+                <div class="row"><dt>Subtotal</dt><dd class="num">${peso(data.totals.subtotal)}</dd></div>
+                <div class="row"><dt>Shipping</dt><dd class="num">${data.totals.shipping ? peso(data.totals.shipping) : 'Free'}</dd></div>
+            </dl>
+            <div class="rail-total">
+                <span class="label">${data.totals.label || 'Your total'}</span>
+                <strong class="value num">${peso(data.totals.total)}</strong>
+            </div>
+            <p class="rail-pay"><span class="dot dot-${data.payment.tone}"></span>${data.payment.method} · ${data.payment.status}</p>
+            <p class="rail-line">${data.payment.line}${data.payment.note ? ` · ${data.payment.note}` : ''}</p>
+        </section>`;
+
+        const sellerDelivery = (data) => `<section class="rail-card" data-note="facts">
+            <p class="rail-label">Deliver to</p>
+            <p class="rail-name">${data.delivery.name}</p>
+            <p class="rail-line">${data.delivery.phone}${copyBtn(data.delivery.phone, 'phone number')}</p>
+            <p class="rail-line">${data.delivery.address}</p>
+            ${data.delivery.note ? `<p class="rail-note">“${data.delivery.note}”</p>` : ''}
+        </section>`;
+
+        const sellerBody = (data) => `<div class="dialog-body">
+            ${data.notice ? noticeBox(data.notice) : ''}
+            <div class="seller-grid">
+                <div class="seller-main">
+                    ${data.next ? sellerNext(data.next) : ''}
+                    ${sellerItems(data)}
+                </div>
+                <aside class="rail" data-note="rail">
+                    ${sellerSummary(data)}
+                    ${sellerDelivery(data)}
+                </aside>
+            </div>
+        </div>`;
+
+        const sellerDialog = (data, sheet) => `<article class="dialog seller-dialog${sheet ? ' is-sheet' : ''}" role="dialog" aria-modal="true" aria-labelledby="order-modal-title">
+            ${header(data, 'seller')}
+            ${sellerBody(data)}
+            ${dialogFooter(data, 'seller')}
+        </article>`;
+
+        const STATE_LABELS = {
+            buyer: { progress: 'In progress', due: 'Payment due', delivered: 'Delivered', cancelled: 'Cancelled' },
+            seller: { new: 'New order', preparing: 'Preparing', cash: 'Cash to collect', cancelled: 'Cancelled' }
+        };
+
+        const stage = document.getElementById('stage');
+        const desktopView = document.getElementById('desktop-view');
+        const phoneView = document.getElementById('phone-view');
+        const dialogHost = document.getElementById('dialog-host');
+        const sheetHost = document.getElementById('sheet-host');
+        const stateSelect = document.getElementById('state-select');
+        const stageCaption = document.getElementById('stage-caption');
+        const notes = document.getElementById('notes');
+        const notesToggle = document.getElementById('notes-toggle');
+        const toast = document.getElementById('toast');
+        const toolbar = document.querySelector('.lab-bar');
+
+        let currentRole = 'buyer';
+        let currentState = 'progress';
+        let currentViewport = 'desktop';
+        let toastTimer = 0;
+
+        const showToast = (message) => {
+            window.clearTimeout(toastTimer);
+            toast.textContent = message;
+            toast.classList.add('is-visible');
+            toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 2400);
+        };
+
+        const copyText = async (value) => {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(value);
+                    return true;
+                }
+            } catch (error) {
+                // Fall back to the selection method below.
+            }
+
+            const field = document.createElement('textarea');
+            field.value = value;
+            field.setAttribute('readonly', '');
+            field.style.position = 'fixed';
+            field.style.top = '-1000px';
+            field.style.opacity = '0';
+            document.body.appendChild(field);
+            field.select();
+            let copied = false;
+            try {
+                copied = document.execCommand('copy');
+            } catch (error) {
+                copied = false;
+            }
+            field.remove();
+            return copied;
+        };
+
+        const closeMenus = () => {
+            document.querySelectorAll('.more-menu').forEach((menu) => {
+                menu.hidden = true;
+                menu.parentElement.querySelector('[data-more]')?.setAttribute('aria-expanded', 'false');
+            });
+        };
+
+        const highlightNote = (name) => {
+            document.querySelectorAll('[data-note]').forEach((element) => {
+                element.classList.toggle('is-highlighted', Boolean(name) && element.dataset.note === name);
+            });
+        };
+
+        const clearHighlight = () => highlightNote(null);
+
+        const setNotes = (open) => {
+            notes.hidden = !open;
+            notesToggle.setAttribute('aria-pressed', String(open));
+            document.body.classList.toggle('notes-open', open);
+            if (open) {
+                syncBarHeight();
+                notes.scrollTop = 0;
+            }
+        };
+
+        const syncBarHeight = () => {
+            document.documentElement.style.setProperty('--bar-h', `${Math.round(toolbar.getBoundingClientRect().height)}px`);
+        };
+
+        const render = () => {
+            const states = currentRole === 'buyer' ? BUYER : SELLER;
+            if (!states[currentState]) {
+                currentState = Object.keys(states)[0];
+            }
+
+            const sheet = currentViewport === 'phone';
+            stage.classList.toggle('is-phone', sheet);
+            desktopView.hidden = sheet;
+            phoneView.hidden = !sheet;
+            dialogHost.innerHTML = '';
+            sheetHost.innerHTML = '';
+
+            const data = states[currentState];
+            const host = sheet ? sheetHost : dialogHost;
+            host.innerHTML = currentRole === 'buyer' ? buyerDialog(data, sheet) : sellerDialog(data, sheet);
+
+            stateSelect.innerHTML = Object.entries(STATE_LABELS[currentRole])
+                .map(([value, label]) => `<option value="${value}">${label}</option>`)
+                .join('');
+            stateSelect.value = currentState;
+
+            document.querySelectorAll('[data-role]').forEach((button) => {
+                button.setAttribute('aria-pressed', String(button.dataset.role === currentRole));
+            });
+            document.querySelectorAll('[data-viewport]').forEach((button) => {
+                button.setAttribute('aria-pressed', String(button.dataset.viewport === currentViewport));
+            });
+
+            const width = sheet ? '390 px sheet' : currentRole === 'seller' ? '940 px' : '760 px';
+            stageCaption.textContent = `${currentRole === 'buyer' ? 'Buyer' : 'Seller'} · ${STATE_LABELS[currentRole][currentState]} · ${width}`;
+
+            closeMenus();
+            clearHighlight();
+        };
+
+        document.querySelectorAll('[data-note-target]').forEach((card) => {
+            const target = card.dataset.noteTarget;
+            card.addEventListener('mouseenter', () => highlightNote(target));
+            card.addEventListener('mouseleave', clearHighlight);
+            card.addEventListener('focus', () => highlightNote(target));
+            card.addEventListener('blur', clearHighlight);
+        });
+
+        document.addEventListener('click', async (event) => {
+            const roleButton = event.target.closest('[data-role]');
+            if (roleButton) {
+                const role = roleButton.dataset.role;
+                if (role !== currentRole) {
+                    currentRole = role;
+                    currentState = Object.keys(role === 'buyer' ? BUYER : SELLER)[0];
+                }
+                render();
+                return;
+            }
+
+            const viewportButton = event.target.closest('[data-viewport]');
+            if (viewportButton) {
+                currentViewport = viewportButton.dataset.viewport;
+                render();
+                return;
+            }
+
+            if (event.target.closest('#notes-toggle')) {
+                setNotes(notes.hidden);
+                return;
+            }
+
+            const moreTrigger = event.target.closest('[data-more]');
+            if (moreTrigger) {
+                event.preventDefault();
+                event.stopPropagation();
+                const menu = moreTrigger.parentElement.querySelector('.more-menu');
+                const shouldOpen = menu.hidden;
+                closeMenus();
+                if (shouldOpen) {
+                    menu.hidden = false;
+                    moreTrigger.setAttribute('aria-expanded', 'true');
+                }
+                return;
+            }
+
+            const copyTarget = event.target.closest('[data-copy]');
+            if (copyTarget) {
+                event.preventDefault();
+                const copied = await copyText(copyTarget.dataset.copy || '');
+                if (copied) {
+                    copyTarget.classList.add('is-copied');
+                    window.setTimeout(() => copyTarget.classList.remove('is-copied'), 1500);
+                    const label = copyTarget.dataset.copyLabel || 'value';
+                    showToast(`${label.charAt(0).toUpperCase()}${label.slice(1)} copied.`);
+                } else {
+                    showToast('Could not copy. Select the text and copy it manually.');
+                }
+                closeMenus();
+                return;
+            }
+
+            const mockAction = event.target.closest('[data-mock-action]');
+            if (mockAction) {
+                event.preventDefault();
+                const fallback = `Mockup only — “${mockAction.textContent.trim()}” is not wired here.`;
+                showToast(mockAction.dataset.toast || fallback);
+                closeMenus();
+                return;
+            }
+
+            if (!event.target.closest('.more-wrap')) {
+                closeMenus();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            closeMenus();
+            if (!notes.hidden) {
+                setNotes(false);
+            }
+        });
+
+        stateSelect.addEventListener('change', () => {
+            currentState = stateSelect.value;
+            render();
+        });
+
+        window.addEventListener('resize', syncBarHeight);
+
+        syncBarHeight();
+        render();
+
+</script>
+</body>
+</html>

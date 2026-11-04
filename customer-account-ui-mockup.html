@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Customer Account UI — Mockup (Recommended)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<style>
+  .account-shell { display: grid; grid-template-columns: 230px 1fr; }
+  :root { --bg: #fafaf9; --surface: #ffffff; --line: #e7e5e4; --ink: #18181b; --muted: #78716c; --brand: #2563eb; --brand-hover: #1d4ed8; --success: #16a34a; --danger: #dc2626; --warning: #d97706; --paper: #f6f5f4; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: var(--bg); color: var(--ink); }
+  .page { min-height: 100vh; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .text-meta { color: var(--muted); }
+  .tab { position: relative; padding: 0 12px; height: 44px; display: inline-flex; align-items: center; font-weight: 600; color: var(--muted); transition: color .15s, border-color .15s; }
+  .tab.active { color: var(--ink); border-bottom: 2px solid var(--brand); }
+  .tab:not(.active):hover { color: var(--ink); }
+  .tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: var(--brand); transform: scaleX(0); transform-origin: right; transition: transform .15s; }
+  .tab.active::after { transform: scaleX(1); transform-origin: left; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .cart-empty { text-align: center; padding: 24px; color: var(--muted); font-size: 14px; }
+  .empty-state { text-align: center; padding: 40px 24px; }
+  .empty-state svg { width: 48px; height: 48px; color: var(--muted); margin-bottom: 12px; }
+  .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: 8px; background: var(--brand); color: #fff; font-weight: 600; font-size: 14px; border: none; cursor: pointer; }
+  .btn-primary:hover { background: var(--brand-hover); }
+  .btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 600; font-size: 14px; cursor: pointer; }
+  .btn-outline:hover { border-color: var(--brand); color: var(--brand); }
+  .order-card { border-bottom: 1px solid var(--line); }
+  .order-card:last-child { border-bottom: none; }
+  .order-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; }
+  .order-body { padding: 14px 16px; }
+  .order-foot { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; gap: 12px; }
+  .tabbed { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  .attention { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; background: #fffbeb; border: 1px solid #f59e0b; font-size: 13px; }
+  .row-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .collapse { transition: max-height 0.2s ease; }
+  @media (max-width: 768px) { .account-shell { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ -->
+<!--  ACCOUNT SHELL  —  persistent sidebar (recommended)         -->
+<!-- ============================================================ -->
+<div class="page h-screen flex" x-data="{ tab: 'orders' }">
+  <!-- Sidebar -->
+  <aside class="w-56 shrink-0 bg-white border-r border-line flex flex-col h-full p-4">
+    <div class="flex items-center gap-2.5 px-2 mb-6">
+      <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1m-8-8h8m-8 4h4m8-6v3.5a2.5 2.5 0 0 1-5 0V9a2.5 2.5 0 0 1 5 0z"/></svg></span>
+      <span class="text-base font-semibold tracking-tight">JMMart</span>
+    </div>
+    <nav class="space-y-1">
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:bg-blue-50 hover:text-brand transition" href="#" @click="tab='orders'" :class="{ 'bg-blue-50 text-brand': tab==='orders' }">
+        <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        My purchases
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:bg-blue-50 hover:text-brand transition" href="#" @click="tab='messages'" :class="{ 'bg-blue-50 text-brand': tab==='messages' }">
+        <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Messages
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:bg-blue-50 hover:text-brand transition" href="#" @click="tab='reviews'" :class="{ 'bg-blue-50 text-brand': tab==='reviews' }">
+        <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20.5V17M12 17v-3m0 3h.01M10 3h4l-1 4.5 3 3.5-4 6"/></svg>
+        Reviews
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:bg-blue-50 hover:text-brand transition" href="#" @click="tab='addresses'" :class="{ 'bg-blue-50 text-brand': tab==='addresses' }">
+        <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        Delivery addresses
+      </a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:bg-blue-50 hover:text-brand transition mt-auto" href="#" @click="tab='settings'" :class="{ 'bg-blue-50 text-brand': tab==='settings' }">
+        <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.15-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.15 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1.15 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Account settings
+      </a>
+    </nav>
+    <div class="mt-4 pt-4 border-t border-line text-xs text-muted flex items-center gap-2 px-3">
+      <span class="inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
+      Signed in as <strong>buyer@example.com</strong>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div class="flex-1 overflow-y-auto p-6">
+    <!-- ---- ORDERS (recommended: extracted summary, clean cards) ---- -->
+    <div class="max-w-6xl">
+      <div class="flex items-end justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">My purchases</h1>
+          <p class="text-meta mt-1"><span id="orderCount">4</span> orders total <a href="#" class="text-brand font-semibold underline-offset-2 hover:underline">Continue shopping →</a></p>
+        </div>
+        <form method="GET" role="search" class="w-full sm:w-80">
+          <label for="purchase-search" class="sr-only">Search purchases</label>
+          <div class="relative">
+            <svg class="pointer-events-none absolute left-3 top-1/2 h-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="m20 20-3.5-3.5"/></svg>
+            <input id="purchase-search" name="search" value="" type="search" class="field-control pl-9 text-base sm:text-meta w-full rounded-lg border border-line px-3 py-2.5 focus:border-brand focus:ring-2 focus:ring-brand/20" placeholder="Order #, store, or item" />
+            <a href="#" class="absolute right-1 top-1 grid h-9 w-9 place-items-center rounded-lg text-muted hover:text-ink" aria-label="Clear search"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></svg></a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Waiting-on-you strip -->
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm mb-6">
+        <strong class="font-semibold text-ink">Waiting on you</strong>
+        <a class="inline-flex min-h-8 items-center gap-1.5 font-semibold text-amber-700 underline-offset-2 hover:underline"><span class="h-2 w-2 rounded-full bg-amber-500"></span>1 to pay</a>
+        <a class="inline-flex min-h-8 items-center gap-1.5 font-semibold text-amber-700 underline-offset-2 hover:underline"><span class="h-2 w-2 rounded-full bg-amber-500"></span>2 returns need you</a>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabbed">
+        <a class="tab active" href="#" @click="tab='all'">All <span class="badge">4</span></a>
+        <a class="tab" href="#" @click="tab='to_pay'">To pay <span class="badge">1</span></a>
+        <a class="tab" href="#" @click="tab='to_review'">To review <span class="badge">1</span></a>
+        <a class="tab" href="#" @click="tab='returns'">Returns <span class="badge">2</span></a>
+        <a class="tab" href="#" @click="tab='delivered'">Delivered <span class="badge">1</span></a>
+      </div>
+
+      <!-- Order cards (clean, extracted summary) -->
+      <section class="mb-6" aria-label="Orders">
+        <div class="order-card">
+          <div class="order-head">
+            <div>
+              <p class="text-sm font-semibold text-ink">Lumina Studio</p>
+              <p class="text-xs text-meta">Order #0317 · 2 items</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="badge bg-amber-50 text-amber-700 border border-amber-200">To pay</span>
+              <button class="btn-outline h-10 px-3 text-sm"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 11.5a8.5 8.5 0 0 1-4.7 7.6 8.38 8.38 0 0 1-3.8.9 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg> Chat</button>
+            </div>
+          </div>
+          <div class="order-body">
+            <ul class="divide-y divide-line-soft">
+              <li class="grid grid-cols-[64px_minmax(0,1fr)] gap-x-4 py-3">
+                <div class="relative h-16 overflow-hidden rounded-md border border-line bg-paper"><img src="https://placehold.co/80x80/e7e5e4/9ca3af?text=📷" alt="" class="h-full w-full object-cover" /></div>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium">Artisan Sproutket</p>
+                  <p class="text-xs text-meta">Variant: Matte White · 1</p>
+                </div>
+                <div class="col-start-2 mt-1.5 flex gap-4 text-sm sm:contents">
+                  <p class="tabular-nums">₱990.00</p>
+                  <p class="text-meta">Qty: 1</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="order-foot">
+            <div class="min-w-0">
+              <p class="text-base font-semibold tabular-nums">₱990.00</p>
+              <p class="text-xs text-meta">Pay with Maya or bank transfer — due in 26h</p>
+            </div>
+            <div class="row-actions">
+              <a class="text-sm font-semibold text-brand underline-offset-2 hover:underline">View order</a>
+              <a class="text-sm font-semibold text-meta underline-offset-2 hover:underline">View return</a>
+              <a class="text-sm font-semibold text-brand underline-offset-2 hover:underline">Write review</a>
+              <button class="btn-primary h-10 px-4 text-sm">Pay now</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Load more placeholder (recommended: debounced, accessible) -->
+      <div class="flex items-center justify-center gap-3 py-3 text-meta">
+        <span class="text-sm">Showing 10 of 24 orders</span>
+        <a class="btn-outline h-10 px-4 text-sm" href="#" id="loadMore">Load more</a>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  PROFILE / SETTINGS (recommended: live form + save)        -->
+    <!-- ============================================================ -->
+    <div class="max-w-6xl mt-8">
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Account settings</h1>
+            <p class="text-meta mt-1">Manage your profile, contact details, and preferences.</p>
+          </div>
+          <span class="badge bg-emerald-50 text-emerald-700 border border-emerald-200">Saved</span>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2">
+          <!-- Profile -->
+          <div class="space-y-4">
+            <h2 class="text-sm font-semibold text-ink">Profile</h2>
+            <div class="grid gap-4 md:grid-cols-2">
+              <div><label class="mb-1 block text-sm font-medium text-muted">Display name</label><input class="field-control w-full rounded-lg border border-line px-3 py-2.5 text-sm" value="Priya Nair" /></div>
+              <div><label class="mb-1 block text-sm font-medium text-muted">Email</label><input class="field-control w-full rounded-lg border border-line px-3 py-2.5 text-sm" value="priya@example.com" /></div>
+            </div>
+            <div><label class="mb-1 block text-sm font-medium text-muted">Bio</label><textarea class="field-control w-full rounded-lg border border-line px-3 py-2.5 text-sm" rows="3">Design lover, collector of ceramics.</textarea></div>
+            <button class="btn-primary h-10 px-4 text-sm" id="saveProfile">Save profile changes</button>
+          </div>
+
+          <!-- Notifications -->
+          <div class="space-y-4">
+            <h2 class="text-sm font-semibold text-ink">Notifications</h2>
+            <div class="space-y-3">
+              <label class="flex items-center justify-between gap-3 py-2 border-b border-line">
+                <span class="text-sm text-ink">Order status updates</span>
+                <input type="checkbox" class="h-4 w-4 rounded border-line text-brand focus:ring-brand" checked />
+              </label>
+              <label class="flex items-center justify-between gap-3 py-2 border-b border-line">
+                <span class="text-sm text-ink">Processing/payment reminders</span>
+                <input type="checkbox" class="h-4 w-4 rounded border-line text-brand focus:ring-brand" checked />
+              </label>
+              <label class="flex items-center justify-between gap-3 py-2">
+                <span class="text-sm text-ink">Newsletters and promotional</span>
+                <input type="checkbox" class="h-4 w-4 rounded border-line text-brand focus:ring-brand" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  MESSAGES (recommended: preview + subject line)            -->
+    <!-- ============================================================ -->
+    <div class="max-w-6xl mt-8">
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Messages</h1>
+          <p class="text-meta mt-1">Conversations with stores you've bought from.</p>
+        </div>
+        <div class="flex gap-2 w-full sm:w-80">
+          <input class="field-control w-full rounded-lg border border-line px-3 py-2.5 text-sm" placeholder="Search conversations…" />
+        </div>
+      </div>
+
+      <div class="card divide-y divide-line">
+        <a href="#" class="flex items-start gap-4 p-4 hover:bg-blue-50/60 transition">
+          <div class="relative h-12 w-12 shrink-0 rounded-lg bg-brand/10 text-brand flex items-center justify-center"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-ink truncate">Lumina Studio</p>
+            <p class="text-xs text-meta"><span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 mr-1"></span>Re: Your order #0317 — 2 items on the way</p>
+            <p class="text-xs text-meta mt-0.5">3 replies · 2h ago</p>
+          </div>
+        </a>
+        <a href="#" class="flex items-start gap-4 p-4 hover:bg-blue-50/60 transition">
+          <div class="relative h-12 w-12 shrink-0 rounded-lg bg-brand/10 text-brand flex items-center justify-center"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-ink truncate">Skyline Pottery</p>
+            <p class="text-xs text-meta">Verified purchase — your mug arrived</p>
+            <p class="text-xs text-meta mt-0.5">1 reply · 1d ago</p>
+          </div>
+        </a>
+        <a href="#" class="flex items-start gap-4 p-4 hover:bg-blue-50/60 transition">
+          <div class="relative h-12 w-12 shrink-0 rounded-lg bg-brand/10 text-brand flex items-center justify-center"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-ink truncate">Craft & Co.</p>
+            <p class="text-xs text-meta">Shipping note: your order is delayed</p>
+            <p class="text-xs text-meta mt-0.5">No replies · 3d ago</p>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  REVIEWS (recommended: clean review cards)                 -->
+    <!-- ============================================================ -->
+    <div class="max-w-6xl mt-8">
+      <div class="card p-6">
+        <header class="flex flex-wrap items-end justify-between gap-4 mb-6">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Your feedback</p>
+            <h1 class="text-2xl font-semibold tracking-tight mt-1">My Reviews</h1>
+          </div>
+          <span class="badge bg-brand/10 text-brand">3 reviews shared</span>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Review card -->
+          <article class="card p-5">
+            <div class="flex items-start gap-4">
+              <div class="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-paper"><img src="https://placehold.co/80x80/e7e5e4/9ca3af?text=📦" alt="" class="h-full w-full object-cover" /></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="flex gap-0.5 text-amber-500" role="img" aria-label="4 out of 5 stars"><svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z"/></svg></span>
+                  <span class="text-sm font-semibold">4 / 5</span>
+                  <span class="text-xs text-meta">Verified purchase</span>
+                </div>
+                <h3 class="text-sm font-semibold mt-1">Sproutket — Matte White</h3>
+                <p class="text-xs text-meta">Lumina Studio · Reviewed Mar 12, 2026</p>
+                <p class="text-sm text-slate-700 mt-2">Great quality and the design is exactly as pictured. The only thing I'd change is the base being slightly top-heavy, but overall a solid purchase.</p>
+              </div>
+              <span class="badge bg-emerald-50 text-emerald-700 border border-emerald-200">Published</span>
+            </div>
+          </article>
+
+          <!-- Review card (removed status) -->
+          <article class="card p-5">
+            <div class="flex items-start gap-4">
+              <div class="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-paper"><svg class="h-8 w-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20.5V17M12 17v-3m0 3h.01M10 3h4l-1 4.5 3 3.5-4 6"/></svg></div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="flex gap-0.5 text-slate-300" role="img" aria-label="2 out of 5 stars"><svg class="h-5 w-5 text-slate-300" viewBox="0 0 20 20" fill="currentColor"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z"/></svg></span>
+                  <span class="text-sm font-semibold">2 / 5</span>
+                  <span class="text-xs text-meta">Verified purchase</span>
+                </div>
+                <h3 class="text-sm font-semibold mt-1">Ceramic Pour-Over</h3>
+                <p class="text-xs text-meta">Craft & Co. · Reviewed Feb 28, 2026</p>
+                <p class="text-sm text-slate-700 mt-2">It works, but the instructions are unclear and the glass carafe cracked on arrival.</p>
+              </div>
+              <span class="badge bg-amber-50 text-amber-700 border border-amber-200">Hidden</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  DELIVERY ADDRESSES (recommended: quick-add form)          -->
+    <!-- ============================================================ -->
+    <div class="max-w-6xl mt-8">
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Delivery Addresses</h1>
+            <p class="text-meta mt-1">Save addresses for faster checkout.</p>
+          </div>
+          <a class="btn-primary h-10 px-4 text-sm" href="#">Add address</a>
+        </div>
+
+        <div class="space-y-5">
+          <div class="card p-5">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-ink">Priya Nair</p>
+                <p class="text-sm text-meta mt-0.5">Flat 3, 12 Orchard Rd, Singapore 238889</p>
+                <p class="text-xs text-meta">+65 9123 4567</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <a class="text-sm font-semibold text-brand underline-offset-2 hover:underline">Edit</a>
+                <button class="h-9 w-9 rounded-md border border-line text-muted hover:text-ink" aria-label="Remove address"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-12 0h12"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <p class="text-sm font-semibold text-ink mb-3">📍 Home</p>
+            <p class="text-sm">42 Wildflower Lane, Melbourne VIC 3000</p>
+            <p class="text-xs text-meta">+61 400 000 000</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  SETTINGS — a coherent shared layout across tabs          -->
+    <!-- ============================================================ -->
+    <div class="max-w-6xl mt-8">
+      <div class="card p-6">
+        <h1 class="text-2xl font-semibold tracking-tight">Settings</h1>
+        <p class="text-meta mt-1">You're currently viewing: <span class="text-brand font-semibold">Messages</span></p>
+        <div class="mt-6 flex flex-wrap gap-2">
+          <a class="btn-outline h-10 px-4 text-sm" href="#">← Back to orders</a>
+          <a class="btn-outline h-10 px-4 text-sm" href="#">← Back to reviews</a>
+          <a class="btn-outline h-10 px-4 text-sm" href="#">← Back to addresses</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Simple tab router to demo the persistent sidebar + back links
+  document.querySelectorAll('.tabbed .tab').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      const target = el.getAttribute('href') || '';
+      const section = document.querySelector('.tabbed')?.closest('[class*="order-card"]') !== null ? '#' : '';
+      window.location.hash = target;
+    });
+  });
+</script>
+</body>
+</html>
