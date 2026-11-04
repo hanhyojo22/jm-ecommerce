@@ -9,7 +9,6 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../widgets/common.dart';
-import '../widgets/shell.dart';
 
 class ProductScreen extends ConsumerWidget {
   const ProductScreen({super.key, required this.productKey});
@@ -26,15 +25,7 @@ class ProductScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Cart',
-            onPressed: () {
-              ref.read(shellTabProvider.notifier).select(1);
-
-              if (context.canPop()) {
-                context.pop();
-              } else {
-                context.go('/');
-              }
-            },
+            onPressed: () => context.push('/cart'),
             icon: const Icon(Icons.shopping_bag_outlined),
           ),
         ],
@@ -323,8 +314,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                     ),
                     subtitle: Text(product.store!.city ?? 'Marketplace store'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () =>
-                        context.push('/store/${product.store!.slug}'),
+                    onTap: () => context.push('/store/${product.store!.slug}'),
                   ),
                 ),
               if (product.variants.isNotEmpty) ...[

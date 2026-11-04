@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'providers/catalog_providers.dart';
 import 'screens/auth_gate.dart';
 import 'screens/addresses_screen.dart';
+import 'screens/cart_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
@@ -24,10 +25,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/store/:slug',
-      builder: (context, state) => StoreScreen(
-        slug: state.pathParameters['slug'] ?? '',
-      ),
+      builder: (context, state) =>
+          StoreScreen(slug: state.pathParameters['slug'] ?? ''),
     ),
+    GoRoute(path: '/cart', builder: (context, state) => const CartScreen()),
     GoRoute(
       path: '/checkout',
       builder: (context, state) => const CheckoutScreen(),

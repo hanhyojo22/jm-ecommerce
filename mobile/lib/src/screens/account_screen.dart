@@ -100,7 +100,7 @@ class AccountScreen extends ConsumerWidget {
                     title: const Text('Messages'),
                     subtitle: const Text('Chats with stores'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => ref.read(shellTabProvider.notifier).select(3),
+                    onTap: () => ref.read(shellTabProvider.notifier).select(2),
                   ),
                 ],
               ),

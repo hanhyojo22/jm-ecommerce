@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
 import '../screens/account_screen.dart';
-import '../screens/cart_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
@@ -32,13 +32,7 @@ final shellTabProvider =
 class AppShell extends ConsumerWidget {
   const AppShell({super.key});
 
-  static const _titles = [
-    'Discover',
-    'Your cart',
-    'Orders',
-    'Messages',
-    'Account',
-  ];
+  static const _titles = ['Discover', 'Orders', 'Messages', 'Account'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,12 +52,12 @@ class AppShell extends ConsumerWidget {
         actions: [
           if (index == 0)
             IconButton(
-              tooltip: 'Messages',
-              onPressed: () => ref.read(shellTabProvider.notifier).select(3),
+              tooltip: 'Cart',
+              onPressed: () => context.push('/cart'),
               icon: Badge(
-                isLabelVisible: unread > 0,
-                label: Text(unread > 99 ? '99+' : '$unread'),
-                child: const Icon(Icons.chat_bubble_outline_rounded),
+                isLabelVisible: cartCount > 0,
+                label: Text(cartCount > 99 ? '99+' : '$cartCount'),
+                child: const Icon(Icons.shopping_bag_outlined),
               ),
             ),
         ],
@@ -72,16 +66,15 @@ class AppShell extends ConsumerWidget {
         index: index,
         children: [
           const CatalogScreen(),
-          if (tab.loaded.contains(1)) const CartScreen() else const SizedBox(),
-          if (tab.loaded.contains(2))
+          if (tab.loaded.contains(1))
             const OrdersScreen()
           else
             const SizedBox(),
-          if (tab.loaded.contains(3))
+          if (tab.loaded.contains(2))
             const MessagesScreen()
           else
             const SizedBox(),
-          if (tab.loaded.contains(4))
+          if (tab.loaded.contains(3))
             const AccountScreen()
           else
             const SizedBox(),
@@ -96,15 +89,6 @@ class AppShell extends ConsumerWidget {
             icon: Icon(Icons.storefront_outlined),
             selectedIcon: Icon(Icons.storefront),
             label: 'Shop',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: cartCount > 0,
-              label: Text(cartCount > 99 ? '99+' : '$cartCount'),
-              child: const Icon(Icons.shopping_bag_outlined),
-            ),
-            selectedIcon: const Icon(Icons.shopping_bag),
-            label: 'Cart',
           ),
           const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),

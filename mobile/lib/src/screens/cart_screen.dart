@@ -7,7 +7,6 @@ import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/cart_providers.dart';
 import '../widgets/common.dart';
-import '../widgets/shell.dart';
 
 class CartScreen extends ConsumerWidget {
   const CartScreen({super.key});
@@ -16,101 +15,110 @@ class CartScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
 
-    return AsyncView(
-      value: cart,
-      onRetry: () => ref.invalidate(cartProvider),
-      builder: (value) {
-        if (value.lines.isEmpty) {
-          return EmptyState(
-            icon: Icons.shopping_bag_outlined,
-            title: 'Your cart is empty',
-            message: 'Products you add from the catalog will appear here.',
-            action: FilledButton(
-              onPressed: () => ref.read(shellTabProvider.notifier).select(0),
-              child: const Text('Browse products'),
-            ),
-          );
-        }
-
-        return Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => ref.read(cartProvider.notifier).refresh(),
-                child: ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                  itemCount: value.lines.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final line = value.lines[index];
-
-                    return _CartLineCard(
-                      line: line,
-                      onToggle: (selected) =>
-                          _toggle(ref, value, line, selected),
-                      onQuantity: (quantity) =>
-                          _updateQuantity(ref, line, quantity),
-                      onRemove: () => _remove(ref, line),
-                    );
-                  },
-                ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Your cart')),
+      body: AsyncView(
+        value: cart,
+        onRetry: () => ref.invalidate(cartProvider),
+        builder: (value) {
+          if (value.lines.isEmpty) {
+            return EmptyState(
+              icon: Icons.shopping_bag_outlined,
+              title: 'Your cart is empty',
+              message: 'Products you add from the catalog will appear here.',
+              action: FilledButton(
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/');
+                  }
+                },
+                child: const Text('Browse products'),
               ),
-            ),
-            SafeArea(
-              top: false,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                    ),
+            );
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () => ref.read(cartProvider.notifier).refresh(),
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    itemCount: value.lines.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final line = value.lines[index];
+
+                      return _CartLineCard(
+                        line: line,
+                        onToggle: (selected) =>
+                            _toggle(ref, value, line, selected),
+                        onQuantity: (quantity) =>
+                            _updateQuantity(ref, line, quantity),
+                        onRemove: () => _remove(ref, line),
+                      );
+                    },
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${value.selectedCount} selected',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
-                          ),
-                          Text(
-                            money(value.subtotal),
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                        ],
+              ),
+              SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    SizedBox(
-                      width: 190,
-                      child: FilledButton(
-                        onPressed: value.selectedCount == 0
-                            ? null
-                            : () => context.push('/checkout'),
-                        child: const Text('Checkout'),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${value.selectedCount} selected',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                            Text(
+                              money(value.subtotal),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 190,
+                        child: FilledButton(
+                          onPressed: value.selectedCount == 0
+                              ? null
+                              : () => context.push('/checkout'),
+                          child: const Text('Checkout'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
