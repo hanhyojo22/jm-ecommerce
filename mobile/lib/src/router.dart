@@ -7,6 +7,7 @@ import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
+import 'screens/store_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -19,6 +20,12 @@ final appRouter = GoRouter(
           store: state.pathParameters['store'] ?? '',
           slug: state.pathParameters['slug'] ?? '',
         ),
+      ),
+    ),
+    GoRoute(
+      path: '/store/:slug',
+      builder: (context, state) => StoreScreen(
+        slug: state.pathParameters['slug'] ?? '',
       ),
     ),
     GoRoute(

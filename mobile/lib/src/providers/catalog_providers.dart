@@ -153,6 +153,16 @@ final categoriesProvider = FutureProvider.autoDispose<List<Category>>(
   (ref) => ref.watch(apiClientProvider).categories(),
 );
 
+final storeProvider = FutureProvider.autoDispose.family<StoreInfo, String>(
+  (ref, slug) => ref.watch(apiClientProvider).store(slug),
+);
+
+final storeProductsProvider =
+    FutureProvider.autoDispose.family<ProductPage, String>(
+      (ref, slug) =>
+          ref.watch(apiClientProvider).products(seller: slug, perPage: 48),
+    );
+
 class ProductKey {
   const ProductKey({required this.store, required this.slug});
 

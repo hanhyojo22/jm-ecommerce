@@ -322,6 +322,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Text(product.store!.city ?? 'Marketplace store'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        context.push('/store/${product.store!.slug}'),
                   ),
                 ),
               if (product.variants.isNotEmpty) ...[
@@ -516,6 +519,11 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                           onTap: () => context.push(
                             '/product/${related.store?.slug ?? ''}/${related.slug}',
                           ),
+                          onStoreTap: related.store == null
+                              ? null
+                              : () => context.push(
+                                  '/store/${related.store!.slug}',
+                                ),
                         ),
                       );
                     },

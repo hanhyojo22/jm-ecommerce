@@ -248,10 +248,18 @@ class StoreAvatar extends StatelessWidget {
 }
 
 class ProductCard extends StatelessWidget {
-  const ProductCard({super.key, required this.product, required this.onTap});
+  const ProductCard({
+    super.key,
+    required this.product,
+    required this.onTap,
+    this.onStoreTap,
+    this.showStore = true,
+  });
 
   final Product product;
   final VoidCallback onTap;
+  final VoidCallback? onStoreTap;
+  final bool showStore;
 
   @override
   Widget build(BuildContext context) {
@@ -287,26 +295,33 @@ class ProductCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (product.store != null)
-                    Row(
-                      children: [
-                        StoreAvatar(
-                          name: product.store!.name,
-                          logoUrl: product.store!.logoUrl,
-                          radius: 9,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            product.store!.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                  if (showStore && product.store != null)
+                    InkWell(
+                      onTap: onStoreTap,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            StoreAvatar(
+                              name: product.store!.name,
+                              logoUrl: product.store!.logoUrl,
+                              radius: 9,
                             ),
-                          ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                product.store!.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   const SizedBox(height: 8),
                   Row(

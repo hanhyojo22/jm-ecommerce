@@ -80,8 +80,10 @@ class StoreInfo {
     required this.name,
     required this.slug,
     this.logoUrl,
+    this.bannerUrl,
     this.city,
     this.description,
+    this.productsCount,
     this.acceptsOnlinePayments = false,
   });
 
@@ -89,8 +91,10 @@ class StoreInfo {
   final String name;
   final String slug;
   final String? logoUrl;
+  final String? bannerUrl;
   final String? city;
   final String? description;
+  final int? productsCount;
   final bool acceptsOnlinePayments;
 
   factory StoreInfo.fromJson(Map<String, dynamic> json) => StoreInfo(
@@ -98,8 +102,12 @@ class StoreInfo {
     name: str(json['name']),
     slug: str(json['slug']),
     logoUrl: json['logo_url'] as String?,
+    bannerUrl: json['banner_url'] as String?,
     city: json['city'] as String?,
     description: json['description'] as String?,
+    productsCount: json['products_count'] == null
+        ? null
+        : integer(json['products_count']),
     acceptsOnlinePayments: boolean(json['accepts_online_payments']),
   );
 }

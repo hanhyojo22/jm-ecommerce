@@ -77,6 +77,7 @@ class ApiClient {
   Future<ProductPage> products({
     String? query,
     String? category,
+    String? seller,
     String? sort,
     int page = 1,
     int perPage = 20,
@@ -88,6 +89,7 @@ class ApiClient {
         query: {
           if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
           if (category != null && category.isNotEmpty) 'category': category,
+          if (seller != null && seller.isNotEmpty) 'seller': seller,
           if (sort != null && sort.isNotEmpty) 'sort': sort,
           'page': page,
           'per_page': perPage,
@@ -146,6 +148,9 @@ class ApiClient {
 
     return listOf(body).map(Category.fromJson).toList(growable: false);
   }
+
+  Future<StoreInfo> store(String slug) async =>
+      StoreInfo.fromJson(mapOf(await _data('GET', '/stores/$slug')));
 
   Future<Product> product({
     required String store,

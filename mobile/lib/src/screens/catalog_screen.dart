@@ -202,6 +202,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               onTap: () => context.push(
                 '/product/${product.store?.slug ?? ''}/${product.slug}',
               ),
+              onStoreTap: product.store == null
+                  ? null
+                  : () => context.push('/store/${product.store!.slug}'),
             );
           }, childCount: products.length),
         ),
