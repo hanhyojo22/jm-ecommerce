@@ -427,19 +427,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(conversation?.store?.name ?? 'Chat'),
-            if (conversation?.productName != null ||
-                conversation?.orderNumber != null)
-              Text(
-                conversation?.productName ??
-                    'Order ${conversation?.orderNumber}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+            if (conversation?.store != null) ...[
+              StoreAvatar(
+                name: conversation!.store!.name,
+                logoUrl: conversation.store!.logoUrl,
+                radius: 18,
               ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(conversation?.store?.name ?? 'Chat'),
+                  if (conversation?.productName != null ||
+                      conversation?.orderNumber != null)
+                    Text(
+                      conversation?.productName ??
+                          'Order ${conversation?.orderNumber}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [

@@ -54,17 +54,10 @@ class MessagesScreen extends ConsumerWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
+                        StoreAvatar(
+                          name: conversation.store?.name ?? 'Store',
+                          logoUrl: conversation.store?.logoUrl,
                           radius: 24,
-                          backgroundColor: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer,
-                          foregroundColor: Theme.of(context)
-                              .colorScheme
-                              .onPrimaryContainer,
-                          child: Text(
-                            initials(conversation.store?.name ?? 'Store'),
-                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(

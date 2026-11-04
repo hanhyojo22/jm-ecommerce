@@ -193,6 +193,60 @@ class NetworkThumb extends StatelessWidget {
   }
 }
 
+class StoreAvatar extends StatelessWidget {
+  const StoreAvatar({
+    super.key,
+    required this.name,
+    this.logoUrl,
+    this.radius = 24,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
+
+  final String name;
+  final String? logoUrl;
+  final double radius;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fallback = CircleAvatar(
+      radius: radius,
+      backgroundColor: backgroundColor ?? scheme.primaryContainer,
+      foregroundColor: foregroundColor ?? scheme.onPrimaryContainer,
+      child: Text(
+        initials(name),
+        style: TextStyle(
+          fontSize: radius * 0.62,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+
+    if (logoUrl == null || logoUrl!.isEmpty) {
+      return fallback;
+    }
+
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: logoUrl!,
+        width: radius * 2,
+        height: radius * 2,
+        fit: BoxFit.cover,
+        memCacheWidth: (radius *
+                2 *
+                MediaQuery.devicePixelRatioOf(context))
+            .round(),
+        fadeInDuration: const Duration(milliseconds: 180),
+        placeholder: (context, value) => fallback,
+        errorWidget: (context, value, error) => fallback,
+      ),
+    );
+  }
+}
+
 class ProductCard extends StatelessWidget {
   const ProductCard({super.key, required this.product, required this.onTap});
 
