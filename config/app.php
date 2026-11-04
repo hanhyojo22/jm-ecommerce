@@ -54,7 +54,15 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
-    'trusted_proxies' => env('TRUSTED_PROXIES') ?: null,
+    /*
+     * Render, Cloudflare and the VPS Caddy all terminate TLS before the request
+     * reaches PHP, so without a trusted proxy every request looks like plain
+     * HTTP. URL::forceHttps() then signs absolute URLs as https while the
+     * request is validated as http, and every signed URL (chat media, return
+     * evidence, email links) fails with 403. Trust the proxy headers by default;
+     * TRUSTED_PROXIES still narrows this if an environment needs it.
+     */
+    'trusted_proxies' => env('TRUSTED_PROXIES') ?: '*',
 
     /*
     |--------------------------------------------------------------------------

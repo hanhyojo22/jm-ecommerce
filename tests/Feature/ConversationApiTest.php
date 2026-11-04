@@ -9,8 +9,10 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -187,6 +189,47 @@ class ConversationApiTest extends TestCase
             ->assertHeader('Content-Type', 'image/jpeg');
 
         $this->get($url.'tampered')->assertForbidden();
+    }
+
+    public function test_signed_attachment_urls_validate_behind_a_tls_terminating_proxy(): void
+    {
+        Storage::fake('chat_attachments');
+
+        // Production signs media URLs over https because APP_URL is https.
+        URL::forceHttps();
+
+        [$buyer, , $conversation] = $this->conversation();
+
+        $url = $this->actingAs($buyer)
+            ->postJson(
+                "/api/v1/conversations/{$conversation->id}/attachments",
+                [
+                    'attachment' => UploadedFile::fake()->image('receipt.jpg', 20, 20),
+                    'client_message_id' => (string) Str::uuid(),
+                ],
+            )
+            ->assertCreated()
+            ->json('data.attachments.0.url');
+
+        $this->assertIsString($url);
+        $this->assertStringStartsWith('https://', $url);
+
+        // The test client builds URLs through url(), which would force https and
+        // hide a broken proxy trust. Build the plain-HTTP request by hand instead,
+        // exactly as Apache receives it after Cloudflare and Render terminate TLS.
+        $parts = parse_url($url);
+        $authority = $parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+        $path = $parts['path'].'?'.$parts['query'];
+
+        $request = Request::create('http://'.$authority.$path, 'GET', server: [
+            'HTTP_X_FORWARDED_PROTO' => 'https',
+            'REMOTE_ADDR' => '127.0.0.1',
+        ]);
+
+        $response = $this->app->handle($request);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('image/jpeg', $response->headers->get('Content-Type'));
     }
 
     public function test_attachment_urls_stay_stable_between_message_reads(): void
