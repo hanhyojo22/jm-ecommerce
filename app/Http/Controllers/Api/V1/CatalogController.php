@@ -220,7 +220,7 @@ class CatalogController extends Controller
             'q' => ['nullable', 'string', 'max:100'],
             'category' => ['nullable', 'string', 'max:255'],
             'seller' => ['nullable', 'string', 'max:255'],
-            'sort' => ['nullable', Rule::in(['relevance', 'newest', 'price_asc', 'price_desc', 'top_rated'])],
+            'sort' => ['nullable', Rule::in(['relevance', 'newest', 'price_asc', 'price_desc', 'top_rated', 'popular'])],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'in_stock' => ['nullable', 'boolean'],

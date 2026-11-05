@@ -55,6 +55,18 @@ class TopProductQuery
         Cache::forget(self::CACHE_KEY);
     }
 
+    public static function orderByPopularity(Builder $products): Builder
+    {
+        $productIds = self::rankings()->pluck('product_id')->values();
+
+        if ($productIds->isNotEmpty()) {
+            $orderCases = $productIds->map(fn (string $productId, int $position): string => "WHEN ? THEN {$position}")->implode(' ');
+            $products->orderByRaw("CASE products.id {$orderCases} ELSE {$productIds->count()} END", $productIds->all());
+        }
+
+        return $products->latest('products.created_at')->orderBy('products.id');
+    }
+
     /** @return Collection<int, array{product_id: string, net_quantity_sold: int, qualifying_order_count: int}> */
     private static function rankings(): Collection
     {

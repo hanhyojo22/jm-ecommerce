@@ -15,6 +15,47 @@ class TopProductsTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_popular_catalog_ranks_qualifying_sales_first_and_keeps_other_products(): void
+    {
+        $this->freezeTime();
+        $winner = $this->product('Popular');
+        $runnerUp = $this->product('Runner up');
+        $cancelled = $this->product('Cancelled');
+        $refunded = $this->product('Refunded');
+        $unsold = $this->product('Unsold');
+        $this->sellerOrderItem($winner, 4, 'delivered', 'paid');
+        $this->sellerOrderItem($runnerUp, 2, 'delivered', 'paid');
+        $this->sellerOrderItem($cancelled, 20, 'cancelled', 'paid');
+        $this->sellerOrderItem($refunded, 20, 'delivered', 'refunded');
+
+        $this->getJson(route('api.v1.products.index', ['sort' => 'popular', 'per_page' => 1]))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $winner->id)
+            ->assertJsonPath('meta.total', 5);
+        $this->getJson(route('api.v1.products.index', ['sort' => 'popular', 'per_page' => 1, 'page' => 2]))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $runnerUp->id);
+        $response = $this->getJson(route('api.v1.products.index', ['sort' => 'popular']))->assertOk();
+        $this->assertEqualsCanonicalizing(
+            [$winner->id, $runnerUp->id, $cancelled->id, $refunded->id, $unsold->id],
+            array_column($response->json('data'), 'id'),
+        );
+    }
+
+    public function test_popular_catalog_without_sales_has_stable_pagination(): void
+    {
+        $this->freezeTime();
+        $first = $this->product('First');
+        $second = $this->product('Second');
+        $expected = collect([$first->id, $second->id])->sort()->values()->all();
+
+        foreach ($expected as $index => $productId) {
+            $this->getJson(route('api.v1.products.index', ['sort' => 'popular', 'per_page' => 1, 'page' => $index + 1]))
+                ->assertOk()
+                ->assertJsonPath('data.0.id', $productId);
+        }
+    }
+
     public function test_top_products_uses_delivered_cod_sales_and_excludes_cancelled_or_refunded_sales(): void
     {
         $this->freezeTime();

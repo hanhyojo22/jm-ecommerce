@@ -74,7 +74,7 @@ class CatalogQuery
      *     q?: string|null,
      *     category?: string|null,
      *     seller?: string|null,
-     *     sort?: 'relevance'|'newest'|'price_asc'|'price_desc'|'top_rated'|null,
+     *     sort?: 'relevance'|'newest'|'price_asc'|'price_desc'|'top_rated'|'popular'|null,
      *     min_price?: string|int|float|null,
      *     max_price?: string|int|float|null,
      *     in_stock?: bool|int|string|null,
@@ -130,6 +130,7 @@ class CatalogQuery
             ->when(! empty($filters['with_photos']), fn (Builder $query) => $query->whereHas('reviews', fn (Builder $review) => $review->published()->whereHas('photos')));
 
         match ($filters['sort'] ?? 'relevance') {
+            'popular' => TopProductQuery::orderByPopularity($products),
             'price_asc' => $products->orderBy('price'),
             'price_desc' => $products->orderByDesc('price'),
             'top_rated' => $products
