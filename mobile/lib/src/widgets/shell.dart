@@ -48,16 +48,68 @@ class AppShell extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[index]),
+        backgroundColor: index == 0
+            ? Theme.of(context).colorScheme.surfaceContainerLowest
+            : null,
+        surfaceTintColor: index == 0 ? Colors.transparent : null,
+        title: index == 0
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.storefront_outlined,
+                      size: 22,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'JMMart.',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Text(_titles[index]),
+        titleSpacing: 20,
         actions: [
           if (index == 0)
-            IconButton(
-              tooltip: 'Cart',
-              onPressed: () => context.push('/cart'),
-              icon: Badge(
-                isLabelVisible: cartCount > 0,
-                label: Text(cartCount > 99 ? '99+' : '$cartCount'),
-                child: const Icon(Icons.shopping_bag_outlined),
+            Semantics(
+              liveRegion: true,
+              child: IconButton.filledTonal(
+                tooltip:
+                    'Cart, $cartCount ${cartCount == 1 ? 'item' : 'items'}',
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary
+                      .withValues(alpha: 0.07),
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: () => context.push('/cart'),
+                icon: Badge(
+                  isLabelVisible: cartCount > 0,
+                  label: ExcludeSemantics(
+                    child: AnimatedSwitcher(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? Duration.zero
+                          : const Duration(milliseconds: 180),
+                      child: Text(
+                        cartCount > 99 ? '99+' : '$cartCount',
+                        key: ValueKey(cartCount),
+                      ),
+                    ),
+                  ),
+                  child: const Icon(Icons.shopping_bag_outlined),
+                ),
               ),
             ),
         ],

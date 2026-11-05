@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
+import '../providers/cart_providers.dart';
 import '../theme.dart';
 
 class AsyncView<T> extends StatelessWidget {
@@ -218,10 +219,7 @@ class StoreAvatar extends StatelessWidget {
       foregroundColor: foregroundColor ?? scheme.onPrimaryContainer,
       child: Text(
         initials(name),
-        style: TextStyle(
-          fontSize: radius * 0.62,
-          fontWeight: FontWeight.w800,
-        ),
+        style: TextStyle(fontSize: radius * 0.62, fontWeight: FontWeight.w800),
       ),
     );
 
@@ -235,9 +233,7 @@ class StoreAvatar extends StatelessWidget {
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
-        memCacheWidth: (radius *
-                2 *
-                MediaQuery.devicePixelRatioOf(context))
+        memCacheWidth: (radius * 2 * MediaQuery.devicePixelRatioOf(context))
             .round(),
         fadeInDuration: const Duration(milliseconds: 180),
         placeholder: (context, value) => fallback,
@@ -254,18 +250,67 @@ class ProductCard extends StatelessWidget {
     required this.onTap,
     this.onStoreTap,
     this.showStore = true,
+    this.discovery = false,
+    this.showAddToCart = false,
   });
 
   final Product product;
   final VoidCallback onTap;
   final VoidCallback? onStoreTap;
   final bool showStore;
+  final bool discovery;
+  final bool showAddToCart;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final price = Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        Text(
+          money(product.effectivePrice),
+          style:
+              (discovery
+                      ? theme.textTheme.titleMedium
+                      : theme.textTheme.titleSmall)
+                  ?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
+                    letterSpacing: -0.3,
+                  ),
+        ),
+        if (!discovery && product.ratingCount > 0)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.star_rounded,
+                size: 15,
+                color: theme.colorScheme.secondary,
+              ),
+              const SizedBox(width: 2),
+              Text(
+                product.ratingAverage.toStringAsFixed(1),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+      ],
+    );
 
     return Card(
+      color: discovery ? theme.colorScheme.surfaceContainerLowest : null,
+      shape: discovery
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+              ),
+            )
+          : null,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -273,15 +318,50 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: NetworkThumb(
-                url: product.thumbnailUrl,
-                width: double.infinity,
-                radius: 0,
-                cacheWidth: 600,
+              child: Padding(
+                padding: discovery
+                    ? const EdgeInsets.fromLTRB(8, 8, 8, 0)
+                    : EdgeInsets.zero,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NetworkThumb(
+                      url: product.thumbnailUrl,
+                      width: double.infinity,
+                      radius: discovery ? 10 : 0,
+                      cacheWidth: 600,
+                    ),
+                    if (discovery && !product.inStock)
+                      Positioned(
+                        left: 8,
+                        top: 8,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: Text(
+                              'Sold out',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+              padding: discovery
+                  ? const EdgeInsets.fromLTRB(12, 10, 12, 0)
+                  : const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -290,69 +370,197 @@ class ProductCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: discovery ? FontWeight.w600 : FontWeight.w700,
                       height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  if (discovery) ...[
+                    const SizedBox(height: 4),
+                    price,
+                    const SizedBox(height: 4),
+                    Semantics(
+                      label: product.ratingCount > 0
+                          ? 'Rated ${product.ratingAverage.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
+                          : 'No reviews yet',
+                      excludeSemantics: true,
+                      child: Row(
+                        children: [
+                          Icon(
+                            product.ratingCount > 0
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            size: 14,
+                            color: product.ratingCount > 0
+                                ? theme.colorScheme.secondary
+                                : theme.colorScheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              product.ratingCount > 0
+                                  ? '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})'
+                                  : 'No reviews yet',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else
+                    const SizedBox(height: 4),
                   if (showStore && product.store != null)
                     InkWell(
                       onTap: onStoreTap,
                       borderRadius: BorderRadius.circular(999),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            StoreAvatar(
-                              name: product.store!.name,
-                              logoUrl: product.store!.logoUrl,
-                              radius: 9,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                product.store!.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Padding(
+                          padding: discovery
+                              ? const EdgeInsets.only(top: 4)
+                              : EdgeInsets.zero,
+                          child: Row(
+                            crossAxisAlignment: discovery
+                                ? CrossAxisAlignment.start
+                                : CrossAxisAlignment.center,
+                            children: [
+                              if (discovery) ...[
+                                Icon(
+                                  Icons.storefront_outlined,
+                                  size: 14,
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
+                                const SizedBox(width: 6),
+                              ] else ...[
+                                StoreAvatar(
+                                  name: product.store!.name,
+                                  logoUrl: product.store!.logoUrl,
+                                  radius: 9,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  product.store!.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                              if (discovery && onStoreTap != null) ...[
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Text(
-                        money(product.effectivePrice),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      const Spacer(),
-                      if (product.ratingCount > 0) ...[
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 15,
-                          color: Color(0xFFE0A63B),
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          product.ratingAverage.toStringAsFixed(1),
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ],
-                  ),
+                  if (!discovery) ...[const SizedBox(height: 8), price],
+                  if (showAddToCart) ...[
+                    const SizedBox(height: 10),
+                    _ProductCartButton(
+                      product: product,
+                      onChooseOptions: onTap,
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProductCartButton extends ConsumerStatefulWidget {
+  const _ProductCartButton({
+    required this.product,
+    required this.onChooseOptions,
+  });
+
+  final Product product;
+  final VoidCallback onChooseOptions;
+
+  @override
+  ConsumerState<_ProductCartButton> createState() => _ProductCartButtonState();
+}
+
+class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
+  bool _adding = false;
+
+  Future<void> _add() async {
+    if (_adding) {
+      return;
+    }
+    setState(() => _adding = true);
+    try {
+      await ref.read(cartProvider.notifier).add(productId: widget.product.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${widget.product.name} added to cart.')),
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.friendly)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _adding = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
+    final chooseOptions =
+        product.hasVariants || product.requiresVariantSelection;
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          textStyle: Theme.of(context).textTheme.labelLarge,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        onPressed: !product.inStock || _adding
+            ? null
+            : chooseOptions
+            ? widget.onChooseOptions
+            : _add,
+        child: _adding
+            ? SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  semanticsLabel: 'Adding ${product.name} to cart',
+                ),
+              )
+            : Text(
+                !product.inStock
+                    ? 'Sold out'
+                    : chooseOptions
+                    ? 'Choose options'
+                    : 'Add to cart',
+                textAlign: TextAlign.center,
+              ),
       ),
     );
   }

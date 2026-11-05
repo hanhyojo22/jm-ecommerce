@@ -9,6 +9,8 @@ class CatalogFilter {
   final String query;
   final String? category;
 
+  String get sort => query.trim().isEmpty ? 'popular' : 'relevance';
+
   CatalogFilter copyWith({
     String? query,
     String? category,
@@ -53,6 +55,7 @@ class ProductFeed {
     required this.lastPage,
     required this.total,
     this.loadingMore = false,
+    this.loadMoreFailed = false,
   });
 
   final CatalogFilter filter;
@@ -61,6 +64,7 @@ class ProductFeed {
   final int lastPage;
   final int total;
   final bool loadingMore;
+  final bool loadMoreFailed;
 
   bool get hasMore => page < lastPage;
 
@@ -70,6 +74,7 @@ class ProductFeed {
     int? lastPage,
     int? total,
     bool? loadingMore,
+    bool? loadMoreFailed,
   }) => ProductFeed(
     filter: filter,
     products: products ?? this.products,
@@ -77,6 +82,7 @@ class ProductFeed {
     lastPage: lastPage ?? this.lastPage,
     total: total ?? this.total,
     loadingMore: loadingMore ?? this.loadingMore,
+    loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
   );
 }
 
@@ -89,6 +95,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
         .products(
           query: filter.query,
           category: filter.category,
+          sort: filter.sort,
           perPage: catalogPageSize,
         );
 
@@ -101,17 +108,21 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
     );
   }
 
-  Future<void> loadMore() async {
+  Future<void> loadMore({bool retry = false}) async {
     final current = state.value;
 
     if (current == null ||
         state.isLoading ||
+        state.hasError ||
         current.loadingMore ||
+        (current.loadMoreFailed && !retry) ||
         !current.hasMore) {
       return;
     }
 
-    state = AsyncData(current.copyWith(loadingMore: true));
+    state = AsyncData(
+      current.copyWith(loadingMore: true, loadMoreFailed: false),
+    );
 
     try {
       final next = await ref
@@ -119,29 +130,42 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
           .products(
             query: current.filter.query,
             category: current.filter.category,
+            sort: current.filter.sort,
             page: current.page + 1,
             perPage: catalogPageSize,
           );
 
-      if (ref.read(catalogFilterProvider) != current.filter) {
+      if (!_isCurrentFeed(current)) {
         return;
       }
 
+      final seen = current.products.map((product) => product.id).toSet();
       state = AsyncData(
         ProductFeed(
           filter: current.filter,
-          products: [...current.products, ...next.products],
+          products: [
+            ...current.products,
+            ...next.products.where((product) => seen.add(product.id)),
+          ],
           page: next.page,
           lastPage: next.lastPage,
           total: next.total,
         ),
       );
     } catch (_) {
-      if (ref.read(catalogFilterProvider) == current.filter) {
-        state = AsyncData(current.copyWith(loadingMore: false));
+      if (_isCurrentFeed(current)) {
+        state = AsyncData(
+          current.copyWith(loadingMore: false, loadMoreFailed: true),
+        );
       }
     }
   }
+
+  bool _isCurrentFeed(ProductFeed feed) =>
+      ref.mounted &&
+      !state.isLoading &&
+      identical(state.value?.products, feed.products) &&
+      ref.read(catalogFilterProvider) == feed.filter;
 }
 
 final productsProvider =
@@ -157,8 +181,8 @@ final storeProvider = FutureProvider.autoDispose.family<StoreInfo, String>(
   (ref, slug) => ref.watch(apiClientProvider).store(slug),
 );
 
-final storeProductsProvider =
-    FutureProvider.autoDispose.family<ProductPage, String>(
+final storeProductsProvider = FutureProvider.autoDispose
+    .family<ProductPage, String>(
       (ref, slug) =>
           ref.watch(apiClientProvider).products(seller: slug, perPage: 48),
     );
@@ -184,3 +208,14 @@ final productProvider = FutureProvider.autoDispose.family<Product, ProductKey>(
   (ref, key) =>
       ref.watch(apiClientProvider).product(store: key.store, slug: key.slug),
 );
+
+final productReviewsProvider = FutureProvider.autoDispose
+    .family<ReviewPage, ({ProductKey product, int page})>(
+      (ref, key) => ref
+          .watch(apiClientProvider)
+          .productReviews(
+            store: key.product.store,
+            product: key.product.slug,
+            page: key.page,
+          ),
+    );

@@ -16,14 +16,16 @@ class CartNotifier extends AsyncNotifier<Cart> {
     int quantity = 1,
     String? variantId,
   }) async {
-    await ref
+    final cart = await ref
         .read(apiClientProvider)
         .addToCart(
           productId: productId,
           quantity: quantity,
           variantId: variantId,
         );
-    await refresh();
+    if (ref.mounted) {
+      state = AsyncData(cart);
+    }
   }
 
   Future<void> updateQuantity(String itemId, int quantity) async {
@@ -56,5 +58,5 @@ final cartProvider = AsyncNotifierProvider.autoDispose<CartNotifier, Cart>(
 final cartCountProvider = Provider.autoDispose<int>((ref) {
   final cart = ref.watch(cartProvider).value;
 
-  return cart?.lines.length ?? 0;
+  return cart?.lines.fold<int>(0, (count, line) => count + line.quantity) ?? 0;
 });

@@ -38,19 +38,26 @@ class ApiClient {
 
   late final Dio _dio;
   final TokenProvider tokenProvider;
+  CancelToken? _productSearchCancelToken;
+  CancelToken? _productSuggestionsCancelToken;
 
   Future<dynamic> _raw(
     String method,
     String path, {
     Object? data,
     Map<String, dynamic>? query,
+    CancelToken? cancelToken,
   }) async {
     try {
       final response = switch (method) {
-        'GET' => await _dio.get(path, queryParameters: query),
-        'POST' => await _dio.post(path, data: data),
-        'PATCH' => await _dio.patch(path, data: data),
-        'DELETE' => await _dio.delete(path),
+        'GET' => await _dio.get(
+          path,
+          queryParameters: query,
+          cancelToken: cancelToken,
+        ),
+        'POST' => await _dio.post(path, data: data, cancelToken: cancelToken),
+        'PATCH' => await _dio.patch(path, data: data, cancelToken: cancelToken),
+        'DELETE' => await _dio.delete(path, cancelToken: cancelToken),
         _ => throw ArgumentError('Unsupported method $method'),
       };
 
@@ -82,71 +89,128 @@ class ApiClient {
     int page = 1,
     int perPage = 20,
   }) async {
-    final body = mapOf(
-      await _raw(
-        'GET',
-        '/products',
-        query: {
-          if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-          if (category != null && category.isNotEmpty) 'category': category,
-          if (seller != null && seller.isNotEmpty) 'seller': seller,
-          if (sort != null && sort.isNotEmpty) 'sort': sort,
-          'page': page,
-          'per_page': perPage,
-        },
-      ),
-    );
-    final meta = mapOf(body['meta']);
+    final trimmedQuery = query?.trim() ?? '';
+    CancelToken? cancelToken;
 
-    return ProductPage(
-      products: listOf(body['data'])
-          .map(Product.fromJson)
-          .toList(growable: false),
-      page: integer(meta['current_page'], page),
-      lastPage: integer(meta['last_page'], page),
-      total: integer(meta['total']),
-    );
+    if (trimmedQuery.isNotEmpty) {
+      _productSearchCancelToken?.cancel('Replaced by a newer search.');
+      cancelToken = CancelToken();
+      _productSearchCancelToken = cancelToken;
+    } else if (page == 1 && seller == null) {
+      _productSearchCancelToken?.cancel('Search was cleared.');
+      _productSearchCancelToken = null;
+    }
+
+    try {
+      final body = mapOf(
+        await _raw(
+          'GET',
+          '/products',
+          query: {
+            if (trimmedQuery.isNotEmpty) 'q': trimmedQuery,
+            if (category != null && category.isNotEmpty) 'category': category,
+            if (seller != null && seller.isNotEmpty) 'seller': seller,
+            if (sort != null && sort.isNotEmpty) 'sort': sort,
+            'page': page,
+            'per_page': perPage,
+          },
+          cancelToken: cancelToken,
+        ),
+      );
+      final meta = mapOf(body['meta']);
+
+      return ProductPage(
+        products: listOf(body['data'])
+            .map(Product.fromJson)
+            .toList(growable: false),
+        page: integer(meta['current_page'], page),
+        lastPage: integer(meta['last_page'], page),
+        total: integer(meta['total']),
+      );
+    } finally {
+      if (identical(_productSearchCancelToken, cancelToken)) {
+        _productSearchCancelToken = null;
+      }
+    }
   }
 
   Future<List<Product>> suggestedProducts(String query) async {
-    final body = await _raw(
-      'GET',
-      '/products/suggestions',
-      query: {'q': query},
-    );
-    final items = body is Map ? body['items'] : null;
+    _productSuggestionsCancelToken?.cancel('Replaced by newer suggestions.');
+    final cancelToken = CancelToken();
+    _productSuggestionsCancelToken = cancelToken;
 
-    return listOf(items)
-        .map((json) {
-          return Product(
-            id: str(json['product_id']),
-            name: str(json['name']),
-            slug: str(json['slug']),
-            price: str(json['price']),
-            effectivePrice: str(json['price']),
-            inStock: !boolean(json['sold_out']),
-            hasVariants: false,
-            requiresVariantSelection: false,
-            freeShipping: false,
-            stockQuantity: boolean(json['sold_out']) ? 0 : 1,
-            soldQuantity: 0,
-            ratingAverage: 0,
-            ratingCount: 0,
-            thumbnailUrl: json['image_url'] as String?,
-            store: StoreInfo(
-              id: '',
-              name: str(json['store_name']),
-              slug: str(json['store_slug']),
-            ),
-          );
-        })
-        .toList(growable: false);
+    try {
+      final body = await _raw(
+        'GET',
+        '/products/suggestions',
+        query: {'q': query},
+        cancelToken: cancelToken,
+      );
+      final items = body is Map ? body['items'] : null;
+
+      return listOf(items)
+          .map((json) {
+            return Product(
+              id: str(json['product_id']),
+              name: str(json['name']),
+              slug: str(json['slug']),
+              price: str(json['price']),
+              effectivePrice: str(json['price']),
+              inStock: !boolean(json['sold_out']),
+              hasVariants: false,
+              requiresVariantSelection: false,
+              freeShipping: false,
+              stockQuantity: boolean(json['sold_out']) ? 0 : 1,
+              soldQuantity: 0,
+              ratingAverage: 0,
+              ratingCount: 0,
+              thumbnailUrl: json['image_url'] as String?,
+              store: StoreInfo(
+                id: '',
+                name: str(json['store_name']),
+                slug: str(json['store_slug']),
+              ),
+            );
+          })
+          .toList(growable: false);
+    } finally {
+      if (identical(_productSuggestionsCancelToken, cancelToken)) {
+        _productSuggestionsCancelToken = null;
+      }
+    }
+  }
+
+  void cancelProductSuggestions() {
+    _productSuggestionsCancelToken?.cancel('Suggestions are no longer shown.');
+    _productSuggestionsCancelToken = null;
   }
 
   Future<List<Category>> categories() async {
     final body = await _data('GET', '/categories');
 
     return listOf(body).map(Category.fromJson).toList(growable: false);
+  }
+
+  Future<ReviewPage> productReviews({
+    required String store,
+    required String product,
+    int page = 1,
+  }) async {
+    final body = mapOf(
+      await _raw(
+        'GET',
+        '/stores/${Uri.encodeComponent(store)}/products/${Uri.encodeComponent(product)}/reviews',
+        query: {'page': page, 'per_page': 10},
+      ),
+    );
+    final meta = mapOf(body['meta']);
+    return ReviewPage(
+      reviews: listOf(body['data'])
+          .map(ProductReview.fromJson)
+          .toList(growable: false),
+      page: integer(meta['current_page'], page),
+      lastPage: integer(meta['last_page'], page),
+    );
   }
 
   Future<StoreInfo> store(String slug) async =>

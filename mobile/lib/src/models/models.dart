@@ -134,6 +134,7 @@ class ProductVariant {
     this.colorHex,
     this.size,
     this.price,
+    this.sku,
     required this.stockQuantity,
     required this.inStock,
   });
@@ -144,6 +145,7 @@ class ProductVariant {
   final String? colorHex;
   final String? size;
   final String? price;
+  final String? sku;
   final int stockQuantity;
   final bool inStock;
 
@@ -154,9 +156,49 @@ class ProductVariant {
     colorHex: json['color_hex'] as String?,
     size: json['size'] as String?,
     price: json['price'] as String?,
+    sku: json['sku'] as String?,
     stockQuantity: integer(json['stock_quantity']),
     inStock: boolean(json['in_stock']),
   );
+}
+
+class ProductReview {
+  const ProductReview({
+    required this.rating,
+    required this.author,
+    required this.body,
+    this.title = '',
+    this.createdAt,
+    this.verifiedPurchase = false,
+  });
+
+  final int rating;
+  final String author;
+  final String body;
+  final String title;
+  final String? createdAt;
+  final bool verifiedPurchase;
+
+  factory ProductReview.fromJson(Map<String, dynamic> json) => ProductReview(
+    rating: integer(json['rating']),
+    author: str(json['author']),
+    body: str(json['body']),
+    title: str(json['title']),
+    createdAt: json['created_at'] as String?,
+    verifiedPurchase: boolean(json['verified_purchase']),
+  );
+}
+
+class ReviewPage {
+  const ReviewPage({
+    required this.reviews,
+    required this.page,
+    required this.lastPage,
+  });
+
+  final List<ProductReview> reviews;
+  final int page;
+  final int lastPage;
 }
 
 class ReviewSummary {
