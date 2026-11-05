@@ -31,10 +31,11 @@ class SendConversationMessage
             }
 
             if ($message->wasRecentlyCreated) {
+                $activityAt = now()->format('Y-m-d H:i:s.u');
                 Conversation::query()
                     ->whereKey($conversation->id)
-                    ->where(fn ($query) => $query->whereNull('latest_message_at')->orWhere('latest_message_at', '<', $message->created_at))
-                    ->update(['latest_message_at' => $message->created_at]);
+                    ->where(fn ($query) => $query->whereNull('latest_message_at')->orWhere('latest_message_at', '<', $activityAt))
+                    ->update(['latest_message_at' => $activityAt]);
             }
 
             return $message;

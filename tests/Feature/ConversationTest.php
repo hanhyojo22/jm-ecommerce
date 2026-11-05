@@ -505,6 +505,28 @@ class ConversationTest extends TestCase
         $this->assertSame($latestMessageAt->toDateTimeString(), $conversation->refresh()->latest_message_at->toDateTimeString());
     }
 
+    public function test_a_received_message_moves_its_conversation_to_the_top_within_the_same_second(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $firstProduct = $this->product();
+        $secondProduct = $this->product();
+        $firstConversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $firstProduct->store_id, 'product_id' => $firstProduct->id]);
+        $secondConversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $secondProduct->store_id, 'product_id' => $secondProduct->id]);
+        Event::fake([ConversationInboxChanged::class, MessageSent::class]);
+        $timestamp = now()->startOfSecond();
+        $sendMessage = app(SendConversationMessage::class);
+        $inbox = Livewire::actingAs($buyer)->test(Inbox::class);
+
+        $this->travelTo($timestamp->copy()->addMicrosecond());
+        $sendMessage->handle($secondConversation, $seller, 'Earlier conversation reply', (string) str()->uuid());
+        $this->travelTo($timestamp->copy()->addMilliseconds(200));
+        $sendMessage->handle($firstConversation, $seller, 'Newest conversation reply', (string) str()->uuid());
+
+        $inbox->call('$refresh')
+            ->assertSeeInOrder(['Newest conversation reply', 'Earlier conversation reply']);
+    }
+
     public function test_blocking_a_seller_prevents_new_messages_from_both_participants(): void
     {
         $buyer = User::factory()->create();
