@@ -657,110 +657,129 @@ class _PendingBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final failed = pending.status == _PendingStatus.failed;
+    final compactAttachment =
+        pending.attachment != null && pending.body.trim().isEmpty;
+    final photoOnly = compactAttachment && pending.attachment!.isImage;
     final foreground = failed
         ? theme.colorScheme.onErrorContainer
+        : photoOnly
+        ? theme.colorScheme.onSurface
         : theme.colorScheme.onPrimary;
-    final statusColor = foreground.withValues(alpha: 0.7);
-    final compactImage =
-        pending.attachment?.isImage == true && pending.body.trim().isEmpty;
+    final statusColor = failed
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurfaceVariant;
 
     return Align(
       alignment: Alignment.centerRight,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
-        ),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: compactImage
-            ? const EdgeInsets.all(3)
-            : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-        decoration: BoxDecoration(
-          color: failed
-              ? theme.colorScheme.errorContainer
-              : theme.colorScheme.primary,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
-            bottomRight: Radius.circular(4),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (pending.attachment != null) ...[
-              _PendingAttachmentPreview(
-                attachment: pending.attachment!,
-                clientId: pending.clientId,
-                foreground: foreground,
-              ),
-              if (pending.body.trim().isNotEmpty) const SizedBox(height: 6),
-            ],
-            if (pending.body.trim().isNotEmpty)
-              Text(
-                pending.body,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: foreground,
-                  height: 1.4,
-                ),
-              ),
-            Padding(
-              padding: compactImage
-                  ? const EdgeInsets.fromLTRB(7, 5, 7, 4)
-                  : const EdgeInsets.only(top: 4),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (pending.status == _PendingStatus.failed)
-                    Icon(
-                      Icons.error_outline_rounded,
-                      size: 12,
-                      color: foreground,
-                    )
-                  else if (pending.status == _PendingStatus.sent)
-                    Icon(Icons.check_rounded, size: 12, color: statusColor)
-                  else
-                    SizedBox(
-                      width: 9,
-                      height: 9,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.4,
-                        color: statusColor,
-                      ),
-                    ),
-                  const SizedBox(width: 4),
-                  Text(
-                    switch (pending.status) {
-                      _PendingStatus.sent => 'Sent',
-                      _PendingStatus.failed => 'Not sent',
-                      _PendingStatus.queued ||
-                      _PendingStatus.sending => 'Sending…',
-                    },
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: statusColor,
-                      fontSize: 10,
-                    ),
-                  ),
-                  if (failed) ...[
-                    const SizedBox(width: 10),
-                    InkWell(
-                      onTap: onRetry,
-                      child: Text(
-                        'Retry',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: foreground,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            key: compactAttachment
+                ? ValueKey('pending-attachment-bubble-${pending.clientId}')
+                : ValueKey('pending-bubble-${pending.clientId}'),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.78,
+            ),
+            padding: photoOnly
+                ? const EdgeInsets.all(4)
+                : compactAttachment
+                ? EdgeInsets.zero
+                : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+            clipBehavior: compactAttachment ? Clip.antiAlias : Clip.none,
+            decoration: BoxDecoration(
+              color: failed
+                  ? theme.colorScheme.errorContainer
+                  : photoOnly
+                  ? theme.colorScheme.surfaceContainerLowest
+                  : theme.colorScheme.primary,
+              border: photoOnly
+                  ? Border.all(color: theme.colorScheme.outline)
+                  : null,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(4),
               ),
             ),
-          ],
-        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (pending.attachment != null) ...[
+                  _PendingAttachmentPreview(
+                    attachment: pending.attachment!,
+                    clientId: pending.clientId,
+                    foreground: foreground,
+                  ),
+                  if (pending.body.trim().isNotEmpty) const SizedBox(height: 6),
+                ],
+                if (pending.body.trim().isNotEmpty)
+                  Text(
+                    pending.body,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: foreground,
+                      height: 1.4,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (pending.status == _PendingStatus.failed)
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: 12,
+                    color: statusColor,
+                  )
+                else if (pending.status == _PendingStatus.sent)
+                  Icon(Icons.check_rounded, size: 12, color: statusColor)
+                else
+                  SizedBox(
+                    width: 9,
+                    height: 9,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.4,
+                      color: statusColor,
+                    ),
+                  ),
+                const SizedBox(width: 4),
+                Text(
+                  switch (pending.status) {
+                    _PendingStatus.sent => 'Sent',
+                    _PendingStatus.failed => 'Not sent',
+                    _PendingStatus.queued ||
+                    _PendingStatus.sending => 'Sending…',
+                  },
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: statusColor,
+                    fontSize: 10,
+                  ),
+                ),
+                if (failed) ...[
+                  const SizedBox(width: 10),
+                  InkWell(
+                    onTap: onRetry,
+                    child: Text(
+                      'Retry',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: statusColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -784,34 +803,111 @@ class _PendingAttachmentPreview extends StatelessWidget {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: Image.memory(
-        attachment.bytes,
-        key: ValueKey('pending-image-$clientId'),
-        width: 190,
-        height: 150,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        errorBuilder: (context, error, stackTrace) => _document(context),
+      borderRadius: BorderRadius.circular(12),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 220, maxHeight: 320),
+        child: Image.memory(
+          attachment.bytes,
+          key: ValueKey('pending-image-$clientId'),
+          width: 220,
+          fit: BoxFit.contain,
+          gaplessPlayback: true,
+          errorBuilder: (context, error, stackTrace) => _document(context),
+        ),
       ),
     );
   }
 
   Widget _document(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.picture_as_pdf_outlined, size: 20, color: foreground),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            attachment.name,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall
-                ?.copyWith(color: foreground),
+    return _DocumentAttachment(
+      key: ValueKey('pending-document-$clientId'),
+      name: attachment.name,
+      foreground: foreground,
+      compact: true,
+    );
+  }
+}
+
+class _DocumentAttachment extends StatelessWidget {
+  const _DocumentAttachment({
+    super.key,
+    required this.name,
+    required this.foreground,
+    required this.compact,
+    this.onTap,
+  });
+
+  final String name;
+  final Color foreground;
+  final bool compact;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = compact ? BorderRadius.zero : BorderRadius.circular(10);
+    final content = Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: foreground.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.picture_as_pdf_outlined,
+              size: 22,
+              color: foreground,
+            ),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'PDF document',
+                  style: Theme.of(context).textTheme.labelSmall
+                      ?.copyWith(color: foreground.withValues(alpha: 0.72)),
+                ),
+              ],
+            ),
+          ),
+          if (onTap != null) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.open_in_new_rounded, size: 18, color: foreground),
+          ],
+        ],
+      ),
+    );
+
+    return Semantics(
+      button: onTap != null,
+      label: onTap == null ? 'Document $name' : 'Open document $name',
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 220),
+        child: Material(
+          color: compact
+              ? Colors.transparent
+              : foreground.withValues(alpha: 0.08),
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(onTap: onTap, borderRadius: radius, child: content),
         ),
-      ],
+      ),
     );
   }
 }
@@ -829,114 +925,148 @@ class _Bubble extends StatelessWidget {
     final foreground = mine
         ? theme.colorScheme.onPrimary
         : theme.colorScheme.onSurface;
-    final compactImage =
-        message.body.trim().isEmpty &&
-        message.attachments.length == 1 &&
-        message.attachments.single.isImage;
+    final compactAttachment =
+        message.body.trim().isEmpty && message.attachments.length == 1;
+    final photoOnly = compactAttachment && message.attachments.single.isImage;
+    final bubbleBackground = photoOnly
+        ? theme.colorScheme.surfaceContainerLowest
+        : background;
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
-        ),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: compactImage
-            ? const EdgeInsets.all(3)
-            : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(mine ? 16 : 4),
-            bottomRight: Radius.circular(mine ? 4 : 16),
-          ),
-          border: mine
-              ? null
-              : Border.all(color: theme.colorScheme.outlineVariant),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (!mine && message.senderName != null)
-              Padding(
-                padding: compactImage
-                    ? const EdgeInsets.fromLTRB(7, 5, 7, 5)
-                    : const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  message.senderName!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w800,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!mine) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: CircleAvatar(
+                key: ValueKey('sender-avatar-${message.id}'),
+                radius: 14,
+                backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                child: Icon(
+                  Icons.person_rounded,
+                  size: 19,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: mine
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                if (!mine && message.senderName != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                    child: Text(
+                      message.senderName!,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            if (message.body.trim().isNotEmpty)
-              Text(
-                message.body,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: foreground,
-                  height: 1.4,
-                ),
-              ),
-            ...message.attachments.map(
-              (attachment) => Padding(
-                padding: EdgeInsets.only(top: compactImage ? 0 : 6),
-                child: attachment.isImage && attachment.url != null
-                    ? NetworkThumb(
-                        url: attachment.url,
-                        cacheKey: 'chat-attachment-${attachment.id}',
-                        width: 190,
-                        height: 150,
-                        radius: 10,
-                      )
-                    : InkWell(
-                        onTap: attachment.url == null
-                            ? null
-                            : () => launchUrl(
-                                Uri.parse(attachment.url!),
-                                mode: LaunchMode.externalApplication,
-                              ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.attach_file_rounded,
-                              size: 18,
-                              color: foreground,
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                attachment.name,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: foreground,
-                                  decoration: TextDecoration.underline,
+                Container(
+                  key: compactAttachment
+                      ? ValueKey('attachment-bubble-${message.id}')
+                      : ValueKey('message-bubble-${message.id}'),
+                  constraints: BoxConstraints(
+                    maxWidth:
+                        MediaQuery.of(context).size.width * 0.78 -
+                        (mine ? 0 : 36),
+                  ),
+                  padding: photoOnly
+                      ? const EdgeInsets.all(4)
+                      : compactAttachment
+                      ? EdgeInsets.zero
+                      : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                  clipBehavior: compactAttachment ? Clip.antiAlias : Clip.none,
+                  decoration: BoxDecoration(
+                    color: bubbleBackground,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(mine ? 16 : 4),
+                      bottomRight: Radius.circular(mine ? 4 : 16),
+                    ),
+                    border: photoOnly || !mine
+                        ? Border.all(
+                            color: photoOnly
+                                ? theme.colorScheme.outline
+                                : theme.colorScheme.outlineVariant,
+                          )
+                        : null,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (message.body.trim().isNotEmpty)
+                        Text(
+                          message.body,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: foreground,
+                            height: 1.4,
+                          ),
+                        ),
+                      ...message.attachments.map(
+                        (attachment) => Padding(
+                          padding: EdgeInsets.only(
+                            top: compactAttachment ? 0 : 6,
+                          ),
+                          child: attachment.isImage && attachment.url != null
+                              ? ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 220,
+                                    maxHeight: 320,
+                                  ),
+                                  child: NetworkThumb(
+                                    url: attachment.url,
+                                    cacheKey:
+                                        'chat-attachment-${attachment.id}',
+                                    width: 220,
+                                    fit: BoxFit.contain,
+                                    radius: photoOnly ? 12 : 10,
+                                  ),
+                                )
+                              : _DocumentAttachment(
+                                  key: ValueKey(
+                                    'document-attachment-${attachment.id}',
+                                  ),
+                                  name: attachment.name,
+                                  foreground: foreground,
+                                  compact: compactAttachment,
+                                  onTap: attachment.url == null
+                                      ? null
+                                      : () => launchUrl(
+                                          Uri.parse(attachment.url!),
+                                          mode: LaunchMode.externalApplication,
+                                        ),
                                 ),
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-              ),
-            ),
-            SizedBox(height: compactImage ? 5 : 3),
-            Padding(
-              padding: compactImage
-                  ? const EdgeInsets.fromLTRB(7, 0, 7, 4)
-                  : EdgeInsets.zero,
-              child: Text(
-                dateTime(message.createdAt),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: foreground.withValues(alpha: 0.65),
-                  fontSize: 10,
+                    ],
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+                  child: Text(
+                    dateTime(message.createdAt),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

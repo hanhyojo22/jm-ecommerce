@@ -16,7 +16,9 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Validation\ValidationException;
@@ -62,6 +64,54 @@ class OnlinePaymentTest extends TestCase
         $this->assertSame('cs_1', $order->payment->checkout_session_id);
     }
 
+    public function test_an_overlapping_payment_request_is_refused_without_calling_the_gateway(): void
+    {
+        $order = $this->checkOut($this->buyerWithCart($this->product(), 2));
+        $lock = Cache::lock('online-payment:'.$order->id, 60);
+        $this->assertTrue($lock->get());
+        try {
+            $this->get(route('orders.pay', $order))->assertRedirect(route('orders.show', $order))->assertSessionHasErrors('payment');
+            Http::assertNothingSent();
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function test_an_already_expired_session_is_verified_before_creating_its_replacement(): void
+    {
+        $order = $this->checkOut($this->buyerWithCart($this->product(), 2));
+        $order->payment()->update(['checkout_session_id' => 'cs_expired']);
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.paymongo.com/v1/checkout_sessions/cs_expired/expire' => Http::response([], 400),
+            'api.paymongo.com/v1/checkout_sessions/cs_expired' => Http::response(['data' => ['attributes' => ['status' => 'expired']]]),
+            'api.paymongo.com/v1/checkout_sessions' => Http::response(['data' => ['id' => 'cs_new', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_new']]]),
+        ]);
+
+        $this->get(route('orders.pay', $order))->assertRedirect('https://checkout.paymongo.com/cs_new');
+        $this->assertSame('cs_new', $order->payment->refresh()->checkout_session_id);
+        Http::assertSentCount(3);
+    }
+
+    public function test_failed_expiry_does_not_open_a_second_payable_checkout(): void
+    {
+        $order = $this->checkOut($this->buyerWithCart($this->product(), 2));
+        $order->payment()->update(['checkout_session_id' => 'cs_processing']);
+        Http::swap(new Factory);
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.paymongo.com/v1/checkout_sessions/cs_processing/expire' => Http::response(['errors' => [['detail' => 'private provider detail']]], 400),
+            'api.paymongo.com/v1/checkout_sessions/cs_processing' => Http::response(['data' => ['attributes' => ['status' => 'active']]]),
+            'api.paymongo.com/v1/checkout_sessions' => Http::response(['data' => ['id' => 'cs_new', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_new']]]),
+        ]);
+
+        $this->get(route('orders.pay', $order))->assertRedirect(route('orders.show', $order))->assertSessionHasErrors('payment');
+
+        $this->assertSame('cs_processing', $order->payment->refresh()->checkout_session_id);
+        Http::assertNotSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/checkout_sessions'));
+    }
+
     public function test_signed_webhook_marks_the_order_paid_once_and_lets_the_store_confirm(): void
     {
         $order = $this->checkOut($this->buyerWithCart($this->product(), 2));
@@ -93,6 +143,7 @@ class OnlinePaymentTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/refunds')
             && $request['data']['attributes']['amount'] === 4000
             && $request['data']['attributes']['payment_id'] === 'pay_1'
+            && $request->hasHeader('Idempotency-Key', 'cancelled-order:'.$sellerOrder->id)
             && $request['data']['attributes']['split_refund']['refund_sources'] === [
                 ['merchant_id' => 'org_a', 'split_type' => 'fixed', 'value' => 3960],
                 ['merchant_id' => 'org_jmmart', 'split_type' => 'fixed', 'value' => 40],

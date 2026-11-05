@@ -61,14 +61,15 @@
                             @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 ml-1 text-xs font-semibold text-muted">{{ $message->sender->name }}</p>@endif
                             @php($attachment = $message->type === 'file' ? $message->attachments->first() : null)
                             @php($isImageAttachment = $attachment !== null && in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
-                            <div class="chat-message-bubble w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $isImageAttachment ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $message->sender_id === auth()->id() ? 'ml-auto rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
+                            @php($usesFlushAttachmentLayout = $attachment !== null && ($isImageAttachment || blank($message->body)))
+                            <div class="chat-message-bubble w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $usesFlushAttachmentLayout ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $message->sender_id === auth()->id() ? 'ml-auto rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
                                 @if ($message->type === 'file' && $message->attachments->isNotEmpty())
                                     @if ($isImageAttachment)
                                         <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" aria-label="Open {{ $attachment->original_name }} in a larger view" class="block overflow-hidden">
                                             <img src="{{ route('messages.attachments.show', $attachment) }}" alt="{{ $attachment->original_name }}" loading="lazy" decoding="async" class="block max-h-80 max-w-full object-contain">
                                         </a>
                                     @else
-                                        <div class="w-64 max-w-full min-w-0 rounded-lg border border-line bg-white p-3 text-ink">
+                                        <div class="w-64 max-w-full min-w-0 bg-white p-3 text-ink {{ $usesFlushAttachmentLayout ? '' : 'rounded-lg border border-line' }}">
                                             <div class="flex min-w-0 items-center gap-3">
                                             <span class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $message->sender_id === auth()->id() ? 'bg-brand text-white' : 'bg-slate-100 text-muted' }}" aria-hidden="true">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg>
@@ -79,7 +80,7 @@
                                         </div>
                                     @endif
                                     @if (filled($message->body))
-                                        <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere] {{ $isImageAttachment ? 'px-4 pb-3 pt-2' : 'mt-2' }}">{{ $message->body }}</p>
+                                        <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere] {{ $usesFlushAttachmentLayout ? 'px-4 pb-3 pt-2' : 'mt-2' }}">{{ $message->body }}</p>
                                     @endif
                                 @else
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
@@ -109,10 +110,17 @@
                     <template x-for="item in pending" :key="item.id">
                         <article class="mb-1 flex justify-end" :data-pending-message-id="item.id">
                             <div class="mt-4 min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem]">
-                                <div class="chat-message-bubble ml-auto w-fit max-w-full rounded-lg rounded-br-[6px] border border-brand bg-brand text-sm leading-[1.6] text-white" :class="item.previewUrl ? 'overflow-hidden p-0' : 'px-4 py-3'">
+                                <div class="chat-message-bubble ml-auto w-fit max-w-full rounded-lg rounded-br-[6px] border border-brand bg-brand text-sm leading-[1.6] text-white" :class="item.previewUrl || item.fileName ? 'overflow-hidden p-0' : 'px-4 py-3'">
                                     <template x-if="item.previewUrl"><img :src="item.previewUrl" alt="Pending photo" class="block max-h-80 max-w-full object-contain"></template>
-                                    <p x-show="item.fileName && !item.previewUrl" x-text="item.fileName" class="truncate text-xs font-semibold"></p>
-                                    <p x-show="item.body" x-text="item.body" class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]" :class="item.previewUrl ? 'px-4 pb-3 pt-2' : ''"></p>
+                                    <template x-if="item.fileName && !item.previewUrl">
+                                        <div class="w-64 max-w-full min-w-0 bg-white p-3 text-ink">
+                                            <div class="flex min-w-0 items-center gap-3">
+                                                <span class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg></span>
+                                                <span class="min-w-0 flex-1"><span x-text="item.fileName" class="block truncate text-sm font-semibold"></span><span class="mt-0.5 block text-xs text-muted">PDF document</span></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <p x-show="item.body" x-text="item.body" class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]" :class="item.previewUrl || item.fileName ? 'px-4 pb-3 pt-2' : ''"></p>
                                 </div>
                                 <div class="mt-1 flex items-center justify-end gap-2 px-1 text-xs font-medium" :class="item.status === 'Failed' ? 'text-red-700' : 'text-muted'">
                                     <time x-text="item.time"></time><span aria-hidden="true">·</span>

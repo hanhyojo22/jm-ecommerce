@@ -95,6 +95,7 @@ class ClerkBackendSessionVerifier implements ClerkSessionVerifier
                 acceptsToken: ['session_token'],
             ));
         } catch (Throwable $exception) {
+            $request->attributes->set('auth_service_unavailable', true);
             // Reported rather than swallowed: an invalid or expired token is answered by the SDK
             // with a refusal, not an exception, so anything landing here is a fault of ours —
             // and an unreported one looks exactly like a visitor who is simply not signed in.

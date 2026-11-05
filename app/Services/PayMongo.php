@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -20,12 +21,28 @@ class PayMongo
     {
         $session = $this->client()->post('/v1/checkout_sessions', ['data' => ['attributes' => $attributes]])->throw()->json('data');
 
+        if (! is_array($session) || ! is_string($session['id'] ?? null) || $session['id'] === ''
+            || ! is_string($session['attributes']['checkout_url'] ?? null)
+            || filter_var($session['attributes']['checkout_url'], FILTER_VALIDATE_URL) === false
+            || parse_url($session['attributes']['checkout_url'], PHP_URL_SCHEME) !== 'https') {
+            throw new RuntimeException('The payment service returned an invalid checkout session.');
+        }
+
         return ['id' => $session['id'], 'checkout_url' => $session['attributes']['checkout_url']];
     }
 
     public function expireCheckoutSession(string $sessionId): void
     {
-        $this->client()->post("/v1/checkout_sessions/{$sessionId}/expire")->throw();
+        try {
+            $this->client()->post("/v1/checkout_sessions/{$sessionId}/expire")->throw();
+        } catch (RequestException $exception) {
+            if ($exception->response->status() === 400
+                && $this->client()->get("/v1/checkout_sessions/{$sessionId}")->throw()->json('data.attributes.status') === 'expired') {
+                return;
+            }
+
+            throw $exception;
+        }
     }
 
     /**
@@ -33,9 +50,15 @@ class PayMongo
      *
      * @param  array<string, string>  $sources  merchant ID => peso amount it gives back
      */
-    public function refund(string $paymentId, string $amount, array $sources): string
+    public function refund(string $paymentId, string $amount, array $sources, ?string $idempotencyKey = null): string
     {
-        return $this->client()->post('/v1/refunds', ['data' => ['attributes' => [
+        $client = $this->client();
+
+        if ($idempotencyKey !== null) {
+            $client = $client->withHeaders(['Idempotency-Key' => $idempotencyKey]);
+        }
+
+        $refundId = $client->post('/v1/refunds', ['data' => ['attributes' => [
             'amount' => self::centavos($amount),
             'payment_id' => $paymentId,
             'reason' => 'requested_by_customer',
@@ -43,6 +66,12 @@ class PayMongo
                 ->map(fn (string $share, string $merchantId): array => ['merchant_id' => $merchantId, 'split_type' => 'fixed', 'value' => self::centavos($share)])
                 ->values()->all()],
         ]]])->throw()->json('data.id');
+
+        if (! is_string($refundId) || $refundId === '') {
+            throw new RuntimeException('The payment service returned an invalid refund.');
+        }
+
+        return $refundId;
     }
 
     public function createChildAccount(): string
@@ -94,6 +123,6 @@ class PayMongo
     {
         $secret = config('services.paymongo.secret_key') ?: throw new RuntimeException('PayMongo is not configured: set PAYMONGO_SECRET_KEY.');
 
-        return Http::baseUrl(config('services.paymongo.base_url'))->withBasicAuth($secret, '')->acceptJson()->asJson()->timeout(15);
+        return Http::baseUrl(config('services.paymongo.base_url'))->withBasicAuth($secret, '')->acceptJson()->asJson()->connectTimeout(3)->timeout(15);
     }
 }

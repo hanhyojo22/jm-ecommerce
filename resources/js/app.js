@@ -1,5 +1,6 @@
 
 import './cookie-consent';
+import { showRequestError } from './request-errors';
 import './chat';
 import './cart';
 import { clerkComponentAppearance, clerkUserProfileAppearance } from './clerk-appearance';
@@ -80,7 +81,7 @@ if (document.querySelector('[data-conversation-thread], [data-conversation-inbox
             enabledTransports: ['ws', 'wss'],
         });
         window.dispatchEvent(new Event('reverb:ready'));
-    }).catch((error) => console.error(error));
+    }).catch(() => console.warn('Real-time updates are unavailable; polling remains active.'));
 }
 
 const clerkPublishableKey = document.querySelector('meta[name="clerk-publishable-key"]')?.content;
@@ -738,7 +739,7 @@ document.addEventListener('click', (event) => {
 
     ensureClerkSession(clerkSessionRefreshEndpoint)
         .catch((error) => {
-            console.error(error);
+            console.warn('Session refresh failed.');
         })
         .finally(() => {
             window.location.assign(destination.href);
@@ -808,7 +809,7 @@ document.addEventListener('submit', async (event) => {
     } catch (error) {
         delete form.dataset.clerkSessionRefreshing;
         clearBusy();
-        console.error(error);
+        console.warn('Session refresh failed.');
 
         if (form.hasAttribute('data-chat-upload')) {
             form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Your session could not be refreshed. Use Retry to try again.' } }));
@@ -1176,8 +1177,7 @@ const signOut = async () => {
         await clerk.signOut();
         window.location.assign('/');
     } catch (error) {
-        console.error(error);
-        window.alert('Unable to sign out. Please try again.');
+        showRequestError('Unable to sign out. Please try again.');
     }
 };
 
@@ -1325,7 +1325,7 @@ if (clerkComponents.length > 0 || clerkHandoff) {
                 clerk.mountUserProfile(element, { appearance: clerkUserProfileAppearance });
             });
         }).catch((error) => {
-            console.error(error);
+            console.warn('Authentication could not load.');
             renderClerkComponentError();
             renderClerkHandoffError();
         });

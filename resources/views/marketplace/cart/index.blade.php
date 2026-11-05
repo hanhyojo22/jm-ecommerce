@@ -83,7 +83,10 @@
                     <div class="mt-5 grid gap-7 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
                         <section aria-labelledby="cart-items" class="min-w-0">
                             <h2 id="cart-items" class="sr-only">Cart items grouped by seller</h2>
-                            <p x-cloak x-show="error" x-text="error" class="mb-3 rounded-md bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert"></p>
+                            <div x-cloak x-show="error" class="mb-3 rounded-md bg-red-50 px-4 py-3 text-sm font-medium text-red-700" role="alert">
+                                <p x-text="error"></p>
+                                <button type="button" @click="send()" :disabled="saving" class="mt-2 min-h-12 rounded-md border border-red-300 px-4 font-semibold disabled:opacity-50">Retry saving selection</button>
+                            </div>
 
                             <div class="overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface">
                                 <div class="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line p-3 sm:px-4 sm:py-3.5">

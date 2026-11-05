@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/core/attachment_picker.dart';
+import 'package:jmmart/src/core/formatters.dart';
 import 'package:jmmart/src/core/reverb_client.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
@@ -32,6 +33,13 @@ void main() {
 
       expect(find.text('Is this still available?'), findsOneWidget);
       expect(find.text('Sending…'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(ValueKey('pending-bubble-${api.lastClientMessageId}')),
+          matching: find.text('Sending…'),
+        ),
+        findsNothing,
+      );
       expect(api.sendCount, 1);
       expect(_composerText(tester), isEmpty);
 
@@ -48,6 +56,13 @@ void main() {
       expect(find.text('Is this still available?'), findsOneWidget);
       expect(find.text('Sending…'), findsNothing);
       expect(find.text('Sent'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('message-bubble-message-1')),
+          matching: find.text(dateTime(confirmed.createdAt)),
+        ),
+        findsNothing,
+      );
 
       await _disposeChat(tester);
     },
@@ -180,6 +195,193 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('attachment-only messages use edge-to-edge bubble layouts', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      _imageMessage('message-image', 'attachment-image', 'receipt.png'),
+      _message(
+        id: 'message-document',
+        clientMessageId: null,
+        body: '',
+        attachments: const [
+          ChatAttachment(
+            id: 'attachment-document',
+            name: 'invoice.pdf',
+            mimeType: 'application/pdf',
+            url: 'http://localhost/media/attachment-document',
+            isImage: false,
+          ),
+        ],
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    final imageBubble = tester.widget<Container>(
+      find.byKey(const ValueKey('attachment-bubble-message-image')),
+    );
+    final image = tester.widget<NetworkThumb>(find.byType(NetworkThumb));
+    final documentBubble = tester.widget<Container>(
+      find.byKey(const ValueKey('attachment-bubble-message-document')),
+    );
+
+    expect(imageBubble.padding, const EdgeInsets.all(4));
+    expect(imageBubble.clipBehavior, Clip.antiAlias);
+    expect(imageBubble.decoration, isA<BoxDecoration>());
+    expect((imageBubble.decoration! as BoxDecoration).border, isNotNull);
+    expect(image.radius, 12);
+    expect(image.fit, BoxFit.contain);
+    expect(image.height, isNull);
+    expect(documentBubble.padding, EdgeInsets.zero);
+    final timestamp = find.text(dateTime(api.serverMessages.first.createdAt));
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('attachment-bubble-message-image')),
+        matching: timestamp,
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('attachment-bubble-message-document')),
+        matching: timestamp,
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('document-attachment-attachment-document')),
+      findsOneWidget,
+    );
+    expect(find.text('PDF document'), findsOneWidget);
+
+    await _disposeChat(tester);
+  });
+
+  testWidgets('incoming photo keeps the sender name above the photo bubble', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage(
+        id: 'incoming-photo',
+        senderId: 'seller-1',
+        senderName: 'James',
+        isMine: false,
+        type: 'file',
+        body: '',
+        createdAt: DateTime.now().toUtc().toIso8601String(),
+        attachments: const [
+          ChatAttachment(
+            id: 'portrait',
+            name: 'portrait.png',
+            mimeType: 'image/png',
+            url: 'http://localhost/media/portrait',
+            isImage: true,
+          ),
+        ],
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    final bubble = find.byKey(
+      const ValueKey('attachment-bubble-incoming-photo'),
+    );
+    expect(find.text('James'), findsOneWidget);
+    expect(
+      find.descendant(of: bubble, matching: find.text('James')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: bubble, matching: find.byType(NetworkThumb)),
+      findsOneWidget,
+    );
+
+    await _disposeChat(tester);
+  });
+
+  testWidgets('incoming messages show a sender circle beside the bubble', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      for (final type in ['text', 'image', 'document'])
+        ChatMessage(
+          id: 'incoming-$type',
+          senderId: 'seller-1',
+          senderName: 'James',
+          isMine: false,
+          type: type == 'text' ? 'text' : 'file',
+          body: type == 'text' ? 'Hello' : '',
+          createdAt: DateTime.now().toUtc().toIso8601String(),
+          attachments: type == 'text'
+              ? const []
+              : [
+                  ChatAttachment(
+                    id: type,
+                    name: type == 'image' ? 'photo.png' : 'file.pdf',
+                    mimeType: type == 'image' ? 'image/png' : 'application/pdf',
+                    url: 'http://localhost/media/$type',
+                    isImage: type == 'image',
+                  ),
+                ],
+        ),
+    ];
+
+    await _pumpChat(tester, api, width: 320, height: 700);
+
+    for (final type in ['text', 'image', 'document']) {
+      final avatar = find.byKey(ValueKey('sender-avatar-incoming-$type'));
+      final bubble = find.byKey(
+        ValueKey(
+          type == 'text'
+              ? 'message-bubble-incoming-$type'
+              : 'attachment-bubble-incoming-$type',
+        ),
+      );
+      expect(avatar, findsOneWidget);
+      expect(bubble, findsOneWidget);
+      expect(
+        tester.getTopLeft(avatar).dx,
+        lessThan(tester.getTopLeft(bubble).dx),
+      );
+    }
+    expect(tester.takeException(), isNull);
+
+    await _disposeChat(tester);
+  });
+
+  testWidgets('document attachments fit narrow screens with large text', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      _message(
+        id: 'message-document',
+        clientMessageId: null,
+        body: '',
+        attachments: const [
+          ChatAttachment(
+            id: 'attachment-document',
+            name: 'a-very-long-invoice-file-name.pdf',
+            mimeType: 'application/pdf',
+            url: 'http://localhost/media/attachment-document',
+            isImage: false,
+          ),
+        ],
+      ),
+    ];
+
+    await _pumpChat(tester, api, width: 320, height: 700, textScale: 2);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('PDF document'), findsOneWidget);
+
+    await _disposeChat(tester);
+  });
+
   testWidgets('a picked photo is uploaded and replaced by the server row', (
     tester,
   ) async {
@@ -196,6 +398,11 @@ void main() {
 
     final clientId = api.lastAttachmentClientMessageId!;
     expect(find.byKey(ValueKey('pending-image-$clientId')), findsOneWidget);
+    final pendingBubble = tester.widget<Container>(
+      find.byKey(ValueKey('pending-attachment-bubble-$clientId')),
+    );
+    expect(pendingBubble.padding, const EdgeInsets.all(4));
+    expect((pendingBubble.decoration! as BoxDecoration).border, isNotNull);
     expect(find.text('Sending…'), findsOneWidget);
 
     final confirmed = _message(
@@ -336,7 +543,17 @@ Future<void> _pumpChat(
   WidgetTester tester,
   _FakeApiClient api, {
   AttachmentPicker? picker,
+  double? width,
+  double height = 844,
+  double textScale = 1,
 }) async {
+  if (width != null) {
+    tester.view.physicalSize = Size(width, height);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  }
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -344,8 +561,13 @@ Future<void> _pumpChat(
         reverbProvider.overrideWithValue(_FakeReverbClient()),
         if (picker != null) attachmentPickerProvider.overrideWithValue(picker),
       ],
-      child: const MaterialApp(
-        home: ChatScreen(conversationId: 'conversation-1'),
+      child: MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: const ChatScreen(conversationId: 'conversation-1'),
       ),
     ),
   );

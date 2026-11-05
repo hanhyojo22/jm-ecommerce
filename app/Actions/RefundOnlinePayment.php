@@ -20,23 +20,23 @@ class RefundOnlinePayment
      */
     public function cancelled(SellerOrder $sellerOrder): ?string
     {
-        $sellerOrder = SellerOrder::query()->with('order.payment', 'tenant', 'store')->findOrFail($sellerOrder->id);
+        return DB::transaction(function () use ($sellerOrder): ?string {
+            $sellerOrder = SellerOrder::query()->with('order.payment', 'tenant', 'store')->lockForUpdate()->findOrFail($sellerOrder->id);
 
-        if ($sellerOrder->status !== 'cancelled' || $sellerOrder->gateway_refund_id !== null) {
-            return $sellerOrder->gateway_refund_id;
-        }
+            if ($sellerOrder->status !== 'cancelled' || $sellerOrder->gateway_refund_id !== null) {
+                return $sellerOrder->gateway_refund_id;
+            }
 
-        $refundId = $this->refund($sellerOrder, (string) $sellerOrder->total);
+            $refundId = $this->refund($sellerOrder, (string) $sellerOrder->total, 'cancelled-order:'.$sellerOrder->id);
 
-        DB::transaction(function () use ($sellerOrder, $refundId): void {
             SellerOrder::query()->whereKey($sellerOrder->id)->whereNull('gateway_refund_id')->update(['gateway_refund_id' => $refundId]);
             AuditLog::query()->create([
                 'actor_user_id' => null, 'action' => 'seller_order.online_refunded', 'entity_type' => SellerOrder::class,
                 'entity_id' => $sellerOrder->id, 'new_values' => ['amount' => (string) $sellerOrder->total, 'gateway_refund_id' => $refundId],
             ]);
-        });
 
-        return $refundId;
+            return $refundId;
+        });
     }
 
     /**
@@ -45,7 +45,7 @@ class RefundOnlinePayment
      * The store gives back the amount less JMMart's fee on it, and JMMart gives back that fee, so
      * each side returns what it kept. PayMongo's fee, which the buyer paid separately, is not refunded.
      */
-    public function refund(SellerOrder $sellerOrder, string $amount): string
+    public function refund(SellerOrder $sellerOrder, string $amount, ?string $idempotencyKey = null): string
     {
         $payment = $sellerOrder->order->payment;
 
@@ -63,6 +63,6 @@ class RefundOnlinePayment
             $sources[config('services.paymongo.merchant_id') ?: throw new RuntimeException('PayMongo is not configured: set PAYMONGO_MERCHANT_ID.')] = $platformPart;
         }
 
-        return $this->payMongo->refund($payment->gateway_payment_id, $amount, $sources);
+        return $this->payMongo->refund($payment->gateway_payment_id, $amount, $sources, $idempotencyKey);
     }
 }

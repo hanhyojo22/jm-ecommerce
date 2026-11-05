@@ -16,6 +16,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="min-h-screen bg-canvas font-sans text-ink antialiased">
+        <x-request-feedback />
         <main class="flex min-h-screen items-center justify-center px-[18px] py-10 sm:px-6">
             <section class="w-full max-w-md text-center">
                 <a href="{{ route('home') }}" class="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">

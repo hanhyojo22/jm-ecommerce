@@ -93,6 +93,7 @@
 
             <form id="checkout-form" x-ref="form" method="POST" action="{{ route('checkout.store') }}" @submit="placing = true" class="mt-[22px] grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-7">
                 @csrf
+                <input type="hidden" name="client_request_id" value="{{ is_string(old('client_request_id')) && filled(old('client_request_id')) ? old('client_request_id') : (string) \Illuminate\Support\Str::uuid() }}">
                 <div class="grid min-w-0 gap-3.5">
                     @if ($orderLimitReached)
                         <div class="rounded-md border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950" role="alert">

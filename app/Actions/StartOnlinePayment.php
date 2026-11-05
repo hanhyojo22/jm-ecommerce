@@ -8,8 +8,8 @@ use App\Models\SellerOrder;
 use App\Services\PayMongo;
 use App\Support\PlatformFee;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class StartOnlinePayment
 {
@@ -27,7 +27,20 @@ class StartOnlinePayment
      */
     public function handle(Order $order, ?string $successUrl = null, ?string $cancelUrl = null): string
     {
-        $order->loadMissing(['payment', 'sellerOrders.store', 'sellerOrders.tenant', 'sellerOrders.items']);
+        $url = Cache::lock('online-payment:'.$order->id, 60)->get(
+            fn (): string => $this->start($order, $successUrl, $cancelUrl),
+        );
+
+        if ($url === false) {
+            throw ValidationException::withMessages(['payment' => 'A payment request is already in progress. Check your order before trying again.']);
+        }
+
+        return $url;
+    }
+
+    private function start(Order $order, ?string $successUrl, ?string $cancelUrl): string
+    {
+        $order->refresh()->load(['payment', 'sellerOrders.store', 'sellerOrders.tenant', 'sellerOrders.items']);
         $payment = $order->payment;
         $sellerOrders = $order->sellerOrders->reject(fn (SellerOrder $sellerOrder): bool => $sellerOrder->status === 'cancelled');
 
@@ -41,6 +54,11 @@ class StartOnlinePayment
 
         $total = $sellerOrders->reduce(fn (string $sum, SellerOrder $sellerOrder): string => bcadd($sum, (string) $sellerOrder->total, 2), '0.00');
         $fee = self::buyerFee($total, $payment->method);
+
+        if ($payment->checkout_session_id !== null) {
+            $this->payMongo->expireCheckoutSession($payment->checkout_session_id);
+            $payment->update(['checkout_session_id' => null]);
+        }
 
         $session = $this->payMongo->createCheckoutSession([
             'line_items' => [...$this->lineItems($sellerOrders), ['name' => 'Payment fee', 'amount' => PayMongo::centavos($fee), 'currency' => 'PHP', 'quantity' => 1]],
@@ -57,17 +75,7 @@ class StartOnlinePayment
             ])->values()->all()],
         ]);
 
-        $previousSessionId = $payment->checkout_session_id;
         $payment->update(['checkout_session_id' => $session['id'], 'fee_amount' => $fee]);
-
-        // A buyer who opens checkout again gets a fresh session; the old one must not take a second payment.
-        if ($previousSessionId !== null) {
-            try {
-                $this->payMongo->expireCheckoutSession($previousSessionId);
-            } catch (Throwable $exception) {
-                report($exception);
-            }
-        }
 
         return $session['checkout_url'];
     }

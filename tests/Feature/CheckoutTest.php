@@ -13,6 +13,7 @@ use App\Models\TenantMember;
 use App\Models\User;
 use App\Services\GmailOrderMailer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
@@ -138,7 +139,27 @@ class CheckoutTest extends TestCase
             ->assertSee('name="province"', false)
             ->assertSee('name="postal_code"', false)
             ->assertSee('name="delivery_note"', false)
+            ->assertSee('name="client_request_id"', false)
             ->assertSee('Free shipping');
+    }
+
+    public function test_database_failure_rolls_back_checkout_stock_and_preserves_the_cart(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        $cart = Cart::create(['user_id' => $customer->id]);
+        $cart->items()->create(['product_id' => $product->id, 'quantity' => 2]);
+        Order::creating(static function (): void {
+            DB::statement('INSERT INTO unavailable_order_storage (id) VALUES (1)');
+        });
+
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())
+            ->assertStatus(500)->assertDontSee('unavailable_order_storage');
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertDatabaseCount('seller_orders', 0);
+        $this->assertSame(5, $product->refresh()->stock_quantity);
+        $this->assertSame(2, $cart->items()->sole()->quantity);
     }
 
     public function test_checkout_saves_and_prefills_the_buyers_delivery_address(): void

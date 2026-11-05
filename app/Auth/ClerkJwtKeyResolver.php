@@ -84,6 +84,9 @@ class ClerkJwtKeyResolver
                 fn (): array => $this->download(),
             );
         } catch (Throwable $exception) {
+            if (app()->bound('request')) {
+                request()->attributes->set('auth_service_unavailable', true);
+            }
             // Clerk did not answer, in time or at all. Every session on the site is refused for
             // as long as that lasts, so it is reported rather than left to look like a site full
             // of signed-out visitors. The parse failures below are not: a token carrying

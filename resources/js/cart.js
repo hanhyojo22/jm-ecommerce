@@ -11,6 +11,8 @@ window.cartSelection = (config) => ({
     saving: false,
     error: '',
     saveTimer: null,
+    inFlight: null,
+    pendingSelection: null,
 
     /**
      * `$el` points at whichever element fired the handler, so the component
@@ -160,17 +162,43 @@ window.cartSelection = (config) => ({
         clearTimeout(this.saveTimer);
         this.saving = true;
         this.error = '';
+        this.pendingSelection = [...this.selected];
         this.saveTimer = setTimeout(() => this.send(), 350);
     },
 
-    async send() {
+    send() {
+        clearTimeout(this.saveTimer);
+        if (this.inFlight) return this.inFlight;
+        this.saving = true;
+        this.error = '';
+        this.pendingSelection = [...this.selected];
+        this.inFlight = this.drainSelection().finally(() => {
+            this.inFlight = null;
+            this.saving = false;
+        });
+        return this.inFlight;
+    },
+
+    async drainSelection() {
+        while (this.pendingSelection !== null) {
+            const selected = this.pendingSelection;
+            this.pendingSelection = null;
+            await this.saveSelection(selected);
+            if (this.error) {
+                this.pendingSelection = null;
+                return;
+            }
+        }
+    },
+
+    async saveSelection(selected) {
         try {
-            const response = await this.request();
+            const response = await this.request(selected);
 
             // The Clerk-backed session is short lived. One stale response is
             // worth a single retry after a refresh before troubling the buyer.
             if (response.status === 401 || response.status === 419) {
-                const retry = await this.request();
+                const retry = await this.request(selected);
 
                 if (!retry.ok) {
                     this.error = 'Your sign-in expired. Reload the page to save your selection.';
@@ -190,12 +218,10 @@ window.cartSelection = (config) => ({
             }
         } catch {
             this.error = 'Your selection could not be saved. Check your connection.';
-        } finally {
-            this.saving = false;
         }
     },
 
-    request() {
+    request(selected) {
         return fetch(config.endpoint, {
             method: 'PATCH',
             credentials: 'same-origin',
@@ -207,7 +233,7 @@ window.cartSelection = (config) => ({
                 // other state-changing request in the app already goes through.
                 'X-Requires-Session': '1',
             },
-            body: JSON.stringify({ selected: [...this.selected] }),
+            body: JSON.stringify({ selected }),
         });
     },
 });

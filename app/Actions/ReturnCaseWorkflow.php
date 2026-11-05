@@ -160,7 +160,7 @@ class ReturnCaseWorkflow
                         if (bccomp(bcadd($refunded, $amount, 2), (string) $case->sellerOrder->total, 2) > 0) {
                             throw ValidationException::withMessages(['action' => 'This refund would take more back than the buyer paid for this store order. Contact JMMart support.']);
                         }
-                        $refundId = $this->refundOnlinePayment->refund($case->sellerOrder, $amount);
+                        $refundId = $this->refundOnlinePayment->refund($case->sellerOrder, $amount, 'return-case:'.$case->id);
                         $case->outcome()->create(['recorded_by' => $actor->id, 'kind' => 'refund', 'amount' => $amount, 'paid_at' => now(), 'created_at' => now()]);
                         $changes = ['status' => 'awaiting_confirmation', 'buyer_respond_by' => now()->addDays(7)];
                         $eventData = ['refund_amount' => $amount, 'gateway_refund_id' => $refundId];
