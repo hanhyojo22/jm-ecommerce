@@ -59,13 +59,13 @@
                         @endif
                         <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem] {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
                             @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 ml-1 text-xs font-semibold text-muted">{{ $message->sender->name }}</p>@endif
-                            <div class="chat-message-bubble w-fit max-w-full rounded-lg border px-4 py-3 text-sm leading-[1.6] {{ $message->sender_id === auth()->id() ? 'ml-auto rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
+                            @php($attachment = $message->type === 'file' ? $message->attachments->first() : null)
+                            @php($isImageAttachment = $attachment !== null && in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
+                            <div class="chat-message-bubble w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $isImageAttachment ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $message->sender_id === auth()->id() ? 'ml-auto rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
                                 @if ($message->type === 'file' && $message->attachments->isNotEmpty())
-                                    @php($attachment = $message->attachments->first())
-                                    @if (in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
-                                        <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" aria-label="Open {{ $attachment->original_name }} in a larger view" class="block">
-                                            <img src="{{ route('messages.attachments.show', $attachment) }}" alt="{{ $attachment->original_name }}" loading="lazy" decoding="async" class="max-h-80 max-w-full rounded-lg object-contain">
-                                            <span class="mt-1 block text-xs underline underline-offset-2">{{ $attachment->original_name }}</span>
+                                    @if ($isImageAttachment)
+                                        <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" aria-label="Open {{ $attachment->original_name }} in a larger view" class="block overflow-hidden">
+                                            <img src="{{ route('messages.attachments.show', $attachment) }}" alt="{{ $attachment->original_name }}" loading="lazy" decoding="async" class="block max-h-80 max-w-full object-contain">
                                         </a>
                                     @else
                                         <div class="w-64 max-w-full min-w-0 rounded-lg border border-line bg-white p-3 text-ink">
@@ -79,7 +79,7 @@
                                         </div>
                                     @endif
                                     @if (filled($message->body))
-                                        <p class="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
+                                        <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere] {{ $isImageAttachment ? 'px-4 pb-3 pt-2' : 'mt-2' }}">{{ $message->body }}</p>
                                     @endif
                                 @else
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
@@ -109,10 +109,10 @@
                     <template x-for="item in pending" :key="item.id">
                         <article class="mb-1 flex justify-end" :data-pending-message-id="item.id">
                             <div class="mt-4 min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem]">
-                                <div class="chat-message-bubble ml-auto w-fit max-w-full rounded-lg rounded-br-[6px] border border-brand bg-brand px-4 py-3 text-sm leading-[1.6] text-white">
-                                    <template x-if="item.previewUrl"><img :src="item.previewUrl" alt="Pending photo" class="mb-2 max-h-80 max-w-full rounded-lg object-contain"></template>
-                                    <p x-show="item.fileName" x-text="item.fileName" class="truncate text-xs font-semibold"></p>
-                                    <p x-show="item.body" x-text="item.body" class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]"></p>
+                                <div class="chat-message-bubble ml-auto w-fit max-w-full rounded-lg rounded-br-[6px] border border-brand bg-brand text-sm leading-[1.6] text-white" :class="item.previewUrl ? 'overflow-hidden p-0' : 'px-4 py-3'">
+                                    <template x-if="item.previewUrl"><img :src="item.previewUrl" alt="Pending photo" class="block max-h-80 max-w-full object-contain"></template>
+                                    <p x-show="item.fileName && !item.previewUrl" x-text="item.fileName" class="truncate text-xs font-semibold"></p>
+                                    <p x-show="item.body" x-text="item.body" class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]" :class="item.previewUrl ? 'px-4 pb-3 pt-2' : ''"></p>
                                 </div>
                                 <div class="mt-1 flex items-center justify-end gap-2 px-1 text-xs font-medium" :class="item.status === 'Failed' ? 'text-red-700' : 'text-muted'">
                                     <time x-text="item.time"></time><span aria-hidden="true">·</span>
