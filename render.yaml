@@ -29,6 +29,7 @@ services:
     plan: starter
     region: singapore
     branch: master
+    autoDeployTrigger: commit
     healthCheckPath: /up
     envVars:
       - key: PORT
@@ -120,6 +121,7 @@ services:
     plan: free
     region: singapore
     branch: master
+    autoDeployTrigger: commit
     envVars:
       - key: PORT
         value: "10000"
@@ -175,6 +177,7 @@ services:
     schedule: "0 * * * *"
     region: singapore
     branch: master
+    autoDeployTrigger: commit
     envVars:
       - key: APP_NAME
         value: JMMart
@@ -250,6 +253,7 @@ services:
     plan: free
     region: singapore
     branch: staging
+    autoDeployTrigger: commit
     healthCheckPath: /up
     envVars:
       - key: PORT
@@ -341,6 +345,7 @@ services:
     plan: free
     region: singapore
     branch: staging
+    autoDeployTrigger: commit
     envVars:
       - key: PORT
         value: "10000"

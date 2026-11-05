@@ -18,9 +18,27 @@ duplicate any pricing, stock, order, return, or chat rules.
 - Android SDK 36, build-tools 36.0.0, NDK 28.2.13676358
 - JDK 21
 - A Clerk publishable key
-- The Laravel API running locally
+- The Laravel API on Render (default), or running locally with explicit overrides
 
 ## Run
+
+Run from the `mobile` directory. The app connects to the production Laravel API
+and chat service on Render by default; your PC does not need to run Laravel.
+Use the publishable key from the same Clerk instance configured on Render.
+Never put a Clerk secret key in the mobile app.
+
+```powershell
+flutter run --dart-define=CLERK_PUBLISHABLE_KEY=YOUR_RENDER_CLERK_PUBLISHABLE_KEY
+```
+
+Build an Android APK with the same cloud configuration:
+
+```powershell
+flutter build apk --debug --dart-define=CLERK_PUBLISHABLE_KEY=YOUR_RENDER_CLERK_PUBLISHABLE_KEY
+```
+
+Cloud builds read and change real marketplace data. To use a local development
+backend instead, start Laravel and Reverb locally and pass all the overrides below.
 
 Android emulator (the host is `10.0.2.2`):
 
@@ -30,7 +48,9 @@ flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1 \
   --dart-define=REVERB_APP_KEY=jmmart-local-key \
   --dart-define=REVERB_HOST=10.0.2.2 \
-  --dart-define=REVERB_PORT=8080
+  --dart-define=REVERB_PORT=8080 \
+  --dart-define=REVERB_USE_TLS=false \
+  --dart-define=REVERB_ORIGIN=http://127.0.0.1:8000
 ```
 
 Physical device on the same network: replace both hosts with the computer's LAN
@@ -41,10 +61,15 @@ USB device alternative:
 
 ```bash
 adb reverse tcp:8000 tcp:8000
+adb reverse tcp:8080 tcp:8080
 flutter run \
   --dart-define=CLERK_PUBLISHABLE_KEY=pk_test_your_key \
   --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1 \
-  --dart-define=REVERB_HOST=127.0.0.1
+  --dart-define=REVERB_APP_KEY=jmmart-local-key \
+  --dart-define=REVERB_HOST=127.0.0.1 \
+  --dart-define=REVERB_PORT=8080 \
+  --dart-define=REVERB_USE_TLS=false \
+  --dart-define=REVERB_ORIGIN=http://127.0.0.1:8000
 ```
 
 The app shows a setup screen instead of crashing when the Clerk key is missing.

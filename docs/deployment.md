@@ -1,3 +1,48 @@
+# Render deployment
+
+The existing `render.yaml` deploys the Laravel web/API service, Reverb chat
+service, and scheduler from `master`. Staging web/API and chat services deploy
+from `staging`. Every service explicitly uses `autoDeployTrigger: commit`.
+Render must be connected through your GitHub account for automatic deployments.
+
+In the Render dashboard, sync the existing Blueprint after pushing changes to
+`render.yaml`. For services managed individually, set Settings > Auto-Deploy to
+On Commit and confirm their linked branch matches the manifest.
+
+Set the required secrets in Render, including a stable `APP_KEY`, hosted PostgreSQL
+`DB_URL`, Clerk keys, and the S3-compatible storage credentials listed in
+`render.yaml`. Use separate databases, buckets, and Clerk instances for staging
+and production. Local `.env` files are excluded from the Docker image and are
+not uploaded to Render. Keep the existing `APP_KEY` and database configuration
+when updating an existing deployment. Configure webhook signing secrets in
+Render when enabling Clerk webhooks or PayMongo payments.
+
+The container builds the website assets and installs production PHP dependencies.
+On startup it runs migrations when `RUN_MIGRATIONS=true`, caches Laravel
+configuration/routes/views, and starts Apache. The API is served by the same
+Laravel application as the website. Queued work currently runs synchronously
+(`QUEUE_CONNECTION=sync`), and the Render cron service runs the scheduler hourly.
+Uploaded files use the configured external buckets so they survive redeploys.
+The existing production web service uses the paid Starter plan; chat and staging
+use free plans and can sleep while idle.
+
+After reviewing and committing the intended files, push to the linked branch:
+
+```sh
+git push origin master
+```
+
+Render rebuilds and deploys the committed backend and website code automatically.
+Saving a file locally does not deploy it. Watch the service's Events/Deploys page
+and verify `/up` and `/api/v1/categories` after the rollout. Backend changes must
+remain compatible with mobile app versions already installed on phones.
+
+The Flutter app defaults to the production Render API and secure Reverb service.
+See [the mobile setup](../mobile/README.md) for its Clerk key and run/build commands.
+Mobile Dart or asset changes require a new APK/app release; Render does not update
+an installed mobile app. The mobile directory is excluded from the backend Docker
+image because it is built separately with Flutter.
+
 # VPS deployment
 
 This deployment uses Docker Compose, Caddy-managed TLS, PostgreSQL, Redis, Laravel queue workers, the scheduler, and Reverb. The production Compose file never publishes PostgreSQL, Redis, Apache, or Reverb directly; Caddy is the only public service.
