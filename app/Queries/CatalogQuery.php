@@ -93,21 +93,24 @@ class CatalogQuery
     public static function search(array $filters, ?Store $seller = null, int $perPage = 12): array
     {
         $search = trim($filters['q'] ?? '');
-        $searchTerm = '%'.Str::lower($search).'%';
+        $normalizedSearch = Str::lower($search);
+        $escapedSearch = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $normalizedSearch);
+        $searchPrefix = $escapedSearch.'%';
+        $searchTerm = '%'.$escapedSearch.'%';
 
         $categoryProducts = self::publishedProducts()
             ->when($seller, fn (Builder $query) => $query->whereBelongsTo($seller));
 
         $catalogProducts = (clone $categoryProducts)
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
-                ->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
-                ->orWhereRaw('LOWER(description) LIKE ?', [$searchTerm])
-                ->orWhereRaw('LOWER(brand) LIKE ?', [$searchTerm])
+                ->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$searchTerm])
+                ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$searchTerm])
+                ->orWhereRaw("LOWER(products.brand) LIKE ? ESCAPE '!'", [$searchTerm])
                 ->orWhereHas('store', fn (Builder $store) => $store
-                    ->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                    ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
                     ->orWhereHas('tenant', fn (Builder $tenant) => $tenant
-                        ->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
-                        ->orWhereHas('members.user', fn (Builder $seller) => $seller->whereRaw('LOWER(name) LIKE ?', [$searchTerm]))))));
+                        ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
+                        ->orWhereHas('members.user', fn (Builder $seller) => $seller->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm]))))));
 
         $products = (clone $catalogProducts)
             ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
@@ -137,7 +140,10 @@ class CatalogQuery
                 ->orderByRaw('CASE WHEN (SELECT COUNT(*) FROM product_reviews WHERE product_reviews.product_id = products.id AND product_reviews.status = ?) = 0 THEN 1 ELSE 0 END ASC', ['published'])
                 ->orderByDesc('published_reviews_avg_rating')
                 ->orderByDesc('published_reviews_count'),
-            'newest', 'relevance' => $products->latest(),
+            'relevance' => $search === ''
+                ? $products->latest()
+                : self::orderByRelevance($products, $normalizedSearch, $searchPrefix, $searchTerm),
+            'newest' => $products->latest(),
         };
 
         if ($seller === null) {
@@ -165,6 +171,31 @@ class CatalogQuery
             'categories' => $categories,
             'brands' => $brands,
         ];
+    }
+
+    private static function orderByRelevance(
+        Builder $products,
+        string $search,
+        string $searchPrefix,
+        string $searchTerm,
+    ): Builder {
+        return $products
+            ->orderByRaw(
+                <<<'SQL'
+                    CASE
+                        WHEN LOWER(products.name) = ? THEN 0
+                        WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1
+                        WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 2
+                        WHEN LOWER(products.brand) = ? THEN 3
+                        WHEN LOWER(products.brand) LIKE ? ESCAPE '!' THEN 4
+                        WHEN LOWER(products.description) LIKE ? ESCAPE '!' THEN 5
+                        ELSE 6
+                    END
+                SQL,
+                [$search, $searchPrefix, $searchTerm, $search, $searchTerm, $searchTerm],
+            )
+            ->orderByDesc('products.created_at')
+            ->orderBy('products.id');
     }
 
     /** @return array{category_counts: array<string, int>, brands: list<string>} */

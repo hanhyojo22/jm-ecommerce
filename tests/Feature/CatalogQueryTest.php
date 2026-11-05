@@ -78,6 +78,41 @@ class CatalogQueryTest extends TestCase
         $this->assertSame([$accessories->id, $audio->id], $result['categories']->pluck('id')->all());
     }
 
+    public function test_relevance_places_exact_and_name_matches_before_description_matches(): void
+    {
+        $store = $this->store();
+        $exact = $this->product($store, ['name' => 'Arc']);
+        $prefix = $this->product($store, ['name' => 'Arc Keyboard']);
+        $description = $this->product($store, [
+            'name' => 'Newest accessory',
+            'description' => 'Includes an arc-shaped stand.',
+        ]);
+        $exact->forceFill(['created_at' => now()->subDays(3)])->save();
+        $prefix->forceFill(['created_at' => now()->subDays(2)])->save();
+        $description->forceFill(['created_at' => now()->subDay()])->save();
+
+        $result = CatalogQuery::search(['q' => 'arc', 'sort' => 'relevance']);
+
+        $this->assertSame(
+            [$exact->id, $prefix->id, $description->id],
+            $result['products']->getCollection()->pluck('id')->all(),
+        );
+    }
+
+    public function test_search_treats_sql_wildcards_as_literal_characters(): void
+    {
+        $store = $this->store();
+        $matchingProduct = $this->product($store, ['name' => '100% Cotton Shirt']);
+        $this->product($store, ['name' => 'Plain Cotton Shirt']);
+
+        $result = CatalogQuery::search(['q' => '%', 'sort' => 'relevance']);
+
+        $this->assertSame(
+            [$matchingProduct->id],
+            $result['products']->getCollection()->pluck('id')->all(),
+        );
+    }
+
     private function store(string $status = 'active', string $tenantStatus = 'active'): Store
     {
         $suffix = str()->lower(str()->random(8));
