@@ -59,9 +59,13 @@
                 @forelse ($messages as $message)
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
                     <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1">
+                        @php($nextMessage = $messages->get($loop->index + 1))
+                        @php($endsRun = $nextMessage === null
+                            || $nextMessage->sender_id !== $message->sender_id
+                            || ! $nextMessage->created_at->isSameMinute($message->created_at))
                         <div class="{{ $message->sender_id === auth()->id() ? 'flex justify-end' : 'flex items-end gap-2' }} {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
                             @if ($message->sender_id !== auth()->id())
-                                <span class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">
+                                <span class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $endsRun ? '' : 'invisible' }}" aria-hidden="true">
                                     @if ($isBuyerMessages && $conversation->store->logo_path)
                                         <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
                                     @else
@@ -99,10 +103,6 @@
                                 </div>
                             </div>
                         </div>
-                        @php($nextMessage = $messages->get($loop->index + 1))
-                        @php($endsRun = $nextMessage === null
-                            || $nextMessage->sender_id !== $message->sender_id
-                            || ! $nextMessage->created_at->isSameMinute($message->created_at))
                         @if ($endsRun)
                             <div class="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted {{ $message->sender_id === auth()->id() ? 'justify-end px-1' : 'justify-start pl-11 pr-1' }}">
                                 <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time>{{ $message->created_at->format('g:i A') }}</time>
