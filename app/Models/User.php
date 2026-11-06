@@ -68,6 +68,11 @@ class User extends Authenticatable
         return $this->hasMany(TenantMember::class);
     }
 
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
     public function sellerApplications(): HasMany
     {
         return $this->hasMany(SellerApplication::class);

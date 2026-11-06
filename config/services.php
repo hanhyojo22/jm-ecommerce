@@ -18,6 +18,10 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'fcm' => [
+        'credentials' => env('FIREBASE_CREDENTIALS', storage_path('app/private/firebase-adminsdk.json')),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

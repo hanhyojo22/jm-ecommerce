@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DeliveryAddressController;
+use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\MessageAttachmentController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderIssueController;
@@ -148,6 +149,13 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/conversations/{conversation}/attachments', [ConversationController::class, 'attach'])
             ->middleware('throttle:10,1')
             ->name('api.v1.conversations.attachments.store');
+
+        Route::post('/device-tokens', [DeviceTokenController::class, 'store'])
+            ->middleware('throttle:api')
+            ->name('api.v1.device-tokens.store');
+        Route::delete('/device-tokens', [DeviceTokenController::class, 'destroy'])
+            ->middleware('throttle:api')
+            ->name('api.v1.device-tokens.destroy');
     });
 
     /*
