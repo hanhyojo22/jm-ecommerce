@@ -113,6 +113,8 @@ services:
         sync: false
       - key: GMAIL_FROM_ADDRESS
         sync: false
+      - key: FIREBASE_CREDENTIALS
+        sync: false
 
   - type: web
     name: jmmart-chat-reverb
@@ -336,6 +338,8 @@ services:
       - key: GMAIL_REFRESH_TOKEN
         sync: false
       - key: GMAIL_FROM_ADDRESS
+        sync: false
+      - key: FIREBASE_CREDENTIALS
         sync: false
 
   - type: web
