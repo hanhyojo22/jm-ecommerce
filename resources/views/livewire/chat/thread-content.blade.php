@@ -60,7 +60,7 @@
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
                     <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1 flex items-start gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
                         @if ($message->sender_id !== auth()->id())
-                            <span class="mt-0.5 grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">
+                            <span class="mt-2 grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">
                                 @if ($isBuyerMessages && $conversation->store->logo_path)
                                     <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
                                 @else
@@ -69,7 +69,7 @@
                             </span>
                         @endif
                         <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem] {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
-                            @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 ml-1 text-xs font-semibold text-muted">{{ $message->sender->name }}</p>@endif
+                            @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 text-xs font-semibold text-muted">{{ $message->sender->name }}</p>@endif
                             @php($attachment = $message->type === 'file' ? $message->attachments->first() : null)
                             @php($isImageAttachment = $attachment !== null && in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
                             @php($usesFlushAttachmentLayout = $attachment !== null && ($isImageAttachment || blank($message->body)))
