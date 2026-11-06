@@ -8,6 +8,7 @@ import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
+import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/screens/catalog_screen.dart';
 import 'package:jmmart/src/theme.dart';
@@ -19,7 +20,10 @@ void main() {
     () async {
       final api = _CatalogApi()..paginated = true;
       final container = ProviderContainer(
-        overrides: [apiClientProvider.overrideWithValue(api)],
+        overrides: [
+          apiClientProvider.overrideWithValue(api),
+          cartCountProvider.overrideWithValue(0),
+        ],
       );
       addTearDown(container.dispose);
       final subscription = container.listen(productsProvider, (_, _) {});
@@ -187,7 +191,10 @@ void main() {
   test('overlapping pages do not repeat a product in the feed', () async {
     final api = _CatalogApi()..paginated = true;
     final container = ProviderContainer(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        cartCountProvider.overrideWithValue(0),
+      ],
     );
     addTearDown(container.dispose);
     final subscription = container.listen(productsProvider, (_, _) {});
@@ -218,7 +225,10 @@ void main() {
       () async {
         final api = _CatalogApi()..paginated = true;
         final container = ProviderContainer(
-          overrides: [apiClientProvider.overrideWithValue(api)],
+          overrides: [
+            apiClientProvider.overrideWithValue(api),
+            cartCountProvider.overrideWithValue(0),
+          ],
         );
         addTearDown(container.dispose);
         final subscription = container.listen(productsProvider, (_, _) {});
@@ -249,7 +259,10 @@ void main() {
   test('an in-flight next page safely finishes after disposal', () async {
     final api = _CatalogApi()..paginated = true;
     final container = ProviderContainer(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        cartCountProvider.overrideWithValue(0),
+      ],
     );
     container.listen(productsProvider, (_, _) {});
     await container.read(productsProvider.future);
@@ -582,7 +595,10 @@ Future<void> _pumpCatalog(
   addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        cartCountProvider.overrideWithValue(0),
+      ],
       child: MaterialApp(
         theme: buildAppTheme(),
         builder: (context, child) => MediaQuery(

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +9,7 @@ import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../widgets/cart_button.dart';
 import '../widgets/common.dart';
 
 class CatalogScreen extends ConsumerStatefulWidget {
@@ -231,34 +233,92 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final feed = previousFeed?.filter == filter ? previousFeed : null;
     final refreshing = products.isLoading && feed != null;
 
-    final search = ColoredBox(
-      color: theme.scaffoldBackgroundColor,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-        child: TextField(
-          controller: _searchController,
-          focusNode: _searchFocus,
-          onChanged: _onSearchChanged,
-          onSubmitted: _submitSearch,
-          onTapOutside: (_) => _searchFocus.unfocus(),
-          autocorrect: false,
-          enableSuggestions: false,
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: 'Search products and stores',
-            labelText: 'Search products and stores',
-            floatingLabelBehavior: FloatingLabelBehavior.never,
-            fillColor: theme.colorScheme.surfaceContainerLowest,
-            prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _searchController,
-              builder: (context, value, child) => value.text.isEmpty
-                  ? const SizedBox.shrink()
-                  : IconButton(
-                      tooltip: 'Clear search',
-                      onPressed: _clearSearch,
-                      icon: const Icon(Icons.close_rounded),
-                    ),
+    final scheme = theme.colorScheme;
+    final searchPill = Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsetsDirectional.only(start: 14, end: 2),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              focusNode: _searchFocus,
+              onChanged: _onSearchChanged,
+              onSubmitted: _submitSearch,
+              onTapOutside: (_) => _searchFocus.unfocus(),
+              autocorrect: false,
+              enableSuggestions: false,
+              maxLines: 1,
+              textInputAction: TextInputAction.search,
+              decoration: const InputDecoration(
+                hintText: 'Search products and stores',
+                labelText: 'Search products and stores',
+                floatingLabelBehavior: FloatingLabelBehavior.never,
+                filled: false,
+                isCollapsed: true,
+                contentPadding: EdgeInsets.symmetric(vertical: 14),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+              ),
+            ),
+          ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _searchController,
+            builder: (context, value, child) => value.text.isEmpty
+                ? const SizedBox.shrink()
+                : IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: _clearSearch,
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+          ),
+          TextButton(
+            onPressed: () => _submitSearch(_searchController.text),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              foregroundColor: scheme.primary,
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            // A short fixed label; capping it keeps the field usable on 320px at 2x text.
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.3,
+              child: const Text('Search', maxLines: 1),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // The shell drops its app bar on this tab, so this band sits behind the status bar.
+    final search = AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
+      child: Material(
+        color: scheme.primary,
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.6,
+          child: Padding(
+            padding: EdgeInsetsDirectional.fromSTEB(
+              16,
+              MediaQuery.paddingOf(context).top + 10,
+              8,
+              12,
+            ),
+            child: Row(
+              children: [
+                Expanded(child: searchPill),
+                const SizedBox(width: 4),
+                const CartButton(),
+              ],
             ),
           ),
         ),

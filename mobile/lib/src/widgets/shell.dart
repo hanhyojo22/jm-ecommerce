@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
 import '../screens/account_screen.dart';
 import '../screens/catalog_screen.dart';
@@ -38,7 +36,6 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(shellTabProvider);
     final index = tab.index;
-    final cartCount = ref.watch(cartCountProvider);
     final unread =
         ref
             .watch(conversationsProvider)
@@ -47,73 +44,10 @@ class AppShell extends ConsumerWidget {
         0;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: index == 0
-            ? Theme.of(context).colorScheme.surfaceContainerLowest
-            : null,
-        surfaceTintColor: index == 0 ? Colors.transparent : null,
-        title: index == 0
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      Icons.storefront_outlined,
-                      size: 22,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      'JMMart.',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : Text(_titles[index]),
-        titleSpacing: 20,
-        actions: [
-          if (index == 0)
-            Semantics(
-              liveRegion: true,
-              child: IconButton.filledTonal(
-                tooltip:
-                    'Cart, $cartCount ${cartCount == 1 ? 'item' : 'items'}',
-                style: IconButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary
-                      .withValues(alpha: 0.07),
-                  foregroundColor: Theme.of(context).colorScheme.primary,
-                ),
-                onPressed: () => context.push('/cart'),
-                icon: Badge(
-                  isLabelVisible: cartCount > 0,
-                  label: ExcludeSemantics(
-                    child: AnimatedSwitcher(
-                      duration: MediaQuery.disableAnimationsOf(context)
-                          ? Duration.zero
-                          : const Duration(milliseconds: 180),
-                      child: Text(
-                        cartCount > 99 ? '99+' : '$cartCount',
-                        key: ValueKey(cartCount),
-                      ),
-                    ),
-                  ),
-                  child: const Icon(Icons.shopping_bag_outlined),
-                ),
-              ),
-            ),
-        ],
-      ),
+      // The Shop tab draws its own search header with the cart.
+      appBar: index == 0
+          ? null
+          : AppBar(title: Text(_titles[index]), titleSpacing: 20),
       body: IndexedStack(
         index: index,
         children: [
