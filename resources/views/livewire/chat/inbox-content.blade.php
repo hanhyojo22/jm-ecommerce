@@ -22,21 +22,23 @@
     <div class="chat-inbox-list min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain" aria-live="polite">
         @forelse ($conversations as $conversation)
             @php($latest = $conversation->messages->first())
+            @php($latestPreview = $latest === null ? 'No messages yet' : (filled($latest->body) ? $latest->body : 'Attachment'))
+            @php($latestPreview = $latest !== null && $latest->sender_id === auth()->id() ? 'You: '.$latestPreview : $latestPreview)
             @php($isUnread = $conversation->unread_messages_count > 0)
             @php($conversationIsBuying = $conversation->buyer_id === auth()->id())
             @php($name = $conversationIsBuying ? $conversation->store->name : $conversation->buyer->name)
             @php($context = $conversation->product ? 'Product · '.$conversation->product->name : ($conversation->sellerOrder ? 'Order · #'.$conversation->sellerOrder->order->number : 'Marketplace chat'))
-            <a wire:key="conversation-{{ $conversation->id }}" data-presence-conversation="{{ $conversation->id }}" href="{{ route('messages.show', $conversation) }}" @if ($activeConversationId === $conversation->id) aria-current="page" @endif class="group flex min-w-0 items-start gap-3 px-4 py-3.5 transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:px-5 {{ $activeConversationId === $conversation->id ? 'bg-blue-50/70' : '' }}">
-                <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-blue-50 text-sm font-semibold text-brand-hover">
+            <a wire:key="conversation-{{ $conversation->id }}" data-presence-conversation="{{ $conversation->id }}" href="{{ route('messages.show', $conversation) }}" @if ($activeConversationId === $conversation->id) aria-current="page" @endif class="group flex min-w-0 items-start gap-3 px-4 py-3.5 transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:px-5 {{ $activeConversationId === $conversation->id ? 'bg-blue-50/70' : ($isUnread ? 'bg-blue-50/40' : '') }}">
+                <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-blue-50 text-sm font-semibold leading-none text-brand-hover" aria-hidden="true">
                     @if ($conversationIsBuying && $conversation->store->logo_path)
-                        <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="size-full object-cover">
+                        <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
                     @else
                         {{ Str::upper(Str::substr($name, 0, 1)) }}
                     @endif
                 </span>
                 <span class="min-w-0 flex-1">
-                    <span class="flex min-w-0 items-baseline gap-2"><span class="truncate text-sm {{ $isUnread ? 'font-semibold' : 'font-semibold' }} text-ink">{{ $name }}</span><time @if ($conversation->latest_message_at) datetime="{{ $conversation->latest_message_at->toIso8601String() }}" @endif class="ml-auto shrink-0 text-xs {{ $isUnread ? 'font-semibold text-brand-hover' : ($activeConversationId === $conversation->id ? 'text-slate-600' : 'text-muted') }}">{{ $conversation->latest_message_at?->diffForHumans() }}</time></span>
-                    <span class="mt-1 flex min-w-0 items-center gap-2"><span class="min-w-0 flex-1 truncate text-sm {{ $isUnread ? 'font-medium text-ink' : ($activeConversationId === $conversation->id ? 'text-slate-600' : 'text-muted') }}">{{ $latest === null ? 'No messages yet' : (filled($latest->body) ? $latest->body : 'Attachment') }}</span>@if ($isUnread)<span class="inline-flex min-w-5 shrink-0 justify-center rounded-full bg-brand px-1.5 py-0.5 text-xs font-semibold leading-none text-white" aria-label="{{ $conversation->unread_messages_count }} unread messages">{{ $conversation->unread_messages_count > 99 ? '99+' : $conversation->unread_messages_count }}</span>@endif</span>
+                    <span class="flex min-w-0 items-baseline gap-2"><span class="truncate text-sm font-semibold text-ink">{{ $name }}</span><time @if ($conversation->latest_message_at) datetime="{{ $conversation->latest_message_at->toIso8601String() }}" @endif class="ml-auto shrink-0 text-xs {{ $isUnread ? 'font-semibold text-brand-hover' : ($activeConversationId === $conversation->id ? 'text-slate-600' : 'text-muted') }}">{{ $conversation->latest_message_at?->diffForHumans() }}</time></span>
+                    <span class="mt-1 flex min-w-0 items-center gap-2"><span class="min-w-0 flex-1 truncate text-sm {{ $isUnread ? 'font-medium text-ink' : ($activeConversationId === $conversation->id ? 'text-slate-600' : 'text-muted') }}">{{ $latestPreview }}</span>@if ($isUnread)<span class="inline-flex min-w-5 shrink-0 justify-center rounded-full bg-brand px-1.5 py-0.5 text-xs font-semibold leading-none text-white" aria-label="{{ $conversation->unread_messages_count }} unread messages">{{ $conversation->unread_messages_count > 99 ? '99+' : $conversation->unread_messages_count }}</span>@endif</span>
                     <span class="mt-1 block truncate text-xs {{ $activeConversationId === $conversation->id ? 'text-slate-600' : 'text-muted' }}">{{ $context }}</span>
                 </span>
             </a>

@@ -26,7 +26,7 @@
 
             <details class="group relative">
                 <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-semibold text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
-                    <span class="grid size-9 place-items-center rounded-full bg-blue-100 text-xs font-semibold text-blue-800">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
+                    <span class="grid size-9 place-items-center rounded-full bg-blue-100 text-xs font-semibold leading-none text-blue-800" aria-hidden="true">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
                     <span class="hidden max-w-36 truncate sm:inline">{{ $user->name }}</span>
                     <svg class="size-4 text-muted transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
                 </summary>

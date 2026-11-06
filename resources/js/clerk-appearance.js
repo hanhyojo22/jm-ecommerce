@@ -228,8 +228,21 @@ export const clerkUserProfileAppearance = {
             fontSize: '0.6875rem',
             fontWeight: '600',
         },
-        avatarBox: { width: '3rem', height: '3rem', borderRadius: '999px', overflow: 'hidden' },
-        avatarImage: { borderRadius: '999px' },
+        avatarBox: {
+            width: '3rem',
+            height: '3rem',
+            flexShrink: '0',
+            borderRadius: '999px',
+            overflow: 'hidden',
+        },
+        avatarImage: {
+            width: '100%',
+            height: '100%',
+            borderRadius: '999px',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            display: 'block',
+        },
         menuButton: {
             width: '2.75rem',
             height: '2.75rem',

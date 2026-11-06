@@ -1,14 +1,19 @@
             <section x-data="chatThread(@js($conversation->id), @js(auth()->id()))" x-on:chat-upload-progress="attachmentProgress($event.detail.progress)" x-on:chat-upload-error="attachmentFailed($event.detail.message)" x-on:chat-upload-sent="attachmentSent($event.detail)" class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface">
-                <header class="flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-3 sm:gap-4 sm:px-5">
-                <div class="flex min-w-0 items-center gap-2.5 sm:gap-3">
+                <header class="flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-line bg-white px-3 py-3 sm:gap-4 sm:px-5">
+                <div class="flex min-w-0 items-center gap-2 sm:gap-3">
                     <a href="{{ auth()->user()->account_type === 'seller' ? route('messages.index', ['context' => $isBuyerMessages ? 'buying' : 'selling']) : route('messages.index') }}" class="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand lg:hidden" aria-label="Back to messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6M9 12h11"/></svg></a>
-                    <div class="flex min-w-0 items-center gap-3">
-                        @if ($isBuyerMessages && $conversation->store->logo_path)
-                            <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="size-11 shrink-0 rounded-full object-cover">
-                        @else
-                            <span class="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-brand-hover" aria-hidden="true">{{ Str::upper(Str::substr($isBuyerMessages ? $conversation->store->name : $conversation->buyer->name, 0, 1)) }}</span>
-                        @endif
-                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $isBuyerMessages ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" x-data="{ online: false }" x-on:chat-presence-status.window="if ($event.detail.conversationId === '{{ $conversation->id }}') online = $event.detail.online" class="flex items-center gap-1.5 truncate text-xs"><span data-presence-dot x-cloak x-show="online" class="size-1.5 shrink-0 rounded-full bg-blue-500"></span><span data-presence-label data-context="{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}" class="min-w-0 truncate" x-text="online ? 'Online · ' + $el.dataset.context : $el.dataset.context">{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}</span></p><p id="chat-typing" x-ref="typingIndicator" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
+                    <div class="flex min-w-0 items-center gap-2.5 sm:gap-3" x-data="{ online: false }" x-on:chat-presence-status.window="if ($event.detail.conversationId === @js($conversation->id)) online = $event.detail.online">
+                        <span class="relative shrink-0">
+                            <span class="grid size-11 place-items-center overflow-hidden rounded-full border border-line bg-blue-50 text-sm font-semibold leading-none text-brand-hover">
+                                @if ($isBuyerMessages && $conversation->store->logo_path)
+                                    <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
+                                @else
+                                    {{ Str::upper(Str::substr($isBuyerMessages ? $conversation->store->name : $conversation->buyer->name, 0, 1)) }}
+                                @endif
+                            </span>
+                            <span data-presence-dot x-cloak x-show="online" class="absolute bottom-0 right-0 size-3 rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"></span>
+                        </span>
+                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $isBuyerMessages ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" class="truncate text-xs text-muted"><span data-presence-label data-context="{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}" class="block truncate" x-text="online ? 'Online · ' + $el.dataset.context : $el.dataset.context">{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}</span></p><p id="chat-typing" x-ref="typingIndicator" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
@@ -53,9 +58,15 @@
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
-                    <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1 flex items-end gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
+                    <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1 flex items-start gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
                         @if ($message->sender_id !== auth()->id())
-                            <span class="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-white text-xs font-semibold text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">{{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}</span>
+                            <span class="mt-0.5 grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">
+                                @if ($isBuyerMessages && $conversation->store->logo_path)
+                                    <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
+                                @else
+                                    {{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}
+                                @endif
+                            </span>
                         @endif
                         <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem] {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
                             @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 ml-1 text-xs font-semibold text-muted">{{ $message->sender->name }}</p>@endif

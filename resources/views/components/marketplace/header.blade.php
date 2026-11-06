@@ -139,7 +139,7 @@
                         </button>
                         <div id="header-account-menu" x-cloak x-show="accountOpen" x-transition.origin.top.right class="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-line bg-white p-2 shadow-[0_16px_36px_rgba(15,23,42,.14)]">
                             <div class="flex min-w-0 items-center gap-3 px-2 py-3">
-                                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-semibold text-brand" aria-hidden="true">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
+                                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-sm font-semibold leading-none text-brand" aria-hidden="true">{{ Str::upper(Str::substr($user->name, 0, 1)) }}</span>
                                 <div class="min-w-0"><p class="truncate text-sm font-semibold text-ink">{{ $user->name }}</p><p class="truncate text-xs text-muted">{{ $user->email }}</p></div>
                             </div>
                             <nav aria-label="Account links" class="border-t border-line py-1">
