@@ -76,6 +76,65 @@ class SendChatMessagePushTest extends TestCase
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
     }
 
+    public function test_a_deactivated_seller_staff_member_is_not_pushed(): void
+    {
+        [$buyer, $owner, $manager, $conversation] = $this->conversationWithTwoStaff();
+        $manager->update(['is_active' => false]);
+
+        $message = $conversation->messages()->create([
+            'sender_id' => $buyer->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'Still there?',
+        ]);
+
+        $notifier = Mockery::mock(PushNotifier::class);
+        $notifier->shouldReceive('sendToUser')
+            ->once()
+            ->with(Mockery::on(fn (User $user) => $user->is($owner)), $buyer->name, 'Still there?', [
+                'type' => 'chat',
+                'conversation_id' => $conversation->id,
+            ]);
+
+        (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+    }
+
+    public function test_staff_of_a_suspended_store_are_not_pushed(): void
+    {
+        [$buyer, , , $conversation] = $this->conversationWithTwoStaff();
+        $conversation->store->update(['status' => 'suspended']);
+
+        $message = $conversation->messages()->create([
+            'sender_id' => $buyer->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'Hello?',
+        ]);
+
+        $notifier = Mockery::mock(PushNotifier::class);
+        $notifier->shouldNotReceive('sendToUser');
+
+        (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+    }
+
+    public function test_a_deactivated_buyer_is_not_pushed(): void
+    {
+        [$buyer, $owner, , $conversation] = $this->conversationWithTwoStaff();
+        $buyer->update(['is_active' => false]);
+
+        $message = $conversation->messages()->create([
+            'sender_id' => $owner->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'Still there?',
+        ]);
+
+        $notifier = Mockery::mock(PushNotifier::class);
+        $notifier->shouldNotReceive('sendToUser');
+
+        (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+    }
+
     /** @return array{0: User, 1: User, 2: User, 3: Conversation} buyer, seller owner, seller manager, conversation */
     private function conversationWithTwoStaff(): array
     {
