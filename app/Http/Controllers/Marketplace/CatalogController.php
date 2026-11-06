@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
 use App\Queries\CatalogQuery;
+use App\Queries\RecommendationQuery;
 use App\Queries\TopProductQuery;
 use App\Support\CookiePreferences;
 use Illuminate\Database\Eloquent\Builder;
@@ -97,14 +98,7 @@ class CatalogController extends Controller
             ->get()
             ->sortBy(fn (Product $product): int => array_search($product->id, $recentProductIds, true))
             ->values();
-        $recommendedProducts = $recentlyViewed->pluck('category_id')->filter()->unique()->isEmpty()
-            ? $bestSellers->take(4)->values()
-            : (clone $homeProducts)
-                ->whereIn('category_id', $recentlyViewed->pluck('category_id')->filter()->unique())
-                ->whereNotIn('id', $recentProductIds)
-                ->latest()
-                ->limit(4)
-                ->get();
+        $recommendedProducts = RecommendationQuery::forRequest($request);
 
         $stores = $this->publicStores()
             ->whereHas('products', fn (Builder $query) => $query->where('status', 'active'))
@@ -167,7 +161,7 @@ class CatalogController extends Controller
 
     public function clearRecentlyViewed(Request $request): RedirectResponse
     {
-        $request->session()->forget('marketplace.recently_viewed');
+        RecommendationQuery::clearHistory($request);
 
         return to_route('home');
     }
@@ -313,6 +307,12 @@ class CatalogController extends Controller
             'with_photos' => ['nullable', 'boolean'],
         ]);
         $catalog = CatalogQuery::search($filters, $seller);
+        $search = trim($filters['q'] ?? '');
+        RecommendationQuery::rememberSearch($request, $search);
+        $recommendedProducts = $seller === null && $search !== ''
+            ? RecommendationQuery::forRequest($request, $search, 16)
+                ->whereNotIn('id', $catalog['products']->getCollection()->pluck('id'))->take(4)->values()
+            : collect();
         $categories = $catalog['categories'];
         $categoryOrder = [
             'electronics', 'fashion', 'health-beauty', 'home-living', 'food-grocery', 'babies-kids', 'sports-outdoors', 'pet-supplies',
@@ -338,6 +338,7 @@ class CatalogController extends Controller
 
         return view('marketplace.catalog.index', [
             'products' => $catalog['products'],
+            'recommendedProducts' => $recommendedProducts,
             'brands' => $catalog['brands'],
             'search' => trim($filters['q'] ?? ''),
             'sellerStore' => $seller,

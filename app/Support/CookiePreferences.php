@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 
 class CookiePreferences
 {
-    public const VERSION = 1;
+    public const VERSION = 2;
 
     public const COOKIE_NAME = 'jmmart_cookie_preferences';
 

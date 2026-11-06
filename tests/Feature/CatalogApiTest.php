@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\Store;
 use App\Models\Tenant;
+use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -32,6 +33,34 @@ class CatalogApiTest extends TestCase
             ->assertJsonPath('data.0.name', 'Cedar Lamp')
             ->assertJsonPath('data.0.store.logo_url', Storage::disk('public')->url('store-logos/cedar-lamp.png'))
             ->assertJsonPath('meta.per_page', 12);
+    }
+
+    public function test_recommendations_respect_public_visibility_and_stock(): void
+    {
+        $visible = $this->product(['name' => 'Cedar Lamp']);
+        $this->product(['name' => 'Cedar Draft', 'status' => 'draft']);
+        $this->product(['name' => 'Cedar Sold Out', 'stock_quantity' => 0]);
+        $variantSoldOut = $this->product(['name' => 'Cedar Variant Sold Out']);
+        $variantSoldOut->variants()->create(['color' => 'Blue', 'size' => 'One size', 'sku' => 'CEDAR-BLUE', 'stock_quantity' => 0]);
+        $this->product(['name' => 'Cedar Suspended Store'], 'active', 'suspended');
+
+        $this->getJson(route('api.v1.products.recommended', ['q' => 'cedar']))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $visible->id);
+    }
+
+    public function test_seller_recommendations_exclude_products_from_their_managed_store(): void
+    {
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        $own = $this->product(['name' => 'Cedar mug']);
+        $other = $this->product(['name' => 'Cedar tray']);
+        TenantMember::create(['tenant_id' => $own->tenant_id, 'user_id' => $seller->id, 'role' => 'owner']);
+
+        $this->actingAs($seller)->getJson(route('api.v1.products.recommended', ['q' => 'cedar']))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $other->id);
     }
 
     public function test_the_catalog_filters_by_search_category_seller_and_viewer_flags(): void

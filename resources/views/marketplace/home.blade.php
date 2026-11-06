@@ -82,9 +82,9 @@
             </section>
         @endif
 
-        @if ($recentlyViewed->isNotEmpty() && $recommendedProducts->isNotEmpty())
+        @if ($recommendedProducts->isNotEmpty())
             <section class="marketplace-section" aria-labelledby="home-recommended-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-recommended-heading" class="marketplace-section-title">Recommended for you</h2><p class="marketplace-section-subtitle">More to explore from categories you recently viewed.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">Explore marketplace <span aria-hidden="true">→</span></a></div>
+                <div class="marketplace-section-head"><div><h2 id="home-recommended-heading" class="marketplace-section-title">Recommended for you</h2><p class="marketplace-section-subtitle">Products selected from your shopping interests and marketplace favorites.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">Explore marketplace <span aria-hidden="true">→</span></a></div>
                 <div class="marketplace-product-grid">
                     @foreach ($recommendedProducts as $product)
                         <x-marketplace.top-product-card :product="$product" />

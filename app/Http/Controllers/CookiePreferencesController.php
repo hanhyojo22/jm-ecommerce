@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Queries\RecommendationQuery;
 use App\Support\CookiePreferences;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class CookiePreferencesController extends Controller
         ]);
 
         if (! (bool) $preferences['functional']) {
-            $request->session()->forget('marketplace.recently_viewed');
+            RecommendationQuery::clearHistory($request);
         }
 
         return response()->json(['saved' => true])->cookie(

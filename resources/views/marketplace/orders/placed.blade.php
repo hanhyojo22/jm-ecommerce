@@ -142,5 +142,15 @@
                 <p class="mt-6 text-[13px] leading-[1.55] text-muted print:hidden">Something not right? Message the store from <a href="{{ route('orders.show', $order) }}" class="font-semibold text-brand underline decoration-[#bcd0ff] underline-offset-4 hover:text-brand-hover hover:decoration-current">your order page</a>. They can help with items, delivery, or returns.</p>
             </section>
         </div>
+        @if ($recommendedProducts->isNotEmpty())
+            <section class="marketplace-section mt-12 print:hidden" aria-labelledby="placed-recommended-heading">
+                <div class="marketplace-section-head"><div><h2 id="placed-recommended-heading" class="marketplace-section-title">More you might like</h2><p class="marketplace-section-subtitle">Explore products related to your shopping interests.</p></div></div>
+                <div class="marketplace-product-grid">
+                    @foreach ($recommendedProducts as $product)
+                        <x-marketplace.top-product-card :product="$product" />
+                    @endforeach
+                </div>
+            </section>
+        @endif
     </div>
 </x-app-layout>

@@ -33,7 +33,7 @@
                 <p class="mt-1 text-sm leading-5 text-muted">Sign-in, security, cart, checkout, and temporary chat drafts.</p>
             </section>
             <label class="flex cursor-pointer items-start justify-between gap-3 py-3">
-                <span><span class="block text-sm font-semibold">Functional</span><span class="mt-1 block text-sm leading-5 text-muted">Recently viewed products and Seller Center settings.</span></span>
+                <span><span class="block text-sm font-semibold">Functional</span><span class="mt-1 block text-sm leading-5 text-muted">Shopping recommendations and Seller Center settings.</span></span>
                 <input type="checkbox" name="functional" class="mt-1 shrink-0 rounded-md border-line text-brand focus:ring-brand" @checked($cookiePreferences['functional'] ?? false)>
             </label>
             <section class="py-3">

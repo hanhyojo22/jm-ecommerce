@@ -32,12 +32,12 @@ class CookiePreferencesTest extends TestCase
             'marketing' => false,
         ]))->get(route('home'))->assertOk()->assertDontSee('data-cookie-banner');
 
-        $this->withSession(['marketplace.recently_viewed' => [123]])
+        $this->withSession(['marketplace.recently_viewed' => [123], 'marketplace.recent_searches' => ['lamp']])
             ->post(route('cookie-preferences.store'), [
                 'functional' => 0,
                 'analytics' => 0,
                 'marketing' => 0,
-            ])->assertOk()->assertSessionMissing('marketplace.recently_viewed');
+            ])->assertOk()->assertSessionMissing('marketplace.recently_viewed')->assertSessionMissing('marketplace.recent_searches');
     }
 
     public function test_inactive_tracking_cannot_be_enabled_and_old_policy_needs_new_consent(): void
@@ -49,7 +49,7 @@ class CookiePreferencesTest extends TestCase
         ])->assertSessionHasErrors('analytics');
 
         $this->withCookie(CookiePreferences::COOKIE_NAME, json_encode([
-            'version' => 0,
+            'version' => 1,
             'functional' => true,
             'analytics' => false,
             'marketing' => false,

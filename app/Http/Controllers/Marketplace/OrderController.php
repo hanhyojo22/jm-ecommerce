@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\SellerOrder;
 use App\Queries\BuyerOrderQuery;
+use App\Queries\RecommendationQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -102,7 +103,10 @@ class OrderController extends Controller
             return to_route('orders.show', $order);
         }
 
-        return view('marketplace.orders.placed', ['order' => $order]);
+        return view('marketplace.orders.placed', [
+            'order' => $order,
+            'recommendedProducts' => RecommendationQuery::forRequest($request),
+        ]);
     }
 
     /**

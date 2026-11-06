@@ -11,6 +11,7 @@ use App\Http\Resources\Api\V1\StoreResource;
 use App\Models\Category;
 use App\Models\Product;
 use App\Queries\CatalogQuery;
+use App\Queries\RecommendationQuery;
 use App\Queries\TopProductQuery;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -94,6 +95,17 @@ class CatalogController extends Controller
         return ProductSummaryResource::collection(
             TopProductQuery::paginate($filters['category'] ?? null, (int) ($filters['per_page'] ?? 12)),
         )->response();
+    }
+
+    public function recommended(Request $request): JsonResponse
+    {
+        $search = $request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? null;
+
+        return response()->json([
+            'data' => ProductSummaryResource::collection(
+                RecommendationQuery::forRequest($request, $search, 12),
+            )->resolve($request),
+        ]);
     }
 
     public function stores(Request $request): JsonResponse

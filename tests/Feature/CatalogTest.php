@@ -193,7 +193,7 @@ class CatalogTest extends TestCase
             ->assertSee('Add to cart');
     }
 
-    public function test_homepage_hides_popular_picks_without_viewing_history(): void
+    public function test_homepage_shows_available_fallback_recommendations_without_viewing_history(): void
     {
         $product = $this->product();
         $this->attachReview($product, false);
@@ -201,7 +201,37 @@ class CatalogTest extends TestCase
         $this->get(route('home'))
             ->assertSee('Trending products')
             ->assertDontSee('Popular picks')
-            ->assertDontSee('home-recommended-heading');
+            ->assertSee('home-recommended-heading')
+            ->assertViewHas('recommendedProducts', fn ($products): bool => $products->contains('id', $product->id));
+    }
+
+    public function test_submitted_search_recommends_related_products_and_can_be_cleared(): void
+    {
+        $category = Category::create(['name' => 'Outdoor gear', 'slug' => 'outdoor-gear', 'is_active' => true]);
+        $this->product(['name' => 'Trail running shoes', 'category_id' => $category->id]);
+        $related = $this->product(['name' => 'Hiking socks', 'category_id' => $category->id]);
+        $unrelated = $this->product(['name' => 'Desk lamp']);
+        $consent = json_encode(['version' => CookiePreferences::VERSION, 'functional' => true, 'analytics' => false, 'marketing' => false]);
+
+        $this->withCookie(CookiePreferences::COOKIE_NAME, $consent)
+            ->get(route('catalog.index', ['q' => 'trail']))
+            ->assertOk()
+            ->assertSessionHas('marketplace.recent_searches', ['trail'])
+            ->assertSee('You might also like')
+            ->assertSee($related->name)
+            ->assertDontSee($unrelated->name);
+
+        $this->get(route('home'))->assertSee($related->name);
+        $this->delete(route('catalog.recently-viewed.clear'))->assertSessionMissing('marketplace.recent_searches');
+    }
+
+    public function test_search_is_not_saved_without_functional_consent(): void
+    {
+        $this->product(['name' => 'Blue headphones']);
+
+        $this->get(route('catalog.index', ['q' => 'blue']))
+            ->assertOk()
+            ->assertSessionMissing('marketplace.recent_searches');
     }
 
     public function test_homepage_loads_new_arrivals_in_public_batches_of_twenty(): void

@@ -404,6 +404,17 @@
                 </div>
             </section>
 
+            @if ($recommendedProducts->isNotEmpty())
+                <section class="marketplace-section" aria-labelledby="catalog-recommended-heading">
+                    <div class="marketplace-section-head"><div><h2 id="catalog-recommended-heading" class="marketplace-section-title">You might also like</h2><p class="marketplace-section-subtitle">More available products related to your search.</p></div></div>
+                    <div class="marketplace-product-grid">
+                        @foreach ($recommendedProducts as $product)
+                            <x-marketplace.top-product-card :product="$product" />
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             {{-- All categories dialog --}}
             @if ($categories->count() > 1)
                 <div x-show="categoriesOpen" x-cloak x-on:keydown.escape.stop="closeCategories()" x-on:keydown.tab="trapCategories($event)" class="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="all-categories-heading">

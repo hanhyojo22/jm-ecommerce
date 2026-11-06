@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Cart;
+use App\Models\Category;
 use App\Models\DeliveryAddress;
 use App\Models\Order;
 use App\Models\Product;
@@ -12,6 +13,7 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use App\Services\GmailOrderMailer;
+use App\Support\CookiePreferences;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -21,6 +23,53 @@ use Tests\TestCase;
 class CheckoutTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_a_cod_purchase_immediately_recommends_related_products_only_to_that_buyer(): void
+    {
+        [, $purchased] = $this->sellerProduct('19.99', 5);
+        $category = Category::create(['name' => 'Bags', 'slug' => 'bags', 'is_active' => true]);
+        $purchased->update(['category_id' => $category->id]);
+        $related = Product::create([
+            'tenant_id' => $purchased->tenant_id,
+            'store_id' => $purchased->store_id,
+            'category_id' => $category->id,
+            'name' => 'Travel pouch',
+            'slug' => 'travel-pouch',
+            'sku' => 'TRAVEL-POUCH',
+            'price' => '12.00',
+            'stock_quantity' => 5,
+            'status' => 'active',
+        ]);
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $otherBuyer = User::factory()->create(['email_verified_at' => now()]);
+        $consent = json_encode(['version' => CookiePreferences::VERSION, 'functional' => true, 'analytics' => false, 'marketing' => false]);
+
+        $this->withCookie(CookiePreferences::COOKIE_NAME, $consent)->actingAs($buyer)
+            ->post(route('cart.store', $purchased), ['quantity' => 1]);
+        $this->post(route('checkout.store'), $this->delivery())->assertRedirect();
+        $order = Order::query()->sole();
+
+        $this->get(route('orders.placed', $order))
+            ->assertOk()
+            ->assertSee('More you might like')
+            ->assertViewHas('recommendedProducts', fn ($products): bool => $products->first()?->id === $related->id
+                && ! $products->contains('id', $purchased->id));
+
+        $this->actingAs($otherBuyer)->getJson(route('api.v1.products.recommended'))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $purchased->id);
+
+        $order->payment()->update(['status' => 'refunded']);
+        $this->actingAs($buyer)->getJson(route('api.v1.products.recommended'))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $purchased->id);
+
+        $order->payment()->update(['status' => 'pending']);
+        $order->sellerOrders()->update(['status' => 'cancelled']);
+        $this->actingAs($buyer)->getJson(route('api.v1.products.recommended'))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $purchased->id);
+    }
 
     public function test_empty_cart_redirects_to_cart_instead_of_rendering_checkout(): void
     {
