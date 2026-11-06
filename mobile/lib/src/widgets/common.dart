@@ -277,7 +277,7 @@ class ProductCard extends StatelessWidget {
                       ? theme.textTheme.titleMedium
                       : theme.textTheme.titleSmall)
                   ?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: discovery ? FontWeight.w700 : FontWeight.w800,
                     color: theme.colorScheme.primary,
                     letterSpacing: -0.3,
                   ),
@@ -370,7 +370,7 @@ class ProductCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: discovery ? FontWeight.w600 : FontWeight.w700,
+                      fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
                       height: 1.25,
                     ),
                   ),
@@ -389,7 +389,7 @@ class ProductCard extends StatelessWidget {
                             product.ratingCount > 0
                                 ? Icons.star_rounded
                                 : Icons.star_outline_rounded,
-                            size: 14,
+                            size: 16,
                             color: product.ratingCount > 0
                                 ? theme.colorScheme.secondary
                                 : theme.colorScheme.onSurfaceVariant,
@@ -430,7 +430,7 @@ class ProductCard extends StatelessWidget {
                               if (discovery) ...[
                                 Icon(
                                   Icons.storefront_outlined,
-                                  size: 14,
+                                  size: 16,
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(width: 6),

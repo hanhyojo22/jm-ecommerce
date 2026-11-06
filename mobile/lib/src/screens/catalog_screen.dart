@@ -349,7 +349,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final scaler = MediaQuery.textScalerOf(context);
-              final width = constraints.maxWidth - 40;
+              final width = constraints.maxWidth - 32;
               final columns = scaler.scale(14) > 21 && width < 600
                   ? 1
                   : (width / 190).floor().clamp(2, 4);
@@ -381,7 +381,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     slivers: [
                       if (_suggestionsQuery.length >= _suggestionMinLength)
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                           sliver: SliverToBoxAdapter(
                             child: _SearchSuggestionsPanel(
                               query: _suggestionsQuery,
@@ -400,20 +400,23 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         child: categories.when(
                           data: (items) => items.isEmpty
                               ? const SizedBox.shrink()
-                              : _CategoryStrip(
-                                  categories: items,
-                                  selected: filter.category,
-                                  onSelected: _selectCategory,
+                              : Padding(
+                                  padding: const EdgeInsets.only(top: 16),
+                                  child: _CategoryStrip(
+                                    categories: items,
+                                    selected: filter.category,
+                                    onSelected: _selectCategory,
+                                  ),
                                 ),
                           loading: () => const Padding(
                             padding: EdgeInsets.symmetric(
-                              horizontal: 20,
+                              horizontal: 16,
                               vertical: 16,
                             ),
                             child: LinearProgressIndicator(),
                           ),
                           error: (error, stack) => Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: TextButton.icon(
                               onPressed: () =>
                                   ref.invalidate(categoriesProvider),
@@ -425,7 +428,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                       ),
                       if (browsing)
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                           sliver: SliverToBoxAdapter(
                             child: _DiscoveryBanner(
                               onExplore: feed?.products.isNotEmpty == true
@@ -534,33 +537,39 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
 
     return [
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
         sliver: SliverToBoxAdapter(
-          child: Column(
+          // Same row shape as the loading skeleton, so nothing jumps when products arrive.
+          child: Row(
             key: _productsHeadingKey,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  feed.filter.query.isNotEmpty
-                      ? 'Results for “${feed.filter.query}”'
-                      : categories
-                                .where(
-                                  (category) =>
-                                      category.slug == feed.filter.category,
-                                )
-                                .firstOrNull
-                                ?.name ??
-                            'Popular products',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4,
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    feed.filter.query.isNotEmpty
+                        ? 'Results for “${feed.filter.query}”'
+                        : categories
+                                  .where(
+                                    (category) =>
+                                        category.slug == feed.filter.category,
+                                  )
+                                  .firstOrNull
+                                  ?.name ??
+                              'Popular products',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.4,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(width: 12),
               Text(
                 '${feed.total > 0 ? feed.total : products.length} ${(feed.total > 0 ? feed.total : products.length) == 1 ? 'product' : 'products'}',
                 style: theme.textTheme.bodySmall?.copyWith(
@@ -572,7 +581,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         ),
       ),
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         sliver: SliverGrid(
           gridDelegate: gridDelegate,
           delegate: SliverChildBuilderDelegate((context, index) {
@@ -595,7 +604,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       if (feed.loadMoreFailed)
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             child: Column(
               children: [
                 const Text('Could not load more products.'),
@@ -624,7 +633,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       if (!feed.hasMore)
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             child: Column(
               children: [
                 Text(
@@ -654,7 +663,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   ) {
     return [
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
         sliver: SliverToBoxAdapter(
           child: Semantics(
             container: true,
@@ -673,7 +682,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         ),
       ),
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         sliver: SliverGrid(
           gridDelegate: gridDelegate,
           delegate: SliverChildBuilderDelegate(
@@ -1086,7 +1095,7 @@ class _CategoryStrip extends StatelessWidget {
         height: 64 + categoryLabelHeight * 2 + 12,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: options.length,
           separatorBuilder: (context, index) => const SizedBox(width: 12),
           itemBuilder: (context, index) {
