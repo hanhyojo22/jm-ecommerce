@@ -631,7 +631,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               nextMessage.senderId != message.senderId ||
               !_isSameChatMinute(nextMessage.createdAt, message.createdAt),
           showReceipt:
-              message.isMine && nextMessage == null && message.receipt != null,
+              message.isMine && nextMessage == null && pending.isEmpty && message.receipt != null,
         );
       },
     );

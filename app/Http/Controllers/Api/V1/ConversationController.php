@@ -152,16 +152,11 @@ class ConversationController extends Controller
             ->sortByDesc('last_read_at')
             ->first();
 
-        $lastOutgoing = $messages->getCollection()->where('sender_id', '!=', $user->id)->last();
+        $lastOutgoing = $messages->getCollection()->where('sender_id', $user->id)->last();
 
-        if ($lastOutgoing !== null && $recipientReadState !== null) {
-            if ($recipientReadState->last_read_message_id === $lastOutgoing->id) {
-                $lastOutgoing->receipt = 'Read';
-            } elseif ($recipientReadState->last_delivered_message_id === $lastOutgoing->id) {
-                $lastOutgoing->receipt = 'Delivered';
-            } else {
-                $lastOutgoing->receipt = 'Sent';
-            }
+        if ($lastOutgoing !== null) {
+            // shortcut: no separate delivery event yet; Delivered is unreachable until a push-notification receipt endpoint exists
+            $lastOutgoing->receipt = $recipientReadState?->last_read_message_id === $lastOutgoing->id ? 'Read' : 'Sent';
         }
 
         return ConversationMessageResource::collection($messages)

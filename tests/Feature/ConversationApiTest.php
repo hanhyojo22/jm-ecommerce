@@ -354,6 +354,73 @@ class ConversationApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_messages_response_includes_read_receipt_on_last_outgoing_message(): void
+    {
+        [$buyer, $seller, $conversation] = $this->conversation();
+
+        $buyerMessage = $conversation->messages()->create([
+            'sender_id' => $buyer->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'Is this still available?',
+        ]);
+
+        // Seller has read up to the buyer's last message.
+        $conversation->readStates()->create([
+            'user_id' => $seller->id,
+            'last_read_message_id' => $buyerMessage->id,
+            'last_read_at' => now(),
+        ]);
+
+        $data = $this->actingAs($buyer)
+            ->getJson("/api/v1/conversations/{$conversation->id}/messages")
+            ->assertOk()
+            ->json('data');
+
+        $outgoing = collect($data)->firstWhere('is_mine', true);
+        $this->assertSame('Read', $outgoing['receipt']);
+
+        // After the seller replies, the buyer's outgoing message still shows Read.
+        // The incoming reply must not carry a receipt field.
+        $conversation->messages()->create([
+            'sender_id' => $seller->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'Yes!',
+        ]);
+
+        $data = $this->actingAs($buyer)
+            ->getJson("/api/v1/conversations/{$conversation->id}/messages")
+            ->assertOk()
+            ->json('data');
+
+        $incoming = collect($data)->firstWhere('is_mine', false);
+        $this->assertArrayNotHasKey('receipt', $incoming);
+
+        $outgoing = collect($data)->firstWhere('is_mine', true);
+        $this->assertSame('Read', $outgoing['receipt']);
+    }
+
+    public function test_messages_response_shows_sent_when_recipient_has_not_read(): void
+    {
+        [$buyer, , $conversation] = $this->conversation();
+
+        $conversation->messages()->create([
+            'sender_id' => $buyer->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'Hello?',
+        ]);
+
+        $data = $this->actingAs($buyer)
+            ->getJson("/api/v1/conversations/{$conversation->id}/messages")
+            ->assertOk()
+            ->json('data');
+
+        $outgoing = collect($data)->firstWhere('is_mine', true);
+        $this->assertSame('Sent', $outgoing['receipt']);
+    }
+
     /**
      * @return array{0: User, 1: User, 2: Conversation, 3: Store, 4: Product}
      */

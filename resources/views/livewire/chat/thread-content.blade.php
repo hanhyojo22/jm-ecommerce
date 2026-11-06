@@ -106,7 +106,7 @@
                         @if ($endsRun)
                             <div class="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted {{ $message->sender_id === auth()->id() ? 'justify-end px-1' : 'justify-start pl-11 pr-1' }}">
                                 <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time>{{ $message->created_at->format('g:i A') }}</time>
-                                @if ($message->id === $lastMessage?->id && $message->sender_id === auth()->id())
+                                @if ($message->id === $lastOutgoing?->id)
                                     <span aria-hidden="true">·</span><span>{{ $receipt }}</span>
                                 @endif
                             </div>

@@ -222,15 +222,12 @@ class Thread extends Component
         $lastMessage = $messages->last();
         // The window's last message is the one this would otherwise go and fetch again.
         $hasNewerMessages = $this->hasNewerMessages($lastMessage);
-        $recipientReadState = $lastMessage?->sender_id === auth()->id()
-            ? $this->conversation->readStates()
-                ->where('user_id', '!=', auth()->id())
-                ->latest('last_read_at')
-                ->first()
+        $lastOutgoing = $messages->last(fn ($m) => $m->sender_id === auth()->id());
+        $recipientReadState = $lastOutgoing !== null
+            ? $this->conversation->readStates()->where('user_id', '!=', auth()->id())->latest('last_read_at')->first()
             : null;
-        $receipt = $recipientReadState?->last_read_message_id === $lastMessage?->id
-            ? 'Read'
-            : ($recipientReadState?->last_delivered_message_id === $lastMessage?->id ? 'Delivered' : 'Sent');
+        // shortcut: no separate delivery event yet; Delivered is unreachable until a push-notification receipt endpoint exists
+        $receipt = $recipientReadState?->last_read_message_id === $lastOutgoing?->id ? 'Read' : 'Sent';
 
         $canSend = Gate::allows('send', $this->conversation);
 
@@ -239,6 +236,7 @@ class Thread extends Component
             'hasMoreMessages' => $hasMoreMessages,
             'hasNewerMessages' => $hasNewerMessages,
             'lastMessage' => $lastMessage,
+            'lastOutgoing' => $lastOutgoing,
             'receipt' => $receipt,
             'canSend' => $canSend,
             'canUnblock' => ! $canSend && $this->conversation->blocksCreatedBy(auth()->user())->exists(),
