@@ -58,22 +58,22 @@
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
-                    <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1 flex items-start gap-2 {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
-                        @if ($message->sender_id !== auth()->id())
-                            <span class="mt-2 grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">
-                                @if ($isBuyerMessages && $conversation->store->logo_path)
-                                    <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
-                                @else
-                                    {{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}
-                                @endif
-                            </span>
-                        @endif
-                        <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem] {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
-                            @if ($message->sender_id !== auth()->id() && $message->sender_id !== $previousSenderId)<p class="mb-1 text-xs font-semibold text-muted">{{ $message->sender->name }}</p>@endif
-                            @php($attachment = $message->type === 'file' ? $message->attachments->first() : null)
-                            @php($isImageAttachment = $attachment !== null && in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
-                            @php($usesFlushAttachmentLayout = $attachment !== null && ($isImageAttachment || blank($message->body)))
-                            <div class="chat-message-bubble w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $usesFlushAttachmentLayout ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $message->sender_id === auth()->id() ? 'ml-auto rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
+                    <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1">
+                        <div class="{{ $message->sender_id === auth()->id() ? 'flex justify-end' : 'flex items-end gap-2' }} {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
+                            @if ($message->sender_id !== auth()->id())
+                                <span class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $message->sender_id === $previousSenderId ? 'invisible' : '' }}" aria-hidden="true">
+                                    @if ($isBuyerMessages && $conversation->store->logo_path)
+                                        <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
+                                    @else
+                                        {{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}
+                                    @endif
+                                </span>
+                            @endif
+                            <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem]">
+                                @php($attachment = $message->type === 'file' ? $message->attachments->first() : null)
+                                @php($isImageAttachment = $attachment !== null && in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true))
+                                @php($usesFlushAttachmentLayout = $attachment !== null && ($isImageAttachment || blank($message->body)))
+                                <div class="chat-message-bubble w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $usesFlushAttachmentLayout ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $message->sender_id === auth()->id() ? 'ml-auto rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
                                 @if ($message->type === 'file' && $message->attachments->isNotEmpty())
                                     @if ($isImageAttachment)
                                         <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" aria-label="Open {{ $attachment->original_name }} in a larger view" class="block overflow-hidden">
@@ -96,21 +96,22 @@
                                 @else
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
                                 @endif
-                            </div>
-                            @php($nextMessage = $messages->get($loop->index + 1))
-                            @php($endsRun = $nextMessage === null
-                                || $nextMessage->sender_id !== $message->sender_id
-                                || ! $nextMessage->created_at->isSameMinute($message->created_at))
-                            @if ($endsRun)
-                                <div class="mt-1 flex items-center gap-1.5 px-1 text-xs font-medium text-muted {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }}">
-                                    <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time>{{ $message->created_at->format('g:i A') }}</time>
-                                    @if ($message->id === $lastMessage?->id && $message->sender_id === auth()->id())
-                                        <span aria-hidden="true">·</span><span>{{ $receipt }}</span>
-                                    @endif
                                 </div>
-                            @endif
-                            @if ($message->sender_id !== auth()->id())<details x-on:toggle="if ($el.open) $nextTick(() => $el.querySelector('form').scrollIntoView({ block: 'nearest' }))" class="mt-0.5 px-1 text-xs"><summary class="inline-flex min-h-8 cursor-pointer list-none items-center gap-1.5 rounded-md px-1.5 text-xs font-medium text-muted transition hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 21V4m0 1c4-3 7 3 14 0v11c-7 3-10-3-14 0"/></svg>Report</summary><form method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="mt-2 w-64 max-w-full space-y-2 rounded-lg border border-line bg-white p-3 shadow-sm">@csrf<select name="reason" required aria-label="Report reason" class="min-h-10 w-full rounded-lg border-line text-sm"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-line text-sm"></textarea><button class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Submit report</button></form></details>@endif
+                            </div>
                         </div>
+                        @php($nextMessage = $messages->get($loop->index + 1))
+                        @php($endsRun = $nextMessage === null
+                            || $nextMessage->sender_id !== $message->sender_id
+                            || ! $nextMessage->created_at->isSameMinute($message->created_at))
+                        @if ($endsRun)
+                            <div class="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted {{ $message->sender_id === auth()->id() ? 'justify-end px-1' : 'justify-start pl-11 pr-1' }}">
+                                <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time>{{ $message->created_at->format('g:i A') }}</time>
+                                @if ($message->id === $lastMessage?->id && $message->sender_id === auth()->id())
+                                    <span aria-hidden="true">·</span><span>{{ $receipt }}</span>
+                                @endif
+                            </div>
+                        @endif
+                        @if ($message->sender_id !== auth()->id())<details x-on:toggle="if ($el.open) $nextTick(() => $el.querySelector('form').scrollIntoView({ block: 'nearest' }))" class="mt-0.5 pl-11 pr-1 text-xs"><summary class="inline-flex min-h-8 cursor-pointer list-none items-center gap-1.5 rounded-md px-1.5 text-xs font-medium text-muted transition hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand [&::-webkit-details-marker]:hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 21V4m0 1c4-3 7 3 14 0v11c-7 3-10-3-14 0"/></svg>Report</summary><form method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="mt-2 w-64 max-w-full space-y-2 rounded-lg border border-line bg-white p-3 shadow-sm">@csrf<select name="reason" required aria-label="Report reason" class="min-h-10 w-full rounded-lg border-line text-sm"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-line text-sm"></textarea><button class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Submit report</button></form></details>@endif
                     </article>
                     @php($previousDate = $message->created_at)
                     @php($previousSenderId = $message->sender_id)
