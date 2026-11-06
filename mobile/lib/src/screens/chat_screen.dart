@@ -119,7 +119,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final userId = event.data['user_id'];
       final me = ref.read(meProvider).value?.id;
 
-      if (userId != null && userId == me) {
+      // Until we know who we are, any typing event could be our own echo.
+      if (me == null || userId == me) {
         return;
       }
 
@@ -405,6 +406,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget build(BuildContext context) {
     // Keep the auto-disposed client alive for the lifetime of this screen.
     ref.watch(reverbProvider);
+    // The typing handler reads this to drop our own echoed events.
+    ref.watch(meProvider);
 
     final messages = ref.watch(messagesProvider(widget.conversationId));
     final conversation = ref

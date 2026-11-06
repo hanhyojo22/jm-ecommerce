@@ -562,6 +562,36 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('own typing echo is ignored but the store typing shows', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    final events = StreamController<ReverbEvent>.broadcast();
+    addTearDown(events.close);
+
+    ReverbEvent typing(String userId) => ReverbEvent('conversation.typing', {
+      'event': 'conversation.typing',
+      'conversation_id': 'conversation-1',
+      'user_id': userId,
+      'typing': true,
+    });
+
+    await _pumpChat(tester, api, reverbEvents: events.stream);
+
+    events.add(typing('buyer-1'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('is typing'), findsNothing);
+
+    events.add(typing('seller-1'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('is typing'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await _disposeChat(tester);
+  });
+
   testWidgets('document attachments fit narrow screens with large text', (
     tester,
   ) async {
@@ -752,6 +782,7 @@ Future<void> _pumpChat(
   WidgetTester tester,
   _FakeApiClient api, {
   AttachmentPicker? picker,
+  Stream<ReverbEvent> reverbEvents = const Stream.empty(),
   double? width,
   double height = 844,
   double textScale = 1,
@@ -767,7 +798,17 @@ Future<void> _pumpChat(
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        reverbProvider.overrideWithValue(_FakeReverbClient()),
+        reverbProvider.overrideWithValue(_FakeReverbClient(reverbEvents)),
+        meProvider.overrideWith(
+          (ref) async => const Account(
+            id: 'buyer-1',
+            name: 'Buyer',
+            email: 'buyer@example.com',
+            accountType: 'buyer',
+            emailVerified: true,
+            isPlatformAdministrator: false,
+          ),
+        ),
         if (picker != null) attachmentPickerProvider.overrideWithValue(picker),
       ],
       child: MaterialApp(
@@ -917,7 +958,7 @@ class _FakeAttachmentPicker implements AttachmentPicker {
 }
 
 class _FakeReverbClient extends ReverbClient {
-  _FakeReverbClient()
+  _FakeReverbClient([this.eventStream = const Stream.empty()])
     : super(
         key: 'test-key',
         host: 'localhost',
@@ -927,8 +968,10 @@ class _FakeReverbClient extends ReverbClient {
         authorize: (socketId, channelName) async => '',
       );
 
+  final Stream<ReverbEvent> eventStream;
+
   @override
-  Stream<ReverbEvent> get events => const Stream.empty();
+  Stream<ReverbEvent> get events => eventStream;
 
   @override
   Stream<ReverbState> get states => const Stream.empty();
