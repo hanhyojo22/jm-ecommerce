@@ -25,6 +25,7 @@ class ConversationMessageResource extends JsonResource
             'body' => $this->body,
             'client_message_id' => $this->client_message_id,
             'created_at' => $this->created_at?->toIso8601String(),
+            'receipt' => $this->when($this->receipt !== null, fn (): string => $this->receipt),
             'attachments' => MessageAttachmentResource::collection($this->whenLoaded('attachments')),
         ];
     }

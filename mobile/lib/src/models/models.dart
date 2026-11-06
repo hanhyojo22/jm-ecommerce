@@ -814,6 +814,7 @@ class ChatMessage {
     required this.body,
     this.clientMessageId,
     required this.createdAt,
+    this.receipt,
     this.attachments = const [],
   });
 
@@ -825,6 +826,7 @@ class ChatMessage {
   final String body;
   final String? clientMessageId;
   final String createdAt;
+  final String? receipt;
   final List<ChatAttachment> attachments;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
@@ -836,6 +838,7 @@ class ChatMessage {
     body: str(json['body']),
     clientMessageId: json['client_message_id'] as String?,
     createdAt: str(json['created_at']),
+    receipt: json['receipt'] as String?,
     attachments: listOf(json['attachments'])
         .map(ChatAttachment.fromJson)
         .toList(growable: false),

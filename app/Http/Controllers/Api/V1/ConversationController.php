@@ -132,7 +132,9 @@ class ConversationController extends Controller
     {
         $this->authorize('view', $conversation);
 
-        $conversation->load(['store', 'product.thumbnail', 'sellerOrder.order']);
+        $user = $request->user();
+
+        $conversation->load(['store', 'product.thumbnail', 'sellerOrder.order', 'readStates']);
 
         $messages = $conversation->messages()
             ->with(['sender:id,name', 'attachments'])
@@ -142,6 +144,25 @@ class ConversationController extends Controller
 
         // The page is fetched newest first for a stable cursor, then shown oldest first.
         $messages->setCollection($messages->getCollection()->reverse()->values());
+
+        // Compute the read receipt for the last outgoing message so clients can
+        // show a Sent / Delivered / Read checkmark beside it.
+        $recipientReadState = $conversation->readStates
+            ->where('user_id', '!=', $user->id)
+            ->sortByDesc('last_read_at')
+            ->first();
+
+        $lastOutgoing = $messages->getCollection()->where('sender_id', '!=', $user->id)->last();
+
+        if ($lastOutgoing !== null && $recipientReadState !== null) {
+            if ($recipientReadState->last_read_message_id === $lastOutgoing->id) {
+                $lastOutgoing->receipt = 'Read';
+            } elseif ($recipientReadState->last_delivered_message_id === $lastOutgoing->id) {
+                $lastOutgoing->receipt = 'Delivered';
+            } else {
+                $lastOutgoing->receipt = 'Sent';
+            }
+        }
 
         return ConversationMessageResource::collection($messages)
             ->additional(['conversation' => ConversationResource::make($conversation)->resolve($request)])

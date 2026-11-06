@@ -630,6 +630,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               nextMessage == null ||
               nextMessage.senderId != message.senderId ||
               !_isSameChatMinute(nextMessage.createdAt, message.createdAt),
+          showReceipt:
+              message.isMine && nextMessage == null && message.receipt != null,
         );
       },
     );
@@ -921,10 +923,16 @@ class _DocumentAttachment extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({super.key, required this.message, required this.showAvatar});
+  const _Bubble({
+    super.key,
+    required this.message,
+    required this.showAvatar,
+    this.showReceipt = false,
+  });
 
   final ChatMessage message;
   final bool showAvatar;
+  final bool showReceipt;
 
   @override
   Widget build(BuildContext context) {
@@ -1056,13 +1064,35 @@ class _Bubble extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-                  child: Text(
-                    dateTime(message.createdAt),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontSize: 11,
-                    ),
-                  ),
+                  child: showReceipt
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              dateTime(message.createdAt),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              key: const ValueKey('receipt-indicator'),
+                              Icons.done,
+                              size: 14,
+                              color: message.receipt == 'Read'
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ],
+                        )
+                      : Text(
+                          dateTime(message.createdAt),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                        ),
                 ),
               ],
             ),

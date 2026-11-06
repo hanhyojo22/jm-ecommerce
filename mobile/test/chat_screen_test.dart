@@ -434,6 +434,134 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('outgoing last message shows a blue read checkmark', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage(
+        id: 'outgoing-read',
+        senderId: 'buyer-1',
+        isMine: true,
+        type: 'text',
+        body: 'Hello',
+        createdAt: DateTime.now().toUtc().toIso8601String(),
+        receipt: 'Read',
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    final bubble = find.byKey(const ValueKey('message-outgoing-read'));
+    expect(bubble, findsOneWidget);
+    expect(
+      find.descendant(
+        of: bubble,
+        matching: find.byKey(const ValueKey('receipt-indicator')),
+      ),
+      findsOneWidget,
+    );
+    await _disposeChat(tester);
+  });
+
+  testWidgets('outgoing last message shows a gray sent checkmark', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage(
+        id: 'outgoing-sent',
+        senderId: 'buyer-1',
+        isMine: true,
+        type: 'text',
+        body: 'Hello',
+        createdAt: DateTime.now().toUtc().toIso8601String(),
+        receipt: 'Sent',
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    final bubble = find.byKey(const ValueKey('message-outgoing-sent'));
+    expect(
+      find.descendant(
+        of: bubble,
+        matching: find.byKey(const ValueKey('receipt-indicator')),
+      ),
+      findsOneWidget,
+    );
+
+    await _disposeChat(tester);
+  });
+
+  testWidgets('incoming messages render without crashing', (tester) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage(
+        id: 'incoming-no-receipt',
+        senderId: 'seller-1',
+        isMine: false,
+        type: 'text',
+        body: 'Hello',
+        createdAt: DateTime.now().toUtc().toIso8601String(),
+        receipt: 'Read',
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    final bubble = find.byKey(const ValueKey('message-incoming-no-receipt'));
+    expect(bubble, findsOneWidget);
+
+    await _disposeChat(tester);
+  });
+
+  testWidgets('non-last outgoing message does not show a receipt checkmark', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    final createdAt = DateTime.now().toUtc().toIso8601String();
+    api.serverMessages = [
+      ChatMessage(
+        id: 'outgoing-first',
+        senderId: 'buyer-1',
+        isMine: true,
+        type: 'text',
+        body: 'First',
+        createdAt: createdAt,
+        receipt: 'Read',
+      ),
+      ChatMessage(
+        id: 'outgoing-last',
+        senderId: 'buyer-1',
+        isMine: true,
+        type: 'text',
+        body: 'Last',
+        createdAt: createdAt,
+        receipt: 'Read',
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    expect(
+      find.byKey(const ValueKey('message-outgoing-first')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('message-outgoing-last')), findsOneWidget);
+
+    // Only the last outgoing message should show the checkmark.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('message-outgoing-last')),
+        matching: find.byKey(const ValueKey('receipt-indicator')),
+      ),
+      findsOneWidget,
+    );
+
+    await _disposeChat(tester);
+  });
+
   testWidgets('document attachments fit narrow screens with large text', (
     tester,
   ) async {
