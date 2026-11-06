@@ -617,11 +617,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           );
         }
 
-        final message = data[data.length - 1 - (index - pending.length)];
+        final dataIndex = data.length - 1 - (index - pending.length);
+        final message = data[dataIndex];
+        final nextMessage = dataIndex + 1 < data.length
+            ? data[dataIndex + 1]
+            : null;
 
         return _Bubble(
           key: ValueKey('message-${message.id}'),
           message: message,
+          showAvatar:
+              nextMessage == null ||
+              nextMessage.senderId != message.senderId ||
+              !_isSameChatMinute(nextMessage.createdAt, message.createdAt),
         );
       },
     );
@@ -913,9 +921,10 @@ class _DocumentAttachment extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({super.key, required this.message});
+  const _Bubble({super.key, required this.message, required this.showAvatar});
 
   final ChatMessage message;
+  final bool showAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -939,19 +948,22 @@ class _Bubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!mine) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: CircleAvatar(
-                key: ValueKey('sender-avatar-${message.id}'),
-                radius: 14,
-                backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                child: Icon(
-                  Icons.person_rounded,
-                  size: 19,
-                  color: theme.colorScheme.onSurfaceVariant,
+            if (showAvatar)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: CircleAvatar(
+                  key: ValueKey('sender-avatar-${message.id}'),
+                  radius: 14,
+                  backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                  child: Icon(
+                    Icons.person_rounded,
+                    size: 19,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ),
+              )
+            else
+              const SizedBox(width: 28),
             const SizedBox(width: 8),
           ],
           Flexible(
@@ -961,17 +973,6 @@ class _Bubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
-                if (!mine && message.senderName != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                    child: Text(
-                      message.senderName!,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
                 Container(
                   key: compactAttachment
                       ? ValueKey('attachment-bubble-${message.id}')
@@ -1070,4 +1071,17 @@ class _Bubble extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _isSameChatMinute(String first, String second) {
+  final firstTime = DateTime.tryParse(first);
+  final secondTime = DateTime.tryParse(second);
+
+  return firstTime != null &&
+      secondTime != null &&
+      firstTime.year == secondTime.year &&
+      firstTime.month == secondTime.month &&
+      firstTime.day == secondTime.day &&
+      firstTime.hour == secondTime.hour &&
+      firstTime.minute == secondTime.minute;
 }

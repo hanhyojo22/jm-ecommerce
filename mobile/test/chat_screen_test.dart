@@ -259,7 +259,7 @@ void main() {
     await _disposeChat(tester);
   });
 
-  testWidgets('incoming photo keeps the sender name above the photo bubble', (
+  testWidgets('incoming photo shows an avatar without a sender name', (
     tester,
   ) async {
     final api = _FakeApiClient();
@@ -289,23 +289,31 @@ void main() {
     final bubble = find.byKey(
       const ValueKey('attachment-bubble-incoming-photo'),
     );
-    expect(find.text('James'), findsOneWidget);
-    expect(
-      find.descendant(of: bubble, matching: find.text('James')),
-      findsNothing,
-    );
+    final avatar = find.byKey(const ValueKey('sender-avatar-incoming-photo'));
+
+    expect(find.text('James'), findsNothing);
+    expect(avatar, findsOneWidget);
     expect(
       find.descendant(of: bubble, matching: find.byType(NetworkThumb)),
       findsOneWidget,
+    );
+    expect(
+      tester.getTopLeft(avatar).dx,
+      lessThan(tester.getTopLeft(bubble).dx),
+    );
+    expect(
+      tester.getBottomLeft(avatar).dy,
+      closeTo(tester.getBottomLeft(bubble).dy, 8),
     );
 
     await _disposeChat(tester);
   });
 
-  testWidgets('incoming messages show a sender circle beside the bubble', (
+  testWidgets('incoming messages show an avatar on the last message only', (
     tester,
   ) async {
     final api = _FakeApiClient();
+    final createdAt = DateTime.now().toUtc().toIso8601String();
     api.serverMessages = [
       for (final type in ['text', 'image', 'document'])
         ChatMessage(
@@ -315,7 +323,7 @@ void main() {
           isMine: false,
           type: type == 'text' ? 'text' : 'file',
           body: type == 'text' ? 'Hello' : '',
-          createdAt: DateTime.now().toUtc().toIso8601String(),
+          createdAt: createdAt,
           attachments: type == 'text'
               ? const []
               : [
@@ -332,23 +340,96 @@ void main() {
 
     await _pumpChat(tester, api, width: 320, height: 700);
 
-    for (final type in ['text', 'image', 'document']) {
-      final avatar = find.byKey(ValueKey('sender-avatar-incoming-$type'));
-      final bubble = find.byKey(
-        ValueKey(
-          type == 'text'
-              ? 'message-bubble-incoming-$type'
-              : 'attachment-bubble-incoming-$type',
+    final bubbles = [
+      for (final type in ['text', 'image', 'document'])
+        find.byKey(
+          ValueKey(
+            type == 'text'
+                ? 'message-bubble-incoming-$type'
+                : 'attachment-bubble-incoming-$type',
+          ),
         ),
-      );
-      expect(avatar, findsOneWidget);
-      expect(bubble, findsOneWidget);
-      expect(
-        tester.getTopLeft(avatar).dx,
-        lessThan(tester.getTopLeft(bubble).dx),
-      );
+    ];
+
+    for (final type in ['text', 'image']) {
+      final avatar = find.byKey(ValueKey('sender-avatar-incoming-$type'));
+      expect(avatar, findsNothing);
     }
+
+    final avatar = find.byKey(
+      const ValueKey('sender-avatar-incoming-document'),
+    );
+    expect(avatar, findsOneWidget);
+    for (final bubble in bubbles) {
+      expect(bubble, findsOneWidget);
+      expect(tester.getTopLeft(bubble).dx, tester.getTopLeft(bubbles.first).dx);
+    }
+    expect(
+      tester.getTopLeft(avatar).dx,
+      lessThan(tester.getTopLeft(bubbles.last).dx),
+    );
+    expect(
+      tester.getBottomLeft(avatar).dy,
+      closeTo(tester.getBottomLeft(bubbles.last).dy, 8),
+    );
+    expect(find.text('James'), findsNothing);
     expect(tester.takeException(), isNull);
+
+    await _disposeChat(tester);
+  });
+
+  testWidgets('a new sender group shows its own avatar', (tester) async {
+    final api = _FakeApiClient();
+    final createdAt = DateTime.now().toUtc().toIso8601String();
+    api.serverMessages = [
+      ChatMessage(
+        id: 'seller-first',
+        senderId: 'seller-1',
+        isMine: false,
+        type: 'text',
+        body: 'Hello',
+        createdAt: createdAt,
+      ),
+      ChatMessage(
+        id: 'seller-second',
+        senderId: 'seller-1',
+        isMine: false,
+        type: 'text',
+        body: 'Still there?',
+        createdAt: createdAt,
+      ),
+      ChatMessage(
+        id: 'buyer-reply',
+        senderId: 'buyer-1',
+        isMine: true,
+        type: 'text',
+        body: 'Yes',
+        createdAt: createdAt,
+      ),
+      ChatMessage(
+        id: 'seller-again',
+        senderId: 'seller-1',
+        isMine: false,
+        type: 'text',
+        body: 'Great',
+        createdAt: createdAt,
+      ),
+    ];
+
+    await _pumpChat(tester, api);
+
+    expect(
+      find.byKey(const ValueKey('sender-avatar-seller-first')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('sender-avatar-seller-second')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('sender-avatar-seller-again')),
+      findsOneWidget,
+    );
 
     await _disposeChat(tester);
   });
