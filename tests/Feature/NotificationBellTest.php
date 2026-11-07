@@ -30,19 +30,20 @@ class NotificationBellTest extends TestCase
         ], $notification->toArray($user));
     }
 
-    public function test_unread_count_reflects_unread_notifications(): void
+    public function test_bell_counts_order_notifications_without_showing_chat_messages(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
 
         $user->notify(new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'));
         $user->notify(new ChatMessageReceived('Jane', 'Still there?', 'conversation-1'));
-        $read = $user->notifications()->latest()->first();
-        $read->markAsRead();
+        $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
 
         Livewire::test(NotificationBell::class)
             ->assertViewHas('unreadCount', 1)
-            ->assertSee('Is this still available?');
+            ->assertSee('Store confirmed your order.')
+            ->assertDontSee('Is this still available?')
+            ->assertDontSee('Still there?');
     }
 
     public function test_mark_all_read_clears_the_badge(): void
@@ -51,11 +52,25 @@ class NotificationBellTest extends TestCase
         $this->actingAs($user);
 
         $user->notify(new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'));
-        $user->notify(new ChatMessageReceived('Jane', 'Still there?', 'conversation-1'));
+        $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
 
-        Livewire::test(NotificationBell::class)->call('markAllRead');
+        Livewire::test(NotificationBell::class)->call('markAllRead')->assertViewHas('unreadCount', 0);
 
-        $this->assertSame(0, $user->unreadNotifications()->count());
+        $this->assertSame(1, $user->unreadNotifications()->count());
+        $this->assertSame(ChatMessageReceived::class, $user->unreadNotifications()->first()->type);
+    }
+
+    public function test_chat_notification_cannot_be_opened_from_the_bell(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $user->notify(new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'));
+        $chatNotification = $user->notifications()->first();
+
+        Livewire::test(NotificationBell::class)->call('goTo', $chatNotification->id)->assertNoRedirect();
+
+        $this->assertNull($chatNotification->fresh()->read_at);
     }
 
     public function test_a_notification_does_not_leak_to_another_user(): void
@@ -64,11 +79,11 @@ class NotificationBellTest extends TestCase
         $otherUser = User::factory()->create();
         $this->actingAs($otherUser);
 
-        $owner->notify(new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'));
+        $owner->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
         $ownersNotificationId = $owner->notifications()->first()->id;
 
         Livewire::test(NotificationBell::class)
-            ->assertDontSee('Is this still available?')
+            ->assertDontSee('Store confirmed your order.')
             ->call('goTo', $ownersNotificationId);
 
         $this->assertDatabaseHas('notifications', ['id' => $ownersNotificationId, 'read_at' => null]);

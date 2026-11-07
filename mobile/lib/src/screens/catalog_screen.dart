@@ -11,7 +11,6 @@ import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../widgets/cart_button.dart';
 import '../widgets/common.dart';
-import '../widgets/notification_bell_button.dart';
 
 class CatalogScreen extends ConsumerStatefulWidget {
   const CatalogScreen({super.key});
@@ -235,9 +234,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final refreshing = products.isLoading && feed != null;
 
     final scheme = theme.colorScheme;
-    final compactSearch =
-        MediaQuery.sizeOf(context).width < 360 ||
-        MediaQuery.textScalerOf(context).scale(14) > 22;
     final searchPill = Container(
       constraints: const BoxConstraints(minHeight: 48),
       padding: const EdgeInsetsDirectional.only(start: 14, end: 2),
@@ -247,10 +243,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       ),
       child: Row(
         children: [
-          if (!compactSearch) ...[
-            Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
-            const SizedBox(width: 8),
-          ],
+          Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: _searchController,
@@ -285,26 +279,20 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     icon: const Icon(Icons.close_rounded),
                   ),
           ),
-          if (compactSearch)
-            IconButton(
-              tooltip: 'Search',
-              onPressed: () => _submitSearch(_searchController.text),
-              icon: Icon(Icons.search_rounded, color: scheme.primary),
-            )
-          else
-            TextButton(
-              onPressed: () => _submitSearch(_searchController.text),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                foregroundColor: scheme.primary,
-                textStyle: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              child: MediaQuery.withClampedTextScaling(
-                maxScaleFactor: 1.3,
-                child: const Text('Search', maxLines: 1),
-              ),
+          TextButton(
+            onPressed: () => _submitSearch(_searchController.text),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              foregroundColor: scheme.primary,
+              textStyle: const TextStyle(fontWeight: FontWeight.w700),
             ),
+            // A short fixed label; capping it keeps the field usable on 320px at 2x text.
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.3,
+              child: const Text('Search', maxLines: 1),
+            ),
+          ),
         ],
       ),
     );
@@ -329,7 +317,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               children: [
                 Expanded(child: searchPill),
                 const SizedBox(width: 4),
-                const NotificationBellButton(onPrimary: true),
                 const CartButton(),
               ],
             ),

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/push_notifications.dart';
 import 'auth_providers.dart';
 import 'chat_providers.dart';
-import 'notification_providers.dart';
 
 /// Registers this device's push token once per signed-in app session.
 /// Watched (not read) from [AppShell] so Riverpod keeps the provider alive
@@ -11,9 +10,6 @@ import 'notification_providers.dart';
 final pushRegistrationProvider = FutureProvider<void>(
   (ref) => PushNotifications.register(
     ref.watch(apiClientProvider),
-    onMessage: () {
-      ref.invalidate(conversationsProvider);
-      ref.invalidate(notificationsProvider);
-    },
+    onMessage: () => ref.invalidate(conversationsProvider),
   ),
 );

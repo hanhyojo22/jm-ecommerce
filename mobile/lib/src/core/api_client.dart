@@ -85,17 +85,6 @@ class ApiClient {
   Future<Account> me() async =>
       Account.fromJson(mapOf(await _data('GET', '/me')));
 
-  Future<NotificationInbox> notifications() async =>
-      NotificationInbox.fromJson(mapOf(await _raw('GET', '/notifications')));
-
-  Future<void> markNotificationRead(String id) async {
-    await _raw('POST', '/notifications/$id/read');
-  }
-
-  Future<void> markAllNotificationsRead() async {
-    await _raw('POST', '/notifications/read');
-  }
-
   Future<ProductPage> products({
     String? query,
     String? category,

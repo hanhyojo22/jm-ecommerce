@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Actions\SavePushSubscription;
+use App\Notifications\ChatMessageReceived;
 use App\Support\WebPushAvailability;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\RateLimiter;
@@ -16,7 +17,7 @@ class NotificationBell extends Component
 
     public function markAllRead(): void
     {
-        auth()->user()->unreadNotifications()->update(['read_at' => now()]);
+        auth()->user()->unreadNotifications()->where('type', '!=', ChatMessageReceived::class)->update(['read_at' => now()]);
     }
 
     /**
@@ -60,7 +61,7 @@ class NotificationBell extends Component
 
     public function goTo(string $id): mixed
     {
-        $notification = auth()->user()->notifications()->whereKey($id)->first();
+        $notification = auth()->user()->notifications()->where('type', '!=', ChatMessageReceived::class)->whereKey($id)->first();
 
         if ($notification === null) {
             return null;
@@ -69,7 +70,6 @@ class NotificationBell extends Component
         $notification->markAsRead();
 
         return match ($notification->data['type'] ?? null) {
-            'chat' => $this->redirect(route('messages.show', $notification->data['conversation_id'])),
             'order' => $this->redirect(route('orders.show', $notification->data['order_id'])),
             'seller_order' => $this->redirect(route('seller.orders.show', $notification->data['seller_order_id'])),
             default => null,
@@ -84,8 +84,8 @@ class NotificationBell extends Component
             : collect();
 
         return view('livewire.notification-bell', [
-            'unreadCount' => $user->unreadNotifications()->count(),
-            'notifications' => $user->notifications()->latest()->limit(10)->get(),
+            'unreadCount' => $user->unreadNotifications()->where('type', '!=', ChatMessageReceived::class)->count(),
+            'notifications' => $user->notifications()->where('type', '!=', ChatMessageReceived::class)->latest()->limit(10)->get(),
             'pushConfigured' => WebPushAvailability::isConfigured(),
             'hasPushSubscription' => $pushSubscriptions->isNotEmpty(),
             'pushEndpointHashes' => $pushSubscriptions

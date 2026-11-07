@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DeliveryAddressController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\MessageAttachmentController;
-use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderIssueController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
@@ -26,12 +25,6 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/me', AccountController::class)
         ->middleware(['auth', 'clerk.verified', 'throttle:api'])
         ->name('api.v1.me');
-
-    Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller', 'throttle:api'])->group(function (): void {
-        Route::get('/notifications', [NotificationController::class, 'index'])->name('api.v1.notifications.index');
-        Route::post('/notifications/read', [NotificationController::class, 'markAllRead'])->name('api.v1.notifications.read-all');
-        Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('api.v1.notifications.read');
-    });
 
     /*
      * The catalog is public, exactly like the storefront, so the app can show it

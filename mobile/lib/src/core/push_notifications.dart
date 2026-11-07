@@ -16,7 +16,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 
 /// Registers this device for push, shows a notification while the app is in
 /// the foreground (FCM does not do this automatically), and deep-links a tap
-/// to the relevant conversation or notification inbox.
+/// to the relevant conversation.
 ///
 /// shortcut: uses the deprecated `getToken()`/`onTokenRefresh` instead of
 /// the newer `register()`/`onRegistered`, because the latter sends a
@@ -64,7 +64,7 @@ class PushNotifications {
             android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           ),
           onDidReceiveNotificationResponse: (response) =>
-              _openTarget(response.payload),
+              _openConversation(response.payload),
         );
 
         FirebaseMessaging.onMessage.listen((message) {
@@ -72,16 +72,14 @@ class PushNotifications {
           _showForeground(message);
         });
         FirebaseMessaging.onMessageOpenedApp.listen(
-          (message) => _openTarget(message.data['conversation_id']),
+          (message) => _openConversation(message.data['conversation_id']),
         );
 
         _initialized = true;
       }
 
       final token = await FirebaseMessaging.instance.getToken();
-      debugPrint(
-        '[Push] getToken(): ${token == null ? 'null' : '${token.substring(0, 12)}...'}',
-      );
+      debugPrint('[Push] getToken(): ${token == null ? 'null' : '${token.substring(0, 12)}...'}');
       if (token != null) {
         await apiClient.registerDeviceToken(token);
         debugPrint('[Push] registerDeviceToken sent successfully');
@@ -95,7 +93,7 @@ class PushNotifications {
       final initialMessage = await FirebaseMessaging.instance
           .getInitialMessage();
       if (initialMessage != null) {
-        _openTarget(initialMessage.data['conversation_id']);
+        _openConversation(initialMessage.data['conversation_id']);
       }
     } catch (error, stack) {
       // Push is a nice-to-have; never let it block the rest of the app.
@@ -129,17 +127,13 @@ class PushNotifications {
       NotificationDetails(
         android: AndroidNotificationDetails(_channel.id, _channel.name),
       ),
-      payload: message.data['conversation_id'] ?? 'notifications',
+      payload: message.data['conversation_id'],
     );
   }
 
-  static void _openTarget(String? conversationId) {
-    if (conversationId != null &&
-        conversationId.isNotEmpty &&
-        conversationId != 'notifications') {
+  static void _openConversation(String? conversationId) {
+    if (conversationId != null && conversationId.isNotEmpty) {
       appRouter.push('/conversations/$conversationId');
-    } else {
-      appRouter.push('/notifications');
     }
   }
 }
