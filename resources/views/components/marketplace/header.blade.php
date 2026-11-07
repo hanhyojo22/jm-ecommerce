@@ -133,9 +133,7 @@
                 @endif
 
                 @auth
-                    @unless ($isSellerWorkspace)
-                        <livewire:notification-bell />
-                    @endunless
+                    <livewire:notification-bell />
 
                     <div class="relative" @click.outside="accountOpen = false">
                         <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" class="flex min-h-11 max-w-48 items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand">

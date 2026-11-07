@@ -28,7 +28,7 @@ class HeaderWorkspaceScopingTest extends TestCase
             ->assertSee('data-notification-bell', false);
     }
 
-    public function test_seller_workspace_shows_only_the_seller_side_unread_count_and_hides_the_cart_and_bell(): void
+    public function test_seller_workspace_shows_only_the_seller_side_unread_count_and_hides_the_cart_but_keeps_the_bell(): void
     {
         [$seller] = $this->sellerWhoAlsoBuys();
 
@@ -37,7 +37,7 @@ class HeaderWorkspaceScopingTest extends TestCase
             ->assertOk()
             ->assertSee('aria-label="Messages, 1 unread"', false)
             ->assertDontSee('data-cart-link', false)
-            ->assertDontSee('data-notification-bell', false);
+            ->assertSee('data-notification-bell', false);
     }
 
     /** @return array{0: User} the dual-role user, with one unread conversation as buyer and one unread as seller staff */
