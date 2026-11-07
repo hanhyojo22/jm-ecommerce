@@ -82,13 +82,11 @@ window.ensureWebPushSubscribed = async ($wire) => {
     }
 
     try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        const existing = await registration.pushManager.getSubscription();
-
-        if (existing) {
-            return;
-        }
-
+        // subscribe() on an already-subscribed registration just returns that same
+        // subscription (no re-prompt, no new endpoint) — always calling it, instead of only
+        // when the browser has none, is what makes this self-healing: the previous version
+        // skipped the save whenever a browser-side subscription already existed, which is
+        // exactly the case when an earlier attempt subscribed but never reached the server.
         await subscribeAndSave($wire);
     } catch (error) {
         console.warn('Could not restore the browser notification subscription.', error);

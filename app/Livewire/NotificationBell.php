@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Component;
 
@@ -37,7 +38,17 @@ class NotificationBell extends Component
             'keys.auth' => ['required', 'string', 'min:10', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
         ]);
 
-        if ($validator->fails() || ! $this->isTrustedPushEndpoint($subscription['endpoint'])) {
+        $untrustedHost = ! $validator->fails() && ! $this->isTrustedPushEndpoint($subscription['endpoint']);
+
+        if ($validator->fails() || $untrustedHost) {
+            // This previously failed silently with no trace anywhere, which made a rejected
+            // subscription indistinguishable from the JS simply never calling this method.
+            Log::warning('Rejected a web push subscription.', [
+                'user_id' => auth()->id(),
+                'reason' => $untrustedHost ? 'untrusted_host' : $validator->errors()->keys(),
+                'endpoint' => $subscription['endpoint'] ?? null,
+            ]);
+
             return;
         }
 
