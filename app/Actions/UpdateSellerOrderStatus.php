@@ -8,8 +8,10 @@ use App\Models\PaymentAdjustment;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\User;
+use App\Notifications\SellerOrderStatusUpdated;
 use App\Queries\TopProductQuery;
 use App\Services\GmailOrderMailer;
+use App\Services\PushNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -157,20 +159,40 @@ class UpdateSellerOrderStatus
         }
 
         DB::afterCommit(function () use ($updatedSellerOrder, $status, $actor): void {
-            try {
-                $updatedSellerOrder->load('order.user', 'store');
-                if ($actor?->is($updatedSellerOrder->order->user)) {
-                    return;
-                }
+            $updatedSellerOrder->load('order.user', 'store');
+            if ($actor?->is($updatedSellerOrder->order->user)) {
+                return;
+            }
 
-                $number = $updatedSellerOrder->order->number;
+            $number = $updatedSellerOrder->order->number;
+            $message = $actor === null
+                ? "Your {$updatedSellerOrder->store->name} items from order #{$number} were marked delivered because they shipped ".config('marketplace.orders.auto_deliver_days').' days ago. If they never arrived, ask for order help.'
+                : "{$updatedSellerOrder->store->name} marked its part of order #{$number} as {$status}.";
+
+            try {
                 app(GmailOrderMailer::class)->send(
                     $updatedSellerOrder->order->user,
                     "JMMart order {$number} update",
-                    ($actor === null
-                        ? "Your {$updatedSellerOrder->store->name} items from order #{$number} were marked delivered because they shipped ".config('marketplace.orders.auto_deliver_days').' days ago. If they never arrived, ask for order help.'
-                        : "{$updatedSellerOrder->store->name} marked its part of order #{$number} as {$status}.")
-                    ."\n\nView your order: ".route('orders.show', $updatedSellerOrder->order_id),
+                    $message."\n\nView your order: ".route('orders.show', $updatedSellerOrder->order_id),
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                app(PushNotifier::class)->sendToUser(
+                    $updatedSellerOrder->order->user,
+                    "Order #{$number}",
+                    $message,
+                    ['type' => 'order', 'order_id' => $updatedSellerOrder->order_id, 'status' => $status],
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                $updatedSellerOrder->order->user->notify(
+                    new SellerOrderStatusUpdated($updatedSellerOrder->order_id, $status, "Order #{$number}", $message)
                 );
             } catch (Throwable $exception) {
                 report($exception);
