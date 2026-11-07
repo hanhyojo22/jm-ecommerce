@@ -43,9 +43,14 @@ class MessagesScreen extends ConsumerWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final conversation = items[index];
+              final isUnread = conversation.unreadCount > 0;
+              final theme = Theme.of(context);
 
               return Card(
                 clipBehavior: Clip.antiAlias,
+                color: isUnread
+                    ? theme.colorScheme.primary.withValues(alpha: 0.06)
+                    : null,
                 child: InkWell(
                   onTap: () =>
                       context.push('/conversations/${conversation.id}'),
@@ -76,12 +81,14 @@ class MessagesScreen extends ConsumerWidget {
                                   ),
                                   Text(
                                     timeAgo(conversation.latestMessageAt),
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: isUnread
+                                          ? theme.colorScheme.primary
+                                          : theme.colorScheme.onSurfaceVariant,
+                                      fontWeight: isUnread
+                                          ? FontWeight.w700
+                                          : FontWeight.w400,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -106,12 +113,20 @@ class MessagesScreen extends ConsumerWidget {
                                       _preview(conversation),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: isUnread
+                                                ? theme.colorScheme.onSurface
+                                                : theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                            fontWeight: isUnread
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
+                                          ),
                                     ),
                                   ),
-                                  if (conversation.unreadCount > 0)
+                                  if (isUnread)
                                     Container(
                                       margin: const EdgeInsets.only(left: 8),
                                       padding: const EdgeInsets.symmetric(
