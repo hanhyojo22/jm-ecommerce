@@ -140,7 +140,8 @@
 
                     <div x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && push.error" class="mt-2">
                         <p class="text-xs font-semibold text-ink">Desktop notifications could not be connected</p>
-                        <p class="mt-0.5 text-xs text-muted">Check this browser's notification settings and try again.</p>
+                        <p x-show="push.isBrave" class="mt-0.5 text-xs text-muted">Brave blocks this by default. Open <code class="text-[11px]">brave://settings/system</code> and turn on "Use Google services for push messaging", then try again.</p>
+                        <p x-show="!push.isBrave" class="mt-0.5 text-xs text-muted">Check this browser's notification settings and try again.</p>
                         <button
                             type="button"
                             @click="retryPush($wire)"

@@ -37,6 +37,15 @@ function rememberOptOut(optedOut) {
     }
 }
 
+/*
+ * Only Brave defines navigator.brave. Its presence alone is a reliable sync
+ * check; calling the isBrave() method it exposes only adds an async round trip
+ * for no extra certainty here.
+ */
+function isBraveBrowser() {
+    return Boolean(window.navigator.brave);
+}
+
 function pushState(overrides = {}) {
     const supported = isPushSupported();
 
@@ -48,6 +57,7 @@ function pushState(overrides = {}) {
         synced: false,
         error: false,
         optedOut: isOptedOut(),
+        isBrave: isBraveBrowser(),
         ...overrides,
     };
 }
