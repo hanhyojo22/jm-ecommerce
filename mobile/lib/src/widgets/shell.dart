@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/chat_providers.dart';
+import '../providers/push_providers.dart';
 import '../screens/account_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
@@ -34,6 +35,9 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Cached by Riverpod: runs once per signed-in session, not on every tab switch.
+    ref.watch(pushRegistrationProvider);
+
     final tab = ref.watch(shellTabProvider);
     final index = tab.index;
     final unread =

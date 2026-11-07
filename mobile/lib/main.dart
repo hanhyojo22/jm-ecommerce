@@ -1,15 +1,28 @@
 import 'package:clerk_flutter/clerk_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'src/app.dart';
 import 'src/config.dart';
 import 'src/core/clerk_http_service.dart';
+import 'src/core/push_notifications.dart';
 import 'src/providers/auth_providers.dart';
 import 'src/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    debugPrint('[Push] Firebase.initializeApp() succeeded');
+  } catch (error) {
+    // No google-services.json in this build, or no Google Play Services on
+    // the device: the app still works, just without push notifications.
+    debugPrint('[Push] Firebase.initializeApp() failed: $error');
+  }
 
   if (!AppConfig.hasClerk) {
     runApp(const ProviderScope(child: JmMartApp()));

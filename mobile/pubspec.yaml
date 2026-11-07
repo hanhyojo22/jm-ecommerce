@@ -46,6 +46,9 @@ dependencies:
   clerk_auth: ^0.0.18-beta
   http: ^1.6.0
   file_picker: ^13.3.2
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
+  flutter_local_notifications: 18.0.1
 
 dev_dependencies:
   flutter_test:

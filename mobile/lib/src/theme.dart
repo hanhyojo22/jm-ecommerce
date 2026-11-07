@@ -1,3 +1,4 @@
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 
 const _brand = Color(0xFF14665A);
@@ -16,6 +17,21 @@ ThemeData buildAppTheme() {
     colorScheme: scheme,
     scaffoldBackgroundColor: const Color(0xFFF7F6F2),
     fontFamily: 'Roboto',
+    // Clerk's sign-in widgets read their colors from here instead of Clerk purple.
+    extensions: [
+      ClerkThemeExtension(
+        colors: ClerkThemeColors(
+          background: Colors.white,
+          altBackground: Color(0xFFE4E2DB),
+          borderSide: Color(0xFFD9D6CE),
+          text: Color(0xFF1E2422),
+          icon: Color(0xFF5B615E),
+          lightweightText: Color(0xFF5B615E),
+          error: Color(0xFFB3261E),
+          accent: scheme.primary,
+        ),
+      ),
+    ],
     appBarTheme: AppBarTheme(
       backgroundColor: const Color(0xFFF7F6F2),
       foregroundColor: scheme.onSurface,

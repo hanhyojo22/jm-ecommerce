@@ -2,6 +2,7 @@
 import './cookie-consent';
 import { showRequestError } from './request-errors';
 import './chat';
+import './notifications';
 import './cart';
 import { clerkComponentAppearance, clerkUserProfileAppearance } from './clerk-appearance';
 
@@ -68,7 +69,7 @@ const reverbConfig = {
     scheme: document.querySelector('meta[name="reverb-scheme"]')?.content,
 };
 
-if (document.querySelector('[data-conversation-thread], [data-conversation-inbox]') && reverbConfig.key && reverbConfig.host) {
+if (document.querySelector('[data-conversation-thread], [data-conversation-inbox], [data-notification-bell]') && reverbConfig.key && reverbConfig.host) {
     Promise.all([import('laravel-echo'), import('pusher-js')]).then(([{ default: Echo }, { default: Pusher }]) => {
         window.Pusher = Pusher;
         window.Echo = new Echo({

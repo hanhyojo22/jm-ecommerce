@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\MessageSent;
 use App\Models\User;
+use App\Notifications\ChatMessageReceived;
 use App\Services\PushNotifier;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Str;
@@ -41,6 +42,8 @@ class SendChatMessagePush implements ShouldQueue
                 Str::limit($message->body, 120),
                 ['type' => 'chat', 'conversation_id' => $conversation->id],
             );
+
+            $recipient->notify(new ChatMessageReceived($message->sender->name, $message->body, $conversation->id));
         }
     }
 }

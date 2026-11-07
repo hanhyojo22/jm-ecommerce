@@ -10,8 +10,10 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Notifications\ChatMessageReceived;
 use App\Services\PushNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Mockery;
 use Tests\TestCase;
@@ -22,6 +24,8 @@ class SendChatMessagePushTest extends TestCase
 
     public function test_a_buyer_message_pushes_every_active_seller_staff_member(): void
     {
+        Notification::fake();
+
         [$buyer, $owner, $manager, $conversation] = $this->conversationWithTwoStaff();
 
         $message = $conversation->messages()->create([
@@ -50,10 +54,15 @@ class SendChatMessagePushTest extends TestCase
             );
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+
+        Notification::assertSentTo($owner, ChatMessageReceived::class);
+        Notification::assertSentTo($manager, ChatMessageReceived::class);
     }
 
     public function test_a_seller_message_pushes_only_the_buyer(): void
     {
+        Notification::fake();
+
         [$buyer, $owner, , $conversation] = $this->conversationWithTwoStaff();
 
         $message = $conversation->messages()->create([
@@ -74,10 +83,14 @@ class SendChatMessagePushTest extends TestCase
             );
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+
+        Notification::assertSentTo($buyer, ChatMessageReceived::class);
     }
 
     public function test_a_deactivated_seller_staff_member_is_not_pushed(): void
     {
+        Notification::fake();
+
         [$buyer, $owner, $manager, $conversation] = $this->conversationWithTwoStaff();
         $manager->update(['is_active' => false]);
 
@@ -97,10 +110,15 @@ class SendChatMessagePushTest extends TestCase
             ]);
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+
+        Notification::assertSentTo($owner, ChatMessageReceived::class);
+        Notification::assertNotSentTo($manager, ChatMessageReceived::class);
     }
 
     public function test_staff_of_a_suspended_store_are_not_pushed(): void
     {
+        Notification::fake();
+
         [$buyer, , , $conversation] = $this->conversationWithTwoStaff();
         $conversation->store->update(['status' => 'suspended']);
 
@@ -115,10 +133,14 @@ class SendChatMessagePushTest extends TestCase
         $notifier->shouldNotReceive('sendToUser');
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+
+        Notification::assertNothingSent();
     }
 
     public function test_a_deactivated_buyer_is_not_pushed(): void
     {
+        Notification::fake();
+
         [$buyer, $owner, , $conversation] = $this->conversationWithTwoStaff();
         $buyer->update(['is_active' => false]);
 
@@ -133,6 +155,8 @@ class SendChatMessagePushTest extends TestCase
         $notifier->shouldNotReceive('sendToUser');
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+
+        Notification::assertNothingSent();
     }
 
     /** @return array{0: User, 1: User, 2: User, 3: Conversation} buyer, seller owner, seller manager, conversation */

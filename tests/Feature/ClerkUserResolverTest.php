@@ -148,6 +148,18 @@ class ClerkUserResolverTest extends TestCase
         $this->assertDatabaseCount('users', 0);
     }
 
+    public function test_the_api_tells_a_clerk_user_with_an_unverified_email_to_verify_it(): void
+    {
+        $this->app->instance(ClerkSessionVerifier::class, new FakeClerkSessionVerifier(
+            new ClerkIdentity('user_unverified'),
+            new ClerkIdentity('user_unverified', 'buyer@example.com', false),
+        ));
+
+        $this->getJson('/api/v1/me')
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'auth.email_unverified');
+    }
+
     public function test_a_verified_clerk_identity_without_a_local_match_creates_a_buyer_only(): void
     {
         $resolver = new ClerkUserResolver(new FakeClerkSessionVerifier(

@@ -132,6 +132,8 @@
                 @endif
 
                 @auth
+                    <livewire:notification-bell />
+
                     <div class="relative" @click.outside="accountOpen = false">
                         <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" class="flex min-h-11 max-w-48 items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand">
                             <svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>

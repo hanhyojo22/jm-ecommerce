@@ -27,14 +27,21 @@ and chat service on Render by default; your PC does not need to run Laravel.
 Use the publishable key from the same Clerk instance configured on Render.
 Never put a Clerk secret key in the mobile app.
 
+Put the login config in `mobile/.env` (gitignored):
+
+```
+CLERK_PUBLISHABLE_KEY=pk_test_...
+API_BASE_URL=https://jmmart-marketplace.onrender.com/api/v1
+```
+
 ```powershell
-flutter run --dart-define=CLERK_PUBLISHABLE_KEY=YOUR_RENDER_CLERK_PUBLISHABLE_KEY
+flutter run --dart-define-from-file=.env
 ```
 
 Build an Android APK with the same cloud configuration:
 
 ```powershell
-flutter build apk --debug --dart-define=CLERK_PUBLISHABLE_KEY=YOUR_RENDER_CLERK_PUBLISHABLE_KEY
+flutter build apk --release --target-platform android-arm64 --dart-define-from-file=.env
 ```
 
 Cloud builds read and change real marketplace data. To use a local development
