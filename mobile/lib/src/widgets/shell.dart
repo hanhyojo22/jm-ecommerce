@@ -28,13 +28,40 @@ final shellTabProvider =
       ShellTabNotifier.new,
     );
 
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
+  @override
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
   static const _titles = ['Discover', 'Orders', 'Messages', 'Account'];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// A push received while backgrounded/killed never reaches [onMessage] in
+  /// push_notifications.dart, so the unread badge would otherwise stay stale
+  /// until something else happened to re-fetch conversations.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(conversationsProvider);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Cached by Riverpod: runs once per signed-in session, not on every tab switch.
     ref.watch(pushRegistrationProvider);
 

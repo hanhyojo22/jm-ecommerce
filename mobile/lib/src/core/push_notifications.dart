@@ -40,7 +40,14 @@ class PushNotifications {
   /// Safe to call once per signed-in session; every failure is swallowed so
   /// a push setup problem (denied permission, no Google Play Services) never
   /// blocks sign-in or the rest of the app.
-  static Future<void> register(ApiClient apiClient) async {
+  ///
+  /// [onMessage] runs for every foreground push, read or not, so the caller
+  /// can refresh its own unread-count state (the badge would otherwise only
+  /// catch up the next time something else re-fetches conversations).
+  static Future<void> register(
+    ApiClient apiClient, {
+    VoidCallback? onMessage,
+  }) async {
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
       debugPrint('[Push] permission status: ${settings.authorizationStatus}');
@@ -60,7 +67,10 @@ class PushNotifications {
               _openConversation(response.payload),
         );
 
-        FirebaseMessaging.onMessage.listen(_showForeground);
+        FirebaseMessaging.onMessage.listen((message) {
+          onMessage?.call();
+          _showForeground(message);
+        });
         FirebaseMessaging.onMessageOpenedApp.listen(
           (message) => _openConversation(message.data['conversation_id']),
         );
