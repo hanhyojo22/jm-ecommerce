@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\CheckoutCart;
+use App\Actions\NotifySellersOfNewOrder;
 use App\Actions\SendOrderReceipt;
 use App\Actions\StartOnlinePayment;
 use App\Http\Controllers\Controller;
@@ -106,6 +107,7 @@ class CheckoutController extends Controller
         CheckoutCart $checkout,
         StartOnlinePayment $startOnlinePayment,
         SendOrderReceipt $sendReceipt,
+        NotifySellersOfNewOrder $notifySellers,
     ): JsonResponse {
         $data = $request->validate([
             'recipient_name' => ['required', 'string', 'max:150'],
@@ -132,6 +134,7 @@ class CheckoutController extends Controller
         $sendReceipt->handle($request->user(), $order, $paymentMethod === 'cod'
             ? 'payable on delivery. Each store confirms its delivery timing.'
             : 'to be paid by '.Payment::METHOD_LABELS[$paymentMethod].'. If you left the payment page, pay from your order page so the stores can confirm and ship.');
+        $notifySellers->handle($order);
 
         $paymentUrl = null;
         $paymentError = null;

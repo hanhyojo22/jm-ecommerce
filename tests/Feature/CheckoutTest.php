@@ -12,12 +12,14 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Notifications\NewSellerOrderPlaced;
 use App\Services\GmailOrderMailer;
 use App\Support\CookiePreferences;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class CheckoutTest extends TestCase
@@ -662,6 +664,44 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseCount('orders', 1);
         $this->assertDatabaseCount('seller_orders', 1);
         $this->assertSame(3, $product->refresh()->stock_quantity);
+    }
+
+    public function test_placing_an_order_notifies_the_stores_active_staff_but_not_the_buyer(): void
+    {
+        Notification::fake();
+
+        [$owner, $product] = $this->sellerProduct('19.99', 5);
+        $manager = User::factory()->seller()->create();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $manager->id, 'role' => 'manager']);
+
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery())->assertRedirect();
+
+        $sellerOrder = SellerOrder::query()->sole();
+
+        Notification::assertSentTo(
+            $owner,
+            NewSellerOrderPlaced::class,
+            fn (NewSellerOrderPlaced $notification): bool => $notification->toArray($owner)['seller_order_id'] === $sellerOrder->id,
+        );
+        Notification::assertSentTo($manager, NewSellerOrderPlaced::class);
+        Notification::assertNotSentTo($buyer, NewSellerOrderPlaced::class);
+    }
+
+    public function test_a_retried_checkout_does_not_notify_sellers_a_second_time(): void
+    {
+        Notification::fake();
+
+        [$owner, $product] = $this->sellerProduct('19.99', 5);
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
+        $payload = [...$this->delivery(), 'client_request_id' => 'checkout-retry-notify'];
+
+        $this->actingAs($buyer)->post(route('checkout.store'), $payload)->assertRedirect();
+        $this->actingAs($buyer)->post(route('checkout.store'), $payload)->assertRedirect();
+
+        Notification::assertSentToTimes($owner, NewSellerOrderPlaced::class, 1);
     }
 
     public function test_a_reused_request_id_with_different_delivery_details_is_rejected(): void

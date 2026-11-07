@@ -25,6 +25,7 @@ class NotificationBell extends Component
         return match ($notification->data['type'] ?? null) {
             'chat' => $this->redirect(route('messages.show', $notification->data['conversation_id'])),
             'order' => $this->redirect(route('orders.show', $notification->data['order_id'])),
+            'seller_order' => $this->redirect(route('seller.orders.show', $notification->data['seller_order_id'])),
             default => null,
         };
     }

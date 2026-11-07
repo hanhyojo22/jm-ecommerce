@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Marketplace;
 
 use App\Actions\CheckoutCart;
+use App\Actions\NotifySellersOfNewOrder;
 use App\Actions\SendOrderReceipt;
 use App\Actions\StartOnlinePayment;
 use App\Http\Controllers\Controller;
@@ -80,7 +81,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request, CheckoutCart $checkout, SendOrderReceipt $sendReceipt): RedirectResponse
+    public function store(Request $request, CheckoutCart $checkout, SendOrderReceipt $sendReceipt, NotifySellersOfNewOrder $notifySellers): RedirectResponse
     {
         $data = $request->validate([
             'recipient_name' => ['required', 'string', 'max:150'],
@@ -106,6 +107,7 @@ class CheckoutController extends Controller
         $buyer = $request->user();
 
         $sendReceipt->handle($buyer, $order, $paymentNote);
+        $notifySellers->handle($order);
 
         return $paymentMethod === 'cod' ? to_route('orders.placed', $order) : to_route('orders.pay', $order);
     }
