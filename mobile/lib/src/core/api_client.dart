@@ -57,7 +57,11 @@ class ApiClient {
         ),
         'POST' => await _dio.post(path, data: data, cancelToken: cancelToken),
         'PATCH' => await _dio.patch(path, data: data, cancelToken: cancelToken),
-        'DELETE' => await _dio.delete(path, cancelToken: cancelToken),
+        'DELETE' => await _dio.delete(
+          path,
+          data: data,
+          cancelToken: cancelToken,
+        ),
         _ => throw ArgumentError('Unsupported method $method'),
       };
 
@@ -471,5 +475,17 @@ class ApiClient {
     );
 
     return str(body is Map ? body['auth'] : null);
+  }
+
+  Future<void> registerDeviceToken(String token) async {
+    await _raw(
+      'POST',
+      '/device-tokens',
+      data: {'token': token, 'platform': 'android'},
+    );
+  }
+
+  Future<void> unregisterDeviceToken(String token) async {
+    await _raw('DELETE', '/device-tokens', data: {'token': token});
   }
 }

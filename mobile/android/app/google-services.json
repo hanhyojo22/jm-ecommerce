@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "579357206267",
+    "project_id": "jmmart-b23e6",
+    "storage_bucket": "jmmart-b23e6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:579357206267:android:462c28287faa7e1c4af25e",
+        "android_client_info": {
+          "package_name": "com.jmmart.jmmart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIyDeL8e4eTkFRzxqlSqh46ZEKClOkSL8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

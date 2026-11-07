@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
@@ -41,9 +43,13 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final message = error is ApiException
-        ? (error as ApiException).friendly
-        : 'Something went wrong.';
+    final apiError = error is ApiException ? error as ApiException : null;
+    final message = apiError?.friendly ?? 'Something went wrong.';
+    // The backend refused this Clerk session, so retrying cannot help: let the user switch accounts.
+    final canSignOut =
+        apiError != null &&
+        (apiError.isUnauthenticated ||
+            apiError.code == 'auth.email_unverified');
 
     return Center(
       child: Padding(
@@ -68,6 +74,18 @@ class ErrorView extends StatelessWidget {
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Try again'),
+              ),
+            ],
+            if (canSignOut) ...[
+              const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: () async {
+                  final router = GoRouter.of(context);
+                  await ClerkAuth.of(context).signOut();
+                  router.go('/');
+                },
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Sign out'),
               ),
             ],
           ],

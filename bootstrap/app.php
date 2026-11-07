@@ -123,6 +123,10 @@ return Application::configure(basePath: dirname(__DIR__))
                     : null;
             }
 
+            if ($request->attributes->get('clerk_email_unverified') === true) {
+                return ApiError::response('auth.email_unverified', 'Verify your email address to continue.', 403);
+            }
+
             return ApiError::response('auth.unauthenticated', 'Sign in to continue.', 401);
         });
 

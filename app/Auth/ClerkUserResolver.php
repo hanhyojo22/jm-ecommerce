@@ -30,6 +30,9 @@ class ClerkUserResolver
         $identity = $this->verifier->fetchUser($identity->id);
 
         if (! $identity->emailVerified || $identity->email === null) {
+            // Lets the API answer "verify your email" instead of "sign in" to a signed-in Clerk user.
+            $request->attributes->set('clerk_email_unverified', true);
+
             return null;
         }
 

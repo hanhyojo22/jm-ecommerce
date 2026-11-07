@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../config.dart';
 import '../core/formatters.dart';
+import '../core/push_notifications.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
@@ -133,7 +134,11 @@ class AccountScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             OutlinedButton.icon(
-              onPressed: () => ClerkAuth.of(context).signOut(),
+              onPressed: () async {
+                final auth = ClerkAuth.of(context);
+                await PushNotifications.unregister(ref.read(apiClientProvider));
+                await auth.signOut();
+              },
               icon: const Icon(Icons.logout_rounded),
               label: const Text('Sign out'),
             ),

@@ -1,4 +1,7 @@
+import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
+// ignore: implementation_imports
+import 'package:clerk_flutter/src/utils/localization_extensions.dart';
 import 'package:flutter/material.dart';
 
 import 'config.dart';
@@ -30,10 +33,30 @@ class JmMartApp extends StatelessWidget {
         routerConfig: appRouter,
         // ClerkErrorListener needs MaterialApp's ScaffoldMessenger.
         builder: (context, child) =>
-            ClerkErrorListener(child: child ?? const SizedBox.shrink()),
+            ClerkErrorListener(
+              handler: _showClerkError,
+              child: child ?? const SizedBox.shrink(),
+            ),
       ),
     );
   }
+}
+
+/// Same snackbar as Clerk's default, minus WebView sub-resource failures:
+/// the SDK reports every failed request inside the Facebook login page
+/// (e.g. net::ERR_CONNECTION_REFUSED) even though sign-in still works.
+void _showClerkError(BuildContext context, clerk.ClerkError error) {
+  if (error.code == clerk.ClerkErrorCode.clientAppError &&
+      error.message.contains('net::ERR_')) {
+    return;
+  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        error.localizedMessage(ClerkAuth.localizationsOf(context)),
+      ),
+    ),
+  );
 }
 
 class MissingConfigScreen extends StatelessWidget {
