@@ -122,7 +122,7 @@
                     </a>
                 @endif
 
-                @if ($isBuyer)
+                @if ($isBuyer && ! $isSellerWorkspace)
                     <a href="{{ route('cart.index') }}" data-cart-link class="relative grid size-11 place-items-center rounded-md text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Cart: {{ $cartItemCount }} {{ Str::plural('item', $cartItemCount) }}">
                         <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
                         {{-- The link's own label already names the count, so the badge repeats it for the eye only. --}}
@@ -132,7 +132,9 @@
                 @endif
 
                 @auth
-                    <livewire:notification-bell />
+                    @unless ($isSellerWorkspace)
+                        <livewire:notification-bell />
+                    @endunless
 
                     <div class="relative" @click.outside="accountOpen = false">
                         <button x-ref="accountButton" type="button" @click="toggleAccount($event)" :aria-expanded="accountOpen.toString()" aria-controls="header-account-menu" aria-label="Account menu" class="flex min-h-11 max-w-48 items-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-left text-sm font-medium text-ink transition hover:border-ink focus-visible:ring-2 focus-visible:ring-brand">
