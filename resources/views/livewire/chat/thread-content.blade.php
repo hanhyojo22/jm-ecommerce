@@ -13,7 +13,7 @@
                             </span>
                             <span data-presence-dot x-cloak x-show="online" class="absolute bottom-0 right-0 size-3 rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"></span>
                         </span>
-                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $isBuyerMessages ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" class="truncate text-xs text-muted"><span data-presence-label data-context="{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}" class="block truncate" x-text="online ? 'Online · ' + $el.dataset.context : $el.dataset.context">{{ $conversation->product ? 'Product inquiry' : 'Order conversation' }}</span></p><p id="chat-typing" x-ref="typingIndicator" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
+                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $isBuyerMessages ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" class="truncate text-xs text-muted"><span data-presence-label data-context="Marketplace chat" class="block truncate" x-text="online ? 'Online · ' + $el.dataset.context : $el.dataset.context">Marketplace chat</span></p><p id="chat-typing" x-ref="typingIndicator" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
@@ -31,20 +31,6 @@
                     </div>
                 </div>
             </header>
-            @if ($conversation->product)
-                <div class="mx-3 mt-2 flex min-w-0 shrink-0 items-center gap-3 rounded-lg bg-canvas p-2.5 sm:mx-5">
-                    @if ($conversation->product->images->first())<img src="{{ Storage::disk('product_images')->url($conversation->product->images->first()->path) }}" alt="" class="size-12 shrink-0 rounded-lg object-cover">@else<div class="grid size-12 shrink-0 place-items-center rounded-lg bg-slate-100 text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9ZM4.5 7.75 12 12l7.5-4.25M12 12v8.5"/></svg></div>@endif
-                    <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-ink">{{ $conversation->product->name }}</p><p class="mt-0.5 truncate text-xs text-muted">₱{{ number_format($conversation->product->price, 2) }} · {{ $conversation->product->stock_quantity > 0 ? 'In stock' : 'Currently unavailable' }}</p></div>
-                    <a href="{{ route('catalog.show', [$conversation->store->slug, $conversation->product->slug]) }}" class="shrink-0 rounded-md px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View item</a>
-                </div>
-            @elseif ($conversation->sellerOrder)
-                <div class="mx-3 mt-2 flex min-w-0 shrink-0 items-center gap-3 rounded-lg bg-amber-50/70 p-2.5 sm:mx-5">
-                    <span class="grid size-12 shrink-0 place-items-center rounded-lg bg-amber-100 text-amber-800" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7.5h14l1 13H4l1-13ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
-                    <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-ink">Order {{ $conversation->sellerOrder->order->number }}</p><p class="mt-0.5 truncate text-xs text-muted">{{ $conversation->sellerOrder->created_at->format('M j, Y') }} · ₱{{ number_format($conversation->sellerOrder->total, 2) }} · {{ Str::headline($conversation->sellerOrder->status) }}</p></div>
-                    @if ($isBuyerMessages)<a href="{{ route('orders.show', $conversation->sellerOrder->order) }}" class="shrink-0 rounded-md px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View order</a>@else<a href="{{ route('seller.orders.show', $conversation->sellerOrder) }}" class="shrink-0 rounded-md px-3 py-2 text-xs font-semibold text-brand-hover transition hover:bg-amber-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:text-sm">View order</a>@endif
-                </div>
-            @endif
-
             <div x-cloak x-show="!online" class="mx-3 mt-2 shrink-0 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-5" role="status">You’re offline. Sending is paused until your connection returns.</div>
             <div x-cloak x-show="online && !liveConnected" class="mx-3 mt-2 shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-brand-hover sm:mx-5" role="status">Reconnecting live updates. You can still send messages.</div>
             <div wire:loading.flex wire:target="jumpToLatest" class="min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden px-3 py-5 sm:px-6 sm:py-6" role="status" aria-label="Loading latest messages">
@@ -57,6 +43,21 @@
                 @php($previousDate = null)
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
+                    @if (($message->context_snapshot['type'] ?? null) === 'product')
+                        <div class="mb-2 mt-4 max-w-sm rounded-lg border border-line bg-white p-3">
+                            <div class="flex items-center gap-3">
+                                @if (filled($message->context_snapshot['image_path'] ?? null))
+                                    <img src="{{ Storage::disk('product_images')->url($message->context_snapshot['image_path']) }}" alt="" class="size-12 rounded-md object-cover">
+                                @endif
+                                <div><p class="font-semibold text-ink">{{ $message->context_snapshot['title'] ?? 'Product' }}</p><p class="text-sm text-muted">₱{{ $message->context_snapshot['price'] ?? '0.00' }}</p></div>
+                            </div>
+                        </div>
+                    @elseif (($message->context_snapshot['type'] ?? null) === 'order')
+                        <div class="mb-2 mt-4 max-w-sm rounded-lg border border-line bg-amber-50 p-3">
+                            <p class="font-semibold text-ink">Order {{ $message->context_snapshot['number'] ?? '' }}</p>
+                            <p class="text-sm text-muted">₱{{ $message->context_snapshot['total'] ?? '0.00' }} · {{ Str::headline($message->context_snapshot['status'] ?? '') }}</p>
+                        </div>
+                    @endif
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
                     <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1">
                         @php($nextMessage = $messages->get($loop->index + 1))
@@ -116,7 +117,7 @@
                     @php($previousDate = $message->created_at)
                     @php($previousSenderId = $message->sender_id)
                 @empty
-                    <div x-show="pending.length === 0" class="flex min-h-64 flex-col items-center justify-center px-6 text-center"><div class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11.5h8M8 14.5h5"/></svg></div><p class="mt-3 text-sm font-semibold text-ink">Start the conversation</p><p class="mt-1 text-sm text-muted">Send a message about this {{ $conversation->product ? 'product' : 'order' }}.</p></div>
+                    <div x-show="pending.length === 0" class="flex min-h-64 flex-col items-center justify-center px-6 text-center"><div class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11.5h8M8 14.5h5"/></svg></div><p class="mt-3 text-sm font-semibold text-ink">Start the conversation</p><p class="mt-1 text-sm text-muted">Send a message about this store.</p></div>
                 @endforelse
                 <div wire:ignore aria-live="polite">
                     <template x-for="item in pending" :key="item.id">
@@ -163,6 +164,12 @@
                     <div class="mb-3 flex max-w-full gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:overflow-visible" role="group" aria-label="Quick replies">@foreach (['Yes, this item is available.', 'Your order is being prepared.', 'We’ll update you once your order ships.', 'Could you provide more details?'] as $reply)<button x-on:click="useQuickReply(@js($reply))" type="button" class="inline-flex min-h-11 shrink-0 items-center rounded-md border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-brand-hover hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:min-w-0 sm:flex-1 sm:shrink sm:justify-center sm:text-center">{{ $reply }}</button>@endforeach</div>
                 @endif
                 @if ($canSend)
+                    @if ($pendingContext)
+                        <div class="mb-3 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-sm text-ink">
+                            <span class="min-w-0 flex-1 truncate">{{ $pendingContext['type'] === 'product' ? $pendingContext['title'].' · ₱'.$pendingContext['price'] : 'Order '.$pendingContext['number'].' · ₱'.$pendingContext['total'] }}</span>
+                            <button type="button" wire:click="clearPendingContext" class="rounded px-2 py-1 text-brand-hover" aria-label="Remove context">Remove</button>
+                        </div>
+                    @endif
                     <div x-cloak x-show="selectedType" class="mb-3 flex max-w-full items-center gap-2 rounded-md border border-line bg-canvas px-2 py-1.5 text-sm text-ink" role="status">
                         <img x-cloak x-show="previewUrl" x-bind:src="previewUrl" alt="Selected photo preview" class="size-10 shrink-0 rounded-md object-cover">
                         <span x-show="selectedType === 'document'" class="grid size-10 shrink-0 place-items-center rounded-md bg-blue-50 text-xs font-semibold text-brand-hover" aria-hidden="true">PDF</span>
@@ -190,7 +197,7 @@
                 <p x-cloak x-show="uploadError" x-text="uploadError" class="mt-2 text-sm font-medium text-red-700" role="alert"></p>
                 </form>
                 @if ($canSend)
-                    <form id="chat-attachment-form" x-ref="attachmentForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""></form>
+                    <form id="chat-attachment-form" x-ref="attachmentForm" wire:ignore method="POST" action="{{ route('messages.attachments.store', $conversation) }}" enctype="multipart/form-data" data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-chat-upload class="hidden">@csrf<input type="hidden" name="client_message_id" value="{{ $clientMessageId }}"><input type="hidden" name="body" value=""><input type="hidden" name="product_id" value="{{ $pendingProductId }}"><input type="hidden" name="seller_order_id" value="{{ $pendingSellerOrderId }}"></form>
                 @endif
             </div>
         </section>

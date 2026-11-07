@@ -2,42 +2,29 @@
 
 namespace App\Models;
 
-use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Conversation extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['buyer_id', 'store_id', 'product_id', 'seller_order_id', 'latest_message_at'];
+    protected $fillable = ['buyer_id', 'store_id', 'latest_message_at'];
 
     protected function casts(): array
     {
         return ['latest_message_at' => 'datetime'];
     }
 
-    protected static function booted(): void
+    public function resolveRouteBinding($value, $field = null): ?self
     {
-        static::saving(function (Conversation $conversation): void {
-            $hasProduct = $conversation->product_id !== null;
-            $hasSellerOrder = $conversation->seller_order_id !== null;
+        $id = DB::table('conversation_aliases')->where('old_id', $value)->value('conversation_id') ?? $value;
 
-            if ($hasProduct === $hasSellerOrder) {
-                throw new DomainException('A conversation must have exactly one context.');
-            }
-
-            if ($hasProduct && ! Product::query()->whereKey($conversation->product_id)->where('store_id', $conversation->store_id)->exists()) {
-                throw new DomainException('The product does not belong to the conversation store.');
-            }
-
-            if ($hasSellerOrder && ! SellerOrder::query()->whereKey($conversation->seller_order_id)->where('store_id', $conversation->store_id)->exists()) {
-                throw new DomainException('The seller order does not belong to the conversation store.');
-            }
-        });
+        return parent::resolveRouteBinding($id, $field);
     }
 
     public function buyer(): BelongsTo
@@ -48,16 +35,6 @@ class Conversation extends Model
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
-    }
-
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class);
-    }
-
-    public function sellerOrder(): BelongsTo
-    {
-        return $this->belongsTo(SellerOrder::class);
     }
 
     public function messages(): HasMany
@@ -138,6 +115,10 @@ class Conversation extends Model
     {
         return $messages
             ->where('sender_id', '!=', $user->id)
-            ->whereRaw("conversation_messages.id > COALESCE((SELECT last_read_message_id FROM conversation_read_states WHERE conversation_id = conversations.id AND user_id = ? LIMIT 1), '')", [$user->id]);
+            ->whereNotExists(function ($query) use ($user): void {
+                $query->selectRaw('1')->from('conversation_message_reads')
+                    ->whereColumn('conversation_message_reads.message_id', 'conversation_messages.id')
+                    ->where('conversation_message_reads.user_id', $user->id);
+            });
     }
 }

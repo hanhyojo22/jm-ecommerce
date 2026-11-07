@@ -17,6 +17,63 @@ import 'package:jmmart/src/screens/chat_screen.dart';
 import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
+  testWidgets('pending product context is sent with the first message', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    await _pumpChat(tester, api, productId: 'product-1');
+
+    expect(find.text('Product inquiry'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Is this available?');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pump();
+
+    expect(api.lastProductId, 'product-1');
+    await _disposeChat(tester);
+  });
+
+  testWidgets('each inquiry shows its own preserved context card', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage.fromJson({
+        'id': 'one',
+        'sender_id': 'buyer-1',
+        'is_mine': true,
+        'type': 'text',
+        'body': 'Does this have 16 GB RAM?',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'context_snapshot': {
+          'type': 'product',
+          'title': 'Laptop Pro',
+          'price': '42000.00',
+        },
+      }),
+      ChatMessage.fromJson({
+        'id': 'two',
+        'sender_id': 'buyer-1',
+        'is_mine': true,
+        'type': 'text',
+        'body': 'Will it work?',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'context_snapshot': {
+          'type': 'product',
+          'title': 'Wireless Mouse',
+          'price': '850.00',
+        },
+      }),
+    ];
+
+    await _pumpChat(tester, api);
+
+    expect(find.text('Laptop Pro'), findsOneWidget);
+    expect(find.text('Wireless Mouse'), findsOneWidget);
+    expect(find.text('₱42000.00'), findsOneWidget);
+    expect(find.text('₱850.00'), findsOneWidget);
+    await _disposeChat(tester);
+  });
+
   testWidgets(
     'a message appears immediately and is replaced by the server row',
     (tester) async {
@@ -786,6 +843,7 @@ Future<void> _pumpChat(
   double? width,
   double height = 844,
   double textScale = 1,
+  String? productId,
 }) async {
   if (width != null) {
     tester.view.physicalSize = Size(width, height);
@@ -817,7 +875,10 @@ Future<void> _pumpChat(
               .copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: const ChatScreen(conversationId: 'conversation-1'),
+        home: ChatScreen(
+          conversationId: 'conversation-1',
+          productId: productId,
+        ),
       ),
     ),
   );
@@ -881,6 +942,7 @@ class _FakeApiClient extends ApiClient {
   final List<String> attachmentClientMessageIds = [];
   List<ChatMessage> serverMessages = const [];
   String? lastClientMessageId;
+  String? lastProductId;
   String? lastAttachmentClientMessageId;
   PickedAttachment? lastAttachment;
 
@@ -908,8 +970,11 @@ class _FakeApiClient extends ApiClient {
     required String conversationId,
     required String body,
     required String clientMessageId,
+    String? productId,
+    String? sellerOrderId,
   }) {
     lastClientMessageId = clientMessageId;
+    lastProductId = productId;
     clientMessageIds.add(clientMessageId);
 
     final completer = Completer<ChatMessage>();
@@ -924,6 +989,8 @@ class _FakeApiClient extends ApiClient {
     required PickedAttachment attachment,
     required String clientMessageId,
     String body = '',
+    String? productId,
+    String? sellerOrderId,
   }) {
     lastAttachment = attachment;
     lastAttachmentClientMessageId = clientMessageId;

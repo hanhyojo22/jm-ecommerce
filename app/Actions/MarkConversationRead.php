@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\ConversationMessage;
 use App\Models\ConversationReadState;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class MarkConversationRead
 {
@@ -29,6 +30,13 @@ class MarkConversationRead
 
         if ($latestIncomingMessage === null) {
             return ['message' => null, 'receipts' => []];
+        }
+
+        $unreadIds = $conversation->messages()->where('sender_id', '!=', $user->id)
+            ->whereNotIn('id', DB::table('conversation_message_reads')->where('user_id', $user->id)->select('message_id'))
+            ->pluck('id');
+        foreach ($unreadIds as $messageId) {
+            DB::table('conversation_message_reads')->insertOrIgnore(['message_id' => $messageId, 'user_id' => $user->id, 'read_at' => now()]);
         }
 
         $state = ConversationReadState::query()->firstOrCreate([
@@ -57,7 +65,7 @@ class MarkConversationRead
             ConversationReceiptUpdated::dispatch($state, $receipt, $latestIncomingMessage->id);
         }
 
-        if (in_array('message.read', $receipts, true)) {
+        if ($unreadIds->isNotEmpty()) {
             ConversationInboxChanged::dispatch($conversation, (string) $user->id);
         }
 

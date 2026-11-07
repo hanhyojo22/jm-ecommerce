@@ -40,8 +40,11 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/conversations/:id',
-      builder: (context, state) =>
-          ChatScreen(conversationId: state.pathParameters['id'] ?? ''),
+      builder: (context, state) => ChatScreen(
+        conversationId: state.pathParameters['id'] ?? '',
+        productId: state.uri.queryParameters['product_id'],
+        sellerOrderId: state.uri.queryParameters['seller_order_id'],
+      ),
     ),
     GoRoute(
       path: '/addresses',

@@ -168,12 +168,13 @@ class MessagesScreen extends ConsumerWidget {
   }
 
   String? _contextLine(Conversation conversation) {
-    if (conversation.productName != null) {
-      return conversation.productName;
+    final snapshot = conversation.latestMessage?.contextSnapshot;
+    if (snapshot?['type'] == 'product') {
+      return snapshot?['title'] as String?;
     }
 
-    if (conversation.orderNumber != null) {
-      return 'Order ${conversation.orderNumber}';
+    if (snapshot?['type'] == 'order') {
+      return 'Order ${snapshot?['number']}';
     }
 
     return null;

@@ -382,7 +382,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           .startConversation(sellerOrderId: sellerOrder.id);
 
       if (mounted) {
-        context.push('/conversations/${conversation.id}');
+        context.push(
+          '/conversations/${conversation.id}?seller_order_id=${sellerOrder.id}',
+        );
       }
     } on ApiException catch (error) {
       if (mounted) {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
@@ -15,9 +16,16 @@ import '../providers/chat_providers.dart';
 import '../widgets/common.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key, required this.conversationId});
+  const ChatScreen({
+    super.key,
+    required this.conversationId,
+    this.productId,
+    this.sellerOrderId,
+  });
 
   final String conversationId;
+  final String? productId;
+  final String? sellerOrderId;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -39,10 +47,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _pickingAttachment = false;
   bool _live = false;
   DateTime? _lastTypingSent;
+  String? _pendingProductId;
+  String? _pendingSellerOrderId;
 
   @override
   void initState() {
     super.initState();
+    _pendingProductId = widget.productId;
+    _pendingSellerOrderId = widget.sellerOrderId;
     _reverb = ref.read(reverbProvider);
     _events = _reverb.events.listen(_onReverbEvent);
     _states = _reverb.states.listen(_onReverbState);
@@ -329,12 +341,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           conversationId: widget.conversationId,
           body: item.body,
           clientMessageId: item.clientId,
+          productId: _pendingProductId,
+          sellerOrderId: _pendingSellerOrderId,
         );
       } else {
         await api.sendAttachment(
           conversationId: widget.conversationId,
           attachment: attachment,
           clientMessageId: item.clientId,
+          productId: _pendingProductId,
+          sellerOrderId: _pendingSellerOrderId,
         );
       }
 
@@ -343,6 +359,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       setState(() => item.status = _PendingStatus.sent);
+      _pendingProductId = null;
+      _pendingSellerOrderId = null;
       ref.invalidate(conversationsProvider);
 
       try {
@@ -413,6 +431,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final conversation = ref
         .watch(conversationProvider(widget.conversationId))
         .value;
+    if (conversation != null && conversation.id != widget.conversationId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/conversations/${conversation.id}');
+      });
+    }
     final theme = Theme.of(context);
 
     ref.listen<AsyncValue<List<ChatMessage>>>(
@@ -445,17 +468,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(conversation?.store?.name ?? 'Chat'),
-                  if (conversation?.productName != null ||
-                      conversation?.orderNumber != null)
-                    Text(
-                      conversation?.productName ??
-                          'Order ${conversation?.orderNumber}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
+                  Text('Marketplace chat', style: theme.textTheme.bodySmall),
                 ],
               ),
             ),
@@ -482,6 +495,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           Expanded(child: _body(messages, theme)),
+          if (_pendingProductId != null || _pendingSellerOrderId != null)
+            ListTile(
+              dense: true,
+              title: Text(
+                _pendingProductId != null ? 'Product inquiry' : 'Order inquiry',
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Remove context',
+                onPressed: () => setState(() {
+                  _pendingProductId = null;
+                  _pendingSellerOrderId = null;
+                }),
+              ),
+            ),
           if (_typing)
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
@@ -634,7 +662,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               nextMessage.senderId != message.senderId ||
               !_isSameChatMinute(nextMessage.createdAt, message.createdAt),
           showReceipt:
-              message.isMine && nextMessage == null && pending.isEmpty && message.receipt != null,
+              message.isMine &&
+              nextMessage == null &&
+              pending.isEmpty &&
+              message.receipt != null,
         );
       },
     );
@@ -951,6 +982,7 @@ class _Bubble extends StatelessWidget {
     final bubbleBackground = photoOnly
         ? theme.colorScheme.surfaceContainerLowest
         : background;
+    final snapshot = message.contextSnapshot;
 
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -984,6 +1016,41 @@ class _Bubble extends StatelessWidget {
                   ? CrossAxisAlignment.end
                   : CrossAxisAlignment.start,
               children: [
+                if (snapshot != null)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (snapshot['image_url'] is String)
+                            Image.network(
+                              snapshot['image_url'] as String,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                            ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  snapshot['type'] == 'product'
+                                      ? '${snapshot['title']}'
+                                      : 'Order ${snapshot['number']}',
+                                  maxLines: 2,
+                                ),
+                                Text(
+                                  '₱${snapshot['type'] == 'product' ? snapshot['price'] : snapshot['total']}',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 Container(
                   key: compactAttachment
                       ? ValueKey('attachment-bubble-${message.id}')

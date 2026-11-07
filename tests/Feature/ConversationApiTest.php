@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Actions\MarkConversationRead;
 use App\Models\Conversation;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -11,6 +13,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -123,15 +126,15 @@ class ConversationApiTest extends TestCase
 
         $first = $this->actingAs($buyer)
             ->postJson('/api/v1/conversations/start', ['product_id' => $fresh->id])
-            ->assertCreated()
-            ->assertJsonPath('data.product.id', $fresh->id);
+            ->assertOk()
+            ->assertJsonPath('data.pending_context.product_id', $fresh->id);
 
         $this->actingAs($buyer)
             ->postJson('/api/v1/conversations/start', ['product_id' => $fresh->id])
             ->assertOk()
             ->assertJsonPath('data.id', $first->json('data.id'));
 
-        $this->assertDatabaseCount('conversations', 2);
+        $this->assertDatabaseCount('conversations', 1);
     }
 
     public function test_starting_a_conversation_without_sending_a_message_is_not_listed(): void
@@ -150,7 +153,7 @@ class ConversationApiTest extends TestCase
 
         $this->actingAs($buyer)
             ->postJson('/api/v1/conversations/start', ['product_id' => $fresh->id])
-            ->assertCreated();
+            ->assertOk();
 
         $this->actingAs($buyer)
             ->getJson('/api/v1/conversations')
@@ -390,11 +393,7 @@ class ConversationApiTest extends TestCase
         ]);
 
         // Seller has read up to the buyer's last message.
-        $conversation->readStates()->create([
-            'user_id' => $seller->id,
-            'last_read_message_id' => $buyerMessage->id,
-            'last_read_at' => now(),
-        ]);
+        app(MarkConversationRead::class)->handle($conversation, $seller);
 
         $data = $this->actingAs($buyer)
             ->getJson("/api/v1/conversations/{$conversation->id}/messages")
@@ -443,6 +442,120 @@ class ConversationApiTest extends TestCase
 
         $outgoing = collect($data)->firstWhere('is_mine', true);
         $this->assertSame('Sent', $outgoing['receipt']);
+    }
+
+    public function test_multiple_product_inquiries_share_one_room_and_keep_message_snapshots(): void
+    {
+        [$buyer, , $conversation, $store, $firstProduct] = $this->conversation();
+        $secondProduct = Product::create([
+            'tenant_id' => $firstProduct->tenant_id, 'store_id' => $store->id,
+            'name' => 'Second item', 'slug' => 'second-item-'.str()->random(8),
+            'sku' => 'SECOND-'.str()->random(8), 'price' => '850.00',
+            'stock_quantity' => 2, 'status' => 'active',
+        ]);
+        $firstId = (string) Str::uuid();
+        $secondId = (string) Str::uuid();
+
+        $this->actingAs($buyer)->postJson('/api/v1/conversations/start', ['product_id' => $firstProduct->id])->assertOk();
+        $this->postJson('/api/v1/conversations/start', ['product_id' => $secondProduct->id])->assertOk()
+            ->assertJsonPath('data.id', $conversation->id);
+        $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'First inquiry', 'client_message_id' => $firstId, 'product_id' => $firstProduct->id,
+        ])->assertCreated();
+        $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Second inquiry', 'client_message_id' => $secondId, 'product_id' => $secondProduct->id,
+        ])->assertCreated()->assertJsonPath('data.context_snapshot.price', '850.00');
+        $secondProduct->update(['name' => 'Renamed item', 'price' => '999.00']);
+
+        $this->getJson("/api/v1/conversations/{$conversation->id}/messages")->assertOk()
+            ->assertJsonPath('data.0.context_snapshot.title', 'Chat Tote')
+            ->assertJsonPath('data.1.context_snapshot.title', 'Second item')
+            ->assertJsonPath('data.1.context_snapshot.price', '850.00');
+        $this->getJson('/api/v1/conversations?filter=product')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.latest_message.body', 'Second inquiry');
+        $this->assertDatabaseCount('conversations', 1);
+    }
+
+    public function test_product_and_order_inquiries_share_one_room_with_an_order_card(): void
+    {
+        [$buyer, , $conversation, $store, $product] = $this->conversation();
+        $order = Order::create([
+            'user_id' => $buyer->id, 'number' => 'JM-1042', 'status' => 'pending',
+            'recipient_name' => 'Buyer', 'phone' => '+639171234567',
+            'address_line' => '10 Market Street', 'city' => 'Manila',
+            'subtotal' => '199.00', 'shipping_amount' => '0.00', 'total' => '199.00',
+        ]);
+        $sellerOrder = $order->sellerOrders()->create([
+            'tenant_id' => $product->tenant_id, 'store_id' => $store->id,
+            'status' => 'pending', 'subtotal' => '199.00', 'shipping_amount' => '0.00', 'total' => '199.00',
+        ]);
+
+        $this->actingAs($buyer)->postJson('/api/v1/conversations/start', ['seller_order_id' => $sellerOrder->id])
+            ->assertOk()->assertJsonPath('data.id', $conversation->id);
+        $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'When will this ship?', 'client_message_id' => (string) Str::uuid(),
+            'seller_order_id' => $sellerOrder->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.context_snapshot.number', 'JM-1042')
+            ->assertJsonPath('data.context_snapshot.total', '199.00');
+        $this->getJson('/api/v1/conversations?filter=order')->assertOk()
+            ->assertJsonCount(1, 'data');
+        $this->assertDatabaseCount('conversations', 1);
+    }
+
+    public function test_message_context_is_rejected_across_stores_and_duplicate_ids_cannot_change_context(): void
+    {
+        [$buyer, , $conversation, , $product] = $this->conversation();
+        $otherTenant = Tenant::create(['name' => 'Other tenant', 'slug' => 'other-tenant-'.str()->random(8), 'status' => 'active']);
+        $otherStore = Store::create([
+            'tenant_id' => $otherTenant->id, 'name' => 'Other shop',
+            'slug' => 'other-shop-'.str()->random(8), 'phone' => '+639171234567',
+            'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active',
+        ]);
+        $otherProduct = Product::create([
+            'tenant_id' => $otherTenant->id, 'store_id' => $otherStore->id,
+            'name' => 'Other item', 'slug' => 'other-item-'.str()->random(8),
+            'sku' => 'OTHER-'.str()->random(8), 'price' => '10.00',
+            'stock_quantity' => 1, 'status' => 'active',
+        ]);
+        $clientId = (string) Str::uuid();
+        $this->actingAs($buyer)->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Question', 'client_message_id' => $clientId, 'product_id' => $otherProduct->id,
+        ])->assertNotFound();
+        $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Question', 'client_message_id' => $clientId, 'product_id' => $product->id,
+        ])->assertCreated();
+        $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Question', 'client_message_id' => $clientId,
+        ])->assertUnprocessable();
+        $this->assertDatabaseCount('conversation_messages', 1);
+    }
+
+    public function test_retired_room_id_resolves_then_checks_access(): void
+    {
+        [$buyer, , $conversation] = $this->conversation();
+        $oldId = (string) Str::ulid();
+        DB::table('conversation_aliases')->insert(['old_id' => $oldId, 'conversation_id' => $conversation->id]);
+
+        $this->actingAs($buyer)->getJson("/api/v1/conversations/{$oldId}")->assertOk()
+            ->assertJsonPath('data.id', $conversation->id);
+        $this->get("/messages/{$oldId}")->assertOk();
+        $this->actingAs(User::factory()->create())->getJson("/api/v1/conversations/{$oldId}")->assertNotFound();
+    }
+
+    public function test_unread_messages_are_tracked_individually_across_inquiries(): void
+    {
+        [$buyer, $seller, $conversation] = $this->conversation();
+        $first = $conversation->messages()->create(['sender_id' => $seller->id, 'client_message_id' => (string) Str::uuid(), 'type' => 'text', 'body' => 'First answer']);
+        $second = $conversation->messages()->create(['sender_id' => $seller->id, 'client_message_id' => (string) Str::uuid(), 'type' => 'text', 'body' => 'Second answer']);
+        DB::table('conversation_message_reads')->insert(['message_id' => $second->id, 'user_id' => $buyer->id, 'read_at' => now()]);
+
+        $this->actingAs($buyer)->getJson('/api/v1/conversations')->assertOk()
+            ->assertJsonPath('data.0.unread_count', 1);
+        $this->postJson("/api/v1/conversations/{$conversation->id}/read")->assertOk();
+        $this->getJson('/api/v1/conversations')->assertOk()->assertJsonPath('data.0.unread_count', 0);
+        $this->assertDatabaseHas('conversation_message_reads', ['message_id' => $first->id, 'user_id' => $buyer->id]);
     }
 
     /**

@@ -29,6 +29,8 @@ class SendConversationAttachment
         UploadedFile $file,
         string $body,
         string $clientMessageId,
+        ?string $productId = null,
+        ?string $sellerOrderId = null,
     ): ConversationMessage {
         $extension = strtolower($file->getClientOriginalExtension());
         $mimeType = $file->getMimeType();
@@ -48,7 +50,7 @@ class SendConversationAttachment
             ->first();
 
         if ($existingMessage !== null) {
-            abort_unless($existingMessage->type === 'file', 409);
+            abort_unless($existingMessage->type === 'file' && $existingMessage->product_id === $productId && $existingMessage->seller_order_id === $sellerOrderId, 409);
 
             return $existingMessage;
         }
@@ -61,8 +63,8 @@ class SendConversationAttachment
         $message = null;
 
         try {
-            DB::transaction(function () use ($conversation, $sender, $body, $clientMessageId, $file, $disk, $path, &$stored, &$attachment, &$message): void {
-                $message = $this->sendMessage->handle($conversation, $sender, $body, $clientMessageId, 'file');
+            DB::transaction(function () use ($conversation, $sender, $body, $clientMessageId, $productId, $sellerOrderId, $file, $disk, $path, &$stored, &$attachment, &$message): void {
+                $message = $this->sendMessage->handle($conversation, $sender, $body, $clientMessageId, 'file', $productId, $sellerOrderId);
                 if (! $message->wasRecentlyCreated) {
                     return;
                 }

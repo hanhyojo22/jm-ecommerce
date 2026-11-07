@@ -21,6 +21,8 @@ class ConversationAttachmentController extends Controller
             'attachment' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'extensions:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'client_message_id' => ['required', 'uuid'],
             'body' => ['nullable', 'string', 'max:2000'],
+            'product_id' => ['nullable', 'ulid', 'prohibits:seller_order_id'],
+            'seller_order_id' => ['nullable', 'ulid'],
         ]);
 
         $message = $sendAttachment->handle(
@@ -29,6 +31,8 @@ class ConversationAttachmentController extends Controller
             $request->file('attachment'),
             trim($data['body'] ?? ''),
             $data['client_message_id'],
+            $data['product_id'] ?? null,
+            $data['seller_order_id'] ?? null,
         );
 
         return $request->expectsJson()

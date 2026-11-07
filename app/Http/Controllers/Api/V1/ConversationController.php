@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 
@@ -40,8 +41,6 @@ class ConversationController extends Controller
         $conversations = Conversation::query()
             ->with([
                 'store',
-                'product.thumbnail',
-                'sellerOrder.order',
                 'messages' => fn ($query) => $query->with(['sender:id,name', 'attachments'])->orderByDesc('created_at')->orderByDesc('id')->limit(1),
             ])
             ->withCount(['messages as unread_messages_count' => fn ($query) => Conversation::constrainToUnread($query, $user)])
@@ -51,16 +50,15 @@ class ConversationController extends Controller
             ->visibleTo($user)
             // The app is the buyer's surface; a seller account sees the chats it is buying in.
             ->where('buyer_id', $user->id)
-            ->when($filter === 'product', fn (Builder $query) => $query->whereNotNull('product_id'))
-            ->when($filter === 'order', fn (Builder $query) => $query->whereNotNull('seller_order_id'))
+            ->when($filter === 'product', fn (Builder $query) => $query->whereHas('messages', fn (Builder $messages) => $messages->where('context_snapshot->type', 'product')))
+            ->when($filter === 'order', fn (Builder $query) => $query->whereHas('messages', fn (Builder $messages) => $messages->where('context_snapshot->type', 'order')))
             ->when($filter === 'unread', fn (Builder $query) => $query->unreadFor($user))
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($search)).'%';
 
                 $query->where(function (Builder $query) use ($term): void {
                     $query->whereHas('store', fn (Builder $store) => $store->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
-                        ->orWhereHas('product', fn (Builder $product) => $product->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
-                        ->orWhereHas('sellerOrder.order', fn (Builder $order) => $order->whereRaw("LOWER(number) LIKE ? ESCAPE '!'", [$term]));
+                        ->orWhereHas('messages', fn (Builder $messages) => $messages->whereRaw("LOWER(CAST(context_snapshot AS TEXT)) LIKE ? ESCAPE '!'", [$term]));
                 });
             })
             ->orderByDesc('latest_message_at')
@@ -75,7 +73,7 @@ class ConversationController extends Controller
     {
         $this->authorize('view', $conversation);
 
-        $conversation->load(['store', 'product.thumbnail', 'sellerOrder.order']);
+        $conversation->load(['store']);
 
         return response()->json(['data' => [
             ...ConversationResource::make($conversation)->resolve($request),
@@ -86,7 +84,7 @@ class ConversationController extends Controller
     public function start(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'product_id' => ['nullable', 'ulid', 'required_without:seller_order_id'],
+            'product_id' => ['nullable', 'ulid', 'required_without:seller_order_id', 'prohibits:seller_order_id'],
             'seller_order_id' => ['nullable', 'ulid', 'required_without:product_id'],
         ]);
 
@@ -103,8 +101,8 @@ class ConversationController extends Controller
             abort_if($user->isMemberOfTenant($product->tenant_id), 403);
 
             $conversation = Conversation::query()->createOrFirst(
-                ['buyer_id' => $user->id, 'product_id' => $product->id],
-                ['store_id' => $product->store_id],
+                ['buyer_id' => $user->id, 'store_id' => $product->store_id],
+                [],
             );
         } else {
             $sellerOrder = SellerOrder::query()->with(['order', 'store'])->findOrFail($data['seller_order_id']);
@@ -112,8 +110,8 @@ class ConversationController extends Controller
             abort_if($user->isMemberOfTenant($sellerOrder->tenant_id), 403);
 
             $conversation = Conversation::query()->createOrFirst(
-                ['buyer_id' => $user->id, 'seller_order_id' => $sellerOrder->id],
-                ['store_id' => $sellerOrder->store_id],
+                ['buyer_id' => $user->id, 'store_id' => $sellerOrder->store_id],
+                [],
             );
         }
 
@@ -123,10 +121,12 @@ class ConversationController extends Controller
             ConversationInboxChanged::dispatch($conversation);
         }
 
-        $conversation->load(['store', 'product.thumbnail', 'sellerOrder.order']);
+        $conversation->load(['store']);
 
         return response()->json(
-            ['data' => ConversationResource::make($conversation)->resolve($request)],
+            ['data' => [...ConversationResource::make($conversation)->resolve($request), 'pending_context' => [
+                'product_id' => $data['product_id'] ?? null, 'seller_order_id' => $data['seller_order_id'] ?? null,
+            ]]],
             $created ? 201 : 200,
         );
     }
@@ -137,7 +137,7 @@ class ConversationController extends Controller
 
         $user = $request->user();
 
-        $conversation->load(['store', 'product.thumbnail', 'sellerOrder.order', 'readStates']);
+        $conversation->load(['store']);
 
         $messages = $conversation->messages()
             ->with(['sender:id,name', 'attachments'])
@@ -148,18 +148,12 @@ class ConversationController extends Controller
         // The page is fetched newest first for a stable cursor, then shown oldest first.
         $messages->setCollection($messages->getCollection()->reverse()->values());
 
-        // Compute the read receipt for the last outgoing message so clients can
-        // show a Sent / Delivered / Read checkmark beside it.
-        $recipientReadState = $conversation->readStates
-            ->where('user_id', '!=', $user->id)
-            ->sortByDesc('last_read_at')
-            ->first();
-
+        // Compute the read receipt for the last outgoing message.
         $lastOutgoing = $messages->getCollection()->where('sender_id', $user->id)->last();
 
         if ($lastOutgoing !== null) {
             // shortcut: no separate delivery event yet; Delivered is unreachable until a push-notification receipt endpoint exists
-            $lastOutgoing->receipt = $recipientReadState?->last_read_message_id === $lastOutgoing->id ? 'Read' : 'Sent';
+            $lastOutgoing->receipt = DB::table('conversation_message_reads')->where('message_id', $lastOutgoing->id)->where('user_id', '!=', $user->id)->exists() ? 'Read' : 'Sent';
         }
 
         return ConversationMessageResource::collection($messages)
@@ -174,6 +168,8 @@ class ConversationController extends Controller
         $data = $request->validate([
             'body' => ['required', 'string', 'max:2000'],
             'client_message_id' => ['required', 'uuid'],
+            'product_id' => ['nullable', 'ulid', 'prohibits:seller_order_id'],
+            'seller_order_id' => ['nullable', 'ulid'],
         ]);
 
         $key = 'conversation-message:'.$request->user()->id;
@@ -187,6 +183,9 @@ class ConversationController extends Controller
             $request->user(),
             trim($data['body']),
             $data['client_message_id'],
+            'text',
+            $data['product_id'] ?? null,
+            $data['seller_order_id'] ?? null,
         );
 
         if ($message->wasRecentlyCreated) {
@@ -233,6 +232,8 @@ class ConversationController extends Controller
             'attachment' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'extensions:jpg,jpeg,png,webp,pdf', 'max:5120'],
             'client_message_id' => ['required', 'uuid'],
             'body' => ['nullable', 'string', 'max:2000'],
+            'product_id' => ['nullable', 'ulid', 'prohibits:seller_order_id'],
+            'seller_order_id' => ['nullable', 'ulid'],
         ]);
 
         $message = $sendAttachment->handle(
@@ -241,6 +242,8 @@ class ConversationController extends Controller
             $request->file('attachment'),
             trim($data['body'] ?? ''),
             $data['client_message_id'],
+            $data['product_id'] ?? null,
+            $data['seller_order_id'] ?? null,
         );
 
         $message->load(['sender:id,name', 'attachments']);

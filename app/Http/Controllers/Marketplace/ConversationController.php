@@ -24,15 +24,15 @@ class ConversationController extends Controller
         abort_if($request->user()->isMemberOfTenant($product->tenant_id), 403);
 
         $conversation = $this->findOrCreate(
-            ['buyer_id' => $request->user()->id, 'product_id' => $product->id],
-            ['store_id' => $product->store_id],
+            ['buyer_id' => $request->user()->id, 'store_id' => $product->store_id],
+            [],
         );
 
         if ($conversation->wasRecentlyCreated) {
             ConversationInboxChanged::dispatch($conversation);
         }
 
-        return to_route('messages.show', $conversation);
+        return to_route('messages.show', ['conversation' => $conversation, 'product_id' => $product->id]);
     }
 
     public function startForSellerOrder(Request $request, SellerOrder $sellerOrder): RedirectResponse
@@ -42,15 +42,15 @@ class ConversationController extends Controller
         abort_if($request->user()->isMemberOfTenant($sellerOrder->tenant_id), 403);
 
         $conversation = $this->findOrCreate(
-            ['buyer_id' => $request->user()->id, 'seller_order_id' => $sellerOrder->id],
-            ['store_id' => $sellerOrder->store_id],
+            ['buyer_id' => $request->user()->id, 'store_id' => $sellerOrder->store_id],
+            [],
         );
 
         if ($conversation->wasRecentlyCreated) {
             ConversationInboxChanged::dispatch($conversation);
         }
 
-        return to_route('messages.show', $conversation);
+        return to_route('messages.show', ['conversation' => $conversation, 'seller_order_id' => $sellerOrder->id]);
     }
 
     public function block(Request $request, Conversation $conversation): RedirectResponse

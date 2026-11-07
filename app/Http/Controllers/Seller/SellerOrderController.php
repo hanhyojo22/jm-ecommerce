@@ -78,7 +78,7 @@ class SellerOrderController extends Controller
             return view('seller.orders._modal', [
                 'sellerOrder' => $sellerOrder,
                 'canManageOrders' => $canManageOrders,
-                'conversation' => Conversation::query()->where('seller_order_id', $sellerOrder->id)->first(),
+                'conversation' => Conversation::query()->where('buyer_id', $sellerOrder->order->user_id)->where('store_id', $sellerOrder->store_id)->first(),
             ]);
         }
 

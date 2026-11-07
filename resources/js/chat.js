@@ -396,6 +396,8 @@ window.chatThread = (conversationId, userId) => ({
         const form = this.$refs.attachmentForm;
         form.querySelector('[name="client_message_id"]').value = item.id;
         form.querySelector('[name="body"]').value = item.body;
+        form.querySelector('[name="product_id"]').value = this.$wire.pendingProductId ?? '';
+        form.querySelector('[name="seller_order_id"]').value = this.$wire.pendingSellerOrderId ?? '';
         form.requestSubmit();
     },
 
@@ -450,6 +452,7 @@ window.chatThread = (conversationId, userId) => ({
             this.$wire.body = '';
         }
         this.clearFile(true);
+        this.$wire.clearPendingContext();
         this.$wire.syncLatestMessages();
     },
 

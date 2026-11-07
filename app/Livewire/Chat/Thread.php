@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Chat;
 
+use App\Actions\ConversationContext;
 use App\Actions\MarkConversationRead;
 use App\Actions\SendConversationMessage;
 use App\Events\TypingStatusChanged;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -28,6 +30,10 @@ class Thread extends Component
 
     public string $clientMessageId = '';
 
+    public ?string $pendingProductId = null;
+
+    public ?string $pendingSellerOrderId = null;
+
     public bool $viewingHistory = false;
 
     /** @var array<int, string> */
@@ -35,9 +41,14 @@ class Thread extends Component
 
     public function mount(Conversation $conversation): void
     {
-        $conversation->load(['buyer', 'store', 'product.images', 'sellerOrder.order']);
+        $conversation->load(['buyer', 'store']);
         Gate::authorize('view', $conversation);
         $this->conversation = $conversation;
+        if ($conversation->buyer_id === auth()->id()) {
+            $this->pendingProductId = request()->query('product_id');
+            $this->pendingSellerOrderId = request()->query('seller_order_id');
+            app(ConversationContext::class)->forMessage($conversation, auth()->user(), $this->pendingProductId, $this->pendingSellerOrderId, false);
+        }
         $this->clientMessageId = (string) Str::uuid();
         $this->messageIds = $conversation->messages()
             ->latest('created_at')
@@ -73,7 +84,7 @@ class Thread extends Component
             return null;
         }
 
-        $message = $sendMessage->handle($this->conversation, $user, $body, $this->clientMessageId);
+        $message = $sendMessage->handle($this->conversation, $user, $body, $this->clientMessageId, 'text', $this->pendingProductId, $this->pendingSellerOrderId);
         if ($message->wasRecentlyCreated) {
             RateLimiter::hit($key, 60);
         }
@@ -82,6 +93,8 @@ class Thread extends Component
             $this->jumpToLatest();
         }
         $this->reset('body');
+        $this->pendingProductId = null;
+        $this->pendingSellerOrderId = null;
         $this->clientMessageId = (string) Str::uuid();
         $this->markRead();
 
@@ -165,6 +178,12 @@ class Thread extends Component
         $this->viewingHistory = false;
     }
 
+    public function clearPendingContext(): void
+    {
+        $this->pendingProductId = null;
+        $this->pendingSellerOrderId = null;
+    }
+
     /**
      * Advance this user's delivery and read receipts to the newest incoming message.
      */
@@ -223,13 +242,13 @@ class Thread extends Component
         // The window's last message is the one this would otherwise go and fetch again.
         $hasNewerMessages = $this->hasNewerMessages($lastMessage);
         $lastOutgoing = $messages->last(fn ($m) => $m->sender_id === auth()->id());
-        $recipientReadState = $lastOutgoing !== null
-            ? $this->conversation->readStates()->where('user_id', '!=', auth()->id())->latest('last_read_at')->first()
-            : null;
         // shortcut: no separate delivery event yet; Delivered is unreachable until a push-notification receipt endpoint exists
-        $receipt = $recipientReadState?->last_read_message_id === $lastOutgoing?->id ? 'Read' : 'Sent';
+        $receipt = $lastOutgoing !== null && DB::table('conversation_message_reads')->where('message_id', $lastOutgoing->id)->where('user_id', '!=', auth()->id())->exists() ? 'Read' : 'Sent';
 
         $canSend = Gate::allows('send', $this->conversation);
+        $pendingContext = ($this->pendingProductId !== null || $this->pendingSellerOrderId !== null)
+            ? app(ConversationContext::class)->forMessage($this->conversation, auth()->user(), $this->pendingProductId, $this->pendingSellerOrderId, false)['context_snapshot']
+            : null;
 
         return view('livewire.chat.thread', [
             'messages' => $messages,
@@ -239,6 +258,7 @@ class Thread extends Component
             'lastOutgoing' => $lastOutgoing,
             'receipt' => $receipt,
             'canSend' => $canSend,
+            'pendingContext' => $pendingContext,
             'canUnblock' => ! $canSend && $this->conversation->blocksCreatedBy(auth()->user())->exists(),
         ]);
     }

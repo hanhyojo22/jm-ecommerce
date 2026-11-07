@@ -211,7 +211,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           .startConversation(productId: product.id);
 
       if (mounted) {
-        context.push('/conversations/${conversation.id}');
+        context.push(
+          '/conversations/${conversation.id}?product_id=${product.id}',
+        );
       }
     } on ApiException catch (error) {
       if (mounted) {

@@ -55,8 +55,6 @@ class Inbox extends Component
             ->with([
                 'buyer',
                 'store',
-                'product',
-                'sellerOrder.order',
                 'messages' => fn ($query) => $query->orderByDesc('created_at')->orderByDesc('id')->limit(1),
                 'readStates' => fn ($query) => $query->where('user_id', $user->id),
             ])
@@ -67,16 +65,15 @@ class Inbox extends Component
             ->visibleTo($user)
             ->when($user->account_type === 'seller' && $this->context === 'buying', fn ($query) => $query->where('buyer_id', $user->id))
             ->when($user->account_type === 'seller' && $this->context !== 'buying', fn ($query) => $query->where('buyer_id', '!=', $user->id))
-            ->when($this->filter === 'product', fn ($query) => $query->whereNotNull('product_id'))
-            ->when($this->filter === 'order', fn ($query) => $query->whereNotNull('seller_order_id'))
+            ->when($this->filter === 'product', fn ($query) => $query->whereHas('messages', fn ($messages) => $messages->where('context_snapshot->type', 'product')))
+            ->when($this->filter === 'order', fn ($query) => $query->whereHas('messages', fn ($messages) => $messages->where('context_snapshot->type', 'order')))
             ->when($this->filter === 'unread', fn ($query) => $query->unreadFor($user))
             ->when(filled($this->search), function ($query): void {
                 $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($this->search))).'%';
                 $query->where(function ($query) use ($term): void {
                     $query->whereHas('buyer', fn ($buyer) => $buyer->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
                         ->orWhereHas('store', fn ($store) => $store->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
-                        ->orWhereHas('product', fn ($product) => $product->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
-                        ->orWhereHas('sellerOrder.order', fn ($order) => $order->whereRaw("LOWER(number) LIKE ? ESCAPE '!'", [$term]));
+                        ->orWhereHas('messages', fn ($messages) => $messages->whereRaw("LOWER(CAST(context_snapshot AS TEXT)) LIKE ? ESCAPE '!'", [$term]));
                 });
             })
             ->orderByDesc('latest_message_at')

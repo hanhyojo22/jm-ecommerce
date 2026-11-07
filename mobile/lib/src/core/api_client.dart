@@ -406,12 +406,19 @@ class ApiClient {
     required String conversationId,
     required String body,
     required String clientMessageId,
+    String? productId,
+    String? sellerOrderId,
   }) async => ChatMessage.fromJson(
     mapOf(
       await _data(
         'POST',
         '/conversations/$conversationId/messages',
-        data: {'body': body, 'client_message_id': clientMessageId},
+        data: {
+          'body': body,
+          'client_message_id': clientMessageId,
+          'product_id': ?productId,
+          'seller_order_id': ?sellerOrderId,
+        },
       ),
     ),
   );
@@ -421,6 +428,8 @@ class ApiClient {
     required PickedAttachment attachment,
     required String clientMessageId,
     String body = '',
+    String? productId,
+    String? sellerOrderId,
   }) async => ChatMessage.fromJson(
     mapOf(
       await _data(
@@ -434,6 +443,8 @@ class ApiClient {
           ),
           'client_message_id': clientMessageId,
           if (body.trim().isNotEmpty) 'body': body.trim(),
+          'product_id': ?productId,
+          'seller_order_id': ?sellerOrderId,
         }),
       ),
     ),

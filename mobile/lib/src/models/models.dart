@@ -816,6 +816,9 @@ class ChatMessage {
     required this.createdAt,
     this.receipt,
     this.attachments = const [],
+    this.productId,
+    this.sellerOrderId,
+    this.contextSnapshot,
   });
 
   final String id;
@@ -828,6 +831,9 @@ class ChatMessage {
   final String createdAt;
   final String? receipt;
   final List<ChatAttachment> attachments;
+  final String? productId;
+  final String? sellerOrderId;
+  final Map<String, dynamic>? contextSnapshot;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
     id: str(json['id']),
@@ -839,6 +845,11 @@ class ChatMessage {
     clientMessageId: json['client_message_id'] as String?,
     createdAt: str(json['created_at']),
     receipt: json['receipt'] as String?,
+    productId: json['product_id'] as String?,
+    sellerOrderId: json['seller_order_id'] as String?,
+    contextSnapshot: json['context_snapshot'] == null
+        ? null
+        : mapOf(json['context_snapshot']),
     attachments: listOf(json['attachments'])
         .map(ChatAttachment.fromJson)
         .toList(growable: false),

@@ -18,7 +18,6 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
-use DomainException;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -29,6 +28,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tests\TestCase;
 
 class ConversationTest extends TestCase
@@ -93,7 +93,18 @@ class ConversationTest extends TestCase
         $this->actingAs($buyer)->post(route('messages.products.start', $product))->assertRedirect();
 
         $this->assertSame(1, Conversation::count());
-        $this->assertDatabaseHas('conversations', ['buyer_id' => $buyer->id, 'product_id' => $product->id, 'store_id' => $product->store_id]);
+        $this->assertDatabaseHas('conversations', ['buyer_id' => $buyer->id, 'store_id' => $product->store_id]);
+    }
+
+    public function test_opening_a_product_chat_shows_pending_context_without_saving_a_message(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $product = $this->product();
+
+        $response = $this->actingAs($buyer)->post(route('messages.products.start', $product))->assertRedirect();
+
+        $this->get($response->headers->get('Location'))->assertOk()->assertSee($product->name);
+        $this->assertDatabaseCount('conversation_messages', 0);
     }
 
     public function test_buyer_starts_one_conversation_from_their_own_seller_order(): void
@@ -129,7 +140,6 @@ class ConversationTest extends TestCase
         $this->assertDatabaseHas('conversations', [
             'buyer_id' => $buyer->id,
             'store_id' => $product->store_id,
-            'seller_order_id' => $sellerOrder->id,
         ]);
 
         $this->actingAs($otherBuyer)->post(route('messages.seller-orders.start', $sellerOrder))->assertNotFound();
@@ -775,14 +785,16 @@ class ConversationTest extends TestCase
         $this->assertFalse(Gate::forUser($otherSeller)->allows('view', $conversation));
     }
 
-    public function test_conversation_rejects_invalid_or_mismatched_contexts(): void
+    public function test_message_rejects_context_from_another_store(): void
     {
         $buyer = User::factory()->create();
         $product = $this->product();
         $otherProduct = $this->product();
 
-        $this->expectException(DomainException::class);
-        Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $otherProduct->id]);
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id]);
+
+        $this->expectException(NotFoundHttpException::class);
+        app(SendConversationMessage::class)->handle($conversation, $buyer, 'Question', (string) str()->uuid(), 'text', $otherProduct->id);
     }
 
     public function test_inbox_search_treats_like_wildcards_as_literal_text(): void
