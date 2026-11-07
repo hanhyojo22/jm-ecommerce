@@ -2,9 +2,12 @@
 
 namespace App\Notifications;
 
+use App\Support\WebPushAvailability;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class ChatMessageReceived extends Notification
 {
@@ -21,7 +24,9 @@ class ChatMessageReceived extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return WebPushAvailability::isConfigured()
+            ? ['database', 'broadcast', WebPushChannel::class]
+            : ['database', 'broadcast'];
     }
 
     /**
@@ -35,5 +40,14 @@ class ChatMessageReceived extends Notification
             'title' => $this->senderName,
             'body' => Str::limit($this->body, 120),
         ];
+    }
+
+    public function toWebPush(object $notifiable, self $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title($this->senderName)
+            ->body(Str::limit($this->body, 120))
+            ->icon('/favicon.svg')
+            ->data(['url' => route('messages.show', $this->conversationId)]);
     }
 }

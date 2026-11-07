@@ -8,6 +8,7 @@ use App\Notifications\ChatMessageReceived;
 use App\Notifications\SellerOrderStatusUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use NotificationChannels\WebPush\WebPushChannel;
 use Tests\TestCase;
 
 class NotificationBellTest extends TestCase
@@ -71,5 +72,43 @@ class NotificationBellTest extends TestCase
             ->call('goTo', $ownersNotificationId);
 
         $this->assertDatabaseHas('notifications', ['id' => $ownersNotificationId, 'read_at' => null]);
+    }
+
+    public function test_a_configured_vapid_keypair_adds_the_webpush_channel(): void
+    {
+        config(['webpush.vapid.public_key' => 'test-public', 'webpush.vapid.private_key' => 'test-private']);
+
+        $notification = new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1');
+
+        $this->assertSame(['database', 'broadcast', WebPushChannel::class], $notification->via(User::factory()->make()));
+    }
+
+    public function test_a_push_subscription_from_an_untrusted_host_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(NotificationBell::class)->call('savePushSubscription', [
+            'endpoint' => 'https://attacker.example.com/collect',
+            'keys' => ['p256dh' => str_repeat('a', 32), 'auth' => str_repeat('b', 16)],
+        ]);
+
+        $this->assertDatabaseMissing('push_subscriptions', ['subscribable_id' => $user->id]);
+    }
+
+    public function test_a_push_subscription_from_a_trusted_host_is_saved(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(NotificationBell::class)->call('savePushSubscription', [
+            'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
+            'keys' => ['p256dh' => str_repeat('a', 32), 'auth' => str_repeat('b', 16)],
+        ]);
+
+        $this->assertDatabaseHas('push_subscriptions', [
+            'subscribable_id' => $user->id,
+            'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
+        ]);
     }
 }

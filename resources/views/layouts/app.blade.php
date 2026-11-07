@@ -23,6 +23,7 @@
         <meta name="reverb-host" content="{{ config('broadcasting.connections.reverb.options.host') }}">
         <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
         <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
+        <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
 
         <title>@yield('title', isset($title) ? $title : (isset($pageTitle) ? $pageTitle.' · '.config('app.name', 'Laravel') : config('app.name', 'Laravel')))</title>
 

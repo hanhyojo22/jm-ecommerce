@@ -2,8 +2,11 @@
 
 namespace App\Notifications;
 
+use App\Support\WebPushAvailability;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
+use NotificationChannels\WebPush\WebPushMessage;
 
 class SellerOrderStatusUpdated extends Notification
 {
@@ -21,7 +24,9 @@ class SellerOrderStatusUpdated extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return WebPushAvailability::isConfigured()
+            ? ['database', 'broadcast', WebPushChannel::class]
+            : ['database', 'broadcast'];
     }
 
     /**
@@ -36,5 +41,14 @@ class SellerOrderStatusUpdated extends Notification
             'title' => $this->title,
             'body' => $this->message,
         ];
+    }
+
+    public function toWebPush(object $notifiable, self $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title($this->title)
+            ->body($this->message)
+            ->icon('/favicon.svg')
+            ->data(['url' => route('orders.show', $this->orderId)]);
     }
 }

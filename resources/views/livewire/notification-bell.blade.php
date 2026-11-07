@@ -1,6 +1,6 @@
 <div data-notification-bell x-data="notificationBell('{{ auth()->id() }}')" wire:key="notification-bell" {{ $attributes }}>
     <div
-        x-data="{ open: false }"
+        x-data="{ open: false, pushStatus: (window.Notification && Notification.permission) || 'unsupported' }"
         x-on:click.outside="open = false"
         class="relative"
     >
@@ -53,6 +53,16 @@
                 @empty
                     <p class="px-4 py-8 text-center text-sm text-muted">No notifications yet.</p>
                 @endforelse
+            </div>
+
+            <div x-show="pushStatus === 'default'" x-cloak class="border-t border-line px-4 py-3">
+                <button
+                    type="button"
+                    @click="pushStatus = 'pending'; window.enableWebPush($wire).then((ok) => { pushStatus = ok ? 'granted' : (window.Notification?.permission ?? 'default') })"
+                    class="w-full rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:bg-canvas"
+                >
+                    Get notified even when this tab is closed
+                </button>
             </div>
         </div>
     </div>

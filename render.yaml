@@ -115,6 +115,12 @@ services:
         sync: false
       - key: FIREBASE_CREDENTIALS
         sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
 
   - type: web
     name: jmmart-chat-reverb
@@ -340,6 +346,12 @@ services:
       - key: GMAIL_FROM_ADDRESS
         sync: false
       - key: FIREBASE_CREDENTIALS
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
         sync: false
 
   - type: web

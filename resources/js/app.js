@@ -3,6 +3,7 @@ import './cookie-consent';
 import { showRequestError } from './request-errors';
 import './chat';
 import './notifications';
+import './web-push';
 import './cart';
 import { clerkComponentAppearance, clerkUserProfileAppearance } from './clerk-appearance';
 
@@ -1174,6 +1175,9 @@ document.querySelector('[data-seller-reviews]')?.addEventListener('submit', asyn
 const signOut = async () => {
     try {
         const clerk = await loadClerk();
+        // A browser notification subscription still points at this account otherwise — the
+        // next person signed in on this device would get this account's alerts as OS toasts.
+        await window.unsubscribeWebPush?.();
         clearClerkSessionCookie();
         await clerk.signOut();
         window.location.assign('/');

@@ -11,13 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 #[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'admin_invited_at', 'is_active', 'preferred_workspace'])]
 #[Hidden(['password', 'remember_token', 'clerk_user_id'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUlids, Notifiable;
+    use HasFactory, HasPushSubscriptions, HasUlids, Notifiable;
 
     /**
      * Get the attributes that should be cast.
