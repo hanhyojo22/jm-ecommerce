@@ -8,6 +8,7 @@ use App\Notifications\ChatMessageReceived;
 use App\Services\PushNotifier;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Str;
+use Throwable;
 
 class SendChatMessagePush implements ShouldQueue
 {
@@ -43,7 +44,11 @@ class SendChatMessagePush implements ShouldQueue
                 ['type' => 'chat', 'conversation_id' => $conversation->id],
             );
 
-            $recipient->notify(new ChatMessageReceived($message->sender->name, $message->body, $conversation->id));
+            try {
+                $recipient->notify(new ChatMessageReceived($message->sender->name, $message->body, $conversation->id));
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
     }
 }
