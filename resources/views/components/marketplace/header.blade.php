@@ -13,8 +13,6 @@
     };
     $isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== $user?->id);
     $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
-    $unreadConversationCount = $isSellerWorkspace ? $sellerUnreadConversationCount : $buyerUnreadConversationCount;
-    $messageBadge = $unreadConversationCount > 99 ? '99+' : $unreadConversationCount;
     $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit');
     $customerPageTitle = match (true) {
         request()->routeIs('orders.show') => 'Order details',
@@ -115,12 +113,7 @@
 
             <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-2 min-[641px]:order-none min-[641px]:ml-0">
                 @if ($canUseMessages)
-                    <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="relative grid size-11 place-items-center rounded-md text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand" aria-label="Messages{{ $unreadConversationCount ? ', '.$unreadConversationCount.' unread' : '' }}">
-                        <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
-                        @if ($unreadConversationCount > 0)
-                            <span class="absolute -right-1 -top-1 grid h-[19px] min-w-[19px] place-items-center rounded-full border-2 border-white bg-brand px-[5px] text-xs font-semibold leading-none text-white">{{ $messageBadge }}</span>
-                        @endif
-                    </a>
+                    <livewire:message-header-badge :seller-workspace="$isSellerWorkspace" />
                 @endif
 
                 @if ($isBuyer && ! $isSellerWorkspace)

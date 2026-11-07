@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\MarkConversationRead;
+use App\Livewire\MessageHeaderBadge;
 use App\Models\Conversation;
 use App\Models\Product;
 use App\Models\Store;
@@ -10,6 +12,7 @@ use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class HeaderWorkspaceScopingTest extends TestCase
@@ -40,7 +43,34 @@ class HeaderWorkspaceScopingTest extends TestCase
             ->assertSee('data-notification-bell', false);
     }
 
-    /** @return array{0: User} the dual-role user, with one unread conversation as buyer and one unread as seller staff */
+    public function test_header_message_counter_refreshes_after_messages_are_read(): void
+    {
+        [$seller, $buyerConversation] = $this->sellerWhoAlsoBuys();
+
+        $buyerBadge = Livewire::actingAs($seller)->test(MessageHeaderBadge::class, ['sellerWorkspace' => false])
+            ->assertViewHas('unreadCount', 1)
+            ->assertSee('Messages, 1 unread');
+
+        app(MarkConversationRead::class)->handle($buyerConversation, $seller);
+
+        $buyerBadge->call('$refresh')
+            ->assertViewHas('unreadCount', 0)
+            ->assertDontSee('Messages, 1 unread');
+
+        $buyerConversation->messages()->create([
+            'sender_id' => $buyerConversation->messages()->firstOrFail()->sender_id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'New update',
+        ]);
+
+        $buyerBadge->call('$refresh')->assertViewHas('unreadCount', 1);
+
+        Livewire::actingAs($seller)->test(MessageHeaderBadge::class, ['sellerWorkspace' => true])
+            ->assertViewHas('unreadCount', 1);
+    }
+
+    /** @return array{0: User, 1: Conversation} the dual-role user and their buyer-side unread conversation */
     private function sellerWhoAlsoBuys(): array
     {
         $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
@@ -118,6 +148,6 @@ class HeaderWorkspaceScopingTest extends TestCase
             'body' => 'Yes, 5 left.',
         ]);
 
-        return [$seller];
+        return [$seller, $buyerSideConversation];
     }
 }
