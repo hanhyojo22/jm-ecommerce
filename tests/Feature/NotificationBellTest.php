@@ -88,10 +88,12 @@ class NotificationBellTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Livewire::test(NotificationBell::class)->call('savePushSubscription', [
-            'endpoint' => 'https://attacker.example.com/collect',
-            'keys' => ['p256dh' => str_repeat('a', 32), 'auth' => str_repeat('b', 16)],
-        ]);
+        Livewire::test(NotificationBell::class)
+            ->call('savePushSubscription', [
+                'endpoint' => 'https://attacker.example.com/collect',
+                'keys' => ['p256dh' => str_repeat('a', 32), 'auth' => str_repeat('b', 16)],
+            ])
+            ->assertReturned(false);
 
         $this->assertDatabaseMissing('push_subscriptions', ['subscribable_id' => $user->id]);
     }
@@ -101,10 +103,12 @@ class NotificationBellTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Livewire::test(NotificationBell::class)->call('savePushSubscription', [
-            'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
-            'keys' => ['p256dh' => str_repeat('a', 32), 'auth' => str_repeat('b', 16)],
-        ]);
+        Livewire::test(NotificationBell::class)
+            ->call('savePushSubscription', [
+                'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
+                'keys' => ['p256dh' => str_repeat('a', 32), 'auth' => str_repeat('b', 16)],
+            ])
+            ->assertReturned(true);
 
         $this->assertDatabaseHas('push_subscriptions', [
             'subscribable_id' => $user->id,

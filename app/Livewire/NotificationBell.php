@@ -2,25 +2,17 @@
 
 namespace App\Livewire;
 
+use App\Actions\SavePushSubscription;
+use App\Support\WebPushAvailability;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Component;
 
 class NotificationBell extends Component
 {
-    /**
-     * A small allowlist of the browser vendors' push services. The subscription's endpoint URL
-     * is otherwise attacker-steerable (a tampered client could submit any URL), and this server
-     * later POSTs to it on every notification — unvalidated, that is an SSRF vector.
-     *
-     * @var array<int, string>
-     */
-    private const TRUSTED_PUSH_HOSTS = [
-        'fcm.googleapis.com',
-        'updates.push.services.mozilla.com',
-        'web.push.apple.com',
-    ];
+    public bool $pushSubscriptionSaved = false;
+
+    public ?string $pushSubscriptionError = null;
 
     public function markAllRead(): void
     {
@@ -30,33 +22,24 @@ class NotificationBell extends Component
     /**
      * @param  array{endpoint?: string, keys?: array{p256dh?: string, auth?: string}}  $subscription
      */
-    public function savePushSubscription(array $subscription): void
+    public function savePushSubscription(array $subscription, SavePushSubscription $save): bool
     {
-        $validator = Validator::make($subscription, [
-            'endpoint' => ['required', 'url'],
-            'keys.p256dh' => ['required', 'string', 'min:20', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
-            'keys.auth' => ['required', 'string', 'min:10', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
-        ]);
+        $this->pushSubscriptionSaved = false;
+        $this->pushSubscriptionError = null;
 
-        $untrustedHost = ! $validator->fails() && ! $this->isTrustedPushEndpoint($subscription['endpoint']);
+        if (! $this->withinRateLimit('save')) {
+            $this->pushSubscriptionError = 'Too many attempts. Wait a minute and try again.';
 
-        if ($validator->fails() || $untrustedHost) {
-            // This previously failed silently with no trace anywhere, which made a rejected
-            // subscription indistinguishable from the JS simply never calling this method.
-            Log::warning('Rejected a web push subscription.', [
-                'user_id' => auth()->id(),
-                'reason' => $untrustedHost ? 'untrusted_host' : $validator->errors()->keys(),
-                'endpoint' => $subscription['endpoint'] ?? null,
-            ]);
-
-            return;
+            return false;
         }
 
-        auth()->user()->updatePushSubscription(
-            $subscription['endpoint'],
-            $subscription['keys']['p256dh'],
-            $subscription['keys']['auth'],
-        );
+        $this->pushSubscriptionSaved = $save->handle(auth()->user(), $subscription);
+
+        if (! $this->pushSubscriptionSaved) {
+            $this->pushSubscriptionError = 'Desktop notifications could not be enabled. Please try again.';
+        }
+
+        return $this->pushSubscriptionSaved;
     }
 
     /**
@@ -64,21 +47,15 @@ class NotificationBell extends Component
      * pushSubscriptions() relation, so an arbitrary endpoint can only ever delete a row this
      * user owns, never someone else's.
      */
-    public function removePushSubscription(string $endpoint): void
+    public function removePushSubscription(string $endpoint): bool
     {
-        auth()->user()->deletePushSubscription($endpoint);
-    }
-
-    private function isTrustedPushEndpoint(string $endpoint): bool
-    {
-        $parts = parse_url($endpoint);
-        $host = $parts['host'] ?? '';
-
-        if (($parts['scheme'] ?? null) !== 'https' || $host === '') {
+        if (! $this->withinRateLimit('remove')) {
             return false;
         }
 
-        return in_array($host, self::TRUSTED_PUSH_HOSTS, true) || str_ends_with($host, '.notify.windows.com');
+        auth()->user()->deletePushSubscription($endpoint);
+
+        return true;
     }
 
     public function goTo(string $id): mixed
@@ -102,10 +79,32 @@ class NotificationBell extends Component
     public function render(): View
     {
         $user = auth()->user();
+        $pushSubscriptions = WebPushAvailability::isConfigured()
+            ? $user->pushSubscriptions()->get()
+            : collect();
 
         return view('livewire.notification-bell', [
             'unreadCount' => $user->unreadNotifications()->count(),
             'notifications' => $user->notifications()->latest()->limit(10)->get(),
+            'pushConfigured' => WebPushAvailability::isConfigured(),
+            'hasPushSubscription' => $pushSubscriptions->isNotEmpty(),
+            'pushEndpointHashes' => $pushSubscriptions
+                ->map(fn ($subscription): string => hash('sha256', $subscription->endpoint))
+                ->values()
+                ->all(),
         ]);
+    }
+
+    private function withinRateLimit(string $action): bool
+    {
+        $key = 'web-push:'.$action.':'.auth()->id();
+
+        if (RateLimiter::tooManyAttempts($key, 10)) {
+            return false;
+        }
+
+        RateLimiter::hit($key, 60);
+
+        return true;
     }
 }

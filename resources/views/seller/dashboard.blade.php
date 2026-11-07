@@ -32,6 +32,77 @@
     <div class="page-shell" data-seller-dashboard data-dashboard-key="{{ $store->id }}"><div class="page-container sc-stack">
         @if (session('status'))<div class="sc-notice" data-tone="success" role="status">{{ session('status') }}</div>@endif
 
+        @if (\App\Support\WebPushAvailability::isConfigured())
+            <section
+                x-data="{
+                    show: false,
+                    busy: false,
+                    error: '',
+                    init() {
+                        let dismissedUntil = 0;
+
+                        try {
+                            dismissedUntil = Number(localStorage.getItem('jmmart:push-prompt-dismissed-until') || 0);
+                        } catch {
+                            // Storage can be unavailable in private mode.
+                        }
+
+                        const supported = 'serviceWorker' in navigator
+                            && 'PushManager' in window
+                            && 'Notification' in window
+                            && window.isSecureContext;
+
+                        this.show = supported && Date.now() > dismissedUntil && Notification.permission === 'default';
+                    },
+                    dismiss() {
+                        try {
+                            localStorage.setItem('jmmart:push-prompt-dismissed-until', String(Date.now() + 14 * 24 * 60 * 60 * 1000));
+                        } catch {
+                            // The prompt still closes for this page view.
+                        }
+
+                        this.show = false;
+                    },
+                    async enable() {
+                        if (this.busy) return;
+
+                        this.busy = true;
+                        this.error = '';
+
+                        try {
+                            const state = await window.enableWebPush(null);
+
+                            if (state.permission === 'granted' && state.synced) {
+                                this.show = false;
+                            } else if (state.permission === 'denied') {
+                                this.error = 'Notifications are blocked in your browser settings.';
+                            } else {
+                                this.error = 'Notifications could not be enabled. Please try again.';
+                            }
+                        } finally {
+                            this.busy = false;
+                        }
+                    },
+                }"
+                x-show="show"
+                x-cloak
+                class="sc-card sc-card-pad"
+                aria-labelledby="desktop-notifications-heading"
+            >
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <h2 id="desktop-notifications-heading" class="sc-card-title">Never miss a new order</h2>
+                        <p class="mt-1 max-w-2xl text-sm text-muted">Turn on desktop notifications so new orders and buyer messages appear on this computer even when JMMart is closed.</p>
+                        <p x-show="error" x-text="error" class="mt-2 text-sm text-danger" role="alert"></p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <button type="button" @click="dismiss()" class="seller-outline-button">Not now</button>
+                        <button type="button" @click="enable()" :disabled="busy" class="seller-primary-button" x-text="busy ? 'Turning on…' : 'Turn on notifications'"></button>
+                    </div>
+                </div>
+            </section>
+        @endif
+
         @if ($attentionItems)
             <section class="sc-card" aria-labelledby="action-required-heading">
                 <div class="sc-card-head"><h2 id="action-required-heading" class="sc-card-title">Needs your attention</h2></div>

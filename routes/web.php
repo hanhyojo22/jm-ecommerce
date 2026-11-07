@@ -28,6 +28,8 @@ use App\Http\Controllers\Marketplace\ProductReviewController as MarketplaceProdu
 use App\Http\Controllers\Marketplace\ReturnCaseController as BuyerReturnCaseController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PushNotificationController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\EarningController;
 use App\Http\Controllers\Seller\OnlinePaymentsController;
@@ -39,6 +41,7 @@ use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\StoreSettingsController;
 use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerSuspensionAppealController;
+use App\Http\Controllers\WebPushKeyController;
 use App\Http\Controllers\WorkspacePreferenceController;
 use App\Livewire\Chat\Inbox as ChatInbox;
 use App\Livewire\Chat\Thread as ChatThread;
@@ -59,6 +62,10 @@ Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalo
 Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('catalog.show');
 Route::post('/clerk/webhook', ClerkWebhookController::class)->middleware('throttle:60,1')->name('clerk.webhook');
 Route::post('/paymongo/webhook', PayMongoWebhookController::class)->middleware('throttle:120,1')->name('paymongo.webhook');
+Route::get('/push/vapid-public-key', WebPushKeyController::class)->middleware('throttle:60,1')->name('push.vapid-key');
+Route::get('/push-notifications/{notification}/read', [PushNotificationController::class, 'markRead'])
+    ->middleware(['signed', 'throttle:60,1'])
+    ->name('push-notifications.read');
 
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -92,6 +99,15 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::post('/reviews/{review}/report', [MarketplaceProductReviewController::class, 'report'])->middleware('throttle:10,1')->name('reviews.report');
     Route::post('/messages/products/{product}', [ConversationController::class, 'startForProduct'])->middleware('throttle:10,1')->name('messages.products.start');
     Route::post('/messages/seller-orders/{sellerOrder}', [ConversationController::class, 'startForSellerOrder'])->middleware('throttle:10,1')->name('messages.seller-orders.start');
+});
+
+Route::middleware(['auth', 'clerk.verified'])->group(function (): void {
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])
+        ->middleware('throttle:20,1')
+        ->name('push-subscriptions.store');
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])
+        ->middleware('throttle:20,1')
+        ->name('push-subscriptions.destroy');
 });
 
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {

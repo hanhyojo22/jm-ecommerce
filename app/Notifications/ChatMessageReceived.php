@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Support\WebPushAvailability;
+use App\Support\WebPushPayload;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Str;
@@ -44,10 +45,15 @@ class ChatMessageReceived extends Notification
 
     public function toWebPush(object $notifiable, self $notification): WebPushMessage
     {
+        $tag = 'chat-'.$this->conversationId;
+
         return (new WebPushMessage)
             ->title($this->senderName)
             ->body(Str::limit($this->body, 120))
-            ->icon('/favicon.svg')
-            ->data(['url' => route('messages.show', $this->conversationId)]);
+            ->icon(asset('images/notification-icon.png'))
+            ->badge(asset('images/notification-badge.png'))
+            ->tag($tag)
+            ->renotify()
+            ->data(WebPushPayload::for($notification, route('messages.show', $this->conversationId), $tag));
     }
 }

@@ -63,8 +63,10 @@ services:
         value: "true"
       - key: RUN_MIGRATIONS
         value: "true"
+      # Push delivery is a queued listener. Keep it off the request path and let
+      # the jmmart-queue-worker service below drain the jobs table.
       - key: QUEUE_CONNECTION
-        value: sync
+        value: database
       - key: BROADCAST_CONNECTION
         value: reverb
       - fromGroup: jmmart-reverb-credentials
@@ -121,6 +123,88 @@ services:
         sync: false
       - key: VAPID_SUBJECT
         sync: false
+
+  # ----------------------------------------------------------------------
+  # Production queue worker. SendChatMessagePush is a ShouldQueue listener and
+  # the web-push HTTP client can take seconds per subscription, so it cannot run
+  # on the request path. FIREBASE_CREDENTIALS is needed here too: the same
+  # listener also sends the mobile FCM pushes.
+  # ----------------------------------------------------------------------
+  - type: worker
+    name: jmmart-queue-worker
+    runtime: docker
+    dockerCommand: php artisan queue:work --sleep=1 --tries=3 --timeout=60 --max-time=3600
+    plan: starter
+    region: singapore
+    branch: master
+    autoDeployTrigger: commit
+    envVars:
+      - key: APP_NAME
+        value: JMMart
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: APP_KEY
+      - key: APP_URL
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: RUN_MIGRATIONS
+        value: "false"
+      - key: RUN_OPTIMIZATIONS
+        value: "false"
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: DB_URL
+      - key: DB_SSLMODE
+        value: require
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: BROADCAST_CONNECTION
+        value: reverb
+      - fromGroup: jmmart-reverb-credentials
+      - key: REVERB_HOST
+        value: jmmart-chat-reverb.onrender.com
+      - key: REVERB_PORT
+        value: "443"
+      - key: REVERB_SCHEME
+        value: https
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+      - key: FIREBASE_CREDENTIALS
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: FIREBASE_CREDENTIALS
+      - key: VAPID_PUBLIC_KEY
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: VAPID_PUBLIC_KEY
+      - key: VAPID_PRIVATE_KEY
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: VAPID_PRIVATE_KEY
+      - key: VAPID_SUBJECT
+        fromService:
+          name: jmmart-marketplace
+          type: web
+          envVarKey: VAPID_SUBJECT
 
   - type: web
     name: jmmart-chat-reverb
@@ -219,7 +303,7 @@ services:
       - key: CACHE_STORE
         value: database
       - key: QUEUE_CONNECTION
-        value: sync
+        value: database
       - key: BROADCAST_CONNECTION
         value: log
       - key: LOG_CHANNEL
@@ -295,8 +379,11 @@ services:
         value: "true"
       - key: RUN_MIGRATIONS
         value: "true"
+      # Render does not offer free background workers. The deferred connection
+      # runs queued listeners after the response, keeping them off the request
+      # path without a paid worker; production uses the real database worker.
       - key: QUEUE_CONNECTION
-        value: sync
+        value: deferred
       - key: BROADCAST_CONNECTION
         value: reverb
       - fromGroup: jmmart-reverb-credentials-staging

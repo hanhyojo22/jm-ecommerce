@@ -12,6 +12,16 @@ use Throwable;
 
 class SendChatMessagePush implements ShouldQueue
 {
+    /**
+     * This job is not idempotent: a retry re-notifies every recipient, since nothing
+     * here records which recipients already got a push or database notification. A
+     * timeout must not become a retry, so tries stays at 1 and the timeout is sized
+     * to fit several recipients at web-push's own 10s HTTP timeout each.
+     */
+    public int $tries = 1;
+
+    public int $timeout = 60;
+
     public function __construct(private readonly PushNotifier $notifier) {}
 
     public function handle(MessageSent $event): void

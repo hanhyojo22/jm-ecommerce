@@ -16,9 +16,9 @@ class PushNotifier
 
     public function __construct()
     {
-        // The app runs with QUEUE_CONNECTION=sync, so this constructor runs
-        // inline on the request that sends a chat message. A missing or
-        // malformed Firebase credential must never break that request.
+        // This can run inline on a request (sync/deferred queues) or inside a
+        // queue worker. A missing or malformed Firebase credential must never
+        // break either path, so a null client silently disables mobile pushes.
         $this->messaging = $this->buildMessaging();
     }
 

@@ -33,9 +33,14 @@ return [
     'database_connection' => env('WEBPUSH_DB_CONNECTION', env('DB_CONNECTION', 'mysql')),
 
     /**
-     * The HTTP client options used to deliver push notifications.
+     * The HTTP client options used to deliver push notifications. The package
+     * default is 30 seconds, which is far too long when delivery runs in a
+     * request or a queue worker that other jobs are waiting behind.
      */
-    'client_options' => [],
+    'client_options' => [
+        'connect_timeout' => (int) env('WEBPUSH_CONNECT_TIMEOUT', 5),
+        'timeout' => (int) env('WEBPUSH_TIMEOUT', 10),
+    ],
 
     /**
      * The automatic padding in bytes used by Minishlink\WebPush.

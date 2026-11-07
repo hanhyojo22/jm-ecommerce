@@ -15,6 +15,9 @@
         Permissions-Policy "geolocation=(), microphone=(), camera=()"
     }
 
+    @serviceworker path /sw.js
+    header @serviceworker Cache-Control "no-cache, no-store, must-revalidate"
+
     @reverb path /app/* /apps/*
     reverse_proxy @reverb reverb:8080
     reverse_proxy app:80

@@ -522,7 +522,10 @@ const loadClerk = () => {
 
         clerk.addListener(({ session }) => {
             if (! session) {
-                clearClerkSessionCookie();
+                // Clerk's own profile modal can end the session without going through
+                // signOut() below. Remove the server-side endpoint while the Laravel
+                // session cookie is still present, then drop the short-lived cookie.
+                Promise.resolve(window.unsubscribeWebPush?.()).finally(() => clearClerkSessionCookie());
             }
         });
 
