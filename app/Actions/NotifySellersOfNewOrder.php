@@ -4,14 +4,17 @@ namespace App\Actions;
 
 use App\Models\Order;
 use App\Models\SellerOrder;
-use App\Models\User;
 use App\Notifications\NewSellerOrderPlaced;
+use App\Services\GmailOrderMailer;
 use App\Services\PushNotifier;
 use Throwable;
 
 class NotifySellersOfNewOrder
 {
-    public function __construct(private readonly PushNotifier $notifier) {}
+    public function __construct(
+        private readonly PushNotifier $notifier,
+        private readonly GmailOrderMailer $mailer,
+    ) {}
 
     /**
      * Alerts each store's active staff that a new order came in for them, once per store in
@@ -35,16 +38,7 @@ class NotifySellersOfNewOrder
 
     private function notifyStoreStaff(Order $order, SellerOrder $sellerOrder): void
     {
-        $recipients = User::query()
-            ->where('account_type', 'seller')
-            ->where('is_active', true)
-            ->whereHas('tenantMemberships', fn ($query) => $query
-                ->where('tenant_id', $sellerOrder->tenant_id)
-                ->whereIn('role', ['owner', 'manager', 'staff'])
-                ->whereHas('tenant', fn ($tenant) => $tenant
-                    ->where('status', 'active')
-                    ->whereHas('store', fn ($store) => $store->where('status', 'active'))))
-            ->get();
+        $recipients = $sellerOrder->tenant->activeNotifiableStaff();
 
         $title = "New order #{$order->number}";
         $body = "{$sellerOrder->store->name} received a new order worth PHP {$sellerOrder->total}.";
@@ -61,6 +55,16 @@ class NotifySellersOfNewOrder
 
             try {
                 $recipient->notify(new NewSellerOrderPlaced($sellerOrder->id, $title, $body));
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                $this->mailer->send(
+                    $recipient,
+                    "JMMart new order #{$order->number}",
+                    $body."\n\nView the order: ".route('seller.orders.show', $sellerOrder->id),
+                );
             } catch (Throwable $exception) {
                 report($exception);
             }

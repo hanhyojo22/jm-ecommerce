@@ -11,7 +11,9 @@ use App\Models\ReturnCaseItem;
 use App\Models\ReturnCaseOutcome;
 use App\Models\SellerOrder;
 use App\Models\User;
+use App\Notifications\ReturnCaseUpdated;
 use App\Services\GmailOrderMailer;
+use App\Services\PushNotifier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -363,14 +365,38 @@ class ReturnCaseWorkflow
             DB::afterCommit(function () use ($case, $type): void {
                 try {
                     $case->load('buyer', 'sellerOrder.order', 'sellerOrder.store.tenant.members.user');
+                    $number = $case->sellerOrder->order->number;
+                    $notice = self::NOTICES[$type];
                     $deadline = $case->deadline();
-                    $body = self::NOTICES[$type]
-                        ."\n\nOrder {$case->sellerOrder->order->number} · {$case->sellerOrder->store->name}."
+                    $emailBody = $notice
+                        ."\n\nOrder {$number} · {$case->sellerOrder->store->name}."
                         .($deadline !== null ? "\nThe next step is due by {$deadline->format('M j, Y g:i A')}." : '');
+                    $title = "Order #{$number} return update";
                     $recipients = collect([$case->buyer])->merge($case->sellerOrder->store->tenant->members->pluck('user'))->filter()->unique('id');
+
                     foreach ($recipients as $recipient) {
                         $url = $recipient->id === $case->buyer_id ? route('returns.show', $case) : route('seller.returns.show', $case);
-                        app(GmailOrderMailer::class)->send($recipient, 'JMMart return case update', $body."\n\nView the case: {$url}");
+
+                        try {
+                            app(GmailOrderMailer::class)->send($recipient, 'JMMart return case update', $emailBody."\n\nView the case: {$url}");
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
+
+                        try {
+                            app(PushNotifier::class)->sendToUser($recipient, $title, $notice, [
+                                'type' => 'return_case',
+                                'return_case_id' => $case->id,
+                            ]);
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
+
+                        try {
+                            $recipient->notify(new ReturnCaseUpdated($case->id, $title, $notice, $url));
+                        } catch (\Throwable $exception) {
+                            report($exception);
+                        }
                     }
                 } catch (\Throwable $exception) {
                     report($exception);

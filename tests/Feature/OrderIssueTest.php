@@ -7,7 +7,9 @@ use App\Models\OrderIssue;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Notifications\OrderIssueOpened;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class OrderIssueTest extends TestCase
@@ -26,6 +28,26 @@ class OrderIssueTest extends TestCase
         $this->assertDatabaseHas('order_issues', ['seller_order_id' => $sellerOrder->id, 'buyer_id' => $buyer->id, 'status' => 'open']);
         $this->actingAs($buyer)->get(route('orders.show', $sellerOrder->order))->assertOk()->assertSee('Please cancel this order.');
         $this->actingAs($buyer)->post(route('order-issues.store', $sellerOrder), $payload)->assertSessionHasErrors('type');
+    }
+
+    public function test_opening_a_request_notifies_the_stores_active_staff_but_not_the_buyer(): void
+    {
+        Notification::fake();
+
+        [$buyer, $sellerOrder] = $this->order();
+        $owner = User::factory()->seller()->create(['email_verified_at' => now()]);
+        $sellerOrder->store->tenant->members()->create(['user_id' => $owner->id, 'role' => 'owner']);
+
+        $this->actingAs($buyer)
+            ->post(route('order-issues.store', $sellerOrder), ['type' => 'cancellation', 'details' => 'Please cancel this order.'])
+            ->assertRedirect(route('orders.show', $sellerOrder->order));
+
+        Notification::assertSentTo(
+            $owner,
+            OrderIssueOpened::class,
+            fn (OrderIssueOpened $notification): bool => $notification->toArray($owner)['seller_order_id'] === $sellerOrder->id,
+        );
+        Notification::assertNotSentTo($buyer, OrderIssueOpened::class);
     }
 
     public function test_request_types_follow_order_state(): void

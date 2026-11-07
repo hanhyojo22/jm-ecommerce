@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 class Tenant extends Model
 {
@@ -72,5 +73,26 @@ class Tenant extends Model
     public function platformFeeStatements(): HasMany
     {
         return $this->hasMany(PlatformFeeStatement::class);
+    }
+
+    /**
+     * Active owner/manager/staff to notify about this tenant's orders — the exact filter
+     * NotifySellersOfNewOrder and OpenOrderIssue share, so a deactivated staff member or a
+     * suspended store never gets paged.
+     *
+     * @return Collection<int, User>
+     */
+    public function activeNotifiableStaff(): Collection
+    {
+        return User::query()
+            ->where('account_type', 'seller')
+            ->where('is_active', true)
+            ->whereHas('tenantMemberships', fn ($query) => $query
+                ->where('tenant_id', $this->id)
+                ->whereIn('role', ['owner', 'manager', 'staff'])
+                ->whereHas('tenant', fn ($tenant) => $tenant
+                    ->where('status', 'active')
+                    ->whereHas('store', fn ($store) => $store->where('status', 'active'))))
+            ->get();
     }
 }

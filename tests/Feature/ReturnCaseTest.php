@@ -11,9 +11,11 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Notifications\ReturnCaseUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -48,6 +50,23 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($admin)->post(route('admin.returns.store', $lateOrder), $this->requestData($lateItem->id, 1))->assertRedirect();
         $this->actingAs($admin)->get(route('admin.returns.show', ReturnCase::query()->where('seller_order_id', $lateOrder->id)->sole()))->assertOk();
         $this->actingAs($seller)->get(route('seller.returns.show', ReturnCase::query()->where('seller_order_id', $lateOrder->id)->sole()))->assertNotFound();
+    }
+
+    public function test_opening_a_return_notifies_both_the_buyer_and_the_seller_in_app(): void
+    {
+        Notification::fake();
+
+        [$buyer, $seller, $order, $item] = $this->deliveredOrder(1, now()->subDays(1));
+
+        $this->actingAs($buyer)->post(route('returns.store', $order), $this->requestData($item->id, 1))->assertRedirect();
+        $case = ReturnCase::query()->sole();
+
+        Notification::assertSentTo(
+            $seller,
+            ReturnCaseUpdated::class,
+            fn (ReturnCaseUpdated $notification): bool => $notification->toArray($seller)['return_case_id'] === $case->id,
+        );
+        Notification::assertSentTo($buyer, ReturnCaseUpdated::class);
     }
 
     public function test_seller_refund_flow_preserves_order_total_and_private_proof(): void
