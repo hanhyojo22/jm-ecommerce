@@ -148,5 +148,21 @@ class AppServiceProvider extends ServiceProvider
                 'sellerApplication' => $sellerApplication,
             ]);
         });
+
+        View::composer('components.marketplace.footer', function (ViewInstance $view): void {
+            $user = request()->user();
+            $canUseMessages = request()->routeIs('home')
+                && $user && in_array($user->account_type, ['buyer', 'seller'], true);
+
+            $view->with([
+                'mobileNavCanUseMessages' => $canUseMessages,
+                'mobileNavUnreadMessageCount' => $canUseMessages && $user->can('viewAny', Conversation::class)
+                    ? Conversation::query()->visibleTo($user)->where('buyer_id', $user->id)->unreadFor($user)->count()
+                    : 0,
+                'mobileNavMessagesUrl' => $canUseMessages
+                    ? ($user->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index'))
+                    : null,
+            ]);
+        });
     }
 }

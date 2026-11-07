@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Chat\Thread;
 use App\Models\Category;
+use App\Models\Conversation;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReview;
@@ -14,6 +16,7 @@ use App\Support\CookiePreferences;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class CatalogTest extends TestCase
@@ -148,6 +151,25 @@ class CatalogTest extends TestCase
             ->assertSee('Mobile marketplace navigation')
             ->assertSee($visible->name)
             ->assertDontSee($hidden->name);
+    }
+
+    public function test_mobile_nav_message_badge_counts_unread_and_clears_on_read(): void
+    {
+        $buyer = User::factory()->create();
+        $seller = User::factory()->seller()->create();
+        $product = $this->product();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'Is this still available?']);
+        $conversation->messages()->create(['sender_id' => $seller->id, 'body' => 'Still there?']);
+
+        $this->actingAs($buyer)->get(route('home'))
+            ->assertSee('aria-label="Messages, 1 unread"', false);
+
+        Livewire::actingAs($buyer)->test(Thread::class, ['conversation' => $conversation]);
+
+        $this->actingAs($buyer)->get(route('home'))
+            ->assertSee('aria-label="Messages"', false)
+            ->assertDontSee('aria-label="Messages,', false);
     }
 
     public function test_sold_out_product_shows_availability_notice_across_public_product_pages(): void
