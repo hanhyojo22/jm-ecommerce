@@ -9,6 +9,28 @@ function urlBase64ToUint8Array(base64) {
     return Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
 }
 
+/*
+ * Shared by the explicit "enable" click and the silent restore below. Never prompts for
+ * permission itself — the caller decides whether that's appropriate.
+ */
+async function subscribeAndSave($wire) {
+    const vapidPublicKey = document.querySelector('meta[name="vapid-public-key"]')?.content;
+
+    if (!vapidPublicKey) {
+        return false;
+    }
+
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+    });
+
+    await $wire.savePushSubscription(subscription.toJSON());
+
+    return true;
+}
+
 window.unsubscribeWebPush = async () => {
     try {
         const registration = await navigator.serviceWorker?.getRegistration();
@@ -33,12 +55,6 @@ window.enableWebPush = async ($wire) => {
         return false;
     }
 
-    const vapidPublicKey = document.querySelector('meta[name="vapid-public-key"]')?.content;
-
-    if (!vapidPublicKey) {
-        return false;
-    }
-
     try {
         const permission = await Notification.requestPermission();
 
@@ -46,18 +62,35 @@ window.enableWebPush = async ($wire) => {
             return false;
         }
 
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-        });
-
-        await $wire.savePushSubscription(subscription.toJSON());
-
-        return true;
+        return await subscribeAndSave($wire);
     } catch (error) {
         console.warn('Could not enable browser notifications.', error);
 
         return false;
+    }
+};
+
+/*
+ * Permission can be granted (this session or an earlier one) without a subscription ever
+ * having been saved — the tab was closed mid-flow, the save request failed, browser data
+ * was cleared, etc. Nothing here prompts the user; it only finishes what permission already
+ * allows, so it's safe to run on every page load.
+ */
+window.ensureWebPushSubscribed = async ($wire) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || Notification.permission !== 'granted') {
+        return;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        const existing = await registration.pushManager.getSubscription();
+
+        if (existing) {
+            return;
+        }
+
+        await subscribeAndSave($wire);
+    } catch (error) {
+        console.warn('Could not restore the browser notification subscription.', error);
     }
 };

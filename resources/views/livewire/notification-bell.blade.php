@@ -1,6 +1,7 @@
 <div data-notification-bell x-data="notificationBell('{{ auth()->id() }}')" wire:key="notification-bell" {{ $attributes }}>
     <div
         x-data="{ open: false, pushStatus: (window.Notification && Notification.permission) || 'unsupported' }"
+        x-init="window.ensureWebPushSubscribed($wire)"
         x-on:click.outside="open = false"
         class="relative"
     >
