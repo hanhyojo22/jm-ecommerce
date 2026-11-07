@@ -5,7 +5,6 @@
     $isBuyer = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $canUseMessages = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $cartBadge = $cartItemCount > 99 ? '99+' : $cartItemCount;
-    $messageBadge = $unreadConversationCount > 99 ? '99+' : $unreadConversationCount;
     $buyerMessagesUrl = $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index');
     $sellerEntry = $sellerTenant ? 'Seller Center' : match ($sellerApplication?->status) {
         'pending' => 'Seller application',
@@ -14,6 +13,8 @@
     };
     $isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== $user?->id);
     $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
+    $unreadConversationCount = $isSellerWorkspace ? $sellerUnreadConversationCount : $buyerUnreadConversationCount;
+    $messageBadge = $unreadConversationCount > 99 ? '99+' : $unreadConversationCount;
     $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit');
     $customerPageTitle = match (true) {
         request()->routeIs('orders.show') => 'Order details',

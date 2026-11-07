@@ -124,11 +124,21 @@ class AppServiceProvider extends ServiceProvider
                 ? $user->sellerApplications()->latest()->first()
                 : null;
 
+            // Split by role so the Seller Center and the customer workspace each show only the
+            // unread count for that side — a seller who also buys would otherwise see one
+            // combined number in both places with no way to tell which half is which.
+            $canViewConversations = $user?->can('viewAny', Conversation::class) ?? false;
+            $buyerUnreadConversationCount = $canViewConversations
+                ? Conversation::query()->visibleTo($user)->where('buyer_id', $user->id)->unreadFor($user)->count()
+                : 0;
+            $sellerUnreadConversationCount = $canViewConversations && $user->account_type === 'seller'
+                ? Conversation::query()->visibleTo($user)->where('buyer_id', '!=', $user->id)->unreadFor($user)->count()
+                : 0;
+
             $view->with([
                 'cartItemCount' => $user?->cartItemCount() ?? 0,
-                'unreadConversationCount' => $user?->can('viewAny', Conversation::class)
-                    ? Conversation::query()->visibleTo($user)->unreadFor($user)->count()
-                    : 0,
+                'buyerUnreadConversationCount' => $buyerUnreadConversationCount,
+                'sellerUnreadConversationCount' => $sellerUnreadConversationCount,
                 'headerCategories' => Category::query()
                     ->where('is_active', true)
                     ->whereIn('id', $publicCategoryIds)
