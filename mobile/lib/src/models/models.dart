@@ -53,6 +53,50 @@ class Account {
   );
 }
 
+class AppNotification {
+  const AppNotification({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.body,
+    required this.createdAt,
+    this.orderId,
+    this.readAt,
+  });
+
+  final String id;
+  final String type;
+  final String title;
+  final String body;
+  final String createdAt;
+  final String? orderId;
+  final String? readAt;
+
+  factory AppNotification.fromJson(Map<String, dynamic> json) =>
+      AppNotification(
+        id: str(json['id']),
+        type: str(json['type']),
+        title: str(json['title'], 'Notification'),
+        body: str(json['body']),
+        createdAt: str(json['created_at']),
+        orderId: json['order_id'] as String?,
+        readAt: json['read_at'] as String?,
+      );
+}
+
+class NotificationInbox {
+  const NotificationInbox({required this.items, required this.unreadCount});
+
+  final List<AppNotification> items;
+  final int unreadCount;
+
+  factory NotificationInbox.fromJson(Map<String, dynamic> json) =>
+      NotificationInbox(
+        items: listOf(json['data']).map(AppNotification.fromJson).toList(),
+        unreadCount: integer(json['unread_count']),
+      );
+}
+
 class Category {
   const Category({
     required this.id,

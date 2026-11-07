@@ -121,10 +121,6 @@ class AccountScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'API ${AppConfig.apiBaseUrl}',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    Text(
                       'Live chat ${AppConfig.hasReverb ? 'enabled' : 'disabled (polling)'}',
                       style: theme.textTheme.bodySmall,
                     ),

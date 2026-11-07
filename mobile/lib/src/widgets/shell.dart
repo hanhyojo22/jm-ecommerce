@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/chat_providers.dart';
+import '../providers/notification_providers.dart';
 import '../providers/push_providers.dart';
 import '../screens/account_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
+import 'notification_bell_button.dart';
 
 class ShellTabState {
   const ShellTabState({required this.index, required this.loaded});
@@ -35,7 +37,8 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
+class _AppShellState extends ConsumerState<AppShell>
+    with WidgetsBindingObserver {
   static const _titles = ['Discover', 'Orders', 'Messages', 'Account'];
 
   @override
@@ -57,6 +60,7 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(conversationsProvider);
+      ref.invalidate(notificationsProvider);
     }
   }
 
@@ -78,7 +82,11 @@ class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver
       // The Shop tab draws its own search header with the cart.
       appBar: index == 0
           ? null
-          : AppBar(title: Text(_titles[index]), titleSpacing: 20),
+          : AppBar(
+              title: Text(_titles[index]),
+              titleSpacing: 20,
+              actions: const [NotificationBellButton()],
+            ),
       body: IndexedStack(
         index: index,
         children: [

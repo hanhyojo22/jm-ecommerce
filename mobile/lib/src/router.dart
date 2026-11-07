@@ -7,6 +7,7 @@ import 'screens/cart_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'screens/product_screen.dart';
 import 'screens/store_screen.dart';
 
@@ -29,6 +30,10 @@ final appRouter = GoRouter(
           StoreScreen(slug: state.pathParameters['slug'] ?? ''),
     ),
     GoRoute(path: '/cart', builder: (context, state) => const CartScreen()),
+    GoRoute(
+      path: '/notifications',
+      builder: (context, state) => const NotificationsScreen(),
+    ),
     GoRoute(
       path: '/checkout',
       builder: (context, state) => const CheckoutScreen(),
