@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
     <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
@@ -12,6 +13,11 @@
              session cookie before it opens a protected page, and it keeps guests untouched. --}}
         <meta name="clerk-session-refresh-endpoint" content="{{ route('clerk.session.refresh') }}">
     @endauth
+    <meta name="reverb-app-key" content="{{ config('broadcasting.connections.reverb.key') }}">
+    <meta name="reverb-host" content="{{ config('broadcasting.connections.reverb.options.host') }}">
+    <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
+    <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
+    <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
     @include('partials.fonts')
     <title>{{ $sellerStore ? $sellerStore->name.' storefront' : 'Marketplace' }} · JMMart</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
