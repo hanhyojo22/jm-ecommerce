@@ -45,6 +45,9 @@ class ConversationController extends Controller
                 'messages' => fn ($query) => $query->with(['sender:id,name', 'attachments'])->orderByDesc('created_at')->orderByDesc('id')->limit(1),
             ])
             ->withCount(['messages as unread_messages_count' => fn ($query) => Conversation::constrainToUnread($query, $user)])
+            // Tapping "Message seller" creates the conversation before any message is sent,
+            // so it can be opened immediately. It should not clutter the inbox until then.
+            ->whereHas('messages')
             ->visibleTo($user)
             // The app is the buyer's surface; a seller account sees the chats it is buying in.
             ->where('buyer_id', $user->id)

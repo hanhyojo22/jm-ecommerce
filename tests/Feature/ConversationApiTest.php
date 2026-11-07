@@ -134,6 +134,30 @@ class ConversationApiTest extends TestCase
         $this->assertDatabaseCount('conversations', 2);
     }
 
+    public function test_starting_a_conversation_without_sending_a_message_is_not_listed(): void
+    {
+        [$buyer, , , $store, $product] = $this->conversation();
+        $fresh = Product::create([
+            'tenant_id' => $product->tenant_id,
+            'store_id' => $store->id,
+            'name' => 'Unmessaged Tote',
+            'slug' => 'unmessaged-tote-'.str()->lower(str()->random(8)),
+            'sku' => 'UNMESSAGED-TOTE-'.str()->upper(str()->random(8)),
+            'price' => '199.00',
+            'stock_quantity' => 5,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($buyer)
+            ->postJson('/api/v1/conversations/start', ['product_id' => $fresh->id])
+            ->assertCreated();
+
+        $this->actingAs($buyer)
+            ->getJson('/api/v1/conversations')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     public function test_reading_a_thread_advances_the_receipt_and_clears_unread(): void
     {
         [$buyer, $seller, $conversation] = $this->conversation();

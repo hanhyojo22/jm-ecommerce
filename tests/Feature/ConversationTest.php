@@ -198,9 +198,11 @@ class ConversationTest extends TestCase
         TenantMember::create(['tenant_id' => $ownProduct->tenant_id, 'user_id' => $seller->id, 'role' => 'owner']);
         $customer = User::factory()->create();
         $sale = Conversation::create(['buyer_id' => $customer->id, 'store_id' => $ownProduct->store_id, 'product_id' => $ownProduct->id]);
+        $sale->messages()->create(['sender_id' => $customer->id, 'type' => 'text', 'body' => 'Still in stock?']);
 
         $this->actingAs($seller)->post(route('messages.products.start', $otherProduct))->assertRedirect();
         $purchase = Conversation::query()->where('buyer_id', $seller->id)->sole();
+        $purchase->messages()->create(['sender_id' => $seller->id, 'type' => 'text', 'body' => 'Is this still available?']);
 
         $this->actingAs($seller)->get(route('messages.index', ['context' => 'buying']))
             ->assertOk()->assertSee(route('messages.show', $purchase), false)
@@ -210,6 +212,22 @@ class ConversationTest extends TestCase
             ->assertDontSee(route('messages.show', $purchase), false);
         $this->actingAs($seller)->get(route('messages.show', $purchase))
             ->assertOk()->assertSee($otherProduct->store->name)->assertDontSee('Your customer conversations.');
+    }
+
+    public function test_starting_a_conversation_without_sending_a_message_does_not_appear_in_either_inbox(): void
+    {
+        $product = $this->product();
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'owner']);
+
+        $this->actingAs($buyer)->post(route('messages.products.start', $product))->assertRedirect();
+        $conversation = Conversation::query()->where('buyer_id', $buyer->id)->sole();
+
+        $this->actingAs($buyer)->get(route('messages.index'))
+            ->assertOk()->assertDontSee(route('messages.show', $conversation), false);
+        $this->actingAs($seller)->get(route('messages.index'))
+            ->assertOk()->assertDontSee(route('messages.show', $conversation), false);
     }
 
     public function test_seller_cannot_start_a_customer_conversation_with_their_own_store(): void
@@ -260,7 +278,9 @@ class ConversationTest extends TestCase
         $otherBuyer = User::factory()->create();
         $product = $this->product();
         $visibleConversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $visibleConversation->messages()->create(['sender_id' => $buyer->id, 'type' => 'text', 'body' => 'Is this still available?']);
         $hiddenConversation = Conversation::create(['buyer_id' => $otherBuyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $hiddenConversation->messages()->create(['sender_id' => $otherBuyer->id, 'type' => 'text', 'body' => 'Is this still available?']);
 
         Livewire::actingAs($buyer)
             ->test(Inbox::class)
@@ -772,8 +792,10 @@ class ConversationTest extends TestCase
         $product->store->forceFill(['name' => '50% off store'])->save();
         $otherProduct = $this->product();
         $otherProduct->store->forceFill(['name' => '50 off store'])->save();
-        Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
-        Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $otherProduct->store_id, 'product_id' => $otherProduct->id]);
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
+        $conversation->messages()->create(['sender_id' => $buyer->id, 'type' => 'text', 'body' => 'Is this still available?']);
+        $otherConversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $otherProduct->store_id, 'product_id' => $otherProduct->id]);
+        $otherConversation->messages()->create(['sender_id' => $buyer->id, 'type' => 'text', 'body' => 'Is this still available?']);
 
         $this->actingAs($buyer);
 
@@ -860,12 +882,13 @@ class ConversationTest extends TestCase
 
         for ($index = 0; $index < 21; $index++) {
             $product = $this->product();
-            Conversation::create([
+            $conversation = Conversation::create([
                 'buyer_id' => $buyer->id,
                 'store_id' => $product->store_id,
                 'product_id' => $product->id,
                 'latest_message_at' => now()->subMinutes($index),
             ]);
+            $conversation->messages()->create(['sender_id' => $buyer->id, 'type' => 'text', 'body' => 'Is this still available?']);
         }
 
         Livewire::actingAs($buyer)->test(Inbox::class)

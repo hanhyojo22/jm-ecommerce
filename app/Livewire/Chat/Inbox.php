@@ -61,6 +61,9 @@ class Inbox extends Component
                 'readStates' => fn ($query) => $query->where('user_id', $user->id),
             ])
             ->withCount(['messages as unread_messages_count' => fn ($query) => Conversation::constrainToUnread($query, $user)])
+            // Tapping "Message seller" creates the conversation before any message is sent,
+            // so it can be opened immediately. It should not clutter either inbox until then.
+            ->whereHas('messages')
             ->visibleTo($user)
             ->when($user->account_type === 'seller' && $this->context === 'buying', fn ($query) => $query->where('buyer_id', $user->id))
             ->when($user->account_type === 'seller' && $this->context !== 'buying', fn ($query) => $query->where('buyer_id', '!=', $user->id))
