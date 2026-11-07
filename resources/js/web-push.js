@@ -13,7 +13,16 @@ window.unsubscribeWebPush = async () => {
     try {
         const registration = await navigator.serviceWorker?.getRegistration();
         const subscription = await registration?.pushManager.getSubscription();
-        await subscription?.unsubscribe();
+
+        if (!subscription) {
+            return;
+        }
+
+        const endpoint = subscription.endpoint;
+        await subscription.unsubscribe();
+        // Drops the server-side row too — unsubscribing the browser alone leaves it orphaned
+        // until the next failed send happens to prune it, which could be a long time.
+        await document.querySelector('[data-notification-bell]')?.$wire?.removePushSubscription(endpoint);
     } catch {
         // Best-effort: a browser without push support, or nothing to unsubscribe, is fine.
     }

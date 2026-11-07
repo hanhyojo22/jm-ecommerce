@@ -111,4 +111,28 @@ class NotificationBellTest extends TestCase
             'endpoint' => 'https://fcm.googleapis.com/fcm/send/abc123',
         ]);
     }
+
+    public function test_removing_a_push_subscription_deletes_the_row(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $user->updatePushSubscription('https://fcm.googleapis.com/fcm/send/abc123', str_repeat('a', 32), str_repeat('b', 16));
+
+        Livewire::test(NotificationBell::class)->call('removePushSubscription', 'https://fcm.googleapis.com/fcm/send/abc123');
+
+        $this->assertDatabaseMissing('push_subscriptions', ['subscribable_id' => $user->id]);
+    }
+
+    public function test_removing_a_push_subscription_cannot_delete_another_users_row(): void
+    {
+        $owner = User::factory()->create();
+        $owner->updatePushSubscription('https://fcm.googleapis.com/fcm/send/abc123', str_repeat('a', 32), str_repeat('b', 16));
+
+        $otherUser = User::factory()->create();
+        $this->actingAs($otherUser);
+
+        Livewire::test(NotificationBell::class)->call('removePushSubscription', 'https://fcm.googleapis.com/fcm/send/abc123');
+
+        $this->assertDatabaseHas('push_subscriptions', ['subscribable_id' => $owner->id]);
+    }
 }

@@ -48,6 +48,16 @@ class NotificationBell extends Component
         );
     }
 
+    /**
+     * deletePushSubscription() is already scoped through the authenticated user's own
+     * pushSubscriptions() relation, so an arbitrary endpoint can only ever delete a row this
+     * user owns, never someone else's.
+     */
+    public function removePushSubscription(string $endpoint): void
+    {
+        auth()->user()->deletePushSubscription($endpoint);
+    }
+
     private function isTrustedPushEndpoint(string $endpoint): bool
     {
         $parts = parse_url($endpoint);
