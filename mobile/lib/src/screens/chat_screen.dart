@@ -1201,6 +1201,54 @@ class _Bubble extends StatelessWidget {
                           );
                         },
                       ),
+                    // Messenger-style: "replied to" label over a faded quote tucked under the bubble.
+                    if (reply != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.reply_rounded,
+                              size: 14,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${mine ? 'You' : 'Store'} replied to '
+                              '${reply.isMine ? (mine ? 'yourself' : 'you') : (mine ? 'Store' : 'themselves')}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Transform.translate(
+                        offset: const Offset(0, 8),
+                        child: Container(
+                          key: ValueKey('reply-quote-${message.id}'),
+                          constraints: BoxConstraints(
+                            maxWidth:
+                                MediaQuery.of(context).size.width * 0.78 -
+                                (mine ? 0 : 36),
+                          ),
+                          padding: const EdgeInsets.fromLTRB(13, 8, 13, 16),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            _quoteText(reply.contextLabel, reply.body),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     Container(
                       key: compactAttachment
                           ? ValueKey('attachment-bubble-${message.id}')
@@ -1240,43 +1288,6 @@ class _Bubble extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (reply != null)
-                            Container(
-                              key: ValueKey('reply-quote-${message.id}'),
-                              margin: const EdgeInsets.only(bottom: 6),
-                              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                              decoration: BoxDecoration(
-                                color: foreground.withValues(alpha: 0.08),
-                                border: Border(
-                                  left: BorderSide(
-                                    color: mine
-                                        ? foreground.withValues(alpha: 0.7)
-                                        : theme.colorScheme.primary,
-                                    width: 3,
-                                  ),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    reply.isMine ? 'You' : 'Store',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: foreground,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  Text(
-                                    _quoteText(reply.contextLabel, reply.body),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: foreground.withValues(alpha: 0.85),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           if (message.body.trim().isNotEmpty)
                             Text(
                               message.body,
