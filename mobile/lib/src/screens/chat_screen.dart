@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -743,22 +744,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ? data[dataIndex + 1]
             : null;
 
-        return _Bubble(
+        void reply() {
+          setState(() => _replyTo = message);
+          _composerFocus.requestFocus();
+        }
+
+        return _SwipeToReply(
           key: ValueKey('message-${message.id}'),
-          message: message,
-          showAvatar:
-              nextMessage == null ||
-              nextMessage.senderId != message.senderId ||
-              !_isSameChatMinute(nextMessage.createdAt, message.createdAt),
-          showReceipt:
-              message.isMine &&
-              nextMessage == null &&
-              pending.isEmpty &&
-              message.receipt != null,
-          onReply: () {
-            setState(() => _replyTo = message);
-            _composerFocus.requestFocus();
-          },
+          fromRight: message.isMine,
+          onReply: reply,
+          child: _Bubble(
+            message: message,
+            showAvatar:
+                nextMessage == null ||
+                nextMessage.senderId != message.senderId ||
+                !_isSameChatMinute(nextMessage.createdAt, message.createdAt),
+            showReceipt:
+                message.isMine &&
+                nextMessage == null &&
+                pending.isEmpty &&
+                message.receipt != null,
+            onReply: reply,
+          ),
         );
       },
     );
@@ -1053,7 +1060,6 @@ class _DocumentAttachment extends StatelessWidget {
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
-    super.key,
     required this.message,
     required this.showAvatar,
     this.showReceipt = false,
@@ -1375,6 +1381,112 @@ class _Bubble extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Messenger-style swipe: drag a message toward the middle of the screen to reply.
+/// Incoming messages swipe right, your own swipe left.
+class _SwipeToReply extends StatefulWidget {
+  const _SwipeToReply({
+    super.key,
+    required this.fromRight,
+    required this.onReply,
+    required this.child,
+  });
+
+  final bool fromRight;
+  final VoidCallback onReply;
+  final Widget child;
+
+  @override
+  State<_SwipeToReply> createState() => _SwipeToReplyState();
+}
+
+class _SwipeToReplyState extends State<_SwipeToReply> {
+  static const _trigger = 56.0;
+  static const _maxDrag = 80.0;
+
+  double _distance = 0;
+  bool _dragging = false;
+  bool _armed = false;
+
+  void _update(DragUpdateDetails details) {
+    final delta = widget.fromRight ? -details.delta.dx : details.delta.dx;
+
+    setState(() {
+      _dragging = true;
+      _distance = (_distance + delta).clamp(0.0, _maxDrag);
+
+      if (!_armed && _distance >= _trigger) {
+        _armed = true;
+        HapticFeedback.selectionClick();
+      } else if (_armed && _distance < _trigger) {
+        _armed = false;
+      }
+    });
+  }
+
+  void _release() {
+    if (_armed) {
+      widget.onReply();
+    }
+
+    setState(() {
+      _dragging = false;
+      _distance = 0;
+      _armed = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = (_distance / _trigger).clamp(0.0, 1.0);
+    final offset = widget.fromRight ? -_distance : _distance;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragUpdate: _update,
+      onHorizontalDragEnd: (_) => _release(),
+      onHorizontalDragCancel: _release,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: 0,
+            bottom: 0,
+            left: widget.fromRight ? null : 4,
+            right: widget.fromRight ? 4 : null,
+            child: Center(
+              child: Opacity(
+                opacity: progress,
+                child: Transform.scale(
+                  scale: 0.6 + 0.4 * progress,
+                  child: CircleAvatar(
+                    radius: 15,
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHigh,
+                    child: Icon(
+                      Icons.reply_rounded,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          AnimatedContainer(
+            duration: _dragging
+                ? Duration.zero
+                : const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            transform: Matrix4.translationValues(offset, 0, 0),
+            child: widget.child,
+          ),
+        ],
       ),
     );
   }

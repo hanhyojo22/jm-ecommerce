@@ -121,6 +121,46 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('swiping a message starts a reply, a short swipe does not', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage.fromJson({
+        'id': 'seller-1',
+        'sender_id': 'seller',
+        'is_mine': false,
+        'type': 'text',
+        'body': 'Yes, two colors left.',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      }),
+      ChatMessage.fromJson({
+        'id': 'buyer-1',
+        'sender_id': 'buyer-1',
+        'is_mine': true,
+        'type': 'text',
+        'body': 'Which colors?',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      }),
+    ];
+
+    await _pumpChat(tester, api);
+
+    await tester.drag(find.text('Yes, two colors left.'), const Offset(20, 0));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('replying-to')), findsNothing);
+
+    await tester.drag(find.text('Yes, two colors left.'), const Offset(120, 0));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('replying-to')), findsOneWidget);
+
+    // Your own messages swipe the other way.
+    await tester.drag(find.text('Which colors?'), const Offset(-120, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Replying to yourself'), findsOneWidget);
+    await _disposeChat(tester);
+  });
+
   testWidgets(
     'a message appears immediately and is replaced by the server row',
     (tester) async {
