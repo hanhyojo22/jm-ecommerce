@@ -34,6 +34,8 @@ class Thread extends Component
 
     public ?string $pendingSellerOrderId = null;
 
+    public ?string $replyToId = null;
+
     public bool $viewingHistory = false;
 
     /** @var array<int, string> */
@@ -84,7 +86,7 @@ class Thread extends Component
             return null;
         }
 
-        $message = $sendMessage->handle($this->conversation, $user, $body, $this->clientMessageId, 'text', $this->pendingProductId, $this->pendingSellerOrderId);
+        $message = $sendMessage->handle($this->conversation, $user, $body, $this->clientMessageId, 'text', $this->pendingProductId, $this->pendingSellerOrderId, $this->replyToId);
         if ($message->wasRecentlyCreated) {
             RateLimiter::hit($key, 60);
         }
@@ -95,6 +97,7 @@ class Thread extends Component
         $this->reset('body');
         $this->pendingProductId = null;
         $this->pendingSellerOrderId = null;
+        $this->replyToId = null;
         $this->clientMessageId = (string) Str::uuid();
         $this->markRead();
 
@@ -178,6 +181,17 @@ class Thread extends Component
         $this->viewingHistory = false;
     }
 
+    public function replyTo(string $messageId): void
+    {
+        Gate::authorize('send', $this->conversation);
+        $this->replyToId = $this->conversation->messages()->whereKey($messageId)->value('id');
+    }
+
+    public function cancelReply(): void
+    {
+        $this->replyToId = null;
+    }
+
     public function clearPendingContext(): void
     {
         $this->pendingProductId = null;
@@ -227,7 +241,7 @@ class Thread extends Component
         $this->messageIds = array_slice(array_values(array_unique($this->messageIds)), -self::WINDOW_MESSAGE_LIMIT);
         $messages = $this->conversation->messages()
             ->whereKey($this->messageIds)
-            ->with(['sender', 'attachments'])
+            ->with(['sender', 'attachments', 'replyTo'])
             ->orderBy('created_at')
             ->orderBy('id')
             ->get();
@@ -269,6 +283,7 @@ class Thread extends Component
             'receipt' => $receipt,
             'canSend' => $canSend,
             'pendingContext' => $pendingContext,
+            'replyingTo' => $this->replyToId === null ? null : $this->conversation->messages()->find($this->replyToId),
             'headerContextLabel' => $headerContextLabel,
             'canUnblock' => ! $canSend && $this->conversation->blocksCreatedBy(auth()->user())->exists(),
         ]);

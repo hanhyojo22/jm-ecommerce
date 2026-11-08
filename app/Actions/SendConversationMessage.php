@@ -12,9 +12,9 @@ use Illuminate\Validation\ValidationException;
 
 class SendConversationMessage
 {
-    public function handle(Conversation $conversation, User $sender, string $body, string $clientMessageId, string $type = 'text', ?string $productId = null, ?string $sellerOrderId = null): ConversationMessage
+    public function handle(Conversation $conversation, User $sender, string $body, string $clientMessageId, string $type = 'text', ?string $productId = null, ?string $sellerOrderId = null, ?string $replyToId = null): ConversationMessage
     {
-        $message = DB::transaction(function () use ($conversation, $sender, $body, $clientMessageId, $type, $productId, $sellerOrderId): ConversationMessage {
+        $message = DB::transaction(function () use ($conversation, $sender, $body, $clientMessageId, $type, $productId, $sellerOrderId, $replyToId): ConversationMessage {
             $existing = ConversationMessage::query()->where('sender_id', $sender->id)->where('client_message_id', $clientMessageId)->first();
             if ($existing !== null) {
                 if ($existing->conversation_id !== $conversation->id || $existing->body !== trim($body) || $existing->type !== $type || $existing->product_id !== $productId || $existing->seller_order_id !== $sellerOrderId) {
@@ -22,6 +22,9 @@ class SendConversationMessage
                 }
 
                 return $existing;
+            }
+            if ($replyToId !== null && ! $conversation->messages()->whereKey($replyToId)->exists()) {
+                throw ValidationException::withMessages(['reply_to_id' => 'That message is no longer available.']);
             }
             $context = app(ConversationContext::class)->forMessage($conversation, $sender, $productId, $sellerOrderId);
             $message = ConversationMessage::query()->createOrFirst([
@@ -31,6 +34,7 @@ class SendConversationMessage
                 'conversation_id' => $conversation->id,
                 'type' => $type,
                 'body' => trim($body),
+                'reply_to_id' => $replyToId,
                 ...$context,
             ]);
 

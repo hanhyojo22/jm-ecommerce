@@ -408,6 +408,7 @@ class ApiClient {
     required String clientMessageId,
     String? productId,
     String? sellerOrderId,
+    String? replyToId,
   }) async => ChatMessage.fromJson(
     mapOf(
       await _data(
@@ -418,6 +419,7 @@ class ApiClient {
           'client_message_id': clientMessageId,
           'product_id': ?productId,
           'seller_order_id': ?sellerOrderId,
+          'reply_to_id': ?replyToId,
         },
       ),
     ),

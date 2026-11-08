@@ -401,6 +401,30 @@ class ConversationTest extends TestCase
             ->assertDontSee('oldest-message-marker');
     }
 
+    public function test_seller_replies_to_a_specific_product_inquiry(): void
+    {
+        $product = $this->product();
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'staff']);
+        $buyer = User::factory()->create();
+        $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id]);
+        $inquiry = $conversation->messages()->create([
+            'sender_id' => $buyer->id, 'client_message_id' => (string) str()->uuid(), 'type' => 'text', 'body' => 'Is this in stock?',
+            'product_id' => $product->id, 'context_snapshot' => ['type' => 'product', 'title' => $product->name, 'price' => $product->price],
+        ]);
+
+        Livewire::actingAs($seller)->test(Thread::class, ['conversation' => $conversation])
+            ->call('replyTo', $inquiry->id)
+            ->assertSee('Replying to '.$buyer->name)
+            ->call('send', 'Yes, five left.', (string) str()->uuid())
+            ->assertHasNoErrors()
+            ->assertSet('replyToId', null)
+            ->assertSee('data-reply-quote', false)
+            ->assertDontSee('data-replying-to', false);
+
+        $this->assertDatabaseHas('conversation_messages', ['body' => 'Yes, five left.', 'reply_to_id' => $inquiry->id]);
+    }
+
     public function test_retrying_a_message_with_the_same_client_id_does_not_duplicate_or_rebroadcast_it(): void
     {
         $buyer = User::factory()->create();

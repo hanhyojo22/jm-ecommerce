@@ -74,6 +74,53 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('long-press replies to a message and the reply shows a quote', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage.fromJson({
+        'id': 'seller-1',
+        'sender_id': 'seller',
+        'is_mine': false,
+        'type': 'text',
+        'body': 'Yes, two colors left.',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      }),
+      ChatMessage.fromJson({
+        'id': 'buyer-2',
+        'sender_id': 'buyer-1',
+        'is_mine': true,
+        'type': 'text',
+        'body': 'Which colors?',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'reply_to': {
+          'id': 'seller-0',
+          'body': 'It ships tomorrow.',
+          'context_label': 'Laptop Pro',
+          'is_mine': false,
+        },
+      }),
+    ];
+
+    await _pumpChat(tester, api);
+
+    expect(find.byKey(const ValueKey('reply-quote-buyer-2')), findsOneWidget);
+    expect(find.text('Laptop Pro · It ships tomorrow.'), findsOneWidget);
+
+    await tester.longPress(find.text('Yes, two colors left.'));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('replying-to')), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'Black please');
+    await tester.tap(find.byIcon(Icons.send_rounded));
+    await tester.pump();
+
+    expect(api.lastReplyToId, 'seller-1');
+    expect(find.byKey(const ValueKey('replying-to')), findsNothing);
+    await _disposeChat(tester);
+  });
+
   testWidgets(
     'a message appears immediately and is replaced by the server row',
     (tester) async {
@@ -943,6 +990,7 @@ class _FakeApiClient extends ApiClient {
   List<ChatMessage> serverMessages = const [];
   String? lastClientMessageId;
   String? lastProductId;
+  String? lastReplyToId;
   String? lastAttachmentClientMessageId;
   PickedAttachment? lastAttachment;
 
@@ -972,9 +1020,11 @@ class _FakeApiClient extends ApiClient {
     required String clientMessageId,
     String? productId,
     String? sellerOrderId,
+    String? replyToId,
   }) {
     lastClientMessageId = clientMessageId;
     lastProductId = productId;
+    lastReplyToId = replyToId;
     clientMessageIds.add(clientMessageId);
 
     final completer = Completer<ChatMessage>();

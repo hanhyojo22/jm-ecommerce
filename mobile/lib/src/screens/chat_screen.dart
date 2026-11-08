@@ -49,6 +49,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   DateTime? _lastTypingSent;
   String? _pendingProductId;
   String? _pendingSellerOrderId;
+  ChatMessage? _replyTo;
+  final _composerFocus = FocusNode();
 
   @override
   void initState() {
@@ -73,6 +75,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _events?.cancel();
     _states?.cancel();
     _composer.dispose();
+    _composerFocus.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -210,9 +213,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       clientId: const Uuid().v4(),
       body: body,
       createdAt: DateTime.now(),
+      replyToId: _replyTo?.id,
     );
 
-    setState(() => _pending.add(item));
+    setState(() {
+      _pending.add(item);
+      _replyTo = null;
+    });
     _composer.clear();
     _scrollToLatest();
     await _sendPending(item);
@@ -343,6 +350,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           clientMessageId: item.clientId,
           productId: _pendingProductId,
           sellerOrderId: _pendingSellerOrderId,
+          replyToId: item.replyToId,
         );
       } else {
         await api.sendAttachment(
@@ -433,7 +441,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         .value;
     if (conversation != null && conversation.id != widget.conversationId) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) context.go('/conversations/${conversation.id}');
+        // Keep the unsent product/order context across the alias redirect.
+        if (mounted) {
+          final pendingContext = {
+            'product_id': ?_pendingProductId,
+            'seller_order_id': ?_pendingSellerOrderId,
+          };
+          context.go(
+            Uri(
+              path: '/conversations/${conversation.id}',
+              queryParameters: pendingContext.isEmpty ? null : pendingContext,
+            ).toString(),
+          );
+        }
       });
     }
     final theme = Theme.of(context);
@@ -525,6 +545,59 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 }),
               ),
             ),
+          if (_replyTo case final replyTo?)
+            Container(
+              key: const ValueKey('replying-to'),
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              padding: const EdgeInsets.only(left: 10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.35,
+                ),
+                border: Border(
+                  left: BorderSide(color: theme.colorScheme.primary, width: 3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          replyTo.isMine
+                              ? 'Replying to yourself'
+                              : 'Replying to ${conversation?.store?.name ?? 'store'}',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        Text(
+                          _quoteText(
+                            replyTo.contextSnapshot?['type'] == 'product'
+                                ? replyTo.contextSnapshot!['title'] as String?
+                                : replyTo.contextSnapshot?['type'] == 'order'
+                                ? 'Order ${replyTo.contextSnapshot!['number']}'
+                                : null,
+                            replyTo.body.trim().isEmpty &&
+                                    replyTo.attachments.isNotEmpty
+                                ? 'Attachment'
+                                : replyTo.body,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Cancel reply',
+                    onPressed: () => setState(() => _replyTo = null),
+                  ),
+                ],
+              ),
+            ),
           if (_typing)
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
@@ -565,6 +638,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   Expanded(
                     child: TextField(
                       controller: _composer,
+                      focusNode: _composerFocus,
                       onChanged: _onComposerChanged,
                       minLines: 1,
                       maxLines: 4,
@@ -681,6 +755,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               nextMessage == null &&
               pending.isEmpty &&
               message.receipt != null,
+          onReply: () {
+            setState(() => _replyTo = message);
+            _composerFocus.requestFocus();
+          },
         );
       },
     );
@@ -697,12 +775,14 @@ class _PendingMessage {
     required this.body,
     required this.createdAt,
     this.attachment,
+    this.replyToId,
   });
 
   final String clientId;
   final String body;
   final DateTime createdAt;
   final PickedAttachment? attachment;
+  final String? replyToId;
   _PendingStatus status = _PendingStatus.queued;
 }
 
@@ -977,11 +1057,13 @@ class _Bubble extends StatelessWidget {
     required this.message,
     required this.showAvatar,
     this.showReceipt = false,
+    this.onReply,
   });
 
   final ChatMessage message;
   final bool showAvatar;
   final bool showReceipt;
+  final VoidCallback? onReply;
 
   @override
   Widget build(BuildContext context) {
@@ -998,238 +1080,299 @@ class _Bubble extends StatelessWidget {
         ? theme.colorScheme.surfaceContainerLowest
         : background;
     final snapshot = message.contextSnapshot;
+    final reply = message.replyTo;
 
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!mine) ...[
-            if (showAvatar)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: CircleAvatar(
-                  key: ValueKey('sender-avatar-${message.id}'),
-                  radius: 14,
-                  backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                  child: Icon(
-                    Icons.person_rounded,
-                    size: 19,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              )
-            else
-              const SizedBox(width: 28),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: mine
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                if (snapshot != null)
-                  Builder(
-                    builder: (context) {
-                      final isProduct = snapshot['type'] == 'product';
-                      final storeSlug = snapshot['store_slug'] as String?;
-                      final productSlug = snapshot['slug'] as String?;
-                      final orderId = snapshot['order_id'] as String?;
-                      final destination = isProduct
-                          ? (storeSlug != null && productSlug != null
-                                ? '/product/$storeSlug/$productSlug'
-                                : null)
-                          : (orderId != null ? '/orders/$orderId' : null);
+    return GestureDetector(
+      onLongPress: onReply,
+      child: Semantics(
+        onLongPressHint: onReply == null ? null : 'Reply',
+        child: Align(
+          alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!mine) ...[
+                if (showAvatar)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: CircleAvatar(
+                      key: ValueKey('sender-avatar-${message.id}'),
+                      radius: 14,
+                      backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                      child: Icon(
+                        Icons.person_rounded,
+                        size: 19,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(width: 28),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: mine
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  children: [
+                    if (snapshot != null)
+                      Builder(
+                        builder: (context) {
+                          final isProduct = snapshot['type'] == 'product';
+                          final storeSlug = snapshot['store_slug'] as String?;
+                          final productSlug = snapshot['slug'] as String?;
+                          final orderId = snapshot['order_id'] as String?;
+                          final destination = isProduct
+                              ? (storeSlug != null && productSlug != null
+                                    ? '/product/$storeSlug/$productSlug'
+                                    : null)
+                              : (orderId != null ? '/orders/$orderId' : null);
 
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 6),
-                        color: isProduct
-                            ? theme.colorScheme.primaryContainer.withValues(
-                                alpha: 0.35,
-                              )
-                            : theme.colorScheme.surfaceContainerHighest,
-                        child: InkWell(
-                          onTap: destination == null
-                              ? null
-                              : () => context.push(destination),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (snapshot['image_url'] is String)
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Image.network(
-                                      snapshot['image_url'] as String,
-                                      width: 48,
-                                      height: 48,
-                                      fit: BoxFit.cover,
-                                    ),
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            color: isProduct
+                                ? theme.colorScheme.primaryContainer.withValues(
+                                    alpha: 0.35,
                                   )
-                                else
-                                  CircleAvatar(
-                                    radius: 24,
-                                    backgroundColor: isProduct
-                                        ? theme.colorScheme.primaryContainer
-                                        : theme.colorScheme.surfaceContainerHigh,
-                                    child: Icon(
-                                      isProduct
-                                          ? Icons.shopping_bag_outlined
-                                          : Icons.receipt_long_outlined,
-                                      size: 20,
-                                      color: theme.colorScheme.onSurfaceVariant,
+                                : theme.colorScheme.surfaceContainerHighest,
+                            child: InkWell(
+                              onTap: destination == null
+                                  ? null
+                                  : () => context.push(destination),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (snapshot['image_url'] is String)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Image.network(
+                                          snapshot['image_url'] as String,
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    else
+                                      CircleAvatar(
+                                        radius: 24,
+                                        backgroundColor: isProduct
+                                            ? theme.colorScheme.primaryContainer
+                                            : theme
+                                                  .colorScheme
+                                                  .surfaceContainerHigh,
+                                        child: Icon(
+                                          isProduct
+                                              ? Icons.shopping_bag_outlined
+                                              : Icons.receipt_long_outlined,
+                                          size: 20,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                      ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isProduct
+                                                ? '${snapshot['title']}'
+                                                : 'Order ${snapshot['number']}',
+                                            maxLines: 2,
+                                          ),
+                                          Text(
+                                            '₱${isProduct ? snapshot['price'] : snapshot['total']}',
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        isProduct
-                                            ? '${snapshot['title']}'
-                                            : 'Order ${snapshot['number']}',
-                                        maxLines: 2,
-                                      ),
-                                      Text(
-                                        '₱${isProduct ? snapshot['price'] : snapshot['total']}',
-                                      ),
-                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    Container(
+                      key: compactAttachment
+                          ? ValueKey('attachment-bubble-${message.id}')
+                          : ValueKey('message-bubble-${message.id}'),
+                      constraints: BoxConstraints(
+                        maxWidth:
+                            MediaQuery.of(context).size.width * 0.78 -
+                            (mine ? 0 : 36),
+                      ),
+                      padding: photoOnly
+                          ? const EdgeInsets.all(4)
+                          : compactAttachment
+                          ? EdgeInsets.zero
+                          : const EdgeInsets.symmetric(
+                              horizontal: 13,
+                              vertical: 9,
+                            ),
+                      clipBehavior: compactAttachment
+                          ? Clip.antiAlias
+                          : Clip.none,
+                      decoration: BoxDecoration(
+                        color: bubbleBackground,
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(16),
+                          topRight: const Radius.circular(16),
+                          bottomLeft: Radius.circular(mine ? 16 : 4),
+                          bottomRight: Radius.circular(mine ? 4 : 16),
+                        ),
+                        border: photoOnly || !mine
+                            ? Border.all(
+                                color: photoOnly
+                                    ? theme.colorScheme.outline
+                                    : theme.colorScheme.outlineVariant,
+                              )
+                            : null,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (reply != null)
+                            Container(
+                              key: ValueKey('reply-quote-${message.id}'),
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                              decoration: BoxDecoration(
+                                color: foreground.withValues(alpha: 0.08),
+                                border: Border(
+                                  left: BorderSide(
+                                    color: mine
+                                        ? foreground.withValues(alpha: 0.7)
+                                        : theme.colorScheme.primary,
+                                    width: 3,
                                   ),
                                 ),
-                              ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    reply.isMine ? 'You' : 'Store',
+                                    style: theme.textTheme.labelSmall?.copyWith(
+                                      color: foreground,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  Text(
+                                    _quoteText(reply.contextLabel, reply.body),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: foreground.withValues(alpha: 0.85),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (message.body.trim().isNotEmpty)
+                            Text(
+                              message.body,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: foreground,
+                                height: 1.4,
+                              ),
+                            ),
+                          ...message.attachments.map(
+                            (attachment) => Padding(
+                              padding: EdgeInsets.only(
+                                top: compactAttachment ? 0 : 6,
+                              ),
+                              child:
+                                  attachment.isImage && attachment.url != null
+                                  ? ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxWidth: 220,
+                                        maxHeight: 320,
+                                      ),
+                                      child: NetworkThumb(
+                                        url: attachment.url,
+                                        cacheKey:
+                                            'chat-attachment-${attachment.id}',
+                                        width: 220,
+                                        fit: BoxFit.contain,
+                                        radius: photoOnly ? 12 : 10,
+                                      ),
+                                    )
+                                  : _DocumentAttachment(
+                                      key: ValueKey(
+                                        'document-attachment-${attachment.id}',
+                                      ),
+                                      name: attachment.name,
+                                      foreground: foreground,
+                                      compact: compactAttachment,
+                                      onTap: attachment.url == null
+                                          ? null
+                                          : () => launchUrl(
+                                              Uri.parse(attachment.url!),
+                                              mode: LaunchMode
+                                                  .externalApplication,
+                                            ),
+                                    ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                Container(
-                  key: compactAttachment
-                      ? ValueKey('attachment-bubble-${message.id}')
-                      : ValueKey('message-bubble-${message.id}'),
-                  constraints: BoxConstraints(
-                    maxWidth:
-                        MediaQuery.of(context).size.width * 0.78 -
-                        (mine ? 0 : 36),
-                  ),
-                  padding: photoOnly
-                      ? const EdgeInsets.all(4)
-                      : compactAttachment
-                      ? EdgeInsets.zero
-                      : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                  clipBehavior: compactAttachment ? Clip.antiAlias : Clip.none,
-                  decoration: BoxDecoration(
-                    color: bubbleBackground,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(mine ? 16 : 4),
-                      bottomRight: Radius.circular(mine ? 4 : 16),
-                    ),
-                    border: photoOnly || !mine
-                        ? Border.all(
-                            color: photoOnly
-                                ? theme.colorScheme.outline
-                                : theme.colorScheme.outlineVariant,
-                          )
-                        : null,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (message.body.trim().isNotEmpty)
-                        Text(
-                          message.body,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: foreground,
-                            height: 1.4,
-                          ),
-                        ),
-                      ...message.attachments.map(
-                        (attachment) => Padding(
-                          padding: EdgeInsets.only(
-                            top: compactAttachment ? 0 : 6,
-                          ),
-                          child: attachment.isImage && attachment.url != null
-                              ? ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 220,
-                                    maxHeight: 320,
-                                  ),
-                                  child: NetworkThumb(
-                                    url: attachment.url,
-                                    cacheKey:
-                                        'chat-attachment-${attachment.id}',
-                                    width: 220,
-                                    fit: BoxFit.contain,
-                                    radius: photoOnly ? 12 : 10,
-                                  ),
-                                )
-                              : _DocumentAttachment(
-                                  key: ValueKey(
-                                    'document-attachment-${attachment.id}',
-                                  ),
-                                  name: attachment.name,
-                                  foreground: foreground,
-                                  compact: compactAttachment,
-                                  onTap: attachment.url == null
-                                      ? null
-                                      : () => launchUrl(
-                                          Uri.parse(attachment.url!),
-                                          mode: LaunchMode.externalApplication,
-                                        ),
-                                ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-                  child: showReceipt
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+                      child: showReceipt
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  dateTime(message.createdAt),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  key: const ValueKey('receipt-indicator'),
+                                  Icons.done,
+                                  size: 14,
+                                  color: message.receipt == 'Read'
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ],
+                            )
+                          : Text(
                               dateTime(message.createdAt),
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                                 fontSize: 11,
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              key: const ValueKey('receipt-indicator'),
-                              Icons.done,
-                              size: 14,
-                              color: message.receipt == 'Read'
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ],
-                        )
-                      : Text(
-                          dateTime(message.createdAt),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontSize: 11,
-                          ),
-                        ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
+
+String _quoteText(String? contextLabel, String body) => [
+  contextLabel,
+  body.trim(),
+].where((part) => part != null && part.isNotEmpty).join(' · ');
 
 bool _isSameChatMinute(String first, String second) {
   final firstTime = DateTime.tryParse(first);

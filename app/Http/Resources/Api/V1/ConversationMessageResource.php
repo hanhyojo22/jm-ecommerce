@@ -31,6 +31,10 @@ class ConversationMessageResource extends JsonResource
                 'image_url' => filled($this->context_snapshot['image_path'] ?? null)
                     ? Storage::disk('product_images')->url($this->context_snapshot['image_path']) : null,
             ],
+            'reply_to' => $this->whenLoaded('replyTo', fn (): array => [
+                ...$this->replyTo->quote(),
+                'is_mine' => $request->user()?->id === $this->replyTo->sender_id,
+            ]),
             'client_message_id' => $this->client_message_id,
             'created_at' => $this->created_at?->toIso8601String(),
             'receipt' => $this->when($this->receipt !== null, fn (): string => $this->receipt),

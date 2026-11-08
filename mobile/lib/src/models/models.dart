@@ -819,6 +819,7 @@ class ChatMessage {
     this.productId,
     this.sellerOrderId,
     this.contextSnapshot,
+    this.replyTo,
   });
 
   final String id;
@@ -834,6 +835,7 @@ class ChatMessage {
   final String? productId;
   final String? sellerOrderId;
   final Map<String, dynamic>? contextSnapshot;
+  final ChatReply? replyTo;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
     id: str(json['id']),
@@ -850,9 +852,34 @@ class ChatMessage {
     contextSnapshot: json['context_snapshot'] == null
         ? null
         : mapOf(json['context_snapshot']),
+    replyTo: json['reply_to'] == null
+        ? null
+        : ChatReply.fromJson(mapOf(json['reply_to'])),
     attachments: listOf(json['attachments'])
         .map(ChatAttachment.fromJson)
         .toList(growable: false),
+  );
+}
+
+/// The quoted message shown above a reply.
+class ChatReply {
+  const ChatReply({
+    required this.id,
+    required this.body,
+    required this.isMine,
+    this.contextLabel,
+  });
+
+  final String id;
+  final String body;
+  final bool isMine;
+  final String? contextLabel;
+
+  factory ChatReply.fromJson(Map<String, dynamic> json) => ChatReply(
+    id: str(json['id']),
+    body: str(json['body']),
+    isMine: boolean(json['is_mine']),
+    contextLabel: json['context_label'] as String?,
   );
 }
 

@@ -143,7 +143,7 @@ class ConversationController extends Controller
         $conversation->load(['store']);
 
         $messages = $conversation->messages()
-            ->with(['sender:id,name', 'attachments'])
+            ->with(['sender:id,name', 'attachments', 'replyTo'])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->cursorPaginate(50);
@@ -173,6 +173,7 @@ class ConversationController extends Controller
             'client_message_id' => ['required', 'uuid'],
             'product_id' => ['nullable', 'ulid', 'prohibits:seller_order_id'],
             'seller_order_id' => ['nullable', 'ulid'],
+            'reply_to_id' => ['nullable', 'ulid'],
         ]);
 
         $key = 'conversation-message:'.$request->user()->id;
@@ -189,13 +190,14 @@ class ConversationController extends Controller
             'text',
             $data['product_id'] ?? null,
             $data['seller_order_id'] ?? null,
+            $data['reply_to_id'] ?? null,
         );
 
         if ($message->wasRecentlyCreated) {
             RateLimiter::hit($key, 60);
         }
 
-        $message->load(['sender:id,name', 'attachments']);
+        $message->load(['sender:id,name', 'attachments', 'replyTo']);
 
         return ConversationMessageResource::make($message)
             ->response($request)

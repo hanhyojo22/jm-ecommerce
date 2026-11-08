@@ -532,6 +532,36 @@ class ConversationApiTest extends TestCase
         $this->assertDatabaseCount('conversation_messages', 1);
     }
 
+    public function test_a_reply_quotes_a_message_from_the_same_conversation_only(): void
+    {
+        [$buyer, $seller, $conversation, , $product] = $this->conversation();
+        $sellerMessage = $conversation->messages()->create([
+            'sender_id' => $seller->id, 'client_message_id' => (string) Str::uuid(),
+            'type' => 'text', 'body' => 'Yes, the tote is available.',
+            'product_id' => $product->id, 'context_snapshot' => ['type' => 'product', 'title' => 'Chat Tote', 'price' => '199.00'],
+        ]);
+
+        $this->actingAs($buyer)->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Great, any other colors?', 'client_message_id' => (string) Str::uuid(), 'reply_to_id' => $sellerMessage->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.reply_to.id', $sellerMessage->id)
+            ->assertJsonPath('data.reply_to.context_label', 'Chat Tote')
+            ->assertJsonPath('data.reply_to.body', 'Yes, the tote is available.')
+            ->assertJsonPath('data.reply_to.is_mine', false);
+        $this->getJson("/api/v1/conversations/{$conversation->id}/messages")->assertOk()
+            ->assertJsonPath('data.0.reply_to', null)
+            ->assertJsonPath('data.1.reply_to.id', $sellerMessage->id);
+
+        [, $otherSeller, $otherConversation] = $this->conversation();
+        $foreignMessage = $otherConversation->messages()->create([
+            'sender_id' => $otherSeller->id, 'client_message_id' => (string) Str::uuid(), 'type' => 'text', 'body' => 'Elsewhere',
+        ]);
+        $this->postJson("/api/v1/conversations/{$conversation->id}/messages", [
+            'body' => 'Sneaky', 'client_message_id' => (string) Str::uuid(), 'reply_to_id' => $foreignMessage->id,
+        ])->assertUnprocessable();
+        $this->assertDatabaseMissing('conversation_messages', ['body' => 'Sneaky']);
+    }
+
     public function test_retired_room_id_resolves_then_checks_access(): void
     {
         [$buyer, , $conversation] = $this->conversation();
