@@ -76,7 +76,7 @@
                                     @if ($isBuyerMessages && $conversation->store->logo_path)
                                         <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
                                     @else
-                                        {{ Str::upper(Str::substr($message->sender->name, 0, 1)) }}
+                                        {{ Str::upper(Str::substr($isBuyerMessages ? $conversation->store->name : $message->sender->name, 0, 1)) }}
                                     @endif
                                 </span>
                             @endif

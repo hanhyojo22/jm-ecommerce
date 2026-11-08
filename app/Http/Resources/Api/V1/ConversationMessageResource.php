@@ -20,7 +20,6 @@ class ConversationMessageResource extends JsonResource
         return [
             'id' => $this->id,
             'sender_id' => $this->sender_id,
-            'sender_name' => $this->whenLoaded('sender', fn (): string => $this->sender->name),
             'is_mine' => $request->user()?->id === $this->sender_id,
             'type' => $this->type,
             'body' => $this->body,

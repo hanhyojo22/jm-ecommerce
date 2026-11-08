@@ -808,7 +808,6 @@ class ChatMessage {
   const ChatMessage({
     required this.id,
     required this.senderId,
-    this.senderName,
     required this.isMine,
     required this.type,
     required this.body,
@@ -824,7 +823,6 @@ class ChatMessage {
 
   final String id;
   final String senderId;
-  final String? senderName;
   final bool isMine;
   final String type;
   final String body;
@@ -840,7 +838,6 @@ class ChatMessage {
   factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
     id: str(json['id']),
     senderId: str(json['sender_id']),
-    senderName: json['sender_name'] as String?,
     isMine: boolean(json['is_mine']),
     type: str(json['type'], 'text'),
     body: str(json['body']),

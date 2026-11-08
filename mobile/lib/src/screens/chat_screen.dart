@@ -530,7 +530,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
-          Expanded(child: _body(messages, theme)),
+          Expanded(child: _body(messages, theme, conversation?.store)),
           if (_pendingProductId != null || _pendingSellerOrderId != null)
             ListTile(
               dense: true,
@@ -804,7 +804,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
-  Widget _body(AsyncValue<List<ChatMessage>> messages, ThemeData theme) {
+  Widget _body(
+    AsyncValue<List<ChatMessage>> messages,
+    ThemeData theme,
+    StoreInfo? store,
+  ) {
     final loaded = messages.value;
     final pending = _pending.reversed.toList(growable: false);
 
@@ -892,6 +896,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           onReply: reply,
           child: _Bubble(
             message: message,
+            store: store,
             showAvatar:
                 nextMessage == null ||
                 nextMessage.senderId != message.senderId ||
@@ -1199,12 +1204,14 @@ class _Bubble extends StatelessWidget {
   const _Bubble({
     required this.message,
     required this.showAvatar,
+    this.store,
     this.showReceipt = false,
     this.onLongPress,
   });
 
   final ChatMessage message;
   final bool showAvatar;
+  final StoreInfo? store;
   final bool showReceipt;
   final VoidCallback? onLongPress;
 
@@ -1239,15 +1246,12 @@ class _Bubble extends StatelessWidget {
                 if (showAvatar)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 24),
-                    child: CircleAvatar(
+                    // Buyers talk to the store, never to an individual staff member.
+                    child: StoreAvatar(
                       key: ValueKey('sender-avatar-${message.id}'),
+                      name: store?.name ?? 'Store',
+                      logoUrl: store?.logoUrl,
                       radius: 14,
-                      backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                      child: Icon(
-                        Icons.person_rounded,
-                        size: 19,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
                     ),
                   )
                 else

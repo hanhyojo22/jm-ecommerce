@@ -479,7 +479,6 @@ void main() {
       ChatMessage(
         id: 'incoming-photo',
         senderId: 'seller-1',
-        senderName: 'James',
         isMine: false,
         type: 'file',
         body: '',
@@ -531,7 +530,6 @@ void main() {
         ChatMessage(
           id: 'incoming-$type',
           senderId: 'seller-1',
-          senderName: 'James',
           isMine: false,
           type: type == 'text' ? 'text' : 'file',
           body: type == 'text' ? 'Hello' : '',
