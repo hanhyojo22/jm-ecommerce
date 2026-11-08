@@ -6,11 +6,13 @@ use App\Models\Conversation;
 use App\Models\TenantMember;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldRescue;
 use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ConversationInboxChanged implements ShouldBroadcastNow, ShouldDispatchAfterCommit
+// ShouldRescue: a down/sleeping Reverb must not fail the request that triggered this.
+class ConversationInboxChanged implements ShouldBroadcastNow, ShouldDispatchAfterCommit, ShouldRescue
 {
     use Dispatchable, SerializesModels;
 

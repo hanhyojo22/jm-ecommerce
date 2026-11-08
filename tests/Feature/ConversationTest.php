@@ -19,6 +19,7 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldRescue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Broadcast;
@@ -38,7 +39,9 @@ class ConversationTest extends TestCase
     public function test_chat_events_broadcast_without_waiting_for_the_queue_worker(): void
     {
         foreach ([MessageSent::class, ConversationReceiptUpdated::class, ConversationInboxChanged::class, TypingStatusChanged::class] as $event) {
-            $this->assertContains(ShouldBroadcastNow::class, class_implements($event), $event.' would sit in the queue before reaching the other person.');
+            $implements = class_implements($event);
+            $this->assertContains(ShouldBroadcastNow::class, $implements, $event.' would sit in the queue before reaching the other person.');
+            $this->assertContains(ShouldRescue::class, $implements, $event.' would fail the triggering request whenever Reverb is slow or unreachable.');
         }
     }
 
