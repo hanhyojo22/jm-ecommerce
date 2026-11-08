@@ -33,7 +33,12 @@ class SendChatMessagePush implements ShouldQueue
         // exactly: a deactivated staff member, or staff of a suspended store, can no
         // longer view the conversation through the API and must not be pushed its
         // content either.
-        $recipients = $message->sender_id === $conversation->buyer_id
+        $sentByBuyer = $message->sender_id === $conversation->buyer_id;
+
+        // Buyers talk to the store, not to whichever staff member replied.
+        $senderName = $sentByBuyer ? $message->sender->name : $conversation->store->name;
+
+        $recipients = $sentByBuyer
             ? User::query()
                 ->where('account_type', 'seller')
                 ->where('is_active', true)
@@ -49,13 +54,13 @@ class SendChatMessagePush implements ShouldQueue
         foreach ($recipients as $recipient) {
             $this->notifier->sendToUser(
                 $recipient,
-                $message->sender->name,
+                $senderName,
                 Str::limit($message->body, 120),
                 ['type' => 'chat', 'conversation_id' => $conversation->id],
             );
 
             try {
-                $recipient->notify(new ChatMessageReceived($message->sender->name, $message->body, $conversation->id));
+                $recipient->notify(new ChatMessageReceived($senderName, $message->body, $conversation->id));
             } catch (Throwable $exception) {
                 report($exception);
             }

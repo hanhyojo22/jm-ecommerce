@@ -59,7 +59,7 @@ class SendChatMessagePushTest extends TestCase
         Notification::assertSentTo($manager, ChatMessageReceived::class);
     }
 
-    public function test_a_seller_message_pushes_only_the_buyer(): void
+    public function test_a_seller_message_pushes_only_the_buyer_under_the_store_name(): void
     {
         Notification::fake();
 
@@ -77,7 +77,7 @@ class SendChatMessagePushTest extends TestCase
             ->once()
             ->with(
                 Mockery::on(fn (User $user) => $user->is($buyer)),
-                $owner->name,
+                $conversation->store->name,
                 'Yes, 5 left.',
                 ['type' => 'chat', 'conversation_id' => $conversation->id],
             );
