@@ -56,9 +56,12 @@ class ConversationController extends Controller
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower($search)).'%';
 
-                $query->where(function (Builder $query) use ($term): void {
+                $query->where(function (Builder $query) use ($term, $search): void {
                     $query->whereHas('store', fn (Builder $store) => $store->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
-                        ->orWhereHas('messages', fn (Builder $messages) => $messages->whereRaw("LOWER(CAST(context_snapshot AS TEXT)) LIKE ? ESCAPE '!'", [$term]));
+                        // Matches the product title / order number a context carries, not the raw JSON blob.
+                        ->orWhereHas('messages', fn (Builder $messages) => $messages
+                            ->whereLike('context_snapshot->title', "%{$search}%")
+                            ->orWhereLike('context_snapshot->number', "%{$search}%"));
                 });
             })
             ->orderByDesc('latest_message_at')

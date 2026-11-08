@@ -13,7 +13,7 @@
                             </span>
                             <span data-presence-dot x-cloak x-show="online" class="absolute bottom-0 right-0 size-3 rounded-full border-2 border-white bg-emerald-500" aria-hidden="true"></span>
                         </span>
-                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $isBuyerMessages ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" class="truncate text-xs text-muted"><span data-presence-label data-context="Marketplace chat" class="block truncate" x-text="online ? 'Online · ' + $el.dataset.context : $el.dataset.context">Marketplace chat</span></p><p id="chat-typing" x-ref="typingIndicator" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
+                        <div class="min-w-0"><h1 class="truncate text-sm font-semibold text-ink sm:text-base">{{ $isBuyerMessages ? $conversation->store->name : $conversation->buyer->name }}</h1><p id="chat-presence" class="truncate text-xs text-muted"><span data-presence-label data-context="{{ $headerContextLabel }}" class="block truncate" x-text="online ? 'Online · ' + $el.dataset.context : $el.dataset.context">{{ $headerContextLabel }}</span></p><p id="chat-typing" x-ref="typingIndicator" class="hidden truncate text-xs font-medium text-brand-hover" aria-live="polite">Typing…</p></div>
                     </div>
                 </div>
                 <div class="flex shrink-0 items-center gap-1">
@@ -43,28 +43,34 @@
                 @php($previousDate = null)
                 @php($previousSenderId = null)
                 @forelse ($messages as $message)
-                    @if (($message->context_snapshot['type'] ?? null) === 'product')
-                        <div class="mb-2 mt-4 max-w-sm rounded-lg border border-line bg-white p-3">
-                            <div class="flex items-center gap-3">
-                                @if (filled($message->context_snapshot['image_path'] ?? null))
-                                    <img src="{{ Storage::disk('product_images')->url($message->context_snapshot['image_path']) }}" alt="" class="size-12 rounded-md object-cover">
-                                @endif
-                                <div><p class="font-semibold text-ink">{{ $message->context_snapshot['title'] ?? 'Product' }}</p><p class="text-sm text-muted">₱{{ $message->context_snapshot['price'] ?? '0.00' }}</p></div>
-                            </div>
-                        </div>
-                    @elseif (($message->context_snapshot['type'] ?? null) === 'order')
-                        <div class="mb-2 mt-4 max-w-sm rounded-lg border border-line bg-amber-50 p-3">
-                            <p class="font-semibold text-ink">Order {{ $message->context_snapshot['number'] ?? '' }}</p>
-                            <p class="text-sm text-muted">₱{{ $message->context_snapshot['total'] ?? '0.00' }} · {{ Str::headline($message->context_snapshot['status'] ?? '') }}</p>
-                        </div>
-                    @endif
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
                     <article wire:key="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" class="mb-1">
                         @php($nextMessage = $messages->get($loop->index + 1))
                         @php($endsRun = $nextMessage === null
                             || $nextMessage->sender_id !== $message->sender_id
                             || ! $nextMessage->created_at->isSameMinute($message->created_at))
-                        <div class="{{ $message->sender_id === auth()->id() ? 'flex justify-end' : 'flex items-end gap-2' }} {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
+                        @if ($message->context_snapshot)
+                            <div class="flex {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }} {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
+                                <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem]">
+                                    @if ($message->context_snapshot['type'] === 'product')
+                                        <a @if (filled($message->context_snapshot['slug'] ?? null)) href="{{ route('catalog.show', [$message->context_snapshot['store_slug'] ?? $conversation->store->slug, $message->context_snapshot['slug']]) }}" @endif class="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3 transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            @if (filled($message->context_snapshot['image_path'] ?? null))
+                                                <img src="{{ Storage::disk('product_images')->url($message->context_snapshot['image_path']) }}" alt="" class="size-12 shrink-0 rounded-md object-cover">
+                                            @else
+                                                <span class="grid size-12 shrink-0 place-items-center rounded-md bg-blue-100 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9ZM4.5 7.75 12 12l7.5-4.25M12 12v8.5"/></svg></span>
+                                            @endif
+                                            <span class="min-w-0 flex-1"><span class="block truncate font-semibold text-ink">{{ $message->context_snapshot['title'] ?? 'Product' }}</span><span class="block text-sm text-muted">₱{{ $message->context_snapshot['price'] ?? '0.00' }}</span></span>
+                                        </a>
+                                    @elseif ($message->context_snapshot['type'] === 'order')
+                                        <a @if (filled($message->context_snapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $message->context_snapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif class="flex items-center gap-3 rounded-lg border border-line bg-canvas p-3 transition hover:bg-line/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            <span class="grid size-12 shrink-0 place-items-center rounded-md bg-white text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7.5h14l1 13H4l1-13ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
+                                            <span class="min-w-0 flex-1"><span class="block truncate font-semibold text-ink">Order {{ $message->context_snapshot['number'] ?? '' }}</span><span class="block text-sm text-muted">₱{{ $message->context_snapshot['total'] ?? '0.00' }} · {{ Str::headline($message->context_snapshot['status'] ?? '') }}</span></span>
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+                        <div class="{{ $message->sender_id === auth()->id() ? 'flex justify-end' : 'flex items-end gap-2' }} {{ $message->context_snapshot ? 'mt-2' : ($message->sender_id === $previousSenderId ? '' : 'mt-4') }}">
                             @if ($message->sender_id !== auth()->id())
                                 <span class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $endsRun ? '' : 'invisible' }}" aria-hidden="true">
                                     @if ($isBuyerMessages && $conversation->store->logo_path)
@@ -117,7 +123,7 @@
                     @php($previousDate = $message->created_at)
                     @php($previousSenderId = $message->sender_id)
                 @empty
-                    <div x-show="pending.length === 0" class="flex min-h-64 flex-col items-center justify-center px-6 text-center"><div class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11.5h8M8 14.5h5"/></svg></div><p class="mt-3 text-sm font-semibold text-ink">Start the conversation</p><p class="mt-1 text-sm text-muted">Send a message about this store.</p></div>
+                    <div x-show="pending.length === 0" class="flex min-h-64 flex-col items-center justify-center px-6 text-center"><div class="grid size-14 place-items-center rounded-full bg-blue-50 text-brand-hover" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 11.5h8M8 14.5h5"/></svg></div><p class="mt-3 text-sm font-semibold text-ink">Start the conversation</p><p class="mt-1 text-sm text-muted">{{ $pendingContext ? 'Send a message about '.($pendingContext['type'] === 'product' ? 'this product.' : 'this order.') : 'Send a message about this store.' }}</p></div>
                 @endforelse
                 <div wire:ignore aria-live="polite">
                     <template x-for="item in pending" :key="item.id">

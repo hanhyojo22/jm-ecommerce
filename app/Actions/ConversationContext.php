@@ -37,7 +37,7 @@ class ConversationContext
 
             return ['product_id' => $product->id, 'context_snapshot' => [
                 'type' => 'product', 'title' => $product->name, 'price' => $product->price,
-                'image_path' => $imagePath,
+                'image_path' => $imagePath, 'slug' => $product->slug, 'store_slug' => $product->store->slug,
             ]];
         }
         $order = SellerOrder::query()->with('order')->findOrFail($sellerOrderId);
@@ -46,7 +46,7 @@ class ConversationContext
 
         return ['seller_order_id' => $order->id, 'context_snapshot' => [
             'type' => 'order', 'number' => $order->order->number, 'total' => $whole.'.'.str_pad($fraction, 2, '0'),
-            'status' => $order->status,
+            'status' => $order->status, 'order_id' => $order->order_id,
         ]];
     }
 }

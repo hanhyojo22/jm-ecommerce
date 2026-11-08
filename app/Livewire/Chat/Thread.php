@@ -249,6 +249,16 @@ class Thread extends Component
         $pendingContext = ($this->pendingProductId !== null || $this->pendingSellerOrderId !== null)
             ? app(ConversationContext::class)->forMessage($this->conversation, auth()->user(), $this->pendingProductId, $this->pendingSellerOrderId, false)['context_snapshot']
             : null;
+        // Falls back to the most recently loaded context-bearing message so the header still names
+        // the inquiry after the buyer's first message scrolls out of the visible window.
+        $headerContextType = $pendingContext['type']
+            ?? $messages->last(fn ($m) => $m->context_snapshot !== null)?->context_snapshot['type']
+            ?? null;
+        $headerContextLabel = match ($headerContextType) {
+            'product' => 'Product inquiry',
+            'order' => 'Order conversation',
+            default => 'Marketplace chat',
+        };
 
         return view('livewire.chat.thread', [
             'messages' => $messages,
@@ -259,6 +269,7 @@ class Thread extends Component
             'receipt' => $receipt,
             'canSend' => $canSend,
             'pendingContext' => $pendingContext,
+            'headerContextLabel' => $headerContextLabel,
             'canUnblock' => ! $canSend && $this->conversation->blocksCreatedBy(auth()->user())->exists(),
         ]);
     }

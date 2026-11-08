@@ -70,10 +70,15 @@ class Inbox extends Component
             ->when($this->filter === 'unread', fn ($query) => $query->unreadFor($user))
             ->when(filled($this->search), function ($query): void {
                 $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($this->search))).'%';
-                $query->where(function ($query) use ($term): void {
+                $needle = trim($this->search);
+                $query->where(function ($query) use ($term, $needle): void {
                     $query->whereHas('buyer', fn ($buyer) => $buyer->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
                         ->orWhereHas('store', fn ($store) => $store->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$term]))
-                        ->orWhereHas('messages', fn ($messages) => $messages->whereRaw("LOWER(CAST(context_snapshot AS TEXT)) LIKE ? ESCAPE '!'", [$term]));
+                        // Matches the product title / order number a context carries, not the raw JSON blob,
+                        // which used to also match internal keys like "image_path" or a stray price digit.
+                        ->orWhereHas('messages', fn ($messages) => $messages
+                            ->whereLike('context_snapshot->title', "%{$needle}%")
+                            ->orWhereLike('context_snapshot->number', "%{$needle}%"));
                 });
             })
             ->orderByDesc('latest_message_at')

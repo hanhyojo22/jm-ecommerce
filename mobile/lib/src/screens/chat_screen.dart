@@ -438,6 +438,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
     final theme = Theme.of(context);
 
+    // Reflects the most recently loaded context-bearing message, not the not-yet-sent
+    // pending context (that already has its own "Product/Order inquiry" chip below).
+    String? headerContextType;
+    for (final m in (messages.value ?? const <ChatMessage>[]).reversed) {
+      if (m.contextSnapshot != null) {
+        headerContextType = m.contextSnapshot!['type'] as String?;
+        break;
+      }
+    }
+    final headerContextLabel = switch (headerContextType) {
+      'product' => 'Product inquiry',
+      'order' => 'Order conversation',
+      _ => 'Marketplace chat',
+    };
+
     ref.listen<AsyncValue<List<ChatMessage>>>(
       messagesProvider(widget.conversationId),
       (previous, next) {
@@ -468,7 +483,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(conversation?.store?.name ?? 'Chat'),
-                  Text('Marketplace chat', style: theme.textTheme.bodySmall),
+                  Text(headerContextLabel, style: theme.textTheme.bodySmall),
                 ],
               ),
             ),
@@ -1017,39 +1032,82 @@ class _Bubble extends StatelessWidget {
                   : CrossAxisAlignment.start,
               children: [
                 if (snapshot != null)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (snapshot['image_url'] is String)
-                            Image.network(
-                              snapshot['image_url'] as String,
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.cover,
-                            ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                  Builder(
+                    builder: (context) {
+                      final isProduct = snapshot['type'] == 'product';
+                      final storeSlug = snapshot['store_slug'] as String?;
+                      final productSlug = snapshot['slug'] as String?;
+                      final orderId = snapshot['order_id'] as String?;
+                      final destination = isProduct
+                          ? (storeSlug != null && productSlug != null
+                                ? '/product/$storeSlug/$productSlug'
+                                : null)
+                          : (orderId != null ? '/orders/$orderId' : null);
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        color: isProduct
+                            ? theme.colorScheme.primaryContainer.withValues(
+                                alpha: 0.35,
+                              )
+                            : theme.colorScheme.surfaceContainerHighest,
+                        child: InkWell(
+                          onTap: destination == null
+                              ? null
+                              : () => context.push(destination),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  snapshot['type'] == 'product'
-                                      ? '${snapshot['title']}'
-                                      : 'Order ${snapshot['number']}',
-                                  maxLines: 2,
-                                ),
-                                Text(
-                                  '₱${snapshot['type'] == 'product' ? snapshot['price'] : snapshot['total']}',
+                                if (snapshot['image_url'] is String)
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.network(
+                                      snapshot['image_url'] as String,
+                                      width: 48,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                else
+                                  CircleAvatar(
+                                    radius: 24,
+                                    backgroundColor: isProduct
+                                        ? theme.colorScheme.primaryContainer
+                                        : theme.colorScheme.surfaceContainerHigh,
+                                    child: Icon(
+                                      isProduct
+                                          ? Icons.shopping_bag_outlined
+                                          : Icons.receipt_long_outlined,
+                                      size: 20,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isProduct
+                                            ? '${snapshot['title']}'
+                                            : 'Order ${snapshot['number']}',
+                                        maxLines: 2,
+                                      ),
+                                      Text(
+                                        '₱${isProduct ? snapshot['price'] : snapshot['total']}',
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
                 Container(
                   key: compactAttachment

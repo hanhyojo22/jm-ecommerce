@@ -170,11 +170,11 @@ class MessagesScreen extends ConsumerWidget {
   String? _contextLine(Conversation conversation) {
     final snapshot = conversation.latestMessage?.contextSnapshot;
     if (snapshot?['type'] == 'product') {
-      return snapshot?['title'] as String?;
+      return 'Product · ${snapshot?['title']}';
     }
 
     if (snapshot?['type'] == 'order') {
-      return 'Order ${snapshot?['number']}';
+      return 'Order · #${snapshot?['number']}';
     }
 
     return null;

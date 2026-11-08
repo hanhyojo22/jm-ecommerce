@@ -27,7 +27,11 @@
             @php($isUnread = $conversation->unread_messages_count > 0)
             @php($conversationIsBuying = $conversation->buyer_id === auth()->id())
             @php($name = $conversationIsBuying ? $conversation->store->name : $conversation->buyer->name)
-            @php($context = $latest?->context_snapshot['title'] ?? (isset($latest?->context_snapshot['number']) ? 'Order · #'.$latest->context_snapshot['number'] : 'Marketplace chat'))
+            @php($context = match ($latest?->context_snapshot['type'] ?? null) {
+                'product' => 'Product · '.($latest->context_snapshot['title'] ?? 'Product'),
+                'order' => 'Order · #'.($latest->context_snapshot['number'] ?? ''),
+                default => 'Marketplace chat',
+            })
             <a wire:key="conversation-{{ $conversation->id }}" data-presence-conversation="{{ $conversation->id }}" href="{{ route('messages.show', $conversation) }}" @if ($activeConversationId === $conversation->id) aria-current="page" @endif class="group flex min-w-0 items-start gap-3 px-4 py-3.5 transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:px-5 {{ $activeConversationId === $conversation->id ? 'bg-blue-50/70' : ($isUnread ? 'bg-blue-50/40' : '') }}">
                 <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-blue-50 text-sm font-semibold leading-none text-brand-hover" aria-hidden="true">
                     @if ($conversationIsBuying && $conversation->store->logo_path)
