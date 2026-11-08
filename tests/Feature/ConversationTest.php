@@ -646,7 +646,8 @@ class ConversationTest extends TestCase
 
         Livewire::actingAs($buyer)
             ->test(Thread::class, ['conversation' => $conversation])
-            ->assertSeeHtml('<img src="'.$attachmentUrl.'" alt="sales.png"');
+            ->assertSeeHtml('<img src="'.$attachmentUrl.'" alt="sales.png"')
+            ->assertSeeHtml('<a href="'.$attachmentUrl.'" download="sales.png"');
 
         $this->actingAs($buyer)
             ->get($attachmentUrl)

@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\ConversationMessageResource;
 use App\Http\Resources\Api\V1\ConversationResource;
 use App\Models\Conversation;
+use App\Models\ConversationMessage;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Support\ApiError;
@@ -202,6 +203,24 @@ class ConversationController extends Controller
         return ConversationMessageResource::make($message)
             ->response($request)
             ->setStatusCode($message->wasRecentlyCreated ? 201 : 200);
+    }
+
+    /**
+     * Report another participant's message. Reporting the same message again keeps the first report.
+     */
+    public function report(Request $request, Conversation $conversation, ConversationMessage $message): JsonResponse
+    {
+        $this->authorize('view', $conversation);
+        abort_unless($message->conversation_id === $conversation->id && $message->sender_id !== $request->user()->id, 404);
+
+        $data = $request->validate([
+            'reason' => ['required', Rule::in(['Spam', 'Abuse', 'Other'])],
+            'details' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $report = $message->reports()->firstOrCreate(['reporter_id' => $request->user()->id], $data);
+
+        return response()->json(['data' => ['reported' => true]], $report->wasRecentlyCreated ? 201 : 200);
     }
 
     public function read(Request $request, Conversation $conversation, MarkConversationRead $markRead): JsonResponse

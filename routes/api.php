@@ -149,6 +149,9 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/conversations/{conversation}/attachments', [ConversationController::class, 'attach'])
             ->middleware('throttle:10,1')
             ->name('api.v1.conversations.attachments.store');
+        Route::post('/conversations/{conversation}/messages/{message}/report', [ConversationController::class, 'report'])
+            ->middleware('throttle:10,1')
+            ->name('api.v1.conversations.messages.report');
 
         Route::post('/device-tokens', [DeviceTokenController::class, 'store'])
             ->middleware('throttle:api')

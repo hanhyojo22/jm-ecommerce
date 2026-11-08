@@ -670,6 +670,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _showMessageMenu(ChatMessage message, VoidCallback reply) async {
     HapticFeedback.mediumImpact();
     final text = message.body.trim();
+    final image = message.attachments
+        .where((attachment) => attachment.isImage && attachment.url != null)
+        .firstOrNull;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -698,11 +701,107 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   );
                 },
               ),
+            if (image != null)
+              ListTile(
+                leading: const Icon(Icons.download_rounded),
+                title: const Text('Save image'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _saveImage(image);
+                },
+              ),
+            if (!message.isMine)
+              ListTile(
+                leading: Icon(
+                  Icons.flag_outlined,
+                  color: Theme.of(sheetContext).colorScheme.error,
+                ),
+                title: Text(
+                  'Report',
+                  style: TextStyle(
+                    color: Theme.of(sheetContext).colorScheme.error,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _reportMessage(message);
+                },
+              ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _saveImage(ChatAttachment image) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await ref.read(imageSaverProvider)(image.url!, image.name);
+      messenger.showSnackBar(const SnackBar(content: Text('Saved to gallery')));
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not save the image. Try again.')),
+      );
+    }
+  }
+
+  Future<void> _reportMessage(ChatMessage message) async {
+    const reasons = {
+      'Spam': 'Spam',
+      'Abuse': 'Abusive content',
+      'Other': 'Something else',
+    };
+
+    final reason = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                'Why are you reporting this message?',
+                style: Theme.of(sheetContext).textTheme.titleMedium,
+              ),
+            ),
+            for (final entry in reasons.entries)
+              ListTile(
+                title: Text(entry.value),
+                onTap: () => Navigator.pop(sheetContext, entry.key),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (reason == null || !mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await ref
+          .read(apiClientProvider)
+          .reportMessage(
+            conversationId: widget.conversationId,
+            messageId: message.id,
+            reason: reason,
+          );
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Report submitted. Our team will review it.'),
+        ),
+      );
+    } on ApiException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
+    }
   }
 
   Widget _body(AsyncValue<List<ChatMessage>> messages, ThemeData theme) {

@@ -396,6 +396,18 @@ class ApiClient {
     return Conversation.fromJson(mapOf(data));
   }
 
+  Future<void> reportMessage({
+    required String conversationId,
+    required String messageId,
+    required String reason,
+  }) async {
+    await _data(
+      'POST',
+      '/conversations/$conversationId/messages/$messageId/report',
+      data: {'reason': reason},
+    );
+  }
+
   Future<List<ChatMessage>> messages(String conversationId) async {
     final body = await _data('GET', '/conversations/$conversationId/messages');
 

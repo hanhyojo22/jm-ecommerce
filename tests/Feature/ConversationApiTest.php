@@ -562,6 +562,27 @@ class ConversationApiTest extends TestCase
         $this->assertDatabaseMissing('conversation_messages', ['body' => 'Sneaky']);
     }
 
+    public function test_the_buyer_reports_only_the_other_participants_message_once(): void
+    {
+        [$buyer, $seller, $conversation] = $this->conversation();
+        $sellerMessage = $conversation->messages()->create([
+            'sender_id' => $seller->id, 'client_message_id' => (string) Str::uuid(), 'type' => 'text', 'body' => 'Buy outside the app',
+        ]);
+        $ownMessage = $conversation->messages()->create([
+            'sender_id' => $buyer->id, 'client_message_id' => (string) Str::uuid(), 'type' => 'text', 'body' => 'Mine',
+        ]);
+        $url = "/api/v1/conversations/{$conversation->id}/messages/{$sellerMessage->id}/report";
+
+        $this->actingAs($buyer)->postJson($url, ['reason' => 'Spam', 'details' => 'Off-platform payment'])->assertCreated();
+        $this->postJson($url, ['reason' => 'Abuse'])->assertOk();
+        $this->postJson("/api/v1/conversations/{$conversation->id}/messages/{$ownMessage->id}/report", ['reason' => 'Spam'])->assertNotFound();
+        $this->postJson($url, ['reason' => 'Made up'])->assertUnprocessable();
+
+        $this->assertDatabaseCount('message_reports', 1);
+        $this->assertDatabaseHas('message_reports', ['conversation_message_id' => $sellerMessage->id, 'reporter_id' => $buyer->id, 'reason' => 'Spam']);
+        $this->actingAs(User::factory()->create())->postJson($url, ['reason' => 'Spam'])->assertNotFound();
+    }
+
     public function test_retired_room_id_resolves_then_checks_access(): void
     {
         [$buyer, , $conversation] = $this->conversation();

@@ -125,6 +125,70 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('long-press menu saves a photo and reports a store message', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    final saved = <String>[];
+    api.serverMessages = [
+      ChatMessage.fromJson({
+        'id': 'store-photo',
+        'sender_id': 'seller',
+        'is_mine': false,
+        'type': 'file',
+        'body': '',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'attachments': [
+          {
+            'id': 'photo-1',
+            'name': 'black.png',
+            'mime_type': 'image/png',
+            'url': 'http://localhost/media/photo-1',
+            'is_image': true,
+          },
+        ],
+      }),
+      ChatMessage.fromJson({
+        'id': 'store-text',
+        'sender_id': 'seller',
+        'is_mine': false,
+        'type': 'text',
+        'body': 'Pay me outside the app',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      }),
+      _message(id: 'mine', clientMessageId: null, body: 'Ok'),
+    ];
+
+    await _pumpChat(
+      tester,
+      api,
+      imageSaver: (url, name) async => saved.add('$url|$name'),
+    );
+
+    await tester.longPress(find.byType(NetworkThumb));
+    await tester.pumpAndSettle();
+    expect(find.text('Copy'), findsNothing);
+    await tester.tap(find.text('Save image'));
+    await tester.pumpAndSettle();
+    expect(saved, ['http://localhost/media/photo-1|black.png']);
+    expect(find.text('Saved to gallery'), findsOneWidget);
+
+    await tester.longPress(find.text('Pay me outside the app'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save image'), findsNothing);
+    await tester.tap(find.text('Report'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Spam'));
+    await tester.pumpAndSettle();
+    expect(api.reports, ['store-text:Spam']);
+
+    // You can't report your own message.
+    await tester.longPress(find.text('Ok'));
+    await tester.pumpAndSettle();
+    expect(find.text('Report'), findsNothing);
+    await _disposeChat(tester);
+  });
+
   testWidgets('swiping a message starts a reply, a short swipe does not', (
     tester,
   ) async {
@@ -930,6 +994,7 @@ Future<void> _pumpChat(
   WidgetTester tester,
   _FakeApiClient api, {
   AttachmentPicker? picker,
+  Future<void> Function(String url, String name)? imageSaver,
   Stream<ReverbEvent> reverbEvents = const Stream.empty(),
   double? width,
   double height = 844,
@@ -959,6 +1024,8 @@ Future<void> _pumpChat(
           ),
         ),
         if (picker != null) attachmentPickerProvider.overrideWithValue(picker),
+        if (imageSaver != null)
+          imageSaverProvider.overrideWithValue(imageSaver),
       ],
       child: MaterialApp(
         builder: (context, child) => MediaQuery(
@@ -1029,6 +1096,14 @@ class _FakeApiClient extends ApiClient {
 
   final List<Completer<ChatMessage>> sends = [];
   final List<String> clientMessageIds = [];
+  final List<String> reports = [];
+
+  @override
+  Future<void> reportMessage({
+    required String conversationId,
+    required String messageId,
+    required String reason,
+  }) async => reports.add('$messageId:$reason');
   final List<Completer<ChatMessage>> attachmentSends = [];
   final List<String> attachmentClientMessageIds = [];
   List<ChatMessage> serverMessages = const [];
