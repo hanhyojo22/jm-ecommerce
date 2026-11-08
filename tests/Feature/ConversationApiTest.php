@@ -189,6 +189,21 @@ class ConversationApiTest extends TestCase
             ->assertJsonPath('data.0.unread_count', 0);
     }
 
+    public function test_marking_a_thread_read_is_rate_limited(): void
+    {
+        [$buyer, , $conversation] = $this->conversation();
+
+        for ($index = 0; $index < 60; $index++) {
+            $this->actingAs($buyer)
+                ->postJson("/api/v1/conversations/{$conversation->id}/read")
+                ->assertOk();
+        }
+
+        $this->actingAs($buyer)
+            ->postJson("/api/v1/conversations/{$conversation->id}/read")
+            ->assertTooManyRequests();
+    }
+
     public function test_an_attachment_is_served_through_a_signed_url(): void
     {
         Storage::fake('chat_attachments');
