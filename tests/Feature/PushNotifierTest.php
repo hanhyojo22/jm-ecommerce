@@ -41,4 +41,20 @@ class PushNotifierTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    public function test_chat_pushes_use_the_messages_channel_and_stack_per_conversation(): void
+    {
+        $message = json_decode(json_encode((new PushNotifier)->buildMessage('Ana', 'Hi', ['type' => 'chat', 'conversation_id' => 'c-42'])), true);
+
+        $this->assertSame('chat_messages', $message['android']['notification']['channel_id']);
+        $this->assertSame('conversation-c-42', $message['android']['notification']['tag']);
+    }
+
+    public function test_order_pushes_use_the_orders_channel(): void
+    {
+        $message = json_decode(json_encode((new PushNotifier)->buildMessage('Order #1', 'Shipped', ['type' => 'order', 'order_id' => 'o-7'])), true);
+
+        $this->assertSame('order_updates', $message['android']['notification']['channel_id']);
+        $this->assertArrayNotHasKey('tag', $message['android']['notification']);
+    }
 }

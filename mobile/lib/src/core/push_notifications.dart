@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../router.dart';
@@ -16,7 +17,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 
 /// Registers this device for push, shows a notification while the app is in
 /// the foreground (FCM does not do this automatically), and deep-links a tap
-/// to the relevant conversation.
+/// to the relevant conversation or order.
 ///
 /// shortcut: uses the deprecated `getToken()`/`onTokenRefresh` instead of
 /// the newer `register()`/`onRegistered`, because the latter sends a
@@ -26,12 +27,21 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
 class PushNotifications {
   PushNotifications._();
 
-  static const _channel = AndroidNotificationChannel(
+  // IDs must match PushNotifier::buildMessage() on the backend.
+  static const _chatChannel = AndroidNotificationChannel(
     'chat_messages',
-    'Chat messages',
+    'Messages',
     description: 'New messages from buyers and sellers.',
     importance: Importance.high,
   );
+  static const _orderChannel = AndroidNotificationChannel(
+    'order_updates',
+    'Orders',
+    description: 'Order status, delivery and return updates.',
+    importance: Importance.high,
+  );
+  static const _icon = '@drawable/ic_stat_notification';
+  static const _accent = Color(0xFF14665A);
 
   static final _local = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
@@ -53,18 +63,19 @@ class PushNotifications {
       debugPrint('[Push] permission status: ${settings.authorizationStatus}');
 
       if (!_initialized) {
-        await _local
+        final android = _local
             .resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin
-            >()
-            ?.createNotificationChannel(_channel);
+            >();
+        await android?.createNotificationChannel(_chatChannel);
+        await android?.createNotificationChannel(_orderChannel);
 
         await _local.initialize(
           const InitializationSettings(
-            android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+            android: AndroidInitializationSettings(_icon),
           ),
           onDidReceiveNotificationResponse: (response) =>
-              _openConversation(response.payload),
+              _open(response.payload),
         );
 
         FirebaseMessaging.onMessage.listen((message) {
@@ -72,14 +83,16 @@ class PushNotifications {
           _showForeground(message);
         });
         FirebaseMessaging.onMessageOpenedApp.listen(
-          (message) => _openConversation(message.data['conversation_id']),
+          (message) => _open(routeFor(message.data)),
         );
 
         _initialized = true;
       }
 
       final token = await FirebaseMessaging.instance.getToken();
-      debugPrint('[Push] getToken(): ${token == null ? 'null' : '${token.substring(0, 12)}...'}');
+      debugPrint(
+        '[Push] getToken(): ${token == null ? 'null' : '${token.substring(0, 12)}...'}',
+      );
       if (token != null) {
         await apiClient.registerDeviceToken(token);
         debugPrint('[Push] registerDeviceToken sent successfully');
@@ -93,7 +106,7 @@ class PushNotifications {
       final initialMessage = await FirebaseMessaging.instance
           .getInitialMessage();
       if (initialMessage != null) {
-        _openConversation(initialMessage.data['conversation_id']);
+        _open(routeFor(initialMessage.data));
       }
     } catch (error, stack) {
       // Push is a nice-to-have; never let it block the rest of the app.
@@ -114,26 +127,70 @@ class PushNotifications {
     }
   }
 
+  /// The in-app screen a push should open, or null when the mobile app has
+  /// no screen for it (seller-side pushes such as new seller orders).
+  @visibleForTesting
+  static String? routeFor(Map<String, dynamic> data) {
+    String? id(String key) {
+      final value = data[key]?.toString();
+      return value == null || value.isEmpty ? null : value;
+    }
+
+    return switch (data['type']) {
+      'chat' when id('conversation_id') != null =>
+        '/conversations/${id('conversation_id')}',
+      'order' when id('order_id') != null => '/orders/${id('order_id')}',
+      _ => null,
+    };
+  }
+
   static Future<void> _showForeground(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) {
       return;
     }
 
+    final route = routeFor(message.data);
+    // Already reading this chat: the new message is on screen, don't ping.
+    if (route != null && appRouter.state.uri.path == route) {
+      return;
+    }
+
+    final isChat = message.data['type'] == 'chat';
+    final channel = isChat ? _chatChannel : _orderChannel;
+    // One notification per conversation, replaced by its newest message,
+    // matching the `tag` the backend sets for background pushes.
+    final tag = isChat
+        ? 'conversation-${message.data['conversation_id']}'
+        : null;
+
     await _local.show(
-      notification.hashCode,
+      (tag ?? message.messageId ?? notification).hashCode,
       notification.title,
       notification.body,
       NotificationDetails(
-        android: AndroidNotificationDetails(_channel.id, _channel.name),
+        android: AndroidNotificationDetails(
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: _icon,
+          color: _accent,
+          tag: tag,
+          category: isChat
+              ? AndroidNotificationCategory.message
+              : AndroidNotificationCategory.status,
+          styleInformation: BigTextStyleInformation(notification.body ?? ''),
+        ),
       ),
-      payload: message.data['conversation_id'],
+      payload: route,
     );
   }
 
-  static void _openConversation(String? conversationId) {
-    if (conversationId != null && conversationId.isNotEmpty) {
-      appRouter.push('/conversations/$conversationId');
+  static void _open(String? route) {
+    if (route != null) {
+      appRouter.push(route);
     }
   }
 }

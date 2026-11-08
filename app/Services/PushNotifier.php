@@ -69,9 +69,7 @@ class PushNotifier
             return;
         }
 
-        $message = CloudMessage::new()
-            ->withNotification(['title' => $title, 'body' => $body])
-            ->withData($data);
+        $message = $this->buildMessage($title, $body, $data);
 
         try {
             $report = $this->messaging->sendMulticast($message, $tokens);
@@ -87,5 +85,27 @@ class PushNotifier
         if ($dead !== []) {
             DeviceToken::query()->whereIn('token', $dead)->delete();
         }
+    }
+
+    /**
+     * Chats go to the mobile app's "Messages" channel and replace the previous
+     * notification for the same conversation; everything else goes to "Orders".
+     * Channel IDs must match the ones created in mobile push_notifications.dart.
+     *
+     * @param  array<string, string>  $data
+     */
+    public function buildMessage(string $title, string $body, array $data = []): CloudMessage
+    {
+        $isChat = ($data['type'] ?? null) === 'chat';
+
+        $androidNotification = array_filter([
+            'channel_id' => $isChat ? 'chat_messages' : 'order_updates',
+            'tag' => $isChat && isset($data['conversation_id']) ? 'conversation-'.$data['conversation_id'] : null,
+        ]);
+
+        return CloudMessage::new()
+            ->withNotification(['title' => $title, 'body' => $body])
+            ->withData($data)
+            ->withAndroidConfig(['priority' => 'high', 'notification' => $androidNotification]);
     }
 }
