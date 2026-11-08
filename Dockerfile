@@ -41,6 +41,7 @@ COPY --from=dependencies /app/vendor ./vendor
 COPY . ./
 COPY --from=frontend /app/public/build ./public/build
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/mpm_prefork.conf /etc/apache2/mods-available/mpm_prefork.conf
 COPY docker/entrypoint.sh /usr/local/bin/jmmart-entrypoint
 
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
