@@ -109,7 +109,11 @@ void main() {
     expect(find.text('Laptop Pro · It ships tomorrow.'), findsOneWidget);
 
     await tester.longPress(find.text('Yes, two colors left.'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Copy'), findsOneWidget);
+    expect(find.byKey(const ValueKey('replying-to')), findsNothing);
+    await tester.tap(find.text('Reply'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('replying-to')), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'Black please');

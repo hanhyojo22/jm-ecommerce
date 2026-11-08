@@ -667,6 +667,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Future<void> _showMessageMenu(ChatMessage message, VoidCallback reply) async {
+    HapticFeedback.mediumImpact();
+    final text = message.body.trim();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.reply_rounded),
+              title: const Text('Reply'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                reply();
+              },
+            ),
+            if (text.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('Copy'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Clipboard.setData(ClipboardData(text: text));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Message copied')),
+                  );
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _body(AsyncValue<List<ChatMessage>> messages, ThemeData theme) {
     final loaded = messages.value;
     final pending = _pending.reversed.toList(growable: false);
@@ -764,7 +802,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 nextMessage == null &&
                 pending.isEmpty &&
                 message.receipt != null,
-            onReply: reply,
+            onLongPress: () => _showMessageMenu(message, reply),
           ),
         );
       },
@@ -1063,13 +1101,13 @@ class _Bubble extends StatelessWidget {
     required this.message,
     required this.showAvatar,
     this.showReceipt = false,
-    this.onReply,
+    this.onLongPress,
   });
 
   final ChatMessage message;
   final bool showAvatar;
   final bool showReceipt;
-  final VoidCallback? onReply;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -1089,9 +1127,9 @@ class _Bubble extends StatelessWidget {
     final reply = message.replyTo;
 
     return GestureDetector(
-      onLongPress: onReply,
+      onLongPress: onLongPress,
       child: Semantics(
-        onLongPressHint: onReply == null ? null : 'Reply',
+        onLongPressHint: onLongPress == null ? null : 'Message options',
         child: Align(
           alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
           child: Row(
