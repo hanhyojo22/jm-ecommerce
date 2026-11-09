@@ -8,7 +8,8 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
     try {
         await buyer.page.goto('/orders');
         await rejectOptionalCookies(buyer.page);
-        await buyer.page.locator('article').filter({ has: buyer.page.getByRole('link', { name: /order QA-REVIEW-001/ }) }).getByRole('link', { name: 'Order QA-REVIEW-001', exact: true }).click();
+        // The card link opens a quick-view modal; the return form lives on the full order page.
+        await buyer.page.goto(await buyer.page.locator('article[data-order-number="QA-REVIEW-001"] > a').getAttribute('href'));
         const returns = buyer.page.locator('#returns');
         await returns.getByRole('spinbutton').fill('1');
         await returns.getByLabel('Details').fill('The item arrived damaged and I need help.');
@@ -77,6 +78,13 @@ async function rejectOptionalCookies(page) {
         page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
     ]);
     await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+}
+
+// The seller inbox lists a conversation only once it has a message.
+async function sendFirstMessage(page, text = 'Hello from the buyer') {
+    await page.getByRole('textbox', { name: 'Write a message' }).fill(text);
+    await page.getByRole('button', { name: 'Send message' }).click();
+    await expect(page.locator('#conversation-messages article[data-client-message-id]').getByText(text, { exact: true }).last()).toBeVisible();
 }
 
 test('guest can browse a product and is prompted to sign in before adding it to cart', async ({ page }) => {
@@ -251,7 +259,7 @@ test('seller shops another store and returns to Seller Center with the same acco
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
-        await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+\/placed$/i);
         await expect(page.getByText('Other Seller QA Product').first()).toBeVisible();
 
         await page.getByRole('button', { name: 'Account menu' }).click();
@@ -304,11 +312,13 @@ test('customer can place a COD order from the product page through checkout', as
         await page.screenshot({ path: testInfo.outputPath('checkout-desktop.png'), fullPage: true });
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
 
+        await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+\/placed$/i);
+        await page.getByRole('link', { name: /Track order/ }).click();
         await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+$/i);
         await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
         await expect(page.getByText('QA Canvas Tote')).toBeVisible();
         await expect(page.getByText('Blue gate')).toBeVisible();
-        await expect(page.getByRole('heading', { name: 'Order summary' }).locator('..').getByText('COD', { exact: true })).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Order summary' })).toContainText('Cash on delivery');
     } finally {
         await context.close();
     }
@@ -693,7 +703,7 @@ test('messaging workspace adapts from split desktop panels to a mobile chat view
             } else {
                 await expect(seller.page.getByRole('heading', { name: 'Select a conversation' })).toBeHidden();
             }
-            const conversationUrl = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).getAttribute('href');
+            const conversationUrl = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).getAttribute('href');
             await seller.page.goto(conversationUrl, { waitUntil: 'domcontentloaded' });
             await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
             if (width >= 1024) {
@@ -718,7 +728,7 @@ test('conversation search and unread filter update the seller inbox', async ({ b
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
-        await customer.page.waitForURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i, { timeout: 30_000 });
+        await customer.page.waitForURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i, { timeout: 30_000 });
         await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Unread filter check');
         await expect(customer.page.locator('#message-help')).toContainText('19/2000');
         await customer.page.getByRole('button', { name: 'Send message' }).click();
@@ -730,13 +740,13 @@ test('conversation search and unread filter update the seller inbox', async ({ b
     const seller = await openAsRole(browser, 'seller');
     try {
         await seller.page.goto('/messages');
-        await seller.page.getByRole('button', { name: 'Unread' }).click();
-        await expect(seller.page.getByRole('button', { name: 'Unread' })).toHaveAttribute('aria-pressed', 'true');
-        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' })).toBeVisible();
+        await seller.page.getByRole('button', { name: 'Unread', exact: true }).click();
+        await expect(seller.page.getByRole('button', { name: 'Unread', exact: true })).toHaveAttribute('aria-pressed', 'true');
+        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' })).toBeVisible();
         await seller.page.getByPlaceholder('Search conversations').fill('no matching customer');
         await expect(seller.page.getByRole('heading', { name: 'No matching conversations' })).toBeVisible();
         await seller.page.getByPlaceholder('Search conversations').fill('QA Customer');
-        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' })).toBeVisible();
+        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' })).toBeVisible();
     } finally {
         await seller.context.close();
     }
@@ -748,26 +758,27 @@ test('incoming message event refreshes the inbox preview and unread badge withou
     test.setTimeout(90_000);
 
     const customer = await openAsRole(browser, 'customer');
+        await sendFirstMessage(customer.page);
     const seller = await openAsRole(browser, 'seller');
 
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
         await seller.page.goto('/messages');
-        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' })).toBeVisible();
+        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' })).toBeVisible();
         await expect.poll(() => seller.page.evaluate(() => Object.entries(window.Echo?.connector.pusher.channels.channels ?? {}).some(([name, channel]) => name.startsWith('private-chat.inbox.') && channel.subscribed))).toBe(true);
-        const unreadBefore = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).evaluate((link) => Number(link.querySelector('[aria-label$="unread messages"]')?.getAttribute('aria-label').split(' ')[0] ?? 0));
+        const unreadBefore = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).evaluate((link) => Number(link.querySelector('[aria-label$="unread messages"]')?.getAttribute('aria-label').split(' ')[0] ?? 0));
         await seller.page.evaluate(() => { window.__chatPageMarker = true; });
 
         await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Live inbox preview');
         await customer.page.getByRole('button', { name: 'Send message' }).click();
         await expect(customer.page.locator('#conversation-messages article[data-client-message-id]').getByText('Live inbox preview', { exact: true })).toBeVisible();
 
-        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' })).toContainText('Live inbox preview');
-        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).getByLabel(`${unreadBefore + 1} unread messages`)).toBeVisible();
+        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' })).toContainText('Live inbox preview');
+        await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).getByLabel(`${unreadBefore + 1} unread messages`)).toBeVisible();
         expect(await seller.page.evaluate(() => window.__chatPageMarker)).toBe(true);
 
-        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
+        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).click();
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         const conversationId = new URL(seller.page.url()).pathname.split('/').pop();
         await expect.poll(() => seller.page.evaluate((id) => window.Echo?.private(`conversation.${id}`).subscription.subscribed, conversationId)).toBe(true);
@@ -789,7 +800,7 @@ test('seller quick reply fills the message draft without a server request', asyn
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
-        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
     } finally {
         await customer.context.close();
     }
@@ -799,7 +810,7 @@ test('seller quick reply fills the message draft without a server request', asyn
     try {
         await seller.page.goto('/messages');
         await rejectOptionalCookies(seller.page);
-        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
+        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).click();
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await expect.poll(() => seller.page.evaluate(() => window.Echo?.connector.pusher.connection.state)).toBe('connected');
         await seller.page.waitForLoadState('networkidle');
@@ -828,10 +839,15 @@ test('seller quick reply fills the message draft without a server request', asyn
 test('a quick reply that wraps stays fully visible in the composer on a phone', async ({ browser }) => {
     const customer = await openAsRole(browser, 'customer');
 
+        // The seller inbox lists a conversation only once it has a message.
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Opening the inbox thread');
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(customer.page.locator('#conversation-messages article[data-client-message-id]').getByText('Opening the inbox thread', { exact: true })).toBeVisible();
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
-        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await sendFirstMessage(customer.page);
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
     } finally {
         await customer.context.close();
     }
@@ -840,7 +856,7 @@ test('a quick reply that wraps stays fully visible in the composer on a phone', 
 
     try {
         await seller.page.goto('/messages');
-        const conversationUrl = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).first().getAttribute('href');
+        const conversationUrl = await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).first().getAttribute('href');
         await seller.page.goto(conversationUrl, { waitUntil: 'domcontentloaded' });
         await rejectOptionalCookies(seller.page);
         const composer = seller.page.getByRole('textbox', { name: 'Write a message' });
@@ -870,7 +886,8 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
-        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await sendFirstMessage(customer.page);
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
     } finally {
         await customer.context.close();
     }
@@ -879,7 +896,7 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
 
     try {
         await seller.page.goto('/messages');
-        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
+        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).click();
         const firstTyping = seller.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
         await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Your order is being prepared.');
         await firstTyping;
@@ -893,7 +910,7 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
         await seller.page.getByRole('textbox', { name: 'Write a message' }).press('Enter');
 
         await expect((await refresh).ok()).toBeTruthy();
-        await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
         await expect(seller.page.locator('#conversation-messages').getByText('Your order is being prepared.', { exact: true })).toBeVisible();
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeEmpty();
 
@@ -908,7 +925,7 @@ test('seller can send a drafted message after the Clerk cookie expires', async (
         await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toHaveValue('Please check your order details.');
         await expect(seller.page.locator('#conversation-messages article[data-client-message-id]').getByText('Please check your order details.', { exact: true })).toHaveCount(0);
         await expect(seller.page.locator('[data-pending-message-id]').filter({ hasText: 'Please check your order details.' })).toContainText('Failed');
-        await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
     } finally {
         await seller.context.close();
     }
@@ -921,7 +938,8 @@ test('chat message time follows the viewer local timezone', async ({ browser }) 
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
-        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+        await sendFirstMessage(customer.page);
+        await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
         await customer.page.reload();
         const typing = customer.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
         await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Local time check');
@@ -966,7 +984,8 @@ for (const attachment of [
         try {
             await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
             await customer.page.getByRole('button', { name: 'Message seller' }).click();
-            await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
+            await sendFirstMessage(customer.page);
+            await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
         } finally {
             await customer.context.close();
         }
@@ -976,7 +995,7 @@ for (const attachment of [
         try {
             await seller.page.goto('/messages');
             await rejectOptionalCookies(seller.page);
-            await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
+            await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).click();
             const rerender = seller.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
             await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Draft before uploading');
             await rerender;
@@ -1015,9 +1034,10 @@ for (const attachment of [
             await seller.page.getByRole('button', { name: `Send ${attachment.label}` }).click();
 
             await expect((await refresh).ok()).toBeTruthy();
-            await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+$/i);
-            const sentMessage = seller.page.locator('#conversation-messages article').filter({ hasText: attachment.filename }).last();
-            await expect(sentMessage.getByText(attachment.filename, { exact: true })).toBeVisible();
+            await expect(seller.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
+            // Photos render as an image named after the file; documents show the filename.
+            const sentMessage = seller.page.locator('#conversation-messages article').filter({ has: seller.page.getByRole('img', { name: attachment.filename }).or(seller.page.getByText(attachment.filename, { exact: true })) }).last();
+            await expect(sentMessage).toBeVisible();
             await expect(sentMessage.getByText('Draft before uploading', { exact: true })).toBeVisible();
             await expect(seller.page.getByRole('textbox', { name: 'Write a message' })).toBeEmpty();
         } finally {
@@ -1039,7 +1059,7 @@ test('an invalid chat file shows an error and can be replaced and retried', asyn
     try {
         await seller.page.goto('/messages');
         await rejectOptionalCookies(seller.page);
-        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Canvas Tote' }).click();
+        await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' }).click();
         await seller.page.getByRole('textbox', { name: 'Write a message' }).fill('Here is the receipt.');
         await seller.page.getByRole('button', { name: 'Add attachment' }).click();
         await seller.page.getByLabel('Image or PDF document').setInputFiles({ name: 'first.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') });
@@ -1106,6 +1126,10 @@ test('messaging workspace has no browser exceptions or automated WCAG A or AA vi
             .analyze();
 
         expect(results.violations).toEqual([]);
+        // The seller inbox lists a conversation only once it has a message.
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Sending the receipt next');
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(customer.page.locator('#conversation-messages article[data-client-message-id]').getByText('Sending the receipt next', { exact: true })).toBeVisible();
         expect(exceptions).toEqual([]);
     } finally {
         await customer.context.close();

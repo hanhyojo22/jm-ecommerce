@@ -8,6 +8,10 @@ test('seller conversation fills the account layout at desktop and mobile widths'
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        // The seller inbox lists a conversation only once it has a message.
+        await buyer.page.getByRole('textbox', { name: 'Write a message' }).fill('Layout check');
+        await buyer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(buyer.page.locator('article[data-client-message-id]').filter({ hasText: 'Layout check' })).toBeVisible();
         await seller.page.goto('/messages');
         const inboxBottom = await seller.page.locator('[data-conversation-inbox] .account-messages-shell .account-shell-content > .grid').evaluate((panel) => panel.getBoundingClientRect().bottom);
         expect(900 - inboxBottom).toBeLessThanOrEqual(40);
@@ -107,11 +111,14 @@ test('new conversation and replies arrive in two open accounts without a refresh
 
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
         await buyer.page.getByRole('button', { name: 'Message seller' }).click();
-        await expect(newConversation).toBeVisible();
+        // Opening the chat alone stays out of the seller inbox; the first message brings it in live.
+        await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        await expect(newConversation).toHaveCount(0);
 
         await buyer.page.getByRole('textbox', { name: 'Write a message' }).fill('Hello from the buyer');
         await buyer.page.getByRole('button', { name: 'Send message' }).click();
         await expect(buyer.page.locator('article[data-client-message-id]').filter({ hasText: 'Hello from the buyer' })).toBeVisible();
+        await expect(newConversation).toBeVisible();
         await expect(newConversation).toContainText('Hello from the buyer');
         const conversationId = new URL(buyer.page.url()).pathname.split('/').pop();
         await expect.poll(() => buyer.page.evaluate((id) => window.Echo?.private(`conversation.${id}`).subscription.subscribed, conversationId)).toBe(true);
@@ -166,7 +173,10 @@ test('reconnect recovers a message sent while the buyer socket was disconnected'
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
         await buyer.page.getByRole('button', { name: 'Message seller' }).click();
-        await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        // The seller inbox lists a conversation only once it has a message.
+        await buyer.page.getByRole('textbox', { name: 'Write a message' }).fill('Before the disconnect');
+        await buyer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(buyer.page.locator('article[data-client-message-id]').filter({ hasText: 'Before the disconnect' })).toBeVisible();
         const conversationId = new URL(buyer.page.url()).pathname.split('/').pop();
         await seller.page.goto('/messages', { waitUntil: 'domcontentloaded' });
         await seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Chat Sample' }).click();

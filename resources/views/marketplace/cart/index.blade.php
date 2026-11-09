@@ -119,6 +119,7 @@
                                             && $storeSelectable->where('selected', true)->count() === $storeSelectable->count();
                                     @endphp
 
+                                    <section aria-labelledby="store-{{ $store->id }}" class="border-b border-line last:border-b-0">
                                     <div class="flex items-center justify-between gap-3 border-b border-line bg-canvas/70 px-4 py-2.5">
                                         <div class="flex min-w-0 items-center gap-3">
                                             <input type="checkbox" data-store-checkbox="{{ $storeId }}" @checked($storeAllSelected) x-on:change="toggleStore('{{ $storeId }}')" @disabled($storeSelectable->isEmpty()) aria-label="Select all items from {{ $store->name }}" class="cart-check">
@@ -190,6 +191,7 @@
                                             </form>
                                         </article>
                                     @endforeach
+                                    </section>
                                 @endforeach
                             </div>
                         </section>

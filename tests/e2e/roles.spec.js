@@ -342,7 +342,7 @@ test('seller order modal renews the session, preloads neighbours and recovers fr
         await page.setViewportSize({ width: 1682, height: 800 });
         await page.goto('/seller/orders');
         const orderLinks = page.locator('table tbody th a');
-        const [firstNumber, secondNumber] = await orderLinks.evaluateAll((links) => links.slice(0, 2).map((link) => link.textContent.trim()));
+        const [firstNumber, secondNumber] = await orderLinks.evaluateAll((links) => links.slice(0, 2).map((link) => link.querySelector('[title]').title));
 
         await orderLinks.first().hover();
         await expect.poll(() => modalRequests.length, 'resting on an order preloads it').toBeGreaterThan(0);
@@ -355,6 +355,8 @@ test('seller order modal renews the session, preloads neighbours and recovers fr
         await expect(page.getByRole('dialog', { name: secondNumber })).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(page.getByRole('dialog')).toBeHidden();
+        // Closing pops the modal's history entry; reloading mid-navigation aborts.
+        await expect(page).not.toHaveURL(/[?&]order=/);
 
         await page.reload();
         await page.route(/\/seller\/orders\/[^/?]+$/, (route) => (route.request().headers()['x-order-modal'] === '1' ? route.fulfill({ status: 500, body: '' }) : route.continue()));

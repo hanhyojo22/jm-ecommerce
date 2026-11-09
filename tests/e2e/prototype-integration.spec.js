@@ -44,7 +44,8 @@ test('variant gallery, prices, and sold-out states work on phone, tablet, and de
                 expect(Math.abs(galleryBox.y - informationBox.y)).toBeLessThan(5);
                 expect(Math.abs(galleryBox.width - informationBox.width)).toBeLessThan(2);
             }
-            const conversations = await page.locator('.pd-conversations').boundingBox();
+            // The description now leads the main column, so measure the column rather than the conversations panel.
+            const conversations = await page.locator('.pd-below > div').first().boundingBox();
             const details = await page.locator('.pd-below > aside').boundingBox();
             if (width === 1440) {
                 expect(Math.abs(conversations.y - details.y)).toBeLessThan(2);
@@ -108,6 +109,8 @@ test('mixed-store COD checkout preserves the selected variant and its price', as
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
+        await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+\/placed$/i);
+        await page.getByRole('link', { name: /Track order/ }).click();
         await expect(page.getByRole('heading', { name: 'Order details' })).toBeVisible();
         await expect(page.getByText('Black / Standard', { exact: true })).toBeVisible();
         await expect(page.getByText('Qty 1 · ₱12.35 each', { exact: true })).toBeVisible();
