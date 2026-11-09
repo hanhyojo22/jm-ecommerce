@@ -42,6 +42,11 @@ class AppLayout extends Component
     ];
 
     /**
+     * Pages that render their own validation banner pass false so errors are not shown twice.
+     */
+    public function __construct(public bool $errorSummary = true) {}
+
+    /**
      * Get the view / contents that represents the component.
      */
     public function render(): View

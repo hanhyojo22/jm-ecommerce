@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :error-summary="false">
     <x-slot name="header"><h1 class="marketplace-page-title">Order requests</h1></x-slot>
     <div class="mx-auto max-w-6xl space-y-5 px-4 py-8 sm:px-8">
         @if(session('status'))<p role="status" class="rounded-lg bg-blue-50 p-4 text-sm text-brand-hover">{{ session('status') }}</p>@endif

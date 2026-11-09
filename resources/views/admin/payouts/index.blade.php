@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :error-summary="false">
     <x-slot name="header">
         <div>
             <h1 class="mt-1 marketplace-page-title">Seller payouts</h1>

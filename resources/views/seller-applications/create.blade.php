@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :error-summary="false">
     @php
         $steps = [
             1 => ['label' => 'Seller type', 'hint' => 'Individual or business', 'phase' => 'About you', 'title' => 'How will you sell?', 'intro' => 'Choose the type that matches your documents. It sets what we ask for later, and can’t be changed after approval.'],

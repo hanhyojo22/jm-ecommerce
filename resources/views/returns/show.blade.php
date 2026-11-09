@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :error-summary="false">
     @php
         $actionRoute = route($role === 'buyer' ? 'returns.update' : ($role === 'seller' ? 'seller.returns.update' : 'admin.returns.update'), $case);
         $deadline = $case->deadline();

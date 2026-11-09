@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :error-summary="false">
     <x-slot name="header"><div><h1 class="mt-1 marketplace-page-title">Marketplace products</h1></div></x-slot>
     <div class="py-8 sm:py-10"><div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">
         @if($errors->any())<div class="mb-6 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not apply those filters. {{ $errors->first() }}</div>@endif

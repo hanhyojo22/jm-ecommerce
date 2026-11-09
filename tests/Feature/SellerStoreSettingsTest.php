@@ -109,6 +109,22 @@ class SellerStoreSettingsTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 0);
     }
 
+    public function test_a_failed_save_shows_one_error_summary(): void
+    {
+        [$owner] = $this->seller();
+        $invalidLogo = fn () => ['logo' => UploadedFile::fake()->create('payload.jpg', 10, 'text/plain')];
+
+        $this->actingAs($owner)->from(route('seller.store-settings.edit'))->followingRedirects()
+            ->patch(route('seller.store-settings.update'), $invalidLogo())
+            ->assertSee('We could not save your changes')
+            ->assertDontSee('data-validation-summary', false);
+
+        // Pages without their own summary still get the layout's.
+        $this->actingAs($owner)->from(route('seller.dashboard'))->followingRedirects()
+            ->patch(route('seller.store-settings.update'), $invalidLogo())
+            ->assertSee('data-validation-summary', false);
+    }
+
     public function test_update_rejects_replacing_and_removing_the_logo_in_the_same_save(): void
     {
         Storage::fake('public');

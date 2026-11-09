@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :error-summary="false">
     <x-slot name="header"><div><h1 class="mt-1 marketplace-page-title">Customers</h1><p class="mt-2 text-sm text-muted">{{ number_format($totalCustomers) }} {{ Str::plural('customer account', $totalCustomers) }} across the marketplace.</p></div></x-slot>
     @php($statusStyles = ['active' => 'bg-success/10 text-success ring-success/20', 'inactive' => 'bg-canvas text-muted ring-line'])
     <div class="py-8 sm:py-10"><div class="mx-auto max-w-[1320px] px-[18px] sm:px-8">

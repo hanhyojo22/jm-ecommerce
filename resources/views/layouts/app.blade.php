@@ -41,7 +41,7 @@
         @endif
     </head>
     <body class="bg-canvas font-sans antialiased text-ink">
-        <x-request-feedback />
+        <x-request-feedback :summary="$errorSummary ?? true" />
         <a href="#main-content" class="sr-only fixed left-4 top-4 z-[100] rounded-lg bg-ink px-4 py-3 text-sm font-semibold text-white focus:not-sr-only focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Skip to content</a>
         <div class="min-h-screen bg-canvas">
             @if ($isAdminWorkspace)

@@ -14,7 +14,7 @@
     }
 @endphp
 
-<x-app-layout>
+<x-app-layout :error-summary="false">
     <x-slot name="header">
         <div class="sc-page-head">
             <div>

@@ -1,4 +1,4 @@
-<x-app-layout>
+<x-app-layout :error-summary="false">
     @php
         $statusStyles = ['pending'=>'bg-amber-50 text-warning-text ring-amber-200','confirmed'=>'bg-blue-50 text-brand-hover ring-blue-200','processing'=>'bg-blue-50 text-brand-hover ring-blue-200','shipped'=>'bg-blue-50 text-brand-hover ring-blue-200','delivered'=>'bg-green-50 text-success ring-green-200','cancelled'=>'bg-red-50 text-danger ring-red-200'];
         $paymentStyles = ['pending'=>'bg-amber-50 text-warning-text ring-amber-200','paid'=>'bg-green-50 text-success ring-green-200','failed'=>'bg-red-50 text-danger ring-red-200','refunded'=>'bg-slate-100 text-muted ring-line'];
