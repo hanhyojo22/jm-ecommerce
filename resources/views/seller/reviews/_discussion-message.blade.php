@@ -17,7 +17,7 @@
             @if ($canReply)
                 <details class="seller-review-reply" @if (old('parent_id') === $entry->id && $errors->any()) open @endif>
                     <summary>Reply</summary>
-                    <form method="POST" action="{{ route('discussions.store', $product) }}" data-discussion-reply-form data-clerk-session-refresh="{{ route('clerk.session.refresh') }}">
+                    <form method="POST" action="{{ route('discussions.store', $product) }}" data-discussion-reply-form data-optimistic-submit data-clerk-session-refresh="{{ route('clerk.session.refresh') }}" data-author-name="{{ $product->store->name }}" data-author-initials="{{ Str::upper(Str::substr($product->store->name, 0, 2)) }}" data-author-is-seller="1" data-author-image="{{ $product->store->logo_path ? Storage::disk('public')->url($product->store->logo_path) : '' }}" data-reply-to="{{ $entry->author_type === 'seller' ? $product->store->name : $entry->user?->name }}">
                         @csrf
                         <input type="hidden" name="parent_id" value="{{ $entry->id }}">
                         <input type="hidden" name="seller_reviews" value="1">

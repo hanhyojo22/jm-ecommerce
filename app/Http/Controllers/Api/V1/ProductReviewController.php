@@ -7,12 +7,33 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductReviewRequest;
 use App\Http\Resources\Api\V1\ProductReviewResource;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\ProductReview;
+use App\Queries\CatalogQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProductReviewController extends Controller
 {
+    public function eligibility(Request $request, Product $product): JsonResponse
+    {
+        abort_unless(CatalogQuery::publishedProducts()->whereKey($product->id)->exists(), 404);
+
+        $item = OrderItem::query()
+            ->where('product_id', $product->id)
+            ->whereDoesntHave('review')
+            ->whereHas('sellerOrder', fn (Builder $query) => $query
+                ->where('status', 'delivered')
+                ->whereHas('order', fn (Builder $order) => $order->where('user_id', $request->user()->id)))
+            ->latest()
+            ->first();
+
+        return response()->json(['data' => [
+            'order_item_id' => $request->user()->isMemberOfTenant($product->tenant_id) ? null : $item?->id,
+        ]]);
+    }
+
     public function store(StoreProductReviewRequest $request, OrderItem $orderItem, PublishProductReview $publish): JsonResponse
     {
         $orderItem->loadMissing('sellerOrder.order', 'review');

@@ -69,6 +69,35 @@ class ProductDiscussionTest extends TestCase
         $this->assertDatabaseHas('product_discussions', ['parent_id' => $question->id, 'body' => '<Blue & ready>', 'author_type' => 'seller']);
     }
 
+    public function test_product_page_forms_return_rendered_fragments_for_optimistic_updates(): void
+    {
+        $product = $this->product();
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'owner']);
+
+        $root = $this->actingAs($buyer)->postJson(route('discussions.store', $product), [
+            'body' => 'Will this fit a 15 inch laptop?',
+        ])->assertOk();
+
+        $this->assertNull($root->json('parent_id'));
+        $this->assertStringContainsString('id="discussion-'.$root->json('id').'"', $root->json('html'));
+        $this->assertStringContainsString('data-discussion-root-id="'.$root->json('id').'"', $root->json('html'));
+        $this->assertStringContainsString('data-discussion-form', $root->json('html'));
+        $this->assertStringContainsString('Will this fit a 15 inch laptop?', $root->json('html'));
+
+        $reply = $this->actingAs($seller)->postJson(route('discussions.store', $product), [
+            'body' => '<Blue & ready>',
+            'parent_id' => $root->json('id'),
+        ])->assertOk();
+
+        $this->assertSame($root->json('id'), $reply->json('parent_id'));
+        $this->assertStringContainsString('id="discussion-'.$reply->json('id').'"', $reply->json('html'));
+        $this->assertStringContainsString('data-discussion-root-id="'.$root->json('id').'"', $reply->json('html'));
+        $this->assertStringContainsString('&lt;Blue &amp; ready&gt;', $reply->json('html'));
+        $this->assertStringContainsString('data-author-is-seller="1"', $reply->json('html'));
+    }
+
     public function test_customers_can_reply_to_each_other_and_to_seller_answers(): void
     {
         $product = $this->product();

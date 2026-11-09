@@ -50,10 +50,14 @@ class Thread extends Component
         $this->resetValidation();
     }
 
-    public function submit(SaveSellerReviewResponse $saveSellerResponse): void
+    public function submit(SaveSellerReviewResponse $saveSellerResponse, ?string $body = null): void
     {
         $user = auth()->user();
         abort_unless($user?->hasVerifiedClerkEmail(), 403);
+
+        if ($body !== null) {
+            $this->body = $body;
+        }
 
         $this->body = trim($this->body);
         $this->validate(['body' => ['required', 'string', 'max:2000']]);
@@ -71,11 +75,15 @@ class Thread extends Component
         $this->saved = true;
     }
 
-    public function submitNestedReply(string $responseId): void
+    public function submitNestedReply(string $responseId, ?string $body = null): void
     {
         $parent = $this->review->responses()->findOrFail($responseId);
         $user = auth()->user();
         abort_unless($user !== null && $this->canReplyTo($parent), 403);
+
+        if ($body !== null) {
+            $this->replyBodies[$responseId] = $body;
+        }
 
         if (is_string($this->replyBodies[$responseId] ?? null)) {
             $this->replyBodies[$responseId] = trim($this->replyBodies[$responseId]);

@@ -425,6 +425,7 @@ test('buyer and seller continue a review thread without reloading and keep it co
     const seller = await openAsRole(browser, 'seller');
     const buyer = await openAsRole(browser, 'customer');
     const pageErrors = [];
+    let finishSubmission = () => {};
     for (const page of [seller.page, buyer.page]) page.on('pageerror', (error) => pageErrors.push(error.message));
 
     try {
@@ -437,6 +438,7 @@ test('buyer and seller continue a review thread without reloading and keep it co
         await sellerThread.getByLabel('Seller response').fill('Thanks for reviewing the tote.');
         await sellerThread.getByRole('button', { name: alreadyResponded ? 'Update response' : 'Post response' }).click();
         await expect(sellerThread).toContainText('Thanks for reviewing the tote.');
+        await expect(sellerThread.getByLabel('Seller response')).toBeHidden();
 
         await seller.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#reviews');
 
@@ -449,7 +451,6 @@ test('buyer and seller continue a review thread without reloading and keep it co
         await storeResponse.locator('summary').click();
         await expect(storeResponse.getByLabel('Write a reply')).toBeVisible();
         await storeResponse.getByLabel('Write a reply').fill('Does it come in blue?');
-        let finishSubmission;
         const pendingSubmission = new Promise((resolve) => { finishSubmission = resolve; });
         await buyer.page.route(/\/livewire[^/]*\/update$/, async (route) => {
             await pendingSubmission;
@@ -458,8 +459,12 @@ test('buyer and seller continue a review thread without reloading and keep it co
         const sendReply = storeResponse.getByRole('button', { name: 'Send' });
         await sendReply.click();
         await expect(sendReply).toBeDisabled();
+        const optimisticReply = thread.locator('[data-pending-reply]').filter({ hasText: 'Does it come in blue?' });
+        await expect(optimisticReply).toBeVisible();
+        await expect(optimisticReply).toContainText('Sending...');
         finishSubmission();
         await expect(thread).toContainText('Does it come in blue?');
+        await expect(thread.locator('[data-pending-reply]')).toHaveCount(0);
         await buyer.page.unroute(/\/livewire[^/]*\/update$/);
         await expect(buyer.page).toHaveURL(/\/stores\/qa-northwind-store\/products\/qa-canvas-tote/);
         await thread.getByRole('button', { name: 'Hide replies' }).click();
@@ -469,12 +474,14 @@ test('buyer and seller continue a review thread without reloading and keep it co
 
         await seller.page.reload();
         await seller.page.route(/\/livewire[^/]*\/update$/, (route) => route.abort());
-        await seller.page.locator('article').getByText('Reply', { exact: true }).click();
+        const sellerReviewThread = seller.page.locator('#reviews article').first();
+        await sellerReviewThread.getByText('Reply', { exact: true }).click();
         await expect(seller.page.getByLabel('Write a reply')).toBeVisible();
         await seller.page.unroute(/\/livewire[^/]*\/update$/);
         await seller.page.getByLabel('Write a reply').fill('Yes, blue is available.');
         await seller.page.getByRole('button', { name: 'Post reply' }).click();
-        await expect(seller.page.locator('article')).toContainText('Yes, blue is available.');
+        await expect(sellerReviewThread).toContainText('Yes, blue is available.');
+        await expect(sellerReviewThread.locator('[data-pending-reply]')).toHaveCount(0);
         const originalReply = seller.page.locator('.review-reply').filter({ hasText: 'Does it come in blue?' }).first().locator('details.review-reply-composer');
         if (await originalReply.getAttribute('open') !== null) await originalReply.locator('summary').click();
         await seller.page.route(/\/livewire[^/]*\/update$/, (route) => route.abort());
@@ -489,6 +496,7 @@ test('buyer and seller continue a review thread without reloading and keep it co
         await sellerFollowup.getByLabel('Write a reply').fill('Perfect, thank you.');
         await sellerFollowup.getByRole('button', { name: 'Send' }).click();
         await expect(thread).toContainText('Perfect, thank you.');
+        await expect(thread.locator('[data-pending-reply]')).toHaveCount(0);
 
         for (const width of [1440, 820, 390]) {
             await buyer.page.setViewportSize({ width, height: 844 });
@@ -503,6 +511,7 @@ test('buyer and seller continue a review thread without reloading and keep it co
         }
         expect(pageErrors).toEqual([]);
     } finally {
+        finishSubmission();
         await seller.context.close();
         await buyer.context.close();
     }
@@ -537,6 +546,7 @@ test('seller reviews show real conversations and working replies at desktop and 
     test.setTimeout(60_000);
     const seller = await openAsRole(browser, 'seller');
     const customer = await openAsRole(browser, 'customer');
+    let finishReply = () => {};
 
     try {
         await seller.page.goto('/seller/store-settings');
@@ -556,7 +566,7 @@ test('seller reviews show real conversations and working replies at desktop and 
         await expect(seller.page.locator('.seller-review-score')).toHaveText('5.0');
         await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Does this tote come in blue?');
         await seller.page.locator('.seller-review-discussion').getByText('Reply', { exact: true }).first().click();
-        expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+        expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgb(32, 91, 244)');
         await seller.page.locator('.seller-review-discussion').getByLabel('Your reply').first().fill('Yes, blue is available.');
         const replyRequests = [];
         seller.page.on('requestfinished', (request) => {
@@ -564,9 +574,20 @@ test('seller reviews show real conversations and working replies at desktop and 
                 replyRequests.push(new URL(request.url()).pathname);
             }
         });
+        const replyPending = new Promise((resolve) => { finishReply = resolve; });
+        await seller.page.route('**/products/*/discussions', async (route) => {
+            await replyPending;
+            await route.continue();
+        });
         await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().click();
+        const optimisticSellerReply = seller.page.locator('[data-pending-seller-reply]').filter({ hasText: 'Yes, blue is available.' });
+        await expect(optimisticSellerReply).toBeVisible();
+        await expect(optimisticSellerReply).toContainText('Sending...');
+        finishReply();
         await expect(seller.page).toHaveURL(/\/seller\/reviews$/);
         await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Yes, blue is available.');
+        await expect(optimisticSellerReply).toHaveCount(0);
+        await seller.page.unroute('**/products/*/discussions');
         const storeAvatar = seller.page.locator('.seller-review-discussion .seller-review-avatar-image').first();
         await expect(storeAvatar).toBeVisible();
         await expect.poll(() => storeAvatar.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
@@ -592,7 +613,61 @@ test('seller reviews show real conversations and working replies at desktop and 
         await seller.page.locator('#discussions .pd-discussion-reply summary').first().click();
         expect(await seller.page.locator('#discussions .pd-reply-submit').first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
     } finally {
+        finishReply();
         await seller.context.close();
+        await customer.context.close();
+    }
+});
+
+test('product comments appear optimistically before the server confirms', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+    const body = `Optimistic product comment ${Date.now()}`;
+    let finishSubmission = () => {};
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#discussions');
+        await rejectOptionalCookies(customer.page);
+        await customer.page.locator('#discussion-body').fill(body);
+
+        const pendingSubmission = new Promise((resolve) => { finishSubmission = resolve; });
+        await customer.page.route('**/products/*/discussions', async (route) => {
+            await pendingSubmission;
+            await route.continue();
+        });
+
+        await customer.page.getByRole('button', { name: 'Post message' }).click();
+
+        const optimisticComment = customer.page.locator('[data-pending-discussion]').filter({ hasText: body });
+        await expect(optimisticComment).toBeVisible();
+        await expect(optimisticComment).toContainText('Sending...');
+        expect(await customer.page.locator('#discussion-body').inputValue()).toBe('');
+
+        finishSubmission();
+
+        await expect(customer.page.locator('[data-pending-discussion]')).toHaveCount(0);
+        await expect(customer.page.locator('#discussions article').filter({ hasText: body })).toBeVisible();
+    } finally {
+        finishSubmission();
+        await customer.context.close();
+    }
+});
+
+test('failed product comment restores the draft and removes the pending message', async ({ browser }) => {
+    const customer = await openAsRole(browser, 'customer');
+    const body = `Unsent product comment ${Date.now()}`;
+
+    try {
+        await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#discussions');
+        await rejectOptionalCookies(customer.page);
+        await customer.page.route('**/products/*/discussions', (route) => route.abort());
+
+        await customer.page.locator('#discussion-body').fill(body);
+        await customer.page.getByRole('button', { name: 'Post message' }).click();
+
+        await expect(customer.page.locator('[data-pending-discussion]')).toHaveCount(0);
+        await expect(customer.page.locator('#discussion-body')).toHaveValue(body);
+        await expect(customer.page.locator('[data-discussion-feedback]').filter({ hasText: 'Could not confirm your message' })).toBeVisible();
+    } finally {
         await customer.context.close();
     }
 });
@@ -683,6 +758,7 @@ test('messaging workspace adapts from split desktop panels to a mobile chat view
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await sendFirstMessage(customer.page);
         await customer.page.setViewportSize({ width: 390, height: 844 });
         await customer.page.screenshot({ path: testInfo.outputPath('chat-buyer-mobile.png') });
         await expect(customer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
@@ -758,12 +834,15 @@ test('incoming message event refreshes the inbox preview and unread badge withou
     test.setTimeout(90_000);
 
     const customer = await openAsRole(browser, 'customer');
-        await sendFirstMessage(customer.page);
     const seller = await openAsRole(browser, 'seller');
 
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        // The seller inbox lists a conversation only once it has a message.
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Opening the inbox thread');
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(customer.page.locator('#conversation-messages article[data-client-message-id]').getByText('Opening the inbox thread', { exact: true })).toBeVisible();
         await seller.page.goto('/messages');
         await expect(seller.page.locator('[data-conversation-list] a').filter({ hasText: 'QA Customer' })).toBeVisible();
         await expect.poll(() => seller.page.evaluate(() => Object.entries(window.Echo?.connector.pusher.channels.channels ?? {}).some(([name, channel]) => name.startsWith('private-chat.inbox.') && channel.subscribed))).toBe(true);
@@ -800,6 +879,7 @@ test('seller quick reply fills the message draft without a server request', asyn
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        await sendFirstMessage(customer.page);
         await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
     } finally {
         await customer.context.close();
@@ -839,10 +919,6 @@ test('seller quick reply fills the message draft without a server request', asyn
 test('a quick reply that wraps stays fully visible in the composer on a phone', async ({ browser }) => {
     const customer = await openAsRole(browser, 'customer');
 
-        // The seller inbox lists a conversation only once it has a message.
-        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Opening the inbox thread');
-        await customer.page.getByRole('button', { name: 'Send message' }).click();
-        await expect(customer.page.locator('#conversation-messages article[data-client-message-id]').getByText('Opening the inbox thread', { exact: true })).toBeVisible();
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
@@ -938,7 +1014,6 @@ test('chat message time follows the viewer local timezone', async ({ browser }) 
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
-        await sendFirstMessage(customer.page);
         await expect(customer.page).toHaveURL(/\/messages\/[0-9A-HJKMNP-TV-Z]+(\?.*)?$/i);
         await customer.page.reload();
         const typing = customer.page.waitForResponse((response) => /\/livewire-[^/]+\/update$/.test(new URL(response.url()).pathname));
@@ -1051,6 +1126,10 @@ test('an invalid chat file shows an error and can be replaced and retried', asyn
     try {
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await customer.page.getByRole('button', { name: 'Message seller' }).click();
+        // The seller inbox lists a conversation only once it has a message.
+        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Sending the receipt next');
+        await customer.page.getByRole('button', { name: 'Send message' }).click();
+        await expect(customer.page.locator('#conversation-messages article[data-client-message-id]').getByText('Sending the receipt next', { exact: true })).toBeVisible();
     } finally {
         await customer.context.close();
     }
@@ -1126,10 +1205,6 @@ test('messaging workspace has no browser exceptions or automated WCAG A or AA vi
             .analyze();
 
         expect(results.violations).toEqual([]);
-        // The seller inbox lists a conversation only once it has a message.
-        await customer.page.getByRole('textbox', { name: 'Write a message' }).fill('Sending the receipt next');
-        await customer.page.getByRole('button', { name: 'Send message' }).click();
-        await expect(customer.page.locator('#conversation-messages article[data-client-message-id]').getByText('Sending the receipt next', { exact: true })).toBeVisible();
         expect(exceptions).toEqual([]);
     } finally {
         await customer.context.close();

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +12,52 @@ import 'package:jmmart/src/screens/product_screen.dart';
 import 'package:jmmart/src/theme.dart';
 
 void main() {
+  testWidgets('failed product rating keeps the draft visible', (tester) async {
+    final api = _ReviewApi()..pendingRating = Completer<ProductReview>();
+    await _pumpProduct(tester, api);
+    await tester.scrollUntilVisible(find.text('Rate this product'), 400);
+    await tester.ensureVisible(find.text('Rate this product'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rate this product'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'My rating draft');
+    await tester.tap(find.text('Publish review'));
+    await tester.pump();
+    api.pendingRating!.completeError(
+      const ApiException(code: 'network.error', message: 'Network error'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('My rating draft'), findsOneWidget);
+    expect(
+      find.text('Could not confirm your rating. Refresh before trying again.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('product rating appears while the review request is pending', (
+    tester,
+  ) async {
+    final api = _ReviewApi()..pendingRating = Completer<ProductReview>();
+    await _pumpProduct(tester, api);
+    await tester.scrollUntilVisible(find.text('Rate this product'), 400);
+    await tester.ensureVisible(find.text('Rate this product'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rate this product'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Publish review'));
+    await tester.pump();
+
+    expect(find.text('You · 5 out of 5 stars'), findsOneWidget);
+    expect(find.text('Sending...'), findsOneWidget);
+
+    api.pendingRating!.complete(
+      const ProductReview(id: 'new', rating: 5, author: 'You', body: ''),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Sending...'), findsNothing);
+  });
+
   testWidgets('product shows written comments and paginates reviews', (
     tester,
   ) async {
@@ -77,7 +125,18 @@ class _ReviewApi extends ApiClient {
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
   bool fail = false;
   bool empty = false;
+  Completer<ProductReview>? pendingRating;
   final requestedPages = <int>[];
+
+  @override
+  Future<String?> eligibleReviewOrderItem(String productId) async => 'item';
+
+  @override
+  Future<ProductReview> publishProductReview({
+    required String orderItemId,
+    required int rating,
+    required String body,
+  }) => pendingRating!.future;
 
   @override
   Future<Cart> cart() async => Cart.empty;

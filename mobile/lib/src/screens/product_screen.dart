@@ -11,6 +11,8 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../providers/checkout_providers.dart';
+import 'order_detail_screen.dart';
+import 'product_discussions.dart';
 import '../widgets/common.dart';
 
 class ProductScreen extends ConsumerWidget {
@@ -56,6 +58,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   bool _buying = false;
   final _optionsKey = GlobalKey();
   bool _chatting = false;
+  bool _showDiscussions = false;
   int _imageIndex = 0;
   Key _galleryKey = UniqueKey();
 
@@ -716,10 +719,10 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         child: Row(
                           children: [
                             SizedBox(width: 18, child: Text('$star')),
-                            const Icon(
+                            Icon(
                               Icons.star_rounded,
                               size: 16,
-                              color: Color(0xFFE0A63B),
+                              color: theme.colorScheme.secondary,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -745,6 +748,22 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                   ],
                   const SizedBox(height: 26),
                   _ProductReviews(productKey: widget.productKey),
+                  const SizedBox(height: 18),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: Text(
+                      'Product discussions',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    onExpansionChanged: (expanded) =>
+                        setState(() => _showDiscussions = expanded),
+                    children: [
+                      if (_showDiscussions)
+                        ProductDiscussions(productKey: widget.productKey),
+                    ],
+                  ),
                   if (product.related.isNotEmpty) ...[
                     const SizedBox(height: 26),
                     Text(
@@ -755,7 +774,13 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                     ),
                     const SizedBox(height: 12),
                     SizedBox(
-                      height: 230,
+                      // Related cards stack more copy when the system text size grows.
+                      height:
+                          (230 +
+                                  (MediaQuery.textScalerOf(context).scale(14) -
+                                          14) *
+                                      9)
+                              .clamp(230.0, 400.0),
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: product.related.length,
@@ -804,6 +829,71 @@ class _ProductReviews extends ConsumerStatefulWidget {
 class _ProductReviewsState extends ConsumerState<_ProductReviews> {
   int _page = 1;
   final _headingKey = GlobalKey();
+  ProductReview? _pendingReview;
+  bool _ratingBusy = false;
+  String? _ratingError;
+
+  Future<void> _rateProduct() async {
+    if (_ratingBusy) return;
+    setState(() => _ratingBusy = true);
+    try {
+      final product = ref.read(productProvider(widget.productKey)).value;
+      if (product == null) return;
+      final api = ref.read(apiClientProvider);
+      final orderItemId = await api.eligibleReviewOrderItem(product.id);
+      if (!mounted) return;
+      if (orderItemId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ratings are available after a delivered purchase of this product.',
+            ),
+          ),
+        );
+        return;
+      }
+      final input = await showProductReviewSheet(context, product.name);
+      if (input == null || !mounted) return;
+      setState(() {
+        _page = 1;
+        _ratingError = null;
+        _pendingReview = ProductReview(
+          rating: input.rating,
+          author: 'You',
+          body: input.body,
+          verifiedPurchase: true,
+        );
+      });
+      final saved = await api.publishProductReview(
+        orderItemId: orderItemId,
+        rating: input.rating,
+        body: input.body,
+      );
+      if (!mounted) return;
+      setState(() => _pendingReview = saved);
+      ref.invalidate(
+        productReviewsProvider((product: widget.productKey, page: 1)),
+      );
+      ref.invalidate(productProvider(widget.productKey));
+    } on ApiException catch (error) {
+      if (mounted) {
+        setState(
+          () => _ratingError = error.code == 'network.error'
+              ? 'Could not confirm your rating. Refresh before trying again.'
+              : error.friendly,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _ratingError =
+              'Could not confirm your rating. Refresh before trying again.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _ratingBusy = false);
+    }
+  }
 
   void _changePage(int page) {
     setState(() => _page = page);
@@ -826,13 +916,52 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Customer reviews',
-          key: _headingKey,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 2,
+          children: [
+            Text(
+              'Customer reviews',
+              key: _headingKey,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              onPressed: _ratingBusy ? null : _rateProduct,
+              icon: const Icon(Icons.star_outline, size: 20),
+              label: Text(
+                _ratingBusy ? 'Posting rating...' : 'Rate this product',
+              ),
+            ),
+          ],
         ),
+        if (_ratingError != null)
+          Text(_ratingError!, style: TextStyle(color: theme.colorScheme.error)),
+        if (_pendingReview != null &&
+            !(reviews.value?.reviews.any(
+                  (review) =>
+                      review.id.isNotEmpty && review.id == _pendingReview!.id,
+                ) ??
+                false)) ...[
+          Text(
+            '${_pendingReview!.author} · ${_pendingReview!.rating} out of 5 stars',
+          ),
+          if (_pendingReview!.body.isNotEmpty) Text(_pendingReview!.body),
+          Text(
+            _ratingError != null
+                ? 'Could not confirm'
+                : _ratingBusy
+                ? 'Sending...'
+                : 'Posted',
+          ),
+        ],
         const SizedBox(height: 12),
         reviews.when(
           loading: () => const Padding(
@@ -858,20 +987,29 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
             children: [
               if (value.reviews.isEmpty) const Text('No reviews yet.'),
               for (final review in value.reviews) ...[
-                Text(
-                  review.author.trim().isEmpty ? 'Customer' : review.author,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        review.author.trim().isEmpty
+                            ? 'Customer'
+                            : review.author,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Semantics(
+                      label: '${review.rating} out of 5 stars',
+                      child: ExcludeSemantics(
+                        child: _Stars(rating: review.rating.toDouble()),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Semantics(
-                  label: '${review.rating} out of 5 stars',
-                  child: ExcludeSemantics(
-                    child: _Stars(rating: review.rating.toDouble()),
-                  ),
-                ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Wrap(
                   spacing: 12,
                   runSpacing: 4,
@@ -952,7 +1090,7 @@ class _Stars extends StatelessWidget {
                     ? Icons.star_half_rounded
                     : Icons.star_outline_rounded),
           size: 18,
-          color: const Color(0xFFE0A63B),
+          color: Theme.of(context).colorScheme.secondary,
         ),
       ),
     );

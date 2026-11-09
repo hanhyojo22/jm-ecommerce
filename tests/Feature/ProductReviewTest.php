@@ -335,6 +335,28 @@ class ProductReviewTest extends TestCase
             ->assertSee('stores/tote-logo.png');
     }
 
+    public function test_thread_actions_accept_optimistic_payloads_and_clear_the_composer(): void
+    {
+        [$buyer, $item, $seller] = $this->deliveredOrderItem();
+        $review = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $item->id, 'user_id' => $buyer->id, 'rating' => 5]);
+        $root = $review->responses()->create(['user_id' => $seller->id, 'author_type' => 'seller', 'body' => 'Thanks']);
+
+        $this->actingAs($seller);
+        Livewire::test(Thread::class, ['review' => $review, 'sellerView' => true])
+            ->call('submit', 'Root response sent from JavaScript')
+            ->assertSet('body', '')
+            ->assertSee('Root response sent from JavaScript');
+
+        $this->actingAs($buyer);
+        Livewire::test(Thread::class, ['review' => $review])
+            ->call('submitNestedReply', $root->id, 'Reply sent from JavaScript')
+            ->assertSet('replyBodies.'.$root->id, '')
+            ->assertSee('Reply sent from JavaScript');
+
+        $this->assertDatabaseHas('product_review_responses', ['product_review_id' => $review->id, 'parent_response_id' => null, 'author_type' => 'seller', 'body' => 'Root response sent from JavaScript']);
+        $this->assertDatabaseHas('product_review_responses', ['product_review_id' => $review->id, 'parent_response_id' => $root->id, 'author_type' => 'buyer', 'body' => 'Reply sent from JavaScript']);
+    }
+
     public function test_thread_rejects_impersonation_cross_review_parent_and_hidden_reviews(): void
     {
         [$buyer, $item, $seller] = $this->deliveredOrderItem();
@@ -370,6 +392,23 @@ class ProductReviewTest extends TestCase
 
         Livewire::test(Thread::class, ['review' => $review])->set('replyBodies.'.$root->id, 'Guest')->call('submitNestedReply', $root->id)->assertForbidden();
         $this->assertSame(1, $review->responses()->count());
+    }
+
+    public function test_review_eligibility_only_returns_the_buyers_unreviewed_delivered_item(): void
+    {
+        [$buyer, $item, $seller] = $this->deliveredOrderItem();
+        $url = route('api.v1.products.review-eligibility', $item->product_id);
+
+        $this->actingAs($buyer)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('data.order_item_id', $item->id);
+        $this->actingAs($seller)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('data.order_item_id', null);
+        $item->review()->create(['product_id' => $item->product_id, 'user_id' => $buyer->id, 'rating' => 5, 'status' => 'published']);
+        $this->actingAs($buyer)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('data.order_item_id', null);
     }
 
     /** @return array{0: User, 1: OrderItem, 2: User} */

@@ -1063,7 +1063,7 @@ class _CategoryStrip extends StatelessWidget {
     'books-media' ||
     'jewelry-watches' ||
     'garden-diy' ||
-    'travel-luggage' => 'assets/categories/$slug.png',
+    'travel-luggage' => 'assets/categories/$slug.webp',
     _ => null,
   };
 

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\MessageAttachmentController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderIssueController;
+use App\Http\Controllers\Api\V1\ProductDiscussionController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
 use App\Http\Controllers\Api\V1\ReturnCaseController;
 use App\Http\Controllers\Api\V1\ReturnCaseEvidenceController;
@@ -43,6 +44,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('api.v1.stores.show');
         Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('api.v1.products.show');
         Route::get('/stores/{store}/products/{product}/reviews', [CatalogController::class, 'reviews'])->name('api.v1.products.reviews');
+        Route::get('/stores/{store}/products/{product}/discussions', [ProductDiscussionController::class, 'index'])->name('api.v1.products.discussions.index');
     });
 
     /*
@@ -130,6 +132,12 @@ Route::prefix('v1')->group(function (): void {
      * inside the controller, matching the web thread.
      */
     Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
+        Route::post('/stores/{store}/products/{product}/discussions', [ProductDiscussionController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('api.v1.products.discussions.store');
+        Route::get('/products/{product}/review-eligibility', [ProductReviewController::class, 'eligibility'])
+            ->middleware('throttle:api')
+            ->name('api.v1.products.review-eligibility');
         Route::get('/conversations', [ConversationController::class, 'index'])
             ->middleware('throttle:api')
             ->name('api.v1.conversations.index');

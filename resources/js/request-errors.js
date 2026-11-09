@@ -83,7 +83,13 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
                 preventDefault();
                 showRequestError(requestErrorMessage(response.status), response.headers.get('X-Request-Id'));
             });
-            onFailure(() => showRequestError('Connection lost. Your changes are still on this page. Check the current status before retrying.'));
+            onFailure(({ error } = {}) => {
+                if (error?.clerkRefreshHandled) {
+                    return;
+                }
+
+                showRequestError('Connection lost. Your changes are still on this page. Check the current status before retrying.');
+            });
         });
     };
     document.addEventListener('livewire:init', installLivewireErrors, { once: true });

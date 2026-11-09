@@ -167,6 +167,7 @@ class ProductVariant {
 
 class ProductReview {
   const ProductReview({
+    this.id = '',
     required this.rating,
     required this.author,
     required this.body,
@@ -175,6 +176,7 @@ class ProductReview {
     this.verifiedPurchase = false,
   });
 
+  final String id;
   final int rating;
   final String author;
   final String body;
@@ -183,6 +185,7 @@ class ProductReview {
   final bool verifiedPurchase;
 
   factory ProductReview.fromJson(Map<String, dynamic> json) => ProductReview(
+    id: str(json['id']),
     rating: integer(json['rating']),
     author: str(json['author']),
     body: str(json['body']),
@@ -190,6 +193,54 @@ class ProductReview {
     createdAt: json['created_at'] as String?,
     verifiedPurchase: boolean(json['verified_purchase']),
   );
+}
+
+class ProductDiscussion {
+  const ProductDiscussion({
+    required this.id,
+    required this.rootId,
+    required this.author,
+    required this.authorType,
+    required this.body,
+    this.parentId,
+    this.createdAt,
+    this.replies = const [],
+  });
+
+  final String id;
+  final String rootId;
+  final String? parentId;
+  final String author;
+  final String authorType;
+  final String body;
+  final String? createdAt;
+  final List<ProductDiscussion> replies;
+
+  factory ProductDiscussion.fromJson(Map<String, dynamic> json) =>
+      ProductDiscussion(
+        id: str(json['id']),
+        rootId: str(json['root_id']),
+        parentId: json['parent_id'] as String?,
+        author: str(json['author']),
+        authorType: str(json['author_type']),
+        body: str(json['body']),
+        createdAt: json['created_at'] as String?,
+        replies: listOf(json['replies'])
+            .map(ProductDiscussion.fromJson)
+            .toList(growable: false),
+      );
+}
+
+class DiscussionPage {
+  const DiscussionPage({
+    required this.discussions,
+    required this.page,
+    required this.lastPage,
+  });
+
+  final List<ProductDiscussion> discussions;
+  final int page;
+  final int lastPage;
 }
 
 class ReviewPage {

@@ -47,15 +47,30 @@ class ProductDiscussionController extends Controller
             && $request->user()->account_type === 'seller'
             && $request->user()->sellerTenant()?->id === $product->tenant_id;
 
-        if ($returnToSellerReviews && $request->expectsJson()) {
+        if ($request->expectsJson()) {
             $discussion->load('user', 'parent.user');
 
-            return response()->json(['html' => view('seller.reviews._discussion-message', [
-                'entry' => $discussion,
-                'product' => $product,
-                'canReply' => true,
-                'discussionPage' => $data['discussion_page'] ?? 1,
-            ])->render()]);
+            if ($returnToSellerReviews) {
+                return response()->json(['html' => view('seller.reviews._discussion-message', [
+                    'entry' => $discussion,
+                    'product' => $product,
+                    'canReply' => true,
+                    'discussionPage' => $data['discussion_page'] ?? 1,
+                ])->render()]);
+            }
+
+            return response()->json([
+                'html' => view('marketplace.catalog._discussion-message', [
+                    'discussion' => $discussion,
+                    'product' => $product,
+                    'canDiscuss' => $request->user() !== null
+                        && in_array($request->user()->account_type, ['buyer', 'seller'], true)
+                        && $request->user()->hasVerifiedClerkEmail(),
+                    'rootDiscussionId' => $discussion->root_id ?? $discussion->id,
+                ])->render(),
+                'id' => $discussion->id,
+                'parent_id' => $discussion->parent_id,
+            ]);
         }
 
         return redirect()->to($returnToSellerReviews

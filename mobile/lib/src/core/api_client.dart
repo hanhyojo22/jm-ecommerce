@@ -221,6 +221,50 @@ class ApiClient {
     );
   }
 
+  Future<DiscussionPage> productDiscussions({
+    required String store,
+    required String product,
+    int page = 1,
+  }) async {
+    final body = mapOf(
+      await _raw(
+        'GET',
+        '/stores/${Uri.encodeComponent(store)}/products/${Uri.encodeComponent(product)}/discussions',
+        query: {'page': page},
+      ),
+    );
+    final meta = mapOf(body['meta']);
+    return DiscussionPage(
+      discussions: listOf(body['data'])
+          .map(ProductDiscussion.fromJson)
+          .toList(growable: false),
+      page: integer(meta['current_page'], page),
+      lastPage: integer(meta['last_page'], page),
+    );
+  }
+
+  Future<ProductDiscussion> postProductDiscussion({
+    required String store,
+    required String product,
+    required String body,
+    String? parentId,
+  }) async => ProductDiscussion.fromJson(
+    mapOf(
+      await _data(
+        'POST',
+        '/stores/${Uri.encodeComponent(store)}/products/${Uri.encodeComponent(product)}/discussions',
+        data: {'body': body, 'parent_id': ?parentId},
+      ),
+    ),
+  );
+
+  Future<String?> eligibleReviewOrderItem(String productId) async {
+    final data = mapOf(
+      await _data('GET', '/products/$productId/review-eligibility'),
+    );
+    return data['order_item_id'] as String?;
+  }
+
   Future<StoreInfo> store(String slug) async =>
       StoreInfo.fromJson(mapOf(await _data('GET', '/stores/$slug')));
 
@@ -492,6 +536,20 @@ class ApiClient {
       },
     );
   }
+
+  Future<ProductReview> publishProductReview({
+    required String orderItemId,
+    required int rating,
+    required String body,
+  }) async => ProductReview.fromJson(
+    mapOf(
+      await _data(
+        'POST',
+        '/order-items/$orderItemId/review',
+        data: {'rating': rating, if (body.isNotEmpty) 'body': body},
+      ),
+    ),
+  );
 
   Future<String> broadcastAuth({
     required String socketId,

@@ -1,0 +1,2233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JMMart — Mobile Homepage Mockup (Interactive Design Preview)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* JMMart Design System Tokens (from Flutter theme & Tailwind config) */
+      --brand-primary: #14665A;
+      --brand-primary-dark: #0D4940;
+      --brand-primary-light: #1D8576;
+      --brand-primary-soft: #E8F3F1;
+      --brand-accent: #E0A63B;
+      --brand-accent-hover: #C9912C;
+      --brand-accent-soft: #FEF8EC;
+      
+      --surface-bg: #F7F6F2;
+      --surface-card: #FFFFFF;
+      --surface-elevated: #FFFFFF;
+      --surface-subtle: #EFECE6;
+      
+      --text-main: #182320;
+      --text-muted: #667570;
+      --text-light: #94A39E;
+      --hairline: rgba(20, 102, 90, 0.12);
+      --hairline-subtle: #EAE6DF;
+      
+      --badge-red: #E11D48;
+      --badge-green: #10B981;
+      --badge-blue: #2563EB;
+      
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-full: 9999px;
+      
+      --shadow-sm: 0 1px 2px rgba(20, 40, 35, 0.04);
+      --shadow-md: 0 4px 14px rgba(20, 40, 35, 0.08);
+      --shadow-lg: 0 12px 30px rgba(20, 40, 35, 0.12);
+    }
+
+    /* Dark Mode Theme Tokens */
+    body.dark-mode {
+      --surface-bg: #0F1513;
+      --surface-card: #18221F;
+      --surface-elevated: #202D29;
+      --surface-subtle: #141C19;
+      
+      --text-main: #F3F5F4;
+      --text-muted: #99A8A2;
+      --text-light: #6A7B75;
+      --hairline: rgba(255, 255, 255, 0.1);
+      --hairline-subtle: #25332E;
+      --brand-primary-soft: rgba(20, 102, 90, 0.25);
+      --brand-accent-soft: rgba(224, 166, 59, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: #0E1312;
+      color: #E2E8F0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 60px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Showcase Bar */
+    .top-bar {
+      width: 100%;
+      max-width: 1180px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding: 14px 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #14665A, #1D8576);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-weight: 800;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(20, 102, 90, 0.4);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: rgba(224, 166, 59, 0.2);
+      color: #F8C366;
+      border: 1px solid rgba(224, 166, 59, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-toggle {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #E2E8F0;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-toggle:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+    }
+
+    .btn-toggle.active {
+      background: var(--brand-primary);
+      border-color: var(--brand-primary-light);
+      color: #FFFFFF;
+    }
+
+    /* Main Showcase Layout */
+    .showcase-container {
+      width: 100%;
+      max-width: 1180px;
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .showcase-container {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    /* Mobile Device Frame */
+    .device-wrapper {
+      position: sticky;
+      top: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .device-chassis {
+      width: 390px;
+      height: 844px;
+      background: #000000;
+      border-radius: 50px;
+      padding: 12px;
+      box-shadow: 
+        0 0 0 3px #2C3532,
+        0 0 0 6px #151C1A,
+        0 25px 50px -12px rgba(0, 0, 0, 0.7),
+        0 0 80px rgba(20, 102, 90, 0.15);
+      position: relative;
+      user-select: none;
+      transition: all 0.3s ease;
+    }
+
+    /* Realistic Screen Cutout */
+    .device-screen {
+      width: 100%;
+      height: 100%;
+      background: var(--surface-bg);
+      border-radius: 40px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Dynamic Island */
+    .dynamic-island {
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 114px;
+      height: 28px;
+      background: #000000;
+      border-radius: 20px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+    }
+
+    .island-camera {
+      width: 11px;
+      height: 11px;
+      background: #111B18;
+      border: 1px solid #1C2E2A;
+      border-radius: 50%;
+    }
+
+    .island-sensor {
+      width: 7px;
+      height: 7px;
+      background: #0E1714;
+      border-radius: 50%;
+    }
+
+    /* Mobile Status Bar */
+    .status-bar {
+      height: 48px;
+      padding: 12px 24px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      background: var(--brand-primary);
+      z-index: 90;
+      transition: background 0.2s ease;
+    }
+
+    .status-icons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-icons svg {
+      width: 15px;
+      height: 15px;
+      fill: currentColor;
+    }
+
+    /* Scrollable App Body */
+    .app-scrollable {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      background: var(--surface-bg);
+      position: relative;
+      padding-bottom: 84px; /* Space for bottom nav */
+    }
+
+    .app-scrollable::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .app-scrollable::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 4px;
+    }
+
+    /* APP HEADER: Brand & Search Band */
+    .app-header {
+      background: var(--brand-primary);
+      padding: 6px 16px 14px;
+      color: #FFFFFF;
+      border-bottom-left-radius: 22px;
+      border-bottom-right-radius: 22px;
+      box-shadow: 0 6px 16px rgba(20, 102, 90, 0.15);
+    }
+
+    .header-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .location-selector {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.14);
+      padding: 5px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .location-selector:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    .location-selector svg {
+      width: 14px;
+      height: 14px;
+      color: var(--brand-accent);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn-header {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .icon-btn-header:hover {
+      background: rgba(255, 255, 255, 0.22);
+      transform: scale(1.04);
+    }
+
+    .icon-btn-header svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .badge-count {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: var(--brand-accent);
+      color: #1A2220;
+      font-size: 10px;
+      font-weight: 800;
+      min-width: 17px;
+      height: 17px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--brand-primary);
+    }
+
+    /* Search Bar */
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .search-pill {
+      flex: 1;
+      height: 44px;
+      background: #FFFFFF;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      cursor: text;
+    }
+
+    .search-pill svg.search-icon {
+      width: 18px;
+      height: 18px;
+      color: #718096;
+      flex-shrink: 0;
+    }
+
+    .search-input-placeholder {
+      flex: 1;
+      font-size: 13px;
+      color: #718096;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .search-action-icons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #A0AEC0;
+    }
+
+    .search-action-icons svg {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    /* Live Search Dropdown Suggestion */
+    .search-dropdown {
+      display: none;
+      position: absolute;
+      top: 108px;
+      left: 16px;
+      right: 16px;
+      background: var(--surface-card);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--hairline);
+      z-index: 120;
+      overflow: hidden;
+    }
+
+    .search-dropdown.open {
+      display: block;
+      animation: dropFade 0.2s ease-out;
+    }
+
+    @keyframes dropFade {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .suggestion-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--hairline-subtle);
+      font-size: 12.5px;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .suggestion-item:hover {
+      background: var(--surface-subtle);
+    }
+
+    /* Trust & Marketplace Value Prop Ribbon */
+    .value-ribbon {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px 2px;
+      gap: 8px;
+    }
+
+    .value-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .value-tag svg {
+      width: 13px;
+      height: 13px;
+      color: var(--brand-primary);
+    }
+
+    /* Hero Banner Carousel */
+    .hero-banner-section {
+      padding: 10px 16px 4px;
+    }
+
+    .hero-banner-card {
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, #14665A 0%, #0B463D 55%, #08342D 100%);
+      color: #FFFFFF;
+      padding: 18px 18px 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(20, 102, 90, 0.2);
+    }
+
+    .hero-banner-card::after {
+      content: '';
+      position: absolute;
+      top: -30px;
+      right: -20px;
+      width: 170px;
+      height: 170px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(224, 166, 59, 0.3) 0%, rgba(20, 102, 90, 0) 70%);
+      pointer-events: none;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(224, 166, 59, 0.22);
+      border: 1px solid rgba(224, 166, 59, 0.35);
+      color: #F8C366;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      margin-bottom: 8px;
+    }
+
+    .hero-heading {
+      font-size: 19px;
+      font-weight: 800;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+      max-width: 200px;
+      margin-bottom: 6px;
+    }
+
+    .hero-sub {
+      font-size: 11.5px;
+      color: #C0DBD5;
+      line-height: 1.4;
+      max-width: 190px;
+      margin-bottom: 12px;
+    }
+
+    .hero-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--brand-accent);
+      color: #17221E;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: background 0.15s;
+    }
+
+    .hero-btn:hover {
+      background: var(--brand-accent-hover);
+    }
+
+    .hero-photo-cluster {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      width: 120px;
+      height: 110px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+    }
+
+    .hero-visual-card {
+      width: 95px;
+      height: 95px;
+      border-radius: 14px;
+      background: #FFFFFF;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      transform: rotate(3deg);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-visual-card img {
+      width: 100%;
+      height: 65%;
+      object-fit: cover;
+    }
+
+    .hero-visual-caption {
+      background: #FFFFFF;
+      padding: 3px 6px;
+      font-size: 8.5px;
+      font-weight: 700;
+      color: #182320;
+      text-align: center;
+    }
+
+    .hero-dots {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .hero-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--hairline-subtle);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .hero-dot.active {
+      width: 16px;
+      border-radius: 3px;
+      background: var(--brand-primary);
+    }
+
+    /* Categories Strip / Circular Grid */
+    .section-container {
+      padding: 16px 16px 0;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-link {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--brand-primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+    }
+
+    .section-link:hover {
+      text-decoration: underline;
+    }
+
+    .categories-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin: 0 -16px;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    .categories-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 62px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cat-avatar {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--surface-card);
+      border: 1.5px solid var(--hairline-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .cat-item:hover .cat-avatar,
+    .cat-item.active .cat-avatar {
+      transform: translateY(-2px);
+      border-color: var(--brand-primary);
+      background: var(--brand-primary-soft);
+    }
+
+    .cat-item.active .cat-avatar::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border: 2px solid var(--brand-primary);
+      border-radius: 50%;
+    }
+
+    .cat-avatar svg {
+      width: 24px;
+      height: 24px;
+      color: var(--brand-primary);
+    }
+
+    .cat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-main);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* Flash Deals Section */
+    .flash-deals-box {
+      background: linear-gradient(145deg, #1A2622 0%, #111A17 100%);
+      border-radius: var(--radius-lg);
+      padding: 14px 14px 16px;
+      color: #FFFFFF;
+      margin-top: 14px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      position: relative;
+    }
+
+    .flash-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .flash-title-area {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .flash-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #EF4444;
+      color: #FFFFFF;
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .flash-timer {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #F87171;
+    }
+
+    .timer-pill {
+      background: #283731;
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: #FFFFFF;
+    }
+
+    .flash-cards-row {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .flash-cards-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    .flash-card {
+      min-width: 124px;
+      width: 124px;
+      background: #23312C;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: transform 0.15s;
+    }
+
+    .flash-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .flash-img-wrapper {
+      width: 100%;
+      height: 100px;
+      background: #18231F;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .flash-img-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .discount-pill {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: #EF4444;
+      color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    .flash-card-body {
+      padding: 8px 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .flash-price {
+      font-size: 13px;
+      font-weight: 800;
+      color: #FBBF24;
+    }
+
+    .flash-old-price {
+      font-size: 10px;
+      color: #8E9F98;
+      text-decoration: line-through;
+    }
+
+    .claim-bar-wrap {
+      width: 100%;
+      height: 5px;
+      background: #16201D;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+
+    .claim-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #F59E0B, #EF4444);
+      border-radius: 3px;
+    }
+
+    .claim-label {
+      font-size: 8.5px;
+      color: #A3B4AD;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Featured Local Stores Carousel (Multi-Vendor Highlight) */
+    .stores-strip {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      margin: 0 -16px;
+      padding: 0 16px 6px;
+    }
+
+    .stores-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .store-badge-card {
+      min-width: 190px;
+      background: var(--surface-card);
+      border: 1px solid var(--hairline-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .store-badge-card:hover {
+      border-color: var(--brand-primary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .store-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .store-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--brand-primary-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--brand-primary);
+      flex-shrink: 0;
+    }
+
+    .store-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .store-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .verified-icon {
+      width: 12px;
+      height: 12px;
+      color: #2563EB;
+      flex-shrink: 0;
+    }
+
+    .store-meta {
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .store-rating {
+      color: #D97706;
+      font-weight: 700;
+    }
+
+    .store-chips {
+      display: flex;
+      gap: 4px;
+    }
+
+    .store-chip-tag {
+      font-size: 9.5px;
+      font-weight: 600;
+      background: var(--surface-subtle);
+      color: var(--text-muted);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* 2-Column Product Grid (Feed / Recommended) */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .product-card {
+      background: var(--surface-card);
+      border: 1px solid var(--hairline-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .product-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .product-image-box {
+      width: 100%;
+      height: 138px;
+      background: #EAEBE9;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .product-image-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .product-tag-floating {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: rgba(20, 102, 90, 0.9);
+      color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .favorite-btn {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.85);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #64748B;
+      transition: color 0.15s, transform 0.15s;
+    }
+
+    .favorite-btn:hover {
+      transform: scale(1.1);
+      color: #E11D48;
+    }
+
+    .favorite-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .product-card-body {
+      padding: 8px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .product-store-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 2px;
+    }
+
+    .store-label-mini {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .product-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 6px;
+      min-height: 32px;
+    }
+
+    .product-rating-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .stars-icon {
+      color: #E0A63B;
+      display: flex;
+      align-items: center;
+    }
+
+    .product-footer-row {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .price-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .price-current {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--brand-primary);
+    }
+
+    body.dark-mode .price-current {
+      color: #34D399;
+    }
+
+    .price-original {
+      font-size: 10px;
+      color: var(--text-light);
+      text-decoration: line-through;
+    }
+
+    .btn-add-cart-mini {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: var(--brand-primary-soft);
+      border: 1px solid var(--hairline);
+      color: var(--brand-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-add-cart-mini:hover {
+      background: var(--brand-primary);
+      color: #FFFFFF;
+      transform: scale(1.05);
+    }
+
+    .btn-add-cart-mini svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    /* Fixed Bottom Navigation (JMMart Shell) */
+    .bottom-nav {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 66px;
+      background: var(--surface-card);
+      border-top: 1px solid var(--hairline-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 12px 14px;
+      z-index: 95;
+      box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .nav-tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      color: var(--text-muted);
+      position: relative;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      user-select: none;
+      transition: color 0.15s;
+    }
+
+    .nav-tab-item.active {
+      color: var(--brand-primary);
+    }
+
+    .nav-tab-item svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .nav-tab-label {
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+
+    .nav-badge-pill {
+      position: absolute;
+      top: 2px;
+      right: 8px;
+      background: #EF4444;
+      color: #FFFFFF;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 8px;
+      border: 1.5px solid var(--surface-card);
+    }
+
+    /* Bottom Home Indicator */
+    .home-indicator {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 4px;
+      background: var(--text-main);
+      opacity: 0.3;
+      border-radius: 2px;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Toast Notification */
+    .toast-popup {
+      position: absolute;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%) translateY(40px);
+      background: rgba(24, 35, 32, 0.95);
+      color: #FFFFFF;
+      padding: 9px 18px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 150;
+      white-space: nowrap;
+    }
+
+    .toast-popup.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Right Side: Architecture & Design Rationale Panel */
+    .design-docs-panel {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      color: #CBD5E1;
+      backdrop-filter: blur(12px);
+    }
+
+    .doc-section-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--brand-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+
+    .doc-main-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .doc-lede {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #94A3B8;
+      margin-bottom: 24px;
+    }
+
+    .specs-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .spec-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .spec-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .spec-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: #94A3B8;
+    }
+
+    .spec-list li strong {
+      color: #F1F5F9;
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #38BDF8;
+    }
+
+    .flow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .flow-step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--brand-primary);
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-text strong {
+      color: #F8FAFC;
+    }
+
+    .note-box {
+      margin-top: 24px;
+      padding: 14px 18px;
+      border-radius: var(--radius-md);
+      background: rgba(224, 166, 59, 0.1);
+      border: 1px solid rgba(224, 166, 59, 0.25);
+      font-size: 12.5px;
+      color: #F8C366;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+
+    .note-box svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar: Quick Interactive Controls -->
+  <header class="top-bar">
+    <div class="brand-pill">
+      <div class="logo-badge">JM</div>
+      <div>
+        <div class="brand-title">JMMart Marketplace <span class="brand-badge">Mobile Mockup</span></div>
+        <div style="font-size: 11px; color: #94A3B8;">Flutter Buyer App &bull; Catalog &amp; Discovery Home</div>
+      </div>
+    </div>
+
+    <div class="controls-group">
+      <button class="btn-toggle" id="themeToggle" onclick="toggleTheme()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+        <span id="themeLabel">Light Mode</span>
+      </button>
+
+      <button class="btn-toggle" id="modeToggle" onclick="toggleVariant()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span id="variantLabel">Variant A: Discovery Focus</span>
+      </button>
+
+      <button class="btn-toggle" onclick="resetScroll()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        Top
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Showcase Container -->
+  <main class="showcase-container">
+
+    <!-- LEFT: Mobile Phone Chassis Frame -->
+    <div class="device-wrapper">
+      <div class="device-chassis" id="deviceFrame">
+        <div class="device-screen">
+          
+          <!-- Dynamic Island -->
+          <div class="dynamic-island">
+            <div class="island-camera"></div>
+            <div class="island-sensor"></div>
+          </div>
+
+          <!-- Phone Status Bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-icons">
+              <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9zm0 13.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5z"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4z"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M17 4h-3V2h-4v2H7v18h10V4zm-2 16H9V6h6v14z"/></svg>
+            </div>
+          </div>
+
+          <!-- Scrollable Mobile App Shell -->
+          <div class="app-scrollable" id="appScrollArea">
+            
+            <!-- APP HEADER & SEARCH -->
+            <div class="app-header">
+              <div class="header-top-row">
+                <div class="location-selector" onclick="showToast('Location picker: Metro Manila')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                  <span>Deliver to: <strong>San Juan, Metro Manila</strong></span>
+                  <svg style="width:10px;height:10px;margin-left:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+
+                <div class="header-actions">
+                  <button class="icon-btn-header" onclick="showToast('Notifications: 2 new vendor updates')" aria-label="Notifications">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                    <span class="badge-count">2</span>
+                  </button>
+
+                  <button class="icon-btn-header" onclick="showToast('Opening Cart (3 items)')" aria-label="Cart">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    <span class="badge-count" id="cartCountBadge">3</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="search-row">
+                <div class="search-pill" onclick="toggleSearchDropdown()">
+                  <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <div class="search-input-placeholder" id="searchPlaceholderText">Search products, stores &amp; brands...</div>
+                  <div class="search-action-icons">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="event.stopPropagation(); showToast('Barcode / Photo scan opened');"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="event.stopPropagation(); showToast('Voice search listening...');"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search Dropdown Preview -->
+            <div class="search-dropdown" id="searchDropdown">
+              <div class="suggestion-item" onclick="selectSearch('Artisan Handcrafted Ceramic Mug')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>Artisan Handcrafted Mug &bull; <strong style="color:var(--brand-primary);">Verde Botanicals</strong></span>
+              </div>
+              <div class="suggestion-item" onclick="selectSearch('Mechanical Keyboard Wireless')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>Mechanical Keyboard &bull; <strong style="color:var(--brand-primary);">Apex Tech Gear</strong></span>
+              </div>
+              <div class="suggestion-item" onclick="selectSearch('Organic Cold Brew Coffee Beans')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span>Organic Coffee Beans &bull; <strong style="color:var(--brand-primary);">Highland Roast Co.</strong></span>
+              </div>
+            </div>
+
+            <!-- Marketplace Trust Ribbon -->
+            <div class="value-ribbon">
+              <div class="value-tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span>Secure Escrow</span>
+              </div>
+              <div class="value-tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Verified Sellers</span>
+              </div>
+              <div class="value-tag">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                <span>COD Available</span>
+              </div>
+            </div>
+
+            <!-- HERO CAROUSEL BANNER -->
+            <section class="hero-banner-section">
+              <div class="hero-banner-card" id="heroCard">
+                <div class="hero-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  <span>Featured Collection</span>
+                </div>
+                <h2 class="hero-heading">Good finds.<br>Closer to home.</h2>
+                <p class="hero-sub">Direct from authentic local workshops &amp; curated marketplace shops.</p>
+                <button class="hero-btn" onclick="showToast('Navigating to Featured Collection')">
+                  <span>Explore Now</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+
+                <div class="hero-photo-cluster">
+                  <div class="hero-visual-card">
+                    <img src="https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80" alt="Ceramic Collection">
+                    <div class="hero-visual-caption">₱450 &bull; Local Craft</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Carousel Pagination Dots -->
+              <div class="hero-dots">
+                <span class="hero-dot active" onclick="switchHero(0)"></span>
+                <span class="hero-dot" onclick="switchHero(1)"></span>
+                <span class="hero-dot" onclick="switchHero(2)"></span>
+              </div>
+            </section>
+
+            <!-- CATEGORIES RAIL -->
+            <section class="section-container">
+              <div class="section-head">
+                <h3 class="section-title">
+                  <span>Explore Categories</span>
+                </h3>
+                <a class="section-link" onclick="showToast('Browsing all 18 categories')">
+                  <span>View all</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                </a>
+              </div>
+
+              <div class="categories-scroll" id="catScroll">
+                <div class="cat-item active" onclick="selectCat(this, 'All')">
+                  <div class="cat-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                  </div>
+                  <span class="cat-label">All Items</span>
+                </div>
+
+                <div class="cat-item" onclick="selectCat(this, 'Electronics')">
+                  <div class="cat-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  </div>
+                  <span class="cat-label">Electronics</span>
+                </div>
+
+                <div class="cat-item" onclick="selectCat(this, 'Fashion')">
+                  <div class="cat-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>
+                  </div>
+                  <span class="cat-label">Fashion</span>
+                </div>
+
+                <div class="cat-item" onclick="selectCat(this, 'Home')">
+                  <div class="cat-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                  </div>
+                  <span class="cat-label">Home &amp; Living</span>
+                </div>
+
+                <div class="cat-item" onclick="selectCat(this, 'Beauty')">
+                  <div class="cat-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                  </div>
+                  <span class="cat-label">Health &amp; Beauty</span>
+                </div>
+
+                <div class="cat-item" onclick="selectCat(this, 'Grocery')">
+                  <div class="cat-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                  </div>
+                  <span class="cat-label">Grocery</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- FLASH DEALS SECTION (Countdown + Limited Stock) -->
+            <section class="section-container" id="flashDealsSection">
+              <div class="flash-deals-box">
+                <div class="flash-head">
+                  <div class="flash-title-area">
+                    <span class="flash-badge">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      Flash Deals
+                    </span>
+                    <span style="font-size: 11px; color: #CBD5E1; margin-left: 2px;">Ends in</span>
+                  </div>
+
+                  <div class="flash-timer">
+                    <span class="timer-pill" id="timerHours">03</span>:
+                    <span class="timer-pill" id="timerMins">42</span>:
+                    <span class="timer-pill" id="timerSecs">18</span>
+                  </div>
+                </div>
+
+                <div class="flash-cards-row">
+                  <!-- Deal 1 -->
+                  <div class="flash-card" onclick="showToast('Viewing Wireless ANC Earbuds deal')">
+                    <div class="flash-img-wrapper">
+                      <img src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=300&q=80" alt="Earbuds">
+                      <span class="discount-pill">-45%</span>
+                    </div>
+                    <div class="flash-card-body">
+                      <span class="flash-price">₱890</span>
+                      <span class="flash-old-price">₱1,620</span>
+                      <div class="claim-bar-wrap">
+                        <div class="claim-bar-fill" style="width: 78%;"></div>
+                      </div>
+                      <span class="claim-label">🔥 32 sold</span>
+                    </div>
+                  </div>
+
+                  <!-- Deal 2 -->
+                  <div class="flash-card" onclick="showToast('Viewing Ceramic Pour-over Kit deal')">
+                    <div class="flash-img-wrapper">
+                      <img src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=300&q=80" alt="Coffee Maker">
+                      <span class="discount-pill">-30%</span>
+                    </div>
+                    <div class="flash-card-body">
+                      <span class="flash-price">₱540</span>
+                      <span class="flash-old-price">₱780</span>
+                      <div class="claim-bar-wrap">
+                        <div class="claim-bar-fill" style="width: 45%;"></div>
+                      </div>
+                      <span class="claim-label">🔥 12 sold</span>
+                    </div>
+                  </div>
+
+                  <!-- Deal 3 -->
+                  <div class="flash-card" onclick="showToast('Viewing Canvas Tote Bag deal')">
+                    <div class="flash-img-wrapper">
+                      <img src="https://images.unsplash.com/photo-1597484662317-9bd7bdda2907?auto=format&fit=crop&w=300&q=80" alt="Tote">
+                      <span class="discount-pill">-50%</span>
+                    </div>
+                    <div class="flash-card-body">
+                      <span class="flash-price">₱299</span>
+                      <span class="flash-old-price">₱599</span>
+                      <div class="claim-bar-wrap">
+                        <div class="claim-bar-fill" style="width: 90%;"></div>
+                      </div>
+                      <span class="claim-label">🔥 45 sold</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- FEATURED LOCAL SHOPS (Multi-Vendor Spotlight) -->
+            <section class="section-container">
+              <div class="section-head">
+                <h3 class="section-title">
+                  <span>Featured Local Shops</span>
+                </h3>
+                <a class="section-link" onclick="showToast('Browsing verified marketplace sellers')">
+                  <span>All stores</span>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+                </a>
+              </div>
+
+              <div class="stores-strip">
+                <!-- Shop 1 -->
+                <div class="store-badge-card" onclick="showToast('Visiting Verde Botanicals store')">
+                  <div class="store-header">
+                    <div class="store-avatar" style="background:#E1EFEA; color:#14665A;">VB</div>
+                    <div class="store-info">
+                      <div class="store-name">
+                        <span>Verde Botanicals</span>
+                        <svg class="verified-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7l-4.1-4.1 1.4-1.4 2.7 2.7 6.7-6.7 1.4 1.4-8.1 8.1z"/></svg>
+                      </div>
+                      <div class="store-meta">
+                        <span class="store-rating">&#9733; 4.9</span>
+                        <span>&bull; 1.4k sales</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="store-chips">
+                    <span class="store-chip-tag">Plants</span>
+                    <span class="store-chip-tag">Ceramics</span>
+                    <span class="store-chip-tag">Quezon City</span>
+                  </div>
+                </div>
+
+                <!-- Shop 2 -->
+                <div class="store-badge-card" onclick="showToast('Visiting Apex Tech Gear store')">
+                  <div class="store-header">
+                    <div class="store-avatar" style="background:#E0EEF9; color:#1E40AF;">AT</div>
+                    <div class="store-info">
+                      <div class="store-name">
+                        <span>Apex Tech Gear</span>
+                        <svg class="verified-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7l-4.1-4.1 1.4-1.4 2.7 2.7 6.7-6.7 1.4 1.4-8.1 8.1z"/></svg>
+                      </div>
+                      <div class="store-meta">
+                        <span class="store-rating">&#9733; 4.8</span>
+                        <span>&bull; 3.2k sales</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="store-chips">
+                    <span class="store-chip-tag">Gadgets</span>
+                    <span class="store-chip-tag">Audio</span>
+                    <span class="store-chip-tag">Makati City</span>
+                  </div>
+                </div>
+
+                <!-- Shop 3 -->
+                <div class="store-badge-card" onclick="showToast('Visiting Urban Thread store')">
+                  <div class="store-header">
+                    <div class="store-avatar" style="background:#FCE7F3; color:#9D174D;">UT</div>
+                    <div class="store-info">
+                      <div class="store-name">
+                        <span>Urban Thread</span>
+                        <svg class="verified-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7l-4.1-4.1 1.4-1.4 2.7 2.7 6.7-6.7 1.4 1.4-8.1 8.1z"/></svg>
+                      </div>
+                      <div class="store-meta">
+                        <span class="store-rating">&#9733; 5.0</span>
+                        <span>&bull; 850 sales</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="store-chips">
+                    <span class="store-chip-tag">Apparel</span>
+                    <span class="store-chip-tag">Linen</span>
+                    <span class="store-chip-tag">Pasig City</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- PRODUCT FEED GRID (Recommended for You) -->
+            <section class="section-container" style="padding-bottom: 20px;">
+              <div class="section-head">
+                <h3 class="section-title">
+                  <span>Recommended For You</span>
+                </h3>
+                <span style="font-size: 11px; color: var(--text-muted);">248 items</span>
+              </div>
+
+              <div class="product-grid" id="productGrid">
+                
+                <!-- Product 1 -->
+                <div class="product-card" onclick="showToast('Opening Ceramic Coffee Mug')">
+                  <div class="product-image-box">
+                    <img src="https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=400&q=80" alt="Ceramic Mug">
+                    <span class="product-tag-floating">Handcrafted</span>
+                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleHeart(this)" aria-label="Favorite">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                  </div>
+                  <div class="product-card-body">
+                    <div class="product-store-row">
+                      <span class="store-label-mini">Verde Botanicals</span>
+                    </div>
+                    <div class="product-title">Nordic Matte Ceramic Mug with Walnut Coaster</div>
+                    <div class="product-rating-row">
+                      <span class="stars-icon">&#9733; 4.9</span>
+                      <span>(128) &bull; 850 sold</span>
+                    </div>
+                    <div class="product-footer-row">
+                      <div class="price-group">
+                        <span class="price-current">₱450.00</span>
+                        <span class="price-original">₱550.00</span>
+                      </div>
+                      <button class="btn-add-cart-mini" onclick="event.stopPropagation(); addToCart('Nordic Matte Ceramic Mug')" aria-label="Add to cart">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Product 2 -->
+                <div class="product-card" onclick="showToast('Opening Mechanical Keyboard')">
+                  <div class="product-image-box">
+                    <img src="https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=400&q=80" alt="Keyboard">
+                    <span class="product-tag-floating" style="background:#2563EB;">Hot Pick</span>
+                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleHeart(this)" aria-label="Favorite">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                  </div>
+                  <div class="product-card-body">
+                    <div class="product-store-row">
+                      <span class="store-label-mini">Apex Tech Gear</span>
+                    </div>
+                    <div class="product-title">Retro RGB Wireless Mechanical Keyboard 75%</div>
+                    <div class="product-rating-row">
+                      <span class="stars-icon">&#9733; 4.8</span>
+                      <span>(312) &bull; 1.2k sold</span>
+                    </div>
+                    <div class="product-footer-row">
+                      <div class="price-group">
+                        <span class="price-current">₱2,490.00</span>
+                      </div>
+                      <button class="btn-add-cart-mini" onclick="event.stopPropagation(); addToCart('Retro Wireless Mechanical Keyboard')" aria-label="Add to cart">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Product 3 -->
+                <div class="product-card" onclick="showToast('Opening Organic Cotton Oversized Tee')">
+                  <div class="product-image-box">
+                    <img src="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=400&q=80" alt="Apparel">
+                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleHeart(this)" aria-label="Favorite">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                  </div>
+                  <div class="product-card-body">
+                    <div class="product-store-row">
+                      <span class="store-label-mini">Urban Thread</span>
+                    </div>
+                    <div class="product-title">Heavyweight 280GSM Organic Relaxed Tee</div>
+                    <div class="product-rating-row">
+                      <span class="stars-icon">&#9733; 5.0</span>
+                      <span>(94) &bull; 420 sold</span>
+                    </div>
+                    <div class="product-footer-row">
+                      <div class="price-group">
+                        <span class="price-current">₱680.00</span>
+                        <span class="price-original">₱850.00</span>
+                      </div>
+                      <button class="btn-add-cart-mini" onclick="event.stopPropagation(); addToCart('Organic Relaxed Tee')" aria-label="Add to cart">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Product 4 -->
+                <div class="product-card" onclick="showToast('Opening Arabica Whole Bean Coffee')">
+                  <div class="product-image-box">
+                    <img src="https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&w=400&q=80" alt="Coffee">
+                    <span class="product-tag-floating" style="background:#D97706;">Single Origin</span>
+                    <button class="favorite-btn" onclick="event.stopPropagation(); toggleHeart(this)" aria-label="Favorite">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                  </div>
+                  <div class="product-card-body">
+                    <div class="product-store-row">
+                      <span class="store-label-mini">Highland Roast Co.</span>
+                    </div>
+                    <div class="product-title">Benguet Arabica Honey Process (250g)</div>
+                    <div class="product-rating-row">
+                      <span class="stars-icon">&#9733; 4.9</span>
+                      <span>(180) &bull; 630 sold</span>
+                    </div>
+                    <div class="product-footer-row">
+                      <div class="price-group">
+                        <span class="price-current">₱385.00</span>
+                      </div>
+                      <button class="btn-add-cart-mini" onclick="event.stopPropagation(); addToCart('Benguet Arabica Coffee')" aria-label="Add to cart">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+
+          </div><!-- /app-scrollable -->
+
+          <!-- FIXED BOTTOM NAVIGATION BAR (Matches ShellTabNotifier) -->
+          <nav class="bottom-nav">
+            <div class="nav-tab-item active" onclick="selectTab(0, this)">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10l-8-6-8 6Z"/><path d="M9 22v-6h6v6"/></svg>
+              <span class="nav-tab-label">Shop</span>
+            </div>
+
+            <div class="nav-tab-item" onclick="selectTab(1, this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+              <span class="nav-tab-label">Orders</span>
+            </div>
+
+            <div class="nav-tab-item" onclick="selectTab(2, this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span class="nav-badge-pill">2</span>
+              <span class="nav-tab-label">Messages</span>
+            </div>
+
+            <div class="nav-tab-item" onclick="selectTab(3, this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="nav-tab-label">Account</span>
+            </div>
+          </nav>
+
+          <!-- Home Indicator Bar -->
+          <div class="home-indicator"></div>
+
+          <!-- Toast Feedback Popup -->
+          <div class="toast-popup" id="toastBox">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="toastMsg">Added to your cart!</span>
+          </div>
+
+        </div><!-- /device-screen -->
+      </div><!-- /device-chassis -->
+    </div><!-- /device-wrapper -->
+
+
+    <!-- RIGHT: Design System Specs & Technical Flutter Rationale -->
+    <div class="design-docs-panel">
+      <div class="doc-section-tag">UI/UX Design Architecture &amp; System</div>
+      <h1 class="doc-main-title">Mobile Homepage Experience</h1>
+      <p class="doc-lede">
+        This high-fidelity mockup visualizes the primary mobile buyer experience for <strong>JMMart</strong>.
+        It bridges the existing Laravel backend (multi-vendor catalog, stores, categories) with the Android/iOS Flutter app (<code>CatalogScreen</code>, Riverpod state, and <code>AppShell</code> navigation).
+      </p>
+
+      <!-- Key Specifications Grid -->
+      <div class="specs-grid">
+        <div class="spec-card">
+          <div class="spec-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E0A63B" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            <span>Color System Tokens</span>
+          </div>
+          <ul class="spec-list">
+            <li><strong>Brand Teal:</strong> <code class="code-pill">#14665A</code> (Primary Header)</li>
+            <li><strong>Warm Amber:</strong> <code class="code-pill">#E0A63B</code> (Accent &amp; CTAs)</li>
+            <li><strong>Light Surface:</strong> <code class="code-pill">#F7F6F2</code> (Warm Sand)</li>
+            <li><strong>Dark Surface:</strong> <code class="code-pill">#0F1513</code> (OLED Dark)</li>
+          </ul>
+          <div class="color-swatches">
+            <div class="swatch" style="background:#14665A;" title="Brand Primary"></div>
+            <div class="swatch" style="background:#E0A63B;" title="Accent Gold"></div>
+            <div class="swatch" style="background:#F7F6F2;" title="Light Surface"></div>
+            <div class="swatch" style="background:#0F1513;" title="Dark Surface"></div>
+          </div>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+            <span>Flutter &amp; Riverpod Seams</span>
+          </div>
+          <ul class="spec-list">
+            <li><strong>Slivers Hierarchy:</strong> <code class="code-pill">CustomScrollView</code></li>
+            <li><strong>State Providers:</strong> <code class="code-pill">catalogFilterProvider</code></li>
+            <li><strong>Feed Lazy Loading:</strong> <code class="code-pill">productsProvider.loadMore()</code></li>
+            <li><strong>Shell Sync:</strong> <code class="code-pill">shellTabProvider</code> (Tab 0)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Core UX Highlights -->
+      <h3 style="font-size: 15px; font-weight: 700; color: #FFFFFF; margin-bottom: 10px;">Strategic UX Modules</h3>
+      <div class="flow-steps">
+        <div class="flow-step-item">
+          <div class="step-number">1</div>
+          <div class="step-text">
+            <strong>Unified Search &amp; Delivery Location Header:</strong>
+            Combines one-tap address selection with an unconstrained 48dp search pill that accommodates both direct queries, photo lookup, and quick category filtering.
+          </div>
+        </div>
+
+        <div class="flow-step-item">
+          <div class="step-number">2</div>
+          <div class="step-text">
+            <strong>Multi-Vendor Storefront Spotlight:</strong>
+            Highlights independent merchants (e.g. <em>Verde Botanicals</em>, <em>Apex Tech</em>) with verified merchant badges, direct follower counts, and ratings to build buyer trust.
+          </div>
+        </div>
+
+        <div class="flow-step-item">
+          <div class="step-number">3</div>
+          <div class="step-text">
+            <strong>Urgency &amp; Conversion Trigger (Flash Deals):</strong>
+            High-contrast dark card container with active countdown timer and stock claim percentage bar to drive impulsive discovery without cluttering the clean catalog aesthetic.
+          </div>
+        </div>
+
+        <div class="flow-step-item">
+          <div class="step-number">4</div>
+          <div class="step-text">
+            <strong>2-Column Native Masonry Product Cards:</strong>
+            Optimized for thumb accessibility on 375px–430px screens. Features explicit seller attribution, ratings count, clear PHP currency formatting, and one-tap "+ Add" cart actions.
+          </div>
+        </div>
+      </div>
+
+      <!-- Compliance Callout -->
+      <div class="note-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+          <strong>Accessibility &amp; Touch Target Compliance:</strong>
+          Every tap target satisfies Android Material 3 and Apple HIG requirements (&ge; 44&times;44dp). Text contrast exceeds WCAG AA (4.5:1), and color is never the sole carrier of status.
+        </div>
+      </div>
+    </div><!-- /design-docs-panel -->
+
+  </main>
+
+  <script>
+    // State
+    let isDark = false;
+    let isVariantB = false;
+    let cartCount = 3;
+
+    // Toast notification
+    let toastTimer = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      const msgSpan = document.getElementById('toastMsg');
+      msgSpan.textContent = msg;
+      toast.classList.add('visible');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('visible');
+      }, 2200);
+    }
+
+    // Toggle Dark / Light Theme
+    function toggleTheme() {
+      isDark = !isDark;
+      document.body.classList.toggle('dark-mode', isDark);
+      document.getElementById('themeLabel').textContent = isDark ? 'Dark Mode' : 'Light Mode';
+      document.getElementById('themeToggle').classList.toggle('active', isDark);
+      showToast(isDark ? 'Switched to Dark Surface (#0F1513)' : 'Switched to Light Surface (#F7F6F2)');
+    }
+
+    // Toggle View Variant (A: Discovery vs B: High-Density Flash-Sale Focus)
+    function toggleVariant() {
+      isVariantB = !isVariantB;
+      const label = document.getElementById('variantLabel');
+      const flashSection = document.getElementById('flashDealsSection');
+      const catScroll = document.getElementById('catScroll');
+
+      if (isVariantB) {
+        label.textContent = 'Variant B: Promo & Flash Sale Focus';
+        // Move Flash section right below hero banner
+        const heroSection = document.querySelector('.hero-banner-section');
+        heroSection.parentNode.insertBefore(flashSection, heroSection.nextSibling);
+        flashSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Activated Promo & Flash Deals Focus');
+      } else {
+        label.textContent = 'Variant A: Discovery Focus';
+        const sectionContainer = document.querySelectorAll('.section-container')[0];
+        sectionContainer.parentNode.insertBefore(flashSection, document.querySelectorAll('.section-container')[2]);
+        showToast('Activated Curated Discovery Focus');
+      }
+    }
+
+    // Add to Cart Simulation
+    function addToCart(productName) {
+      cartCount++;
+      document.getElementById('cartCountBadge').textContent = cartCount;
+      showToast(`Added "${productName}" to cart (${cartCount})`);
+    }
+
+    // Toggle Favorite Heart
+    function toggleHeart(btn) {
+      const svg = btn.querySelector('svg');
+      if (svg.getAttribute('fill') === 'currentColor') {
+        svg.setAttribute('fill', 'none');
+        btn.style.color = '#64748B';
+        showToast('Removed from favorites');
+      } else {
+        svg.setAttribute('fill', 'currentColor');
+        btn.style.color = '#E11D48';
+        showToast('Saved to your favorites!');
+      }
+    }
+
+    // Category Selection
+    function selectCat(element, name) {
+      document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      showToast(`Filtered feed by: ${name}`);
+    }
+
+    // Bottom Navigation Bar Selection
+    function selectTab(index, element) {
+      document.querySelectorAll('.nav-tab-item').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      const tabNames = ['Shop (Discover)', 'Your Orders', 'Messages', 'Account & Settings'];
+      showToast(`Navigated to: ${tabNames[index]}`);
+    }
+
+    // Search dropdown toggle
+    function toggleSearchDropdown() {
+      const dropdown = document.getElementById('searchDropdown');
+      dropdown.classList.toggle('open');
+    }
+
+    function selectSearch(query) {
+      document.getElementById('searchPlaceholderText').textContent = query;
+      document.getElementById('searchDropdown').classList.remove('open');
+      showToast(`Searching for: "${query}"`);
+    }
+
+    // Close search dropdown on click outside
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('searchDropdown');
+      const searchPill = document.querySelector('.search-pill');
+      if (!dropdown.contains(e.target) && !searchPill.contains(e.target)) {
+        dropdown.classList.remove('open');
+      }
+    });
+
+    // Reset Scroll to Top
+    function resetScroll() {
+      document.getElementById('appScrollArea').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Hero Carousel Swapping
+    const heroSlides = [
+      {
+        tag: 'Featured Collection',
+        heading: 'Good finds.<br>Closer to home.',
+        sub: 'Direct from authentic local workshops & curated marketplace shops.',
+        img: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=300&q=80',
+        caption: '₱450 • Local Craft'
+      },
+      {
+        tag: 'Flash Voucher',
+        heading: '20% OFF<br>Local Artisans',
+        sub: 'Use voucher code LOCALJM on checkout. Min spend ₱800.',
+        img: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=300&q=80',
+        caption: 'Code: LOCALJM'
+      },
+      {
+        tag: 'Free Shipping',
+        heading: 'Zero Delivery Fees<br>This Weekend',
+        sub: 'Available on all multi-vendor orders above ₱999.',
+        img: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=300&q=80',
+        caption: 'Orders ₱999+'
+      }
+    ];
+
+    function switchHero(idx) {
+      const dots = document.querySelectorAll('.hero-dot');
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      const slide = heroSlides[idx];
+      const card = document.getElementById('heroCard');
+      card.querySelector('.hero-tag span').textContent = slide.tag;
+      card.querySelector('.hero-heading').innerHTML = slide.heading;
+      card.querySelector('.hero-sub').textContent = slide.sub;
+      card.querySelector('.hero-visual-card img').src = slide.img;
+      card.querySelector('.hero-visual-caption').textContent = slide.caption;
+    }
+
+    // Flash Deals Countdown Timer
+    let secondsLeft = 3 * 3600 + 42 * 60 + 18;
+    setInterval(() => {
+      if (secondsLeft <= 0) return;
+      secondsLeft--;
+      const h = Math.floor(secondsLeft / 3600);
+      const m = Math.floor((secondsLeft % 3600) / 60);
+      const s = secondsLeft % 60;
+      document.getElementById('timerHours').textContent = String(h).padStart(2, '0');
+      document.getElementById('timerMins').textContent = String(m).padStart(2, '0');
+      document.getElementById('timerSecs').textContent = String(s).padStart(2, '0');
+    }, 1000);
+  </script>
+</body>
+</html>

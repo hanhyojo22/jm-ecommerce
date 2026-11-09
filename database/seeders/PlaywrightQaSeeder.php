@@ -92,9 +92,23 @@ class PlaywrightQaSeeder extends Seeder
             $arrival->save();
         }
 
-        $historyConversation = Conversation::query()->create(['buyer_id' => $customer->id, 'store_id' => $otherStore->id, 'product_id' => $historyProduct->id]);
+        $historyConversation = Conversation::query()->create(['buyer_id' => $customer->id, 'store_id' => $otherStore->id]);
         for ($number = 1; $number <= 225; $number++) {
-            $historyConversation->messages()->create(['sender_id' => $customer->id, 'body' => "History message {$number}"]);
+            $historyConversation->messages()->create([
+                'sender_id' => $customer->id,
+                'body' => "History message {$number}",
+                ...($number === 225 ? [
+                    'product_id' => $historyProduct->id,
+                    'context_snapshot' => [
+                        'type' => 'product',
+                        'title' => $historyProduct->name,
+                        'price' => $historyProduct->price,
+                        'image_path' => $historyProduct->thumbnail?->path,
+                        'slug' => $historyProduct->slug,
+                        'store_slug' => $otherStore->slug,
+                    ],
+                ] : []),
+            ]);
         }
         $historyConversation->update(['latest_message_at' => now()]);
 

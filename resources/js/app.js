@@ -654,7 +654,7 @@ const formNeedsClerkSessionCookie = (form) => {
         return false;
     }
 
-    if (form.hasAttribute('wire:submit') || form.hasAttribute('data-add-to-cart')) {
+    if (form.hasAttribute('wire:submit') || form.hasAttribute('data-add-to-cart') || form.hasAttribute('data-optimistic-submit')) {
         return false;
     }
 
@@ -682,8 +682,9 @@ if (clerkSessionRefreshEndpoint) {
                 await ensureClerkSession(clerkSessionRefreshEndpoint);
                 document.querySelector('[data-clerk-refresh-error]')?.remove();
             } catch (error) {
-                const form = document.activeElement?.closest('form[wire\\:submit]')
-                    ?? document.querySelector('form[wire\\:submit="submit"], [data-conversation-thread] form[wire\\:submit="send"]');
+                const form = document.activeElement?.closest('form[wire\\:submit], form[data-optimistic-submit]')
+                    ?? document.querySelector('form[data-submitting="true"]')
+                    ?? document.querySelector('form[wire\\:submit="submit"], form[data-optimistic-submit], [data-conversation-thread] form[wire\\:submit="send"]');
 
                 if (form && !form.querySelector('[data-clerk-refresh-error]')) {
                     const message = document.createElement('p');
@@ -692,6 +693,11 @@ if (clerkSessionRefreshEndpoint) {
                     message.setAttribute('role', 'alert');
                     message.textContent = 'Your session could not be refreshed. Please try again.';
                     form.prepend(message);
+                }
+
+                // The in-form message is specific; skip Livewire's generic connection-lost toast.
+                if (error instanceof Error) {
+                    error.clerkRefreshHandled = true;
                 }
 
                 throw error;
@@ -1121,58 +1127,342 @@ document.addEventListener('pointerdown', (event) => {
 
 document.querySelectorAll('form[data-add-to-cart]').forEach(bindAddToCartForm);
 
-document.querySelector('[data-seller-reviews]')?.addEventListener('submit', async (event) => {
-    const form = event.target.closest('form[data-discussion-reply-form]');
+/*
+ * Comment and reply forms post as JSON and are reconciled by swapping the optimistic bubble
+ * with the server-rendered one. The body travels as an argument because the composer is
+ * cleared before the request is sent.
+ */
+const submitDiscussionForm = async (form, body) => {
+    const formData = new FormData(form);
+    formData.set('body', body);
+
+    const submit = () => fetch(form.action, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData,
+    }).catch(() => {
+        throw new Error('Could not confirm your message. Check the discussion before retrying.');
+    });
+
+    let response = await submit();
+
+    if (response.status === 401) {
+        const endpoint = form.dataset.clerkSessionRefresh || clerkSessionRefreshEndpoint;
+
+        if (!endpoint) {
+            throw new Error('Your session expired. Refresh the page and try again.');
+        }
+
+        try {
+            await ensureClerkSession(endpoint);
+        } catch {
+            throw new Error('Your session expired. Refresh the page and try again.');
+        }
+
+        response = await submit();
+    }
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(result.errors?.body?.[0] ?? result.errors?.parent_id?.[0] ?? result.message ?? 'Could not post your message.');
+    }
+
+    return result;
+};
+
+const buildPendingDiscussion = (form, body, parentId) => {
+    const template = document.querySelector('template[data-discussion-pending-template]');
+
+    if (!template) return null;
+
+    const pending = template.content.firstElementChild.cloneNode(true);
+    const isSeller = form.dataset.authorIsSeller === '1';
+    const avatar = pending.querySelector('[data-pending-avatar]');
+
+    pending.classList.toggle('ml-5', Boolean(parentId));
+
+    avatar.classList.toggle('seller', isSeller);
+
+    if (form.dataset.authorImage) {
+        const image = document.createElement('img');
+        image.src = form.dataset.authorImage;
+        image.alt = '';
+        image.className = 'size-full object-cover';
+        avatar.append(image);
+    } else {
+        avatar.textContent = form.dataset.authorInitials ?? '';
+    }
+
+    pending.querySelector('[data-pending-author]').textContent = form.dataset.authorName ?? '';
+    pending.querySelector('[data-pending-seller]').hidden = !isSeller;
+    pending.querySelector('[data-pending-body]').textContent = body;
+
+    const replyTo = form.dataset.replyTo ?? '';
+    const replyToNode = pending.querySelector('[data-pending-reply-to]');
+    replyToNode.textContent = replyTo ? `Reply to ${replyTo}` : '';
+    replyToNode.hidden = !replyTo;
+    pending.dataset.pendingDiscussion = 'true';
+
+    return pending;
+};
+
+const insertPendingDiscussion = (pending, parentId) => {
+    const list = document.querySelector('[data-discussion-list]');
+
+    if (!list) return;
+
+    if (parentId) {
+        const parent = document.getElementById(`discussion-${parentId}`);
+        const rootId = parent?.dataset.discussionRootId;
+        const group = rootId
+            ? [...list.querySelectorAll('article[data-discussion-root-id]')].filter((article) => article.dataset.discussionRootId === rootId)
+            : [];
+        const last = group[group.length - 1] ?? parent;
+
+        if (last) {
+            last.insertAdjacentElement('afterend', pending);
+        } else {
+            list.append(pending);
+        }
+
+        return;
+    }
+
+    const articles = [...list.querySelectorAll('article.pd-discussion')];
+    const last = articles[articles.length - 1];
+
+    if (last) {
+        last.insertAdjacentElement('afterend', pending);
+    } else {
+        list.append(pending);
+    }
+};
+
+document.querySelector('#discussions')?.addEventListener('submit', async (event) => {
+    if (!(event.target instanceof Element)) {
+        return;
+    }
+
+    const form = event.target.closest('form[data-discussion-form]');
+
     if (!form) {
         return;
     }
 
+    const textarea = form.querySelector('[name="body"]');
+    const body = textarea?.value.trim() ?? '';
+
+    if (!body) {
+        textarea?.focus();
+        return;
+    }
+
+    if (form.dataset.submitting === 'true') {
+        event.preventDefault();
+        return;
+    }
+
+    const parentId = form.querySelector('[name="parent_id"]')?.value ?? '';
+    const pending = buildPendingDiscussion(form, body, parentId);
+
+    if (!pending) {
+        return;
+    }
+
     event.preventDefault();
+    event.stopPropagation();
+    form.dataset.submitting = 'true';
+
+    const button = form.querySelector('button[type="submit"]');
+    const feedback = form.querySelector('[data-discussion-feedback]');
+    const details = form.closest('details');
+    const originalLabel = button?.textContent;
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Posting...';
+    }
+
+    if (feedback) {
+        feedback.hidden = true;
+    }
+
+    textarea.value = '';
+    if (details) details.open = false;
+    insertPendingDiscussion(pending, parentId);
+
+    try {
+        const result = await submitDiscussionForm(form, body);
+
+        if (typeof result.html !== 'string' || result.html.trim() === '') {
+            window.location.reload();
+            return;
+        }
+
+        pending.outerHTML = result.html;
+        document.querySelector('[data-discussion-announcement]')?.replaceChildren(parentId ? 'Reply posted.' : 'Message posted.');
+    } catch (error) {
+        pending.remove();
+        textarea.value = body;
+        if (details) details.open = true;
+        if (feedback) {
+            feedback.textContent = error.message || 'Could not post your message. Please try again.';
+            feedback.hidden = false;
+        }
+    } finally {
+        delete form.dataset.submitting;
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalLabel;
+        }
+    }
+});
+
+const buildPendingSellerReply = (form, body) => {
+    const pending = document.createElement('div');
+    pending.className = 'seller-review-message seller-review-message-reply';
+    pending.dataset.pendingSellerReply = 'true';
+    pending.setAttribute('aria-busy', 'true');
+
+    if (form.dataset.authorImage) {
+        const image = document.createElement('img');
+        image.src = form.dataset.authorImage;
+        image.alt = '';
+        image.className = 'seller-review-avatar-image';
+        image.loading = 'lazy';
+        image.width = 31;
+        image.height = 31;
+        pending.append(image);
+    } else {
+        const avatar = document.createElement('span');
+        avatar.className = 'seller-review-avatar seller-review-avatar-store';
+        avatar.setAttribute('aria-hidden', 'true');
+        avatar.textContent = form.dataset.authorInitials ?? '';
+        pending.append(avatar);
+    }
+
+    const content = document.createElement('div');
+    content.className = 'min-w-0 flex-1';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'seller-review-bubble';
+
+    const heading = document.createElement('div');
+    heading.className = 'flex flex-wrap items-center gap-2';
+
+    const author = document.createElement('strong');
+    author.textContent = form.dataset.authorName ?? '';
+
+    const badge = document.createElement('span');
+    badge.className = 'seller-review-badge';
+    badge.textContent = 'Seller';
+
+    heading.append(author, badge);
+
+    const paragraph = document.createElement('p');
+    paragraph.textContent = body;
+    bubble.append(heading, paragraph);
+
+    const actions = document.createElement('div');
+    actions.className = 'seller-review-actions';
+
+    const time = document.createElement('time');
+    time.textContent = 'Just now';
+    actions.append(time);
+
+    if (form.dataset.replyTo) {
+        const replyTo = document.createElement('span');
+        replyTo.textContent = `Reply to ${form.dataset.replyTo}`;
+        actions.append(replyTo);
+    }
+
+    const status = document.createElement('span');
+    status.setAttribute('role', 'status');
+    status.textContent = 'Sending...';
+    actions.append(status);
+
+    content.append(bubble, actions);
+    pending.append(content);
+
+    return pending;
+};
+
+document.querySelector('[data-seller-reviews]')?.addEventListener('submit', async (event) => {
+    if (!(event.target instanceof Element)) {
+        return;
+    }
+
+    const form = event.target.closest('form[data-discussion-reply-form]');
+
+    if (!form) {
+        return;
+    }
+
+    const textarea = form.querySelector('[name="body"]');
+    const body = textarea?.value.trim() ?? '';
+
+    if (!body) {
+        textarea?.focus();
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
     if (form.dataset.submitting === 'true') {
         return;
     }
 
     form.dataset.submitting = 'true';
+
+    const pending = buildPendingSellerReply(form, body);
+    form.closest('.seller-review-discussion')?.append(pending);
+
     const button = form.querySelector('button[type="submit"]');
     const feedback = form.querySelector('[data-discussion-feedback]');
-    button.disabled = true;
-    button.textContent = 'Posting...';
-    feedback.hidden = true;
+    const details = form.closest('details');
+    const originalLabel = button?.textContent;
+
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Posting...';
+    }
+
+    if (feedback) {
+        feedback.hidden = true;
+    }
+
+    textarea.value = '';
+    if (details) details.open = false;
 
     try {
-        const submit = () => fetch(form.action, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { Accept: 'application/json' },
-            body: new FormData(form),
-        });
+        const result = await submitDiscussionForm(form, body);
 
-        let response = await submit();
-        if (response.status === 401) {
-            await refreshClerkSession(form.dataset.clerkSessionRefresh);
-            response = await submit();
-        }
-
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(result.errors?.body?.[0] ?? result.errors?.parent_id?.[0] ?? result.message ?? 'Could not post your reply.');
-        }
         if (!result.html) {
             window.location.reload();
             return;
         }
 
-        form.closest('.seller-review-discussion').insertAdjacentHTML('beforeend', result.html);
+        pending.outerHTML = result.html;
         form.reset();
-        form.closest('details').open = false;
-        document.querySelector('[data-discussion-announcement]').textContent = 'Reply posted.';
+        if (details) details.open = false;
+        document.querySelector('[data-discussion-announcement]')?.replaceChildren('Reply posted.');
     } catch (error) {
-        feedback.textContent = error.message || 'Could not confirm your reply. Refresh before trying again.';
-        feedback.hidden = false;
+        pending.remove();
+        textarea.value = body;
+        if (details) details.open = true;
+        if (feedback) {
+            feedback.textContent = error.message || 'Could not confirm your reply. Refresh before trying again.';
+            feedback.hidden = false;
+        }
     } finally {
         delete form.dataset.submitting;
-        button.disabled = false;
-        button.textContent = 'Post reply';
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalLabel;
+        }
     }
 });
 

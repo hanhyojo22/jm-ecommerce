@@ -219,3 +219,14 @@ final productReviewsProvider = FutureProvider.autoDispose
             page: key.page,
           ),
     );
+
+final productDiscussionsProvider = FutureProvider.autoDispose
+    .family<DiscussionPage, ({ProductKey product, int page})>(
+      (ref, key) => ref
+          .watch(apiClientProvider)
+          .productDiscussions(
+            store: key.product.store,
+            product: key.product.slug,
+            page: key.page,
+          ),
+    );
