@@ -461,11 +461,15 @@
                                         <div class="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
                                             <div class="flex min-w-0 items-center gap-2.5">
                                                 @if ($sellerOrder->store->logo_path)
-                                                    <img src="{{ Storage::disk('public')->url($sellerOrder->store->logo_path) }}" alt="" width="24" height="24" loading="lazy" class="size-6 shrink-0 rounded-md border border-line bg-white object-cover">
+                                                    <img src="{{ Storage::disk('public')->url($sellerOrder->store->logo_path) }}" alt="" width="32" height="32" loading="lazy" class="size-8 shrink-0 rounded-md border border-line bg-white object-cover">
                                                 @else
-                                                    <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg>
+                                                    <span class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--color-sunken)] text-muted ring-1 ring-inset ring-[var(--color-line-soft)]" aria-hidden="true"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5 5.5 4h13L20 9.5"/><path d="M4 9.5a2.67 2.67 0 0 0 5.33 0 2.67 2.67 0 0 0 5.34 0 2.67 2.67 0 0 0 5.33 0"/><path d="M5.5 12.5V20h13v-7.5"/><path d="M10 20v-4h4v4"/></svg></span>
                                                 @endif
-                                                <span class="truncate text-[13px] font-semibold text-ink">{{ $store }}</span>
+                                                <span class="min-w-0">
+                                                    <span class="block truncate text-[13px] font-semibold leading-[17px] text-ink">{{ $store }}</span>
+                                                    {{-- Time first: the long order number is the part allowed to truncate on a phone. --}}
+                                                    <span class="block truncate text-[11.5px] leading-[15px] text-muted">{{ $order->created_at->format('g:i A') }}@if ($order->payment)<span class="max-sm:hidden"><span aria-hidden="true" class="px-1">·</span>{{ \App\Models\Payment::METHOD_LABELS[$order->payment->method] ?? ucfirst($order->payment->method) }}</span>@endif<span aria-hidden="true" class="px-1">·</span><span class="tabular-nums">{{ $order->number }}</span></span>
+                                                </span>
                                             </div>
                                             <span @class(['inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold', $pillClass])>
                                                 <span class="size-[7px] rounded-full {{ $pillDot }}" aria-hidden="true"></span>
@@ -513,8 +517,8 @@
                                                     </div>
                                                     <div class="min-w-0">
                                                         <p class="truncate text-[13px] font-semibold leading-[17px] text-ink">{{ $item->product_name }}</p>
-                                                        @if ($item->variant_label)
-                                                            <p class="mt-0.5 truncate text-[11.5px] leading-[15px] text-brand">{{ $item->variant_label }}</p>
+                                                        @if ($item->variant_label || $item->quantity > 1)
+                                                            <p class="mt-0.5 truncate text-[11.5px] leading-[15px] text-muted">@if ($item->variant_label)<span class="text-brand">{{ $item->variant_label }}</span>@endif @if ($item->variant_label && $item->quantity > 1)<span aria-hidden="true" class="px-0.5">·</span>@endif @if ($item->quantity > 1)<span class="tabular-nums">₱{{ number_format($item->unit_price, 2) }} each</span>@endif</p>
                                                         @endif
                                                     </div>
                                                     <div class="col-start-2 flex items-baseline justify-between gap-4 sm:contents">

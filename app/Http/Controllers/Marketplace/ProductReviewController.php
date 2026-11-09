@@ -17,8 +17,9 @@ class ProductReviewController extends Controller
     {
         return view('marketplace.reviews.index', [
             'reviews' => $request->user()->productReviews()
-                ->with(['product.store', 'product.thumbnail', 'orderItem.sellerOrder'])
+                ->with(['product.store', 'product.thumbnail', 'orderItem.sellerOrder.order:id,number', 'photos', 'response'])
                 ->latest()->paginate(10),
+            'averageRating' => $request->user()->productReviews()->avg('rating'),
         ]);
     }
 

@@ -132,6 +132,11 @@
         box-shadow: var(--focus-ring);
     }
 
+    /* The My account record surface, matching the purchase cards. */
+    .account-card {
+        @apply overflow-hidden rounded-[10px] border border-line bg-surface shadow-[0_1px_2px_rgb(24_44_72/4%)];
+    }
+
     .status-badge {
         @apply inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-4 tracking-[0.02em] ring-1 ring-inset;
     }
