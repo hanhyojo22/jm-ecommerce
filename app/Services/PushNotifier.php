@@ -89,17 +89,24 @@ class PushNotifier
 
     /**
      * Chats go to the mobile app's "Messages" channel and replace the previous
-     * notification for the same conversation; everything else goes to "Orders".
+     * notification for the same conversation; announcements and cart reminders
+     * go to "Updates and offers"; everything else goes to "Orders".
      * Channel IDs must match the ones created in mobile push_notifications.dart.
      *
      * @param  array<string, string>  $data
      */
     public function buildMessage(string $title, string $body, array $data = []): CloudMessage
     {
-        $isChat = ($data['type'] ?? null) === 'chat';
+        $type = $data['type'] ?? null;
+        $isChat = $type === 'chat';
 
         $androidNotification = array_filter([
-            'channel_id' => $isChat ? 'chat_messages' : 'order_updates',
+            'channel_id' => match ($type) {
+                'chat' => 'chat_messages',
+                // Kept apart so muting offers never silences order updates.
+                'announcement', 'cart' => 'marketplace_updates',
+                default => 'order_updates',
+            },
             'tag' => $isChat && isset($data['conversation_id']) ? 'conversation-'.$data['conversation_id'] : null,
         ]);
 

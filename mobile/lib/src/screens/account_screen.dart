@@ -119,6 +119,32 @@ class AccountScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 14),
+              Card(
+                child: SwitchListTile(
+                  secondary: const Icon(Icons.shopping_cart_outlined),
+                  title: const Text('Cart reminders'),
+                  subtitle: const Text(
+                    'Remind me when items sit in my cart for a day',
+                  ),
+                  value: account.cartReminders,
+                  onChanged: (enabled) async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await ref
+                          .read(apiClientProvider)
+                          .updateCartReminders(enabled);
+                      ref.invalidate(meProvider);
+                    } catch (_) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Could not save. Try again.'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 14),
               OutlinedButton.icon(
                 onPressed: () async {
                   final auth = ClerkAuth.of(context);

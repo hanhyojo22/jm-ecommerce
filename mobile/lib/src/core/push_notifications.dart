@@ -40,6 +40,12 @@ class PushNotifications {
     description: 'Order status, delivery and return updates.',
     importance: Importance.high,
   );
+  static const _updatesChannel = AndroidNotificationChannel(
+    'marketplace_updates',
+    'Updates and offers',
+    description: 'JMMart announcements and cart reminders.',
+    importance: Importance.defaultImportance,
+  );
   static const _icon = '@drawable/ic_stat_notification';
   static const _accent = Color(0xFF14665A);
 
@@ -69,6 +75,7 @@ class PushNotifications {
             >();
         await android?.createNotificationChannel(_chatChannel);
         await android?.createNotificationChannel(_orderChannel);
+        await android?.createNotificationChannel(_updatesChannel);
 
         await _local.initialize(
           const InitializationSettings(
@@ -140,6 +147,7 @@ class PushNotifications {
       'chat' when id('conversation_id') != null =>
         '/conversations/${id('conversation_id')}',
       'order' when id('order_id') != null => '/orders/${id('order_id')}',
+      'cart' => '/cart',
       _ => null,
     };
   }
@@ -157,7 +165,11 @@ class PushNotifications {
     }
 
     final isChat = message.data['type'] == 'chat';
-    final channel = isChat ? _chatChannel : _orderChannel;
+    final channel = switch (message.data['type']) {
+      'chat' => _chatChannel,
+      'announcement' || 'cart' => _updatesChannel,
+      _ => _orderChannel,
+    };
     // One notification per conversation, replaced by its newest message,
     // matching the `tag` the backend sets for background pushes.
     final tag = isChat
@@ -173,8 +185,10 @@ class PushNotifications {
           channel.id,
           channel.name,
           channelDescription: channel.description,
-          importance: Importance.high,
-          priority: Priority.high,
+          importance: channel.importance,
+          priority: channel == _updatesChannel
+              ? Priority.defaultPriority
+              : Priority.high,
           icon: _icon,
           color: _accent,
           tag: tag,

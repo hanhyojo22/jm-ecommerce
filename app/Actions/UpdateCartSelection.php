@@ -29,6 +29,7 @@ class UpdateCartSelection
 
         $cart->items()->whereKey($ownedIds)->update(['selected' => true]);
         $cart->items()->whereKeyNot($ownedIds)->update(['selected' => false]);
+        $cart->touch();
 
         return [
             'selected_count' => $ownedIds->count(),

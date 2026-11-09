@@ -17,4 +17,11 @@ class AccountController extends Controller
     {
         return UserResource::make($request->user())->response($request);
     }
+
+    public function update(Request $request): JsonResponse
+    {
+        $request->user()->update($request->validate(['cart_reminders' => ['required', 'boolean']]));
+
+        return UserResource::make($request->user())->response($request);
+    }
 }

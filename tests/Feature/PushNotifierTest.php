@@ -57,4 +57,13 @@ class PushNotifierTest extends TestCase
         $this->assertSame('order_updates', $message['android']['notification']['channel_id']);
         $this->assertArrayNotHasKey('tag', $message['android']['notification']);
     }
+
+    public function test_announcements_and_cart_reminders_use_the_updates_channel(): void
+    {
+        foreach (['announcement', 'cart'] as $type) {
+            $message = json_decode(json_encode((new PushNotifier)->buildMessage('Hi', 'Hello', ['type' => $type])), true);
+
+            $this->assertSame('marketplace_updates', $message['android']['notification']['channel_id']);
+        }
+    }
 }

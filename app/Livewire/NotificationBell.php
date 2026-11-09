@@ -72,6 +72,7 @@ class NotificationBell extends Component
         return match ($notification->data['type'] ?? null) {
             'order' => $this->redirect(route('orders.show', $notification->data['order_id'])),
             'seller_order' => $this->redirect(route('seller.orders.show', $notification->data['seller_order_id'])),
+            'announcement', 'cart' => $this->redirect($notification->data['url']),
             default => null,
         };
     }

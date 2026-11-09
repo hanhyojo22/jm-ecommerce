@@ -76,4 +76,18 @@ return [
         'window_days' => 180,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cart Reminders
+    |--------------------------------------------------------------------------
+    |
+    | A buyer whose cart has gone unchanged this many hours is pushed one
+    | reminder. Changing the cart starts a new idle stretch.
+    |
+    */
+
+    'cart' => [
+        'reminder_hours' => 24,
+    ],
+
 ];

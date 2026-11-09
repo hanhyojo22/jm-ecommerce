@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAccountController;
+use App\Http\Controllers\Admin\AnnouncementController;
 use App\Http\Controllers\Admin\ChatReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GovernanceController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Marketplace\OrderIssueController;
 use App\Http\Controllers\Marketplace\ProductDiscussionController;
 use App\Http\Controllers\Marketplace\ProductReviewController as MarketplaceProductReviewController;
 use App\Http\Controllers\Marketplace\ReturnCaseController as BuyerReturnCaseController;
+use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushNotificationController;
@@ -134,6 +136,10 @@ Route::post('/profile/workspace', WorkspacePreferenceController::class)
     ->middleware(['auth', 'account:buyer,seller'])
     ->name('profile.workspace.update');
 
+Route::patch('/profile/notifications', NotificationPreferenceController::class)
+    ->middleware(['auth', 'account:buyer,seller'])
+    ->name('profile.notifications.update');
+
 Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
     Route::get('/start-selling', [SellerApplicationController::class, 'create'])->name('seller-application.create');
     Route::get('/start-selling/store-link', [SellerApplicationController::class, 'storeLink'])->middleware('throttle:30,1')->name('seller-application.store-link');
@@ -227,6 +233,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])
     Route::get('/admin/customers/{customer}', [GovernanceController::class, 'showCustomer'])->name('admin.customers.show');
     Route::post('/admin/customers/{customer}/lift-cod-limit', [GovernanceController::class, 'liftCodLimit'])->middleware('throttle:admin-mutations')->name('admin.customers.lift-cod-limit');
     Route::get('/admin/audit-logs', [GovernanceController::class, 'auditLogs'])->name('admin.audit-logs.index');
+    Route::get('/admin/announcements', [AnnouncementController::class, 'create'])->name('admin.announcements.create');
+    Route::post('/admin/announcements', [AnnouncementController::class, 'store'])->middleware('throttle:admin-mutations')->name('admin.announcements.store');
+    Route::patch('/admin/announcements/{announcement}/cancel', [AnnouncementController::class, 'cancel'])->middleware('throttle:admin-mutations')->name('admin.announcements.cancel');
     Route::get('/admin/accounts', [AdminAccountController::class, 'index'])->name('admin.accounts.index');
     Route::post('/admin/accounts', [AdminAccountController::class, 'store'])->middleware('throttle:admin-mutations')->name('admin.accounts.store');
     Route::patch('/admin/accounts/{user}/deactivate', [AdminAccountController::class, 'deactivate'])->middleware('throttle:admin-mutations')->name('admin.accounts.deactivate');

@@ -72,6 +72,7 @@ class CartController extends Controller
     {
         $cart = $request->user()->cart;
         $cart?->items()->where('selected', true)->delete();
+        $cart?->touch();
 
         return $this->payload($request);
     }

@@ -34,6 +34,7 @@ class Account {
     required this.accountType,
     required this.emailVerified,
     required this.isPlatformAdministrator,
+    this.cartReminders = true,
   });
 
   final String id;
@@ -42,6 +43,7 @@ class Account {
   final String accountType;
   final bool emailVerified;
   final bool isPlatformAdministrator;
+  final bool cartReminders;
 
   factory Account.fromJson(Map<String, dynamic> json) => Account(
     id: str(json['id']),
@@ -50,6 +52,7 @@ class Account {
     accountType: str(json['account_type'], 'buyer'),
     emailVerified: boolean(json['email_verified']),
     isPlatformAdministrator: boolean(json['is_platform_administrator']),
+    cartReminders: json['cart_reminders'] != false,
   );
 }
 

@@ -59,6 +59,7 @@ class CartController extends Controller
     {
         $cart = $request->user()->cart()->first();
         $removed = $cart?->items()->where('selected', true)->delete() ?? 0;
+        $cart?->touch();
 
         return to_route('cart.index')->with(
             'status',

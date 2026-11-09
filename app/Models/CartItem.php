@@ -12,6 +12,14 @@ class CartItem extends Model
 
     protected $fillable = ['cart_id', 'product_id', 'product_variant_id', 'variant_key', 'quantity', 'selected'];
 
+    /**
+     * The cart's updated_at is its last activity, which carts:remind reads.
+     * Bulk query updates and deletes skip this, so those call $cart->touch().
+     *
+     * @var list<string>
+     */
+    protected $touches = ['cart'];
+
     protected function casts(): array
     {
         return ['selected' => 'boolean'];

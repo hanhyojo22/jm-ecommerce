@@ -26,6 +26,7 @@ class UserResource extends JsonResource
             'preferred_workspace' => $this->preferred_workspace,
             'email_verified' => $this->hasVerifiedClerkEmail(),
             'is_platform_administrator' => $this->isPlatformAdministrator(),
+            'cart_reminders' => (bool) ($this->cart_reminders ?? true),
         ];
     }
 }

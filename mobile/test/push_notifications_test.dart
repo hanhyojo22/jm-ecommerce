@@ -18,6 +18,7 @@ void main() {
       }),
       isNull,
     );
+    expect(PushNotifications.routeFor({'type': 'cart'}), '/cart');
     expect(PushNotifications.routeFor({'type': 'chat'}), isNull);
   });
 }

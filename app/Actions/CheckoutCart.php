@@ -175,6 +175,7 @@ class CheckoutCart
                     'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($total, $paymentMethod),
                 ]);
                 $cart->items()->whereKey($items->modelKeys())->delete();
+                $cart->touch();
 
                 return $order;
             });

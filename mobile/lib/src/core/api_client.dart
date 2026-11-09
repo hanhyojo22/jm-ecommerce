@@ -85,6 +85,10 @@ class ApiClient {
   Future<Account> me() async =>
       Account.fromJson(mapOf(await _data('GET', '/me')));
 
+  Future<Account> updateCartReminders(bool enabled) async => Account.fromJson(
+    mapOf(await _data('PATCH', '/me', data: {'cart_reminders': enabled})),
+  );
+
   Future<ProductPage> products({
     String? query,
     String? category,

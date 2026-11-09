@@ -2,13 +2,16 @@
 
 use App\Actions\IssuePlatformFeeStatements;
 use App\Actions\UpdateSellerOrderStatus;
+use App\Models\Cart;
 use App\Models\Payment;
 use App\Models\PlatformFeeStatement;
 use App\Models\ReturnCase;
 use App\Models\SellerOrder;
 use App\Models\User;
+use App\Notifications\MarketplaceNotice;
 use App\Services\GmailOrderMailer;
 use App\Services\PayMongo;
+use App\Services\PushNotifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -184,3 +187,39 @@ Artisan::command('platform-fees:remind', function (GmailOrderMailer $mailer): vo
 
     $this->info("Reminded {$statements->count()} overdue statement(s).");
 })->purpose('Remind stores with overdue platform fees and alert support')->daily();
+
+Artisan::command('carts:remind', function (PushNotifier $notifier): void {
+    $cutoff = now()->subHours((int) config('marketplace.cart.reminder_hours'));
+
+    $carts = Cart::query()
+        ->whereHas('user', fn ($query) => $query->where('is_active', true)->where('cart_reminders', true))
+        // Only worth a nudge while something in it can still be bought.
+        ->whereHas('items.product', fn ($query) => $query->where('status', 'active')->where('stock_quantity', '>', 0)
+            ->whereHas('store', fn ($store) => $store->where('status', 'active')))
+        // updated_at is the cart's last activity: item changes touch it (see CartItem::$touches).
+        ->where('updated_at', '<', $cutoff)
+        // One reminder per idle stretch: a cart changed after its last reminder is due again.
+        ->where(fn ($query) => $query->whereNull('reminded_at')->orWhereColumn('reminded_at', '<', 'updated_at'))
+        ->with('user')
+        ->withCount('items')
+        ->get();
+
+    foreach ($carts as $cart) {
+        $title = 'Still thinking it over?';
+        $body = "You left {$cart->items_count} item(s) in your cart. Check out before they sell out.";
+
+        $notifier->sendToUser($cart->user, $title, $body, ['type' => 'cart']);
+
+        try {
+            $cart->user->notify(new MarketplaceNotice('cart', $title, $body, route('cart.index')));
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        // Not an activity: keep updated_at so the cart stays marked as idle.
+        $cart->timestamps = false;
+        $cart->update(['reminded_at' => now()]);
+    }
+
+    $this->info("Reminded {$carts->count()} idle cart(s).");
+})->purpose('Remind buyers about carts left unchanged for a day')->hourly();
