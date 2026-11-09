@@ -45,12 +45,39 @@ class JmMartApp extends StatelessWidget {
   }
 }
 
+/// Whether a Clerk error is the device failing to reach Clerk at all (no
+/// connection, DNS failure, timeout) rather than an auth problem.
+@visibleForTesting
+bool isClerkNetworkFailure(String message) => RegExp(
+  r'SocketException|Failed host lookup|ClientException|Network is unreachable|Connection (refused|reset|timed out)|HandshakeException',
+).hasMatch(message);
+
+const clerkOfflineMessage =
+    "You're offline. JMMart will reconnect when your connection is back.";
+
+DateTime? _lastOfflineNotice;
+
 /// Same snackbar as Clerk's default, minus WebView sub-resource failures:
 /// the SDK reports every failed request inside the Facebook login page
 /// (e.g. net::ERR_CONNECTION_REFUSED) even though sign-in still works.
+/// Network failures from Clerk's background token refresh get one plain
+/// message instead of the raw exception, at most every 30 seconds, because
+/// the SDK retries and would otherwise stack the same error.
 void _showClerkError(BuildContext context, clerk.ClerkError error) {
   if (error.code == clerk.ClerkErrorCode.clientAppError &&
       error.message.contains('net::ERR_')) {
+    return;
+  }
+  if (isClerkNetworkFailure(error.message)) {
+    final now = DateTime.now();
+    if (_lastOfflineNotice != null &&
+        now.difference(_lastOfflineNotice!) < const Duration(seconds: 30)) {
+      return;
+    }
+    _lastOfflineNotice = now;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text(clerkOfflineMessage)));
     return;
   }
   ScaffoldMessenger.of(context).showSnackBar(

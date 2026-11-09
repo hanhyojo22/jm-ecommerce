@@ -179,6 +179,7 @@ class NetworkThumb extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.cacheWidth,
     this.cacheKey,
+    this.placeholderSize,
   });
 
   final String? url;
@@ -188,14 +189,18 @@ class NetworkThumb extends StatelessWidget {
   final BoxFit fit;
   final int? cacheWidth;
 
+  /// Loading/error box size when [width]/[height] are left free so the image
+  /// can size itself to its own aspect ratio.
+  final Size? placeholderSize;
+
   /// Stable key for immutable media whose signed URL changes between fetches.
   final String? cacheKey;
 
   @override
   Widget build(BuildContext context) {
     final placeholder = Container(
-      width: width,
-      height: height,
+      width: width ?? placeholderSize?.width,
+      height: height ?? placeholderSize?.height,
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Icon(
         Icons.image_outlined,

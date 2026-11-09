@@ -996,9 +996,7 @@ class _PendingBubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.78,
             ),
-            padding: photoOnly
-                ? const EdgeInsets.all(4)
-                : compactAttachment
+            padding: compactAttachment
                 ? EdgeInsets.zero
                 : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
             clipBehavior: compactAttachment ? Clip.antiAlias : Clip.none,
@@ -1009,7 +1007,7 @@ class _PendingBubble extends StatelessWidget {
                   ? theme.colorScheme.surfaceContainerLowest
                   : theme.colorScheme.primary,
               border: photoOnly
-                  ? Border.all(color: theme.colorScheme.outline)
+                  ? Border.all(color: theme.colorScheme.outlineVariant)
                   : null,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
@@ -1116,18 +1114,16 @@ class _PendingAttachmentPreview extends StatelessWidget {
       return _document(context);
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 220, maxHeight: 320),
-        child: Image.memory(
-          attachment.bytes,
-          key: ValueKey('pending-image-$clientId'),
-          width: 220,
-          fit: BoxFit.contain,
-          gaplessPlayback: true,
-          errorBuilder: (context, error, stackTrace) => _document(context),
-        ),
+    // The pending bubble clips to its own shape; the image keeps its aspect ratio.
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 220, maxHeight: 320),
+      child: Image.memory(
+        attachment.bytes,
+        key: ValueKey('pending-image-$clientId'),
+        cacheWidth: (220 * MediaQuery.devicePixelRatioOf(context)).round(),
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+        errorBuilder: (context, error, stackTrace) => _document(context),
       ),
     );
   }
@@ -1433,9 +1429,8 @@ class _Bubble extends StatelessWidget {
                             MediaQuery.of(context).size.width * 0.78 -
                             (mine ? 0 : 36),
                       ),
-                      padding: photoOnly
-                          ? const EdgeInsets.all(4)
-                          : compactAttachment
+                      // A photo fills its bubble edge to edge; the bubble shape clips it.
+                      padding: compactAttachment
                           ? EdgeInsets.zero
                           : const EdgeInsets.symmetric(
                               horizontal: 13,
@@ -1454,9 +1449,7 @@ class _Bubble extends StatelessWidget {
                         ),
                         border: photoOnly || !mine
                             ? Border.all(
-                                color: photoOnly
-                                    ? theme.colorScheme.outline
-                                    : theme.colorScheme.outlineVariant,
+                                color: theme.colorScheme.outlineVariant,
                               )
                             : null,
                       ),
@@ -1483,13 +1476,21 @@ class _Bubble extends StatelessWidget {
                                         maxWidth: 220,
                                         maxHeight: 320,
                                       ),
+                                      // No fixed width: the photo keeps its own aspect
+                                      // ratio inside 220x320 instead of letterboxing.
                                       child: NetworkThumb(
                                         url: attachment.url,
                                         cacheKey:
                                             'chat-attachment-${attachment.id}',
-                                        width: 220,
+                                        cacheWidth:
+                                            (220 *
+                                                    MediaQuery.devicePixelRatioOf(
+                                                      context,
+                                                    ))
+                                                .round(),
+                                        placeholderSize: const Size(220, 220),
                                         fit: BoxFit.contain,
-                                        radius: photoOnly ? 12 : 10,
+                                        radius: photoOnly ? 0 : 10,
                                       ),
                                     )
                                   : _DocumentAttachment(

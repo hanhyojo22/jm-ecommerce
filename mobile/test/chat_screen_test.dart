@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -439,12 +440,15 @@ void main() {
       find.byKey(const ValueKey('attachment-bubble-message-document')),
     );
 
-    expect(imageBubble.padding, const EdgeInsets.all(4));
+    // Edge to edge: no frame padding, the bubble clips the photo, and the photo
+    // keeps its own aspect ratio rather than a fixed letterboxed width.
+    expect(imageBubble.padding, EdgeInsets.zero);
     expect(imageBubble.clipBehavior, Clip.antiAlias);
     expect(imageBubble.decoration, isA<BoxDecoration>());
     expect((imageBubble.decoration! as BoxDecoration).border, isNotNull);
-    expect(image.radius, 12);
+    expect(image.radius, 0);
     expect(image.fit, BoxFit.contain);
+    expect(image.width, isNull);
     expect(image.height, isNull);
     expect(documentBubble.padding, EdgeInsets.zero);
     final timestamp = find.text(dateTime(api.serverMessages.first.createdAt));
@@ -831,6 +835,38 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('a tall photo bubble hugs the photo instead of letterboxing it', (
+    tester,
+  ) async {
+    final bytes = (await tester.runAsync(() => _solidPng(100, 200)))!;
+    final api = _FakeApiClient();
+    final picker = _FakeAttachmentPicker()
+      ..image = PickedAttachment(name: 'screenshot.png', bytes: bytes);
+
+    await _pumpChat(tester, api, picker: picker);
+    await _openAttachmentMenu(tester, 'Photo');
+    // Let the engine decode the image so it lays out at its real size.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 200)),
+    );
+    await tester.pump();
+
+    final clientId = api.lastAttachmentClientMessageId!;
+    final bubble = tester.getSize(
+      find.byKey(ValueKey('pending-attachment-bubble-$clientId')),
+    );
+    final image = tester.getSize(
+      find.byKey(ValueKey('pending-image-$clientId')),
+    );
+
+    // The 1px border is the only space around the photo: no side bars.
+    expect(bubble.width - image.width, lessThanOrEqualTo(2));
+    expect(bubble.height - image.height, lessThanOrEqualTo(2));
+    expect(image.width / image.height, closeTo(0.5, 0.02));
+
+    await _disposeChat(tester);
+  });
+
   testWidgets('a picked photo is uploaded and replaced by the server row', (
     tester,
   ) async {
@@ -850,7 +886,7 @@ void main() {
     final pendingBubble = tester.widget<Container>(
       find.byKey(ValueKey('pending-attachment-bubble-$clientId')),
     );
-    expect(pendingBubble.padding, const EdgeInsets.all(4));
+    expect(pendingBubble.padding, EdgeInsets.zero);
     expect((pendingBubble.decoration! as BoxDecoration).border, isNotNull);
     expect(find.text('Sending…'), findsOneWidget);
 
@@ -981,6 +1017,18 @@ Future<void> _openAttachmentMenu(WidgetTester tester, String option) async {
   await tester.tap(find.text(option));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
+}
+
+Future<Uint8List> _solidPng(int width, int height) async {
+  final recorder = ui.PictureRecorder();
+  Canvas(recorder).drawRect(
+    Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+    Paint()..color = const Color(0xFF205BF4),
+  );
+  final image = await recorder.endRecording().toImage(width, height);
+  final data = await image.toByteData(format: ui.ImageByteFormat.png);
+
+  return data!.buffer.asUint8List();
 }
 
 Uint8List _pngBytes() => base64Decode(
