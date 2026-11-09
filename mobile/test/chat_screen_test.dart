@@ -190,6 +190,62 @@ void main() {
     await _disposeChat(tester);
   });
 
+  testWidgets('tapping a chat photo opens a zoomable viewer that can save', (
+    tester,
+  ) async {
+    final saved = <String>[];
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage.fromJson({
+        'id': 'store-photo',
+        'sender_id': 'seller',
+        'is_mine': false,
+        'type': 'file',
+        'body': '',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'attachments': [
+          {
+            'id': 'photo-1',
+            'name': 'receipt.png',
+            'mime_type': 'image/png',
+            'url': 'http://localhost/media/photo-1',
+            'is_image': true,
+          },
+        ],
+      }),
+    ];
+
+    await _pumpChat(
+      tester,
+      api,
+      imageSaver: (url, name) async => saved.add('$url|$name'),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('open-image-photo-1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final viewer = tester.widget<InteractiveViewer>(
+      find.byKey(const ValueKey('image-viewer-zoom')),
+    );
+    expect(viewer.minScale, 1);
+    expect(viewer.maxScale, greaterThan(1));
+    expect(find.bySemanticsLabel('receipt.png'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Save image'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(saved, ['http://localhost/media/photo-1|receipt.png']);
+
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byKey(const ValueKey('image-viewer-zoom')), findsNothing);
+    expect(find.byKey(const ValueKey('open-image-photo-1')), findsOneWidget);
+
+    await _disposeChat(tester);
+  });
+
   testWidgets('swiping a message starts a reply, a short swipe does not', (
     tester,
   ) async {

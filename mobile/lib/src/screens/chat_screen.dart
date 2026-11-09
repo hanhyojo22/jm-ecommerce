@@ -15,6 +15,7 @@ import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/chat_providers.dart';
 import '../widgets/common.dart';
+import '../widgets/image_viewer.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({
@@ -933,6 +934,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 pending.isEmpty &&
                 message.receipt != null,
             onLongPress: () => _showMessageMenu(message, reply),
+            onSaveImage: _saveImage,
           ),
         );
       },
@@ -1229,6 +1231,7 @@ class _Bubble extends StatelessWidget {
     this.store,
     this.showReceipt = false,
     this.onLongPress,
+    this.onSaveImage,
   });
 
   final ChatMessage message;
@@ -1236,6 +1239,7 @@ class _Bubble extends StatelessWidget {
   final StoreInfo? store;
   final bool showReceipt;
   final VoidCallback? onLongPress;
+  final Future<void> Function(ChatAttachment image)? onSaveImage;
 
   @override
   Widget build(BuildContext context) {
@@ -1478,19 +1482,42 @@ class _Bubble extends StatelessWidget {
                                       ),
                                       // No fixed width: the photo keeps its own aspect
                                       // ratio inside 220x320 instead of letterboxing.
-                                      child: NetworkThumb(
-                                        url: attachment.url,
-                                        cacheKey:
-                                            'chat-attachment-${attachment.id}',
-                                        cacheWidth:
-                                            (220 *
-                                                    MediaQuery.devicePixelRatioOf(
-                                                      context,
-                                                    ))
-                                                .round(),
-                                        placeholderSize: const Size(220, 220),
-                                        fit: BoxFit.contain,
-                                        radius: photoOnly ? 0 : 10,
+                                      child: Semantics(
+                                        button: true,
+                                        label: 'Open photo',
+                                        child: GestureDetector(
+                                          key: ValueKey(
+                                            'open-image-${attachment.id}',
+                                          ),
+                                          onTap: () => ImageViewer.open(
+                                            context,
+                                            url: attachment.url!,
+                                            cacheKey:
+                                                'chat-attachment-${attachment.id}',
+                                            title: attachment.name,
+                                            onSave: onSaveImage == null
+                                                ? null
+                                                : () =>
+                                                      onSaveImage!(attachment),
+                                          ),
+                                          child: NetworkThumb(
+                                            url: attachment.url,
+                                            cacheKey:
+                                                'chat-attachment-${attachment.id}',
+                                            cacheWidth:
+                                                (220 *
+                                                        MediaQuery.devicePixelRatioOf(
+                                                          context,
+                                                        ))
+                                                    .round(),
+                                            placeholderSize: const Size(
+                                              220,
+                                              220,
+                                            ),
+                                            fit: BoxFit.contain,
+                                            radius: photoOnly ? 0 : 10,
+                                          ),
+                                        ),
                                       ),
                                     )
                                   : _DocumentAttachment(

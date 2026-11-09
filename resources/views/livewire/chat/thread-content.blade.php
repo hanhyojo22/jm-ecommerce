@@ -100,7 +100,7 @@
                                 <div class="chat-message-bubble min-w-0 w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $usesFlushAttachmentLayout ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $message->sender_id === auth()->id() ? 'rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
                                 @if ($message->type === 'file' && $message->attachments->isNotEmpty())
                                     @if ($isImageAttachment)
-                                        <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" aria-label="Open {{ $attachment->original_name }} in a larger view" class="block overflow-hidden">
+                                        <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" x-on:click="openChatImage($event, @js(route('messages.attachments.show', $attachment)), @js($attachment->original_name))" aria-label="Open {{ $attachment->original_name }} in a larger view" class="block cursor-zoom-in overflow-hidden">
                                             <img src="{{ route('messages.attachments.show', $attachment) }}" alt="{{ $attachment->original_name }}" loading="lazy" decoding="async" class="block max-h-80 max-w-full object-contain">
                                         </a>
                                     @else

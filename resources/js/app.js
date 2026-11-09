@@ -2,6 +2,7 @@
 import './cookie-consent';
 import { showRequestError } from './request-errors';
 import './chat';
+import './image-viewer';
 import './notifications';
 import './web-push';
 import './cart';

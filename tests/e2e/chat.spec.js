@@ -279,6 +279,73 @@ test('failed attachment upload retries with one confirmed bubble', async ({ brow
     }
 });
 
+test('a chat photo opens in a zoomable viewer', async ({ browser }) => {
+    const buyer = await openAsRole(browser, 'customer');
+
+    try {
+        await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
+        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
+        await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
+        await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();
+
+        // A real 600x400 PNG, drawn in the page, so the viewer has something to scale.
+        const png = Buffer.from(await buyer.page.evaluate(() => {
+            const canvas = Object.assign(document.createElement('canvas'), { width: 600, height: 400 });
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#205bf4';
+            context.fillRect(0, 0, 600, 400);
+            context.fillStyle = '#ffffff';
+            context.fillRect(250, 150, 100, 100);
+            return canvas.toDataURL('image/png').split(',')[1];
+        }), 'base64');
+        const name = `qa-zoom-${Date.now()}.png`;
+        await buyer.page.getByRole('button', { name: 'Add attachment' }).click();
+        await buyer.page.getByLabel('Image or PDF document').setInputFiles({ name, mimeType: 'image/png', buffer: png });
+        await buyer.page.getByRole('button', { name: 'Send photo' }).click();
+
+        const photo = buyer.page.getByRole('link', { name: `Open ${name} in a larger view` });
+        await expect(photo).toBeVisible();
+        await photo.click();
+
+        const viewer = buyer.page.getByRole('dialog', { name: 'Photo viewer' });
+        const zoom = viewer.locator('[data-image-viewer-zoom]');
+        await expect(viewer).toBeVisible();
+        await expect(viewer.getByRole('img', { name })).toBeVisible();
+        await expect(zoom).toHaveText('100%');
+        await expect(viewer.getByRole('button', { name: 'Zoom out' })).toBeDisabled();
+
+        await viewer.getByRole('button', { name: 'Zoom in' }).click();
+        await expect(zoom).toHaveText('150%');
+        await buyer.page.keyboard.press('0');
+        await expect(zoom).toHaveText('100%');
+
+        const image = viewer.locator('[data-image-viewer-image]');
+        await image.dblclick();
+        await expect(zoom).toHaveText('250%');
+        await image.dblclick();
+        await expect(zoom).toHaveText('100%');
+
+        await image.hover();
+        await buyer.page.mouse.wheel(0, -400);
+        await expect.poll(async () => parseInt(await zoom.textContent(), 10)).toBeGreaterThan(100);
+        await buyer.page.mouse.wheel(0, 100000);
+        await expect(zoom).toHaveText('100%');
+
+        await expect(viewer.getByRole('link', { name: 'Save image' })).toHaveAttribute('download', name);
+        await buyer.page.keyboard.press('Escape');
+        await expect(viewer).toBeHidden();
+
+        // Clicking the dark area around the photo closes it too.
+        await photo.click();
+        await expect(viewer).toBeVisible();
+        await viewer.locator('[data-image-viewer-stage]').click({ position: { x: 8, y: 200 } });
+        await expect(viewer).toBeHidden();
+    } finally {
+        await buyer.context.close();
+    }
+});
+
 test('Livewire navigation cleans up conversation channels', async ({ browser }) => {
     test.setTimeout(90_000);
     const buyer = await openAsRole(browser, 'customer');
