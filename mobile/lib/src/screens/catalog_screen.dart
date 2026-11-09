@@ -234,17 +234,32 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final refreshing = products.isLoading && feed != null;
 
     final scheme = theme.colorScheme;
+    // One height for the field and the cart so the header reads as a single row;
+    // it grows a little with large text instead of clipping it.
+    final headerScaler = MediaQuery.textScalerOf(context)
+        .clamp(maxScaleFactor: 1.6);
+    final barHeight = headerScaler.scale(48).clamp(48.0, 60.0);
+    // Pad the single text line evenly so the field fills the pill (one 48dp tap target)
+    // with hint and typed text centred; textAlignVertical alone did not centre it here.
+    final inputLine = TextPainter(
+      text: TextSpan(text: 'Ag', style: theme.textTheme.bodyLarge),
+      textDirection: TextDirection.ltr,
+      textScaler: headerScaler,
+    )..layout();
+    final inputPadding = ((barHeight - inputLine.height) / 2).clamp(0.0, 24.0);
+    inputLine.dispose();
+    final trailingSize = barHeight - 8;
     final searchPill = Container(
-      constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsetsDirectional.only(start: 14, end: 2),
+      height: barHeight,
+      padding: const EdgeInsetsDirectional.only(start: 14),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(barHeight / 2),
       ),
       child: Row(
         children: [
-          Icon(Icons.search_rounded, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 8),
+          Icon(Icons.search_rounded, size: 20, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _searchController,
@@ -255,43 +270,58 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               autocorrect: false,
               enableSuggestions: false,
               maxLines: 1,
+              style: theme.textTheme.bodyLarge,
               textInputAction: TextInputAction.search,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
+                // The hint doubles as the TalkBack label; a hidden labelText pushed typed text off-centre.
                 hintText: 'Search products and stores',
-                labelText: 'Search products and stores',
-                floatingLabelBehavior: FloatingLabelBehavior.never,
                 filled: false,
-                isCollapsed: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 14),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(vertical: inputPadding),
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
               ),
             ),
           ),
+          // Empty, the hint gets the whole pill; once typing, clear and submit appear.
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: _searchController,
             builder: (context, value, child) => value.text.isEmpty
-                ? const SizedBox.shrink()
-                : IconButton(
-                    tooltip: 'Clear search',
-                    onPressed: _clearSearch,
-                    icon: const Icon(Icons.close_rounded),
+                ? const SizedBox(width: 12)
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: _clearSearch,
+                        color: scheme.onSurfaceVariant,
+                        style: IconButton.styleFrom(
+                          fixedSize: Size.square(trailingSize),
+                          minimumSize: Size.square(trailingSize),
+                          padding: EdgeInsets.zero,
+                        ),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                      ),
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(end: 4),
+                        child: IconButton.filled(
+                          tooltip: 'Search',
+                          onPressed: () =>
+                              _submitSearch(_searchController.text),
+                          style: IconButton.styleFrom(
+                            fixedSize: Size.square(trailingSize),
+                            minimumSize: Size.square(trailingSize),
+                            padding: EdgeInsets.zero,
+                          ),
+                          icon: const Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-          ),
-          TextButton(
-            onPressed: () => _submitSearch(_searchController.text),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              foregroundColor: scheme.primary,
-              textStyle: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            // A short fixed label; capping it keeps the field usable on 320px at 2x text.
-            child: MediaQuery.withClampedTextScaling(
-              maxScaleFactor: 1.3,
-              child: const Text('Search', maxLines: 1),
-            ),
           ),
         ],
       ),
@@ -299,9 +329,12 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
 
     // The shell drops its app bar on this tab, so this band sits behind the status bar.
     final search = AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
+      value:
+          (ThemeData.estimateBrightnessForColor(scheme.primary) ==
+                      Brightness.dark
+                  ? SystemUiOverlayStyle.light
+                  : SystemUiOverlayStyle.dark)
+              .copyWith(statusBarColor: Colors.transparent),
       child: Material(
         color: scheme.primary,
         child: MediaQuery.withClampedTextScaling(
@@ -309,15 +342,15 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           child: Padding(
             padding: EdgeInsetsDirectional.fromSTEB(
               16,
-              MediaQuery.paddingOf(context).top + 10,
-              8,
+              MediaQuery.paddingOf(context).top + 8,
+              16,
               12,
             ),
             child: Row(
               children: [
                 Expanded(child: searchPill),
-                const SizedBox(width: 4),
-                const CartButton(),
+                const SizedBox(width: 12),
+                CartButton(size: barHeight),
               ],
             ),
           ),
@@ -672,9 +705,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
             child: ExcludeSemantics(
               child: Row(
                 children: [
-                  _SkeletonBox(width: 168, height: 20),
+                  SkeletonBox(width: 168, height: 20),
                   const Spacer(),
-                  _SkeletonBox(width: 64, height: 14),
+                  SkeletonBox(width: 64, height: 14),
                 ],
               ),
             ),
@@ -703,16 +736,16 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Expanded(
-                        child: _SkeletonBox(width: double.infinity, radius: 10),
+                        child: SkeletonBox(width: double.infinity, radius: 10),
                       ),
                       const SizedBox(height: 12),
-                      _SkeletonBox(width: cardWidth - 24, height: 12),
+                      SkeletonBox(width: cardWidth - 24, height: 12),
                       const SizedBox(height: 6),
-                      _SkeletonBox(width: cardWidth * 0.58, height: 12),
+                      SkeletonBox(width: cardWidth * 0.58, height: 12),
                       const SizedBox(height: 12),
-                      _SkeletonBox(width: cardWidth * 0.48, height: 16),
+                      SkeletonBox(width: cardWidth * 0.48, height: 16),
                       const SizedBox(height: 16),
-                      _SkeletonBox(width: cardWidth * 0.58, height: 10),
+                      SkeletonBox(width: cardWidth * 0.58, height: 10),
                       const SizedBox(height: 12),
                     ],
                   ),
@@ -724,27 +757,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         ),
       ),
     ];
-  }
-}
-
-class _SkeletonBox extends StatelessWidget {
-  const _SkeletonBox({this.width, this.height, this.radius = 6});
-
-  final double? width;
-  final double? height;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest
-            .withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
   }
 }
 
@@ -1109,7 +1121,8 @@ class _CategoryStrip extends StatelessWidget {
             );
 
             return SizedBox(
-              width: scaler.scale(72).clamp(72, 112),
+              // Wide enough at 2× text that one-word names like "Electronics" never split mid-word.
+              width: scaler.scale(76).clamp(72, 168),
               child: Semantics(
                 button: true,
                 selected: active,

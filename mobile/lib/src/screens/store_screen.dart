@@ -58,39 +58,88 @@ class StoreScreen extends ConsumerWidget {
                         ),
                       ]
                     : [
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                          sliver: SliverGrid(
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                  childAspectRatio: 0.66,
-                                ),
-                            delegate: SliverChildBuilderDelegate((
-                              context,
-                              index,
-                            ) {
-                              final product = page.products[index];
+                        SliverLayoutBuilder(
+                          builder: (context, constraints) {
+                            final scaler = MediaQuery.textScalerOf(context);
+                            final width = constraints.crossAxisExtent - 32;
+                            final columns = scaler.scale(14) > 21 && width < 600
+                                ? 1
+                                : (width / 190).floor().clamp(2, 4);
+                            final cardWidth =
+                                (width - (columns - 1) * 12) / columns;
 
-                              return ProductCard(
-                                product: product,
-                                showStore: false,
-                                onTap: () => context.push(
-                                  '/product/${product.store?.slug ?? slug}/${product.slug}',
-                                ),
-                              );
-                            }, childCount: page.products.length),
-                          ),
+                            return SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                              sliver: SliverGrid(
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: columns,
+                                      crossAxisSpacing: 12,
+                                      mainAxisSpacing: 12,
+                                      mainAxisExtent:
+                                          cardWidth + scaler.scale(58) + 56,
+                                    ),
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
+                                  final product = page.products[index];
+
+                                  return ProductCard(
+                                    product: product,
+                                    showStore: false,
+                                    onTap: () => context.push(
+                                      '/product/${product.store?.slug ?? slug}/${product.slug}',
+                                    ),
+                                  );
+                                }, childCount: page.products.length),
+                              ),
+                            );
+                          },
                         ),
                       ],
                 loading: () => [
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 48),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
+                  SliverLayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.crossAxisExtent - 32;
+                      final columns = (width / 190).floor().clamp(2, 4);
+
+                      return SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: columns,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                mainAxisExtent:
+                                    ((width - (columns - 1) * 12) / columns) *
+                                        0.9 +
+                                    70,
+                              ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) => Semantics(
+                              container: index == 0,
+                              liveRegion: index == 0,
+                              label: index == 0 ? 'Loading products' : null,
+                              child: ExcludeSemantics(
+                                child: Card(
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: SkeletonBox(
+                                      width: double.infinity,
+                                      radius: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            childCount: columns * 2,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
                 error: (error, stack) => [
@@ -153,11 +202,7 @@ class _StoreHeader extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              StoreAvatar(
-                name: store.name,
-                logoUrl: store.logoUrl,
-                radius: 30,
-              ),
+              StoreAvatar(name: store.name, logoUrl: store.logoUrl, radius: 30),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(

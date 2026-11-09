@@ -209,17 +209,99 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               SafeArea(
                 top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: FilledButton(
-                    onPressed: _placing ? null : () => _placeOrder(value),
-                    child: _placing
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text('Place order · ${money(_total(value))}'),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final largeText =
+                              MediaQuery.textScalerOf(context).scale(14) > 18;
+                          final total = Text(
+                            money(_total(value)),
+                            textAlign: TextAlign.end,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                          );
+
+                          if (largeText) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Total',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
+                                ),
+                                const SizedBox(height: 2),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: total,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Total',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: total,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: _placing ? null : () => _placeOrder(value),
+                        child: _placing
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Place order'),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -231,6 +313,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _itemsCard(CheckoutQuote quote) {
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -247,6 +331,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               (line) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     NetworkThumb(
                       url: line.imageUrl,
@@ -261,7 +346,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         children: [
                           Text(
                             line.productName,
-                            maxLines: 1,
+                            maxLines: largeText ? 2 : 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
@@ -269,13 +354,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                             '${line.quantity} × ${money(line.unitPrice)}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
+                          if (largeText) ...[
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                money(line.lineTotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                    Text(
-                      money(line.lineTotal),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                    if (!largeText)
+                      Text(
+                        money(line.lineTotal),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                   ],
                 ),
               ),
@@ -383,31 +482,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     : null,
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _city,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'City'),
-                      validator: (value) => (value ?? '').trim().isEmpty
-                          ? 'Enter the city.'
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _province,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'Province'),
-                      validator: (value) => (value ?? '').trim().isEmpty
-                          ? 'Enter the province.'
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
+              _cityProvinceFields(context),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _postalCode,
@@ -425,8 +500,47 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
+  Widget _cityProvinceFields(BuildContext context) {
+    final city = TextFormField(
+      controller: _city,
+      textCapitalization: TextCapitalization.words,
+      decoration: const InputDecoration(labelText: 'City'),
+      validator: (value) =>
+          (value ?? '').trim().isEmpty ? 'Enter the city.' : null,
+    );
+    final province = TextFormField(
+      controller: _province,
+      textCapitalization: TextCapitalization.words,
+      decoration: const InputDecoration(labelText: 'Province'),
+      validator: (value) =>
+          (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Side-by-side labels clip on narrow screens with large text.
+        final stack =
+            constraints.maxWidth < 300 ||
+            MediaQuery.textScalerOf(context).scale(14) > 21;
+
+        if (stack) {
+          return Column(children: [city, const SizedBox(height: 10), province]);
+        }
+
+        return Row(
+          children: [
+            Expanded(child: city),
+            const SizedBox(width: 10),
+            Expanded(child: province),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _paymentCard(CheckoutQuote quote) {
     final theme = Theme.of(context);
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
     const labels = {
       'cod': 'Cash on delivery',
       'gcash': 'GCash',
@@ -462,22 +576,44 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     contentPadding: EdgeInsets.zero,
                     value: entry.key,
                     enabled: option.available,
-                    title: Row(
-                      children: [
-                        Text(
-                          labels[entry.key] ?? entry.key,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        if (option.fee != null &&
-                            double.tryParse(option.fee!) != 0) ...[
-                          const Spacer(),
-                          Text(
-                            '+ ${money(option.fee)}',
-                            style: theme.textTheme.bodySmall,
+                    title: largeText
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                labels[entry.key] ?? entry.key,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (option.fee != null &&
+                                  double.tryParse(option.fee!) != 0)
+                                Text(
+                                  '+ ${money(option.fee)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  labels[entry.key] ?? entry.key,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              if (option.fee != null &&
+                                  double.tryParse(option.fee!) != 0) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  '+ ${money(option.fee)}',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ],
                           ),
-                        ],
-                      ],
-                    ),
                     subtitle: option.available
                         ? null
                         : Text(
@@ -495,6 +631,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _totalsCard(CheckoutQuote quote) {
+    final theme = Theme.of(context);
     final fee = quote.paymentOptions[_paymentMethod]?.fee ?? '0.00';
     final total = _total(quote);
 
@@ -506,57 +643,74 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ...quote.storeTotals.map(
               (store) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    Expanded(child: Text(store.name)),
-                    Text(money(store.total)),
-                  ],
+                child: _amountRow(
+                  label: Text(store.name),
+                  amount: Text(money(store.total)),
                 ),
               ),
             ),
             const Divider(height: 20),
-            Row(
-              children: [
-                const Expanded(child: Text('Subtotal')),
-                Text(money(quote.subtotal)),
-              ],
+            _amountRow(
+              label: const Text('Subtotal'),
+              amount: Text(money(quote.subtotal)),
             ),
             if ((double.tryParse(fee) ?? 0) > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Online payment fee (${_paymentMethod.toUpperCase()})',
-                      ),
-                    ),
-                    Text(money(fee)),
-                  ],
+                child: _amountRow(
+                  label: Text(
+                    'Online payment fee (${_paymentMethod.toUpperCase()})',
+                  ),
+                  amount: Text(money(fee)),
                 ),
               ),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Total',
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w800),
-                  ),
+            _amountRow(
+              label: Text(
+                'Total',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
                 ),
-                Text(
-                  money(total),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+              ),
+              amount: Text(
+                money(total),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.primary,
                 ),
-              ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _amountRow({required Widget label, required Widget amount}) {
+    if (MediaQuery.textScalerOf(context).scale(14) <= 18) {
+      return Row(
+        children: [
+          Expanded(child: label),
+          const SizedBox(width: 8),
+          amount,
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        label,
+        const SizedBox(height: 2),
+        Align(
+          alignment: Alignment.centerRight,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: amount,
+          ),
+        ),
+      ],
     );
   }
 }

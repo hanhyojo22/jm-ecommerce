@@ -97,13 +97,9 @@ class MessagesScreen extends ConsumerWidget {
                                   _contextLine(conversation)!,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                               const SizedBox(height: 4),
                               Row(
@@ -140,7 +136,9 @@ class MessagesScreen extends ConsumerWidget {
                                         borderRadius: BorderRadius.circular(99),
                                       ),
                                       child: Text(
-                                        '${conversation.unreadCount}',
+                                        conversation.unreadCount > 99
+                                            ? '99+'
+                                            : '${conversation.unreadCount}',
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme

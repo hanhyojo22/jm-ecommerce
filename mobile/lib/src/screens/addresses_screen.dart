@@ -32,50 +32,59 @@ class AddressesScreen extends ConsumerWidget {
             );
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            itemCount: items.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final address = items[index];
-
-              return Card(
-                child: ListTile(
-                  contentPadding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
-                  title: Text(
-                    address.recipientName,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: Text(
-                    '${address.addressLine}, ${address.city}, ${address.province} ${address.postalCode}\n${address.phone}',
-                  ),
-                  isThreeLine: true,
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Edit',
-                        onPressed: () => _openForm(context, ref, address),
-                        icon: const Icon(Icons.edit_outlined),
-                      ),
-                      IconButton(
-                        tooltip: 'Delete',
-                        onPressed: () => _delete(context, ref, address),
-                        icon: const Icon(Icons.delete_outline_rounded),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(addressesProvider);
+              await ref.read(addressesProvider.future);
             },
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              itemCount: items.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final address = items[index];
+
+                return Card(
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+                    title: Text(
+                      address.recipientName,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      '${address.addressLine}, ${address.city}, ${address.province} ${address.postalCode}\n${address.phone}',
+                    ),
+                    isThreeLine: true,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Edit',
+                          onPressed: () => _openForm(context, ref, address),
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                        IconButton(
+                          tooltip: 'Delete',
+                          onPressed: () => _delete(context, ref, address),
+                          icon: const Icon(Icons.delete_outline_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(context, ref, null),
-        icon: const Icon(Icons.add_location_alt_outlined),
-        label: const Text('Add address'),
-      ),
+      floatingActionButton: (addresses.value?.isEmpty ?? true)
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _openForm(context, ref, null),
+              icon: const Icon(Icons.add_location_alt_outlined),
+              label: const Text('Add address'),
+            ),
     );
   }
 
@@ -212,6 +221,43 @@ class _AddressFormState extends State<AddressForm> {
     super.dispose();
   }
 
+  Widget _cityProvinceFields(BuildContext context) {
+    final city = TextFormField(
+      controller: _city,
+      textCapitalization: TextCapitalization.words,
+      decoration: const InputDecoration(labelText: 'City'),
+      validator: (value) =>
+          (value ?? '').trim().isEmpty ? 'Enter the city.' : null,
+    );
+    final province = TextFormField(
+      controller: _province,
+      textCapitalization: TextCapitalization.words,
+      decoration: const InputDecoration(labelText: 'Province'),
+      validator: (value) =>
+          (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stack =
+            constraints.maxWidth < 300 ||
+            MediaQuery.textScalerOf(context).scale(14) > 21;
+
+        if (stack) {
+          return Column(children: [city, const SizedBox(height: 10), province]);
+        }
+
+        return Row(
+          children: [
+            Expanded(child: city),
+            const SizedBox(width: 10),
+            Expanded(child: province),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -219,7 +265,7 @@ class _AddressFormState extends State<AddressForm> {
         left: 20,
         right: 20,
         top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
       ),
       child: Form(
         key: _formKey,
@@ -265,31 +311,7 @@ class _AddressFormState extends State<AddressForm> {
                     : null,
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _city,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'City'),
-                      validator: (value) => (value ?? '').trim().isEmpty
-                          ? 'Enter the city.'
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _province,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'Province'),
-                      validator: (value) => (value ?? '').trim().isEmpty
-                          ? 'Enter the province.'
-                          : null,
-                    ),
-                  ),
-                ],
-              ),
+              _cityProvinceFields(context),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _postal,

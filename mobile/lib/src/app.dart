@@ -19,6 +19,8 @@ class JmMartApp extends StatelessWidget {
       return MaterialApp(
         title: 'JMMart',
         theme: buildAppTheme(),
+        darkTheme: buildAppTheme(brightness: Brightness.dark),
+        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         home: const MissingConfigScreen(),
       );
@@ -29,14 +31,15 @@ class JmMartApp extends StatelessWidget {
       child: MaterialApp.router(
         title: 'JMMart',
         theme: buildAppTheme(),
+        darkTheme: buildAppTheme(brightness: Brightness.dark),
+        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         routerConfig: appRouter,
         // ClerkErrorListener needs MaterialApp's ScaffoldMessenger.
-        builder: (context, child) =>
-            ClerkErrorListener(
-              handler: _showClerkError,
-              child: child ?? const SizedBox.shrink(),
-            ),
+        builder: (context, child) => ClerkErrorListener(
+          handler: _showClerkError,
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }
@@ -52,9 +55,7 @@ void _showClerkError(BuildContext context, clerk.ClerkError error) {
   }
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(
-        error.localizedMessage(ClerkAuth.localizationsOf(context)),
-      ),
+      content: Text(error.localizedMessage(ClerkAuth.localizationsOf(context))),
     ),
   );
 }

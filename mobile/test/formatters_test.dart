@@ -14,4 +14,10 @@ void main() {
       expect(addMoney('10.5', '0.25'), '10.75');
     });
   });
+
+  test('initials skip symbols between words', () {
+    expect(initials('Trail & Tide'), 'TT');
+    expect(initials('JM'), 'J');
+    expect(initials('  '), '');
+  });
 }

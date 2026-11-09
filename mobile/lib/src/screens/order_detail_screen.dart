@@ -70,6 +70,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   Widget _header(OrderDetail order) {
     final theme = Theme.of(context);
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
 
     return Card(
       child: Padding(
@@ -77,19 +78,34 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
+            if (largeText)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     'Order ${order.shortNumber}',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                ),
-                StatusPill(status: order.status),
-              ],
-            ),
+                  const SizedBox(height: 6),
+                  StatusPill(status: order.status),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Order ${order.shortNumber}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  StatusPill(status: order.status),
+                ],
+              ),
             const SizedBox(height: 6),
             Text(
               'Placed ${dateTime(order.createdAt)}',
@@ -98,24 +114,64 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    money(order.total),
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: theme.colorScheme.primary,
-                    ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = largeText || constraints.maxWidth < 300;
+                final price = Text(
+                  money(order.total),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.primary,
                   ),
-                ),
-                if (order.canPay)
-                  FilledButton.icon(
-                    onPressed: _busy ? null : () => _pay(order),
-                    icon: const Icon(Icons.lock_open_rounded),
-                    label: const Text('Pay now'),
-                  ),
-              ],
+                );
+                final payButton = largeText
+                    ? FilledButton(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                        onPressed: _busy ? null : () => _pay(order),
+                        child: const Text('Pay now'),
+                      )
+                    : FilledButton.icon(
+                        // The shared button style stretches to the available width,
+                        // which is infinite inside a Row with an Expanded sibling.
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                        onPressed: _busy ? null : () => _pay(order),
+                        icon: const Icon(Icons.lock_open_rounded),
+                        label: const Text('Pay now'),
+                      );
+
+                if (stack) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: price,
+                        ),
+                      ),
+                      if (order.canPay) ...[
+                        const SizedBox(height: 10),
+                        payButton,
+                      ],
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    Expanded(child: price),
+                    if (order.canPay) ...[const SizedBox(width: 12), payButton],
+                  ],
+                );
+              },
             ),
             if (order.canConfirmReceipt) ...[
               const SizedBox(height: 10),
@@ -176,11 +232,13 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Widget _payment(OrderDetail order) {
     final theme = Theme.of(context);
     final payment = order.payment;
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.payments_outlined, color: theme.colorScheme.primary),
             const SizedBox(width: 12),
@@ -200,10 +258,21 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (largeText && payment != null) ...[
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        money(payment.amount),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            if (payment != null)
+            if (!largeText && payment != null)
               Text(
                 money(payment.amount),
                 style: const TextStyle(fontWeight: FontWeight.w800),
@@ -216,6 +285,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
   Widget _sellerOrder(OrderDetail order, SellerOrder sellerOrder) {
     final theme = Theme.of(context);
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
 
     return Card(
       child: Padding(
@@ -224,6 +294,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
                   radius: 16,
@@ -233,12 +304,21 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    sellerOrder.store?.name ?? 'Store',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sellerOrder.store?.name ?? 'Store',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      if (largeText) ...[
+                        const SizedBox(height: 6),
+                        StatusPill(status: sellerOrder.status),
+                      ],
+                    ],
                   ),
                 ),
-                StatusPill(status: sellerOrder.status),
+                if (!largeText) StatusPill(status: sellerOrder.status),
               ],
             ),
             const SizedBox(height: 10),
@@ -246,6 +326,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               (line) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     NetworkThumb(
                       url: line.imageUrl,
@@ -273,23 +354,44 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                             '${line.quantity} × ${money(line.unitPrice)}',
                             style: theme.textTheme.bodySmall,
                           ),
+                          if (largeText) ...[
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                money(line.lineTotal),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            if (sellerOrder.status == 'delivered' &&
+                                !line.reviewed)
+                              TextButton(
+                                onPressed: _busy ? null : () => _review(line),
+                                child: const Text('Review'),
+                              ),
+                          ],
                         ],
                       ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          money(line.lineTotal),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        if (sellerOrder.status == 'delivered' && !line.reviewed)
-                          TextButton(
-                            onPressed: _busy ? null : () => _review(line),
-                            child: const Text('Review'),
+                    if (!largeText)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            money(line.lineTotal),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                      ],
-                    ),
+                          if (sellerOrder.status == 'delivered' &&
+                              !line.reviewed)
+                            TextButton(
+                              onPressed: _busy ? null : () => _review(line),
+                              child: const Text('Review'),
+                            ),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -394,11 +496,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Future<void> _review(OrderLine line) async {
-    final input = await showModalBottomSheet<ReviewInput>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => _ReviewSheet(productName: line.productName),
-    );
+    final input = await showProductReviewSheet(context, line.productName);
 
     if (input == null) {
       return;
@@ -437,6 +535,17 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 }
 
+Future<ReviewInput?> showProductReviewSheet(
+  BuildContext context,
+  String productName,
+) => showModalBottomSheet<ReviewInput>(
+  context: context,
+  isScrollControlled: true,
+  showDragHandle: true,
+  useSafeArea: true,
+  builder: (context) => _ReviewSheet(productName: productName),
+);
+
 class ReviewInput {
   const ReviewInput({required this.rating, required this.body});
 
@@ -472,50 +581,55 @@ class _ReviewSheetState extends State<_ReviewSheet> {
         top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Review ${widget.productName}',
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: List.generate(5, (index) {
-              final star = index + 1;
-
-              return IconButton(
-                onPressed: () => setState(() => _rating = star),
-                icon: Icon(
-                  star <= _rating
-                      ? Icons.star_rounded
-                      : Icons.star_outline_rounded,
-                  color: const Color(0xFFE0A63B),
-                  size: 32,
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _body,
-            maxLines: 4,
-            maxLength: 3000,
-            decoration: const InputDecoration(
-              labelText: 'Your review (optional)',
-              alignLabelWithHint: true,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Review ${widget.productName}',
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
             ),
-          ),
-          const SizedBox(height: 10),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(context)
-                    .pop(ReviewInput(rating: _rating, body: _body.text.trim())),
-            child: const Text('Publish review'),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Semantics(
+              label: 'Rating: $_rating out of 5',
+              child: Row(
+                children: List.generate(5, (index) {
+                  final star = index + 1;
+
+                  return IconButton(
+                    tooltip: '$star star${star == 1 ? '' : 's'}',
+                    onPressed: () => setState(() => _rating = star),
+                    icon: Icon(
+                      star <= _rating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: Theme.of(context).colorScheme.secondary,
+                      size: 32,
+                    ),
+                  );
+                }),
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _body,
+              maxLines: 4,
+              maxLength: 3000,
+              decoration: const InputDecoration(
+                labelText: 'Your review (optional)',
+                alignLabelWithHint: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            FilledButton(
+              onPressed: () => Navigator.of(context)
+                  .pop(ReviewInput(rating: _rating, body: _body.text.trim())),
+              child: const Text('Publish review'),
+            ),
+          ],
+        ),
       ),
     );
   }

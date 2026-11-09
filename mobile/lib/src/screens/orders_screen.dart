@@ -32,11 +32,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
 
     return Column(
       children: [
-        SizedBox(
-          height: 54,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
             children: _tabs.map((tab) {
               final count = orders.value?.tabCounts[tab.key] ?? 0;
 
@@ -45,6 +44,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 child: ChoiceChip(
                   label: Text(count > 0 ? '${tab.label} ($count)' : tab.label),
                   selected: _tab == tab.key,
+                  showCheckmark: false,
                   onSelected: (_) => setState(() => _tab = tab.key),
                 ),
               );
@@ -100,6 +100,53 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
+    final thumbnails = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ...order.lines
+            .take(3)
+            .map(
+              (line) => NetworkThumb(
+                url: line.imageUrl,
+                width: 56,
+                height: 56,
+                radius: 10,
+              ),
+            ),
+        if (order.lines.length > 3)
+          Text('+${order.lines.length - 3}', style: theme.textTheme.bodySmall),
+      ],
+    );
+    final totals = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        largeText
+            ? FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  money(order.total),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              )
+            : Text(
+                money(order.total),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+        Text(
+          '${order.lines.length} ${order.lines.length == 1 ? 'item' : 'items'}',
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
+    );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -113,6 +160,7 @@ class _OrderCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   CircleAvatar(
                     radius: 18,
@@ -135,78 +183,72 @@ class _OrderCard extends StatelessWidget {
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        if (largeText) ...[
+                          const SizedBox(height: 6),
+                          StatusPill(status: order.status),
+                        ],
                       ],
                     ),
                   ),
-                  StatusPill(status: order.status),
+                  if (!largeText) StatusPill(status: order.status),
                 ],
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                height: 56,
-                child: Row(
+              if (largeText)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ...order.lines
-                        .take(3)
-                        .map(
-                          (line) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: NetworkThumb(
-                              url: line.imageUrl,
-                              width: 56,
-                              height: 56,
-                              radius: 10,
+                    thumbnails,
+                    const SizedBox(height: 8),
+                    Align(alignment: Alignment.centerRight, child: totals),
+                  ],
+                )
+              else
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: thumbnails),
+                    const SizedBox(width: 10),
+                    totals,
+                  ],
+                ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      order.orderCreatedAt == null
+                          ? ''
+                          : dateTime(order.orderCreatedAt),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            order.canConfirmReceipt
+                                ? 'Tap to confirm receipt'
+                                : 'View order',
+                            textAlign: TextAlign.end,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ),
-                    if (order.lines.length > 3)
-                      Text(
-                        '+${order.lines.length - 3}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    const Spacer(),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          money(order.total),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          '${order.lines.length} ${order.lines.length == 1 ? 'item' : 'items'}',
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        const Icon(Icons.chevron_right, size: 18),
                       ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Text(
-                    order.orderCreatedAt == null
-                        ? ''
-                        : dateTime(order.orderCreatedAt),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    order.canConfirmReceipt
-                        ? 'Tap to confirm receipt'
-                        : 'View order',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, size: 18),
-                ],
               ),
             ],
           ),

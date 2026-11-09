@@ -58,6 +58,8 @@ class _StartupErrorApp extends StatelessWidget {
     return MaterialApp(
       title: 'JMMart',
       theme: buildAppTheme(),
+      darkTheme: buildAppTheme(brightness: Brightness.dark),
+      themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: SafeArea(

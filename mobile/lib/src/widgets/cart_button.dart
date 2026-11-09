@@ -6,7 +6,10 @@ import '../providers/cart_providers.dart';
 
 /// Cart shortcut drawn on the brand-coloured home header.
 class CartButton extends ConsumerWidget {
-  const CartButton({super.key});
+  const CartButton({super.key, this.size = 48});
+
+  /// Matches the search field's height so the header reads as one row.
+  final double size;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,17 +23,21 @@ class CartButton extends ConsumerWidget {
         tooltip: 'Cart, $count ${count == 1 ? 'item' : 'items'}',
         onPressed: () => context.push('/cart'),
         style: IconButton.styleFrom(
-          minimumSize: const Size(48, 48),
+          fixedSize: Size.square(size),
+          minimumSize: Size.square(size),
+          padding: EdgeInsets.zero,
+          shape: const CircleBorder(),
           foregroundColor: scheme.onPrimary,
+          backgroundColor: scheme.onPrimary.withValues(alpha: 0.14),
         ),
         icon: Stack(
           clipBehavior: Clip.none,
           children: [
-            const Icon(Icons.shopping_cart_outlined, size: 26),
+            const Icon(Icons.shopping_cart_outlined, size: 22),
             if (count > 0)
               PositionedDirectional(
-                top: -7,
-                end: -11,
+                top: -9,
+                end: -10,
                 child: ExcludeSemantics(
                   child: MediaQuery.withClampedTextScaling(
                     maxScaleFactor: 1.3,

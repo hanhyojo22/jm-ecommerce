@@ -99,8 +99,10 @@ String initials(String name) {
   final parts = name
       .trim()
       .split(RegExp(r'\s+'))
-      .where((part) => part.isNotEmpty)
+      .map((part) => RegExp(r'[\p{L}\p{N}]', unicode: true).stringMatch(part))
+      .whereType<String>()
       .take(2);
 
-  return parts.map((part) => part[0].toUpperCase()).join();
+  // Symbols like "&" never become an initial: "Trail & Tide" → "TT".
+  return parts.map((letter) => letter.toUpperCase()).join();
 }

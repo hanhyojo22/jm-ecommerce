@@ -63,7 +63,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _states = _reverb.states.listen(_onReverbState);
 
     unawaited(_connectReverb());
-    _poll = Timer.periodic(const Duration(seconds: 15), (_) => _refresh());
+    _startPolling();
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
   }
@@ -101,12 +101,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     if (state == ReverbState.connected) {
       _reconnectTimer?.cancel();
+      // The socket delivers new messages, so REST polling is redundant.
+      _stopPolling();
       return;
     }
+
+    _startPolling();
 
     if (state == ReverbState.disconnected || state == ReverbState.failed) {
       _scheduleReconnect();
     }
+  }
+
+  void _startPolling() {
+    if (_poll?.isActive ?? false) {
+      return;
+    }
+
+    _poll = Timer.periodic(const Duration(seconds: 15), (_) => _refresh());
+  }
+
+  void _stopPolling() {
+    _poll?.cancel();
+    _poll = null;
   }
 
   void _scheduleReconnect() {
@@ -503,8 +520,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(conversation?.store?.name ?? 'Chat'),
-                  Text(headerContextLabel, style: theme.textTheme.bodySmall),
+                  Text(
+                    conversation?.store?.name ?? 'Chat',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    headerContextLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),
@@ -521,7 +547,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Icons.circle,
                 size: 10,
                 color: _live
-                    ? const Color(0xFF2F855A)
+                    ? theme.colorScheme.primary
                     : theme.colorScheme.outline,
               ),
             ),
@@ -617,7 +643,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             child: Container(
               padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surfaceContainerLowest,
                 border: Border(
                   top: BorderSide(color: theme.colorScheme.outlineVariant),
                 ),
@@ -1219,7 +1245,9 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final mine = message.isMine;
-    final background = mine ? theme.colorScheme.primary : Colors.white;
+    final background = mine
+        ? theme.colorScheme.primary
+        : theme.colorScheme.surfaceContainerLowest;
     final foreground = mine
         ? theme.colorScheme.onPrimary
         : theme.colorScheme.onSurface;

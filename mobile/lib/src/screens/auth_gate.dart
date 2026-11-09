@@ -30,10 +30,6 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  static const _ink = Color(0xFF1E2422);
-  static const _muted = Color(0xFF545A57);
-  static const _hairline = Color(0xFFE2DFD7);
-
   bool _showEmailForm = false;
   clerk.SocialConnection? _pendingConnection;
 
@@ -112,10 +108,10 @@ class _SignInScreenState extends State<SignInScreen> {
                             color: scheme.primary,
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.shopping_bag_outlined,
                             size: 17,
-                            color: Color(0xFFF7F6F2),
+                            color: scheme.onPrimary,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -133,10 +129,10 @@ class _SignInScreenState extends State<SignInScreen> {
                     const SizedBox(height: 64),
                     Semantics(
                       header: true,
-                      child: const Text(
+                      child: Text(
                         'Sign in to JMMart',
                         style: TextStyle(
-                          color: _ink,
+                          color: scheme.onSurface,
                           fontSize: 32,
                           height: 38 / 32,
                           fontWeight: FontWeight.w700,
@@ -145,10 +141,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
+                    Text(
                       'Your orders, saved stores and seller chats, on every device.',
                       style: TextStyle(
-                        color: _muted,
+                        color: scheme.onSurfaceVariant,
                         fontSize: 16,
                         height: 1.5,
                       ),
@@ -165,19 +161,28 @@ class _SignInScreenState extends State<SignInScreen> {
                       const SizedBox(height: 12),
                     ],
                     if (connections.isNotEmpty)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12, bottom: 24),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12, bottom: 24),
                         child: Row(
                           children: [
-                            Expanded(child: Divider(color: _hairline)),
+                            Expanded(
+                              child: Divider(color: scheme.outlineVariant),
+                            ),
                             Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               child: Text(
                                 'or',
-                                style: TextStyle(color: _muted, fontSize: 13),
+                                style: TextStyle(
+                                  color: scheme.onSurfaceVariant,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
-                            Expanded(child: Divider(color: _hairline)),
+                            Expanded(
+                              child: Divider(color: scheme.outlineVariant),
+                            ),
                           ],
                         ),
                       ),
@@ -190,12 +195,16 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     const Spacer(),
                     const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'New to JMMart?',
-                          style: TextStyle(color: _muted, fontSize: 15),
+                          style: TextStyle(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 15,
+                          ),
                         ),
                         TextButton(
                           onPressed: _pendingConnection == null
@@ -214,10 +223,10 @@ class _SignInScreenState extends State<SignInScreen> {
                     const SizedBox(height: 4),
                     Text.rich(
                       TextSpan(
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           height: 1.5,
-                          color: Color(0xFF6B706D),
+                          color: scheme.onSurfaceVariant,
                         ),
                         children: [
                           const TextSpan(
@@ -276,13 +285,15 @@ class _SocialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return OutlinedButton.icon(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(52),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1E2422),
-        side: const BorderSide(color: Color(0xFFD9D6CE)),
+        backgroundColor: scheme.surfaceContainerLowest,
+        foregroundColor: scheme.onSurface,
+        side: BorderSide(color: scheme.outlineVariant),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       icon: SizedBox.square(

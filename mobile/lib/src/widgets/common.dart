@@ -147,6 +147,28 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+/// A neutral placeholder block used while content is loading.
+class SkeletonBox extends StatelessWidget {
+  const SkeletonBox({super.key, this.width, this.height, this.radius = 6});
+
+  final double? width;
+  final double? height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest
+            .withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
 class NetworkThumb extends StatelessWidget {
   const NetworkThumb({
     super.key,
@@ -282,6 +304,15 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
+      height: 1.25,
+    );
+    // Reserve two title lines so one- and two-line names keep images and prices aligned across a row.
+    final titleHeight =
+        MediaQuery.textScalerOf(context).scale(titleStyle?.fontSize ?? 14) *
+        1.25 *
+        2;
     final price = Wrap(
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -383,13 +414,13 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
-                      height: 1.25,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: titleHeight),
+                    child: Text(
+                      product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
                     ),
                   ),
                   if (discovery) ...[
@@ -596,7 +627,9 @@ class StatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.12,
+        ),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -621,14 +654,17 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
-      child: Row(
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 8,
+        runSpacing: 4,
         children: [
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium
                 ?.copyWith(fontWeight: FontWeight.w800),
           ),
-          const Spacer(),
           ?trailing,
         ],
       ),
@@ -659,15 +695,23 @@ class QuantityStepper extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
+            tooltip: 'Decrease quantity',
             visualDensity: VisualDensity.compact,
             onPressed: quantity > 1 ? () => onChanged(quantity - 1) : null,
             icon: const Icon(Icons.remove, size: 18),
           ),
-          Text(
-            '$quantity',
-            style: const TextStyle(fontWeight: FontWeight.w700),
+          Semantics(
+            liveRegion: true,
+            label: 'Quantity $quantity',
+            child: ExcludeSemantics(
+              child: Text(
+                '$quantity',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ),
           IconButton(
+            tooltip: 'Increase quantity',
             visualDensity: VisualDensity.compact,
             onPressed: quantity < max ? () => onChanged(quantity + 1) : null,
             icon: const Icon(Icons.add, size: 18),
