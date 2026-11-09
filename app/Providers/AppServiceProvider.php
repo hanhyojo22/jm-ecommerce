@@ -76,6 +76,12 @@ class AppServiceProvider extends ServiceProvider
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));
 
+        // The app marks a thread read on every refresh; its own budget keeps a busy chat
+        // from spending the shared api allowance that browsing and message loads need.
+        RateLimiter::for('conversation-read', fn (Request $request): Limit => Limit::perMinute(60)->by(
+            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+        ));
+
         RateLimiter::for('admin-mutations', fn (Request $request): Limit => Limit::perMinute(20)->by(
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));

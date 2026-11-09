@@ -202,6 +202,10 @@ class ConversationApiTest extends TestCase
         $this->actingAs($buyer)
             ->postJson("/api/v1/conversations/{$conversation->id}/read")
             ->assertTooManyRequests();
+
+        $this->actingAs($buyer)
+            ->getJson('/api/v1/conversations')
+            ->assertOk();
     }
 
     public function test_an_attachment_is_served_through_a_signed_url(): void

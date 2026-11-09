@@ -142,7 +142,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'send'])
             ->name('api.v1.conversations.messages.store');
         Route::post('/conversations/{conversation}/read', [ConversationController::class, 'read'])
-            ->middleware('throttle:api')
+            ->middleware('throttle:conversation-read')
             ->name('api.v1.conversations.read');
         Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])
             ->middleware('throttle:60,1')
