@@ -21,4 +21,19 @@ void main() {
     expect(PushNotifications.routeFor({'type': 'cart'}), '/cart');
     expect(PushNotifications.routeFor({'type': 'chat'}), isNull);
   });
+
+  test('foreground pushes use the icon the backend chose', () {
+    expect(
+      PushNotifications.iconFor('ic_stat_shipped'),
+      '@drawable/ic_stat_shipped',
+    );
+    expect(
+      PushNotifications.iconFor(null),
+      '@drawable/ic_stat_notification',
+    );
+    expect(
+      PushNotifications.iconFor('../evil'),
+      '@drawable/ic_stat_notification',
+    );
+  });
 }

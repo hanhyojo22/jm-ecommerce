@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Push icons are picked by name at runtime (FCM "icon" field and the foreground
+     notification), so release resource shrinking would otherwise strip them. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_*" />

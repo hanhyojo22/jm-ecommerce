@@ -1,0 +1,13 @@
+<!-- Status-bar icon: Android renders only the alpha channel, so it is a white stroke silhouette. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M6 3h12v18l-2.5-1.6L13 21l-2.5-1.6L8 21l-2-1.6Z M9 8h6 M9 12h6 M9 16h3.5"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

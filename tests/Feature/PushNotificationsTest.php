@@ -164,19 +164,19 @@ class PushNotificationsTest extends TestCase
         $notificationId = (string) Str::uuid();
 
         $notifications = [
-            [new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'), route('messages.show', 'conversation-1'), 'chat-conversation-1'],
-            [new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'), route('orders.show', 'order-1'), 'order-order-1'],
-            [new NewSellerOrderPlaced('seller-order-1', 'New order', 'A buyer placed an order.'), route('seller.orders.show', 'seller-order-1'), 'seller-order-seller-order-1'],
+            [new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'), route('messages.show', 'conversation-1'), 'chat-conversation-1', 'message'],
+            [new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'), route('orders.show', 'order-1'), 'order-order-1', 'confirmed'],
+            [new NewSellerOrderPlaced('seller-order-1', 'New order', 'A buyer placed an order.'), route('seller.orders.show', 'seller-order-1'), 'seller-order-seller-order-1', 'new_order'],
         ];
 
-        foreach ($notifications as [$notification, $expectedUrl, $expectedTag]) {
+        foreach ($notifications as [$notification, $expectedUrl, $expectedTag, $expectedIcon]) {
             $notification->id = $notificationId;
             $payload = $notification->toWebPush($user, $notification)->toArray();
 
             $this->assertSame($expectedTag, $payload['tag']);
             $this->assertTrue($payload['renotify']);
-            $this->assertSame(asset('images/notification-icon.png'), $payload['icon']);
-            $this->assertSame(asset('images/notification-badge.png'), $payload['badge']);
+            $this->assertSame(asset("images/notifications/{$expectedIcon}.png"), $payload['icon']);
+            $this->assertSame(asset("images/notifications/{$expectedIcon}-badge.png"), $payload['badge']);
             $this->assertSame($expectedUrl, $payload['data']['url']);
             $this->assertSame($notificationId, $payload['data']['notification_id']);
 

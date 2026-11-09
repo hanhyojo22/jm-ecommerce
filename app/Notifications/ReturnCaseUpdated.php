@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\NotificationIcon;
 use App\Support\WebPushAvailability;
 use App\Support\WebPushPayload;
 use Illuminate\Bus\Queueable;
@@ -50,8 +51,8 @@ class ReturnCaseUpdated extends Notification
         return (new WebPushMessage)
             ->title($this->title)
             ->body($this->message)
-            ->icon(asset('images/notification-icon.png'))
-            ->badge(asset('images/notification-badge.png'))
+            ->icon(NotificationIcon::url('return_case'))
+            ->badge(NotificationIcon::badgeUrl('return_case'))
             ->tag($tag)
             ->renotify()
             ->data(WebPushPayload::for($notification, $this->url, $tag));

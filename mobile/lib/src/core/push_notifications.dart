@@ -152,6 +152,14 @@ class PushNotifications {
     };
   }
 
+  /// The status-bar icon for a foreground push: the per-type `ic_stat_*`
+  /// drawable the backend chose (PushNotifier), or the default bag icon.
+  @visibleForTesting
+  static String iconFor(String? smallIcon) =>
+      smallIcon == null || !smallIcon.startsWith('ic_stat_')
+      ? _icon
+      : '@drawable/$smallIcon';
+
   static Future<void> _showForeground(RemoteMessage message) async {
     final notification = message.notification;
     if (notification == null) {
@@ -189,7 +197,7 @@ class PushNotifications {
           priority: channel == _updatesChannel
               ? Priority.defaultPriority
               : Priority.high,
-          icon: _icon,
+          icon: iconFor(notification.android?.smallIcon),
           color: _accent,
           tag: tag,
           category: isChat

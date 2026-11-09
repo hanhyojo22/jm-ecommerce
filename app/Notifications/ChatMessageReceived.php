@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\NotificationIcon;
 use App\Support\WebPushAvailability;
 use App\Support\WebPushPayload;
 use Illuminate\Bus\Queueable;
@@ -50,8 +51,8 @@ class ChatMessageReceived extends Notification
         return (new WebPushMessage)
             ->title($this->senderName)
             ->body(Str::limit($this->body, 120))
-            ->icon(asset('images/notification-icon.png'))
-            ->badge(asset('images/notification-badge.png'))
+            ->icon(NotificationIcon::url('chat'))
+            ->badge(NotificationIcon::badgeUrl('chat'))
             ->tag($tag)
             ->renotify()
             ->data(WebPushPayload::for($notification, route('messages.show', $this->conversationId), $tag));

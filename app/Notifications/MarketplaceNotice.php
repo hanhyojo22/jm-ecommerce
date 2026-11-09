@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\NotificationIcon;
 use App\Support\WebPushAvailability;
 use App\Support\WebPushPayload;
 use Illuminate\Bus\Queueable;
@@ -54,8 +55,8 @@ class MarketplaceNotice extends Notification
         return (new WebPushMessage)
             ->title($this->title)
             ->body($this->body)
-            ->icon(asset('images/notification-icon.png'))
-            ->badge(asset('images/notification-badge.png'))
+            ->icon(NotificationIcon::url($this->type))
+            ->badge(NotificationIcon::badgeUrl($this->type))
             ->tag($tag)
             ->data(WebPushPayload::for($notification, $this->url, $tag));
     }

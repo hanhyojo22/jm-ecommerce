@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\NotificationIcon;
 use App\Support\WebPushAvailability;
 use App\Support\WebPushPayload;
 use Illuminate\Bus\Queueable;
@@ -51,8 +52,8 @@ class SellerOrderStatusUpdated extends Notification
         return (new WebPushMessage)
             ->title($this->title)
             ->body($this->message)
-            ->icon(asset('images/notification-icon.png'))
-            ->badge(asset('images/notification-badge.png'))
+            ->icon(NotificationIcon::url('order', $this->status))
+            ->badge(NotificationIcon::badgeUrl('order', $this->status))
             ->tag($tag)
             ->renotify()
             ->data(WebPushPayload::for($notification, route('orders.show', $this->orderId), $tag));

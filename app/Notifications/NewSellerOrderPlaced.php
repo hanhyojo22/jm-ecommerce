@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\NotificationIcon;
 use App\Support\WebPushAvailability;
 use App\Support\WebPushPayload;
 use Illuminate\Bus\Queueable;
@@ -49,8 +50,8 @@ class NewSellerOrderPlaced extends Notification
         return (new WebPushMessage)
             ->title($this->title)
             ->body($this->message)
-            ->icon(asset('images/notification-icon.png'))
-            ->badge(asset('images/notification-badge.png'))
+            ->icon(NotificationIcon::url('seller_order'))
+            ->badge(NotificationIcon::badgeUrl('seller_order'))
             ->tag($tag)
             ->renotify()
             ->data(WebPushPayload::for($notification, route('seller.orders.show', $this->sellerOrderId), $tag));
