@@ -21,6 +21,10 @@ class AnnouncementController extends Controller
     {
         return view('admin.announcements.create', [
             'announcements' => Announcement::query()->with('sender', 'user')->latest()->limit(10)->get(),
+            'audienceCounts' => [
+                'customers' => SendAdminAnnouncement::recipients('customers')->count(),
+                'stores' => SendAdminAnnouncement::recipients('stores')->count(),
+            ],
         ]);
     }
 
