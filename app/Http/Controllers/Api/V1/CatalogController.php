@@ -134,7 +134,9 @@ class CatalogController extends Controller
         $store = CatalogQuery::publicStores()
             ->withCount([
                 'products as public_products_count' => fn (Builder $query) => $query->where('status', 'active'),
+                'ratings',
             ])
+            ->withAvg('ratings', 'rating')
             ->where('slug', $store)
             ->firstOrFail();
 
@@ -254,7 +256,10 @@ class CatalogController extends Controller
                 'images',
                 'variants',
                 'category:id,name,slug',
-                'store:id,name,slug,status,city,logo_path,description,paymongo_account_id,paymongo_account_status',
+                'store' => fn ($query) => $query
+                    ->select(['id', 'name', 'slug', 'status', 'city', 'logo_path', 'description', 'paymongo_account_id', 'paymongo_account_status'])
+                    ->withCount('ratings')
+                    ->withAvg('ratings', 'rating'),
             ])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')

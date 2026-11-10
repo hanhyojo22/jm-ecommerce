@@ -75,6 +75,7 @@ class OrderController extends Controller
             'sellerOrders.issues' => fn ($query) => $query->latest(),
             'sellerOrders.returnCases' => fn ($query) => $query->latest('id'),
             'sellerOrders.items.review',
+            'sellerOrders.storeRating',
             'payment',
         ]);
 
@@ -119,7 +120,7 @@ class OrderController extends Controller
             throw ValidationException::withMessages(['received' => 'We couldn’t mark this order received. It may already be delivered or have an open request; refresh to see its latest status.']);
         }
 
-        $sellerOrder->refresh()->load(['store:id,name,slug,logo_path', 'items', 'issues', 'returnCases', 'order']);
+        $sellerOrder->refresh()->load(['store:id,name,slug,logo_path', 'items', 'issues', 'returnCases', 'order', 'storeRating']);
 
         return SellerOrderResource::make($sellerOrder)->response($request);
     }

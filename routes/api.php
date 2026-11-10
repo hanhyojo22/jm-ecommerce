@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\ProductDiscussionController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
 use App\Http\Controllers\Api\V1\ReturnCaseController;
 use App\Http\Controllers\Api\V1\ReturnCaseEvidenceController;
+use App\Http\Controllers\Api\V1\StoreRatingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/products/recommended', [CatalogController::class, 'recommended'])->name('api.v1.products.recommended');
         Route::get('/stores', [CatalogController::class, 'stores'])->name('api.v1.stores.index');
         Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('api.v1.stores.show');
+        Route::get('/stores/{store}/ratings', [StoreRatingController::class, 'index'])->name('api.v1.store-ratings.index');
         Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('api.v1.products.show');
         Route::get('/stores/{store}/products/{product}/reviews', [CatalogController::class, 'reviews'])->name('api.v1.products.reviews');
         Route::get('/stores/{store}/products/{product}/discussions', [ProductDiscussionController::class, 'index'])->name('api.v1.products.discussions.index');
@@ -98,6 +100,10 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])
             ->middleware('throttle:10,1')
             ->name('api.v1.orders.received');
+
+        Route::post('/orders/seller-orders/{sellerOrder}/store-rating', [StoreRatingController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('api.v1.store-ratings.store');
 
         Route::get('/orders/seller-orders/{sellerOrder}/issues', [OrderIssueController::class, 'index'])
             ->middleware('throttle:api')

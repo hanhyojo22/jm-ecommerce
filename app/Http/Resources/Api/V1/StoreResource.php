@@ -27,6 +27,20 @@ class StoreResource extends JsonResource
             'banner_url' => $this->banner_path === null ? null : Storage::disk('public')->url($this->banner_path),
             'accepts_online_payments' => $this->acceptsOnlinePayments(),
             'products_count' => $this->when(isset($this->public_products_count), fn (): int => (int) $this->public_products_count),
+            'rating' => $this->when(isset($this->ratings_count), fn (): array => self::ratingSummary($this->resource)),
+        ];
+    }
+
+    /**
+     * The store's rating from buyers; needs `withCount('ratings')` and `withAvg('ratings', 'rating')`.
+     *
+     * @return array{average: float, count: int}
+     */
+    public static function ratingSummary(Store $store): array
+    {
+        return [
+            'average' => round((float) ($store->ratings_avg_rating ?? 0), 2),
+            'count' => (int) $store->ratings_count,
         ];
     }
 }

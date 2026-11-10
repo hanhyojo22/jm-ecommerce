@@ -41,6 +41,7 @@ class ProductResource extends ProductSummaryResource
                     ? null
                     : Storage::disk('public')->url($this->store->logo_path),
                 'accepts_online_payments' => $this->store->acceptsOnlinePayments(),
+                'rating' => $this->when(isset($this->store->ratings_count), fn (): array => StoreResource::ratingSummary($this->store)),
             ]),
         ];
     }

@@ -32,6 +32,14 @@ class SellerOrderResource extends JsonResource
             'delivered_at' => $this->delivered_at?->toIso8601String(),
             'cod_collected_at' => $this->cod_collected_at?->toIso8601String(),
             'can_confirm_receipt' => $this->status === 'shipped',
+            'store_rating' => $this->whenLoaded('storeRating', fn (): ?array => $this->storeRating === null ? null : [
+                'rating' => $this->storeRating->rating,
+                'comment' => $this->storeRating->comment,
+            ]),
+            'can_rate_store' => $this->relationLoaded('storeRating')
+                && $this->storeRating === null
+                && $this->status === 'delivered'
+                && ! (bool) $request->user()?->isMemberOfTenant($this->tenant_id),
             'store' => $this->whenLoaded('store', fn (): array => [
                 'id' => $this->store->id,
                 'name' => $this->store->name,
