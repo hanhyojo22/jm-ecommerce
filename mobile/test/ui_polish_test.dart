@@ -9,7 +9,6 @@ import 'package:jmmart/src/screens/order_detail_screen.dart';
 import 'package:jmmart/src/screens/orders_screen.dart';
 import 'package:jmmart/src/screens/store_screen.dart';
 import 'package:jmmart/src/theme.dart';
-import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
   test('light and dark themes expose distinct readable surfaces', () {
@@ -44,6 +43,32 @@ void main() {
 
     expect(find.text('Pay now'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a delivered order lets the buyer rate the store once', (
+    tester,
+  ) async {
+    _scale = 1;
+    final api = _RateStoreApi();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [apiClientProvider.overrideWithValue(api)],
+        child: _app(const OrderDetailScreen(orderId: 'order-1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(find.text('Rate store'), 300);
+    await tester.ensureVisible(find.text('Rate store'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rate store'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('4 stars'));
+    await tester.tap(find.text('Submit rating'));
+    await tester.pumpAndSettle();
+
+    expect(api.ratedStars, 4);
+    expect(find.text('Rate store'), findsNothing);
   });
 
   testWidgets('a dense cart line fits a phone with large text', (tester) async {
@@ -97,33 +122,79 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('store search filters the product grid', (tester) async {
+    _phone(tester, scale: 1);
+    await _pumpStore(tester);
+
+    await tester.enterText(find.byType(TextField), 'mug');
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 result'), findsOneWidget);
+    expect(find.text('Handmade ceramic mug'), findsOneWidget);
+    expect(
+      find.text('Everyday linen shirt with a long product name'),
+      findsNothing,
+    );
+
+    await tester.tap(find.text('Clear filters'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 results'), findsNothing);
+    expect(
+      find.text('Everyday linen shirt with a long product name'),
+      findsOneWidget,
+    );
+    expect(find.text('Handmade ceramic mug'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('store category tabs filter the product grid', (tester) async {
+    _phone(tester, scale: 1);
+    await _pumpStore(tester);
+
+    await tester.tap(find.text('Home & Living'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 result'), findsOneWidget);
+    expect(find.text('Handmade ceramic mug'), findsOneWidget);
+    expect(
+      find.text('Everyday linen shirt with a long product name'),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('the store grid fits one column on a phone with large text', (
     tester,
   ) async {
     _phone(tester, scale: 2);
+    await _pumpStore(tester);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(_StoreApi())],
-        child: _app(const StoreScreen(slug: 'store')),
-      ),
+    final verticalScroll = find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
     );
-    await tester.pumpAndSettle();
-
     await tester.scrollUntilVisible(
-      find.text('Products'),
-      200,
-      scrollable: find.descendant(
-        of: find.byType(CustomScrollView),
-        matching: find.byType(Scrollable),
-      ),
+      find.byType(StoreProductCard).first,
+      240,
+      scrollable: verticalScroll,
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Products'), findsOneWidget);
-    expect(find.byType(ProductCard), findsWidgets);
+    final cardWidth = tester.getSize(find.byType(StoreProductCard).first).width;
+    expect(cardWidth, greaterThan(250));
     expect(tester.takeException(), isNull);
   });
+}
+
+Future<void> _pumpStore(WidgetTester tester) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [apiClientProvider.overrideWithValue(_StoreApi())],
+      child: _app(const StoreScreen(slug: 'store')),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 void _phone(WidgetTester tester, {required double scale}) {
@@ -146,7 +217,7 @@ Widget _app(Widget home) => MaterialApp(
   home: home,
 );
 
-OrderDetail _order() => OrderDetail(
+OrderDetail _order({bool canRateStore = false}) => OrderDetail(
   id: 'order-1',
   number: 'JM-1001',
   shortNumber: '#1001',
@@ -163,15 +234,16 @@ OrderDetail _order() => OrderDetail(
     province: 'Metro Manila',
     postalCode: '1223',
   ),
-  sellerOrders: const [
+  sellerOrders: [
     SellerOrder(
       id: 'seller-order-1',
-      status: 'pending',
+      status: canRateStore ? 'delivered' : 'pending',
+      canRateStore: canRateStore,
       subtotal: '1998.00',
       shippingAmount: '0.00',
       total: '1998.00',
       canConfirmReceipt: false,
-      store: StoreInfo(
+      store: const StoreInfo(
         id: 'store',
         name: 'The Independent Store',
         slug: 'store',
@@ -181,7 +253,7 @@ OrderDetail _order() => OrderDetail(
       orderShortNumber: '#1001',
       orderTotal: '1998.00',
       orderCreatedAt: '2026-11-08T10:00:00Z',
-      lines: [
+      lines: const [
         OrderLine(
           id: 'line-1',
           productName: 'Everyday linen shirt with a long product name',
@@ -203,6 +275,27 @@ class _OrderApi extends ApiClient {
 
   @override
   Future<OrderDetail> order(String id) async => _order();
+}
+
+class _RateStoreApi extends ApiClient {
+  _RateStoreApi()
+    : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
+
+  int? ratedStars;
+
+  @override
+  Future<OrderDetail> order(String id) async =>
+      _order(canRateStore: ratedStars == null);
+
+  @override
+  Future<void> rateStore({
+    required String sellerOrderId,
+    required int rating,
+    String? comment,
+  }) async {
+    expect(sellerOrderId, 'seller-order-1');
+    ratedStars = rating;
+  }
 }
 
 class _CartApi extends ApiClient {
@@ -339,11 +432,17 @@ class _StoreApi extends ApiClient {
         inStock: true,
         hasVariants: false,
         requiresVariantSelection: false,
-        freeShipping: false,
+        freeShipping: true,
         stockQuantity: 4,
         soldQuantity: 2,
         ratingAverage: 4.8,
         ratingCount: 12,
+        category: Category(
+          id: 'fashion',
+          name: 'Fashion',
+          slug: 'fashion',
+          productCount: 1,
+        ),
         store: StoreInfo(
           id: 'store',
           name: 'The Independent Store',
@@ -364,6 +463,12 @@ class _StoreApi extends ApiClient {
         soldQuantity: 1,
         ratingAverage: 4.5,
         ratingCount: 4,
+        category: Category(
+          id: 'home',
+          name: 'Home & Living',
+          slug: 'home',
+          productCount: 1,
+        ),
         store: StoreInfo(
           id: 'store',
           name: 'The Independent Store',

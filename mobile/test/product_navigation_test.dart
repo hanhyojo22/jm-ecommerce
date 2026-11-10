@@ -50,11 +50,9 @@ void main() {
     await _pump(tester, api);
     await tester.drag(find.byType(PageView), const Offset(-500, 0));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Large'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _openVariations(tester);
+    await tester.tap(find.text('Yellow'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Large'));
     await tester.pumpAndSettle();
     expect(
@@ -64,30 +62,19 @@ void main() {
       isTrue,
     );
     expect(find.text('2 in stock'), findsOneWidget);
+    await _closeSheet(tester);
+    expect(api.adds, 0, reason: 'Closing the picker keeps the choice only.');
     expect(find.text('₱325.00'), findsOneWidget);
-    expect(find.text('SKU SHIRT-YELLOW'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, 1800));
-    await tester.pumpAndSettle();
-    final photo = tester
-        .widgetList<NetworkThumb>(
-          find.descendant(
-            of: find.byType(PageView),
-            matching: find.byType(NetworkThumb),
-          ),
-        )
-        .first;
-    expect(photo.url, 'https://example.test/yellow.jpg');
-    await tester.drag(find.byType(PageView), const Offset(-500, 0));
-    await tester.pumpAndSettle();
+    expect(find.text('Blue · Yellow  |  Small · Large'), findsOneWidget);
+    expect(find.text('Selected: Yellow / Large'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Large'),
+      find.text('SKU SHIRT-YELLOW'),
       400,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Large'));
-    await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).first, const Offset(0, 1800));
     await tester.pumpAndSettle();
+    expect(_firstPhoto(tester), 'https://example.test/yellow.jpg');
     final gallery = find
         .descendant(
           of: find.byType(PageView),
@@ -95,29 +82,50 @@ void main() {
         )
         .first;
     expect(tester.state<ScrollableState>(gallery).position.pixels, 0);
+
+    await tester.drag(find.byType(PageView), const Offset(-500, 0));
+    await tester.pumpAndSettle();
+    await _openVariations(tester);
+    await tester.tap(find.text('Blue'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Large'))
+          .selected,
+      isFalse,
+      reason: 'Blue has no Large, so the size is cleared.',
+    );
+    await tester.tap(find.text('Small'));
+    await tester.pumpAndSettle();
+    await _closeSheet(tester);
+    expect(_firstPhoto(tester), 'https://example.test/blue.jpg');
+    expect(tester.state<ScrollableState>(gallery).position.pixels, 0);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets(
-    'switching to a lower-stock variant clamps the quantity sent to cart',
+    'picking a variant resets the quantity and caps it at that stock',
     (tester) async {
       final api = _ProductApi()
         ..variants = true
         ..coloredVariants = true;
       await _pump(tester, api);
-      await tester.scrollUntilVisible(
-        find.text('Quantity'),
-        400,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
+      await _openVariations(tester);
       await tester.tap(find.byIcon(Icons.add));
       await tester.pump();
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Yellow'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Large'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Add to cart'));
+      expect(find.bySemanticsLabel('Quantity 1'), findsOneWidget);
+      for (var tap = 0; tap < 3; tap++) {
+        await tester.tap(find.byIcon(Icons.add));
+        await tester.pump();
+      }
+      expect(find.bySemanticsLabel('Quantity 2'), findsOneWidget);
+      await tester.tap(find.text('Confirm'));
       await tester.pumpAndSettle();
       expect(api.addedQuantity, 2);
       expect(api.variantId, 'large');
@@ -131,13 +139,10 @@ void main() {
       ..variants = true
       ..effectivePrice = '200.00';
     await _pump(tester, api);
-    await tester.scrollUntilVisible(
-      find.text('Large'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _openVariations(tester);
     await tester.tap(find.text('Large'));
     await tester.pumpAndSettle();
+    await _closeSheet(tester);
     expect(find.text('₱250.00'), findsOneWidget);
     expect(find.text('₱200.00'), findsNothing);
   });
@@ -147,11 +152,7 @@ void main() {
       ..variants = true
       ..largeInStock = false;
     await _pump(tester, api);
-    await tester.scrollUntilVisible(
-      find.text('Large'),
-      400,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await _openVariations(tester);
     final chip = tester.widget<ChoiceChip>(
       find.widgetWithText(ChoiceChip, 'Large'),
     );
@@ -176,11 +177,13 @@ void main() {
   ) async {
     final api = _ProductApi()..pending = Completer<Cart>();
     await _pump(tester, api);
-    await tester.tap(find.byTooltip('Add to cart'));
+    await tester.tap(find.text('Add to cart'));
     await tester.pump();
     expect(api.adds, 1);
     expect(
-      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Buy now'))
+          .onPressed,
       isNull,
     );
     api.pending!.complete(api.addedCart);
@@ -204,13 +207,15 @@ void main() {
       );
       expect(find.text('Checkout route'), findsNothing);
       expect(
-        tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Buy now'))
+            .onPressed,
         isNotNull,
       );
     },
   );
 
-  testWidgets('required options must be selected before buying', (
+  testWidgets('buying without options opens the picker and continues', (
     tester,
   ) async {
     final api = _ProductApi()..variants = true;
@@ -218,12 +223,15 @@ void main() {
     await tester.tap(find.text('Buy now'));
     await tester.pumpAndSettle();
     expect(api.adds, 0);
-    expect(find.text('Small').hitTestable(), findsOneWidget);
-    await tester.ensureVisible(find.text('Small'));
-    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Confirm'))
+          .onPressed,
+      isNull,
+    );
     await tester.tap(find.text('Small'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Buy now'));
+    await tester.tap(find.text('Confirm'));
     await tester.pumpAndSettle();
     expect(api.variantId, 'small');
     expect(find.text('Checkout route'), findsOneWidget);
@@ -231,21 +239,14 @@ void main() {
 
   testWidgets('sold out products cannot be added or bought', (tester) async {
     await _pump(tester, _ProductApi()..inStock = false);
-    expect(
-      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
-      isNull,
-    );
-    expect(
-      tester
-          .widget<IconButton>(
-            find.byWidgetPredicate(
-              (widget) =>
-                  widget is IconButton && widget.tooltip == 'Add to cart',
-            ),
-          )
-          .onPressed,
-      isNull,
-    );
+    for (final label in ['Sold out', 'Add to cart']) {
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, label))
+            .onPressed,
+        isNull,
+      );
+    }
   });
 
   for (final action in ['Store']) {
@@ -257,11 +258,40 @@ void main() {
     });
   }
 
+  testWidgets('the seller block renders with store and related products', (
+    tester,
+  ) async {
+    await _pump(tester, _ProductApi()..withStore = true);
+    expect(tester.takeException(), isNull);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Visit store'));
+    await tester.pumpAndSettle();
+    expect(find.text('Store route'), findsOneWidget);
+  });
+
   testWidgets('header cart shortcut opens the cart', (tester) async {
     await _pump(tester, _ProductApi());
     await tester.tap(find.byTooltip('Open cart'));
     await tester.pumpAndSettle();
     expect(find.text('Cart route'), findsOneWidget);
+  });
+
+  testWidgets('tapping a gallery photo opens the full-screen image viewer', (
+    tester,
+  ) async {
+    final api = _ProductApi()
+      ..variants = true
+      ..coloredVariants = true;
+    await _pump(tester, api);
+    await tester.tap(find.byType(PageView));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.byKey(const ValueKey('image-viewer-zoom')), findsOneWidget);
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.byKey(const ValueKey('image-viewer-zoom')), findsNothing);
   });
 
   for (final width in [320.0, 390.0]) {
@@ -275,13 +305,33 @@ void main() {
           await tester.drag(find.byType(ListView).first, const Offset(0, -650));
           await tester.pumpAndSettle();
           expect(find.text('Buy now').hitTestable(), findsOneWidget);
-          expect(find.byTooltip('Add to cart').hitTestable(), findsOneWidget);
+          expect(find.text('Add to cart').hitTestable(), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
       );
     }
   }
 }
+
+Future<void> _openVariations(WidgetTester tester) async {
+  await tester.tap(find.text('Add to cart'));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _closeSheet(WidgetTester tester) async {
+  await tester.tapAt(const Offset(20, 20));
+  await tester.pumpAndSettle();
+}
+
+String? _firstPhoto(WidgetTester tester) => tester
+    .widgetList<NetworkThumb>(
+      find.descendant(
+        of: find.byType(PageView),
+        matching: find.byType(NetworkThumb),
+      ),
+    )
+    .first
+    .url;
 
 Future<void> _pump(
   WidgetTester tester,
@@ -334,6 +384,7 @@ class _ProductApi extends ApiClient {
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
   int adds = 0;
   bool variants = false;
+  bool withStore = false;
   bool coloredVariants = false;
   bool largeInStock = true;
   String effectivePrice = '250.00';
@@ -376,25 +427,39 @@ class _ProductApi extends ApiClient {
             {'url': 'https://example.test/yellow.jpg', 'color': 'Yellow'},
           ]
         : [],
+    'store': withStore
+        ? {'id': 's', 'name': 'JM', 'slug': 'store', 'city': 'Cebu'}
+        : null,
+    'more_from_store': [
+      if (withStore)
+        {'id': 'pants', 'name': 'Pants', 'slug': 'pants', 'price': '1.00'},
+    ],
+    'related_products': [
+      if (withStore)
+        {'id': 'hoodie', 'name': 'Hoodie', 'slug': 'hoodie', 'price': '1.00'},
+    ],
     'requires_variant_selection': variants,
     'has_variants': variants,
     'variants': variants
         ? [
-            for (final label in ['Small', 'Large'])
+            for (final size in ['Small', 'Large'])
               {
-                'id': label.toLowerCase(),
-                'label': label,
+                'id': size.toLowerCase(),
+                'label': coloredVariants
+                    ? '${size == 'Small' ? 'Blue' : 'Yellow'} / $size'
+                    : size,
                 'color': coloredVariants
-                    ? (label == 'Small' ? 'Blue' : 'Yellow')
+                    ? (size == 'Small' ? 'Blue' : 'Yellow')
                     : null,
+                'size': size,
                 'price': coloredVariants
-                    ? (label == 'Small' ? '275.00' : '325.00')
+                    ? (size == 'Small' ? '275.00' : '325.00')
                     : null,
                 'sku': coloredVariants
-                    ? (label == 'Small' ? 'SHIRT-BLUE' : 'SHIRT-YELLOW')
+                    ? (size == 'Small' ? 'SHIRT-BLUE' : 'SHIRT-YELLOW')
                     : null,
-                'in_stock': label == 'Small' || largeInStock,
-                'stock_quantity': coloredVariants && label == 'Large' ? 2 : 5,
+                'in_stock': size == 'Small' || largeInStock,
+                'stock_quantity': coloredVariants && size == 'Large' ? 2 : 5,
               },
           ]
         : [],

@@ -420,6 +420,25 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   child: const Text('Confirm received'),
                 ),
               ),
+            if (sellerOrder.canRateStore)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: OutlinedButton.icon(
+                  onPressed: _busy ? null : () => _rateStore(sellerOrder),
+                  icon: const Icon(Icons.storefront_outlined, size: 18),
+                  label: const Text('Rate store'),
+                ),
+              )
+            else if (sellerOrder.storeRating != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'You rated this store ${sellerOrder.storeRating} out of 5',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -495,6 +514,42 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
   }
 
+  Future<void> _rateStore(SellerOrder sellerOrder) async {
+    final input = await showStoreRatingSheet(
+      context,
+      sellerOrder.store?.name ?? 'this store',
+    );
+
+    if (input == null) {
+      return;
+    }
+
+    setState(() => _busy = true);
+
+    try {
+      await ref
+          .read(apiClientProvider)
+          .rateStore(
+            sellerOrderId: sellerOrder.id,
+            rating: input.rating,
+            comment: input.body,
+          );
+      ref.invalidate(orderProvider(widget.orderId));
+
+      if (mounted) {
+        _snack('Thanks for rating ${sellerOrder.store?.name ?? 'the store'}.');
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        _snack(error.friendly);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
   Future<void> _review(OrderLine line) async {
     final input = await showProductReviewSheet(context, line.productName);
 
@@ -543,7 +598,28 @@ Future<ReviewInput?> showProductReviewSheet(
   isScrollControlled: true,
   showDragHandle: true,
   useSafeArea: true,
-  builder: (context) => _ReviewSheet(productName: productName),
+  builder: (context) => _ReviewSheet(
+    title: 'Review $productName',
+    fieldLabel: 'Your review (optional)',
+    submitLabel: 'Publish review',
+    maxLength: 3000,
+  ),
+);
+
+Future<ReviewInput?> showStoreRatingSheet(
+  BuildContext context,
+  String storeName,
+) => showModalBottomSheet<ReviewInput>(
+  context: context,
+  isScrollControlled: true,
+  showDragHandle: true,
+  useSafeArea: true,
+  builder: (context) => _ReviewSheet(
+    title: 'Rate $storeName',
+    fieldLabel: 'How was the seller? (optional)',
+    submitLabel: 'Submit rating',
+    maxLength: 1000,
+  ),
 );
 
 class ReviewInput {
@@ -554,9 +630,17 @@ class ReviewInput {
 }
 
 class _ReviewSheet extends StatefulWidget {
-  const _ReviewSheet({required this.productName});
+  const _ReviewSheet({
+    required this.title,
+    required this.fieldLabel,
+    required this.submitLabel,
+    required this.maxLength,
+  });
 
-  final String productName;
+  final String title;
+  final String fieldLabel;
+  final String submitLabel;
+  final int maxLength;
 
   @override
   State<_ReviewSheet> createState() => _ReviewSheetState();
@@ -587,7 +671,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Review ${widget.productName}',
+              widget.title,
               style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
@@ -616,9 +700,9 @@ class _ReviewSheetState extends State<_ReviewSheet> {
             TextField(
               controller: _body,
               maxLines: 4,
-              maxLength: 3000,
-              decoration: const InputDecoration(
-                labelText: 'Your review (optional)',
+              maxLength: widget.maxLength,
+              decoration: InputDecoration(
+                labelText: widget.fieldLabel,
                 alignLabelWithHint: true,
               ),
             ),
@@ -626,7 +710,7 @@ class _ReviewSheetState extends State<_ReviewSheet> {
             FilledButton(
               onPressed: () => Navigator.of(context)
                   .pop(ReviewInput(rating: _rating, body: _body.text.trim())),
-              child: const Text('Publish review'),
+              child: Text(widget.submitLabel),
             ),
           ],
         ),

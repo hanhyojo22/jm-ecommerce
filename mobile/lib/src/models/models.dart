@@ -88,6 +88,8 @@ class StoreInfo {
     this.description,
     this.productsCount,
     this.acceptsOnlinePayments = false,
+    this.ratingAverage = 0,
+    this.ratingCount,
   });
 
   final String id;
@@ -99,6 +101,10 @@ class StoreInfo {
   final String? description;
   final int? productsCount;
   final bool acceptsOnlinePayments;
+
+  /// Buyers' average rating of the store; [ratingCount] is null when the API omits it.
+  final double ratingAverage;
+  final int? ratingCount;
 
   factory StoreInfo.fromJson(Map<String, dynamic> json) => StoreInfo(
     id: str(json['id']),
@@ -112,6 +118,10 @@ class StoreInfo {
         ? null
         : integer(json['products_count']),
     acceptsOnlinePayments: boolean(json['accepts_online_payments']),
+    ratingAverage: decimal(mapOf(json['rating'])['average']),
+    ratingCount: json['rating'] == null
+        ? null
+        : integer(mapOf(json['rating'])['count']),
   );
 }
 
@@ -239,6 +249,42 @@ class DiscussionPage {
   });
 
   final List<ProductDiscussion> discussions;
+  final int page;
+  final int lastPage;
+}
+
+class StoreRating {
+  const StoreRating({
+    required this.id,
+    required this.rating,
+    this.comment,
+    required this.author,
+    required this.createdAt,
+  });
+
+  final String id;
+  final int rating;
+  final String? comment;
+  final String author;
+  final String createdAt;
+
+  factory StoreRating.fromJson(Map<String, dynamic> json) => StoreRating(
+    id: str(json['id']),
+    rating: integer(json['rating']),
+    comment: json['comment'] as String?,
+    author: str(json['author']),
+    createdAt: str(json['created_at']),
+  );
+}
+
+class StoreRatingPage {
+  const StoreRatingPage({
+    required this.ratings,
+    required this.page,
+    required this.lastPage,
+  });
+
+  final List<StoreRating> ratings;
   final int page;
   final int lastPage;
 }
@@ -699,6 +745,8 @@ class SellerOrder {
     this.deliveredAt,
     this.codCollectedAt,
     required this.canConfirmReceipt,
+    this.canRateStore = false,
+    this.storeRating,
     this.store,
     required this.lines,
     this.orderId,
@@ -717,6 +765,10 @@ class SellerOrder {
   final String? deliveredAt;
   final String? codCollectedAt;
   final bool canConfirmReceipt;
+  final bool canRateStore;
+
+  /// The stars this buyer gave the store for this order, if any.
+  final int? storeRating;
   final StoreInfo? store;
   final List<OrderLine> lines;
   final String? orderId;
@@ -738,6 +790,10 @@ class SellerOrder {
       deliveredAt: json['delivered_at'] as String?,
       codCollectedAt: json['cod_collected_at'] as String?,
       canConfirmReceipt: boolean(json['can_confirm_receipt']),
+      canRateStore: boolean(json['can_rate_store']),
+      storeRating: json['store_rating'] == null
+          ? null
+          : integer(mapOf(json['store_rating'])['rating']),
       store: json['store'] == null
           ? null
           : StoreInfo.fromJson(mapOf(json['store'])),

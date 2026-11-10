@@ -247,24 +247,41 @@ class StoreAvatar extends StatelessWidget {
     this.radius = 24,
     this.backgroundColor,
     this.foregroundColor,
+    this.square = false,
   });
 
   final String name;
   final String? logoUrl;
   final double radius;
+
+  /// Draws a rounded square instead of a circle, as store headers use.
+  final bool square;
   final Color? backgroundColor;
   final Color? foregroundColor;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final fallback = CircleAvatar(
-      radius: radius,
-      backgroundColor: backgroundColor ?? scheme.primaryContainer,
-      foregroundColor: foregroundColor ?? scheme.onPrimaryContainer,
+    final shape = square
+        ? RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius / 3),
+          )
+        : const CircleBorder();
+    final fallback = Container(
+      width: radius * 2,
+      height: radius * 2,
+      alignment: Alignment.center,
+      decoration: ShapeDecoration(
+        shape: shape,
+        color: backgroundColor ?? scheme.primaryContainer,
+      ),
       child: Text(
         initials(name),
-        style: TextStyle(fontSize: radius * 0.62, fontWeight: FontWeight.w800),
+        style: TextStyle(
+          color: foregroundColor ?? scheme.onPrimaryContainer,
+          fontSize: radius * 0.62,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
 
@@ -272,7 +289,8 @@ class StoreAvatar extends StatelessWidget {
       return fallback;
     }
 
-    return ClipOval(
+    return ClipPath(
+      clipper: ShapeBorderClipper(shape: shape),
       child: CachedNetworkImage(
         imageUrl: logoUrl!,
         width: radius * 2,

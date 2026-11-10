@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/api_exception.dart';
+import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
@@ -113,47 +114,130 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
     }
   }
 
-  Widget _pendingTile(_PendingDiscussion item) => ListTile(
-    key: ValueKey('pending-discussion-${item.localId}'),
-    contentPadding: EdgeInsets.only(left: item.parentId == null ? 0 : 20),
-    title: const Text('You'),
-    subtitle: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(item.body),
-        Text(
-          item.error ?? (item.serverId == null ? 'Sending...' : 'Posted'),
-          style: TextStyle(
-            color: item.error == null
-                ? Theme.of(context).colorScheme.onSurfaceVariant
-                : Theme.of(context).colorScheme.error,
+  Widget _pendingTile(_PendingDiscussion item) {
+    final theme = Theme.of(context);
+    final isReply = item.parentId != null;
+
+    return Padding(
+      key: ValueKey('pending-discussion-${item.localId}'),
+      padding: EdgeInsets.only(left: isReply ? 20 : 0, top: 8, bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: item.error != null
+                ? theme.colorScheme.error.withValues(alpha: 0.5)
+                : theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
           ),
         ),
-      ],
-    ),
-  );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'You',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  item.error ??
+                      (item.serverId == null ? 'Sending...' : 'Posted'),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: item.error == null
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.error,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              item.body,
+              style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-  Widget _discussionTile(
-    ProductDiscussion item, {
-    bool reply = false,
-  }) => Padding(
-    padding: EdgeInsets.only(left: reply ? 20 : 0, bottom: 8),
-    child: Column(
+  Widget _discussionTile(ProductDiscussion item, {bool reply = false}) {
+    final theme = Theme.of(context);
+    final date = shortDate(item.createdAt);
+
+    final content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          item.authorType == 'seller' ? '${item.author} · Seller' : item.author,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              item.authorType == 'seller'
+                  ? '${item.author} · Seller'
+                  : item.author,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: item.authorType == 'seller'
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface,
+              ),
+            ),
+            if (date.isNotEmpty)
+              Text(
+                date,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: 3),
-        Text(item.body),
-        TextButton(onPressed: () => _reply(item), child: const Text('Reply')),
+        const SizedBox(height: 4),
+        Text(
+          item.body,
+          style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+        ),
+        TextButton(
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          onPressed: () => _reply(item),
+          child: const Text('Reply'),
+        ),
       ],
-    ),
-  );
+    );
+
+    if (!reply) {
+      return Padding(padding: const EdgeInsets.only(bottom: 8), child: content);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(color: theme.colorScheme.outlineVariant, width: 2),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: content,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final provider = productDiscussionsProvider((
       product: widget.productKey,
       page: _page,
@@ -168,7 +252,7 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
     };
 
     return Padding(
-      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -179,8 +263,10 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
             onChanged: _onComposerChanged,
             decoration: const InputDecoration(
               labelText: 'Ask a question or add a comment',
+              alignLabelWithHint: true,
             ),
           ),
+          const SizedBox(height: 6),
           FilledButton(
             onPressed: _canPost ? () => _post(_composer.text) : null,
             child: const Text('Post comment'),
@@ -192,12 +278,27 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
                     !confirmedIds.contains(item.serverId)),
           ))
             _pendingTile(item),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           discussions.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) => TextButton(
-              onPressed: () => ref.invalidate(provider),
-              child: const Text('Retry discussions'),
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (_, _) => Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                  onPressed: () => ref.invalidate(provider),
+                  child: const Text('Retry discussions'),
+                ),
+              ),
             ),
             data: (page) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,10 +314,23 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
                             !confirmedIds.contains(item.serverId)),
                   ))
                     _pendingTile(item),
-                  const Divider(),
+                  const Divider(height: 24),
                 ],
                 if (page.discussions.isEmpty && _pending.isEmpty)
-                  const Text('No discussions yet.'),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      'No discussions yet.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
                 if (page.lastPage > 1)
                   Wrap(
                     spacing: 8,
@@ -228,7 +342,12 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
                             : null,
                         child: const Text('Previous'),
                       ),
-                      Text('Page ${page.page} of ${page.lastPage}'),
+                      Text(
+                        'Page ${page.page} of ${page.lastPage}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       TextButton(
                         onPressed: page.page < page.lastPage
                             ? () => setState(() => _page++)
