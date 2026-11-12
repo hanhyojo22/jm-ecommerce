@@ -102,6 +102,42 @@ test('admin deep-links a product ad to a store', async ({ browser }) => {
     }
 });
 
+test('picking a product uses its photo until the admin sets a custom image', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'admin');
+
+    try {
+        await page.goto('/admin/announcements');
+        await rejectOptionalCookies(page);
+
+        const imageUrl = page.getByLabel('Or paste an image URL');
+        const summaryImage = page.locator('aside dl div', { hasText: 'Campaign image' });
+
+        await page.getByLabel('Open a store directly').selectOption({ label: 'QA Southwind Store' });
+        await page.getByLabel('Open a product directly').selectOption({ label: 'QA Variant Speaker' });
+
+        await expect(imageUrl).toHaveValue(/qa\/variant-/);
+        await expect(page.getByText('Using product photo')).toBeVisible();
+        await expect(page.getByLabel('Title')).toHaveValue(/^QA Variant Speaker · ₱10\.00$/);
+        await expect(summaryImage).toContainText('Product photo (auto)');
+
+        await imageUrl.fill('https://example.com/sale-banner.jpg');
+        await expect(summaryImage).toContainText('Custom image');
+
+        await page.getByLabel('Open a product directly').selectOption({ label: 'Other Seller QA Product' });
+        await expect(imageUrl).toHaveValue('https://example.com/sale-banner.jpg');
+
+        await page.getByLabel('Open a product directly').selectOption({ label: 'QA Variant Speaker' });
+        await page.getByRole('button', { name: 'Use product photo' }).click();
+        await expect(imageUrl).toHaveValue(/qa\/variant-/);
+
+        await page.getByLabel('Open a store directly').selectOption('');
+        await expect(imageUrl).toHaveValue('');
+        await expect(summaryImage).toContainText('None');
+    } finally {
+        await context.close();
+    }
+});
+
 test('admin uploads a campaign image and sees it across the composer previews', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'admin');
 
@@ -116,7 +152,7 @@ test('admin uploads a campaign image and sees it across the composer previews', 
         });
 
         await expect(page.getByAltText('Campaign image preview')).toHaveCount(2);
-        await expect(page.getByText('Included', { exact: true })).toBeVisible();
+        await expect(page.locator('aside dl div', { hasText: 'Campaign image' })).toContainText('Custom image');
         await expect(page.getByRole('button', { name: 'Replace', exact: true })).toBeVisible();
 
         await page.getByRole('button', { name: 'Remove', exact: true }).click();

@@ -78,6 +78,29 @@ function signedReadUrl(value) {
         : null;
 }
 
+/** The button label for pages that have one; mirrors the mobile app's action labels. */
+function actionLabel(url) {
+    const path = url.pathname.replace(/\/+$/, '');
+
+    if (/^\/stores\/[^/]+\/products\/[^/]+$/.test(path)) {
+        return 'View product';
+    }
+
+    if (/^\/stores\/[^/]+$/.test(path)) {
+        return 'Open store';
+    }
+
+    if (path === '/cart') {
+        return 'View cart';
+    }
+
+    if (/^\/orders\/[^/]+$/.test(path)) {
+        return 'View order';
+    }
+
+    return null;
+}
+
 function notificationOptions(payload) {
     const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
     const tag = text(payload.tag ?? data.tag);
@@ -96,6 +119,12 @@ function notificationOptions(payload) {
 
     if (image !== null) {
         options.image = image.href;
+    }
+
+    // The click handler opens data.url for the button and the body alike.
+    const label = actionLabel(new URL(options.data.url));
+    if (label !== null) {
+        options.actions = [{ action: 'open', title: label }];
     }
 
     // renotify requires a tag in Chromium; without one it throws instead of showing.

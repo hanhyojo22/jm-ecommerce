@@ -220,7 +220,8 @@ class AdminAnnouncementTest extends TestCase
         $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Store', 'slug' => 'northwind-store', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         $product = fn (string $name, string $slug, string $status): Product => Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => $name, 'slug' => $slug, 'sku' => strtoupper($slug), 'price' => 199, 'stock_quantity' => 3, 'status' => $status]);
-        $product('Canvas Tote', 'canvas-tote', 'active');
+        Storage::fake('product_images');
+        $product('Canvas Tote', 'canvas-tote', 'active')->images()->create(['path' => 'products/canvas-tote.jpg', 'position' => 0]);
         $product('Hidden Draft', 'hidden-draft', 'draft');
 
         $this->actingAs(User::factory()->administrator()->create())
@@ -229,6 +230,8 @@ class AdminAnnouncementTest extends TestCase
             ->assertSee('Open a product directly')
             ->assertSee('Canvas Tote')
             ->assertSee('canvas-tote')
+            ->assertSee('canvas-tote.jpg')
+            ->assertSee('199.00')
             ->assertDontSee('Hidden Draft');
     }
 

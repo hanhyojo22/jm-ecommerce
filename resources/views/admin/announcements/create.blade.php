@@ -60,9 +60,13 @@
                 'slug' => $product->slug,
                 'name' => $product->name,
                 'url' => route('catalog.show', ['store' => $storeSlug, 'product' => $product->slug]),
+                'price' => '₱'.number_format((float) $product->price, 2),
+                'image' => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null,
             ])->values()->all());
         $initialProduct = $productLinks->first(fn ($product): bool => route('catalog.show', ['store' => $product->store->slug, 'product' => $product->slug]) === old('url', ''));
         $initialProductSlug = (string) ($initialProduct?->slug ?? '');
+        $initialProductImage = $initialProduct?->thumbnail ? Storage::disk('product_images')->url($initialProduct->thumbnail->path) : '';
+        $initialAutoImage = $initialProductImage !== '' && $initialProductImage === old('image_url') ? $initialProductImage : '';
         $initialStoreSlug = (string) ($initialProduct?->store->slug ?? $storeLinks->first(fn ($store): bool => route('catalog.store', $store->slug) === old('url', ''))?->slug ?? '');
         $templates = [
             [
@@ -131,19 +135,54 @@
                 storeNames: @js($storeNames),
                 productSlug: @js($initialProductSlug),
                 storeProducts: @js($storeProducts),
+                autoImage: @js($initialAutoImage),
                 selectStore(slug) {
+                    this.clearDeepLink();
                     this.storeSlug = slug;
-                    this.productSlug = '';
                     this.url = slug === '' ? '' : (this.storeUrls[slug] ?? '');
+                },
+                clearDeepLink() {
+                    if (this.usingProductPhoto()) {
+                        this.removeImage();
+                    }
+
+                    this.storeSlug = '';
+                    this.productSlug = '';
                     this.activeTemplate = null;
+                },
+                usingProductPhoto() {
+                    return this.autoImage !== '' && this.imageUrl === this.autoImage && this.imageName === '';
+                },
+                useProductPhoto() {
+                    const image = this.selectedProduct()?.image ?? '';
+
+                    if (image === '') {
+                        this.removeImage();
+                        return;
+                    }
+
+                    this.imageUrl = image;
+                    this.useExternalImage();
+                    this.autoImage = image;
                 },
                 selectedProduct() {
                     return (this.storeProducts[this.storeSlug] ?? []).find((product) => product.slug === this.productSlug) ?? null;
                 },
                 selectProduct(slug) {
+                    const followsProduct = ! this.imagePreview || this.usingProductPhoto();
                     this.productSlug = slug;
-                    this.url = this.selectedProduct()?.url ?? (this.storeUrls[this.storeSlug] ?? '');
+                    const product = this.selectedProduct();
+                    this.url = product?.url ?? (this.storeUrls[this.storeSlug] ?? '');
                     this.activeTemplate = null;
+
+                    // A custom image always wins; only an empty or automatic image follows the product.
+                    if (followsProduct) {
+                        this.useProductPhoto();
+                    }
+
+                    if (product && this.title.trim() === '') {
+                        this.title = Array.from(product.name + ' · ' + product.price).slice(0, 60).join('');
+                    }
                 },
                 stageImage(file) {
                     if (!file) {
@@ -216,6 +255,7 @@
                     this.imageUrl = '';
                     this.imageError = '';
                     this.imageFailed = false;
+                    this.autoImage = '';
                 },
             }"
         >
@@ -304,7 +344,7 @@
                                     @foreach ($templates as $template)
                                         <button
                                             type="button"
-                                            @click="title = @js($template['title']); body = @js($template['body']); url = @js($template['url']); activeTemplate = @js($template['key']); storeSlug = ''; productSlug = ''"
+                                            @click="title = @js($template['title']); body = @js($template['body']); url = @js($template['url']); clearDeepLink(); activeTemplate = @js($template['key'])"
                                             :aria-pressed="activeTemplate === @js($template['key'])"
                                             :class="activeTemplate === @js($template['key'])
                                                 ? 'border-brand bg-[var(--color-info-wash)]/70 ring-1 ring-inset ring-brand'
@@ -416,7 +456,7 @@
                                     name="url"
                                     :value="old('url')"
                                     x-model="url"
-                                    @input="activeTemplate = null; storeSlug = ''; productSlug = ''"
+                                    @input="clearDeepLink()"
                                     placeholder="{{ route('home') }}"
                                     aria-describedby="url-hint"
                                 />
@@ -426,7 +466,7 @@
                                     @foreach ($quickLinks as $preset)
                                         <button
                                             type="button"
-                                            @click="url = @js($preset['url']); activeTemplate = null; storeSlug = ''; productSlug = ''"
+                                            @click="clearDeepLink(); url = @js($preset['url'])"
                                             :class="url === @js($preset['url'])
                                                 ? 'border-brand bg-[var(--color-info-wash)] text-brand'
                                                 : 'border-line bg-canvas text-muted hover:border-[var(--color-border-strong)] hover:text-ink'"
@@ -478,10 +518,14 @@
 
                             <div class="border-t border-line-soft pt-6">
                                 <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                                    <x-input-label for="campaign_image" :value="__('Campaign image')" class="!mb-0 !text-ink" />
+                                    <span class="flex items-center gap-2">
+                                        <x-input-label for="campaign_image" :value="__('Campaign image')" class="!mb-0 !text-ink" />
+                                        <span x-cloak x-show="usingProductPhoto()" class="rounded-full bg-[var(--color-success-wash)] px-2 py-0.5 text-[11px] font-semibold text-success ring-1 ring-inset ring-[var(--color-success-line)]">Using product photo</span>
+                                        <span x-cloak x-show="imagePreview && ! usingProductPhoto()" class="rounded-full bg-[var(--color-info-wash)] px-2 py-0.5 text-[11px] font-semibold text-brand ring-1 ring-inset ring-[var(--color-info-line)]">Custom image</span>
+                                    </span>
                                     <span class="text-xs text-muted">Optional · JPEG, PNG, or WebP · 2 MB max</span>
                                 </div>
-                                <p class="mt-1 text-xs leading-5 text-muted">A landscape image appears inside expanded Android notifications and adds a thumbnail in the in-app bell.</p>
+                                <p class="mt-1 text-xs leading-5 text-muted">Choosing a product uses its main photo. Upload or paste an image to use your own instead; switching product keeps it. Phones and Windows crop to 2:1, so 1024×512 works best with text away from the edges.</p>
 
                                 <input
                                     x-ref="imageInput"
@@ -510,7 +554,7 @@
                                                         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="m21 15-5-5L5 20" /></svg>
                                                     </span>
                                                     <span class="mt-2 text-sm font-semibold text-ink">Drop a campaign image</span>
-                                                    <span class="mt-0.5 text-xs text-muted">or click to browse · 16:9 works best</span>
+                                                    <span class="mt-0.5 text-xs text-muted">or click to browse · 2:1 works best</span>
                                                 </span>
                                             </template>
                                             <template x-if="imagePreview && ! imageFailed">
@@ -518,13 +562,13 @@
                                                     <img
                                                         :src="imagePreview"
                                                         alt="Campaign image preview"
-                                                        class="aspect-[16/9] w-full object-cover"
+                                                        class="aspect-[2/1] w-full object-cover"
                                                         x-on:error="imageFailed = true"
                                                         referrerpolicy="no-referrer"
                                                     >
                                                     <span class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-[#0b1526]/90 via-[#0b1526]/45 to-transparent px-3.5 pb-3 pt-10 text-left">
                                                         <span class="min-w-0 text-white">
-                                                            <span class="block truncate text-xs font-semibold" x-text="imageName || 'External image'"></span>
+                                                            <span class="block truncate text-xs font-semibold" x-text="imageName || (usingProductPhoto() ? 'Product photo' : 'External image')"></span>
                                                             <span class="block text-[11px] text-white/75">Replace or remove below</span>
                                                         </span>
                                                     </span>
@@ -537,6 +581,13 @@
                                             <button type="button" @click="removeImage()" class="inline-flex min-h-8 items-center rounded-md px-2 py-1 text-xs font-semibold text-danger transition hover:bg-[var(--color-danger-wash)]">Remove</button>
                                             <span class="text-xs text-muted">Uploads take priority over a pasted URL.</span>
                                         </div>
+                                        <button
+                                            type="button"
+                                            x-cloak
+                                            x-show="selectedProduct()?.image && ! usingProductPhoto()"
+                                            @click="useProductPhoto()"
+                                            class="mt-2 inline-flex min-h-8 items-center rounded-md border border-[var(--color-info-line)] bg-[var(--color-info-wash)] px-2.5 text-xs font-semibold text-brand transition hover:border-brand"
+                                        >Use product photo</button>
 
                                         <p x-show="imageFailed" x-cloak class="mt-2 text-xs font-medium text-danger">That image could not load. Check the URL or upload a file instead.</p>
                                         <p x-show="imageError" x-cloak class="mt-2 text-xs font-medium text-danger" x-text="imageError"></p>
@@ -587,7 +638,23 @@
 
                         <div class="space-y-5 p-5">
                             <div>
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Push alert</p>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Push alert · collapsed</p>
+                                <div class="mt-2 rounded-xl border border-line bg-[var(--color-paper)] p-2.5">
+                                    <div class="flex items-center gap-3 rounded-lg border border-line bg-white p-3 shadow-[0_2px_8px_rgb(24_44_72/6%)]">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="text-[11px] text-muted">JMMart · now</p>
+                                            <p class="truncate text-sm font-semibold text-ink" x-text="title.trim() || 'Notification title'">Notification title</p>
+                                            <p class="truncate text-xs text-muted" x-text="body.trim() || 'Your message preview will appear here as you type.'">Your message preview will appear here as you type.</p>
+                                        </div>
+                                        <template x-if="imagePreview && ! imageFailed">
+                                            <img :src="imagePreview" alt="" class="size-11 shrink-0 rounded-md border border-line object-cover" referrerpolicy="no-referrer">
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Push alert · expanded (2:1 crop)</p>
                                 <div class="mt-2 rounded-xl border border-line bg-[var(--color-paper)] p-2.5">
                                     <div class="overflow-hidden rounded-lg border border-line bg-white p-3.5 shadow-[0_2px_8px_rgb(24_44_72/6%)]">
                                         <div class="flex items-start gap-3">
@@ -602,8 +669,9 @@
                                             </div>
                                         </div>
                                         <template x-if="imagePreview && ! imageFailed">
-                                            <img :src="imagePreview" alt="Campaign image preview" class="mt-3 aspect-[16/9] w-full rounded-md object-cover" x-on:error="imageFailed = true" referrerpolicy="no-referrer">
+                                            <img :src="imagePreview" alt="Campaign image preview" class="mt-3 aspect-[2/1] w-full rounded-md object-cover" x-on:error="imageFailed = true" referrerpolicy="no-referrer">
                                         </template>
+                                        <p x-cloak x-show="usingProductPhoto() && ! imageFailed" class="mt-2 rounded-md bg-[var(--color-warning-wash)] px-2.5 py-2 text-[11px] leading-4 text-[var(--color-warning-text)]">Square product photos lose their top and bottom when expanded.</p>
                                         <p x-cloak x-show="imagePreview && imageFailed" class="mt-2 rounded-md bg-[var(--color-warning-wash)] px-2.5 py-2 text-[11px] leading-4 text-[var(--color-warning-text)]">Image unavailable. The notification still shows its title and message.</p>
                                     </div>
                                 </div>
@@ -649,7 +717,7 @@
                                 </div>
                                 <div class="flex items-center justify-between gap-3 py-2">
                                     <dt class="text-muted">Campaign image</dt>
-                                    <dd class="font-medium text-ink" x-text="imagePreview && ! imageFailed ? 'Included' : 'None'">None</dd>
+                                    <dd class="font-medium text-ink" x-text="! imagePreview || imageFailed ? 'None' : (usingProductPhoto() ? 'Product photo (auto)' : 'Custom image')">None</dd>
                                 </div>
                             </dl>
                         </div>

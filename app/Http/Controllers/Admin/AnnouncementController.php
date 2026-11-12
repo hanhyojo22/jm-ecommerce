@@ -34,7 +34,8 @@ class AnnouncementController extends Controller
                 ->get(),
             // shortcut: loads every published product; switch to a search endpoint once the catalog reaches thousands.
             'productLinks' => CatalogQuery::publishedProducts()
-                ->select(['id', 'store_id', 'name', 'slug'])
+                ->with('thumbnail')
+                ->select(['id', 'store_id', 'name', 'slug', 'price'])
                 ->orderBy('name')
                 ->get(),
         ]);
