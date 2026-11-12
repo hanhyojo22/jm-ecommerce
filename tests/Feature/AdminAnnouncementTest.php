@@ -214,6 +214,32 @@ class AdminAnnouncementTest extends TestCase
         $this->assertTrue($announcement->fresh()->isFinished());
     }
 
+    public function test_storefront_links_become_native_store_deep_links(): void
+    {
+        $this->assertSame('northwind-store', SendAdminAnnouncement::storeSlug(route('catalog.store', 'northwind-store')));
+        $this->assertNull(SendAdminAnnouncement::storeSlug(route('catalog.show', ['store' => 'northwind-store', 'product' => 'tote'])));
+        $this->assertNull(SendAdminAnnouncement::storeSlug(route('catalog.index')));
+    }
+
+    public function test_a_store_campaign_sends_the_store_slug_to_mobile_pushes(): void
+    {
+        Notification::fake();
+        $customer = User::factory()->create();
+        $announcement = $this->announcement('customers', 1);
+        $announcement->update(['url' => route('catalog.store', 'northwind-store')]);
+
+        $notifier = Mockery::mock(PushNotifier::class);
+        $notifier->shouldReceive('sendToUser')
+            ->once()
+            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', [
+                'type' => 'announcement',
+                'url' => route('catalog.store', 'northwind-store'),
+                'store_slug' => 'northwind-store',
+            ]);
+
+        (new SendAdminAnnouncement($announcement->id, [$customer->id]))->handle($notifier);
+    }
+
     public function test_cancelling_stops_batches_not_yet_sent(): void
     {
         Notification::fake();

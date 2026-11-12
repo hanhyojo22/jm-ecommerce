@@ -152,6 +152,8 @@ class PushNotifications {
       'order' when id('order_id') != null => '/orders/${id('order_id')}',
       'cart' => '/cart',
       'return_case' when id('order_id') != null => '/orders/${id('order_id')}',
+      'announcement' when id('store_slug') != null =>
+        '/store/${Uri.encodeComponent(id('store_slug')!)}',
       'announcement' => announcementDestination(id('url')),
       _ => null,
     };

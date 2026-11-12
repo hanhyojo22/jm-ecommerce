@@ -249,8 +249,37 @@ void main() {
       }),
       isNull,
     );
+    expect(
+      PushNotifications.routeFor({
+        'type': 'announcement',
+        'store_slug': 'northwind',
+        'url': 'http://127.0.0.1:4173/stores/northwind',
+      }),
+      '/store/northwind',
+    );
     expect(PushNotifications.routeFor({'type': 'cart'}), '/cart');
     expect(PushNotifications.routeFor({'type': 'chat'}), isNull);
+  });
+
+  testWidgets('store metadata opens the store action without a trusted URL', (
+    tester,
+  ) async {
+    final details = await tester.runAsync(
+      () => PushNotifications.detailsFor(
+        const RemoteMessage(
+          data: {
+            'type': 'announcement',
+            'title': 'Fresh finds',
+            'body': 'New arrivals are in.',
+            'store_slug': 'northwind',
+            'url': 'http://127.0.0.1:4173/stores/northwind',
+          },
+        ),
+        imageLoader: (_) async => null,
+      ),
+    );
+
+    expect(details!.actions!.single.title, 'Open store');
   });
 
   test('all push types retain the same JMMart brand icon', () {

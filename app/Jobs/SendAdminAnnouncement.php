@@ -34,6 +34,19 @@ class SendAdminAnnouncement implements ShouldQueue
     ) {}
 
     /**
+     * A storefront link becomes an explicit app destination so the mobile app
+     * opens the store screen even when the web host differs from the API host.
+     */
+    public static function storeSlug(string $url): ?string
+    {
+        if (preg_match('#^/stores/([^/]+)/?$#', parse_url($url, PHP_URL_PATH) ?: '', $matches) !== 1) {
+            return null;
+        }
+
+        return $matches[1];
+    }
+
+    /**
      * @return Builder<User>
      */
     public static function recipients(string $audience, ?string $userId = null): Builder
@@ -72,11 +85,14 @@ class SendAdminAnnouncement implements ShouldQueue
         }
 
         // Re-checked so an account deactivated after queueing is skipped.
-        $recipients->whereKey($this->batchUserIds)->get()->each(function (User $user) use ($notifier, $announcement): void {
+        $storeSlug = self::storeSlug($announcement->url);
+
+        $recipients->whereKey($this->batchUserIds)->get()->each(function (User $user) use ($notifier, $announcement, $storeSlug): void {
             $notifier->sendToUser($user, $announcement->title, $announcement->body, array_filter([
                 'type' => 'announcement',
                 'url' => $announcement->url,
                 'image_url' => $announcement->image_url,
+                'store_slug' => $storeSlug,
             ]));
 
             try {
