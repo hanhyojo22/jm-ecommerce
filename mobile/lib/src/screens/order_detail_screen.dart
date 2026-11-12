@@ -84,10 +84,22 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         ],
       ),
       body: AsyncView(
-        value: order,
+        // A failed refresh keeps the order on screen with a retry banner.
+        value: order.hasValue ? AsyncData(order.requireValue) : order,
         onRetry: () => ref.invalidate(orderProvider(widget.orderId)),
         builder: (value) => Column(
           children: [
+            if (order.hasError)
+              MaterialBanner(
+                content: const Text('Could not refresh this order.'),
+                actions: [
+                  TextButton(
+                    onPressed: () =>
+                        ref.invalidate(orderProvider(widget.orderId)),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -503,6 +515,15 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     onReturnInfo: () => _showGuaranteeSheet(order),
                   ),
                 ],
+                if (sellerOrder.latestReturnStatus case final returnStatus?) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Return request: ${statusLabel(returnStatus)}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
                 if (sellerOrder.canConfirmReceipt ||
                     sellerOrder.canRateStore ||
                     sellerOrder.storeRating != null) ...[
@@ -564,7 +585,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'Help',
+                              'Order help',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodyMedium?.copyWith(
@@ -825,14 +846,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
-  /// Sticky bottom bar with Logistic Detail + primary store/order action.
+  /// Sticky bottom bar with Delivery details + primary store/order action.
   Widget _bottomBar(OrderDetail order) {
     final scheme = Theme.of(context).colorScheme;
+    // Large text keeps only delivery details so the bar doesn't cover the
+    // list; the store stays reachable from its name on the store card.
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    if (largeText) {
-      return const SizedBox.shrink();
-    }
-
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
     );
@@ -860,9 +879,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   side: BorderSide(color: scheme.outlineVariant),
                 ),
                 onPressed: () => _showLogisticSheet(order),
-                child: const Text('Logistic Detail'),
+                child: const Text('Delivery details'),
               ),
-              if (order.sellerOrders.isNotEmpty &&
+              if (!largeText &&
+                  order.sellerOrders.isNotEmpty &&
                   order.sellerOrders.first.store?.slug != null &&
                   order.sellerOrders.first.store!.slug.isNotEmpty)
                 OutlinedButton(
@@ -892,7 +912,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       useSafeArea: true,
       builder: (context) {
         final theme = Theme.of(context);
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -928,14 +948,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       useSafeArea: true,
       builder: (context) {
         final theme = Theme.of(context);
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Logistic Detail · ${order.shortNumber}',
+                'Delivery details · ${order.shortNumber}',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -970,22 +990,30 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
+  /// Refreshes the order and list through the container, which outlives this
+  /// screen, so a reply that lands after the user leaves stays safe.
+  void _refreshOrders(ProviderContainer container) {
+    container.invalidate(orderProvider(widget.orderId));
+    container.invalidate(ordersProvider);
+  }
+
   Future<void> _pay(OrderDetail order) async {
+    final container = ProviderScope.containerOf(context, listen: false);
     setState(() => _busy = true);
 
     try {
-      final url = await ref.read(apiClientProvider).payOrder(order.id);
-
-      if (url != null && url.isNotEmpty) {
-        final uri = Uri.tryParse(url);
-
-        if (uri != null) {
+      final url = await container.read(apiClientProvider).payOrder(order.id);
+      final uri = url == null ? null : Uri.tryParse(url);
+      final opened =
+          uri != null &&
+          uri.hasScheme &&
           await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      }
 
-      ref.invalidate(orderProvider(widget.orderId));
-      ref.invalidate(ordersProvider);
+      _refreshOrders(container);
+
+      if (!opened && mounted) {
+        _snack('Could not open payment. Please try again.');
+      }
     } on ApiException catch (error) {
       if (mounted) {
         _snack(error.friendly);
@@ -998,12 +1026,39 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Future<void> _confirm(SellerOrder sellerOrder) async {
+    // Confirming releases payment to the store, so it must be deliberate.
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm you received this order?'),
+        content: Text(
+          'Only confirm once every item from '
+          '${sellerOrder.store?.name ?? 'the store'} has arrived in good '
+          'condition. The store is paid after you confirm.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Not yet'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Yes, received'),
+          ),
+        ],
+      ),
+    );
+
+    if (approved != true || !mounted) {
+      return;
+    }
+
+    final container = ProviderScope.containerOf(context, listen: false);
     setState(() => _busy = true);
 
     try {
-      await ref.read(apiClientProvider).confirmReceived(sellerOrder.id);
-      ref.invalidate(orderProvider(widget.orderId));
-      ref.invalidate(ordersProvider);
+      await container.read(apiClientProvider).confirmReceived(sellerOrder.id);
+      _refreshOrders(container);
 
       if (mounted) {
         _snack(
@@ -1022,6 +1077,11 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Future<void> _chat(SellerOrder sellerOrder) async {
+    if (_busy) {
+      return;
+    }
+    setState(() => _busy = true);
+
     try {
       final conversation = await ref
           .read(apiClientProvider)
@@ -1036,6 +1096,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       if (mounted) {
         _snack(error.friendly);
       }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -1045,21 +1109,22 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       sellerOrder.store?.name ?? 'this store',
     );
 
-    if (input == null) {
+    if (input == null || !mounted) {
       return;
     }
 
+    final container = ProviderScope.containerOf(context, listen: false);
     setState(() => _busy = true);
 
     try {
-      await ref
+      await container
           .read(apiClientProvider)
           .rateStore(
             sellerOrderId: sellerOrder.id,
             rating: input.rating,
             comment: input.body,
           );
-      ref.invalidate(orderProvider(widget.orderId));
+      container.invalidate(orderProvider(widget.orderId));
 
       if (mounted) {
         _snack('Thanks for rating ${sellerOrder.store?.name ?? 'the store'}.');
@@ -1078,22 +1143,22 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Future<void> _review(OrderLine line) async {
     final input = await showProductReviewSheet(context, line.productName);
 
-    if (input == null) {
+    if (input == null || !mounted) {
       return;
     }
 
+    final container = ProviderScope.containerOf(context, listen: false);
     setState(() => _busy = true);
 
     try {
-      await ref
+      await container
           .read(apiClientProvider)
           .submitReview(
             orderItemId: line.id,
             rating: input.rating,
             body: input.body,
           );
-      ref.invalidate(orderProvider(widget.orderId));
-      ref.invalidate(ordersProvider);
+      _refreshOrders(container);
 
       if (mounted) {
         _snack('Your review was published.');
@@ -1284,17 +1349,6 @@ class _OrderDetailItemRow extends StatelessWidget {
                       ),
                     ),
                   ],
-                  if (!largeText && status != 'cancelled') ...[
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: const [
-                        _DetailTag(label: 'Free Returns'),
-                        _DetailTag(label: '7 Days Local Supplier Warranty'),
-                      ],
-                    ),
-                  ],
                   const SizedBox(height: 8),
                   Wrap(
                     alignment: WrapAlignment.spaceBetween,
@@ -1372,34 +1426,6 @@ class _OrderDetailItemRow extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _DetailTag extends StatelessWidget {
-  const _DetailTag({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: scheme.primary,
-          fontSize: 10.5,
-          fontWeight: FontWeight.w600,
-          height: 1.2,
-        ),
-      ),
     );
   }
 }

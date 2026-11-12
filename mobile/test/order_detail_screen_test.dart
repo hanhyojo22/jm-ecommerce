@@ -163,9 +163,12 @@ void main() {
           dark: dark,
         );
         await tester.scrollUntilVisible(find.text('Order help'), 160);
+        // ensureVisible jumps the scroll; lay out before tapping the new spot.
+        await tester.pump();
         await tester.tap(find.text('Order help'));
         await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('Got it'));
+        await tester.pump();
         await tester.tap(find.text('Got it'));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

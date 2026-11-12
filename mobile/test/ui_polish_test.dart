@@ -96,7 +96,7 @@ void main() {
       expect(find.text('Preparing'), findsOneWidget);
       expect(find.text('On the way'), findsOneWidget);
       expect(find.text('Delivered'), findsWidgets);
-      expect(find.text('Logistic Detail'), findsOneWidget);
+      expect(find.text('Delivery details'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('Delivery Address'), 200);
       expect(find.text('Delivery Address'), findsOneWidget);
