@@ -26,6 +26,7 @@ class CartController extends Controller
             'product_id' => ['required', 'ulid', 'exists:products,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
             'variant_id' => ['nullable', 'ulid'],
+            'buy_now' => ['sometimes', 'boolean'],
         ]);
 
         $addProductToCart->handle(
@@ -33,6 +34,7 @@ class CartController extends Controller
             Product::query()->findOrFail($data['product_id']),
             $data['quantity'],
             $data['variant_id'] ?? null,
+            $request->boolean('buy_now'),
         );
 
         return $this->payload($request)->setStatusCode(201);

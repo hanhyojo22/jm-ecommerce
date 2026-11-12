@@ -166,6 +166,7 @@ class _CartApi extends ApiClient {
     required String productId,
     int quantity = 1,
     String? variantId,
+    bool buyNow = false,
   }) async {
     expect(productId, 'shirt');
     expect(quantity, 1);

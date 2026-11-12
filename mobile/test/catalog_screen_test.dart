@@ -15,6 +15,61 @@ import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
+  testWidgets('search placeholder scrolls without submitting a search', (
+    tester,
+  ) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final api = _CatalogApi();
+    await _pumpCatalog(tester, api);
+    final requests = api.firstPageRequests;
+    expect(find.text('Search products'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Search electronics'), findsOneWidget);
+    expect(api.firstPageRequests, requests);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      isEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('search placeholder pauses on focus and preserves typed text', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogApi());
+    await tester.tap(find.byType(TextField));
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.text('Search electronics'), findsNothing);
+    expect(find.text('Search products'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'linen');
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'linen',
+    );
+
+    tester.widget<TextField>(find.byType(TextField)).focusNode!.unfocus();
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.text('Search electronics'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reduced motion keeps the search placeholder still', (
+    tester,
+  ) async {
+    await _pumpCatalog(tester, _CatalogApi(), disableAnimations: true);
+    await tester.pump(const Duration(seconds: 10));
+    expect(find.text('Search products'), findsOneWidget);
+    expect(find.text('Search electronics'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   test(
     'browsing keeps popular sorting across pages and searching uses relevance',
     () async {
@@ -561,6 +616,34 @@ void main() {
     expect(find.text('Nothing matches that search'), findsNothing);
   });
 
+  testWidgets('top deals list only marked-down products, deepest first', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..deals = [
+        _product(50, name: 'Small saving', compareAt: '60000.00'),
+        _product(51, name: 'Big saving', compareAt: '110000.00'),
+      ];
+    await _pumpCatalog(tester, api);
+
+    // The deals strip precedes the feed (whose cards repeat the badges).
+    expect(find.text('See all'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('-50%').first).dx,
+      lessThan(tester.getTopLeft(find.text('-8%').first).dx),
+    );
+
+    await tester.enterText(find.byType(TextField), 'bag');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('See all'), findsNothing);
+  });
+
+  testWidgets('top deals stay hidden when nothing is on sale', (tester) async {
+    await _pumpCatalog(tester, _CatalogApi());
+    expect(find.text('See all'), findsNothing);
+  });
+
   for (final width in [320.0, 375.0, 390.0, 768.0, 844.0]) {
     for (final scale in [1.0, 1.3, 2.0]) {
       testWidgets('catalog fits ${width}px at ${scale}x text', (tester) async {
@@ -619,22 +702,28 @@ Future<void> _pumpCatalog(
   }
 }
 
-Product _product(int index, {String? name, String? slug}) => Product(
-  id: '$index',
-  name: name ?? 'Everyday linen shirt with a long product name',
-  slug: slug ?? 'shirt-$index',
-  price: '55000.00',
-  effectivePrice: '55000.00',
-  inStock: true,
-  hasVariants: false,
-  requiresVariantSelection: false,
-  freeShipping: false,
-  stockQuantity: 3,
-  soldQuantity: 0,
-  ratingAverage: 4.8,
-  ratingCount: 12,
-  store: const StoreInfo(id: 'store', name: 'Independent store', slug: 'store'),
-);
+Product _product(int index, {String? name, String? slug, String? compareAt}) =>
+    Product(
+      id: '$index',
+      name: name ?? 'Everyday linen shirt with a long product name',
+      slug: slug ?? 'shirt-$index',
+      price: '55000.00',
+      effectivePrice: '55000.00',
+      compareAtPrice: compareAt,
+      inStock: true,
+      hasVariants: false,
+      requiresVariantSelection: false,
+      freeShipping: false,
+      stockQuantity: 3,
+      soldQuantity: 0,
+      ratingAverage: 4.8,
+      ratingCount: 12,
+      store: const StoreInfo(
+        id: 'store',
+        name: 'Independent store',
+        slug: 'store',
+      ),
+    );
 
 class _CatalogApi extends ApiClient {
   _CatalogApi()
@@ -654,6 +743,7 @@ class _CatalogApi extends ApiClient {
   int firstPageRequests = 0;
   Completer<ProductPage>? pendingPage;
   Completer<ProductPage>? pendingFirstPage;
+  List<Product> deals = const [];
 
   @override
   Future<List<Category>> categories() async {
@@ -716,7 +806,13 @@ class _CatalogApi extends ApiClient {
     return ProductPage(
       products: noMatches
           ? const []
-          : List.generate(12, (index) => _product((page - 1) * 12 + index)),
+          : [
+              if (page == 1 && (query?.isEmpty ?? true)) ...deals,
+              ...List.generate(
+                12,
+                (index) => _product((page - 1) * 12 + index),
+              ),
+            ],
       page: page,
       lastPage: paginated ? 2 : 1,
       total: noMatches

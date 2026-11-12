@@ -11,7 +11,9 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../providers/checkout_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/fly_to_cart.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/store_ratings_sheet.dart';
 import 'order_detail_screen.dart';
@@ -102,8 +104,12 @@ class _ProductBody extends ConsumerStatefulWidget {
 class _ProductBodyState extends ConsumerState<_ProductBody> {
   String? _variantId;
   int _quantity = 1;
-  bool _adding = false;
-  bool _buying = false;
+
+  /// null while idle; otherwise whether the request in flight is Buy now.
+  /// A notifier, not setState, so a tap repaints only the purchase bar.
+  final _purchase = ValueNotifier<bool?>(null);
+  final _cartIconKey = GlobalKey<CartBadgeIconState>();
+  final _addButtonKey = GlobalKey();
   bool _chatting = false;
   bool _showDiscussions = false;
   int _imageIndex = 0;
@@ -215,6 +221,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   @override
   void dispose() {
     _galleryController.dispose();
+    _purchase.dispose();
     super.dispose();
   }
 
@@ -222,7 +229,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     bool buyNow = false,
     bool optionsConfirmed = false,
   }) async {
-    if (_adding ||
+    if (_purchase.value != null ||
         !product.inStock ||
         (_variant != null && !_variant!.inStock)) {
       return;
@@ -232,19 +239,31 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       return;
     }
 
-    setState(() {
-      _adding = true;
-      _buying = buyNow;
-    });
+    _purchase.value = buyNow;
+    if (!buyNow) {
+      // Feedback lands on the tap, not after the server round trip.
+      final images = _galleryImages;
+      flyToCart(
+        context: context,
+        source: _addButtonKey,
+        target: _cartIconKey,
+        imageUrl: images.isEmpty
+            ? product.thumbnailUrl
+            : images[_imageIndex.clamp(0, images.length - 1)].url,
+      );
+    }
     var added = false;
 
     try {
-      await ref
+      // Buy now is one request: the server adds the line and makes it the only
+      // selected item, so checkout opens after a single round trip.
+      final cart = await ref
           .read(cartProvider.notifier)
           .add(
             productId: product.id,
             quantity: _quantity,
             variantId: _variantId,
+            buyNow: buyNow,
           );
 
       added = true;
@@ -252,26 +271,29 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
         return;
       }
       if (buyNow) {
-        final lines = ref
-            .read(cartProvider)
-            .value
-            ?.lines
+        final line = cart.lines
             .where(
               (line) =>
                   line.productId == product.id && line.variantId == _variantId,
-            );
-        if (lines == null || lines.isEmpty) {
+            )
+            .firstOrNull;
+        if (line == null) {
           _snack('Added to your cart. Open Cart to continue checkout.');
           return;
         }
-        await ref.read(cartProvider.notifier).selectOnly([lines.first.id]);
-        if (!mounted) {
-          return;
+        // An API that predates buy_now leaves other lines ticked; only then
+        // pay for the separate selection request.
+        final onlyThisSelected = cart.lines.every(
+          (other) => other.selected == (other.id == line.id),
+        );
+        if (!onlyThisSelected) {
+          await ref.read(cartProvider.notifier).selectOnly([line.id]);
+          if (!mounted) {
+            return;
+          }
         }
         ref.invalidate(checkoutQuoteProvider);
         context.push('/checkout');
-      } else {
-        _snack('Added to your cart.');
       }
     } on ApiException catch (error) {
       if (mounted) {
@@ -283,7 +305,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       }
     } finally {
       if (mounted) {
-        setState(() => _adding = false);
+        _purchase.value = null;
       }
     }
   }
@@ -332,10 +354,15 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     }
   }
 
-  Widget _purchaseBar(BuildContext context) {
+  Widget _purchaseBar(BuildContext context) => ValueListenableBuilder(
+    valueListenable: _purchase,
+    builder: (context, inFlight, _) => _purchaseBarContents(context, inFlight),
+  );
+
+  Widget _purchaseBarContents(BuildContext context, bool? inFlight) {
     final theme = Theme.of(context);
     final available = product.inStock && (_variant?.inStock ?? true);
-    final enabled = available && !_adding;
+    final enabled = available && inFlight == null;
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 17;
 
     Widget shortcut(
@@ -351,10 +378,10 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           padding: const EdgeInsets.all(4),
           foregroundColor: theme.colorScheme.onSurface,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
           ),
         ),
-        onPressed: _adding || busy ? null : onTap,
+        onPressed: inFlight == true || busy ? null : onTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -411,8 +438,10 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       final foreground = buyNow
           ? theme.colorScheme.onInverseSurface
           : theme.colorScheme.onPrimary;
-      final busy = _adding && _buying == buyNow;
+      // Only checkout shows a spinner; adding is confirmed by the flight.
+      final busy = buyNow && inFlight == true;
       return FilledButton(
+        key: buyNow ? null : _addButtonKey,
         style: FilledButton.styleFrom(
           backgroundColor: background,
           foregroundColor: foreground,
@@ -421,12 +450,17 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           textStyle: theme.textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),
-          disabledBackgroundColor: busy ? background : null,
+          // Keep colour while a request runs so the bar doesn't flash grey.
+          disabledBackgroundColor: inFlight != null ? background : null,
+          disabledForegroundColor: inFlight != null ? foreground : null,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
           ),
         ),
-        onPressed: enabled ? () => _addToCart(buyNow: buyNow) : null,
+        // Add stays live (taps are ignored while busy) so it never greys out.
+        onPressed: enabled || (!buyNow && available && inFlight == false)
+            ? () => _addToCart(buyNow: buyNow)
+            : null,
         child: busy
             ? SizedBox.square(
                 dimension: 20,
@@ -697,23 +731,23 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     BuildContext context,
     List<Product> products, {
     EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 16),
+    bool showStore = true,
   }) => SizedBox(
-    // Cards stack more copy when the system text size grows.
-    height: (230 + (MediaQuery.textScalerOf(context).scale(14) - 14) * 9).clamp(
-      230.0,
-      400.0,
-    ),
+    // Same sizing rule as the home grid: square photo plus scaled copy.
+    height: 150 + MediaQuery.textScalerOf(context).scale(showStore ? 138 : 100),
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: padding,
       itemCount: products.length,
-      separatorBuilder: (context, index) => const SizedBox(width: 12),
+      separatorBuilder: (context, index) => const SizedBox(width: 8),
       itemBuilder: (context, index) {
         final item = products[index];
         return SizedBox(
           width: 150,
           child: ProductCard(
             product: item,
+            discovery: true,
+            showStore: showStore,
             onTap: () =>
                 context.push('/product/${item.store?.slug ?? ''}/${item.slug}'),
             onStoreTap: item.store == null
@@ -741,7 +775,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
             border: Border.all(
               color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
             ),
@@ -811,7 +845,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final count = ref.watch(cartCountProvider);
     final images = _galleryImages;
     final effectivePrice = _variant == null
         ? product.effectivePrice
@@ -830,17 +863,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           IconButton(
             tooltip: 'Open cart',
             onPressed: () => context.push('/cart'),
-            icon: Semantics(
-              liveRegion: true,
-              label: '$count items in cart',
-              child: Badge(
-                isLabelVisible: count > 0,
-                label: ExcludeSemantics(
-                  child: Text(count > 99 ? '99+' : '$count'),
-                ),
-                child: const Icon(Icons.shopping_cart_outlined),
-              ),
-            ),
+            icon: CartBadgeIcon(key: _cartIconKey),
           ),
         ],
       ),
@@ -951,7 +974,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         ),
                         if (product.soldQuantity > 0)
                           Text(
-                            '  |  ${product.soldQuantity} sold',
+                            '· ${product.soldQuantity} sold',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -992,33 +1015,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                             ? 'Choose an option'
                             : 'Selected: ${_variant!.label}',
                         onTap: () => _openVariationSheet(buyNow: false),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.shopping_bag_outlined,
-                              size: 20,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                'Quantity',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            QuantityStepper(
-                              quantity: _quantity,
-                              max: _maxQuantity,
-                              onChanged: (value) =>
-                                  setState(() => _quantity = value),
-                            ),
-                          ],
-                        ),
                       ),
                   ],
                 ),
@@ -1068,9 +1064,18 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
-                                          Icons.star_rounded,
+                                          (product.store!.ratingCount ?? 0) > 0
+                                              ? Icons.star_rounded
+                                              : Icons.star_outline_rounded,
                                           size: 16,
-                                          color: theme.colorScheme.secondary,
+                                          color:
+                                              (product.store!.ratingCount ??
+                                                      0) >
+                                                  0
+                                              ? theme.colorScheme.secondary
+                                              : theme
+                                                    .colorScheme
+                                                    .onSurfaceVariant,
                                         ),
                                         const SizedBox(width: 4),
                                         Flexible(
@@ -1092,12 +1097,14 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
                               // The theme's full-width minimum breaks inside a Row.
                               minimumSize: const Size(0, 40),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(
+                                  appSurfaceRadius,
+                                ),
                               ),
                             ),
                             onPressed: () =>
@@ -1119,6 +1126,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                           context,
                           product.moreFromStore,
                           padding: EdgeInsets.zero,
+                          showStore: false,
                         ),
                       ],
                     ],
@@ -1159,7 +1167,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(appSurfaceRadius),
                         ),
                         child: Text(
                           'SKU $sku',
@@ -1376,7 +1384,7 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: theme.colorScheme.errorContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
             ),
             child: Row(
               children: [
@@ -1410,7 +1418,7 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
               border: Border.all(
                 color: _ratingError != null
                     ? theme.colorScheme.error.withValues(alpha: 0.5)
@@ -1471,7 +1479,7 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1495,7 +1503,7 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(appSurfaceRadius),
                   ),
                   child: Text(
                     'No reviews yet.',
@@ -1811,7 +1819,7 @@ class _VariationSheetState extends State<_VariationSheet> {
       child: Opacity(
         opacity: enabled ? 1 : 0.4,
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
           onTap: enabled ? () => _pickColor(color) : null,
           child: SizedBox(
             width: 72,
@@ -1821,7 +1829,7 @@ class _VariationSheetState extends State<_VariationSheet> {
                   height: 72,
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(appSurfaceRadius),
                     border: Border.all(
                       width: 2,
                       color: selected
@@ -1836,7 +1844,7 @@ class _VariationSheetState extends State<_VariationSheet> {
                             color:
                                 swatch ??
                                 theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(5),
+                            borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                 ),
@@ -2023,7 +2031,7 @@ class _VariationSheetState extends State<_VariationSheet> {
                 fontWeight: FontWeight.w700,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(appSurfaceRadius),
               ),
             ),
             onPressed: ready

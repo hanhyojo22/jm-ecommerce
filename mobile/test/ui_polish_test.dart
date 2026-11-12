@@ -26,6 +26,14 @@ void main() {
       greaterThan(dark.colorScheme.surface.computeLuminance()),
     );
     expect(dark.cardTheme.color, isNot(light.cardTheme.color));
+    expect(light.badgeTheme.backgroundColor, light.colorScheme.primary);
+    expect(
+      light.navigationBarTheme.iconTheme?.resolve({
+        WidgetState.selected,
+      })?.color,
+      light.colorScheme.primary,
+    );
+    expect(light.navigationBarTheme.indicatorColor, isNot(Colors.transparent));
   });
 
   testWidgets('order detail header fits a phone with large text', (
@@ -71,6 +79,47 @@ void main() {
     expect(find.text('Rate store'), findsNothing);
   });
 
+  testWidgets(
+    'order detail renders stepper, delivery card, chat, order number copy, and summary toggle',
+    (tester) async {
+      _phone(tester, scale: 1);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [apiClientProvider.overrideWithValue(_RateStoreApi())],
+          child: _app(const OrderDetailScreen(orderId: 'order-1')),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Placed'), findsOneWidget);
+      expect(find.text('Preparing'), findsOneWidget);
+      expect(find.text('On the way'), findsOneWidget);
+      expect(find.text('Delivered'), findsWidgets);
+      expect(find.text('Logistic Detail'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('Delivery Address'), 200);
+      expect(find.text('Delivery Address'), findsOneWidget);
+      expect(find.text('JMMart Money Back Guarantee'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('Chat with Seller'), 200);
+      expect(find.text('Chat with Seller'), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('View Order Summary'), 250);
+      await tester.ensureVisible(find.text('View Order Summary'));
+      await tester.pumpAndSettle();
+      expect(find.text('Order No.'), findsOneWidget);
+      expect(find.text('Copy'), findsOneWidget);
+
+      await tester.tap(find.text('View Order Summary'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Hide Order Summary'), findsOneWidget);
+      expect(find.text('Shipping Fee'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('a dense cart line fits a phone with large text', (tester) async {
     _phone(tester, scale: 2);
 
@@ -98,7 +147,26 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Select all (1)'));
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+
+    expect(api.selected, ['in-stock']);
+  });
+
+  testWidgets('the store checkbox selects only that store\'s buyable lines', (
+    tester,
+  ) async {
+    final api = _SelectAllApi();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [apiClientProvider.overrideWithValue(api)],
+        child: _app(const CartScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsLabel('Select Store'));
     await tester.pumpAndSettle();
 
     expect(api.selected, ['in-stock']);
@@ -121,6 +189,40 @@ void main() {
     expect(find.text('Tap to confirm receipt'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'orders screen renders Lazada My Orders header, search, and multi-item rows',
+    (tester) async {
+      _phone(tester, scale: 1);
+      final api = _OrdersApi();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [apiClientProvider.overrideWithValue(api)],
+          child: _app(const Scaffold(body: OrdersScreen())),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('My Orders'), findsOneWidget);
+      expect(find.text('Filter'), findsOneWidget);
+      expect(find.text('To ship'), findsOneWidget);
+      expect(find.text('To review'), findsOneWidget);
+      // Up to 3 full Lazada item rows are shown with Qty and +1 more
+      expect(find.text('Everyday linen shirt'), findsOneWidget);
+      expect(find.text('Handmade ceramic mug'), findsOneWidget);
+      expect(find.text('Cotton tote bag'), findsOneWidget);
+      expect(find.text('+1 more'), findsOneWidget);
+      expect(find.textContaining('Total(4 Items):'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Independent');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(api.lastSearch, 'Independent');
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('store search filters the product grid', (tester) async {
     _phone(tester, scale: 1);
@@ -344,59 +446,63 @@ class _OrdersApi extends ApiClient {
   _OrdersApi()
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
+  String? lastSearch;
+
   @override
-  Future<OrdersResult> orders({String tab = 'all', String? search}) async =>
-      const OrdersResult(
-        orders: [
-          SellerOrder(
-            id: 'seller-order-1',
-            status: 'shipped',
-            subtotal: '1998.00',
-            shippingAmount: '0.00',
-            total: '1998.00',
-            canConfirmReceipt: true,
-            store: StoreInfo(
-              id: 'store',
-              name: 'The Independent Store',
-              slug: 'store',
-            ),
-            orderId: 'order-1',
-            orderShortNumber: '#1001',
-            orderCreatedAt: '2026-11-08T10:00:00Z',
-            lines: [
-              OrderLine(
-                id: 'line-1',
-                productName: 'Everyday linen shirt',
-                unitPrice: '999.00',
-                quantity: 1,
-                lineTotal: '999.00',
-              ),
-              OrderLine(
-                id: 'line-2',
-                productName: 'Handmade ceramic mug',
-                unitPrice: '999.00',
-                quantity: 1,
-                lineTotal: '999.00',
-              ),
-              OrderLine(
-                id: 'line-3',
-                productName: 'Cotton tote bag',
-                unitPrice: '999.00',
-                quantity: 1,
-                lineTotal: '999.00',
-              ),
-              OrderLine(
-                id: 'line-4',
-                productName: 'Linen apron',
-                unitPrice: '999.00',
-                quantity: 1,
-                lineTotal: '999.00',
-              ),
-            ],
+  Future<OrdersResult> orders({String tab = 'all', String? search}) async {
+    lastSearch = search;
+    return const OrdersResult(
+      orders: [
+        SellerOrder(
+          id: 'seller-order-1',
+          status: 'shipped',
+          subtotal: '1998.00',
+          shippingAmount: '0.00',
+          total: '1998.00',
+          canConfirmReceipt: true,
+          store: StoreInfo(
+            id: 'store',
+            name: 'The Independent Store',
+            slug: 'store',
           ),
-        ],
-        tabCounts: {'all': 1, 'to_receive': 1},
-      );
+          orderId: 'order-1',
+          orderShortNumber: '#1001',
+          orderCreatedAt: '2026-11-08T10:00:00Z',
+          lines: [
+            OrderLine(
+              id: 'line-1',
+              productName: 'Everyday linen shirt',
+              unitPrice: '999.00',
+              quantity: 1,
+              lineTotal: '999.00',
+            ),
+            OrderLine(
+              id: 'line-2',
+              productName: 'Handmade ceramic mug',
+              unitPrice: '999.00',
+              quantity: 1,
+              lineTotal: '999.00',
+            ),
+            OrderLine(
+              id: 'line-3',
+              productName: 'Cotton tote bag',
+              unitPrice: '999.00',
+              quantity: 1,
+              lineTotal: '999.00',
+            ),
+            OrderLine(
+              id: 'line-4',
+              productName: 'Linen apron',
+              unitPrice: '999.00',
+              quantity: 1,
+              lineTotal: '999.00',
+            ),
+          ],
+        ),
+      ],
+      tabCounts: {'all': 1, 'to_receive': 1},
+    );
+  }
 }
 
 class _StoreApi extends ApiClient {

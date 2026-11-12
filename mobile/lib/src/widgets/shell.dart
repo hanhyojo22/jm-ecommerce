@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
+import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/push_providers.dart';
 import '../screens/account_screen.dart';
+import '../screens/cart_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
@@ -23,10 +26,9 @@ class ShellTabNotifier extends Notifier<ShellTabState> {
       state = ShellTabState(index: index, loaded: {...state.loaded, index});
 }
 
-final shellTabProvider =
-    NotifierProvider.autoDispose<ShellTabNotifier, ShellTabState>(
-      ShellTabNotifier.new,
-    );
+final shellTabProvider = NotifierProvider<ShellTabNotifier, ShellTabState>(
+  ShellTabNotifier.new,
+);
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -37,7 +39,13 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell>
     with WidgetsBindingObserver {
-  static const _titles = ['Discover', 'Orders', 'Messages', 'Account'];
+  static const _titles = [
+    'Discover',
+    'Orders',
+    'Messages',
+    'Your cart',
+    'Account',
+  ];
 
   @override
   void initState() {
@@ -74,10 +82,12 @@ class _AppShellState extends ConsumerState<AppShell>
             .value
             ?.fold<int>(0, (sum, item) => sum + item.unreadCount) ??
         0;
+    final cartCount = ref.watch(cartCountProvider);
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // The Shop tab draws its own search header with the cart.
-      appBar: index == 0
+      // Shopping tabs draw their own marketplace headers.
+      appBar: index == 0 || index == 1 || index == 3 || index == 4
           ? null
           : AppBar(title: Text(_titles[index]), titleSpacing: 20),
       body: IndexedStack(
@@ -93,42 +103,125 @@ class _AppShellState extends ConsumerState<AppShell>
           else
             const SizedBox(),
           if (tab.loaded.contains(3))
+            CartScreen(
+              embedded: true,
+              onBrowseProducts: () =>
+                  ref.read(shellTabProvider.notifier).select(0),
+            )
+          else
+            const SizedBox(),
+          if (tab.loaded.contains(4))
             const AccountScreen()
           else
             const SizedBox(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        onDestinationSelected: (value) =>
-            ref.read(shellTabProvider.notifier).select(value),
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.storefront_outlined),
-            selectedIcon: Icon(Icons.storefront),
-            label: 'Shop',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Orders',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: unread > 0,
-              label: Text(unread > 99 ? '99+' : '$unread'),
-              child: const Icon(Icons.chat_bubble_outline_rounded),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLowest,
+          border: Border(
+            top: BorderSide(
+              color: scheme.primary.withValues(alpha: 0.14),
+              width: 1,
             ),
-            selectedIcon: const Icon(Icons.chat_bubble_rounded),
-            label: 'Messages',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Account',
+          boxShadow: [
+            BoxShadow(
+              color: scheme.shadow.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: PhosphorDuotoneTheme(
+          data: PhosphorDuotoneThemeData(
+            secondaryColor: scheme.primary,
+            secondaryOpacity: 0.22,
           ),
-        ],
+          child: NavigationBar(
+            selectedIndex: index,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            onDestinationSelected: (value) =>
+                ref.read(shellTabProvider.notifier).select(value),
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(PhosphorIconsBold.storefront),
+                selectedIcon: PhosphorIcon(
+                  PhosphorIconsDuotone.storefront,
+                  color: scheme.primary,
+                ),
+                label: 'Shop',
+              ),
+              NavigationDestination(
+                icon: const Icon(PhosphorIconsBold.receipt),
+                selectedIcon: PhosphorIcon(
+                  PhosphorIconsDuotone.receipt,
+                  color: scheme.primary,
+                ),
+                label: 'Orders',
+              ),
+              NavigationDestination(
+                icon: _NavBadge(
+                  count: unread,
+                  child: const Icon(PhosphorIconsBold.chatCircleDots),
+                ),
+                selectedIcon: _NavBadge(
+                  count: unread,
+                  child: PhosphorIcon(
+                    PhosphorIconsDuotone.chatCircleDots,
+                    color: scheme.primary,
+                  ),
+                ),
+                label: 'Messages',
+              ),
+              NavigationDestination(
+                icon: _NavBadge(
+                  count: cartCount,
+                  child: const Icon(PhosphorIconsBold.shoppingCart),
+                ),
+                selectedIcon: _NavBadge(
+                  count: cartCount,
+                  child: PhosphorIcon(
+                    PhosphorIconsDuotone.shoppingCart,
+                    color: scheme.primary,
+                  ),
+                ),
+                label: 'Cart',
+              ),
+              NavigationDestination(
+                icon: const Icon(PhosphorIconsBold.user),
+                selectedIcon: PhosphorIcon(
+                  PhosphorIconsDuotone.user,
+                  color: scheme.primary,
+                ),
+                label: 'Account',
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _NavBadge extends StatelessWidget {
+  const _NavBadge({required this.count, required this.child});
+
+  final int count;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Badge(
+      isLabelVisible: count > 0,
+      backgroundColor: scheme.primary,
+      textColor: scheme.onPrimary,
+      // Nudge the bubble off the glyph so it reads as a separate shape.
+      offset: const Offset(8, -6),
+      label: Text(count > 99 ? '99+' : '$count'),
+      child: child,
     );
   }
 }

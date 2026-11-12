@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
+import 'package:jmmart/src/providers/order_providers.dart';
 import 'package:jmmart/src/screens/account_screen.dart';
 import 'package:jmmart/src/theme.dart';
+import 'package:jmmart/src/widgets/shell.dart';
 
 void main() {
   test('cart reminders default on unless the account turned them off', () {
@@ -47,6 +49,44 @@ void main() {
     expect(find.text('Could not save. Try again.'), findsOneWidget);
     expect(_switch(tester).value, isTrue);
   });
+
+  testWidgets(
+    'account screen renders Lazada sections and My Orders shortcuts',
+    (tester) async {
+      final api = _AccountApi();
+      final container = ProviderContainer(
+        overrides: [apiClientProvider.overrideWithValue(api)],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: buildAppTheme(),
+            home: const Scaffold(body: AccountScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('QA Buyer'), findsOneWidget);
+      expect(find.text('Member Center'), findsOneWidget);
+      expect(find.text('My Orders'), findsOneWidget);
+      expect(find.text('View All Orders'), findsOneWidget);
+      expect(find.text('To Pay'), findsOneWidget);
+      expect(find.text('To Ship'), findsOneWidget);
+      expect(find.text('To Receive'), findsOneWidget);
+      expect(find.text('To Review'), findsOneWidget);
+      expect(find.text('My Channels'), findsOneWidget);
+
+      await tester.tap(find.text('To Receive'));
+      await tester.pumpAndSettle();
+
+      expect(container.read(ordersTabProvider), 'to_receive');
+      expect(container.read(shellTabProvider).index, 1);
+    },
+  );
 }
 
 SwitchListTile _switch(WidgetTester tester) =>

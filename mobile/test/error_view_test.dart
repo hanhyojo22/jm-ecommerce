@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/widgets/common.dart';
 
-Widget _view(Object error) =>
-    MaterialApp(home: Scaffold(body: ErrorView(error: error)));
+Widget _view(Object error) => MaterialApp(
+  home: Scaffold(body: ErrorView(error: error)),
+);
 
 void main() {
   testWidgets('offers sign out when the API refuses the session', (

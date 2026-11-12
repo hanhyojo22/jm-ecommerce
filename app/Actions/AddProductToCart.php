@@ -11,14 +11,18 @@ use Illuminate\Validation\ValidationException;
 
 class AddProductToCart
 {
-    public function handle(User $user, Product $product, int $quantity, ?string $variantId = null): CartItem
+    /**
+     * Add (or top up) a cart line. With $selectOnly (Buy now) the line becomes the
+     * only ticked item in the same transaction, so checkout needs no extra request.
+     */
+    public function handle(User $user, Product $product, int $quantity, ?string $variantId = null, bool $selectOnly = false): CartItem
     {
         abort_unless(
             $user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(),
             403,
         );
 
-        return DB::transaction(function () use ($user, $product, $quantity, $variantId): CartItem {
+        return DB::transaction(function () use ($user, $product, $quantity, $variantId, $selectOnly): CartItem {
             $cart = Cart::query()->lockForUpdate()->firstOrCreate(['user_id' => $user->id]);
             $product = Product::query()->with(['store', 'tenant'])->lockForUpdate()->findOrFail($product->id);
 
@@ -55,6 +59,11 @@ class AddProductToCart
                 throw ValidationException::withMessages(['quantity' => 'The combined cart quantity exceeds the available stock or the 100 item limit.']);
             }
             $item->save();
+
+            if ($selectOnly) {
+                $cart->items()->whereKeyNot($item->id)->update(['selected' => false]);
+                $cart->touch();
+            }
 
             return $item;
         });

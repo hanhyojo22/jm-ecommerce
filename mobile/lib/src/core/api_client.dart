@@ -315,10 +315,12 @@ class ApiClient {
   Future<Cart> cart() async =>
       Cart.fromJson(mapOf(await _data('GET', '/cart')));
 
+  /// [buyNow] also makes this line the only selected item, in the same request.
   Future<Cart> addToCart({
     required String productId,
     int quantity = 1,
     String? variantId,
+    bool buyNow = false,
   }) async => Cart.fromJson(
     mapOf(
       await _data(
@@ -328,6 +330,7 @@ class ApiClient {
           'product_id': productId,
           'quantity': quantity,
           'variant_id': ?variantId,
+          if (buyNow) 'buy_now': true,
         },
       ),
     ),

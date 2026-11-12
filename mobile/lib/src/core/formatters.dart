@@ -17,6 +17,18 @@ String addMoney(String a, String b) {
   return '$sign${absolute ~/ 100}.${(absolute % 100).toString().padLeft(2, '0')}';
 }
 
+/// Whole-percent markdown from [compareAt] to [price], or 0 when there is no saving.
+int discountPercent(String price, String? compareAt) {
+  final was = _minorUnits(compareAt ?? '');
+  final now = _minorUnits(price);
+
+  if (was <= 0 || now >= was) {
+    return 0;
+  }
+
+  return ((was - now) * 100) ~/ was;
+}
+
 int _minorUnits(String value) {
   final cleaned = value.trim().replaceAll(',', '');
 

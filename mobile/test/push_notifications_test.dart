@@ -27,10 +27,7 @@ void main() {
       PushNotifications.iconFor('ic_stat_shipped'),
       '@drawable/ic_stat_shipped',
     );
-    expect(
-      PushNotifications.iconFor(null),
-      '@drawable/ic_stat_notification',
-    );
+    expect(PushNotifications.iconFor(null), '@drawable/ic_stat_notification');
     expect(
       PushNotifications.iconFor('../evil'),
       '@drawable/ic_stat_notification',

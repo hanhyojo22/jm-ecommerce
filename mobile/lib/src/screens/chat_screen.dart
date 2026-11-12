@@ -14,6 +14,7 @@ import '../core/reverb_client.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/chat_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/image_viewer.dart';
 
@@ -1156,7 +1157,9 @@ class _DocumentAttachment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = compact ? BorderRadius.zero : BorderRadius.circular(10);
+    final radius = compact
+        ? BorderRadius.zero
+        : BorderRadius.circular(appSurfaceRadius);
     final content = Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -1166,7 +1169,7 @@ class _DocumentAttachment extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: foreground.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
             ),
             child: Icon(
               Icons.picture_as_pdf_outlined,
@@ -1317,7 +1320,9 @@ class _Bubble extends StatelessWidget {
                               onTap: destination == null
                                   ? null
                                   : () => context.push(destination),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                appSurfaceRadius,
+                              ),
                               child: Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: Row(
@@ -1325,7 +1330,9 @@ class _Bubble extends StatelessWidget {
                                   children: [
                                     if (snapshot['image_url'] is String)
                                       ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(
+                                          appSurfaceRadius,
+                                        ),
                                         child: Image.network(
                                           snapshot['image_url'] as String,
                                           width: 48,

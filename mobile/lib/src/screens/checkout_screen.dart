@@ -644,7 +644,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               (store) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: _amountRow(
-                  label: Text(store.name),
+                  label: _storeTotalLabel(quote, store),
                   amount: Text(money(store.total)),
                 ),
               ),
@@ -683,6 +683,25 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _storeTotalLabel(CheckoutQuote quote, StoreTotal store) {
+    final slugs = quote.lines
+        .where((line) => line.storeName == store.name)
+        .map((line) => line.storeSlug)
+        .toSet();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        StoreAvatar(
+          name: store.name,
+          storeSlug: slugs.length == 1 ? slugs.single : null,
+          radius: 14,
+        ),
+        const SizedBox(width: 8),
+        Flexible(child: Text(store.name)),
+      ],
     );
   }
 

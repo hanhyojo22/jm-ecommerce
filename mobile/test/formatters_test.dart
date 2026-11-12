@@ -15,6 +15,13 @@ void main() {
     });
   });
 
+  test('discountPercent floors the markdown and ignores non-sales', () {
+    expect(discountPercent('104.25', '299.00'), 65);
+    expect(discountPercent('200.00', '200.00'), 0);
+    expect(discountPercent('250.00', '200.00'), 0);
+    expect(discountPercent('200.00', null), 0);
+  });
+
   test('initials skip symbols between words', () {
     expect(initials('Trail & Tide'), 'TT');
     expect(initials('JM'), 'J');

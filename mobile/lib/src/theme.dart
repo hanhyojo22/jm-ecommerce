@@ -6,6 +6,12 @@ const _accent = Color(0xFFE0A63B);
 const _lightSurface = Color(0xFFF7F6F2);
 const _darkSurface = Color(0xFF0F1513);
 
+/// The home feed's surface edge: tight 4px corners on a flat white panel.
+/// Cards, fields and buttons across every page reuse it so the app reads as
+/// one marketplace instead of mixing pillowy Material shapes with sharp feed
+/// tiles.
+const appSurfaceRadius = 4.0;
+
 ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
   final dark = brightness == Brightness.dark;
   final scheme = ColorScheme.fromSeed(
@@ -59,7 +65,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         side: BorderSide(color: hairline),
       ),
     ),
@@ -69,13 +75,17 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       surfaceTintColor: Colors.transparent,
       dragHandleColor: scheme.outline,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(appSurfaceRadius),
+        ),
       ),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: surfaceLowest,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      ),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
@@ -85,7 +95,9 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
         fontFamily: 'Roboto',
       ),
       actionTextColor: scheme.inversePrimary,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -104,22 +116,24 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         borderSide: BorderSide(color: scheme.outlineVariant),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         borderSide: BorderSide(color: scheme.outlineVariant),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         borderSide: BorderSide(color: scheme.primary, width: 1.6),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
+        ),
         textStyle: const TextStyle(
           fontFamily: 'Roboto',
           fontSize: 16,
@@ -130,25 +144,47 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
+        ),
       ),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surfaceLowest,
-      indicatorColor: scheme.primaryContainer,
+      indicatorColor: scheme.primary.withValues(alpha: dark ? 0.22 : 0.12),
+      indicatorShape: const StadiumBorder(),
       surfaceTintColor: Colors.transparent,
-      elevation: 1,
+      elevation: 0,
+      height: 66,
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          size: states.contains(WidgetState.selected) ? 24 : 23,
+          color: states.contains(WidgetState.selected)
+              ? scheme.primary
+              : scheme.onSurfaceVariant,
+        ),
+      ),
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
           fontFamily: 'Roboto',
-          fontSize: 11,
+          fontSize: 11.5,
+          letterSpacing: -0.1,
           fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w700
+              ? FontWeight.w800
               : FontWeight.w600,
           color: states.contains(WidgetState.selected)
               ? scheme.primary
               : scheme.onSurfaceVariant,
         ),
+      ),
+    ),
+    badgeTheme: BadgeThemeData(
+      backgroundColor: scheme.primary,
+      textColor: scheme.onPrimary,
+      textStyle: const TextStyle(
+        fontFamily: 'Roboto',
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
       ),
     ),
     chipTheme: ChipThemeData(

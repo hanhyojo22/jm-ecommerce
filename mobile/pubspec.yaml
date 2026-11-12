@@ -50,6 +50,7 @@ dependencies:
   firebase_messaging: ^17.0.1
   flutter_local_notifications: 18.0.1
   gal: ^2.3.3
+  phosphor_icons: ^3.0.1
 
 dev_dependencies:
   flutter_test:

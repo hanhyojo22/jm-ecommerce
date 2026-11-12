@@ -5,6 +5,7 @@ import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
+import 'common.dart';
 
 /// Opens the buyers' ratings of [store], newest first.
 Future<void> showStoreRatings(BuildContext context, StoreInfo store) =>
@@ -91,11 +92,23 @@ class _StoreRatingsListState extends ConsumerState<_StoreRatingsList> {
       controller: widget.controller,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
       children: [
-        Text(
-          '${widget.store.name} ratings',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+        Row(
+          children: [
+            StoreAvatar(
+              name: widget.store.name,
+              logoUrl: widget.store.logoUrl,
+              radius: 18,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${widget.store.name} ratings',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 4),
         Row(

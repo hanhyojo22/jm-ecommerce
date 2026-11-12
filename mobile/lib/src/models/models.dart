@@ -477,6 +477,26 @@ class CartLine {
   final bool hasVariants;
   final String? variantLabel;
 
+  CartLine withSelected(bool value) => value == selected
+      ? this
+      : CartLine(
+          id: id,
+          productId: productId,
+          variantId: variantId,
+          quantity: quantity,
+          selected: value,
+          available: available,
+          unitPrice: unitPrice,
+          lineTotal: lineTotal,
+          imageUrl: imageUrl,
+          productName: productName,
+          productSlug: productSlug,
+          storeName: storeName,
+          storeSlug: storeSlug,
+          hasVariants: hasVariants,
+          variantLabel: variantLabel,
+        );
+
   factory CartLine.fromJson(Map<String, dynamic> json) {
     final product = mapOf(json['product']);
     final store = mapOf(product['store']);
@@ -747,6 +767,7 @@ class SellerOrder {
     required this.canConfirmReceipt,
     this.canRateStore = false,
     this.storeRating,
+    this.latestReturnStatus,
     this.store,
     required this.lines,
     this.orderId,
@@ -769,6 +790,7 @@ class SellerOrder {
 
   /// The stars this buyer gave the store for this order, if any.
   final int? storeRating;
+  final String? latestReturnStatus;
   final StoreInfo? store;
   final List<OrderLine> lines;
   final String? orderId;
@@ -791,6 +813,7 @@ class SellerOrder {
       codCollectedAt: json['cod_collected_at'] as String?,
       canConfirmReceipt: boolean(json['can_confirm_receipt']),
       canRateStore: boolean(json['can_rate_store']),
+      latestReturnStatus: mapOf(json['latest_return'])['status'] as String?,
       storeRating: json['store_rating'] == null
           ? null
           : integer(mapOf(json['store_rating'])['rating']),

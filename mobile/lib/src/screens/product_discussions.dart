@@ -6,6 +6,7 @@ import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../theme.dart';
 
 class ProductDiscussions extends ConsumerStatefulWidget {
   const ProductDiscussions({super.key, required this.productKey});
@@ -125,7 +126,7 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
           border: Border.all(
             color: item.error != null
                 ? theme.colorScheme.error.withValues(alpha: 0.5)
@@ -289,7 +290,7 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(appSurfaceRadius),
               ),
               child: Align(
                 alignment: Alignment.centerLeft,
@@ -322,7 +323,7 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(appSurfaceRadius),
                     ),
                     child: Text(
                       'No discussions yet.',

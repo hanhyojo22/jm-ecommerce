@@ -61,6 +61,35 @@ class CartApiTest extends TestCase
             ->assertJsonPath('data.subtotal', '0.00');
     }
 
+    public function test_buy_now_adds_and_selects_only_that_item_in_one_request(): void
+    {
+        [$buyer, $product] = $this->buyerAndProduct();
+        $other = Product::create([
+            'tenant_id' => $product->tenant_id,
+            'store_id' => $product->store_id,
+            'name' => 'API Mug',
+            'slug' => "{$product->slug}-mug",
+            'sku' => "{$product->sku}-MUG",
+            'price' => '50.00',
+            'stock_quantity' => 5,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($buyer)
+            ->postJson('/api/v1/cart/items', ['product_id' => $other->id, 'quantity' => 1])
+            ->assertCreated();
+
+        $response = $this->actingAs($buyer)
+            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1, 'buy_now' => true])
+            ->assertCreated()
+            ->assertJsonCount(2, 'data.items')
+            ->assertJsonPath('data.selected_count', 1)
+            ->assertJsonPath('data.subtotal', '199.00');
+
+        $selected = collect($response->json('data.items'))->where('selected', true);
+        $this->assertSame([$product->id], $selected->pluck('product_id')->values()->all());
+    }
+
     public function test_a_product_with_variants_requires_the_buyer_to_choose_one(): void
     {
         [$buyer, $product] = $this->buyerAndProduct();

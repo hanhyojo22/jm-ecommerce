@@ -8,6 +8,7 @@ import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/cart_providers.dart';
+import '../providers/catalog_providers.dart';
 import '../theme.dart';
 
 class AsyncView<T> extends StatelessWidget {
@@ -175,7 +176,7 @@ class NetworkThumb extends StatelessWidget {
     required this.url,
     this.width,
     this.height,
-    this.radius = 14,
+    this.radius = appSurfaceRadius,
     this.fit = BoxFit.cover,
     this.cacheWidth,
     this.cacheKey,
@@ -244,6 +245,7 @@ class StoreAvatar extends StatelessWidget {
     super.key,
     required this.name,
     this.logoUrl,
+    this.storeSlug,
     this.radius = 24,
     this.backgroundColor,
     this.foregroundColor,
@@ -252,6 +254,9 @@ class StoreAvatar extends StatelessWidget {
 
   final String name;
   final String? logoUrl;
+
+  /// Resolves photos for compact responses that only include a store slug.
+  final String? storeSlug;
   final double radius;
 
   /// Draws a rounded square instead of a circle, as store headers use.
@@ -262,6 +267,22 @@ class StoreAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final slug = storeSlug?.trim();
+    final imageUrl = logoUrl?.trim();
+    if ((imageUrl == null || imageUrl.isEmpty) &&
+        slug != null &&
+        slug.isNotEmpty) {
+      return Consumer(
+        builder: (context, ref, child) => StoreAvatar(
+          name: name,
+          logoUrl: ref.watch(storeProvider(slug)).value?.logoUrl,
+          radius: radius,
+          square: square,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+        ),
+      );
+    }
     final shape = square
         ? RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radius / 3),
@@ -285,14 +306,14 @@ class StoreAvatar extends StatelessWidget {
       ),
     );
 
-    if (logoUrl == null || logoUrl!.isEmpty) {
+    if (imageUrl == null || imageUrl.isEmpty) {
       return fallback;
     }
 
     return ClipPath(
       clipper: ShapeBorderClipper(shape: shape),
       child: CachedNetworkImage(
-        imageUrl: logoUrl!,
+        imageUrl: imageUrl,
         width: radius * 2,
         height: radius * 2,
         fit: BoxFit.cover,
@@ -328,32 +349,58 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
+      fontSize: discovery ? 13 : null,
       fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
-      height: 1.25,
+      height: 1.3,
     );
     // Reserve two title lines so one- and two-line names keep images and prices aligned across a row.
     final titleHeight =
         MediaQuery.textScalerOf(context).scale(titleStyle?.fontSize ?? 14) *
-        1.25 *
+        1.3 *
         2;
+    final discount = discountPercent(
+      product.effectivePrice,
+      product.compareAtPrice,
+    );
     final price = Wrap(
-      alignment: WrapAlignment.spaceBetween,
+      alignment: discovery ? WrapAlignment.start : WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: 8,
       runSpacing: 4,
       children: [
         Text(
           money(product.effectivePrice),
-          style:
-              (discovery
-                      ? theme.textTheme.titleMedium
-                      : theme.textTheme.titleSmall)
-                  ?.copyWith(
-                    fontWeight: discovery ? FontWeight.w700 : FontWeight.w800,
-                    color: theme.colorScheme.primary,
-                    letterSpacing: -0.3,
-                  ),
+          style: discovery
+              ? theme.textTheme.titleMedium?.copyWith(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.primary,
+                  letterSpacing: -0.4,
+                  height: 1.15,
+                )
+              : theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.primary,
+                  letterSpacing: -0.3,
+                ),
         ),
+        if (discovery && discount > 0)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: theme.colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              child: Text(
+                '-$discount%',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onErrorContainer,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
         if (!discovery && product.ratingCount > 0)
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -374,15 +421,6 @@ class ProductCard extends StatelessWidget {
     );
 
     return Card(
-      color: discovery ? theme.colorScheme.surfaceContainerLowest : null,
-      shape: discovery
-          ? RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-              ),
-            )
-          : null,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -391,18 +429,22 @@ class ProductCard extends StatelessWidget {
           children: [
             Expanded(
               child: Padding(
-                padding: discovery
-                    ? const EdgeInsets.fromLTRB(8, 8, 8, 0)
-                    : EdgeInsets.zero,
+                padding: EdgeInsets.zero,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     NetworkThumb(
                       url: product.thumbnailUrl,
                       width: double.infinity,
-                      radius: discovery ? 10 : 0,
+                      radius: 0,
                       cacheWidth: 600,
                     ),
+                    if (discovery)
+                      Positioned(
+                        left: 0,
+                        bottom: 0,
+                        child: _FeedBadges(product: product),
+                      ),
                     if (discovery && !product.inStock)
                       Positioned(
                         left: 8,
@@ -410,7 +452,9 @@ class ProductCard extends StatelessWidget {
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(
+                              appSurfaceRadius,
+                            ),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -432,7 +476,7 @@ class ProductCard extends StatelessWidget {
             ),
             Padding(
               padding: discovery
-                  ? const EdgeInsets.fromLTRB(12, 10, 12, 0)
+                  ? const EdgeInsets.fromLTRB(8, 8, 8, 0)
                   : const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,9 +513,13 @@ class ProductCard extends StatelessWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              product.ratingCount > 0
-                                  ? '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})'
-                                  : 'No reviews yet',
+                              [
+                                product.ratingCount > 0
+                                    ? '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})'
+                                    : 'No reviews yet',
+                                if (product.soldQuantity > 0)
+                                  '${_compactCount(product.soldQuantity)} sold',
+                              ].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
@@ -487,7 +535,7 @@ class ProductCard extends StatelessWidget {
                   if (showStore && product.store != null)
                     InkWell(
                       onTap: onStoreTap,
-                      borderRadius: BorderRadius.circular(999),
+                      borderRadius: BorderRadius.circular(appSurfaceRadius),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 48),
                         child: Padding(
@@ -499,21 +547,12 @@ class ProductCard extends StatelessWidget {
                                 ? CrossAxisAlignment.start
                                 : CrossAxisAlignment.center,
                             children: [
-                              if (discovery) ...[
-                                Icon(
-                                  Icons.storefront_outlined,
-                                  size: 16,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 6),
-                              ] else ...[
-                                StoreAvatar(
-                                  name: product.store!.name,
-                                  logoUrl: product.store!.logoUrl,
-                                  radius: 9,
-                                ),
-                                const SizedBox(width: 6),
-                              ],
+                              StoreAvatar(
+                                name: product.store!.name,
+                                logoUrl: product.store!.logoUrl,
+                                radius: 9,
+                              ),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   product.store!.name,
@@ -549,6 +588,84 @@ class ProductCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+String _compactCount(int count) {
+  if (count < 1000) {
+    return '$count';
+  }
+
+  final thousands = count / 1000;
+  final value = thousands >= 10
+      ? thousands.toStringAsFixed(0)
+      : thousands.toStringAsFixed(1);
+
+  return '${value.endsWith('.0') ? value.substring(0, value.length - 2) : value}k';
+}
+
+/// The tri-colour benefit band marketplace feeds use at the foot of a photo.
+class _FeedBadges extends StatelessWidget {
+  const _FeedBadges({required this.product});
+
+  final Product product;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.2,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (product.freeShipping)
+            _FeedBadge(
+              label: 'FREE SHIPPING',
+              background: scheme.primary,
+              foreground: scheme.onPrimary,
+            ),
+          _FeedBadge(
+            label: 'COD',
+            background: const Color(0xFFB45309),
+            foreground: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeedBadge extends StatelessWidget {
+  const _FeedBadge({
+    required this.label,
+    required this.background,
+    required this.foreground,
+  });
+
+  final String label;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: background),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+        child: Text(
+          label,
+          maxLines: 1,
+          style: TextStyle(
+            color: foreground,
+            fontSize: 8.5,
+            height: 1.1,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.1,
+          ),
         ),
       ),
     );
@@ -608,7 +725,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           textStyle: Theme.of(context).textTheme.labelLarge,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
           ),
         ),
         onPressed: !product.inStock || _adding
@@ -653,7 +770,7 @@ class StatusPill extends StatelessWidget {
         color: color.withValues(
           alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.12,
         ),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
       ),
       child: Text(
         statusLabel(status),
@@ -712,7 +829,7 @@ class QuantityStepper extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

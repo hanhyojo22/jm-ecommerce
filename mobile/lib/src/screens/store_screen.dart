@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/catalog_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/store_ratings_sheet.dart';
 
@@ -28,11 +29,13 @@ class StoreScreen extends ConsumerStatefulWidget {
 
 class _StoreScreenState extends ConsumerState<StoreScreen> {
   final _searchController = TextEditingController();
+  final _searchFocus = FocusNode();
   String _query = '';
   String? _categorySlug;
 
   @override
   void dispose() {
+    _searchFocus.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -105,6 +108,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         ? 'Search this store'
         : 'Search in $storeName';
 
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+
     return AppBar(
       backgroundColor: header,
       foregroundColor: Colors.white,
@@ -114,66 +119,97 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
       systemOverlayStyle: SystemUiOverlayStyle.light,
       toolbarHeight: searchHeight + 16,
       titleSpacing: 2,
-      title: Container(
-        height: searchHeight,
-        padding: const EdgeInsetsDirectional.only(start: 14, end: 4),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(searchHeight / 2),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.search_rounded,
-              size: 20,
-              color: scheme.onSurfaceVariant,
+      title: ListenableBuilder(
+        listenable: _searchFocus,
+        builder: (context, child) {
+          final focused = _searchFocus.hasFocus;
+          final active = focused || _query.isNotEmpty;
+
+          return AnimatedContainer(
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+            height: searchHeight,
+            padding: const EdgeInsetsDirectional.only(start: 12, end: 4),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: focused
+                    ? scheme.secondary
+                    : scheme.secondary.withValues(alpha: 0.75),
+                width: focused ? 2 : 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: focused ? 0.16 : 0.08),
+                  blurRadius: focused ? 10 : 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: MediaQuery(
-                data: MediaQuery.of(context).copyWith(textScaler: scaler),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _query = value),
-                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  maxLines: 1,
-                  textInputAction: TextInputAction.search,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: scheme.onSurface,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: hint,
-                    hintMaxLines: 1,
-                    filled: false,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical: inputPadding,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: active ? scheme.primary : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: MediaQuery(
+                    data: MediaQuery.of(context).copyWith(textScaler: scaler),
+                    child: Semantics(
+                      label: hint,
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocus,
+                        onChanged: (value) => setState(() => _query = value),
+                        onSubmitted: (_) => _searchFocus.unfocus(),
+                        onTapOutside: (_) => _searchFocus.unfocus(),
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        maxLines: 1,
+                        textInputAction: TextInputAction.search,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: hint,
+                          hintMaxLines: 1,
+                          filled: false,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: inputPadding,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                        ),
+                      ),
                     ),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
                   ),
                 ),
-              ),
+                if (_query.isEmpty)
+                  const SizedBox(width: 10)
+                else
+                  IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: _clearSearch,
+                    color: scheme.onSurfaceVariant,
+                    style: IconButton.styleFrom(
+                      fixedSize: Size.square(trailingSize),
+                      minimumSize: Size.square(trailingSize),
+                      padding: EdgeInsets.zero,
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                  ),
+              ],
             ),
-            if (_query.isEmpty)
-              const SizedBox(width: 10)
-            else
-              IconButton(
-                tooltip: 'Clear search',
-                onPressed: _clearSearch,
-                color: scheme.onSurfaceVariant,
-                style: IconButton.styleFrom(
-                  fixedSize: Size.square(trailingSize),
-                  minimumSize: Size.square(trailingSize),
-                  padding: EdgeInsets.zero,
-                ),
-                icon: const Icon(Icons.close_rounded, size: 20),
-              ),
-          ],
-        ),
+          );
+        },
       ),
       actions: [
         IconButton(
@@ -452,7 +488,9 @@ class _StoreHero extends StatelessWidget {
     final secondary = Colors.white.withValues(alpha: 0.9);
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
+      borderRadius: const BorderRadius.vertical(
+        bottom: Radius.circular(appSurfaceRadius),
+      ),
       child: Stack(
         children: [
           Positioned.fill(
@@ -642,14 +680,14 @@ class _StoreStatsPanel extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
           Expanded(
             child: InkWell(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
               onTap: () => showStoreRatings(context, store),
               child: _StatCell(
                 icon: rated ? Icons.star_rounded : Icons.star_outline_rounded,
@@ -1161,7 +1199,7 @@ class _DiscountBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: scheme.primary,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
       ),
       child: Text(
         '-$percent%',
@@ -1186,7 +1224,7 @@ class _SoldOutBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLowest.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(
@@ -1212,7 +1250,7 @@ class _FreeShippingBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Row(

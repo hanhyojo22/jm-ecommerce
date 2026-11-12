@@ -172,6 +172,19 @@ void main() {
     expect(find.text('Checkout route'), findsOneWidget);
   });
 
+  testWidgets('buy now opens checkout after a single cart request', (
+    tester,
+  ) async {
+    final api = _ProductApi()..honorsBuyNow = true;
+    await _pump(tester, api);
+    await tester.tap(find.text('Buy now'));
+    await tester.pumpAndSettle();
+    expect(api.adds, 1);
+    expect(api.sentBuyNow, isTrue);
+    expect(api.selectionRequests, 0);
+    expect(find.text('Checkout route'), findsOneWidget);
+  });
+
   testWidgets('add to cart blocks duplicate taps and updates the cart badge', (
     tester,
   ) async {
@@ -179,7 +192,11 @@ void main() {
     await _pump(tester, api);
     await tester.tap(find.text('Add to cart'));
     await tester.pump();
+    await tester.tap(find.text('Add to cart'));
+    await tester.pump();
     expect(api.adds, 1);
+    // The badge counts the item before the server answers.
+    expect(find.text('1'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, 'Buy now'))
@@ -189,8 +206,29 @@ void main() {
     api.pending!.complete(api.addedCart);
     await tester.pumpAndSettle();
     expect(find.text('3'), findsOneWidget);
-    expect(find.text('Added to your cart.'), findsOneWidget);
     expect(find.text('Checkout route'), findsNothing);
+  });
+
+  testWidgets('a failed add takes the optimistic item back out of the badge', (
+    tester,
+  ) async {
+    final api = _ProductApi()..pending = Completer<Cart>();
+    await _pump(tester, api);
+    await tester.tap(find.text('Add to cart'));
+    await tester.pump();
+    expect(find.text('1'), findsOneWidget);
+
+    api.pending!.completeError(
+      const ApiException(
+        code: 'insufficient_stock',
+        message: 'Only 0 left in stock.',
+        statusCode: 422,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1'), findsNothing);
+    expect(find.textContaining('left in stock'), findsOneWidget);
   });
 
   testWidgets(
@@ -391,6 +429,9 @@ class _ProductApi extends ApiClient {
   int? addedQuantity;
   bool inStock = true;
   bool failSelection = false;
+  bool honorsBuyNow = false;
+  bool sentBuyNow = false;
+  int selectionRequests = 0;
   String? variantId;
   List<String> selected = [];
   Completer<Cart>? pending;
@@ -477,11 +518,33 @@ class _ProductApi extends ApiClient {
     required String productId,
     int quantity = 1,
     String? variantId,
+    bool buyNow = false,
   }) async {
     expect(productId, 'shirt');
     adds++;
     addedQuantity = quantity;
     this.variantId = variantId;
+    sentBuyNow = buyNow;
+    if (buyNow && honorsBuyNow) {
+      return current = Cart.fromJson({
+        'items': [
+          {
+            'id': 'shirt-line',
+            'product_id': 'shirt',
+            'product_variant_id': variantId,
+            'quantity': 1,
+            'selected': true,
+          },
+          {
+            'id': 'other-line',
+            'product_id': 'other',
+            'quantity': 2,
+            'selected': false,
+          },
+        ],
+        'selected_count': 1,
+      });
+    }
     return current = pending == null ? addedCart : await pending!.future;
   }
 
@@ -489,6 +552,7 @@ class _ProductApi extends ApiClient {
   Future<({int selectedCount, String subtotal})> updateCartSelection(
     List<String> ids,
   ) async {
+    selectionRequests++;
     if (failSelection) {
       throw const ApiException(
         code: 'network.error',
