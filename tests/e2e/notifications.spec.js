@@ -47,6 +47,28 @@ test('admin sends a notification to one customer and it opens its link from the 
     }
 });
 
+test('admin starts a notification from a ready-made template', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'admin');
+
+    try {
+        await page.goto('/admin/announcements');
+        await rejectOptionalCookies(page);
+
+        const productAd = page.getByRole('button', { name: /Product ad/ });
+        await productAd.click();
+
+        await expect(productAd).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.getByLabel('Title')).toHaveValue('Fresh finds just landed');
+        await expect(page.getByLabel('Message')).toHaveValue('Discover new arrivals from JMMart sellers. Browse the latest products and find something to love.');
+        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/search', page.url()).href);
+
+        await page.getByLabel('Title').fill('Custom title');
+        await expect(productAd).toHaveAttribute('aria-pressed', 'false');
+    } finally {
+        await context.close();
+    }
+});
+
 test('admin cannot send a notification that links to another site or an unknown customer', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'admin');
 

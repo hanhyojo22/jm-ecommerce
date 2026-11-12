@@ -30,6 +30,48 @@
             ['label' => 'Stores', 'url' => route('catalog.stores')],
             ['label' => 'Cart', 'url' => route('cart.index')],
         ];
+        $templates = [
+            [
+                'key' => 'announcement',
+                'label' => 'Announcement',
+                'description' => 'A general platform update or news for everyone.',
+                'title' => 'A quick update from JMMart',
+                'body' => 'We have made a few improvements to make shopping at JMMart easier. Take a look around and see what is new.',
+                'url' => route('home'),
+            ],
+            [
+                'key' => 'product-ad',
+                'label' => 'Product ad',
+                'description' => 'Promote new arrivals and fresh finds from sellers.',
+                'title' => 'Fresh finds just landed',
+                'body' => 'Discover new arrivals from JMMart sellers. Browse the latest products and find something to love.',
+                'url' => route('catalog.index'),
+            ],
+            [
+                'key' => 'flash-sale',
+                'label' => 'Flash sale',
+                'description' => 'Create urgency for limited-time deals.',
+                'title' => 'Flash sale is live',
+                'body' => 'Limited-time deals on top products. Shop now before your favorite items sell out.',
+                'url' => route('catalog.top-products'),
+            ],
+            [
+                'key' => 'store-spotlight',
+                'label' => 'Store spotlight',
+                'description' => 'Drive buyers to trusted local sellers.',
+                'title' => 'Support local sellers',
+                'body' => 'Explore trusted JMMart stores and shop their latest offers, all in one place.',
+                'url' => route('catalog.stores'),
+            ],
+            [
+                'key' => 'cart-reminder',
+                'label' => 'Cart reminder',
+                'description' => 'Nudge buyers back to an unfinished cart.',
+                'title' => 'Still thinking it over?',
+                'body' => 'Your cart is waiting. Complete your order before the items you picked sell out.',
+                'url' => route('cart.index'),
+            ],
+        ];
     @endphp
 
     <div class="page-shell">
@@ -45,6 +87,7 @@
                 imageFailed: false,
                 submitting: false,
                 defaultUrl: @js(route('home')),
+                activeTemplate: null,
             }"
         >
             @if (session('status'))
@@ -119,6 +162,49 @@
                         </div>
 
                         <div>
+                            <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                                <p class="text-sm font-semibold text-ink">Start with a template</p>
+                                <p class="text-xs text-muted">Fills the title, message, and link. Edit anything before sending.</p>
+                            </div>
+                            <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                @foreach ($templates as $template)
+                                    <button
+                                        type="button"
+                                        @click="title = @js($template['title']); body = @js($template['body']); url = @js($template['url']); activeTemplate = @js($template['key'])"
+                                        :aria-pressed="activeTemplate === @js($template['key'])"
+                                        :class="activeTemplate === @js($template['key'])
+                                            ? 'border-brand bg-[var(--color-info-wash)]/60 ring-1 ring-inset ring-brand'
+                                            : 'border-line bg-surface hover:border-[var(--color-border-strong)] hover:bg-canvas/60'"
+                                        class="flex min-h-11 items-start gap-3 rounded-lg border p-3 text-left transition"
+                                    >
+                                        <span class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-md bg-[var(--color-sunken)] text-muted ring-1 ring-inset ring-[var(--color-line-soft)]" aria-hidden="true">
+                                            @switch($template['key'])
+                                                @case('announcement')
+                                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3Z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+                                                    @break
+                                                @case('product-ad')
+                                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22 2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8Z" /><circle cx="7" cy="7" r="1" /></svg>
+                                                    @break
+                                                @case('flash-sale')
+                                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z" /></svg>
+                                                    @break
+                                                @case('store-spotlight')
+                                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
+                                                    @break
+                                                @default
+                                                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /><path d="M2 3h2l2.4 11.2a2 2 0 0 0 2 1.6h8.7a2 2 0 0 0 2-1.6L21 7H6" /></svg>
+                                            @endswitch
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-semibold text-ink">{{ $template['label'] }}</span>
+                                            <span class="mt-0.5 block text-xs leading-5 text-muted">{{ $template['description'] }}</span>
+                                        </span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div>
                             <div class="flex items-baseline justify-between gap-2">
                                 <x-input-label for="title" :value="__('Title')" class="!text-ink" />
                                 <span class="text-xs tabular-nums text-muted" aria-hidden="true"><span x-text="Array.from(title).length">{{ mb_strlen((string) old('title')) }}</span>/60</span>
@@ -129,6 +215,7 @@
                                 name="title"
                                 :value="old('title')"
                                 x-model="title"
+                                @input="activeTemplate = null"
                                 maxlength="60"
                                 placeholder="e.g. Weekend flash sale is live"
                                 required
@@ -148,6 +235,7 @@
                                 maxlength="200"
                                 required
                                 x-model="body"
+                                @input="activeTemplate = null"
                                 placeholder="Write a concise update for the lock screen and notification bell…"
                                 class="field-control mt-1.5 resize-y"
                             >{{ old('body') }}</textarea>
@@ -170,6 +258,7 @@
                                 name="url"
                                 :value="old('url')"
                                 x-model="url"
+                                @input="activeTemplate = null"
                                 placeholder="{{ route('home') }}"
                                 aria-describedby="url-hint"
                             />
@@ -179,7 +268,7 @@
                                 @foreach ($quickLinks as $preset)
                                     <button
                                         type="button"
-                                        @click="url = @js($preset['url'])"
+                                        @click="url = @js($preset['url']); activeTemplate = null"
                                         :class="url === @js($preset['url'])
                                             ? 'border-brand bg-[var(--color-info-wash)] text-brand'
                                             : 'border-line bg-canvas text-muted hover:border-[var(--color-border-strong)] hover:text-ink'"
