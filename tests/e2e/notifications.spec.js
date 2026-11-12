@@ -98,6 +98,8 @@ test('admin picks what the notification opens, searching only that kind', async 
         await expect(page.getByRole('option', { name: /QA Canvas Tote/ })).toHaveCount(0);
         await expect(link).toHaveValue(new URL('/stores/qa-northwind-store', page.url()).href);
         await expect(opensRow).toContainText('Store · QA Northwind Store');
+        await expect(page.getByLabel('Title')).toHaveValue('New at QA Northwind Store');
+        await expect(page.getByLabel('Message')).toHaveValue('');
 
         await page.getByRole('radio', { name: 'A product' }).click();
         await expect(link).toHaveValue('');
@@ -113,9 +115,13 @@ test('admin picks what the notification opens, searching only that kind', async 
         await product.press('Enter');
         await expect(link).toHaveValue(new URL('/stores/qa-northwind-store/products/qa-canvas-tote', page.url()).href);
         await expect(opensRow).toContainText('Product · QA Canvas Tote');
+        await expect(page.getByLabel('Title')).toHaveValue('QA Canvas Tote · ₱19.99');
+        await expect(page.getByLabel('Message')).toHaveValue('From QA Northwind Store.');
 
         await page.getByRole('button', { name: 'Change product' }).click();
         await expect(link).toHaveValue('');
+        await expect(page.getByLabel('Title')).toHaveValue('');
+        await expect(page.getByLabel('Message')).toHaveValue('');
         await expect(opensRow).toContainText('Home');
 
         await page.getByLabel('Title').fill('Draft');

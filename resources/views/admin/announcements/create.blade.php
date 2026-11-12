@@ -51,8 +51,15 @@
         $oldUrl = (string) old('url', '');
         $initialOpens = $initialLinkTarget['kind'] ?? ($oldUrl === '' || $oldUrl === route('home') ? 'home' : 'other');
         $initialAutoImage = ($initialLinkTarget['kind'] ?? null) === 'product' && filled($initialLinkTarget['image']) && $initialLinkTarget['image'] === old('image_url') ? $initialLinkTarget['image'] : '';
-        $initialProductTitle = ($initialLinkTarget['kind'] ?? null) === 'product' ? mb_substr($initialLinkTarget['name'].' · '.$initialLinkTarget['price'], 0, 60) : '';
-        $initialAutoTitle = $initialProductTitle !== '' && $initialProductTitle === old('title') ? $initialProductTitle : '';
+        $initialIsProduct = ($initialLinkTarget['kind'] ?? null) === 'product';
+        $initialTargetTitle = match ($initialLinkTarget['kind'] ?? null) {
+            'product' => mb_substr($initialLinkTarget['name'].' · '.$initialLinkTarget['price'], 0, 60),
+            'store' => mb_substr('New at '.$initialLinkTarget['name'], 0, 60),
+            default => '',
+        };
+        $initialAutoTitle = $initialTargetTitle !== '' && $initialTargetTitle === old('title') ? $initialTargetTitle : '';
+        $initialTargetBody = $initialIsProduct ? mb_substr('From '.$initialLinkTarget['store'].'.', 0, 200) : '';
+        $initialAutoBody = $initialTargetBody !== '' && $initialTargetBody === old('body') ? $initialTargetBody : '';
     @endphp
 
     <script>
@@ -176,6 +183,7 @@
                         linkError: '',
                         autoImage: @js($initialAutoImage),
                         autoTitle: @js($initialAutoTitle),
+                        autoBody: @js($initialAutoBody),
                         linkEndpoint: @js(route('admin.announcements.link-targets')),
                         previewDevice: 'phone',
                         reviewChecked: false,
@@ -230,10 +238,18 @@
                                 this.useProductPhoto();
                             }
 
-                            // Like the image, an empty or automatic title follows the pick; a typed one stays.
-                            if (option.kind === 'product' && (this.title.trim() === '' || this.title === this.autoTitle)) {
-                                this.title = Array.from(option.name + ' · ' + option.price).slice(0, 60).join('');
+                            // Like the image, an empty or automatic title and message follow the pick; typed ones stay.
+                            const isProduct = option.kind === 'product';
+
+                            if (this.title.trim() === '' || this.title === this.autoTitle) {
+                                this.title = Array.from(isProduct ? option.name + ' · ' + option.price : 'New at ' + option.name).slice(0, 60).join('');
                                 this.autoTitle = this.title;
+                                this.activeTemplate = null;
+                            }
+
+                            if (isProduct && (this.body.trim() === '' || this.body === this.autoBody)) {
+                                this.body = Array.from('From ' + option.store + '.').slice(0, 200).join('');
+                                this.autoBody = this.body;
                                 this.activeTemplate = null;
                             }
                         },
@@ -247,6 +263,12 @@
                             }
 
                             this.autoTitle = '';
+
+                            if (this.autoBody !== '' && this.body === this.autoBody) {
+                                this.body = '';
+                            }
+
+                            this.autoBody = '';
 
                             this.target = null;
                         },
@@ -562,7 +584,7 @@
                                             placeholder="e.g. Weekend flash sale is live"
                                             required
                                         />
-                                        <p x-show="target?.kind === 'product'" x-cloak class="mt-1.5 text-xs text-muted">An empty title is filled from the product. Edit freely.</p>
+                                        <p x-show="target" x-cloak class="mt-1.5 text-xs text-muted" x-text="target?.kind === 'product' ? 'An empty title and message are filled from the product and its store. Edit freely.' : 'An empty title is filled from the store. Edit freely.'"></p>
                                         <x-input-error :messages="$errors->get('title')" class="mt-2" />
                                     </div>
 
