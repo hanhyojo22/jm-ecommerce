@@ -16,7 +16,7 @@
                     href="{{ route('admin.announcements.create', ['tab' => 'history']) }}"
                     @if ($tab === 'history') aria-current="page" @endif
                     class="inline-flex min-h-10 items-center gap-1.5 rounded-md px-4 text-sm font-semibold transition {{ $tab === 'history' ? 'bg-surface text-ink shadow-[0_1px_2px_rgb(24_44_72/8%)]' : 'text-muted hover:text-ink' }}"
-                >History <span class="text-xs font-medium tabular-nums text-muted">{{ $announcements->count() }}</span></a>
+                >History</a>
             </nav>
         </div>
     </x-slot>
@@ -771,13 +771,14 @@
                             </div>
                         </aside>
 
-                        <div class="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-line bg-surface px-4 py-3 shadow-[0_-6px_18px_rgb(24_44_72/8%)] xl:hidden">
+                        <div class="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-line bg-surface px-4 pt-3 shadow-[0_-6px_18px_rgb(24_44_72/8%)] lg:left-[232px] xl:hidden" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
                             <p class="min-w-0 flex-1 truncate text-xs text-muted">To <span class="font-semibold text-ink" x-text="recipientLabel()"></span></p>
                             <button type="button" @click="openReview()" class="inline-flex min-h-12 shrink-0 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white">Review and send</button>
                         </div>
 
                         <dialog
                             x-ref="review"
+                            @close="reviewChecked = false"
                             aria-labelledby="review-title"
                             class="w-[min(40rem,calc(100vw-2rem))] rounded-2xl border border-line bg-surface p-0 text-ink shadow-[0_24px_60px_rgb(11_21_38/30%)] backdrop:bg-[#0b1526]/55"
                         >

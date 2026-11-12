@@ -26,13 +26,16 @@ class AnnouncementController extends Controller
 {
     public function create(Request $request): View
     {
+        $tab = $request->query('tab') === 'history' ? 'history' : 'compose';
+
         return view('admin.announcements.create', [
-            'tab' => $request->query('tab') === 'history' ? 'history' : 'compose',
+            'tab' => $tab,
             'announcements' => Announcement::query()->with('sender', 'user')->latest()->limit(10)->get(),
-            'audienceCounts' => [
+            // Only the composer shows audience sizes.
+            'audienceCounts' => $tab === 'compose' ? [
                 'customers' => SendAdminAnnouncement::recipients('customers')->count(),
                 'stores' => SendAdminAnnouncement::recipients('stores')->count(),
-            ],
+            ] : [],
             'initialLinkTarget' => self::linkTargetFor((string) old('url', '')),
         ]);
     }

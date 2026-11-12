@@ -210,6 +210,20 @@ test('admin cannot send a notification that links to another site or an unknown 
         // The layout also lists errors in a summary; the field's own message sits inside the form.
         await expect(page.locator('form').getByText('The link must be a JMMart page.')).toBeVisible();
 
+        // Confirming once and going back to edit must not let Enter skip a second review.
+        await page.getByLabel('JMMart link').fill('');
+        await page.getByRole('radio', { name: 'Home' }).click();
+        await page.getByRole('button', { name: 'Review and send' }).click();
+        const review = page.getByRole('dialog', { name: 'Review before sending' });
+        await review.getByLabel('I checked the preview and want to send this now.').check();
+        await review.getByRole('button', { name: 'Back to editing' }).click();
+        await page.getByLabel('Title').fill('Phishing check edited');
+        await page.getByLabel('Title').press('Enter');
+        await expect(page).not.toHaveURL(/tab=history/);
+        await page.getByRole('button', { name: 'Review and send' }).click();
+        await expect(review.getByRole('button', { name: 'Send notification' })).toBeDisabled();
+        await review.getByRole('button', { name: 'Back to editing' }).click();
+
         await page.getByRole('radio', { name: 'One customer' }).check();
         await page.getByLabel('Customer email').fill('nobody@example.test');
         await page.getByRole('radio', { name: 'Home' }).click();
