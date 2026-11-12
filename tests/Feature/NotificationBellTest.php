@@ -54,10 +54,50 @@ class NotificationBellTest extends TestCase
         $user->notify(new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'));
         $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
 
-        Livewire::test(NotificationBell::class)->call('markAllRead')->assertViewHas('unreadCount', 0);
+        Livewire::test(NotificationBell::class)
+            ->call('markAllRead')
+            ->assertViewHas('unreadCount', 0)
+            ->assertDontSee('Store confirmed your order.');
 
         $this->assertSame(1, $user->unreadNotifications()->count());
         $this->assertSame(ChatMessageReceived::class, $user->unreadNotifications()->first()->type);
+    }
+
+    public function test_opening_the_bell_reads_notifications_and_clears_them_on_close(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
+        $otherUser->notify(new SellerOrderStatusUpdated('order-2', 'confirmed', 'Other order', 'Another customer notification.'));
+
+        Livewire::actingAs($user)->test(NotificationBell::class)
+            ->call('openNotifications')
+            ->assertViewHas('unreadCount', 0)
+            ->assertSee('Store confirmed your order.')
+            ->call('closeNotifications')
+            ->call('openNotifications')
+            ->assertDontSee('Store confirmed your order.');
+
+        $this->assertSame(0, $user->unreadNotifications()->count());
+        $this->assertSame(1, $otherUser->unreadNotifications()->count());
+        $this->assertSame(1, $user->notifications()->count());
+    }
+
+    public function test_clicking_a_notification_clears_it_and_keeps_its_destination(): void
+    {
+        $user = User::factory()->create();
+        $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
+        $notification = $user->notifications()->first();
+
+        Livewire::actingAs($user)->test(NotificationBell::class)
+            ->call('openNotifications')
+            ->call('goTo', $notification->id)
+            ->assertRedirect(route('orders.show', 'order-1'))
+            ->assertSet('openedNotificationIds', []);
+
+        Livewire::test(NotificationBell::class)->assertDontSee('Store confirmed your order.');
+
+        $this->assertNotNull($notification->fresh()->read_at);
     }
 
     public function test_chat_notification_cannot_be_opened_from_the_bell(): void

@@ -6,7 +6,9 @@ use App\Actions\SavePushSubscription;
 use App\Notifications\ChatMessageReceived;
 use App\Support\WebPushAvailability;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\RateLimiter;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class NotificationBell extends Component
@@ -15,9 +17,29 @@ class NotificationBell extends Component
 
     public ?string $pushSubscriptionError = null;
 
+    /** @var list<string> */
+    #[Locked]
+    public array $openedNotificationIds = [];
+
+    public function openNotifications(): void
+    {
+        $notificationIds = auth()->user()->unreadNotifications()
+            ->where('type', '!=', ChatMessageReceived::class)
+            ->latest()->limit(10)->pluck('id')->all();
+
+        $this->markAllRead();
+        $this->openedNotificationIds = $notificationIds;
+    }
+
+    public function closeNotifications(): void
+    {
+        $this->openedNotificationIds = [];
+    }
+
     public function markAllRead(): void
     {
         auth()->user()->unreadNotifications()->where('type', '!=', ChatMessageReceived::class)->update(['read_at' => now()]);
+        $this->openedNotificationIds = [];
     }
 
     /**
@@ -68,6 +90,7 @@ class NotificationBell extends Component
         }
 
         $notification->markAsRead();
+        $this->openedNotificationIds = array_values(array_diff($this->openedNotificationIds, [$id]));
 
         return match ($notification->data['type'] ?? null) {
             'order' => $this->redirect(route('orders.show', $notification->data['order_id'])),
@@ -86,7 +109,9 @@ class NotificationBell extends Component
 
         return view('livewire.notification-bell', [
             'unreadCount' => $user->unreadNotifications()->where('type', '!=', ChatMessageReceived::class)->count(),
-            'notifications' => $user->notifications()->where('type', '!=', ChatMessageReceived::class)->latest()->limit(10)->get(),
+            'notifications' => $user->notifications()->where('type', '!=', ChatMessageReceived::class)
+                ->where(fn (Builder $query) => $query->whereNull('read_at')->orWhereIn('id', $this->openedNotificationIds))
+                ->latest()->limit(10)->get(),
             'pushConfigured' => WebPushAvailability::isConfigured(),
             'hasPushSubscription' => $pushSubscriptions->isNotEmpty(),
             'pushEndpointHashes' => $pushSubscriptions

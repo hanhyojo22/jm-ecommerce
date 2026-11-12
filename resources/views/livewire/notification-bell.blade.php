@@ -41,15 +41,17 @@
             },
         }"
         x-init="if (pushConfigured) { checkPush($wire) }"
-        x-on:click.outside="open = false"
+        x-on:click.outside="if (open) { open = false; $wire.closeNotifications() }"
+        x-on:keydown.escape.window="if (open) { open = false; $wire.closeNotifications() }"
         x-on:jmmart:pushsubscriptionchange.window="if (pushConfigured) { checkPush($wire) }"
         class="relative"
     >
         <button
             type="button"
-            @click="open = !open"
+            @click="open = !open; open ? $wire.openNotifications() : $wire.closeNotifications()"
             class="relative grid size-11 place-items-center rounded-md text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand"
             aria-label="Notifications{{ $unreadCount ? ', '.$unreadCount.' unread' : '' }}"
+            :aria-expanded="open"
         >
             <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">
                 <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
@@ -68,7 +70,7 @@
         >
             <div class="flex items-center justify-between border-b border-line px-4 py-3">
                 <strong class="text-sm font-semibold text-ink">Notifications</strong>
-                @if ($unreadCount > 0)
+                @if ($notifications->isNotEmpty())
                     <button type="button" wire:click="markAllRead" class="text-xs font-medium text-brand hover:text-brand-hover">Mark all read</button>
                 @endif
             </div>
@@ -77,6 +79,7 @@
                 @forelse ($notifications as $notification)
                     <button
                         type="button"
+                        wire:key="notification-{{ $notification->id }}"
                         wire:click="goTo('{{ $notification->id }}')"
                         class="flex w-full items-start gap-2 border-b border-line px-4 py-3 text-left transition hover:bg-canvas {{ $notification->read_at === null ? 'bg-blue-50/40' : '' }}"
                     >
@@ -104,7 +107,7 @@
                         @endif
                     </button>
                 @empty
-                    <p class="px-4 py-8 text-center text-sm text-muted">No notifications yet.</p>
+                    <p class="px-4 py-8 text-center text-sm text-muted">You're all caught up.</p>
                 @endforelse
             </div>
 

@@ -51,8 +51,11 @@ test('admin sends a notification to one customer and it opens its link from the 
         await customer.page.getByRole('button', { name: /^Notifications, \d+ unread$/ }).click();
         const item = customer.page.locator('[data-notification-bell] button', { hasText: title });
         await expect(item).toContainText('Everything in your cart is 10% off until Sunday.');
+        await expect(customer.page.getByRole('button', { name: 'Notifications', exact: true })).toBeVisible();
         await item.click();
         await expect(customer.page).toHaveURL(/\/cart$/);
+        await customer.page.getByRole('button', { name: 'Notifications', exact: true }).click();
+        await expect(customer.page.locator('[data-notification-bell] button', { hasText: title })).toHaveCount(0);
     } finally {
         await admin.context.close();
         await customer.context.close();
