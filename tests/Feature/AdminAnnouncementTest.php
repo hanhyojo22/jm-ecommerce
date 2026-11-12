@@ -118,7 +118,7 @@ class AdminAnnouncementTest extends TestCase
         Queue::assertPushed(SendAdminAnnouncement::class, 1);
     }
 
-    public function test_the_composer_lists_only_active_stores_for_direct_deep_links(): void
+    public function test_link_targets_list_only_active_stores(): void
     {
         $administrator = User::factory()->administrator()->create();
         $this->storeOwner('active');
@@ -128,10 +128,10 @@ class AdminAnnouncementTest extends TestCase
         $suspendedStore = Store::query()->where('status', 'suspended')->sole();
 
         $this->actingAs($administrator)
-            ->get(route('admin.announcements.create'))
+            ->getJson(route('admin.announcements.link-targets'))
             ->assertOk()
-            ->assertSee('Open a store directly')
-            ->assertSee($activeStore->name)
+            ->assertJsonCount(1, 'stores')
+            ->assertJsonPath('stores.0.name', $activeStore->name)
             ->assertDontSee($suspendedStore->name);
     }
 
@@ -216,24 +216,48 @@ class AdminAnnouncementTest extends TestCase
         $this->assertTrue($announcement->fresh()->isFinished());
     }
 
-    public function test_the_composer_offers_published_products_as_deep_links(): void
+    public function test_link_targets_search_published_stores_and_products_by_name(): void
     {
         $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Store', 'slug' => 'northwind-store', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         $product = fn (string $name, string $slug, string $status): Product => Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => $name, 'slug' => $slug, 'sku' => strtoupper($slug), 'price' => 199, 'stock_quantity' => 3, 'status' => $status]);
         Storage::fake('product_images');
         $product('Canvas Tote', 'canvas-tote', 'active')->images()->create(['path' => 'products/canvas-tote.jpg', 'position' => 0]);
-        $product('Hidden Draft', 'hidden-draft', 'draft');
+        $product('Canvas Draft', 'canvas-draft', 'draft');
+        $product('Steel Bottle', 'steel-bottle', 'active');
 
         $this->actingAs(User::factory()->administrator()->create())
-            ->get(route('admin.announcements.create'))
+            ->getJson(route('admin.announcements.link-targets', ['q' => 'canvas']))
             ->assertOk()
-            ->assertSee('Open a product directly')
-            ->assertSee('Canvas Tote')
-            ->assertSee('canvas-tote')
-            ->assertSee('canvas-tote.jpg')
-            ->assertSee('199.00')
-            ->assertDontSee('Hidden Draft');
+            ->assertJsonCount(0, 'stores')
+            ->assertJsonCount(1, 'products')
+            ->assertJsonPath('products.0.name', 'Canvas Tote')
+            ->assertJsonPath('products.0.store', 'Northwind Store')
+            ->assertJsonPath('products.0.price', '₱199.00')
+            ->assertJsonPath('products.0.url', route('catalog.show', ['store' => 'northwind-store', 'product' => 'canvas-tote']))
+            ->assertJsonPath('products.0.image', Storage::disk('product_images')->url('products/canvas-tote.jpg'));
+
+        $this->getJson(route('admin.announcements.link-targets', ['q' => 'northwind']))
+            ->assertJsonPath('stores.0.url', route('catalog.store', 'northwind-store'))
+            ->assertJsonCount(0, 'products');
+
+        $this->actingAs(User::factory()->create())
+            ->getJson(route('admin.announcements.link-targets', ['q' => 'canvas']))
+            ->assertForbidden();
+    }
+
+    public function test_a_failed_submit_keeps_the_picked_product(): void
+    {
+        $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Store', 'slug' => 'northwind-store', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
+        Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE', 'price' => 199, 'stock_quantity' => 3, 'status' => 'active']);
+
+        $this->actingAs(User::factory()->administrator()->create())
+            ->from(route('admin.announcements.create'))
+            ->followingRedirects()
+            ->post(route('admin.announcements.store'), ['audience' => 'customers', 'title' => '', 'body' => 'Hello', 'url' => route('catalog.show', ['store' => 'northwind-store', 'product' => 'canvas-tote'])])
+            ->assertOk()
+            ->assertSee('Canvas Tote');
     }
 
     public function test_storefront_links_become_native_store_deep_links(): void

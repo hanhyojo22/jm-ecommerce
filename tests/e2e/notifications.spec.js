@@ -69,34 +69,37 @@ test('admin starts a notification from a ready-made template', async ({ browser 
     }
 });
 
-test('admin deep-links a product ad to a store', async ({ browser }) => {
+test('admin searches for a store or product to deep-link', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'admin');
 
     try {
         await page.goto('/admin/announcements');
         await rejectOptionalCookies(page);
 
-        await page.getByRole('button', { name: /Product ad/ }).click();
-        await page.getByLabel('Open a store directly').selectOption({ label: 'QA Northwind Store' });
+        const search = page.getByRole('combobox', { name: 'Store or product' });
+        const link = page.getByLabel('Link (optional)');
+        const deepLinkRow = page.locator('aside dl div', { hasText: 'App deep link' });
 
-        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/stores/qa-northwind-store', page.url()).href);
+        await search.fill('northwind');
+        await page.getByRole('option', { name: /QA Northwind Store/ }).click();
+        await expect(link).toHaveValue(new URL('/stores/qa-northwind-store', page.url()).href);
+        await expect(deepLinkRow).toContainText('Store · QA Northwind Store');
 
-        const summary = page.locator('aside dl');
-        const storeRow = summary.locator('div', { hasText: 'Store deep link' });
-        await expect(storeRow).toContainText('QA Northwind Store');
+        await search.fill('canvas');
+        await expect(page.getByRole('option', { name: /QA Canvas Tote/ })).toContainText('₱19.99');
+        await search.press('ArrowDown');
+        await search.press('ArrowUp');
+        await search.press('Enter');
+        await expect(link).toHaveValue(new URL('/stores/qa-northwind-store/products/qa-canvas-tote', page.url()).href);
+        await expect(deepLinkRow).toContainText('Product · QA Canvas Tote');
 
-        const productRow = summary.locator('div', { hasText: 'Product deep link' });
-        await page.getByLabel('Open a product directly').selectOption({ label: 'QA Canvas Tote' });
-        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/stores/qa-northwind-store/products/qa-canvas-tote', page.url()).href);
-        await expect(productRow).toContainText('QA Canvas Tote');
+        await search.fill('zzz-no-such-thing');
+        await expect(page.getByText('No published store or product matches')).toBeVisible();
+        await search.press('Escape');
 
-        await page.getByLabel('Open a product directly').selectOption('');
-        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/stores/qa-northwind-store', page.url()).href);
-        await expect(productRow).toContainText('None');
-
-        await page.getByLabel('Open a store directly').selectOption('');
-        await expect(page.getByLabel('Link (optional)')).toHaveValue('');
-        await expect(storeRow).toContainText('None');
+        await page.getByRole('button', { name: 'Remove the selected store or product' }).click();
+        await expect(link).toHaveValue('');
+        await expect(deepLinkRow).toContainText('None');
     } finally {
         await context.close();
     }
@@ -109,12 +112,15 @@ test('picking a product uses its photo until the admin sets a custom image', asy
         await page.goto('/admin/announcements');
         await rejectOptionalCookies(page);
 
+        const search = page.getByRole('combobox', { name: 'Store or product' });
         const imageUrl = page.getByLabel('Or paste an image URL');
         const summaryImage = page.locator('aside dl div', { hasText: 'Campaign image' });
+        const pick = async (query, name) => {
+            await search.fill(query);
+            await page.getByRole('option', { name }).click();
+        };
 
-        await page.getByLabel('Open a store directly').selectOption({ label: 'QA Southwind Store' });
-        await page.getByLabel('Open a product directly').selectOption({ label: 'QA Variant Speaker' });
-
+        await pick('speaker', /QA Variant Speaker/);
         await expect(imageUrl).toHaveValue(/qa\/variant-/);
         await expect(page.getByText('Using product photo')).toBeVisible();
         await expect(page.getByLabel('Title')).toHaveValue(/^QA Variant Speaker · ₱10\.00$/);
@@ -123,14 +129,14 @@ test('picking a product uses its photo until the admin sets a custom image', asy
         await imageUrl.fill('https://example.com/sale-banner.jpg');
         await expect(summaryImage).toContainText('Custom image');
 
-        await page.getByLabel('Open a product directly').selectOption({ label: 'Other Seller QA Product' });
+        await pick('other seller', /Other Seller QA Product/);
         await expect(imageUrl).toHaveValue('https://example.com/sale-banner.jpg');
 
-        await page.getByLabel('Open a product directly').selectOption({ label: 'QA Variant Speaker' });
+        await pick('speaker', /QA Variant Speaker/);
         await page.getByRole('button', { name: 'Use product photo' }).click();
         await expect(imageUrl).toHaveValue(/qa\/variant-/);
 
-        await page.getByLabel('Open a store directly').selectOption('');
+        await page.getByRole('button', { name: 'Remove the selected store or product' }).click();
         await expect(imageUrl).toHaveValue('');
         await expect(summaryImage).toContainText('None');
     } finally {

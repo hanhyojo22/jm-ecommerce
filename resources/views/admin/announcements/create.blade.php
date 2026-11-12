@@ -53,22 +53,7 @@
             ['label' => 'Stores', 'url' => route('catalog.stores')],
             ['label' => 'Cart', 'url' => route('cart.index')],
         ];
-        $storeUrls = $storeLinks->mapWithKeys(fn ($store): array => [$store->slug => route('catalog.store', $store->slug)]);
-        $storeNames = $storeLinks->pluck('name', 'slug');
-        $productPhoto = fn ($product): ?string => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null;
-        $storeProducts = $productLinks->groupBy(fn ($product): string => $product->store->slug)
-            ->map(fn ($products, string $storeSlug): array => $products->map(fn ($product): array => [
-                'slug' => $product->slug,
-                'name' => $product->name,
-                'url' => route('catalog.show', ['store' => $storeSlug, 'product' => $product->slug]),
-                'price' => '₱'.number_format((float) $product->price, 2),
-                'image' => $productPhoto($product),
-            ])->values()->all());
-        $initialProduct = $productLinks->first(fn ($product): bool => route('catalog.show', ['store' => $product->store->slug, 'product' => $product->slug]) === old('url', ''));
-        $initialProductSlug = (string) ($initialProduct?->slug ?? '');
-        $initialProductImage = $initialProduct ? ($productPhoto($initialProduct) ?? '') : '';
-        $initialAutoImage = $initialProductImage !== '' && $initialProductImage === old('image_url') ? $initialProductImage : '';
-        $initialStoreSlug = (string) ($initialProduct?->store->slug ?? $storeLinks->first(fn ($store): bool => route('catalog.store', $store->slug) === old('url', ''))?->slug ?? '');
+        $initialAutoImage = ($initialLinkTarget['kind'] ?? null) === 'product' && filled($initialLinkTarget['image']) && $initialLinkTarget['image'] === old('image_url') ? $initialLinkTarget['image'] : '';
         $templates = [
             [
                 'key' => 'announcement',
@@ -131,31 +116,105 @@
                 submitting: false,
                 defaultUrl: @js(route('home')),
                 activeTemplate: null,
-                storeSlug: @js($initialStoreSlug),
-                storeUrls: @js($storeUrls),
-                storeNames: @js($storeNames),
-                productSlug: @js($initialProductSlug),
-                storeProducts: @js($storeProducts),
+                target: @js($initialLinkTarget),
                 autoImage: @js($initialAutoImage),
-                selectStore(slug) {
-                    this.clearDeepLink();
-                    this.storeSlug = slug;
-                    this.url = slug === '' ? '' : (this.storeUrls[slug] ?? '');
+                targetEndpoint: @js(route('admin.announcements.link-targets')),
+                targetQuery: '',
+                targetResults: { stores: [], products: [] },
+                targetOpen: false,
+                targetLoading: false,
+                targetError: false,
+                targetActive: -1,
+                targetRequest: 0,
+                targetOptions() {
+                    return [...this.targetResults.stores, ...this.targetResults.products];
+                },
+                async searchTargets() {
+                    const request = ++this.targetRequest;
+                    this.targetOpen = true;
+                    this.targetLoading = true;
+                    this.targetError = false;
+
+                    try {
+                        const response = await fetch(this.targetEndpoint + '?q=' + encodeURIComponent(this.targetQuery.trim()), {
+                            headers: { Accept: 'application/json' },
+                        });
+
+                        if (! response.ok) {
+                            throw new Error(response.statusText);
+                        }
+
+                        const results = await response.json();
+
+                        // A slower earlier search must not overwrite a newer one.
+                        if (request === this.targetRequest) {
+                            this.targetResults = results;
+                            this.targetActive = this.targetOptions().length > 0 ? 0 : -1;
+                        }
+                    } catch {
+                        if (request === this.targetRequest) {
+                            this.targetError = true;
+                        }
+                    } finally {
+                        if (request === this.targetRequest) {
+                            this.targetLoading = false;
+                        }
+                    }
+                },
+                moveTarget(step) {
+                    const count = this.targetOptions().length;
+
+                    if (! this.targetOpen) {
+                        this.searchTargets();
+                        return;
+                    }
+
+                    if (count > 0) {
+                        this.targetActive = (this.targetActive + step + count) % count;
+                        this.$nextTick(() => document.getElementById('link-target-option-' + this.targetActive)?.scrollIntoView({ block: 'nearest' }));
+                    }
+                },
+                chooseActiveTarget(event) {
+                    const option = this.targetOpen ? this.targetOptions()[this.targetActive] : null;
+
+                    if (option) {
+                        event.preventDefault();
+                        this.selectTarget(option);
+                    }
+                },
+                selectTarget(option) {
+                    const followsTarget = ! this.imagePreview || this.usingProductPhoto();
+                    this.target = option;
+                    this.url = option.url;
+                    this.activeTemplate = null;
+                    this.targetOpen = false;
+                    this.targetQuery = '';
+
+                    // A custom image always wins; only an empty or automatic image follows the pick.
+                    if (followsTarget) {
+                        this.useProductPhoto();
+                    }
+
+                    if (option.kind === 'product' && this.title.trim() === '') {
+                        this.title = Array.from(option.name + ' · ' + option.price).slice(0, 60).join('');
+                    }
                 },
                 clearDeepLink() {
                     if (this.usingProductPhoto()) {
                         this.removeImage();
                     }
 
-                    this.storeSlug = '';
-                    this.productSlug = '';
+                    this.target = null;
                     this.activeTemplate = null;
                 },
                 usingProductPhoto() {
                     return this.autoImage !== '' && this.imageUrl === this.autoImage && this.imageName === '';
                 },
+                productPhoto() {
+                    return this.target?.kind === 'product' ? (this.target.image ?? '') : '';
+                },
                 useProductPhoto() {
-                    const image = this.selectedProduct()?.image ?? '';
+                    const image = this.productPhoto();
 
                     if (image === '') {
                         this.removeImage();
@@ -165,25 +224,6 @@
                     this.imageUrl = image;
                     this.useExternalImage();
                     this.autoImage = image;
-                },
-                selectedProduct() {
-                    return (this.storeProducts[this.storeSlug] ?? []).find((product) => product.slug === this.productSlug) ?? null;
-                },
-                selectProduct(slug) {
-                    const followsProduct = ! this.imagePreview || this.usingProductPhoto();
-                    this.productSlug = slug;
-                    const product = this.selectedProduct();
-                    this.url = product?.url ?? (this.storeUrls[this.storeSlug] ?? '');
-                    this.activeTemplate = null;
-
-                    // A custom image always wins; only an empty or automatic image follows the product.
-                    if (followsProduct) {
-                        this.useProductPhoto();
-                    }
-
-                    if (product && this.title.trim() === '') {
-                        this.title = Array.from(product.name + ' · ' + product.price).slice(0, 60).join('');
-                    }
                 },
                 stageImage(file) {
                     if (!file) {
@@ -391,45 +431,128 @@
                             <div class="border-t border-line-soft pt-6">
                                 <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                                     <p class="text-sm font-semibold text-ink">Where it opens</p>
-                                    <p class="text-xs text-muted">Pick a product to use its photo and fill an empty title.</p>
+                                    <p class="text-xs text-muted">Picking a product also fills its photo and an empty title.</p>
                                 </div>
-                                @if ($storeLinks->isNotEmpty())
-                                    <div class="mb-4 rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-sunken)]/70 p-3">
-                                        <div class="flex flex-wrap items-center justify-between gap-2">
-                                            <label for="store_deep_link" class="text-xs font-semibold text-ink">Open a store directly</label>
-                                            <span class="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-brand ring-1 ring-inset ring-[var(--color-info-line)]">App deep link</span>
-                                        </div>
-                                        <select
-                                            id="store_deep_link"
-                                            class="field-control mt-2"
-                                            x-model="storeSlug"
-                                            @change="selectStore($event.target.value)"
-                                            aria-describedby="store-deep-link-hint"
+                                <div class="relative mb-4" @click.outside="targetOpen = false">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <label for="link_target_search" class="text-xs font-semibold text-ink">Store or product</label>
+                                        <span class="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-brand ring-1 ring-inset ring-[var(--color-info-line)]">Opens in the app</span>
+                                    </div>
+                                    <div class="relative mt-1.5">
+                                        <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                                        <input
+                                            id="link_target_search"
+                                            type="search"
+                                            x-model="targetQuery"
+                                            @focus="searchTargets()"
+                                            @input.debounce.250ms="searchTargets()"
+                                            @keydown.arrow-down.prevent="moveTarget(1)"
+                                            @keydown.arrow-up.prevent="moveTarget(-1)"
+                                            @keydown.enter="chooseActiveTarget($event)"
+                                            @keydown.escape="targetOpen = false"
+                                            role="combobox"
+                                            autocomplete="off"
+                                            aria-autocomplete="list"
+                                            aria-controls="link-target-list"
+                                            :aria-expanded="targetOpen.toString()"
+                                            :aria-activedescendant="targetOpen && targetActive >= 0 ? 'link-target-option-' + targetActive : null"
+                                            aria-describedby="link-target-hint"
+                                            placeholder="Search stores and products by name"
+                                            class="field-control pl-9"
                                         >
-                                            <option value="">No store selected</option>
-                                            @foreach ($storeLinks as $store)
-                                                <option value="{{ $store->slug }}">{{ $store->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        <p id="store-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the store screen directly. Browsers open the store page.</p>
-
-                                        <div x-show="(storeProducts[storeSlug] ?? []).length > 0" x-cloak class="mt-3">
-                                            <label for="product_deep_link" class="text-xs font-semibold text-ink">Open a product directly</label>
-                                            <select
-                                                id="product_deep_link"
-                                                class="field-control mt-2"
-                                                @change="selectProduct($event.target.value)"
-                                                aria-describedby="product-deep-link-hint"
-                                            >
-                                                <option value="" :selected="productSlug === ''">Whole store</option>
-                                                <template x-for="product in storeProducts[storeSlug] ?? []" :key="product.slug">
-                                                    <option :value="product.slug" :selected="product.slug === productSlug" x-text="product.name"></option>
+                                        <div
+                                            x-cloak
+                                            x-show="targetOpen"
+                                            x-transition.opacity.duration.150ms
+                                            class="absolute inset-x-0 top-full z-20 mt-1.5 overflow-hidden rounded-lg border border-line bg-surface shadow-[0_12px_32px_rgb(24_44_72/14%)]"
+                                        >
+                                            <ul id="link-target-list" role="listbox" aria-label="Stores and products" class="max-h-80 overflow-y-auto py-1.5">
+                                                <template x-if="targetResults.stores.length > 0">
+                                                    <li role="presentation" class="px-3.5 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Stores</li>
                                                 </template>
-                                            </select>
-                                            <p id="product-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the product screen directly. Browsers open the product page.</p>
+                                                <template x-for="(option, index) in targetResults.stores" :key="option.url">
+                                                    <li
+                                                        :id="'link-target-option-' + index"
+                                                        role="option"
+                                                        :aria-selected="(targetActive === index).toString()"
+                                                        @click="selectTarget(option)"
+                                                        @mouseenter="targetActive = index"
+                                                        :class="targetActive === index ? 'bg-[var(--color-info-wash)]' : ''"
+                                                        class="flex min-h-11 cursor-pointer items-center gap-3 px-3.5 py-2"
+                                                    >
+                                                        <template x-if="option.image">
+                                                            <img :src="option.image" alt="" class="size-8 shrink-0 rounded-md border border-line object-cover" referrerpolicy="no-referrer">
+                                                        </template>
+                                                        <template x-if="! option.image">
+                                                            <span class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--color-sunken)] text-muted ring-1 ring-inset ring-[var(--color-line-soft)]" aria-hidden="true">
+                                                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
+                                                            </span>
+                                                        </template>
+                                                        <span class="min-w-0 flex-1">
+                                                            <span class="block truncate text-sm font-semibold text-ink" x-text="option.name"></span>
+                                                            <span class="block text-xs text-muted">Store page</span>
+                                                        </span>
+                                                    </li>
+                                                </template>
+                                                <template x-if="targetResults.products.length > 0">
+                                                    <li role="presentation" class="px-3.5 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Products</li>
+                                                </template>
+                                                <template x-for="(option, index) in targetResults.products" :key="option.url">
+                                                    <li
+                                                        :id="'link-target-option-' + (targetResults.stores.length + index)"
+                                                        role="option"
+                                                        :aria-selected="(targetActive === targetResults.stores.length + index).toString()"
+                                                        @click="selectTarget(option)"
+                                                        @mouseenter="targetActive = targetResults.stores.length + index"
+                                                        :class="targetActive === targetResults.stores.length + index ? 'bg-[var(--color-info-wash)]' : ''"
+                                                        class="flex min-h-11 cursor-pointer items-center gap-3 px-3.5 py-2"
+                                                    >
+                                                        <template x-if="option.image">
+                                                            <img :src="option.image" alt="" class="size-10 shrink-0 rounded-md border border-line bg-white object-contain" referrerpolicy="no-referrer">
+                                                        </template>
+                                                        <template x-if="! option.image">
+                                                            <span class="grid size-10 shrink-0 place-items-center rounded-md bg-[var(--color-sunken)] text-muted ring-1 ring-inset ring-[var(--color-line-soft)]" aria-hidden="true">
+                                                                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22 2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8Z" /><circle cx="7" cy="7" r="1" /></svg>
+                                                            </span>
+                                                        </template>
+                                                        <span class="min-w-0 flex-1">
+                                                            <span class="block truncate text-sm font-semibold text-ink" x-text="option.name"></span>
+                                                            <span class="block truncate text-xs text-muted" x-text="option.store"></span>
+                                                        </span>
+                                                        <span class="shrink-0 text-sm font-semibold tabular-nums text-ink" x-text="option.price"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+
+                                            <p x-show="targetLoading" class="border-t border-line-soft px-3.5 py-2.5 text-xs text-muted" role="status">Searching…</p>
+                                            <p x-show="! targetLoading && ! targetError && targetOptions().length === 0" class="px-3.5 py-3 text-sm text-muted" role="status">
+                                                No published store or product matches “<span x-text="targetQuery.trim()"></span>”.
+                                            </p>
+                                            <div x-show="targetError" class="flex items-center justify-between gap-3 px-3.5 py-3 text-sm text-danger" role="alert">
+                                                <span>Search is unavailable right now.</span>
+                                                <button type="button" @click="searchTargets()" class="min-h-8 rounded-md px-2 text-xs font-semibold text-brand hover:bg-[var(--color-info-wash)]">Try again</button>
+                                            </div>
                                         </div>
                                     </div>
-                                @endif
+
+                                    <p id="link-target-hint" class="mt-1.5 text-xs leading-5 text-muted">Type part of a name. App users land on that screen; browsers open the page.</p>
+
+                                    <div x-cloak x-show="target" class="mt-3 flex items-center gap-3 rounded-lg border border-[var(--color-info-line)] bg-[var(--color-info-wash)]/60 p-3">
+                                        <template x-if="target?.image">
+                                            <img :src="target.image" alt="" class="size-12 shrink-0 rounded-md border border-line bg-white object-contain" referrerpolicy="no-referrer">
+                                        </template>
+                                        <template x-if="target && ! target.image">
+                                            <span class="grid size-12 shrink-0 place-items-center rounded-md bg-surface text-brand ring-1 ring-inset ring-[var(--color-info-line)]" aria-hidden="true">
+                                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></svg>
+                                            </span>
+                                        </template>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-sm font-semibold text-ink" x-text="target?.name"></p>
+                                            <p class="truncate text-xs text-muted" x-text="target?.kind === 'product' ? 'Product · ' + target.store + ' · ' + target.price : 'Store page'"></p>
+                                        </div>
+                                        <button type="button" @click="clearDeepLink(); url = ''" class="inline-flex min-h-9 shrink-0 items-center rounded-md px-2.5 text-xs font-semibold text-muted transition hover:bg-surface hover:text-ink" aria-label="Remove the selected store or product">Remove</button>
+                                    </div>
+                                </div>
                                 <x-input-label for="url" :value="__('Link (optional)')" class="!text-ink" />
                                 <x-text-input
                                     id="url"
@@ -589,7 +712,7 @@
                                         <button
                                             type="button"
                                             x-cloak
-                                            x-show="selectedProduct()?.image && ! usingProductPhoto()"
+                                            x-show="productPhoto() && ! usingProductPhoto()"
                                             @click="useProductPhoto()"
                                             class="mt-2 inline-flex min-h-8 items-center rounded-md border border-[var(--color-info-line)] bg-[var(--color-info-wash)] px-2.5 text-xs font-semibold text-brand transition hover:border-brand"
                                         >Use product photo</button>
@@ -713,12 +836,8 @@
                                     <dd class="max-w-[12rem] truncate font-medium text-brand" x-text="url.trim() || defaultUrl">{{ route('home') }}</dd>
                                 </div>
                                 <div class="flex items-center justify-between gap-3 py-2">
-                                    <dt class="text-muted">Store deep link</dt>
-                                    <dd class="max-w-[12rem] truncate font-medium" :class="storeSlug ? 'text-brand' : 'text-muted'" x-text="storeSlug ? (storeNames[storeSlug] || 'Selected store') : 'None'">None</dd>
-                                </div>
-                                <div class="flex items-center justify-between gap-3 py-2">
-                                    <dt class="text-muted">Product deep link</dt>
-                                    <dd class="max-w-[12rem] truncate font-medium" :class="productSlug ? 'text-brand' : 'text-muted'" x-text="selectedProduct()?.name ?? 'None'">None</dd>
+                                    <dt class="text-muted">App deep link</dt>
+                                    <dd class="max-w-[12rem] truncate font-medium" :class="target ? 'text-brand' : 'text-muted'" x-text="target ? (target.kind === 'product' ? 'Product · ' : 'Store · ') + target.name : 'None'">None</dd>
                                 </div>
                                 <div class="flex items-center justify-between gap-3 py-2">
                                     <dt class="text-muted">Campaign image</dt>

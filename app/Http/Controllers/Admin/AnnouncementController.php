@@ -7,9 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendAdminAnnouncement;
 use App\Models\Announcement;
 use App\Models\AuditLog;
+use App\Models\Product;
+use App\Models\Store;
 use App\Models\User;
 use App\Queries\CatalogQuery;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,17 +32,90 @@ class AnnouncementController extends Controller
                 'customers' => SendAdminAnnouncement::recipients('customers')->count(),
                 'stores' => SendAdminAnnouncement::recipients('stores')->count(),
             ],
-            'storeLinks' => CatalogQuery::publicStores()
-                ->select(['name', 'slug'])
-                ->orderBy('name')
-                ->get(),
-            // shortcut: loads every published product; switch to a search endpoint once the catalog reaches thousands.
-            'productLinks' => CatalogQuery::publishedProducts()
-                ->with('thumbnail')
-                ->select(['id', 'store_id', 'name', 'slug', 'price'])
-                ->orderBy('name')
-                ->get(),
+            'initialLinkTarget' => self::linkTargetFor((string) old('url', '')),
         ]);
+    }
+
+    /**
+     * Stores and products a campaign can deep-link to, searched by name so the
+     * picker stays fast however large the catalog grows.
+     */
+    public function linkTargets(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+        $search = trim((string) ($validated['q'] ?? ''));
+        $matching = fn (Builder $query): Builder => $query->when($search !== '', fn (Builder $query) => $query->whereLike('name', "%{$search}%"));
+
+        return response()->json([
+            'stores' => $matching(CatalogQuery::publicStores())
+                ->orderBy('name')
+                ->limit(6)
+                ->get(['id', 'name', 'slug', 'logo_path'])
+                ->map(fn (Store $store): array => self::storeTarget($store))
+                ->all(),
+            'products' => $matching(CatalogQuery::publishedProducts())
+                ->with('thumbnail')
+                ->orderBy('name')
+                ->limit(6)
+                ->get(['id', 'store_id', 'name', 'slug', 'price'])
+                ->map(fn (Product $product): array => self::productTarget($product))
+                ->all(),
+        ]);
+    }
+
+    /**
+     * Restores the picked store or product after a failed submit.
+     *
+     * @return array<string, string|null>|null
+     */
+    private static function linkTargetFor(string $url): ?array
+    {
+        $segments = array_values(array_filter(explode('/', (string) parse_url($url, PHP_URL_PATH))));
+
+        if (count($segments) === 4 && $segments[0] === 'stores' && $segments[2] === 'products') {
+            $product = CatalogQuery::publishedProducts()->with('thumbnail')
+                ->where('slug', $segments[3])
+                ->whereHas('store', fn (Builder $query) => $query->where('slug', $segments[1]))
+                ->first();
+
+            return $product ? self::productTarget($product) : null;
+        }
+
+        if (count($segments) === 2 && $segments[0] === 'stores') {
+            $store = CatalogQuery::publicStores()->where('slug', $segments[1])->first();
+
+            return $store ? self::storeTarget($store) : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{kind: string, name: string, url: string, image: string|null}
+     */
+    private static function storeTarget(Store $store): array
+    {
+        return [
+            'kind' => 'store',
+            'name' => $store->name,
+            'url' => route('catalog.store', $store->slug),
+            'image' => $store->logo_path ? Storage::disk('public')->url($store->logo_path) : null,
+        ];
+    }
+
+    /**
+     * @return array{kind: string, name: string, url: string, image: string|null, store: string, price: string}
+     */
+    private static function productTarget(Product $product): array
+    {
+        return [
+            'kind' => 'product',
+            'name' => $product->name,
+            'url' => route('catalog.show', ['store' => $product->store->slug, 'product' => $product->slug]),
+            'image' => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null,
+            'store' => $product->store->name,
+            'price' => '₱'.number_format((float) $product->price, 2),
+        ];
     }
 
     public function store(Request $request, StorePublicImage $storePublicImage): RedirectResponse
