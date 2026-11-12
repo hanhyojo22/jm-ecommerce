@@ -112,81 +112,62 @@
             </div>
 
             @if ($pushConfigured)
-                <div class="border-t border-line px-4 py-3" x-cloak aria-live="polite">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Desktop notifications</p>
+                <div data-desktop-alerts class="border-t border-line px-4 py-2" x-cloak>
+                    <div class="flex min-h-11 items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2">
+                            <svg class="size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
+                            <span class="text-xs font-medium text-ink">Desktop alerts</span>
+                            <span
+                                x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && !push.error && push.synced"
+                                class="text-xs font-medium text-success"
+                                role="status"
+                            >On</span>
+                        </div>
 
-                    <div x-show="!push.supported" class="mt-2">
-                        <p class="text-xs text-muted">This browser does not support desktop notifications.</p>
-                    </div>
-
-                    <div x-show="push.supported && !push.secure" class="mt-2">
-                        <p class="text-xs text-muted">Desktop notifications require HTTPS. Open JMMart on a secure connection to turn them on.</p>
-                    </div>
-
-                    <div x-show="push.supported && push.secure && push.permission === 'denied'" class="mt-2">
-                        <p class="text-xs font-semibold text-ink">Desktop notifications are blocked</p>
-                        <p class="mt-0.5 text-xs text-muted">Allow notifications for this site in your browser settings, then check again.</p>
-                        <button type="button" @click="checkPush($wire)" class="mt-2 text-xs font-semibold text-brand hover:text-brand-hover">Check again</button>
-                    </div>
-
-                    <div x-show="push.supported && push.secure && push.permission !== 'denied' && push.optedOut" class="mt-2">
-                        <p class="text-xs font-semibold text-ink">Desktop notifications are off</p>
-                        <p class="mt-0.5 text-xs text-muted">You turned them off for this browser.</p>
                         <button
-                            type="button"
-                            @click="enablePush($wire)"
-                            :disabled="pushBusy"
-                            class="mt-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60"
-                            x-text="pushBusy ? 'Turning on…' : 'Turn on desktop notifications'"
-                        ></button>
-                    </div>
-
-                    <div x-show="push.supported && push.secure && push.permission === 'default' && !push.optedOut" class="mt-2">
-                        <p class="text-xs font-semibold text-ink">Stay updated while JMMart is closed</p>
-                        <p class="mt-0.5 text-xs text-muted">Get an alert on this device for new orders and messages.</p>
-                        <button
-                            type="button"
-                            @click="enablePush($wire)"
-                            :disabled="pushBusy"
-                            class="mt-2 w-full rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60"
-                            x-text="pushBusy ? 'Turning on…' : 'Turn on desktop notifications'"
-                        ></button>
-                    </div>
-
-                    <div x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && push.error" class="mt-2">
-                        <p class="text-xs font-semibold text-ink">Desktop notifications could not be connected</p>
-                        <p x-show="push.isBrave" class="mt-0.5 text-xs text-muted">Brave blocks this by default. Open <code class="text-[11px]">brave://settings/system</code> and turn on "Use Google services for push messaging", then try again.</p>
-                        <p x-show="!push.isBrave" class="mt-0.5 text-xs text-muted">Check this browser's notification settings and try again.</p>
-                        <button
-                            type="button"
-                            @click="retryPush($wire)"
-                            :disabled="pushBusy"
-                            class="mt-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60"
-                            x-text="pushBusy ? 'Trying again…' : 'Try again'"
-                        ></button>
-                    </div>
-
-                    <div x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && !push.error && push.synced" class="mt-2">
-                        <p class="text-xs font-semibold text-success">Desktop notifications are on</p>
-                        <p class="mt-0.5 text-xs text-muted">New orders and messages appear in your computer's notification center.</p>
-                        <button
+                            x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && !push.error && push.synced"
                             type="button"
                             @click="disablePush($wire)"
                             :disabled="pushBusy"
-                            class="mt-2 text-xs font-semibold text-muted underline underline-offset-4 transition hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
-                        >Turn off for this browser</button>
-                    </div>
-
-                    <div x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && !push.error && !push.synced" class="mt-2">
-                        <p class="text-xs font-semibold text-ink">Connect this browser</p>
-                        <p class="mt-0.5 text-xs text-muted">Notifications are allowed, but this browser is not connected to your account.</p>
+                            class="min-h-11 shrink-0 rounded-md px-2 text-xs font-semibold text-muted hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-60"
+                            x-text="pushBusy ? 'Turning off...' : 'Turn off'"
+                        ></button>
                         <button
+                            x-show="push.supported && push.secure && push.permission !== 'checking' && push.permission !== 'denied' && (push.optedOut || push.permission === 'default' || (!push.error && !push.synced))"
                             type="button"
                             @click="enablePush($wire)"
                             :disabled="pushBusy"
-                            class="mt-2 rounded-md border border-line px-3 py-2 text-xs font-semibold text-ink transition hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60"
-                            x-text="pushBusy ? 'Connecting…' : 'Connect this browser'"
+                            class="min-h-11 shrink-0 rounded-md px-2 text-xs font-semibold text-brand hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-60"
+                            x-text="pushBusy ? 'Turning on...' : 'Turn on'"
                         ></button>
+                        <button
+                            x-show="push.supported && push.secure && push.permission === 'denied'"
+                            type="button"
+                            @click="checkPush($wire)"
+                            class="min-h-11 shrink-0 rounded-md px-2 text-xs font-semibold text-brand hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+                        >Check again</button>
+                        <button
+                            x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && push.error"
+                            type="button"
+                            @click="retryPush($wire)"
+                            :disabled="pushBusy"
+                            class="min-h-11 shrink-0 rounded-md px-2 text-xs font-semibold text-brand hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-60"
+                            x-text="pushBusy ? 'Retrying...' : 'Retry'"
+                        ></button>
+                    </div>
+
+                    <div class="text-xs leading-relaxed text-muted" role="status">
+                        <p x-show="push.permission === 'checking'">Checking browser...</p>
+                        <p x-show="!push.supported">Unavailable in this browser.</p>
+                        <p x-show="push.supported && !push.secure">Use HTTPS to enable alerts.</p>
+                        <p x-show="push.supported && push.secure && push.permission === 'denied'">Blocked. Allow notifications in your browser settings.</p>
+                        <div x-show="push.supported && push.secure && push.permission === 'granted' && !push.optedOut && push.error" class="pb-2">
+                            <p>Couldn't connect. Try again.</p>
+                            <details x-show="push.isBrave" class="mt-1">
+                                <summary class="cursor-pointer text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Brave browser help</summary>
+                                <p class="mt-1">In <code>brave://settings/system</code>, enable "Use Google services for push messaging", then retry.</p>
+                            </details>
+                        </div>
                     </div>
                 </div>
             @endif
