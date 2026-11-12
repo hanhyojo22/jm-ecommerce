@@ -27,7 +27,14 @@ class SellerOrder extends Model
 
     protected function casts(): array
     {
-        return ['shipped_at' => 'datetime', 'delivered_at' => 'datetime', 'cod_collected_at' => 'datetime'];
+        return [
+            'subtotal' => 'decimal:2',
+            'shipping_amount' => 'decimal:2',
+            'total' => 'decimal:2',
+            'shipped_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'cod_collected_at' => 'datetime',
+        ];
     }
 
     public function items(): HasMany

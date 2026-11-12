@@ -31,6 +31,11 @@ class Order extends Model
         'status',
     ];
 
+    protected function casts(): array
+    {
+        return ['subtotal' => 'decimal:2', 'shipping_amount' => 'decimal:2', 'total' => 'decimal:2'];
+    }
+
     /**
      * Order numbers carry a 26-character ULID. Lists show the prefix and the last eight
      * characters, which are what tells orders apart.

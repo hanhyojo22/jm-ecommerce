@@ -23,6 +23,11 @@ class OrderItem extends Model
         'image_path',
     ];
 
+    protected function casts(): array
+    {
+        return ['unit_price' => 'decimal:2', 'line_total' => 'decimal:2'];
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

@@ -22,6 +22,11 @@ class Payment extends Model
 
     protected $fillable = ['method', 'status', 'amount', 'fee_amount', 'checkout_session_id', 'gateway_payment_id'];
 
+    protected function casts(): array
+    {
+        return ['amount' => 'decimal:2', 'fee_amount' => 'decimal:2'];
+    }
+
     public function isOnline(): bool
     {
         return in_array($this->method, [...self::ONLINE_METHODS, 'bank'], true);
