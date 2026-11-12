@@ -190,9 +190,47 @@ void main() {
       'https://jmmart-marketplace.onrender.com/products',
     );
     expect(
+      PushNotifications.announcementDestination(
+        'https://jmmart-marketplace.onrender.com/stores/northwind',
+      ),
+      '/store/northwind',
+    );
+    expect(
+      PushNotifications.announcementDestination(
+        'https://jmmart-marketplace.onrender.com/stores/northwind/products/tote',
+      ),
+      '/product/northwind/tote',
+    );
+    expect(
+      PushNotifications.announcementDestination(
+        'https://jmmart-marketplace.onrender.com/cart',
+      ),
+      '/cart',
+    );
+    expect(
       PushNotifications.routeFor({'type': 'return_case', 'order_id': 'o1'}),
       '/orders/o1',
     );
+  });
+
+  testWidgets('store announcements offer a direct store action', (
+    tester,
+  ) async {
+    final details = await tester.runAsync(
+      () => PushNotifications.detailsFor(
+        const RemoteMessage(
+          data: {
+            'type': 'announcement',
+            'title': 'Fresh finds',
+            'body': 'New arrivals are in.',
+            'url': 'https://jmmart-marketplace.onrender.com/stores/northwind',
+          },
+        ),
+        imageLoader: (_) async => null,
+      ),
+    );
+
+    expect(details!.actions!.single.title, 'Open store');
   });
 
   test('push taps open the matching screen', () {

@@ -53,6 +53,9 @@
             ['label' => 'Stores', 'url' => route('catalog.stores')],
             ['label' => 'Cart', 'url' => route('cart.index')],
         ];
+        $storeUrls = $storeLinks->mapWithKeys(fn ($store): array => [$store->slug => route('catalog.store', $store->slug)]);
+        $storeNames = $storeLinks->pluck('name', 'slug');
+        $initialStoreSlug = (string) ($storeLinks->first(fn ($store): bool => route('catalog.store', $store->slug) === old('url', ''))?->slug ?? '');
         $templates = [
             [
                 'key' => 'announcement',
@@ -115,6 +118,14 @@
                 submitting: false,
                 defaultUrl: @js(route('home')),
                 activeTemplate: null,
+                storeSlug: @js($initialStoreSlug),
+                storeUrls: @js($storeUrls),
+                storeNames: @js($storeNames),
+                selectStore(slug) {
+                    this.storeSlug = slug;
+                    this.url = slug === '' ? '' : (this.storeUrls[slug] ?? '');
+                    this.activeTemplate = null;
+                },
                 stageImage(file) {
                     if (!file) {
                         return;
@@ -274,7 +285,7 @@
                                     @foreach ($templates as $template)
                                         <button
                                             type="button"
-                                            @click="title = @js($template['title']); body = @js($template['body']); url = @js($template['url']); activeTemplate = @js($template['key'])"
+                                            @click="title = @js($template['title']); body = @js($template['body']); url = @js($template['url']); activeTemplate = @js($template['key']); storeSlug = ''"
                                             :aria-pressed="activeTemplate === @js($template['key'])"
                                             :class="activeTemplate === @js($template['key'])
                                                 ? 'border-brand bg-[var(--color-info-wash)]/70 ring-1 ring-inset ring-brand'
@@ -386,7 +397,7 @@
                                     name="url"
                                     :value="old('url')"
                                     x-model="url"
-                                    @input="activeTemplate = null"
+                                    @input="activeTemplate = null; storeSlug = ''"
                                     placeholder="{{ route('home') }}"
                                     aria-describedby="url-hint"
                                 />
@@ -396,7 +407,7 @@
                                     @foreach ($quickLinks as $preset)
                                         <button
                                             type="button"
-                                            @click="url = @js($preset['url']); activeTemplate = null"
+                                            @click="url = @js($preset['url']); activeTemplate = null; storeSlug = ''"
                                             :class="url === @js($preset['url'])
                                                 ? 'border-brand bg-[var(--color-info-wash)] text-brand'
                                                 : 'border-line bg-canvas text-muted hover:border-[var(--color-border-strong)] hover:text-ink'"
@@ -404,6 +415,29 @@
                                         >{{ $preset['label'] }}</button>
                                     @endforeach
                                 </div>
+
+                                @if ($storeLinks->isNotEmpty())
+                                    <div class="mt-3 rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-sunken)]/70 p-3">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <label for="store_deep_link" class="text-xs font-semibold text-ink">Open a store directly</label>
+                                            <span class="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-brand ring-1 ring-inset ring-[var(--color-info-line)]">App deep link</span>
+                                        </div>
+                                        <select
+                                            id="store_deep_link"
+                                            class="field-control mt-2"
+                                            x-model="storeSlug"
+                                            @change="selectStore($event.target.value)"
+                                            aria-describedby="store-deep-link-hint"
+                                        >
+                                            <option value="">No store selected</option>
+                                            @foreach ($storeLinks as $store)
+                                                <option value="{{ $store->slug }}">{{ $store->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p id="store-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the store screen directly. Browsers open the store page.</p>
+                                    </div>
+                                @endif
+
                                 <x-input-error :messages="$errors->get('url')" class="mt-2" />
                             </div>
 
@@ -569,6 +603,10 @@
                                 <div class="flex items-center justify-between gap-3 py-2">
                                     <dt class="text-muted">Opens on tap</dt>
                                     <dd class="max-w-[12rem] truncate font-medium text-brand" x-text="url.trim() || defaultUrl">{{ route('home') }}</dd>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 py-2">
+                                    <dt class="text-muted">Store deep link</dt>
+                                    <dd class="max-w-[12rem] truncate font-medium" :class="storeSlug ? 'text-brand' : 'text-muted'" x-text="storeSlug ? (storeNames[storeSlug] || 'Selected store') : 'None'">None</dd>
                                 </div>
                                 <div class="flex items-center justify-between gap-3 py-2">
                                     <dt class="text-muted">Campaign image</dt>

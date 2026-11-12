@@ -8,6 +8,7 @@ use App\Jobs\SendAdminAnnouncement;
 use App\Models\Announcement;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Queries\CatalogQuery;
 use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,10 @@ class AnnouncementController extends Controller
                 'customers' => SendAdminAnnouncement::recipients('customers')->count(),
                 'stores' => SendAdminAnnouncement::recipients('stores')->count(),
             ],
+            'storeLinks' => CatalogQuery::publicStores()
+                ->select(['name', 'slug'])
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 

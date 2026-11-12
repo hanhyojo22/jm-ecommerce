@@ -186,6 +186,8 @@ class PushNotifications {
     _open(route);
   }
 
+  /// The in-app destination for an announcement link. Store and product pages
+  /// open their native screens; other same-site pages stay full browser links.
   @visibleForTesting
   static String announcementDestination(String? url) {
     final uri = Uri.tryParse(url ?? '');
@@ -196,6 +198,26 @@ class PushNotifications {
         uri.userInfo.isNotEmpty) {
       return '/';
     }
+
+    final segments = uri.pathSegments
+        .where((segment) => segment.isNotEmpty)
+        .toList();
+
+    if (segments.length == 2 && segments[0] == 'stores') {
+      return '/store/${Uri.encodeComponent(segments[1])}';
+    }
+    if (segments.length == 4 &&
+        segments[0] == 'stores' &&
+        segments[2] == 'products') {
+      return '/product/${Uri.encodeComponent(segments[1])}/${Uri.encodeComponent(segments[3])}';
+    }
+    if (segments.length == 1 && segments[0] == 'cart') {
+      return '/cart';
+    }
+    if (segments.length == 2 && segments[0] == 'orders') {
+      return '/orders/${Uri.encodeComponent(segments[1])}';
+    }
+
     return uri.toString();
   }
 
@@ -303,7 +325,8 @@ class PushNotifications {
       'chat' => 'Open chat',
       'order' || 'return_case' => 'View order',
       'cart' => 'View cart',
-      'announcement' => 'Explore',
+      'announcement' =>
+        (route?.startsWith('/store/') ?? false) ? 'Open store' : 'Explore',
       _ => null,
     };
     return AndroidNotificationDetails(

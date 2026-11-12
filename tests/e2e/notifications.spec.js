@@ -69,6 +69,30 @@ test('admin starts a notification from a ready-made template', async ({ browser 
     }
 });
 
+test('admin deep-links a product ad to a store', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'admin');
+
+    try {
+        await page.goto('/admin/announcements');
+        await rejectOptionalCookies(page);
+
+        await page.getByRole('button', { name: /Product ad/ }).click();
+        await page.getByLabel('Open a store directly').selectOption({ label: 'QA Northwind Store' });
+
+        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/stores/qa-northwind-store', page.url()).href);
+
+        const summary = page.locator('aside dl');
+        const storeRow = summary.locator('div', { hasText: 'Store deep link' });
+        await expect(storeRow).toContainText('QA Northwind Store');
+
+        await page.getByLabel('Open a store directly').selectOption('');
+        await expect(page.getByLabel('Link (optional)')).toHaveValue('');
+        await expect(storeRow).toContainText('None');
+    } finally {
+        await context.close();
+    }
+});
+
 test('admin uploads a campaign image and sees it across the composer previews', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'admin');
 
@@ -88,7 +112,7 @@ test('admin uploads a campaign image and sees it across the composer previews', 
 
         await page.getByRole('button', { name: 'Remove', exact: true }).click();
         await expect(page.getByAltText('Campaign image preview')).toHaveCount(0);
-        await expect(page.getByText('None', { exact: true })).toBeVisible();
+        await expect(page.locator('aside dl div', { hasText: 'Campaign image' })).toContainText('None');
     } finally {
         await context.close();
     }

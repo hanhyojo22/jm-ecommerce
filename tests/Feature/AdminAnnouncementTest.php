@@ -116,6 +116,42 @@ class AdminAnnouncementTest extends TestCase
         Queue::assertPushed(SendAdminAnnouncement::class, 1);
     }
 
+    public function test_the_composer_lists_only_active_stores_for_direct_deep_links(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $this->storeOwner('active');
+        $this->storeOwner('suspended');
+
+        $activeStore = Store::query()->where('status', 'active')->sole();
+        $suspendedStore = Store::query()->where('status', 'suspended')->sole();
+
+        $this->actingAs($administrator)
+            ->get(route('admin.announcements.create'))
+            ->assertOk()
+            ->assertSee('Open a store directly')
+            ->assertSee($activeStore->name)
+            ->assertDontSee($suspendedStore->name);
+    }
+
+    public function test_a_store_deep_link_is_a_valid_campaign_link(): void
+    {
+        Queue::fake();
+        $administrator = User::factory()->administrator()->create();
+        $this->storeOwner('active');
+        $store = Store::query()->sole();
+
+        $this->actingAs($administrator)
+            ->post(route('admin.announcements.store'), [
+                'audience' => 'customers',
+                'title' => 'Fresh finds',
+                'body' => 'Shop the new arrivals.',
+                'url' => route('catalog.store', $store->slug),
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(route('catalog.store', $store->slug), Announcement::query()->sole()->url);
+    }
+
     public function test_non_administrators_cannot_send_or_cancel_announcements(): void
     {
         Queue::fake();
