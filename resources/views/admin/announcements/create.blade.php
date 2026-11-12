@@ -55,17 +55,18 @@
         ];
         $storeUrls = $storeLinks->mapWithKeys(fn ($store): array => [$store->slug => route('catalog.store', $store->slug)]);
         $storeNames = $storeLinks->pluck('name', 'slug');
+        $productPhoto = fn ($product): ?string => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null;
         $storeProducts = $productLinks->groupBy(fn ($product): string => $product->store->slug)
             ->map(fn ($products, string $storeSlug): array => $products->map(fn ($product): array => [
                 'slug' => $product->slug,
                 'name' => $product->name,
                 'url' => route('catalog.show', ['store' => $storeSlug, 'product' => $product->slug]),
                 'price' => '₱'.number_format((float) $product->price, 2),
-                'image' => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null,
+                'image' => $productPhoto($product),
             ])->values()->all());
         $initialProduct = $productLinks->first(fn ($product): bool => route('catalog.show', ['store' => $product->store->slug, 'product' => $product->slug]) === old('url', ''));
         $initialProductSlug = (string) ($initialProduct?->slug ?? '');
-        $initialProductImage = $initialProduct?->thumbnail ? Storage::disk('product_images')->url($initialProduct->thumbnail->path) : '';
+        $initialProductImage = $initialProduct ? ($productPhoto($initialProduct) ?? '') : '';
         $initialAutoImage = $initialProductImage !== '' && $initialProductImage === old('image_url') ? $initialProductImage : '';
         $initialStoreSlug = (string) ($initialProduct?->store->slug ?? $storeLinks->first(fn ($store): bool => route('catalog.store', $store->slug) === old('url', ''))?->slug ?? '');
         $templates = [
@@ -388,6 +389,78 @@
                             </div>
 
                             <div class="border-t border-line-soft pt-6">
+                                <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                                    <p class="text-sm font-semibold text-ink">Where it opens</p>
+                                    <p class="text-xs text-muted">Pick a product to use its photo and fill an empty title.</p>
+                                </div>
+                                @if ($storeLinks->isNotEmpty())
+                                    <div class="mb-4 rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-sunken)]/70 p-3">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <label for="store_deep_link" class="text-xs font-semibold text-ink">Open a store directly</label>
+                                            <span class="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-brand ring-1 ring-inset ring-[var(--color-info-line)]">App deep link</span>
+                                        </div>
+                                        <select
+                                            id="store_deep_link"
+                                            class="field-control mt-2"
+                                            x-model="storeSlug"
+                                            @change="selectStore($event.target.value)"
+                                            aria-describedby="store-deep-link-hint"
+                                        >
+                                            <option value="">No store selected</option>
+                                            @foreach ($storeLinks as $store)
+                                                <option value="{{ $store->slug }}">{{ $store->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p id="store-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the store screen directly. Browsers open the store page.</p>
+
+                                        <div x-show="(storeProducts[storeSlug] ?? []).length > 0" x-cloak class="mt-3">
+                                            <label for="product_deep_link" class="text-xs font-semibold text-ink">Open a product directly</label>
+                                            <select
+                                                id="product_deep_link"
+                                                class="field-control mt-2"
+                                                @change="selectProduct($event.target.value)"
+                                                aria-describedby="product-deep-link-hint"
+                                            >
+                                                <option value="" :selected="productSlug === ''">Whole store</option>
+                                                <template x-for="product in storeProducts[storeSlug] ?? []" :key="product.slug">
+                                                    <option :value="product.slug" :selected="product.slug === productSlug" x-text="product.name"></option>
+                                                </template>
+                                            </select>
+                                            <p id="product-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the product screen directly. Browsers open the product page.</p>
+                                        </div>
+                                    </div>
+                                @endif
+                                <x-input-label for="url" :value="__('Link (optional)')" class="!text-ink" />
+                                <x-text-input
+                                    id="url"
+                                    class="mt-1.5"
+                                    type="url"
+                                    name="url"
+                                    :value="old('url')"
+                                    x-model="url"
+                                    @input="clearDeepLink()"
+                                    placeholder="{{ route('home') }}"
+                                    aria-describedby="url-hint"
+                                />
+                                <p id="url-hint" class="mt-1.5 text-xs text-muted">A JMMart page the notification opens. Leave empty for the home page.</p>
+                                <div class="mt-2.5 flex flex-wrap items-center gap-1.5" aria-label="Quick link presets">
+                                    <span class="mr-1 text-xs font-medium text-muted">Quick fill:</span>
+                                    @foreach ($quickLinks as $preset)
+                                        <button
+                                            type="button"
+                                            @click="clearDeepLink(); url = @js($preset['url'])"
+                                            :class="url === @js($preset['url'])
+                                                ? 'border-brand bg-[var(--color-info-wash)] text-brand'
+                                                : 'border-line bg-canvas text-muted hover:border-[var(--color-border-strong)] hover:text-ink'"
+                                            class="inline-flex min-h-8 items-center rounded-md border px-2.5 py-1 text-xs font-semibold transition"
+                                        >{{ $preset['label'] }}</button>
+                                    @endforeach
+                                </div>
+
+
+                                <x-input-error :messages="$errors->get('url')" class="mt-2" />
+                            </div>
+                            <div class="border-t border-line-soft pt-6">
                                 <div class="flex items-baseline justify-between gap-2">
                                     <x-input-label for="title" :value="__('Title')" class="!text-ink" />
                                     <span
@@ -447,74 +520,6 @@
                                 <x-input-error :messages="$errors->get('body')" class="mt-2" />
                             </div>
 
-                            <div>
-                                <x-input-label for="url" :value="__('Link (optional)')" class="!text-ink" />
-                                <x-text-input
-                                    id="url"
-                                    class="mt-1.5"
-                                    type="url"
-                                    name="url"
-                                    :value="old('url')"
-                                    x-model="url"
-                                    @input="clearDeepLink()"
-                                    placeholder="{{ route('home') }}"
-                                    aria-describedby="url-hint"
-                                />
-                                <p id="url-hint" class="mt-1.5 text-xs text-muted">A JMMart page the notification opens. Leave empty for the home page.</p>
-                                <div class="mt-2.5 flex flex-wrap items-center gap-1.5" aria-label="Quick link presets">
-                                    <span class="mr-1 text-xs font-medium text-muted">Quick fill:</span>
-                                    @foreach ($quickLinks as $preset)
-                                        <button
-                                            type="button"
-                                            @click="clearDeepLink(); url = @js($preset['url'])"
-                                            :class="url === @js($preset['url'])
-                                                ? 'border-brand bg-[var(--color-info-wash)] text-brand'
-                                                : 'border-line bg-canvas text-muted hover:border-[var(--color-border-strong)] hover:text-ink'"
-                                            class="inline-flex min-h-8 items-center rounded-md border px-2.5 py-1 text-xs font-semibold transition"
-                                        >{{ $preset['label'] }}</button>
-                                    @endforeach
-                                </div>
-
-                                @if ($storeLinks->isNotEmpty())
-                                    <div class="mt-3 rounded-lg border border-[var(--color-line-soft)] bg-[var(--color-sunken)]/70 p-3">
-                                        <div class="flex flex-wrap items-center justify-between gap-2">
-                                            <label for="store_deep_link" class="text-xs font-semibold text-ink">Open a store directly</label>
-                                            <span class="rounded-full bg-surface px-2 py-0.5 text-[11px] font-semibold text-brand ring-1 ring-inset ring-[var(--color-info-line)]">App deep link</span>
-                                        </div>
-                                        <select
-                                            id="store_deep_link"
-                                            class="field-control mt-2"
-                                            x-model="storeSlug"
-                                            @change="selectStore($event.target.value)"
-                                            aria-describedby="store-deep-link-hint"
-                                        >
-                                            <option value="">No store selected</option>
-                                            @foreach ($storeLinks as $store)
-                                                <option value="{{ $store->slug }}">{{ $store->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        <p id="store-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the store screen directly. Browsers open the store page.</p>
-
-                                        <div x-show="(storeProducts[storeSlug] ?? []).length > 0" x-cloak class="mt-3">
-                                            <label for="product_deep_link" class="text-xs font-semibold text-ink">Open a product directly</label>
-                                            <select
-                                                id="product_deep_link"
-                                                class="field-control mt-2"
-                                                @change="selectProduct($event.target.value)"
-                                                aria-describedby="product-deep-link-hint"
-                                            >
-                                                <option value="" :selected="productSlug === ''">Whole store</option>
-                                                <template x-for="product in storeProducts[storeSlug] ?? []" :key="product.slug">
-                                                    <option :value="product.slug" :selected="product.slug === productSlug" x-text="product.name"></option>
-                                                </template>
-                                            </select>
-                                            <p id="product-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the product screen directly. Browsers open the product page.</p>
-                                        </div>
-                                    </div>
-                                @endif
-
-                                <x-input-error :messages="$errors->get('url')" class="mt-2" />
-                            </div>
 
                             <div class="border-t border-line-soft pt-6">
                                 <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -525,7 +530,7 @@
                                     </span>
                                     <span class="text-xs text-muted">Optional · JPEG, PNG, or WebP · 2 MB max</span>
                                 </div>
-                                <p class="mt-1 text-xs leading-5 text-muted">Choosing a product uses its main photo. Upload or paste an image to use your own instead; switching product keeps it. Phones and Windows crop to 2:1, so 1024×512 works best with text away from the edges.</p>
+                                <p class="mt-1 text-xs leading-5 text-muted">Choosing a product uses its main photo. Upload or paste an image to use your own instead; switching product keeps it. Wide images fill the notification best: 1024×512 (2:1), text away from the edges.</p>
 
                                 <input
                                     x-ref="imageInput"
@@ -654,7 +659,7 @@
                             </div>
 
                             <div>
-                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Push alert · expanded (2:1 crop)</p>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Push alert · expanded</p>
                                 <div class="mt-2 rounded-xl border border-line bg-[var(--color-paper)] p-2.5">
                                     <div class="overflow-hidden rounded-lg border border-line bg-white p-3.5 shadow-[0_2px_8px_rgb(24_44_72/6%)]">
                                         <div class="flex items-start gap-3">
@@ -669,9 +674,9 @@
                                             </div>
                                         </div>
                                         <template x-if="imagePreview && ! imageFailed">
-                                            <img :src="imagePreview" alt="Campaign image preview" class="mt-3 aspect-[2/1] w-full rounded-md object-cover" x-on:error="imageFailed = true" referrerpolicy="no-referrer">
+                                            <img :src="imagePreview" alt="Campaign image preview" class="mt-3 aspect-[2/1] w-full rounded-md bg-white object-contain" x-on:error="imageFailed = true" referrerpolicy="no-referrer">
                                         </template>
-                                        <p x-cloak x-show="usingProductPhoto() && ! imageFailed" class="mt-2 rounded-md bg-[var(--color-warning-wash)] px-2.5 py-2 text-[11px] leading-4 text-[var(--color-warning-text)]">Square product photos lose their top and bottom when expanded.</p>
+                                        <p x-cloak x-show="usingProductPhoto() && ! imageFailed" class="mt-2 rounded-md bg-[var(--color-sunken)] px-2.5 py-2 text-[11px] leading-4 text-muted">The app shows the whole photo on white. Windows browsers crop it to 2:1.</p>
                                         <p x-cloak x-show="imagePreview && imageFailed" class="mt-2 rounded-md bg-[var(--color-warning-wash)] px-2.5 py-2 text-[11px] leading-4 text-[var(--color-warning-text)]">Image unavailable. The notification still shows its title and message.</p>
                                     </div>
                                 </div>

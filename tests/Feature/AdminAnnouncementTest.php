@@ -34,6 +34,7 @@ class AdminAnnouncementTest extends TestCase
         $this->assertDatabaseHas('announcements', ['image_url' => 'https://example.com/campaign.jpg']);
         $this->post(route('admin.announcements.store'), array_replace($payload, ['image_url' => 'http://example.com/campaign.jpg']))->assertSessionHasErrors('image_url');
         $this->assertDatabaseCount('announcements', 1);
+        $this->post(route('admin.announcements.store'), array_replace($payload, ['image_url' => rtrim(config('app.url'), '/').'/storage/products/tote.jpg']))->assertSessionHasNoErrors();
     }
 
     public function test_an_uploaded_campaign_image_is_stored_and_saved_as_the_announcement_image(): void

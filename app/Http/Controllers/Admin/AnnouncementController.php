@@ -49,7 +49,12 @@ class AnnouncementController extends Controller
             'title' => ['required', 'string', 'max:60'],
             'body' => ['required', 'string', 'max:200'],
             'campaign_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'image_url' => ['nullable', 'url:https', 'max:1000'],
+            'image_url' => ['nullable', 'url:https,http', 'max:1000', function (string $attribute, string $value, Closure $fail): void {
+                // Plain HTTP only for JMMart's own files (local product photos and uploads).
+                if (parse_url($value, PHP_URL_SCHEME) !== 'https' && parse_url($value, PHP_URL_HOST) !== parse_url(config('app.url'), PHP_URL_HOST)) {
+                    $fail('The image link must use HTTPS.');
+                }
+            }],
             'url' => ['nullable', 'url:https,http', 'max:500', function (string $attribute, string $value, Closure $fail): void {
                 // A push from JMMart that opens another site would read as phishing.
                 if (parse_url($value, PHP_URL_HOST) !== parse_url(config('app.url'), PHP_URL_HOST)) {

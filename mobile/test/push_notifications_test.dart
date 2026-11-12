@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -326,6 +327,38 @@ void main() {
     );
 
     expect(details!.actions!.single.title, 'View product');
+  });
+
+  testWidgets('square photos are padded to 2:1 and wide banners kept', (
+    tester,
+  ) async {
+    Future<Uint8List> png(int width, int height) async {
+      final recorder = ui.PictureRecorder();
+      ui.Canvas(recorder).drawRect(
+        ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+        ui.Paint()..color = const ui.Color(0xFF205BF4),
+      );
+      final image = await recorder.endRecording().toImage(width, height);
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      return bytes!.buffer.asUint8List();
+    }
+
+    Future<List<int>> size(Uint8List bytes) async {
+      final frame = await (await ui.instantiateImageCodec(bytes))
+          .getNextFrame();
+      return [frame.image.width, frame.image.height];
+    }
+
+    await tester.runAsync(() async {
+      final square = await png(40, 40);
+      expect(await size(await PushNotifications.padToWide(square)), [80, 40]);
+
+      final banner = await png(120, 40);
+      expect(await PushNotifications.padToWide(banner), same(banner));
+
+      final junk = Uint8List.fromList([1, 2, 3]);
+      expect(await PushNotifications.padToWide(junk), same(junk));
+    });
   });
 
   test('all push types retain the same JMMart brand icon', () {

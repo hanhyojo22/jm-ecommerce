@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
@@ -331,7 +333,7 @@ class PushNotifications {
     if (photo != null &&
         (data['type'] == 'cart' || data['type'] == 'announcement')) {
       style = BigPictureStyleInformation(
-        ByteArrayAndroidBitmap(photo),
+        ByteArrayAndroidBitmap(await padToWide(photo)),
         contentTitle: _title(message),
         summaryText: _body(message),
         hideExpandedLargeIcon: true,
@@ -392,6 +394,66 @@ class PushNotifications {
 
   /// Bounded HTTPS downloads cannot delay a notification indefinitely.
   @visibleForTesting
+  /// Android crops the expanded picture to about 2:1, cutting the top and
+  /// bottom off square product photos. Narrower images are centred on a white
+  /// 2:1 canvas instead; wide banners and undecodable bytes pass through.
+  @visibleForTesting
+  static Future<Uint8List> padToWide(Uint8List bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final image = (await codec.getNextFrame()).image;
+      try {
+        final width = image.width.toDouble();
+        final height = image.height.toDouble();
+        if (width >= height * 1.8) {
+          return bytes;
+        }
+        // Keeps the PNG small; notifications never show the picture larger.
+        final scale = math.min(1.0, 512 / height);
+        final canvasHeight = (height * scale).round();
+        final canvasWidth = canvasHeight * 2;
+        final drawWidth = width * scale;
+        final drawHeight = height * scale;
+        final recorder = ui.PictureRecorder();
+        final canvas = ui.Canvas(recorder)
+          ..drawRect(
+            ui.Rect.fromLTWH(
+              0,
+              0,
+              canvasWidth.toDouble(),
+              canvasHeight.toDouble(),
+            ),
+            ui.Paint()..color = const ui.Color(0xFFFFFFFF),
+          );
+        canvas.drawImageRect(
+          image,
+          ui.Rect.fromLTWH(0, 0, width, height),
+          ui.Rect.fromLTWH(
+            (canvasWidth - drawWidth) / 2,
+            (canvasHeight - drawHeight) / 2,
+            drawWidth,
+            drawHeight,
+          ),
+          ui.Paint()..filterQuality = ui.FilterQuality.medium,
+        );
+        final padded = await recorder.endRecording().toImage(
+          canvasWidth,
+          canvasHeight,
+        );
+        try {
+          final png = await padded.toByteData(format: ui.ImageByteFormat.png);
+          return png == null ? bytes : png.buffer.asUint8List();
+        } finally {
+          padded.dispose();
+        }
+      } finally {
+        image.dispose();
+      }
+    } catch (_) {
+      return bytes;
+    }
+  }
+
   static Future<Uint8List?> downloadImage(
     String? url, {
     http.Client? client,
