@@ -1,0 +1,19 @@
+name: conversation_shortcuts
+description: "Publishes Android conversation shortcuts so chat notifications use the conversation layout."
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: ^3.13.7
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.jmmart.conversation_shortcuts
+        pluginClass: ConversationShortcutsPlugin

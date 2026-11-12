@@ -1,0 +1,23 @@
+group 'com.jmmart.conversation_shortcuts'
+version '1.0'
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.jmmart.conversation_shortcuts'
+    compileSdk 35
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdkVersion 21
+    }
+}
+
+dependencies {
+    // pushDynamicShortcut and long-lived shortcuts need androidx.core 1.5+.
+    implementation 'androidx.core:core:1.13.1'
+}

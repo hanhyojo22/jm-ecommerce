@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:conversation_shortcuts/conversation_shortcuts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -305,6 +306,9 @@ class PushNotifications {
   static Future<AndroidNotificationDetails> detailsFor(
     RemoteMessage message, {
     Future<Uint8List?> Function(String? url)? imageLoader,
+    Future<List<Message>> Function(String tag)? earlierMessages,
+    Future<void> Function(String id, String name, Uint8List? avatar)?
+    publishShortcut,
   }) async {
     final data = message.data;
     final isChat = data['type'] == 'chat';
@@ -328,9 +332,41 @@ class PushNotifications {
         ? const DrawableResourceAndroidBitmap('jmmart_avatar')
         : ByteArrayAndroidBitmap(photo);
     StyleInformation style = BigTextStyleInformation(_body(message));
-    // MessagingStyle relocates the avatar on some Android versions. The standard
-    // template keeps the brand header separate from the right-side thumbnail.
-    if (photo != null &&
+    final tag = tagFor(data);
+    if (isChat) {
+      // Android's conversation layout: the store photo becomes a round avatar
+      // on the left with the JMMart badge (or the store's initial when there
+      // is no photo), and new messages stack under the earlier unread ones.
+      final avatar = photo == null ? null : await cropToCircle(photo);
+      final store = Person(
+        key: tag,
+        name: _title(message),
+        icon: avatar == null ? null : ByteArrayAndroidIcon(avatar),
+        important: true,
+      );
+      final earlier = tag == null
+          ? const <Message>[]
+          : await (earlierMessages ?? _activeMessages)(tag);
+      if (tag != null) {
+        try {
+          await (publishShortcut ?? _publishShortcut)(
+            tag,
+            _title(message),
+            avatar,
+          );
+        } catch (error) {
+          // Without the shortcut Android falls back to the older messaging layout.
+          debugPrint('[Push] conversation shortcut failed: $error');
+        }
+      }
+      style = MessagingStyleInformation(
+        const Person(name: 'You'),
+        messages: [
+          ...earlier.skip(math.max(0, earlier.length - _maxStackedMessages)),
+          Message(_body(message), message.sentTime ?? DateTime.now(), store),
+        ],
+      );
+    } else if (photo != null &&
         (data['type'] == 'cart' || data['type'] == 'announcement')) {
       style = BigPictureStyleInformation(
         ByteArrayAndroidBitmap(await padToWide(photo)),
@@ -366,8 +402,10 @@ class PushNotifications {
             data['small_icon']?.toString(),
       ),
       color: _accent,
-      largeIcon: largeIcon,
-      tag: tagFor(data),
+      // The conversation avatar replaces the right-side thumbnail for chats.
+      largeIcon: isChat ? null : largeIcon,
+      tag: tag,
+      shortcutId: isChat ? tag : null,
       subText: data['subtitle']?.toString(),
       category: isChat
           ? AndroidNotificationCategory.message
@@ -390,6 +428,30 @@ class PushNotifications {
               ),
             ],
     );
+  }
+
+  /// Earlier messages beyond this many drop off the stacked chat notification.
+  static const _maxStackedMessages = 4;
+
+  static Future<void> _publishShortcut(
+    String id,
+    String name,
+    Uint8List? avatar,
+  ) => ConversationShortcuts.publish(id: id, name: name, avatar: avatar);
+
+  /// Messages already showing in this conversation's notification, so a new
+  /// one stacks under them instead of replacing them.
+  static Future<List<Message>> _activeMessages(String tag) async {
+    try {
+      final style = await _local
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.getActiveNotificationMessagingStyle(_idFor(tag), tag: tag);
+      return style?.messages ?? const [];
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// Bounded HTTPS downloads cannot delay a notification indefinitely.
@@ -445,6 +507,48 @@ class PushNotifications {
           return png == null ? bytes : png.buffer.asUint8List();
         } finally {
           padded.dispose();
+        }
+      } finally {
+        image.dispose();
+      }
+    } catch (_) {
+      return bytes;
+    }
+  }
+
+  /// Some Android skins (ASUS ZenUI among them) show conversation avatars as
+  /// rounded squares, so the photo is centre-cropped into a circle here.
+  /// Undecodable bytes pass through.
+  @visibleForTesting
+  static Future<Uint8List> cropToCircle(Uint8List bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final image = (await codec.getNextFrame()).image;
+      try {
+        final side = math.min(image.width, image.height).toDouble();
+        // Notifications never draw the avatar larger than this.
+        final size = math.min(side, 256.0).round();
+        final target = ui.Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble());
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(recorder)
+          ..clipPath(ui.Path()..addOval(target))
+          ..drawImageRect(
+            image,
+            ui.Rect.fromLTWH(
+              (image.width - side) / 2,
+              (image.height - side) / 2,
+              side,
+              side,
+            ),
+            target,
+            ui.Paint()..filterQuality = ui.FilterQuality.medium,
+          );
+        final round = await recorder.endRecording().toImage(size, size);
+        try {
+          final png = await round.toByteData(format: ui.ImageByteFormat.png);
+          return png == null ? bytes : png.buffer.asUint8List();
+        } finally {
+          round.dispose();
         }
       } finally {
         image.dispose();
