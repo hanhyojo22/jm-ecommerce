@@ -8,6 +8,28 @@ import 'package:http/testing.dart';
 import 'package:jmmart/src/core/push_notifications.dart';
 
 void main() {
+  test(
+    'notification images pass through without Flutter image conversion',
+    () async {
+      final bytes = Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]);
+      final client = MockClient(
+        (_) async => http.Response.bytes(
+          bytes,
+          200,
+          headers: {'content-type': 'image/png'},
+        ),
+      );
+      addTearDown(client.close);
+      expect(
+        await PushNotifications.downloadImage(
+          'https://example.com/avatar.png',
+          client: client,
+        ),
+        bytes,
+      );
+    },
+  );
+
   testWidgets('chat cards show the store avatar and reply and open actions', (
     tester,
   ) async {

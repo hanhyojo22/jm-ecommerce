@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
@@ -14,7 +12,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../router.dart';
 import '../config.dart';
-import 'formatters.dart';
 import 'api_client.dart';
 
 /// Legacy notification payloads are already displayed by Android.
@@ -290,16 +287,17 @@ class PushNotifications {
     } catch (_) {
       /* Keep the text card when imagery fails. */
     }
-    final fallback = await _initialsImage(
-      isChat ? data['sender_name']?.toString() ?? _title(message) : 'JM',
-    );
-    final largeIcon = ByteArrayAndroidBitmap(photo ?? fallback);
+    final AndroidBitmap<Object> largeIcon = photo == null
+        ? const DrawableResourceAndroidBitmap('jmmart_avatar')
+        : ByteArrayAndroidBitmap(photo);
     StyleInformation style = BigTextStyleInformation(_body(message));
     if (isChat) {
       final sender = Person(
         name: data['sender_name']?.toString() ?? _title(message),
         key: data['conversation_id']?.toString(),
-        icon: ByteArrayAndroidIcon(photo ?? fallback),
+        icon: photo == null
+            ? const DrawableResourceAndroidIcon('jmmart_avatar')
+            : ByteArrayAndroidIcon(photo),
       );
       style = MessagingStyleInformation(
         const Person(name: 'You'),
@@ -398,73 +396,13 @@ class PushNotifications {
           }
           bytes.add(chunk);
         }
-        // Decode and bound dimensions before passing the bitmap to Android.
-        final buffer = await ui.ImmutableBuffer.fromUint8List(
-          bytes.takeBytes(),
-        );
-        final descriptor = await ui.ImageDescriptor.encoded(buffer);
-        if (descriptor.width > 8192 ||
-            descriptor.height > 8192 ||
-            descriptor.width * descriptor.height > 16000000) {
-          descriptor.dispose();
-          buffer.dispose();
-          return null;
-        }
-        final scale = math.min(
-          1.0,
-          768 / math.max(descriptor.width, descriptor.height),
-        );
-        final codec = await descriptor.instantiateCodec(
-          targetWidth: math.max(1, (descriptor.width * scale).round()),
-          targetHeight: math.max(1, (descriptor.height * scale).round()),
-        );
-        descriptor.dispose();
-        buffer.dispose();
-        try {
-          final frame = await codec.getNextFrame();
-          try {
-            final png = await frame.image.toByteData(
-              format: ui.ImageByteFormat.png,
-            );
-            return png?.buffer.asUint8List();
-          } finally {
-            frame.image.dispose();
-          }
-        } finally {
-          codec.dispose();
-        }
+        return bytes.takeBytes();
       })().timeout(const Duration(seconds: 4));
     } catch (_) {
       return null;
     } finally {
       if (client == null) connection.close();
     }
-  }
-
-  static Future<Uint8List> _initialsImage(String name) async {
-    final recorder = ui.PictureRecorder();
-    final canvas = ui.Canvas(recorder);
-    canvas.drawCircle(const ui.Offset(64, 64), 64, ui.Paint()..color = _accent);
-    final paragraph =
-        (ui.ParagraphBuilder(
-                ui.ParagraphStyle(
-                  textAlign: ui.TextAlign.center,
-                  fontSize: 44,
-                  fontWeight: ui.FontWeight.w700,
-                ),
-              )
-              ..pushStyle(ui.TextStyle(color: const Color(0xffffffff)))
-              ..addText(initials(name)))
-            .build()
-          ..layout(const ui.ParagraphConstraints(width: 128));
-    canvas.drawParagraph(paragraph, ui.Offset(0, (128 - paragraph.height) / 2));
-    paragraph.dispose();
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(128, 128);
-    picture.dispose();
-    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    image.dispose();
-    return bytes!.buffer.asUint8List();
   }
 
   static void _open(String? route) {
