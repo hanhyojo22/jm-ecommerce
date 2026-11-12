@@ -102,15 +102,15 @@ class PushNotifierTest extends TestCase
         $this->assertArrayNotHasKey('rich_notification', $message['data']);
     }
 
-    public function test_each_push_type_carries_its_own_status_bar_icon(): void
+    public function test_each_android_push_type_carries_the_same_brand_icon(): void
     {
         $icon = fn (array $data): ?string => json_decode(json_encode((new PushNotifier)->buildMessage('Hi', 'Hello', $data)), true)['android']['notification']['icon'] ?? null;
 
-        $this->assertSame('ic_stat_message', $icon(['type' => 'chat', 'conversation_id' => 'c-1']));
-        $this->assertSame('ic_stat_shipped', $icon(['type' => 'order', 'order_id' => 'o-1', 'status' => 'shipped']));
-        $this->assertSame('ic_stat_cancelled', $icon(['type' => 'order', 'order_id' => 'o-1', 'status' => 'cancelled']));
-        $this->assertSame('ic_stat_announcement', $icon(['type' => 'announcement']));
-        $this->assertNull($icon(['type' => 'something_new']));
+        $this->assertSame('ic_stat_notification', $icon(['type' => 'chat', 'conversation_id' => 'c-1']));
+        $this->assertSame('ic_stat_notification', $icon(['type' => 'order', 'order_id' => 'o-1', 'status' => 'shipped']));
+        $this->assertSame('ic_stat_notification', $icon(['type' => 'order', 'order_id' => 'o-1', 'status' => 'cancelled']));
+        $this->assertSame('ic_stat_notification', $icon(['type' => 'announcement']));
+        $this->assertSame('ic_stat_notification', $icon(['type' => 'something_new']));
     }
 
     public function test_every_icon_key_ships_a_web_icon_badge_and_android_drawable(): void

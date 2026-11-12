@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\DeviceToken;
 use App\Models\User;
-use App\Support\NotificationIcon;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\CloudMessage;
@@ -109,7 +108,7 @@ class PushNotifier
             },
             'tag' => $isChat && isset($data['conversation_id']) ? 'conversation-'.$data['conversation_id'] : ($type === 'order' && isset($data['order_id']) ? 'order-'.$data['order_id'] : null),
             // An app build without this drawable falls back to the manifest's default icon.
-            'icon' => ($icon = NotificationIcon::key($type, $data['status'] ?? null)) !== null ? 'ic_stat_'.$icon : null,
+            'icon' => 'ic_stat_notification',
         ]);
 
         $icon = $androidNotification['icon'] ?? 'ic_stat_notification';

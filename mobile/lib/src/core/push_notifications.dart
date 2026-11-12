@@ -157,13 +157,9 @@ class PushNotifications {
     };
   }
 
-  /// The status-bar icon for a foreground push: the per-type `ic_stat_*`
-  /// drawable the backend chose (PushNotifier), or the default bag icon.
+  /// Keep the app's brand in the header; contextual photos use the large icon.
   @visibleForTesting
-  static String iconFor(String? smallIcon) =>
-      smallIcon == null || !smallIcon.startsWith('ic_stat_')
-      ? _icon
-      : '@drawable/$smallIcon';
+  static String iconFor(String? smallIcon) => _icon;
 
   static Future<void> _initializeLocal() => _localInitialization ??= () async {
     final android = _local
@@ -291,22 +287,9 @@ class PushNotifications {
         ? const DrawableResourceAndroidBitmap('jmmart_avatar')
         : ByteArrayAndroidBitmap(photo);
     StyleInformation style = BigTextStyleInformation(_body(message));
-    if (isChat) {
-      final sender = Person(
-        name: data['sender_name']?.toString() ?? _title(message),
-        key: data['conversation_id']?.toString(),
-        icon: photo == null
-            ? const DrawableResourceAndroidIcon('jmmart_avatar')
-            : ByteArrayAndroidIcon(photo),
-      );
-      style = MessagingStyleInformation(
-        const Person(name: 'You'),
-        groupConversation: false,
-        messages: [
-          Message(_body(message), message.sentTime ?? DateTime.now(), sender),
-        ],
-      );
-    } else if (photo != null &&
+    // MessagingStyle relocates the avatar on some Android versions. The standard
+    // template keeps the brand header separate from the right-side thumbnail.
+    if (photo != null &&
         (data['type'] == 'cart' || data['type'] == 'announcement')) {
       style = BigPictureStyleInformation(
         ByteArrayAndroidBitmap(photo),

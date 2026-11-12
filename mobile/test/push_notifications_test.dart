@@ -30,33 +30,34 @@ void main() {
     },
   );
 
-  testWidgets('chat cards show the store avatar and reply and open actions', (
-    tester,
-  ) async {
-    final details = await tester.runAsync(
-      () => PushNotifications.detailsFor(
-        const RemoteMessage(
-          data: {
-            'type': 'chat',
-            'title': 'JM',
-            'body': 'The navy option is available.',
-            'conversation_id': 'c1',
-            'avatar_url': 'https://example.com/store.png',
-          },
+  testWidgets(
+    'chat cards keep a brand header and separate store thumbnail and actions',
+    (tester) async {
+      final details = await tester.runAsync(
+        () => PushNotifications.detailsFor(
+          const RemoteMessage(
+            data: {
+              'type': 'chat',
+              'title': 'JM',
+              'body': 'The navy option is available.',
+              'conversation_id': 'c1',
+              'avatar_url': 'https://example.com/store.png',
+            },
+          ),
+          imageLoader: (_) async => Uint8List.fromList([1, 2, 3]),
         ),
-        imageLoader: (_) async => Uint8List.fromList([1, 2, 3]),
-      ),
-    );
-    expect(details!.styleInformation, isA<MessagingStyleInformation>());
-    final style = details.styleInformation as MessagingStyleInformation;
-    expect(style.messages!.single.person!.name, 'JM');
-    expect(style.messages!.single.person!.icon, isA<ByteArrayAndroidIcon>());
-    expect(details.actions!.map((action) => action.title), [
-      'Reply',
-      'Open chat',
-    ]);
-    expect(details.tag, 'conversation-c1');
-  });
+      );
+      expect(details!.styleInformation, isA<BigTextStyleInformation>());
+      expect(details.icon, '@drawable/ic_stat_notification');
+      expect(details.largeIcon, isA<ByteArrayAndroidBitmap>());
+      expect((details.largeIcon as ByteArrayAndroidBitmap).data, [1, 2, 3]);
+      expect(details.actions!.map((action) => action.title), [
+        'Reply',
+        'Open chat',
+      ]);
+      expect(details.tag, 'conversation-c1');
+    },
+  );
 
   testWidgets('order photos stay compact and updates share an order tag', (
     tester,
@@ -214,10 +215,10 @@ void main() {
     expect(PushNotifications.routeFor({'type': 'chat'}), isNull);
   });
 
-  test('foreground pushes use the icon the backend chose', () {
+  test('all push types retain the same JMMart brand icon', () {
     expect(
       PushNotifications.iconFor('ic_stat_shipped'),
-      '@drawable/ic_stat_shipped',
+      '@drawable/ic_stat_notification',
     );
     expect(PushNotifications.iconFor(null), '@drawable/ic_stat_notification');
     expect(
