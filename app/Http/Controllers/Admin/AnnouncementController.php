@@ -62,7 +62,7 @@ class AnnouncementController extends Controller
                 ->map(fn (Store $store): array => self::storeTarget($store))
             : $matching(CatalogQuery::publishedProducts())
                 ->when(filled($validated['store'] ?? null), fn (Builder $query) => $query->whereHas('store', fn (Builder $store) => $store->where('slug', $validated['store'])))
-                ->with('thumbnail')
+                ->with('thumbnail', 'store:id,name,slug')
                 ->orderBy('name')
                 ->limit(8)
                 ->get(['id', 'store_id', 'name', 'slug', 'price'])
@@ -78,9 +78,9 @@ class AnnouncementController extends Controller
      */
     private static function linkTargetFor(string $url): ?array
     {
-        $segments = array_values(array_filter(explode('/', (string) parse_url($url, PHP_URL_PATH))));
+        $segments = self::linkSegments($url);
 
-        if (count($segments) === 4 && $segments[0] === 'stores' && $segments[2] === 'products') {
+        if (self::isProductLink($segments)) {
             $product = CatalogQuery::publishedProducts()->with('thumbnail')
                 ->where('slug', $segments[3])
                 ->whereHas('store', fn (Builder $query) => $query->where('slug', $segments[1]))
@@ -89,13 +89,37 @@ class AnnouncementController extends Controller
             return $product ? self::productTarget($product) : null;
         }
 
-        if (count($segments) === 2 && $segments[0] === 'stores') {
+        if (self::isStoreLink($segments)) {
             $store = CatalogQuery::publicStores()->where('slug', $segments[1])->first();
 
             return $store ? self::storeTarget($store) : null;
         }
 
         return null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function linkSegments(string $url): array
+    {
+        return array_values(array_filter(explode('/', (string) parse_url($url, PHP_URL_PATH))));
+    }
+
+    /**
+     * @param  list<string>  $segments
+     */
+    private static function isProductLink(array $segments): bool
+    {
+        return count($segments) === 4 && $segments[0] === 'stores' && $segments[2] === 'products';
+    }
+
+    /**
+     * @param  list<string>  $segments
+     */
+    private static function isStoreLink(array $segments): bool
+    {
+        return count($segments) === 2 && $segments[0] === 'stores';
     }
 
     /**
@@ -146,6 +170,15 @@ class AnnouncementController extends Controller
                 // A push from JMMart that opens another site would read as phishing.
                 if (parse_url($value, PHP_URL_HOST) !== parse_url(config('app.url'), PHP_URL_HOST)) {
                     $fail('The link must be a JMMart page.');
+
+                    return;
+                }
+
+                // The pick may have been hidden or suspended since the admin chose it.
+                $segments = self::linkSegments($value);
+
+                if ((self::isProductLink($segments) || self::isStoreLink($segments)) && self::linkTargetFor($value) === null) {
+                    $fail(self::isProductLink($segments) ? 'That product is no longer available. Choose another.' : 'That store is no longer available. Choose another.');
                 }
             }],
         ]);

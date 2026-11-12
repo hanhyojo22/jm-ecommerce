@@ -51,6 +51,8 @@
         $oldUrl = (string) old('url', '');
         $initialOpens = $initialLinkTarget['kind'] ?? ($oldUrl === '' || $oldUrl === route('home') ? 'home' : 'other');
         $initialAutoImage = ($initialLinkTarget['kind'] ?? null) === 'product' && filled($initialLinkTarget['image']) && $initialLinkTarget['image'] === old('image_url') ? $initialLinkTarget['image'] : '';
+        $initialProductTitle = ($initialLinkTarget['kind'] ?? null) === 'product' ? mb_substr($initialLinkTarget['name'].' · '.$initialLinkTarget['price'], 0, 60) : '';
+        $initialAutoTitle = $initialProductTitle !== '' && $initialProductTitle === old('title') ? $initialProductTitle : '';
     @endphp
 
     <script>
@@ -173,6 +175,7 @@
                         storeFilter: null,
                         linkError: '',
                         autoImage: @js($initialAutoImage),
+                        autoTitle: @js($initialAutoTitle),
                         linkEndpoint: @js(route('admin.announcements.link-targets')),
                         previewDevice: 'phone',
                         reviewChecked: false,
@@ -227,14 +230,23 @@
                                 this.useProductPhoto();
                             }
 
-                            if (option.kind === 'product' && this.title.trim() === '') {
+                            // Like the image, an empty or automatic title follows the pick; a typed one stays.
+                            if (option.kind === 'product' && (this.title.trim() === '' || this.title === this.autoTitle)) {
                                 this.title = Array.from(option.name + ' · ' + option.price).slice(0, 60).join('');
+                                this.autoTitle = this.title;
+                                this.activeTemplate = null;
                             }
                         },
                         clearTarget() {
                             if (this.usingProductPhoto()) {
                                 this.removeImage();
                             }
+
+                            if (this.autoTitle !== '' && this.title === this.autoTitle) {
+                                this.title = '';
+                            }
+
+                            this.autoTitle = '';
 
                             this.target = null;
                         },

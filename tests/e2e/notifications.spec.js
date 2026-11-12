@@ -156,9 +156,12 @@ test('picking a product uses its photo until the admin sets a custom image', asy
         await page.getByRole('button', { name: 'Change product' }).click();
         await pick('other seller', /Other Seller QA Product/);
         await expect(imageUrl).toHaveValue('https://example.com/sale-banner.jpg');
+        await expect(page.getByLabel('Title')).toHaveValue(/^Other Seller QA Product · /);
 
+        await page.getByLabel('Title').fill('My own title');
         await page.getByRole('button', { name: 'Change product' }).click();
         await pick('speaker', /QA Variant Speaker/);
+        await expect(page.getByLabel('Title')).toHaveValue('My own title');
         await page.getByRole('button', { name: 'Use product photo' }).click();
         await expect(imageUrl).toHaveValue(/qa\/variant-/);
 

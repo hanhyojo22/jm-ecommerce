@@ -154,6 +154,21 @@ class AdminAnnouncementTest extends TestCase
         $this->assertSame(route('catalog.store', $store->slug), Announcement::query()->sole()->url);
     }
 
+    public function test_a_store_or_product_link_must_still_be_public(): void
+    {
+        Queue::fake();
+        $administrator = User::factory()->administrator()->create();
+        $this->storeOwner('suspended');
+        $store = Store::query()->sole();
+        Product::create(['tenant_id' => $store->tenant_id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE', 'price' => 199, 'stock_quantity' => 3, 'status' => 'active']);
+        $send = fn (string $url) => $this->actingAs($administrator)->post(route('admin.announcements.store'), ['audience' => 'customers', 'title' => 'Hi', 'body' => 'Hello', 'url' => $url]);
+
+        $send(route('catalog.store', $store->slug))->assertSessionHasErrors(['url' => 'That store is no longer available. Choose another.']);
+        $send(route('catalog.show', ['store' => $store->slug, 'product' => 'canvas-tote']))->assertSessionHasErrors(['url' => 'That product is no longer available. Choose another.']);
+
+        Queue::assertNothingPushed();
+    }
+
     public function test_non_administrators_cannot_send_or_cancel_announcements(): void
     {
         Queue::fake();
