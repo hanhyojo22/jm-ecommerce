@@ -55,7 +55,15 @@
         ];
         $storeUrls = $storeLinks->mapWithKeys(fn ($store): array => [$store->slug => route('catalog.store', $store->slug)]);
         $storeNames = $storeLinks->pluck('name', 'slug');
-        $initialStoreSlug = (string) ($storeLinks->first(fn ($store): bool => route('catalog.store', $store->slug) === old('url', ''))?->slug ?? '');
+        $storeProducts = $productLinks->groupBy(fn ($product): string => $product->store->slug)
+            ->map(fn ($products, string $storeSlug): array => $products->map(fn ($product): array => [
+                'slug' => $product->slug,
+                'name' => $product->name,
+                'url' => route('catalog.show', ['store' => $storeSlug, 'product' => $product->slug]),
+            ])->values()->all());
+        $initialProduct = $productLinks->first(fn ($product): bool => route('catalog.show', ['store' => $product->store->slug, 'product' => $product->slug]) === old('url', ''));
+        $initialProductSlug = (string) ($initialProduct?->slug ?? '');
+        $initialStoreSlug = (string) ($initialProduct?->store->slug ?? $storeLinks->first(fn ($store): bool => route('catalog.store', $store->slug) === old('url', ''))?->slug ?? '');
         $templates = [
             [
                 'key' => 'announcement',
@@ -121,9 +129,20 @@
                 storeSlug: @js($initialStoreSlug),
                 storeUrls: @js($storeUrls),
                 storeNames: @js($storeNames),
+                productSlug: @js($initialProductSlug),
+                storeProducts: @js($storeProducts),
                 selectStore(slug) {
                     this.storeSlug = slug;
+                    this.productSlug = '';
                     this.url = slug === '' ? '' : (this.storeUrls[slug] ?? '');
+                    this.activeTemplate = null;
+                },
+                selectedProduct() {
+                    return (this.storeProducts[this.storeSlug] ?? []).find((product) => product.slug === this.productSlug) ?? null;
+                },
+                selectProduct(slug) {
+                    this.productSlug = slug;
+                    this.url = this.selectedProduct()?.url ?? (this.storeUrls[this.storeSlug] ?? '');
                     this.activeTemplate = null;
                 },
                 stageImage(file) {
@@ -285,7 +304,7 @@
                                     @foreach ($templates as $template)
                                         <button
                                             type="button"
-                                            @click="title = @js($template['title']); body = @js($template['body']); url = @js($template['url']); activeTemplate = @js($template['key']); storeSlug = ''"
+                                            @click="title = @js($template['title']); body = @js($template['body']); url = @js($template['url']); activeTemplate = @js($template['key']); storeSlug = ''; productSlug = ''"
                                             :aria-pressed="activeTemplate === @js($template['key'])"
                                             :class="activeTemplate === @js($template['key'])
                                                 ? 'border-brand bg-[var(--color-info-wash)]/70 ring-1 ring-inset ring-brand'
@@ -397,7 +416,7 @@
                                     name="url"
                                     :value="old('url')"
                                     x-model="url"
-                                    @input="activeTemplate = null; storeSlug = ''"
+                                    @input="activeTemplate = null; storeSlug = ''; productSlug = ''"
                                     placeholder="{{ route('home') }}"
                                     aria-describedby="url-hint"
                                 />
@@ -407,7 +426,7 @@
                                     @foreach ($quickLinks as $preset)
                                         <button
                                             type="button"
-                                            @click="url = @js($preset['url']); activeTemplate = null; storeSlug = ''"
+                                            @click="url = @js($preset['url']); activeTemplate = null; storeSlug = ''; productSlug = ''"
                                             :class="url === @js($preset['url'])
                                                 ? 'border-brand bg-[var(--color-info-wash)] text-brand'
                                                 : 'border-line bg-canvas text-muted hover:border-[var(--color-border-strong)] hover:text-ink'"
@@ -435,6 +454,22 @@
                                             @endforeach
                                         </select>
                                         <p id="store-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the store screen directly. Browsers open the store page.</p>
+
+                                        <div x-show="(storeProducts[storeSlug] ?? []).length > 0" x-cloak class="mt-3">
+                                            <label for="product_deep_link" class="text-xs font-semibold text-ink">Open a product directly</label>
+                                            <select
+                                                id="product_deep_link"
+                                                class="field-control mt-2"
+                                                @change="selectProduct($event.target.value)"
+                                                aria-describedby="product-deep-link-hint"
+                                            >
+                                                <option value="" :selected="productSlug === ''">Whole store</option>
+                                                <template x-for="product in storeProducts[storeSlug] ?? []" :key="product.slug">
+                                                    <option :value="product.slug" :selected="product.slug === productSlug" x-text="product.name"></option>
+                                                </template>
+                                            </select>
+                                            <p id="product-deep-link-hint" class="mt-1.5 text-xs leading-5 text-muted">Mobile app users open the product screen directly. Browsers open the product page.</p>
+                                        </div>
                                     </div>
                                 @endif
 
@@ -607,6 +642,10 @@
                                 <div class="flex items-center justify-between gap-3 py-2">
                                     <dt class="text-muted">Store deep link</dt>
                                     <dd class="max-w-[12rem] truncate font-medium" :class="storeSlug ? 'text-brand' : 'text-muted'" x-text="storeSlug ? (storeNames[storeSlug] || 'Selected store') : 'None'">None</dd>
+                                </div>
+                                <div class="flex items-center justify-between gap-3 py-2">
+                                    <dt class="text-muted">Product deep link</dt>
+                                    <dd class="max-w-[12rem] truncate font-medium" :class="productSlug ? 'text-brand' : 'text-muted'" x-text="selectedProduct()?.name ?? 'None'">None</dd>
                                 </div>
                                 <div class="flex items-center justify-between gap-3 py-2">
                                     <dt class="text-muted">Campaign image</dt>

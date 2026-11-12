@@ -85,6 +85,15 @@ test('admin deep-links a product ad to a store', async ({ browser }) => {
         const storeRow = summary.locator('div', { hasText: 'Store deep link' });
         await expect(storeRow).toContainText('QA Northwind Store');
 
+        const productRow = summary.locator('div', { hasText: 'Product deep link' });
+        await page.getByLabel('Open a product directly').selectOption({ label: 'QA Canvas Tote' });
+        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/stores/qa-northwind-store/products/qa-canvas-tote', page.url()).href);
+        await expect(productRow).toContainText('QA Canvas Tote');
+
+        await page.getByLabel('Open a product directly').selectOption('');
+        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/stores/qa-northwind-store', page.url()).href);
+        await expect(productRow).toContainText('None');
+
         await page.getByLabel('Open a store directly').selectOption('');
         await expect(page.getByLabel('Link (optional)')).toHaveValue('');
         await expect(storeRow).toContainText('None');

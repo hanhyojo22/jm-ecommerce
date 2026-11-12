@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\SendAdminAnnouncement;
 use App\Livewire\NotificationBell;
 use App\Models\Announcement;
+use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -212,6 +213,23 @@ class AdminAnnouncementTest extends TestCase
         );
         $this->assertSame(1, $announcement->fresh()->sent_count);
         $this->assertTrue($announcement->fresh()->isFinished());
+    }
+
+    public function test_the_composer_offers_published_products_as_deep_links(): void
+    {
+        $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Store', 'slug' => 'northwind-store', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
+        $product = fn (string $name, string $slug, string $status): Product => Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => $name, 'slug' => $slug, 'sku' => strtoupper($slug), 'price' => 199, 'stock_quantity' => 3, 'status' => $status]);
+        $product('Canvas Tote', 'canvas-tote', 'active');
+        $product('Hidden Draft', 'hidden-draft', 'draft');
+
+        $this->actingAs(User::factory()->administrator()->create())
+            ->get(route('admin.announcements.create'))
+            ->assertOk()
+            ->assertSee('Open a product directly')
+            ->assertSee('Canvas Tote')
+            ->assertSee('canvas-tote')
+            ->assertDontSee('Hidden Draft');
     }
 
     public function test_storefront_links_become_native_store_deep_links(): void
