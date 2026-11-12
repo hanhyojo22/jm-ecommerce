@@ -154,6 +154,10 @@ class PushNotifications {
       'return_case' when id('order_id') != null => '/orders/${id('order_id')}',
       'announcement' when id('store_slug') != null =>
         '/store/${Uri.encodeComponent(id('store_slug')!)}',
+      // The server sends the link's path so product, cart and order links open
+      // natively even when the website host differs from the API host.
+      'announcement' when pathDestination(id('app_path')) != null =>
+        pathDestination(id('app_path')),
       'announcement' => announcementDestination(id('url')),
       _ => null,
     };
@@ -201,9 +205,20 @@ class PushNotifications {
       return '/';
     }
 
-    final segments = uri.pathSegments
+    return pathDestination(uri.path) ?? uri.toString();
+  }
+
+  /// The app screen for a JMMart web path, or null when the app has none.
+  @visibleForTesting
+  static String? pathDestination(String? path) {
+    if (path == null || !path.startsWith('/')) return null;
+    final segments = Uri(path: path).pathSegments
         .where((segment) => segment.isNotEmpty)
         .toList();
+
+    if (segments.isEmpty) {
+      return '/';
+    }
 
     if (segments.length == 2 && segments[0] == 'stores') {
       return '/store/${Uri.encodeComponent(segments[1])}';
@@ -220,7 +235,7 @@ class PushNotifications {
       return '/orders/${Uri.encodeComponent(segments[1])}';
     }
 
-    return uri.toString();
+    return null;
   }
 
   @visibleForTesting
@@ -327,8 +342,13 @@ class PushNotifications {
       'chat' => 'Open chat',
       'order' || 'return_case' => 'View order',
       'cart' => 'View cart',
-      'announcement' =>
-        (route?.startsWith('/store/') ?? false) ? 'Open store' : 'Explore',
+      'announcement' => switch (route) {
+        final r? when r.startsWith('/store/') => 'Open store',
+        final r? when r.startsWith('/product/') => 'View product',
+        '/cart' => 'View cart',
+        final r? when r.startsWith('/orders/') => 'View order',
+        _ => 'Explore',
+      },
       _ => null,
     };
     return AndroidNotificationDetails(

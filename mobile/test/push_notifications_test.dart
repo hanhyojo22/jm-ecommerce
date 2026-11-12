@@ -257,6 +257,30 @@ void main() {
       }),
       '/store/northwind',
     );
+    expect(
+      PushNotifications.routeFor({
+        'type': 'announcement',
+        'app_path': '/stores/northwind/products/canvas-tote',
+        'url': 'http://127.0.0.1:4173/stores/northwind/products/canvas-tote',
+      }),
+      '/product/northwind/canvas-tote',
+    );
+    expect(
+      PushNotifications.routeFor({
+        'type': 'announcement',
+        'app_path': '/cart',
+        'url': 'http://127.0.0.1:4173/cart',
+      }),
+      '/cart',
+    );
+    expect(
+      PushNotifications.routeFor({
+        'type': 'announcement',
+        'app_path': '/',
+        'url': 'http://127.0.0.1:4173/',
+      }),
+      '/',
+    );
     expect(PushNotifications.routeFor({'type': 'cart'}), '/cart');
     expect(PushNotifications.routeFor({'type': 'chat'}), isNull);
   });
@@ -280,6 +304,28 @@ void main() {
     );
 
     expect(details!.actions!.single.title, 'Open store');
+  });
+
+  testWidgets('product announcements offer a direct product action', (
+    tester,
+  ) async {
+    final details = await tester.runAsync(
+      () => PushNotifications.detailsFor(
+        const RemoteMessage(
+          data: {
+            'type': 'announcement',
+            'title': 'Flash deal',
+            'body': 'Canvas tote is 30% off.',
+            'app_path': '/stores/northwind/products/canvas-tote',
+            'url':
+                'http://127.0.0.1:4173/stores/northwind/products/canvas-tote',
+          },
+        ),
+        imageLoader: (_) async => null,
+      ),
+    );
+
+    expect(details!.actions!.single.title, 'View product');
   });
 
   test('all push types retain the same JMMart brand icon', () {

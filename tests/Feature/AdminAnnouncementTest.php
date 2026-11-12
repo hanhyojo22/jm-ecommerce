@@ -201,7 +201,7 @@ class AdminAnnouncementTest extends TestCase
         $notifier = Mockery::mock(PushNotifier::class);
         $notifier->shouldReceive('sendToUser')
             ->once()
-            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', ['type' => 'announcement', 'url' => $announcement->url, 'image_url' => 'https://cdn.example.com/campaign.jpg']);
+            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', ['type' => 'announcement', 'url' => $announcement->url, 'image_url' => 'https://cdn.example.com/campaign.jpg', 'app_path' => parse_url($announcement->url, PHP_URL_PATH) ?: '/']);
 
         (new SendAdminAnnouncement($announcement->id, [$customer->id]))->handle($notifier);
 
@@ -235,6 +235,27 @@ class AdminAnnouncementTest extends TestCase
                 'type' => 'announcement',
                 'url' => route('catalog.store', 'northwind-store'),
                 'store_slug' => 'northwind-store',
+                'app_path' => '/stores/northwind-store',
+            ]);
+
+        (new SendAdminAnnouncement($announcement->id, [$customer->id]))->handle($notifier);
+    }
+
+    public function test_a_product_campaign_sends_the_product_path_to_mobile_pushes(): void
+    {
+        Notification::fake();
+        $customer = User::factory()->create();
+        $announcement = $this->announcement('customers', 1);
+        $productUrl = route('catalog.show', ['store' => 'northwind-store', 'product' => 'canvas-tote']);
+        $announcement->update(['url' => $productUrl]);
+
+        $notifier = Mockery::mock(PushNotifier::class);
+        $notifier->shouldReceive('sendToUser')
+            ->once()
+            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', [
+                'type' => 'announcement',
+                'url' => $productUrl,
+                'app_path' => '/stores/northwind-store/products/canvas-tote',
             ]);
 
         (new SendAdminAnnouncement($announcement->id, [$customer->id]))->handle($notifier);
