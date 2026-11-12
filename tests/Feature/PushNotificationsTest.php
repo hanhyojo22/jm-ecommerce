@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Notifications\ChatMessageReceived;
+use App\Notifications\MarketplaceNotice;
 use App\Notifications\NewSellerOrderPlaced;
 use App\Notifications\SellerOrderStatusUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -185,6 +186,18 @@ class PushNotificationsTest extends TestCase
             $this->assertTrue($readRequest->hasValidSignature());
             $this->assertStringContainsString('/push-notifications/'.$notificationId.'/read', $payload['data']['read_url']);
         }
+    }
+
+    public function test_marketplace_notice_images_reach_web_push_and_the_notification_bell(): void
+    {
+        $user = User::factory()->create();
+        $notification = new MarketplaceNotice('announcement', 'Fresh finds', 'Explore the collection.', 'https://jmmart.test/search', 'https://cdn.example.com/campaign.jpg');
+        $notification->id = (string) Str::uuid();
+
+        $payload = $notification->toWebPush($user, $notification)->toArray();
+
+        $this->assertSame('https://cdn.example.com/campaign.jpg', $payload['image']);
+        $this->assertSame('https://cdn.example.com/campaign.jpg', $notification->toArray($user)['image_url']);
     }
 
     /**

@@ -80,7 +80,7 @@ class SendAdminAnnouncement implements ShouldQueue
             ]));
 
             try {
-                $user->notify(new MarketplaceNotice('announcement', $announcement->title, $announcement->body, $announcement->url));
+                $user->notify(new MarketplaceNotice('announcement', $announcement->title, $announcement->body, $announcement->url, $announcement->image_url));
             } catch (Throwable $exception) {
                 report($exception);
             }

@@ -69,6 +69,31 @@ test('admin starts a notification from a ready-made template', async ({ browser 
     }
 });
 
+test('admin uploads a campaign image and sees it across the composer previews', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'admin');
+
+    try {
+        await page.goto('/admin/announcements');
+        await rejectOptionalCookies(page);
+
+        await page.locator('#campaign_image').setInputFiles({
+            name: 'campaign.png',
+            mimeType: 'image/png',
+            buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'),
+        });
+
+        await expect(page.getByAltText('Campaign image preview')).toHaveCount(2);
+        await expect(page.getByText('Included', { exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Replace', exact: true })).toBeVisible();
+
+        await page.getByRole('button', { name: 'Remove', exact: true }).click();
+        await expect(page.getByAltText('Campaign image preview')).toHaveCount(0);
+        await expect(page.getByText('None', { exact: true })).toBeVisible();
+    } finally {
+        await context.close();
+    }
+});
+
 test('admin cannot send a notification that links to another site or an unknown customer', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'admin');
 

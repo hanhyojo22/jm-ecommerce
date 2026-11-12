@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\StorePublicImage;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendAdminAnnouncement;
 use App\Models\Announcement;
@@ -11,6 +12,7 @@ use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -28,13 +30,14 @@ class AnnouncementController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, StorePublicImage $storePublicImage): RedirectResponse
     {
         $validated = $request->validate([
             'audience' => ['required', Rule::in(['customers', 'stores', 'customer'])],
             'email' => ['nullable', 'required_if:audience,customer', 'email', 'max:255'],
             'title' => ['required', 'string', 'max:60'],
             'body' => ['required', 'string', 'max:200'],
+            'campaign_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'image_url' => ['nullable', 'url:https', 'max:1000'],
             'url' => ['nullable', 'url:https,http', 'max:500', function (string $attribute, string $value, Closure $fail): void {
                 // A push from JMMart that opens another site would read as phishing.
@@ -43,6 +46,13 @@ class AnnouncementController extends Controller
                 }
             }],
         ]);
+
+        $imageUrl = $validated['image_url'] ?? null;
+
+        if ($request->hasFile('campaign_image')) {
+            $path = $storePublicImage->handle($request->file('campaign_image'), 'announcements', 'public');
+            $imageUrl = Storage::disk('public')->url($path);
+        }
 
         $customer = null;
 
@@ -54,7 +64,7 @@ class AnnouncementController extends Controller
             }
         }
 
-        $announcement = DB::transaction(function () use ($request, $validated, $customer): Announcement {
+        $announcement = DB::transaction(function () use ($request, $validated, $customer, $imageUrl): Announcement {
             $announcement = Announcement::query()->create([
                 'sender_id' => $request->user()->id,
                 'audience' => $validated['audience'],
@@ -62,7 +72,7 @@ class AnnouncementController extends Controller
                 'title' => $validated['title'],
                 'body' => $validated['body'],
                 'url' => $validated['url'] ?? route('home'),
-                'image_url' => $validated['image_url'] ?? null,
+                'image_url' => $imageUrl,
                 'recipient_count' => SendAdminAnnouncement::recipients($validated['audience'], $customer?->id)->count(),
             ]);
 

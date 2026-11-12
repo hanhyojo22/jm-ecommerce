@@ -55,6 +55,21 @@ function sameOriginUrl(value, fallbackPath = '/') {
     }
 }
 
+function notificationImage(value) {
+    if (typeof value !== 'string' || value === '') {
+        return null;
+    }
+
+    try {
+        const url = new URL(value, self.location.origin);
+
+        // External artwork must be HTTPS; local development may serve it same-origin.
+        return url.protocol === 'https:' || url.origin === self.location.origin ? url : null;
+    } catch {
+        return null;
+    }
+}
+
 function signedReadUrl(value) {
     const url = sameOriginUrl(value);
 
@@ -66,6 +81,7 @@ function signedReadUrl(value) {
 function notificationOptions(payload) {
     const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
     const tag = text(payload.tag ?? data.tag);
+    const image = notificationImage(payload.image ?? data.image_url);
     const options = {
         body: text(payload.body),
         icon: text(payload.icon, DEFAULT_ICON),
@@ -77,6 +93,10 @@ function notificationOptions(payload) {
         },
         timestamp: Date.now(),
     };
+
+    if (image !== null) {
+        options.image = image.href;
+    }
 
     // renotify requires a tag in Chromium; without one it throws instead of showing.
     if (tag !== '') {

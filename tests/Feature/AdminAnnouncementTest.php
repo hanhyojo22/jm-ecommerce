@@ -12,8 +12,10 @@ use App\Models\User;
 use App\Notifications\MarketplaceNotice;
 use App\Services\PushNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Mockery;
 use Tests\TestCase;
@@ -31,6 +33,25 @@ class AdminAnnouncementTest extends TestCase
         $this->assertDatabaseHas('announcements', ['image_url' => 'https://example.com/campaign.jpg']);
         $this->post(route('admin.announcements.store'), array_replace($payload, ['image_url' => 'http://example.com/campaign.jpg']))->assertSessionHasErrors('image_url');
         $this->assertDatabaseCount('announcements', 1);
+    }
+
+    public function test_an_uploaded_campaign_image_is_stored_and_saved_as_the_announcement_image(): void
+    {
+        Queue::fake();
+        Storage::fake('public');
+        $admin = User::factory()->administrator()->create();
+
+        $this->actingAs($admin)->post(route('admin.announcements.store'), [
+            'audience' => 'customers',
+            'title' => 'Fresh finds',
+            'body' => 'Explore the collection.',
+            'campaign_image' => UploadedFile::fake()->image('campaign.jpg', 1200, 628),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $announcement = Announcement::query()->sole();
+        $storedFiles = Storage::disk('public')->allFiles('announcements');
+        $this->assertCount(1, $storedFiles);
+        $this->assertStringContainsString(basename($storedFiles[0]), $announcement->image_url);
     }
 
     public function test_an_administrator_queues_an_announcement_and_it_is_audited(): void
@@ -139,15 +160,20 @@ class AdminAnnouncementTest extends TestCase
         Notification::fake();
         $customer = User::factory()->create();
         $announcement = $this->announcement('customers', 1);
+        $announcement->update(['image_url' => 'https://cdn.example.com/campaign.jpg']);
 
         $notifier = Mockery::mock(PushNotifier::class);
         $notifier->shouldReceive('sendToUser')
             ->once()
-            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', ['type' => 'announcement', 'url' => $announcement->url]);
+            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', ['type' => 'announcement', 'url' => $announcement->url, 'image_url' => 'https://cdn.example.com/campaign.jpg']);
 
         (new SendAdminAnnouncement($announcement->id, [$customer->id]))->handle($notifier);
 
-        Notification::assertSentTo($customer, MarketplaceNotice::class);
+        Notification::assertSentTo(
+            $customer,
+            MarketplaceNotice::class,
+            fn (MarketplaceNotice $notification): bool => ($notification->toArray($customer)['image_url'] ?? null) === 'https://cdn.example.com/campaign.jpg',
+        );
         $this->assertSame(1, $announcement->fresh()->sent_count);
         $this->assertTrue($announcement->fresh()->isFinished());
     }

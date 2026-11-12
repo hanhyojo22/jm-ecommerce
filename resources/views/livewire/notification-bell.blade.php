@@ -90,6 +90,18 @@
                             <span class="mt-0.5 block truncate text-xs text-muted">{{ $notification->data['body'] ?? '' }}</span>
                             <span class="mt-1 block text-[11px] text-muted">{{ $notification->created_at->diffForHumans() }}</span>
                         </span>
+                        @if (! empty($notification->data['image_url']))
+                            <img
+                                src="{{ $notification->data['image_url'] }}"
+                                alt=""
+                                width="44"
+                                height="44"
+                                loading="lazy"
+                                referrerpolicy="no-referrer"
+                                x-on:error="$el.remove()"
+                                class="mt-0.5 size-11 shrink-0 rounded-md border border-line object-cover"
+                            >
+                        @endif
                     </button>
                 @empty
                     <p class="px-4 py-8 text-center text-sm text-muted">No notifications yet.</p>

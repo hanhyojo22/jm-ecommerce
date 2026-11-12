@@ -23,6 +23,7 @@ class MarketplaceNotice extends Notification
         private readonly string $title,
         private readonly string $body,
         private readonly string $url,
+        private readonly ?string $imageUrl = null,
     ) {}
 
     /**
@@ -40,24 +41,31 @@ class MarketplaceNotice extends Notification
      */
     public function toArray(object $notifiable): array
     {
-        return [
+        return array_filter([
             'type' => $this->type,
             'title' => $this->title,
             'body' => $this->body,
             'url' => $this->url,
-        ];
+            'image_url' => $this->imageUrl,
+        ], fn (mixed $value): bool => $value !== null);
     }
 
     public function toWebPush(object $notifiable, self $notification): WebPushMessage
     {
         $tag = $this->type.'-'.$notification->id;
 
-        return (new WebPushMessage)
+        $message = (new WebPushMessage)
             ->title($this->title)
             ->body($this->body)
             ->icon(NotificationIcon::url($this->type))
             ->badge(NotificationIcon::badgeUrl($this->type))
             ->tag($tag)
             ->data(WebPushPayload::for($notification, $this->url, $tag));
+
+        if ($this->imageUrl !== null) {
+            $message->image($this->imageUrl);
+        }
+
+        return $message;
     }
 }
