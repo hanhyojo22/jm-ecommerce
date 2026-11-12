@@ -172,6 +172,26 @@ class CatalogTest extends TestCase
             ->assertDontSee('aria-label="Messages,', false);
     }
 
+    public function test_public_product_cards_show_free_shipping_and_cod_badges(): void
+    {
+        $product = $this->product(['free_shipping' => true]);
+
+        foreach ([route('home'), route('catalog.index'), route('catalog.store', $product->store->slug)] as $url) {
+            $this->get($url)
+                ->assertSee('FREE SHIPPING')
+                ->assertSee('COD');
+        }
+    }
+
+    public function test_paid_shipping_product_card_shows_cod_without_free_shipping_badge(): void
+    {
+        $product = $this->product(['free_shipping' => false]);
+
+        $this->get(route('catalog.store', $product->store->slug))
+            ->assertSee('COD')
+            ->assertDontSee('FREE SHIPPING');
+    }
+
     public function test_sold_out_product_shows_availability_notice_across_public_product_pages(): void
     {
         $product = $this->product(['stock_quantity' => 0]);

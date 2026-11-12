@@ -30,6 +30,12 @@
         @if ($product->stock_quantity < 1)
             <x-marketplace.sold-out-overlay compact />
         @endif
+        <span class="pointer-events-none absolute bottom-0 left-0 flex max-w-full flex-wrap text-[10px] font-extrabold leading-tight tracking-[0.01em] text-white">
+            @if ($product->free_shipping)
+                <span class="whitespace-nowrap bg-brand px-1.5 py-1">FREE SHIPPING</span>
+            @endif
+            <span class="whitespace-nowrap bg-warning-text px-1.5 py-1" aria-label="Cash on delivery">COD</span>
+        </span>
     </a>
     @if ($isOnSale)<span class="absolute left-3 top-3 rounded-full bg-red-600 px-2 py-1 text-xs font-semibold leading-none text-white">-{{ $discountPercent }}%</span>@endif
     <div class="flex flex-1 flex-col gap-1.5 p-3.5 sm:p-4">
