@@ -1,4 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -6,14 +13,20 @@ import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../router.dart';
+import '../config.dart';
+import 'formatters.dart';
 import 'api_client.dart';
 
-/// Android shows the OS notification for a backgrounded/terminated app by
-/// itself from the message's `notification` payload, so there is nothing to
-/// do here. The handler only has to exist and be a top-level/static
-/// function for `FirebaseMessaging.onBackgroundMessage` to accept it.
+/// Legacy notification payloads are already displayed by Android.
 @pragma('vm:entry-point')
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  if (message.notification != null ||
+      message.data['rich_notification'] != '1') {
+    return;
+  }
+  await Firebase.initializeApp();
+  await PushNotifications.showMessage(message);
+}
 
 /// Registers this device for push, shows a notification while the app is in
 /// the foreground (FCM does not do this automatically), and deep-links a tap
@@ -51,7 +64,9 @@ class PushNotifications {
 
   static final _local = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+  static Future<void>? _localInitialization;
   static StreamSubscription<String>? _refreshSubscription;
+  static final _renderVersions = <String, int>{};
 
   /// Safe to call once per signed-in session; every failure is swallowed so
   /// a push setup problem (denied permission, no Google Play Services) never
@@ -69,25 +84,11 @@ class PushNotifications {
       debugPrint('[Push] permission status: ${settings.authorizationStatus}');
 
       if (!_initialized) {
-        final android = _local
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-        await android?.createNotificationChannel(_chatChannel);
-        await android?.createNotificationChannel(_orderChannel);
-        await android?.createNotificationChannel(_updatesChannel);
-
-        await _local.initialize(
-          const InitializationSettings(
-            android: AndroidInitializationSettings(_icon),
-          ),
-          onDidReceiveNotificationResponse: (response) =>
-              _open(response.payload),
-        );
+        await _initializeLocal();
 
         FirebaseMessaging.onMessage.listen((message) {
           onMessage?.call();
-          _showForeground(message);
+          unawaited(showMessage(message, foreground: true));
         });
         FirebaseMessaging.onMessageOpenedApp.listen(
           (message) => _open(routeFor(message.data)),
@@ -110,6 +111,11 @@ class PushNotifications {
         apiClient.registerDeviceToken,
       );
 
+      final launch = await _local.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp == true) {
+        final response = launch!.notificationResponse;
+        _handleResponse(response);
+      }
       final initialMessage = await FirebaseMessaging.instance
           .getInitialMessage();
       if (initialMessage != null) {
@@ -148,6 +154,8 @@ class PushNotifications {
         '/conversations/${id('conversation_id')}',
       'order' when id('order_id') != null => '/orders/${id('order_id')}',
       'cart' => '/cart',
+      'return_case' when id('order_id') != null => '/orders/${id('order_id')}',
+      'announcement' => announcementDestination(id('url')),
       _ => null,
     };
   }
@@ -160,58 +168,312 @@ class PushNotifications {
       ? _icon
       : '@drawable/$smallIcon';
 
-  static Future<void> _showForeground(RemoteMessage message) async {
-    final notification = message.notification;
-    if (notification == null) {
-      return;
+  static Future<void> _initializeLocal() => _localInitialization ??= () async {
+    final android = _local
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    for (final channel in [_chatChannel, _orderChannel, _updatesChannel]) {
+      await android?.createNotificationChannel(channel);
     }
+    await _local.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings(_icon),
+      ),
+      onDidReceiveNotificationResponse: _handleResponse,
+    );
+  }();
 
+  static void _handleResponse(NotificationResponse? response) {
+    var route = response?.payload;
+    if (response?.actionId == 'reply' &&
+        route?.startsWith('/conversations/') == true) {
+      route = '$route?reply=1';
+    }
+    _open(route);
+  }
+
+  @visibleForTesting
+  static String announcementDestination(String? url) {
+    final uri = Uri.tryParse(url ?? '');
+    final api = Uri.parse(AppConfig.apiBaseUrl);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host != api.host ||
+        uri.userInfo.isNotEmpty) {
+      return '/';
+    }
+    return uri.toString();
+  }
+
+  @visibleForTesting
+  static String? tagFor(Map<String, dynamic> data) => switch (data['type']) {
+    'chat' when data['conversation_id'] != null =>
+      'conversation-${data['conversation_id']}',
+    'order' when data['order_id'] != null => 'order-${data['order_id']}',
+    'return_case' when data['return_case_id'] != null =>
+      'return-${data['return_case_id']}',
+    'cart' => 'cart-reminder',
+    _ => null,
+  };
+
+  static int _idFor(String value) {
+    // Stable across the foreground and background Dart isolates.
+    var hash = 0x811c9dc5;
+    for (final unit in value.codeUnits) {
+      hash = ((hash ^ unit) * 0x01000193) & 0x7fffffff;
+    }
+    return hash;
+  }
+
+  static String _title(RemoteMessage message) =>
+      message.notification?.title ??
+      message.data['title']?.toString() ??
+      'JMMart';
+  static String _body(RemoteMessage message) =>
+      message.notification?.body ?? message.data['body']?.toString() ?? '';
+
+  /// Uses the same renderer for foreground messages and upgraded background pushes.
+  static Future<void> showMessage(
+    RemoteMessage message, {
+    bool foreground = false,
+  }) async {
     final route = routeFor(message.data);
-    // Already reading this chat: the new message is on screen, don't ping.
-    if (route != null && appRouter.state.uri.path == route) {
+    if (foreground && route != null && appRouter.state.uri.path == route) {
       return;
     }
+    try {
+      final tag = tagFor(message.data);
+      final version = tag == null ? 0 : (_renderVersions[tag] ?? 0) + 1;
+      if (tag != null) {
+        _renderVersions[tag] = version;
+      }
+      await _initializeLocal();
+      final details = await detailsFor(message);
+      if (tag != null && _renderVersions[tag] != version) {
+        return;
+      }
+      await _local.show(
+        _idFor(
+          tag ?? message.messageId ?? '${_title(message)}:${message.sentTime}',
+        ),
+        _title(message),
+        _body(message),
+        NotificationDetails(android: details),
+        payload: route,
+      );
+    } catch (error) {
+      debugPrint('[Push] display failed: $error');
+    }
+  }
 
-    final isChat = message.data['type'] == 'chat';
-    final channel = switch (message.data['type']) {
+  @visibleForTesting
+  static Future<AndroidNotificationDetails> detailsFor(
+    RemoteMessage message, {
+    Future<Uint8List?> Function(String? url)? imageLoader,
+  }) async {
+    final data = message.data;
+    final isChat = data['type'] == 'chat';
+    final channel = switch (data['type']) {
       'chat' => _chatChannel,
       'announcement' || 'cart' => _updatesChannel,
       _ => _orderChannel,
     };
-    // One notification per conversation, replaced by its newest message,
-    // matching the `tag` the backend sets for background pushes.
-    final tag = isChat
-        ? 'conversation-${message.data['conversation_id']}'
-        : null;
-
-    await _local.show(
-      (tag ?? message.messageId ?? notification).hashCode,
-      notification.title,
-      notification.body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          channel.id,
-          channel.name,
-          channelDescription: channel.description,
-          importance: channel.importance,
-          priority: channel == _updatesChannel
-              ? Priority.defaultPriority
-              : Priority.high,
-          icon: iconFor(notification.android?.smallIcon),
-          color: _accent,
-          tag: tag,
-          category: isChat
-              ? AndroidNotificationCategory.message
-              : AndroidNotificationCategory.status,
-          styleInformation: BigTextStyleInformation(notification.body ?? ''),
-        ),
+    final load = imageLoader ?? downloadImage;
+    final photoUrl = isChat
+        ? data['avatar_url']?.toString()
+        : data['image_url']?.toString() ??
+              message.notification?.android?.imageUrl;
+    Uint8List? photo;
+    try {
+      photo = await load(photoUrl);
+    } catch (_) {
+      /* Keep the text card when imagery fails. */
+    }
+    final fallback = await _initialsImage(
+      isChat ? data['sender_name']?.toString() ?? _title(message) : 'JM',
+    );
+    final largeIcon = ByteArrayAndroidBitmap(photo ?? fallback);
+    StyleInformation style = BigTextStyleInformation(_body(message));
+    if (isChat) {
+      final sender = Person(
+        name: data['sender_name']?.toString() ?? _title(message),
+        key: data['conversation_id']?.toString(),
+        icon: ByteArrayAndroidIcon(photo ?? fallback),
+      );
+      style = MessagingStyleInformation(
+        const Person(name: 'You'),
+        groupConversation: false,
+        messages: [
+          Message(_body(message), message.sentTime ?? DateTime.now(), sender),
+        ],
+      );
+    } else if (photo != null &&
+        (data['type'] == 'cart' || data['type'] == 'announcement')) {
+      style = BigPictureStyleInformation(
+        ByteArrayAndroidBitmap(photo),
+        contentTitle: _title(message),
+        summaryText: _body(message),
+        hideExpandedLargeIcon: true,
+      );
+    }
+    final route = routeFor(data);
+    final label = switch (data['type']) {
+      'chat' => 'Open chat',
+      'order' || 'return_case' => 'View order',
+      'cart' => 'View cart',
+      'announcement' => 'Explore',
+      _ => null,
+    };
+    return AndroidNotificationDetails(
+      channel.id,
+      channel.name,
+      channelDescription: channel.description,
+      importance: channel.importance,
+      priority: channel == _updatesChannel
+          ? Priority.defaultPriority
+          : Priority.high,
+      icon: iconFor(
+        message.notification?.android?.smallIcon ??
+            data['small_icon']?.toString(),
       ),
-      payload: route,
+      color: _accent,
+      largeIcon: largeIcon,
+      tag: tagFor(data),
+      subText: data['subtitle']?.toString(),
+      category: isChat
+          ? AndroidNotificationCategory.message
+          : AndroidNotificationCategory.status,
+      visibility: NotificationVisibility.private,
+      styleInformation: style,
+      actions: route == null || label == null
+          ? null
+          : [
+              if (isChat)
+                const AndroidNotificationAction(
+                  'reply',
+                  'Reply',
+                  showsUserInterface: true,
+                ),
+              AndroidNotificationAction(
+                'open',
+                label,
+                showsUserInterface: true,
+              ),
+            ],
     );
   }
 
+  /// Bounded HTTPS downloads cannot delay a notification indefinitely.
+  @visibleForTesting
+  static Future<Uint8List?> downloadImage(
+    String? url, {
+    http.Client? client,
+  }) async {
+    final uri = Uri.tryParse(url ?? '');
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty) {
+      return null;
+    }
+    final connection = client ?? http.Client();
+    try {
+      return await (() async {
+        final response = await connection.send(
+          http.Request('GET', uri)..followRedirects = false,
+        );
+        if (response.statusCode != 200 ||
+            (response.contentLength ?? 0) > 1024 * 1024) {
+          return null;
+        }
+        final type = response.headers['content-type']?.split(';').first;
+        if (!const ['image/jpeg', 'image/png', 'image/webp'].contains(type)) {
+          return null;
+        }
+        final bytes = BytesBuilder(copy: false);
+        await for (final chunk in response.stream) {
+          if (bytes.length + chunk.length > 1024 * 1024) {
+            return null;
+          }
+          bytes.add(chunk);
+        }
+        // Decode and bound dimensions before passing the bitmap to Android.
+        final buffer = await ui.ImmutableBuffer.fromUint8List(
+          bytes.takeBytes(),
+        );
+        final descriptor = await ui.ImageDescriptor.encoded(buffer);
+        if (descriptor.width > 8192 ||
+            descriptor.height > 8192 ||
+            descriptor.width * descriptor.height > 16000000) {
+          descriptor.dispose();
+          buffer.dispose();
+          return null;
+        }
+        final scale = math.min(
+          1.0,
+          768 / math.max(descriptor.width, descriptor.height),
+        );
+        final codec = await descriptor.instantiateCodec(
+          targetWidth: math.max(1, (descriptor.width * scale).round()),
+          targetHeight: math.max(1, (descriptor.height * scale).round()),
+        );
+        descriptor.dispose();
+        buffer.dispose();
+        try {
+          final frame = await codec.getNextFrame();
+          try {
+            final png = await frame.image.toByteData(
+              format: ui.ImageByteFormat.png,
+            );
+            return png?.buffer.asUint8List();
+          } finally {
+            frame.image.dispose();
+          }
+        } finally {
+          codec.dispose();
+        }
+      })().timeout(const Duration(seconds: 4));
+    } catch (_) {
+      return null;
+    } finally {
+      if (client == null) connection.close();
+    }
+  }
+
+  static Future<Uint8List> _initialsImage(String name) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder);
+    canvas.drawCircle(const ui.Offset(64, 64), 64, ui.Paint()..color = _accent);
+    final paragraph =
+        (ui.ParagraphBuilder(
+                ui.ParagraphStyle(
+                  textAlign: ui.TextAlign.center,
+                  fontSize: 44,
+                  fontWeight: ui.FontWeight.w700,
+                ),
+              )
+              ..pushStyle(ui.TextStyle(color: const Color(0xffffffff)))
+              ..addText(initials(name)))
+            .build()
+          ..layout(const ui.ParagraphConstraints(width: 128));
+    canvas.drawParagraph(paragraph, ui.Offset(0, (128 - paragraph.height) / 2));
+    paragraph.dispose();
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(128, 128);
+    picture.dispose();
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return bytes!.buffer.asUint8List();
+  }
+
   static void _open(String? route) {
-    if (route != null) {
+    if (route == null) return;
+    if (route.startsWith('https://')) {
+      unawaited(
+        launchUrl(Uri.parse(route), mode: LaunchMode.externalApplication),
+      );
+    } else {
       appRouter.push(route);
     }
   }

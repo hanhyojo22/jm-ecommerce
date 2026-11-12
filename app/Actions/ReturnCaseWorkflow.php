@@ -16,6 +16,7 @@ use App\Services\GmailOrderMailer;
 use App\Services\PushNotifier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ReturnCaseWorkflow
@@ -372,6 +373,7 @@ class ReturnCaseWorkflow
                         ."\n\nOrder {$number} · {$case->sellerOrder->store->name}."
                         .($deadline !== null ? "\nThe next step is due by {$deadline->format('M j, Y g:i A')}." : '');
                     $title = "Order #{$number} return update";
+                    $imagePath = $case->items()->with('orderItem')->first()?->orderItem?->image_path;
                     $recipients = collect([$case->buyer])->merge($case->sellerOrder->store->tenant->members->pluck('user'))->filter()->unique('id');
 
                     foreach ($recipients as $recipient) {
@@ -384,10 +386,12 @@ class ReturnCaseWorkflow
                         }
 
                         try {
-                            app(PushNotifier::class)->sendToUser($recipient, $title, $notice, [
+                            app(PushNotifier::class)->sendToUser($recipient, $title, $notice, array_filter([
                                 'type' => 'return_case',
                                 'return_case_id' => $case->id,
-                            ]);
+                                'order_id' => $case->sellerOrder->order_id,
+                                'image_url' => $imagePath !== null ? Storage::disk('product_images')->url($imagePath) : null,
+                            ]));
                         } catch (\Throwable $exception) {
                             report($exception);
                         }

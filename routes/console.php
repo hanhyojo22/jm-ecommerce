@@ -15,6 +15,7 @@ use App\Services\PushNotifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -206,9 +207,17 @@ Artisan::command('carts:remind', function (PushNotifier $notifier): void {
 
     foreach ($carts as $cart) {
         $title = 'Still thinking it over?';
-        $body = "You left {$cart->items_count} item(s) in your cart. Check out before they sell out.";
+        $lead = $cart->items()->with(['product.store', 'product.tenant', 'product.variants', 'product.thumbnail', 'variant'])->get()
+            ->first(fn ($item): bool => $item->isAvailable());
+        if ($lead === null) {
+            continue;
+        }
+        $body = $lead->product->name.' is saved in your cart.';
 
-        $notifier->sendToUser($cart->user, $title, $body, ['type' => 'cart']);
+        $notifier->sendToUser($cart->user, $title, $body, array_filter([
+            'type' => 'cart',
+            'image_url' => ($path = $lead->imagePath()) !== null ? Storage::disk('product_images')->url($path) : null,
+        ]));
 
         try {
             $cart->user->notify(new MarketplaceNotice('cart', $title, $body, route('cart.index')));

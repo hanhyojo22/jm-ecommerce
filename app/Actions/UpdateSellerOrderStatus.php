@@ -13,6 +13,7 @@ use App\Queries\TopProductQuery;
 use App\Services\GmailOrderMailer;
 use App\Services\PushNotifier;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -180,11 +181,24 @@ class UpdateSellerOrderStatus
             }
 
             try {
+                $lead = $updatedSellerOrder->items()->orderBy('id')->first();
+                $pushTitle = match ($status) {
+                    'confirmed' => 'Your order is confirmed',
+                    'processing' => 'Your order is being prepared',
+                    'shipped' => 'Your order is on its way',
+                    'delivered' => 'Your order was marked delivered',
+                    'cancelled' => 'Your order was cancelled',
+                    default => 'Your order has an update',
+                };
                 app(PushNotifier::class)->sendToUser(
                     $updatedSellerOrder->order->user,
-                    "Order #{$number}",
-                    $message,
-                    ['type' => 'order', 'order_id' => $updatedSellerOrder->order_id, 'status' => $status],
+                    $pushTitle,
+                    implode(' · ', array_filter([$lead?->product_name, $lead?->variant_label, $updatedSellerOrder->store->name])),
+                    array_filter([
+                        'type' => 'order', 'order_id' => $updatedSellerOrder->order_id, 'status' => $status,
+                        'subtitle' => $updatedSellerOrder->store->name,
+                        'image_url' => $lead?->image_path !== null ? Storage::disk('product_images')->url($lead->image_path) : null,
+                    ]),
                 );
             } catch (Throwable $exception) {
                 report($exception);

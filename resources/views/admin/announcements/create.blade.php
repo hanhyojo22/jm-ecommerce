@@ -41,6 +41,8 @@
                 title: @js(old('title', '')),
                 body: @js(old('body', '')),
                 url: @js(old('url', '')),
+                imageUrl: @js(old('image_url', '')),
+                imageFailed: false,
                 submitting: false,
                 defaultUrl: @js(route('home')),
             }"
@@ -153,6 +155,13 @@
                         </div>
 
                         <div>
+                            <x-input-label for="image_url" :value="__('Campaign image (optional)')" class="!text-ink" />
+                            <x-text-input id="image_url" class="mt-1.5" type="url" name="image_url" :value="old('image_url')" x-model="imageUrl" @input="imageFailed = false" placeholder="https://…/campaign.jpg" aria-describedby="image-url-hint" />
+                            <p id="image-url-hint" class="mt-1.5 text-xs text-muted">Use a public HTTPS JPEG, PNG, or WebP under 1 MB. Landscape artwork works best in expanded Android notifications.</p>
+                            <x-input-error :messages="$errors->get('image_url')" class="mt-2" />
+                        </div>
+
+                        <div>
                             <x-input-label for="url" :value="__('Link (optional)')" class="!text-ink" />
                             <x-text-input
                                 id="url"
@@ -216,6 +225,10 @@
                                         <p class="mt-0.5 break-words text-xs leading-5 text-muted" x-text="body.trim() || 'Your message preview will appear here as you type.'">Your message preview will appear here as you type.</p>
                                     </div>
                                 </div>
+                                <template x-if="imageUrl.startsWith('https://') && !imageFailed">
+                                    <img :src="imageUrl" alt="Campaign image preview" class="mt-3 aspect-video w-full rounded-md object-cover" x-on:error="imageFailed = true" referrerpolicy="no-referrer">
+                                </template>
+                                <p x-cloak x-show="imageFailed" class="mt-2 text-xs text-muted">Image unavailable. The notification will still show its title and message.</p>
                             </div>
                         </div>
 

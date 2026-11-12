@@ -24,11 +24,13 @@ class ChatScreen extends ConsumerStatefulWidget {
     required this.conversationId,
     this.productId,
     this.sellerOrderId,
+    this.focusComposer = false,
   });
 
   final String conversationId;
   final String? productId;
   final String? sellerOrderId;
+  final bool focusComposer;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -668,6 +670,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: TextField(
                       controller: _composer,
                       focusNode: _composerFocus,
+                      autofocus: widget.focusComposer,
                       onChanged: _onComposerChanged,
                       minLines: 1,
                       maxLines: 4,

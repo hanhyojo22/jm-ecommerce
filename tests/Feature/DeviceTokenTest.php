@@ -58,6 +58,16 @@ class DeviceTokenTest extends TestCase
         $this->assertDatabaseCount('device_tokens', 0);
     }
 
+    public function test_rich_notification_support_is_opt_in_and_reset_on_legacy_registration(): void
+    {
+        $buyer = User::factory()->create();
+        $this->actingAs($buyer)->postJson(route('api.v1.device-tokens.store'), ['token' => 'rich-device', 'rich_notifications' => true])->assertNoContent(201);
+        $this->assertDatabaseHas('device_tokens', ['token' => 'rich-device', 'rich_notifications' => true]);
+
+        $this->postJson(route('api.v1.device-tokens.store'), ['token' => 'rich-device'])->assertNoContent(201);
+        $this->assertDatabaseHas('device_tokens', ['token' => 'rich-device', 'rich_notifications' => false]);
+    }
+
     public function test_a_user_cannot_delete_someone_elses_token(): void
     {
         $owner = User::factory()->create();

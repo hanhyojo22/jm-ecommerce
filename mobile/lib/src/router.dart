@@ -44,6 +44,7 @@ final appRouter = GoRouter(
         conversationId: state.pathParameters['id'] ?? '',
         productId: state.uri.queryParameters['product_id'],
         sellerOrderId: state.uri.queryParameters['seller_order_id'],
+        focusComposer: state.uri.queryParameters['reply'] == '1',
       ),
     ),
     GoRoute(

@@ -15,12 +15,12 @@ class PushNotifier
 {
     private readonly ?Messaging $messaging;
 
-    public function __construct()
+    public function __construct(?Messaging $messaging = null)
     {
         // This can run inline on a request (sync/deferred queues) or inside a
         // queue worker. A missing or malformed Firebase credential must never
         // break either path, so a null client silently disables mobile pushes.
-        $this->messaging = $this->buildMessaging();
+        $this->messaging = $messaging ?? $this->buildMessaging();
     }
 
     private function buildMessaging(): ?Messaging
@@ -64,27 +64,26 @@ class PushNotifier
             return;
         }
 
-        $tokens = $user->deviceTokens()->pluck('token')->all();
+        $devices = $user->deviceTokens()->get();
 
-        if ($tokens === []) {
+        if ($devices->isEmpty()) {
             return;
         }
 
-        $message = $this->buildMessage($title, $body, $data);
+        foreach ($devices->groupBy(fn (DeviceToken $device): int => (int) ($device->platform === 'android' && $device->rich_notifications)) as $rich => $group) {
+            $message = $this->buildMessage($title, $body, $data, (bool) $rich);
+            try {
+                $report = $this->messaging->sendMulticast($message, $group->pluck('token')->all());
+            } catch (Throwable $e) {
+                report($e);
 
-        try {
-            $report = $this->messaging->sendMulticast($message, $tokens);
-        } catch (Throwable $e) {
-            report($e);
+                continue;
+            }
 
-            return;
-        }
-
-        // Invalid (malformed) and unknown (app uninstalled) tokens are both dead ends.
-        $dead = [...$report->invalidTokens(), ...$report->unknownTokens()];
-
-        if ($dead !== []) {
-            DeviceToken::query()->whereIn('token', $dead)->delete();
+            $dead = [...$report->invalidTokens(), ...$report->unknownTokens()];
+            if ($dead !== []) {
+                DeviceToken::query()->whereIn('token', $dead)->delete();
+            }
         }
     }
 
@@ -96,7 +95,7 @@ class PushNotifier
      *
      * @param  array<string, string>  $data
      */
-    public function buildMessage(string $title, string $body, array $data = []): CloudMessage
+    public function buildMessage(string $title, string $body, array $data = [], bool $rich = false): CloudMessage
     {
         $type = $data['type'] ?? null;
         $isChat = $type === 'chat';
@@ -108,14 +107,26 @@ class PushNotifier
                 'announcement', 'cart' => 'marketplace_updates',
                 default => 'order_updates',
             },
-            'tag' => $isChat && isset($data['conversation_id']) ? 'conversation-'.$data['conversation_id'] : null,
+            'tag' => $isChat && isset($data['conversation_id']) ? 'conversation-'.$data['conversation_id'] : ($type === 'order' && isset($data['order_id']) ? 'order-'.$data['order_id'] : null),
             // An app build without this drawable falls back to the manifest's default icon.
             'icon' => ($icon = NotificationIcon::key($type, $data['status'] ?? null)) !== null ? 'ic_stat_'.$icon : null,
         ]);
 
-        return CloudMessage::new()
-            ->withNotification(['title' => $title, 'body' => $body])
-            ->withData($data)
+        $icon = $androidNotification['icon'] ?? 'ic_stat_notification';
+        if ($rich) {
+            // Updated Android installs render one native card in either app state.
+            return CloudMessage::new()->withData($data + [
+                'title' => $title,
+                'body' => $body,
+                'small_icon' => $icon,
+                'rich_notification' => '1',
+            ])->withAndroidConfig(['priority' => 'high', 'ttl' => $isChat ? '86400s' : '3600s']);
+        }
+
+        $image = $data['image_url'] ?? $data['avatar_url'] ?? null;
+        $notification = array_filter(['title' => $title, 'body' => $body, 'image' => $image]);
+
+        return CloudMessage::new()->withNotification($notification)->withData($data)
             ->withAndroidConfig(['priority' => 'high', 'notification' => $androidNotification]);
     }
 }

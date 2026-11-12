@@ -608,7 +608,7 @@ class ApiClient {
     await _raw(
       'POST',
       '/device-tokens',
-      data: {'token': token, 'platform': 'android'},
+      data: {'token': token, 'platform': 'android', 'rich_notifications': true},
     );
   }
 

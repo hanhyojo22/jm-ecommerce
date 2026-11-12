@@ -35,6 +35,7 @@ class AnnouncementController extends Controller
             'email' => ['nullable', 'required_if:audience,customer', 'email', 'max:255'],
             'title' => ['required', 'string', 'max:60'],
             'body' => ['required', 'string', 'max:200'],
+            'image_url' => ['nullable', 'url:https', 'max:1000'],
             'url' => ['nullable', 'url:https,http', 'max:500', function (string $attribute, string $value, Closure $fail): void {
                 // A push from JMMart that opens another site would read as phishing.
                 if (parse_url($value, PHP_URL_HOST) !== parse_url(config('app.url'), PHP_URL_HOST)) {
@@ -61,6 +62,7 @@ class AnnouncementController extends Controller
                 'title' => $validated['title'],
                 'body' => $validated['body'],
                 'url' => $validated['url'] ?? route('home'),
+                'image_url' => $validated['image_url'] ?? null,
                 'recipient_count' => SendAdminAnnouncement::recipients($validated['audience'], $customer?->id)->count(),
             ]);
 
@@ -69,7 +71,7 @@ class AnnouncementController extends Controller
                 'action' => 'announcement.sent',
                 'entity_type' => Announcement::class,
                 'entity_id' => $announcement->id,
-                'new_values' => $announcement->only('audience', 'user_id', 'title', 'body', 'url', 'recipient_count'),
+                'new_values' => $announcement->only('audience', 'user_id', 'title', 'body', 'url', 'image_url', 'recipient_count'),
                 'ip_address' => $request->ip(),
             ]);
 

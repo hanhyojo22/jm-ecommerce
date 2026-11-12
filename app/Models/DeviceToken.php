@@ -10,7 +10,12 @@ class DeviceToken extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['user_id', 'token', 'platform'];
+    protected $fillable = ['user_id', 'token', 'platform', 'rich_notifications'];
+
+    protected function casts(): array
+    {
+        return ['rich_notifications' => 'boolean'];
+    }
 
     public function user(): BelongsTo
     {

@@ -22,6 +22,17 @@ class AdminAnnouncementTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_campaign_images_are_optional_https_urls_saved_with_the_announcement(): void
+    {
+        Queue::fake();
+        $admin = User::factory()->administrator()->create();
+        $payload = ['audience' => 'customers', 'title' => 'Fresh finds', 'body' => 'Explore the collection.', 'image_url' => 'https://example.com/campaign.jpg'];
+        $this->actingAs($admin)->post(route('admin.announcements.store'), $payload)->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertDatabaseHas('announcements', ['image_url' => 'https://example.com/campaign.jpg']);
+        $this->post(route('admin.announcements.store'), array_replace($payload, ['image_url' => 'http://example.com/campaign.jpg']))->assertSessionHasErrors('image_url');
+        $this->assertDatabaseCount('announcements', 1);
+    }
+
     public function test_an_administrator_queues_an_announcement_and_it_is_audited(): void
     {
         Queue::fake();
@@ -132,7 +143,7 @@ class AdminAnnouncementTest extends TestCase
         $notifier = Mockery::mock(PushNotifier::class);
         $notifier->shouldReceive('sendToUser')
             ->once()
-            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', ['type' => 'announcement']);
+            ->with(Mockery::on(fn (User $user): bool => $user->is($customer)), 'Big sale', 'Everything 20% off.', ['type' => 'announcement', 'url' => $announcement->url]);
 
         (new SendAdminAnnouncement($announcement->id, [$customer->id]))->handle($notifier);
 

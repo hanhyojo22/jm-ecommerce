@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\ChatMessageReceived;
 use App\Services\PushNotifier;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -37,6 +38,7 @@ class SendChatMessagePush implements ShouldQueue
 
         // Buyers talk to the store, not to whichever staff member replied.
         $senderName = $sentByBuyer ? $message->sender->name : $conversation->store->name;
+        $preview = filled($message->body) ? Str::limit($message->body, 120) : 'Sent an attachment';
 
         $recipients = $sentByBuyer
             ? User::query()
@@ -55,8 +57,14 @@ class SendChatMessagePush implements ShouldQueue
             $this->notifier->sendToUser(
                 $recipient,
                 $senderName,
-                Str::limit($message->body, 120),
-                ['type' => 'chat', 'conversation_id' => $conversation->id],
+                $preview,
+                array_filter([
+                    'type' => 'chat',
+                    'conversation_id' => $conversation->id,
+                    'sender_name' => $senderName,
+                    'avatar_url' => ! $sentByBuyer && $conversation->store->logo_path !== null
+                        ? Storage::disk('public')->url($conversation->store->logo_path) : null,
+                ]),
             );
 
             try {

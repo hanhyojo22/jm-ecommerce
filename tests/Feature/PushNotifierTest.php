@@ -9,11 +9,32 @@ use App\Services\PushNotifier;
 use App\Support\NotificationIcon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Kreait\Firebase\Contract\Messaging;
+use Kreait\Firebase\Messaging\MulticastSendReport;
+use Mockery;
 use Tests\TestCase;
 
 class PushNotifierTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_mixed_installs_receive_rich_and_legacy_payloads_separately(): void
+    {
+        $user = User::factory()->create();
+        DeviceToken::create(['user_id' => $user->id, 'token' => 'legacy', 'platform' => 'android']);
+        DeviceToken::create(['user_id' => $user->id, 'token' => 'updated', 'platform' => 'android', 'rich_notifications' => true]);
+        $messaging = Mockery::mock(Messaging::class);
+        $sent = [];
+        $messaging->shouldReceive('sendMulticast')->twice()->andReturnUsing(function ($message, array $tokens) use (&$sent): MulticastSendReport {
+            $sent[$tokens[0]] = json_decode(json_encode($message), true);
+
+            return MulticastSendReport::withItems([]);
+        });
+        (new PushNotifier($messaging))->sendToUser($user, 'JM', 'Hello', ['type' => 'chat']);
+        $this->assertArrayHasKey('notification', $sent['legacy']);
+        $this->assertArrayNotHasKey('notification', $sent['updated']);
+        $this->assertSame('1', $sent['updated']['data']['rich_notification']);
+    }
 
     /**
      * The app runs with QUEUE_CONNECTION=sync, so a chat message's own HTTP
@@ -57,7 +78,28 @@ class PushNotifierTest extends TestCase
         $message = json_decode(json_encode((new PushNotifier)->buildMessage('Order #1', 'Shipped', ['type' => 'order', 'order_id' => 'o-7'])), true);
 
         $this->assertSame('order_updates', $message['android']['notification']['channel_id']);
-        $this->assertArrayNotHasKey('tag', $message['android']['notification']);
+        $this->assertSame('order-o-7', $message['android']['notification']['tag']);
+    }
+
+    public function test_rich_android_payloads_are_data_only_with_images_and_display_content(): void
+    {
+        $data = ['type' => 'order', 'order_id' => 'o-7', 'image_url' => 'https://example.com/product.jpg'];
+        $message = json_decode(json_encode((new PushNotifier)->buildMessage('On its way', 'Cargo Pants · JM', $data, true)), true);
+
+        $this->assertArrayNotHasKey('notification', $message);
+        $this->assertSame('On its way', $message['data']['title']);
+        $this->assertSame('Cargo Pants · JM', $message['data']['body']);
+        $this->assertSame('https://example.com/product.jpg', $message['data']['image_url']);
+        $this->assertSame('1', $message['data']['rich_notification']);
+        $this->assertSame('high', $message['android']['priority']);
+    }
+
+    public function test_older_installs_retain_automatic_notification_and_image_payloads(): void
+    {
+        $message = json_decode(json_encode((new PushNotifier)->buildMessage('JM', 'Hello', ['type' => 'chat', 'avatar_url' => 'https://example.com/store.jpg'])), true);
+        $this->assertSame('JM', $message['notification']['title']);
+        $this->assertSame('https://example.com/store.jpg', $message['notification']['image']);
+        $this->assertArrayNotHasKey('rich_notification', $message['data']);
     }
 
     public function test_each_push_type_carries_its_own_status_bar_icon(): void

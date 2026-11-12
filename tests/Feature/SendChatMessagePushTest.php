@@ -42,7 +42,7 @@ class SendChatMessagePushTest extends TestCase
                 Mockery::on(fn (User $user) => $user->is($owner)),
                 $buyer->name,
                 'Is this still available?',
-                ['type' => 'chat', 'conversation_id' => $conversation->id],
+                Mockery::on(fn (array $data): bool => $data['type'] === 'chat' && $data['conversation_id'] === $conversation->id && isset($data['sender_name'])),
             );
         $notifier->shouldReceive('sendToUser')
             ->once()
@@ -50,7 +50,7 @@ class SendChatMessagePushTest extends TestCase
                 Mockery::on(fn (User $user) => $user->is($manager)),
                 $buyer->name,
                 'Is this still available?',
-                ['type' => 'chat', 'conversation_id' => $conversation->id],
+                Mockery::on(fn (array $data): bool => $data['type'] === 'chat' && $data['conversation_id'] === $conversation->id && isset($data['sender_name'])),
             );
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
@@ -79,7 +79,7 @@ class SendChatMessagePushTest extends TestCase
                 Mockery::on(fn (User $user) => $user->is($buyer)),
                 $conversation->store->name,
                 'Yes, 5 left.',
-                ['type' => 'chat', 'conversation_id' => $conversation->id],
+                Mockery::on(fn (array $data): bool => $data['type'] === 'chat' && $data['conversation_id'] === $conversation->id && isset($data['sender_name'])),
             );
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
@@ -107,6 +107,7 @@ class SendChatMessagePushTest extends TestCase
             ->with(Mockery::on(fn (User $user) => $user->is($owner)), $buyer->name, 'Still there?', [
                 'type' => 'chat',
                 'conversation_id' => $conversation->id,
+                'sender_name' => $buyer->name,
             ]);
 
         (new SendChatMessagePush($notifier))->handle(new MessageSent($message));

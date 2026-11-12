@@ -73,7 +73,11 @@ class SendAdminAnnouncement implements ShouldQueue
 
         // Re-checked so an account deactivated after queueing is skipped.
         $recipients->whereKey($this->batchUserIds)->get()->each(function (User $user) use ($notifier, $announcement): void {
-            $notifier->sendToUser($user, $announcement->title, $announcement->body, ['type' => 'announcement']);
+            $notifier->sendToUser($user, $announcement->title, $announcement->body, array_filter([
+                'type' => 'announcement',
+                'url' => $announcement->url,
+                'image_url' => $announcement->image_url,
+            ]));
 
             try {
                 $user->notify(new MarketplaceNotice('announcement', $announcement->title, $announcement->body, $announcement->url));

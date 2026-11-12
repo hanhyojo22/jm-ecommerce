@@ -10,7 +10,7 @@ class Announcement extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['sender_id', 'audience', 'user_id', 'title', 'body', 'url', 'recipient_count', 'sent_count', 'cancelled_at'];
+    protected $fillable = ['sender_id', 'audience', 'user_id', 'title', 'body', 'url', 'image_url', 'recipient_count', 'sent_count', 'cancelled_at'];
 
     protected function casts(): array
     {

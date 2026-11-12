@@ -14,6 +14,7 @@ class DeviceTokenController extends Controller
         $data = $request->validate([
             'token' => ['required', 'string', 'max:255'],
             'platform' => ['nullable', 'string', 'in:android,ios'],
+            'rich_notifications' => ['sometimes', 'boolean'],
         ]);
 
         // Matched globally, not through the relation: a token moving to a different
@@ -21,7 +22,11 @@ class DeviceTokenController extends Controller
         // the unique constraint.
         DeviceToken::query()->updateOrCreate(
             ['token' => $data['token']],
-            ['user_id' => $request->user()->id, 'platform' => $data['platform'] ?? 'android'],
+            [
+                'user_id' => $request->user()->id,
+                'platform' => $data['platform'] ?? 'android',
+                'rich_notifications' => ($data['platform'] ?? 'android') === 'android' && $request->boolean('rich_notifications'),
+            ],
         );
 
         return response()->noContent(201);
