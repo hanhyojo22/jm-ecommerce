@@ -24,9 +24,10 @@ use Illuminate\View\View;
 
 class AnnouncementController extends Controller
 {
-    public function create(): View
+    public function create(Request $request): View
     {
         return view('admin.announcements.create', [
+            'tab' => $request->query('tab') === 'history' ? 'history' : 'compose',
             'announcements' => Announcement::query()->with('sender', 'user')->latest()->limit(10)->get(),
             'audienceCounts' => [
                 'customers' => SendAdminAnnouncement::recipients('customers')->count(),
@@ -42,25 +43,29 @@ class AnnouncementController extends Controller
      */
     public function linkTargets(Request $request): JsonResponse
     {
-        $validated = $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+        $validated = $request->validate([
+            'type' => ['required', Rule::in(['stores', 'products'])],
+            'q' => ['nullable', 'string', 'max:100'],
+            'store' => ['nullable', 'string', 'max:255'],
+        ]);
         $search = trim((string) ($validated['q'] ?? ''));
         $matching = fn (Builder $query): Builder => $query->when($search !== '', fn (Builder $query) => $query->whereLike('name', "%{$search}%"));
 
-        return response()->json([
-            'stores' => $matching(CatalogQuery::publicStores())
+        $results = $validated['type'] === 'stores'
+            ? $matching(CatalogQuery::publicStores())
                 ->orderBy('name')
-                ->limit(6)
-                ->get(['id', 'name', 'slug', 'logo_path'])
+                ->limit(8)
+                ->get(['id', 'name', 'slug', 'city', 'logo_path'])
                 ->map(fn (Store $store): array => self::storeTarget($store))
-                ->all(),
-            'products' => $matching(CatalogQuery::publishedProducts())
+            : $matching(CatalogQuery::publishedProducts())
+                ->when(filled($validated['store'] ?? null), fn (Builder $query) => $query->whereHas('store', fn (Builder $store) => $store->where('slug', $validated['store'])))
                 ->with('thumbnail')
                 ->orderBy('name')
-                ->limit(6)
+                ->limit(8)
                 ->get(['id', 'store_id', 'name', 'slug', 'price'])
-                ->map(fn (Product $product): array => self::productTarget($product))
-                ->all(),
-        ]);
+                ->map(fn (Product $product): array => self::productTarget($product));
+
+        return response()->json(['results' => $results->all()]);
     }
 
     /**
@@ -91,13 +96,15 @@ class AnnouncementController extends Controller
     }
 
     /**
-     * @return array{kind: string, name: string, url: string, image: string|null}
+     * @return array{kind: string, name: string, slug: string, city: string|null, url: string, image: string|null}
      */
     private static function storeTarget(Store $store): array
     {
         return [
             'kind' => 'store',
             'name' => $store->name,
+            'slug' => $store->slug,
+            'city' => $store->city,
             'url' => route('catalog.store', $store->slug),
             'image' => $store->logo_path ? Storage::disk('public')->url($store->logo_path) : null,
         ];
@@ -183,13 +190,13 @@ class AnnouncementController extends Controller
 
         SendAdminAnnouncement::dispatch($announcement->id);
 
-        return to_route('admin.announcements.create')->with('status', "Notification queued for {$announcement->recipient_count} recipient(s).");
+        return to_route('admin.announcements.create', ['tab' => 'history'])->with('status', "Notification queued for {$announcement->recipient_count} recipient(s).");
     }
 
     public function cancel(Request $request, Announcement $announcement): RedirectResponse
     {
         if ($announcement->isFinished()) {
-            return to_route('admin.announcements.create')->with('status', 'That notification has already finished sending.');
+            return to_route('admin.announcements.create', ['tab' => 'history'])->with('status', 'That notification has already finished sending.');
         }
 
         $announcement->update(['cancelled_at' => now()]);
@@ -203,6 +210,6 @@ class AnnouncementController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
-        return to_route('admin.announcements.create')->with('status', 'Notification cancelled. Batches not yet sent were stopped.');
+        return to_route('admin.announcements.create', ['tab' => 'history'])->with('status', 'Notification cancelled. Batches not yet sent were stopped.');
     }
 }

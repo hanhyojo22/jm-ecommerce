@@ -66,7 +66,7 @@ class AdminAnnouncementTest extends TestCase
 
         $this->actingAs($administrator)
             ->post(route('admin.announcements.store'), ['audience' => 'customers', 'title' => 'Big sale', 'body' => 'Everything 20% off today.'])
-            ->assertRedirect(route('admin.announcements.create'))
+            ->assertRedirect(route('admin.announcements.create', ['tab' => 'history']))
             ->assertSessionHas('status', 'Notification queued for 2 recipient(s).');
 
         $announcement = Announcement::query()->sole();
@@ -74,7 +74,7 @@ class AdminAnnouncementTest extends TestCase
         Queue::assertPushed(SendAdminAnnouncement::class, fn (SendAdminAnnouncement $job): bool => $job->announcementId === $announcement->id && $job->batchUserIds === null);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $administrator->id, 'action' => 'announcement.sent', 'entity_id' => $announcement->id]);
 
-        $this->actingAs($administrator)->get(route('admin.announcements.create'))->assertSee('Big sale')->assertSee('0/2 sent');
+        $this->actingAs($administrator)->get(route('admin.announcements.create', ['tab' => 'history']))->assertSee('Big sale')->assertSee('0/2 sent');
     }
 
     public function test_a_specific_customer_must_exist(): void
@@ -128,10 +128,10 @@ class AdminAnnouncementTest extends TestCase
         $suspendedStore = Store::query()->where('status', 'suspended')->sole();
 
         $this->actingAs($administrator)
-            ->getJson(route('admin.announcements.link-targets'))
+            ->getJson(route('admin.announcements.link-targets', ['type' => 'stores']))
             ->assertOk()
-            ->assertJsonCount(1, 'stores')
-            ->assertJsonPath('stores.0.name', $activeStore->name)
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.name', $activeStore->name)
             ->assertDontSee($suspendedStore->name);
     }
 
@@ -216,33 +216,43 @@ class AdminAnnouncementTest extends TestCase
         $this->assertTrue($announcement->fresh()->isFinished());
     }
 
-    public function test_link_targets_search_published_stores_and_products_by_name(): void
+    public function test_link_targets_search_one_type_and_can_narrow_products_to_a_store(): void
     {
         $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Store', 'slug' => 'northwind-store', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
-        $product = fn (string $name, string $slug, string $status): Product => Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => $name, 'slug' => $slug, 'sku' => strtoupper($slug), 'price' => 199, 'stock_quantity' => 3, 'status' => $status]);
+        $otherTenant = Tenant::create(['name' => 'Southwind', 'slug' => 'southwind', 'status' => 'active']);
+        $otherStore = Store::create(['tenant_id' => $otherTenant->id, 'name' => 'Southwind Store', 'slug' => 'southwind-store', 'phone' => '+639171234567', 'address_line' => '11 Market Street', 'city' => 'Cebu', 'status' => 'active']);
+        $product = fn (Store $owner, string $name, string $slug, string $status): Product => Product::create(['tenant_id' => $owner->tenant_id, 'store_id' => $owner->id, 'name' => $name, 'slug' => $slug, 'sku' => strtoupper($slug), 'price' => 199, 'stock_quantity' => 3, 'status' => $status]);
         Storage::fake('product_images');
-        $product('Canvas Tote', 'canvas-tote', 'active')->images()->create(['path' => 'products/canvas-tote.jpg', 'position' => 0]);
-        $product('Canvas Draft', 'canvas-draft', 'draft');
-        $product('Steel Bottle', 'steel-bottle', 'active');
+        $product($store, 'Canvas Tote', 'canvas-tote', 'active')->images()->create(['path' => 'products/canvas-tote.jpg', 'position' => 0]);
+        $product($store, 'Canvas Draft', 'canvas-draft', 'draft');
+        $product($otherStore, 'Canvas Pouch', 'canvas-pouch', 'active');
 
         $this->actingAs(User::factory()->administrator()->create())
-            ->getJson(route('admin.announcements.link-targets', ['q' => 'canvas']))
+            ->getJson(route('admin.announcements.link-targets', ['type' => 'products', 'q' => 'canvas']))
             ->assertOk()
-            ->assertJsonCount(0, 'stores')
-            ->assertJsonCount(1, 'products')
-            ->assertJsonPath('products.0.name', 'Canvas Tote')
-            ->assertJsonPath('products.0.store', 'Northwind Store')
-            ->assertJsonPath('products.0.price', '₱199.00')
-            ->assertJsonPath('products.0.url', route('catalog.show', ['store' => 'northwind-store', 'product' => 'canvas-tote']))
-            ->assertJsonPath('products.0.image', Storage::disk('product_images')->url('products/canvas-tote.jpg'));
+            ->assertJsonCount(2, 'results')
+            ->assertJsonPath('results.0.name', 'Canvas Pouch')
+            ->assertJsonPath('results.1.name', 'Canvas Tote')
+            ->assertJsonPath('results.1.store', 'Northwind Store')
+            ->assertJsonPath('results.1.price', '₱199.00')
+            ->assertJsonPath('results.1.url', route('catalog.show', ['store' => 'northwind-store', 'product' => 'canvas-tote']))
+            ->assertJsonPath('results.1.image', Storage::disk('product_images')->url('products/canvas-tote.jpg'));
 
-        $this->getJson(route('admin.announcements.link-targets', ['q' => 'northwind']))
-            ->assertJsonPath('stores.0.url', route('catalog.store', 'northwind-store'))
-            ->assertJsonCount(0, 'products');
+        $this->getJson(route('admin.announcements.link-targets', ['type' => 'products', 'q' => 'canvas', 'store' => 'northwind-store']))
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.name', 'Canvas Tote');
+
+        $this->getJson(route('admin.announcements.link-targets', ['type' => 'stores', 'q' => 'north']))
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results.0.slug', 'northwind-store')
+            ->assertJsonPath('results.0.city', 'Manila')
+            ->assertJsonPath('results.0.url', route('catalog.store', 'northwind-store'));
+
+        $this->getJson(route('admin.announcements.link-targets', ['q' => 'canvas']))->assertUnprocessable();
 
         $this->actingAs(User::factory()->create())
-            ->getJson(route('admin.announcements.link-targets', ['q' => 'canvas']))
+            ->getJson(route('admin.announcements.link-targets', ['type' => 'products']))
             ->assertForbidden();
     }
 

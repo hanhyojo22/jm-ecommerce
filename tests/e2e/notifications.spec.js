@@ -9,6 +9,16 @@ async function rejectOptionalCookies(page) {
     }
 }
 
+async function reviewAndSend(page) {
+    await page.getByRole('button', { name: 'Review and send' }).click();
+    const review = page.getByRole('dialog', { name: 'Review before sending' });
+    await expect(review).toBeVisible();
+    const send = review.getByRole('button', { name: 'Send notification' });
+    await expect(send).toBeDisabled();
+    await review.getByLabel('I checked the preview and want to send this now.').check();
+    await send.click();
+}
+
 test('admin sends a notification to one customer and it opens its link from the bell', async ({ browser }) => {
     const admin = await openAsRole(browser, 'admin');
     const customer = await openAsRole(browser, 'customer');
@@ -17,16 +27,18 @@ test('admin sends a notification to one customer and it opens its link from the 
     try {
         await admin.page.goto('/admin/announcements');
         await rejectOptionalCookies(admin.page);
-        await expect(admin.page.getByRole('heading', { name: 'Send a notification' })).toBeVisible();
+        await expect(admin.page.getByRole('heading', { name: 'Notifications', level: 1 })).toBeVisible();
 
         await admin.page.getByRole('radio', { name: 'One customer' }).check();
         await admin.page.getByLabel('Customer email').fill('QA-Customer@example.test');
+        await admin.page.getByRole('radio', { name: 'Other page' }).click();
+        await admin.page.getByRole('button', { name: 'Cart', exact: true }).click();
         await admin.page.getByLabel('Title').fill(title);
         await admin.page.getByLabel('Message').fill('Everything in your cart is 10% off until Sunday.');
-        await admin.page.getByLabel('Link (optional)').fill(new URL('/cart', admin.page.url()).href);
-        await admin.page.getByRole('button', { name: 'Send notification' }).click();
+        await reviewAndSend(admin.page);
 
         await expect(admin.page.getByText('Notification queued for 1 recipient(s).', { exact: true })).toBeVisible();
+        await expect(admin.page).toHaveURL(/tab=history/);
         // The e2e queue is sync, so the send has already finished by the time the page reloads.
         const sent = admin.page.locator('li', { hasText: title });
         await expect(sent).toContainText('qa-customer@example.test');
@@ -54,13 +66,14 @@ test('admin starts a notification from a ready-made template', async ({ browser 
         await page.goto('/admin/announcements');
         await rejectOptionalCookies(page);
 
-        const productAd = page.getByRole('button', { name: /Product ad/ });
+        const productAd = page.getByRole('button', { name: 'Product ad' });
         await productAd.click();
 
         await expect(productAd).toHaveAttribute('aria-pressed', 'true');
         await expect(page.getByLabel('Title')).toHaveValue('Fresh finds just landed');
         await expect(page.getByLabel('Message')).toHaveValue('Discover new arrivals from JMMart sellers. Browse the latest products and find something to love.');
-        await expect(page.getByLabel('Link (optional)')).toHaveValue(new URL('/search', page.url()).href);
+        await expect(page.getByRole('radio', { name: 'Other page' })).toHaveAttribute('aria-checked', 'true');
+        await expect(page.getByLabel('JMMart link')).toHaveValue(new URL('/search', page.url()).href);
 
         await page.getByLabel('Title').fill('Custom title');
         await expect(productAd).toHaveAttribute('aria-pressed', 'false');
@@ -69,37 +82,47 @@ test('admin starts a notification from a ready-made template', async ({ browser 
     }
 });
 
-test('admin searches for a store or product to deep-link', async ({ browser }) => {
+test('admin picks what the notification opens, searching only that kind', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'admin');
 
     try {
         await page.goto('/admin/announcements');
         await rejectOptionalCookies(page);
 
-        const search = page.getByRole('combobox', { name: 'Store or product' });
-        const link = page.getByLabel('Link (optional)');
-        const deepLinkRow = page.locator('aside dl div', { hasText: 'App deep link' });
+        const link = page.locator('input[name="url"]');
+        const opensRow = page.locator('aside dl div', { hasText: 'Opens' });
 
-        await search.fill('northwind');
+        await page.getByRole('radio', { name: 'A store' }).click();
+        await page.getByRole('combobox', { name: 'Store', exact: true }).fill('northwind');
         await page.getByRole('option', { name: /QA Northwind Store/ }).click();
+        await expect(page.getByRole('option', { name: /QA Canvas Tote/ })).toHaveCount(0);
         await expect(link).toHaveValue(new URL('/stores/qa-northwind-store', page.url()).href);
-        await expect(deepLinkRow).toContainText('Store · QA Northwind Store');
+        await expect(opensRow).toContainText('Store · QA Northwind Store');
 
-        await search.fill('canvas');
-        await expect(page.getByRole('option', { name: /QA Canvas Tote/ })).toContainText('₱19.99');
-        await search.press('ArrowDown');
-        await search.press('ArrowUp');
-        await search.press('Enter');
-        await expect(link).toHaveValue(new URL('/stores/qa-northwind-store/products/qa-canvas-tote', page.url()).href);
-        await expect(deepLinkRow).toContainText('Product · QA Canvas Tote');
-
-        await search.fill('zzz-no-such-thing');
-        await expect(page.getByText('No published store or product matches')).toBeVisible();
-        await search.press('Escape');
-
-        await page.getByRole('button', { name: 'Remove the selected store or product' }).click();
+        await page.getByRole('radio', { name: 'A product' }).click();
         await expect(link).toHaveValue('');
-        await expect(deepLinkRow).toContainText('None');
+        await page.getByRole('combobox', { name: 'From store (optional)' }).fill('southwind');
+        await page.getByRole('option', { name: /QA Southwind Store/ }).click();
+        const product = page.getByRole('combobox', { name: 'Product' });
+        await product.fill('canvas');
+        await expect(page.getByText('No product in QA Southwind Store matches “canvas”.')).toBeVisible();
+        await page.getByRole('button', { name: 'Search every store' }).click();
+        await expect(page.getByRole('option', { name: /QA Canvas Tote/ })).toContainText('₱19.99');
+        await product.press('ArrowDown');
+        await product.press('ArrowUp');
+        await product.press('Enter');
+        await expect(link).toHaveValue(new URL('/stores/qa-northwind-store/products/qa-canvas-tote', page.url()).href);
+        await expect(opensRow).toContainText('Product · QA Canvas Tote');
+
+        await page.getByRole('button', { name: 'Change product' }).click();
+        await expect(link).toHaveValue('');
+        await expect(opensRow).toContainText('Home');
+
+        await page.getByLabel('Title').fill('Draft');
+        await page.getByLabel('Message').fill('Draft body');
+        await page.getByRole('button', { name: 'Review and send' }).click();
+        await expect(page.getByText('Choose a product, or switch to Home.')).toBeVisible();
+        await expect(page.getByRole('dialog', { name: 'Review before sending' })).toBeHidden();
     } finally {
         await context.close();
     }
@@ -112,33 +135,36 @@ test('picking a product uses its photo until the admin sets a custom image', asy
         await page.goto('/admin/announcements');
         await rejectOptionalCookies(page);
 
-        const search = page.getByRole('combobox', { name: 'Store or product' });
         const imageUrl = page.getByLabel('Or paste an image URL');
-        const summaryImage = page.locator('aside dl div', { hasText: 'Campaign image' });
+        const imageRow = page.locator('aside dl div', { hasText: 'Image' });
+        const product = page.getByRole('combobox', { name: 'Product' });
         const pick = async (query, name) => {
-            await search.fill(query);
+            await product.fill(query);
             await page.getByRole('option', { name }).click();
         };
 
+        await page.getByRole('radio', { name: 'A product' }).click();
         await pick('speaker', /QA Variant Speaker/);
         await expect(imageUrl).toHaveValue(/qa\/variant-/);
         await expect(page.getByText('Using product photo')).toBeVisible();
         await expect(page.getByLabel('Title')).toHaveValue(/^QA Variant Speaker · ₱10\.00$/);
-        await expect(summaryImage).toContainText('Product photo (auto)');
+        await expect(imageRow).toContainText('Product photo');
 
         await imageUrl.fill('https://example.com/sale-banner.jpg');
-        await expect(summaryImage).toContainText('Custom image');
+        await expect(imageRow).toContainText('Custom image');
 
+        await page.getByRole('button', { name: 'Change product' }).click();
         await pick('other seller', /Other Seller QA Product/);
         await expect(imageUrl).toHaveValue('https://example.com/sale-banner.jpg');
 
+        await page.getByRole('button', { name: 'Change product' }).click();
         await pick('speaker', /QA Variant Speaker/);
         await page.getByRole('button', { name: 'Use product photo' }).click();
         await expect(imageUrl).toHaveValue(/qa\/variant-/);
 
-        await page.getByRole('button', { name: 'Remove the selected store or product' }).click();
+        await page.getByRole('button', { name: 'Change product' }).click();
         await expect(imageUrl).toHaveValue('');
-        await expect(summaryImage).toContainText('None');
+        await expect(imageRow).toContainText('None');
     } finally {
         await context.close();
     }
@@ -158,12 +184,12 @@ test('admin uploads a campaign image and sees it across the composer previews', 
         });
 
         await expect(page.getByAltText('Campaign image preview')).toHaveCount(2);
-        await expect(page.locator('aside dl div', { hasText: 'Campaign image' })).toContainText('Custom image');
+        await expect(page.locator('aside dl div', { hasText: 'Image' })).toContainText('Custom image');
         await expect(page.getByRole('button', { name: 'Replace', exact: true })).toBeVisible();
 
         await page.getByRole('button', { name: 'Remove', exact: true }).click();
         await expect(page.getByAltText('Campaign image preview')).toHaveCount(0);
-        await expect(page.locator('aside dl div', { hasText: 'Campaign image' })).toContainText('None');
+        await expect(page.locator('aside dl div', { hasText: 'Image' })).toContainText('None');
     } finally {
         await context.close();
     }
@@ -178,17 +204,19 @@ test('admin cannot send a notification that links to another site or an unknown 
 
         await page.getByLabel('Title').fill('Phishing check');
         await page.getByLabel('Message').fill('This must not be sent.');
-        await page.getByLabel('Link (optional)').fill('https://example.com/login');
-        await page.getByRole('button', { name: 'Send notification' }).click();
+        await page.getByRole('radio', { name: 'Other page' }).click();
+        await page.getByLabel('JMMart link').fill('https://example.com/login');
+        await reviewAndSend(page);
         // The layout also lists errors in a summary; the field's own message sits inside the form.
         await expect(page.locator('form').getByText('The link must be a JMMart page.')).toBeVisible();
 
         await page.getByRole('radio', { name: 'One customer' }).check();
         await page.getByLabel('Customer email').fill('nobody@example.test');
-        await page.getByLabel('Link (optional)').fill('');
-        await page.getByRole('button', { name: 'Send notification' }).click();
+        await page.getByRole('radio', { name: 'Home' }).click();
+        await reviewAndSend(page);
         await expect(page.locator('form').getByText('No active customer has this email.')).toBeVisible();
 
+        await page.goto('/admin/announcements?tab=history');
         await expect(page.locator('li', { hasText: 'Phishing check' })).toHaveCount(0);
     } finally {
         await context.close();
