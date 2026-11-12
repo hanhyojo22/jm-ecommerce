@@ -1,3 +1,5 @@
+import 'package:app_links/app_links.dart';
+import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -34,6 +36,13 @@ Future<void> main() async {
       config: ClerkAuthConfig(
         publishableKey: AppConfig.clerkPublishableKey,
         httpService: const NativeClerkHttpService(),
+        // Facebook signs in through the browser, which can hand off to the
+        // Facebook app; other providers keep Clerk's in-app flow.
+        redirectionGenerator: (context, strategy) =>
+            strategy.provider == clerk.Strategy.oauthFacebook.provider
+            ? AppConfig.oauthRedirectUri
+            : null,
+        deepLinkStream: AppLinks().uriLinkStream,
       ),
     );
 

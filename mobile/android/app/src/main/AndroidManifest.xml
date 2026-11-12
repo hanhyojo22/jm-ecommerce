@@ -31,6 +31,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Facebook sign-in returns here from the browser (AppConfig.oauthRedirectUri). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="jmmart" android:host="oauth-callback"/>
+            </intent-filter>
+            <!-- Clerk consumes the OAuth deep link; keep go_router from treating it as a route. -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
         </activity>
         <!-- Used by FCM for pushes that arrive while the app is backgrounded or closed. -->
         <meta-data

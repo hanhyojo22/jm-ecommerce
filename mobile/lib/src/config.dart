@@ -12,6 +12,17 @@ class AppConfig {
     'CLERK_PUBLISHABLE_KEY',
   );
 
+  /// Web OAuth client ID of the Google Cloud project behind Clerk's Google
+  /// connection; native Google sign-in issues its ID token for this audience.
+  /// Without it, Google falls back to Clerk's web sign-in.
+  static const String googleWebClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+  );
+
+  /// Where the browser hands Facebook sign-in back to the app. Must match the
+  /// intent filter in AndroidManifest.xml and Clerk's allowlisted redirect URLs.
+  static final Uri oauthRedirectUri = Uri.parse('jmmart://oauth-callback');
+
   static const String reverbKey = String.fromEnvironment(
     'REVERB_APP_KEY',
     defaultValue: 'd4258d9d1bdd4fbd09df58dc182cba0e84359788001b076d',

@@ -3,7 +3,9 @@ import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
 
 import '../config.dart';
 import '../widgets/shell.dart';
@@ -35,16 +37,51 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _signInWith(clerk.SocialConnection connection) async {
     setState(() => _pendingConnection = connection);
+    final auth = ClerkAuth.of(context, listen: false);
     try {
-      await ClerkAuth.of(
-        context,
-        listen: false,
-      ).ssoSignIn(context, connection.strategy);
+      if (connection.strategy.provider ==
+              clerk.Strategy.oauthGoogle.provider &&
+          AppConfig.googleWebClientId.isNotEmpty) {
+        await _signInWithNativeGoogle(auth);
+      } else {
+        await auth.ssoSignIn(context, connection.strategy);
+      }
     } finally {
       if (mounted) {
         setState(() => _pendingConnection = null);
       }
     }
+  }
+
+  /// Shows Android's Google account picker, then hands its ID token to Clerk.
+  Future<void> _signInWithNativeGoogle(ClerkAuthState auth) async {
+    final String? idToken;
+    try {
+      // Clerk accepts each Google ID token nonce once, so every attempt needs a
+      // new one; google_sign_in only takes the nonce in initialize, which on
+      // Android (google_sign_in_android 7.2.x) just replaces the stored values.
+      await GoogleSignIn.instance.initialize(
+        serverClientId: AppConfig.googleWebClientId,
+        nonce: const Uuid().v4(),
+      );
+      final account = await GoogleSignIn.instance.authenticate();
+      idToken = account.authentication.idToken;
+    } on GoogleSignInException catch (error) {
+      if (error.code != GoogleSignInExceptionCode.canceled) {
+        auth.handleError(clerk.ClerkError.external(error));
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    await auth.safelyCall(
+      context,
+      () => auth.idTokenSignIn(
+        provider: clerk.IdTokenProvider.google,
+        token: idToken,
+      ),
+    );
   }
 
   void _openEmailForm() => setState(() => _showEmailForm = true);
