@@ -989,21 +989,30 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 Column(
                   children: [
-                    _infoRow(
-                      context,
-                      icon: Icons.local_shipping_outlined,
-                      title: product.freeShipping
-                          ? 'Free shipping'
-                          : 'Standard delivery',
-                      subtitle: product.freeShipping
-                          ? null
-                          : 'Shipping fee shown at checkout',
-                      highlight: product.freeShipping,
-                    ),
-                    _infoRow(
-                      context,
-                      icon: Icons.payments_outlined,
-                      title: 'Cash on delivery available',
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _infoRow(
+                            context,
+                            icon: Icons.local_shipping_outlined,
+                            title: product.freeShipping
+                                ? 'Free shipping'
+                                : 'Standard delivery',
+                            subtitle: product.freeShipping
+                                ? null
+                                : 'Fee shown at checkout',
+                            highlight: product.freeShipping,
+                          ),
+                        ),
+                        Expanded(
+                          child: _infoRow(
+                            context,
+                            icon: Icons.payments_outlined,
+                            title: 'Cash on delivery',
+                          ),
+                        ),
+                      ],
                     ),
                     // A single variant is auto-selected, so there is nothing to choose.
                     if (product.variants.length > 1)
