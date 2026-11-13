@@ -73,7 +73,7 @@
             <section id="flash-deals" class="scroll-mt-[136px] py-8 sm:py-10" aria-labelledby="home-deals-heading">
                 <div class="grid gap-6 rounded-[var(--radius-surface)] bg-ink p-5 text-white sm:p-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-7">
                     <div class="flex flex-col items-start justify-center"><p class="text-xs font-semibold uppercase tracking-[.12em] text-blue-300">Flash deals</p><h2 id="home-deals-heading" class="marketplace-section-title mt-2 text-white">A good find at a better price.</h2><p class="mt-2 text-sm leading-6 text-slate-300">Browse products currently discounted by their sellers.</p><a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center rounded-md bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100">View all deals <span class="ml-2" aria-hidden="true">→</span></a></div>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="grid grid-cols-2 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         @foreach ($flashDeals as $product)
                             <x-marketplace.top-product-card :product="$product" />
                         @endforeach

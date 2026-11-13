@@ -8,7 +8,10 @@ void main() {
     'discovery details stay closely grouped and show unrated status',
     (tester) async {
       await tester.pumpWidget(_card(discovery: true));
-      final nameBottom = tester.getBottomLeft(find.text('Cargo Pants')).dy;
+      final name = find.text('Cargo Pants');
+      // A one-line name must not reserve a blank second line above the price.
+      expect(tester.getSize(name).height, lessThan(25));
+      final nameBottom = tester.getBottomLeft(name).dy;
       final priceTop = tester.getTopLeft(find.text('₱255.00')).dy;
       expect(priceTop - nameBottom, lessThanOrEqualTo(6));
       final rating = find.text('No reviews yet');

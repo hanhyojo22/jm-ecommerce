@@ -353,11 +353,6 @@ class ProductCard extends StatelessWidget {
       fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
       height: 1.3,
     );
-    // Reserve two title lines so one- and two-line names keep images and prices aligned across a row.
-    final titleHeight =
-        MediaQuery.textScalerOf(context).scale(titleStyle?.fontSize ?? 14) *
-        1.3 *
-        2;
     final discount = discountPercent(
       product.effectivePrice,
       product.compareAtPrice,
@@ -481,14 +476,11 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: titleHeight),
-                    child: Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: titleStyle,
-                    ),
+                  Text(
+                    product.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: titleStyle,
                   ),
                   if (discovery) ...[
                     const SizedBox(height: 4),
