@@ -510,6 +510,8 @@ class ConversationApiTest extends TestCase
             'tenant_id' => $product->tenant_id, 'store_id' => $store->id,
             'status' => 'pending', 'subtotal' => '199.00', 'shipping_amount' => '0.00', 'total' => '199.00',
         ]);
+        $order->payment()->create(['method' => 'cod', 'status' => 'pending', 'amount' => '199.00']);
+        $product->update(['free_shipping' => true]);
         foreach ([['Rice cooker', 'products/rice-cooker.jpg', 'White', 1, 5], ['Spare lid', null, null, 2, 4]] as [$name, $imagePath, $variant, $quantity, $rating]) {
             $item = $sellerOrder->items()->create([
                 'product_id' => $product->id, 'product_name' => $name, 'sku' => 'SKU-'.str()->random(6),
@@ -531,10 +533,12 @@ class ConversationApiTest extends TestCase
             ->assertJsonPath('data.context_snapshot.number', 'JM-1042')
             ->assertJsonPath('data.context_snapshot.total', '199.00')
             ->assertJsonPath('data.context_snapshot.item_count', 3)
+            ->assertJsonPath('data.context_snapshot.payment_method', 'cod')
+            ->assertJsonPath('data.context_snapshot.city', 'Manila')
             ->assertJsonPath('data.context_snapshot.image_url', Storage::disk('product_images')->url('products/rice-cooker.jpg'))
             ->assertJsonPath('data.context_snapshot.items', [
-                ['name' => 'Rice cooker', 'variant' => 'White', 'quantity' => 1, 'image_path' => 'products/rice-cooker.jpg', 'rating' => 4.5, 'rating_count' => 2, 'image_url' => Storage::disk('product_images')->url('products/rice-cooker.jpg')],
-                ['name' => 'Spare lid', 'variant' => null, 'quantity' => 2, 'image_path' => null, 'rating' => 4.5, 'rating_count' => 2, 'image_url' => null],
+                ['name' => 'Rice cooker', 'variant' => 'White', 'quantity' => 1, 'image_path' => 'products/rice-cooker.jpg', 'rating' => 4.5, 'rating_count' => 2, 'sold' => 3, 'free_shipping' => true, 'image_url' => Storage::disk('product_images')->url('products/rice-cooker.jpg')],
+                ['name' => 'Spare lid', 'variant' => null, 'quantity' => 2, 'image_path' => null, 'rating' => 4.5, 'rating_count' => 2, 'sold' => 3, 'free_shipping' => true, 'image_url' => null],
             ]);
         $this->getJson('/api/v1/conversations?filter=order')->assertOk()
             ->assertJsonCount(1, 'data');

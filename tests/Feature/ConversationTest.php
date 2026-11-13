@@ -267,21 +267,22 @@ class ConversationTest extends TestCase
             ->assertSee('x-on:input.debounce.500ms="$wire.startTyping()"', false);
     }
 
-    public function test_order_inquiry_card_shows_the_first_product_with_its_rating(): void
+    public function test_order_inquiry_card_looks_like_a_product_card(): void
     {
         $buyer = User::factory()->create(['email_verified_at' => now()]);
         $product = $this->product();
         $conversation = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $product->store_id]);
         $items = collect(['Rice cooker', 'Spare lid', 'Measuring cup', 'Steamer tray'])
-            ->map(fn (string $name): array => ['name' => $name, 'variant' => 'White', 'quantity' => 2, 'image_path' => null, 'rating' => 4.5, 'rating_count' => 12])->all();
+            ->map(fn (string $name): array => ['name' => $name, 'variant' => 'White', 'quantity' => 2, 'image_path' => null, 'rating' => 4.5, 'rating_count' => 12, 'sold' => 19, 'free_shipping' => true])->all();
         $conversation->messages()->create(['sender_id' => $buyer->id, 'body' => 'When will this ship?', 'context_snapshot' => [
             'type' => 'order', 'number' => 'JM-1042', 'total' => '199.00', 'status' => 'shipped',
             'order_id' => 'missing-order', 'item_count' => 4, 'items' => $items,
+            'payment_method' => 'cod', 'city' => 'Cebu',
         ]]);
 
         $this->actingAs($buyer)->get(route('messages.show', $conversation))
             ->assertOk()
-            ->assertSeeInOrder(['+3', 'Rice cooker', 'Shipped', '4.5 (12)', 'White · ×2', '₱199.00'])
+            ->assertSeeInOrder(['+3', 'COD', 'FREE SHIPPING', 'Rice cooker', '₱199.00', '4.5 (12)', '19 Sold', 'Cebu', 'Shipped'])
             ->assertDontSee('Steamer tray');
     }
 

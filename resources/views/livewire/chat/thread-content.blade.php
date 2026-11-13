@@ -66,33 +66,34 @@
                                         @php($orderItems = $orderSnapshot['items'] ?? [])
                                         @php($firstItem = $orderItems[0] ?? null)
                                         @php($firstImage = $firstItem['image_path'] ?? $orderSnapshot['image_path'] ?? null)
-                                        @php($firstVariant = $firstItem['variant'] ?? null)
                                         @php($orderStatusStyles = ['pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'confirmed' => 'bg-brand/10 text-brand-hover ring-brand/20', 'processing' => 'bg-brand/10 text-brand-hover ring-brand/20', 'shipped' => 'bg-brand/10 text-brand-hover ring-brand/20', 'delivered' => 'bg-success/10 text-success ring-success/20', 'cancelled' => 'bg-danger/10 text-danger-text ring-danger/20'])
-                                        <a @if (filled($orderSnapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $orderSnapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif data-chat-order-card class="{{ $message->sender_id === auth()->id() ? 'ml-auto ' : '' }}flex max-w-sm items-center gap-2.5 rounded-lg border border-line bg-white p-2 transition hover:border-brand/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-                                            <span class="relative size-12 shrink-0">
+                                        <a @if (filled($orderSnapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $orderSnapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif data-chat-order-card class="{{ $message->sender_id === auth()->id() ? 'ml-auto ' : '' }}flex max-w-sm gap-3 rounded-lg border border-line bg-white p-2 transition hover:border-brand/40 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            <span class="relative size-24 shrink-0 overflow-hidden rounded-md bg-slate-100">
                                                 @if (filled($firstImage))
-                                                    <img src="{{ Storage::disk('product_images')->url($firstImage) }}" alt="" loading="lazy" class="size-12 rounded-md border border-line object-cover">
+                                                    <img src="{{ Storage::disk('product_images')->url($firstImage) }}" alt="" loading="lazy" class="size-full object-cover">
                                                 @else
-                                                    <span class="grid size-12 place-items-center rounded-md bg-canvas text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9ZM4.5 7.75 12 12l7.5-4.25M12 12v8.5"/></svg></span>
+                                                    <span class="grid size-full place-items-center text-muted" aria-hidden="true"><svg class="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 10h8M8 14h5"/></svg></span>
                                                 @endif
                                                 @if (count($orderItems) > 1)
-                                                    <span class="absolute bottom-0.5 right-0.5 rounded bg-black/65 px-1 text-[11px] font-semibold leading-4 text-white">+{{ count($orderItems) - 1 }}</span>
+                                                    <span class="absolute right-1 top-1 rounded bg-black/65 px-1.5 text-[11px] font-bold leading-5 text-white">+{{ count($orderItems) - 1 }}</span>
                                                 @endif
                                             </span>
-                                            <span class="min-w-0 flex-1">
-                                                <span class="flex items-center gap-1.5">
-                                                    <span class="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{{ $firstItem['name'] ?? $orderSnapshot['item_name'] ?? 'Order '.($orderSnapshot['number'] ?? '') }}</span>
-                                                    @if (filled($orderSnapshot['status'] ?? null))
-                                                        <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset {{ $orderStatusStyles[$orderSnapshot['status']] ?? 'bg-canvas text-muted ring-line' }}">{{ Str::headline($orderSnapshot['status']) }}</span>
-                                                    @endif
+                                            <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                                                @if (($orderSnapshot['payment_method'] ?? null) === 'cod' || ($firstItem['free_shipping'] ?? false))
+                                                    <span class="mb-0.5 flex flex-wrap items-center gap-1 text-[10px] font-bold leading-none text-white">
+                                                        @if (($orderSnapshot['payment_method'] ?? null) === 'cod')<span class="inline-flex h-4 items-center rounded bg-warning-text px-1.5"><span aria-hidden="true">COD</span><span class="sr-only">Cash on delivery</span></span>@endif
+                                                        @if ($firstItem['free_shipping'] ?? false)<span class="inline-flex h-4 items-center rounded bg-brand px-1.5">FREE SHIPPING</span>@endif
+                                                    </span>
+                                                @endif
+                                                <span class="truncate text-sm font-medium text-ink">{{ $firstItem['name'] ?? $orderSnapshot['item_name'] ?? 'Order '.($orderSnapshot['number'] ?? '') }}</span>
+                                                <span class="text-lg font-bold leading-6 tabular-nums text-ink">₱{{ number_format((float) ($orderSnapshot['total'] ?? 0), 2) }}</span>
+                                                <span class="flex min-w-0 items-center gap-1 text-xs text-muted">
+                                                    @if (($firstItem['rating_count'] ?? 0) > 0)<svg viewBox="0 0 20 20" class="size-3.5 shrink-0 fill-amber-400" aria-hidden="true"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z" /></svg><span class="shrink-0">{{ number_format((float) $firstItem['rating'], 1) }} ({{ $firstItem['rating_count'] }})</span>@else<span class="shrink-0">No reviews yet</span>@endif
+                                                    @if (($firstItem['sold'] ?? 0) > 0)<span class="h-3 w-px shrink-0 bg-line" aria-hidden="true"></span><span class="shrink-0">{{ $firstItem['sold'] }} Sold</span>@endif
                                                 </span>
-                                                <span class="mt-1 flex items-center gap-1 text-xs text-muted">
-                                                    @if (($firstItem['rating_count'] ?? 0) > 0)
-                                                        <svg viewBox="0 0 20 20" fill="currentColor" class="size-3.5 shrink-0 text-amber-500" aria-hidden="true"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9L10 1.5z"/></svg>
-                                                        <span class="shrink-0">{{ number_format($firstItem['rating'], 1) }} ({{ $firstItem['rating_count'] }})</span>
-                                                    @endif
-                                                    <span class="min-w-0 flex-1 truncate">{{ collect([($firstItem['rating_count'] ?? 0) > 0 ? '' : null, filled($firstVariant) ? $firstVariant : null, isset($firstItem['quantity']) ? '×'.$firstItem['quantity'] : null])->reject(fn ($part) => $part === null)->implode(' · ') }}</span>
-                                                    <span class="shrink-0 text-sm font-semibold tabular-nums text-ink">₱{{ $orderSnapshot['total'] ?? '0.00' }}</span>
+                                                <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
+                                                    @if (filled($orderSnapshot['city'] ?? null))<svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg><span class="min-w-0 flex-1 truncate">{{ $orderSnapshot['city'] }}</span>@else<span class="flex-1"></span>@endif
+                                                    @if (filled($orderSnapshot['status'] ?? null))<span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset {{ $orderStatusStyles[$orderSnapshot['status']] ?? 'bg-canvas text-muted ring-line' }}">{{ Str::headline($orderSnapshot['status']) }}</span>@endif
                                                 </span>
                                             </span>
                                         </a>

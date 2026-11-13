@@ -41,7 +41,9 @@ class ConversationContext
                 'image_path' => $imagePath, 'slug' => $product->slug, 'store_slug' => $product->store->slug,
             ]];
         }
-        $order = SellerOrder::query()->with(['order', 'items.product' => fn ($query) => $query
+        $order = SellerOrder::query()->with(['order.payment', 'store', 'items.product' => fn ($query) => $query
+            ->withSum(['orderItems as sold_quantity' => fn (Builder $items) => $items
+                ->whereHas('sellerOrder', fn (Builder $sellerOrder) => $sellerOrder->where('status', '!=', 'cancelled'))], 'quantity')
             ->withCount(['reviews as published_reviews_count' => fn (Builder $reviews) => $reviews->published()])
             ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $reviews) => $reviews->published()], 'rating'),
         ])->findOrFail($sellerOrderId);
@@ -51,6 +53,7 @@ class ConversationContext
         return ['seller_order_id' => $order->id, 'context_snapshot' => [
             'type' => 'order', 'number' => $order->order->number, 'total' => $whole.'.'.str_pad($fraction, 2, '0'),
             'status' => $order->status, 'order_id' => $order->order_id,
+            'payment_method' => $order->order->payment?->method, 'city' => $order->store->city,
             'item_count' => (int) $order->items->sum('quantity'),
             'image_path' => $order->items->firstWhere('image_path', '!=', null)?->image_path,
             'items' => $order->items->map(fn ($item): array => [
@@ -58,6 +61,8 @@ class ConversationContext
                 'quantity' => (int) $item->quantity, 'image_path' => $item->image_path,
                 'rating' => round((float) ($item->product?->published_reviews_avg_rating ?? 0), 1),
                 'rating_count' => (int) ($item->product?->published_reviews_count ?? 0),
+                'sold' => (int) ($item->product?->sold_quantity ?? 0),
+                'free_shipping' => (bool) $item->product?->free_shipping,
             ])->all(),
         ]];
     }

@@ -1764,13 +1764,14 @@ bool _isSameChatMinute(String first, String second) {
       firstTime.minute == secondTime.minute;
 }
 
-/// One-row chat card for an order inquiry: the first product's photo (opens
-/// full screen, "+N" when the order has more), its name and order status, and
-/// its rating, variant, quantity and the order total.
+/// Chat card for an order inquiry, styled like the marketplace product card:
+/// photo (opens full screen, "+N" when the order has more), COD / free
+/// shipping badges, product name, order total, rating and sold count, and the
+/// store's city beside the order status.
 class _OrderInquiryCard extends StatelessWidget {
   const _OrderInquiryCard({required this.messageId, required this.snapshot});
 
-  static const _photoSize = 52.0;
+  static const _photoSize = 92.0;
 
   final String messageId;
   final Map<String, dynamic> snapshot;
@@ -1784,6 +1785,8 @@ class _OrderInquiryCard extends StatelessWidget {
     );
     final orderId = snapshot['order_id'] as String?;
     final status = snapshot['status'] as String?;
+    final city = snapshot['city'] as String?;
+    final isCod = snapshot['payment_method'] == 'cod';
     final items = [
       for (final item in snapshot['items'] as List? ?? const [])
         if (item is Map) Map<String, dynamic>.from(item),
@@ -1795,13 +1798,13 @@ class _OrderInquiryCard extends StatelessWidget {
         '${first?['name'] ?? snapshot['item_name'] ?? 'Order ${snapshot['number']}'}';
     final rating = (first?['rating'] as num?)?.toDouble() ?? 0;
     final ratingCount = (first?['rating_count'] as num?)?.toInt() ?? 0;
-    final variant = first?['variant'] as String?;
-    final quantity = (first?['quantity'] as num?)?.toInt();
+    final sold = (first?['sold'] as num?)?.toInt() ?? 0;
+    final freeShipping = first?['free_shipping'] == true;
     final moreItems = items.length - 1;
 
     return Container(
       key: ValueKey('order-card-$messageId'),
-      width: MediaQuery.sizeOf(context).width * 0.72,
+      width: MediaQuery.sizeOf(context).width * 0.74,
       margin: const EdgeInsets.only(bottom: 6),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -1818,6 +1821,7 @@ class _OrderInquiryCard extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Semantics(
                   button: imageUrl != null,
@@ -1852,22 +1856,12 @@ class _OrderInquiryCard extends StatelessWidget {
                           ),
                           if (moreItems > 0)
                             Positioned(
-                              right: 2,
-                              bottom: 2,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 1,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.65),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '+$moreItems',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: Colors.white,
-                                  ),
+                              right: 4,
+                              top: 4,
+                              child: _Badge(
+                                label: '+$moreItems',
+                                background: Colors.black.withValues(
+                                  alpha: 0.65,
                                 ),
                               ),
                             ),
@@ -1881,59 +1875,86 @@ class _OrderInquiryCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                      if (isCod || freeShipping) ...[
+                        Wrap(
+                          spacing: 4,
+                          children: [
+                            if (isCod)
+                              const _Badge(
+                                label: 'COD',
+                                background: Color(0xFFB45309),
                               ),
-                            ),
-                          ),
-                          if (status != null) ...[
-                            const SizedBox(width: 6),
-                            StatusPill(status: status),
+                            if (freeShipping)
+                              _Badge(
+                                label: 'FREE SHIPPING',
+                                background: scheme.primary,
+                              ),
                           ],
-                        ],
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      const SizedBox(height: 4),
+                      Text(
+                        money('${snapshot['total']}'),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
                       Row(
                         children: [
                           if (ratingCount > 0) ...[
                             Icon(
                               Icons.star_rounded,
-                              size: 15,
-                              color: Colors.amber.shade700,
+                              size: 14,
+                              color: Colors.amber.shade600,
                             ),
                             const SizedBox(width: 2),
-                            Text(
-                              '${rating.toStringAsFixed(1)} ($ratingCount)',
-                              style: muted,
-                            ),
                           ],
-                          Expanded(
+                          Flexible(
                             child: Text(
                               [
-                                if (ratingCount > 0) '',
-                                if (variant != null && variant.isNotEmpty)
-                                  variant,
-                                if (quantity != null) '×$quantity',
-                              ].join(' · '),
+                                ratingCount > 0
+                                    ? '${rating.toStringAsFixed(1)} ($ratingCount)'
+                                    : 'No reviews yet',
+                                if (sold > 0) '$sold Sold',
+                              ].join(' | '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: muted,
                             ),
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '₱${snapshot['total']}',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (city != null && city.isNotEmpty) ...[
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: scheme.onSurfaceVariant,
                             ),
-                          ),
+                            const SizedBox(width: 2),
+                            Expanded(
+                              child: Text(
+                                city,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: muted,
+                              ),
+                            ),
+                          ] else
+                            const Spacer(),
+                          if (status != null) StatusPill(status: status),
                         ],
                       ),
                     ],
@@ -1951,8 +1972,39 @@ class _OrderInquiryCard extends StatelessWidget {
     color: scheme.surfaceContainerHigh,
     child: Icon(
       Icons.inventory_2_outlined,
-      size: 20,
+      size: 24,
       color: scheme.onSurfaceVariant,
     ),
   );
+}
+
+/// Small solid label, as on the marketplace product card's COD / free shipping tags.
+class _Badge extends StatelessWidget {
+  const _Badge({required this.label, required this.background});
+
+  final String label;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        child: Text(
+          label,
+          maxLines: 1,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            height: 1.2,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
 }

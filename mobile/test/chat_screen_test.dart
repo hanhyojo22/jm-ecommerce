@@ -95,6 +95,8 @@ void main() {
           'status': 'shipped',
           'order_id': 'order-1',
           'item_count': 5,
+          'payment_method': 'cod',
+          'city': 'Cebu',
           'image_url': 'http://localhost/media/rice-cooker.jpg',
           'items': [
             {
@@ -103,6 +105,8 @@ void main() {
               'quantity': 1,
               'rating': 4.5,
               'rating_count': 12,
+              'sold': 19,
+              'free_shipping': true,
               'image_url': 'http://localhost/media/rice-cooker.jpg',
             },
             {'name': 'Spare lid', 'quantity': 2, 'image_url': null},
@@ -118,8 +122,10 @@ void main() {
     expect(find.textContaining('JM-1042'), findsNothing);
     expect(find.text('Rice cooker'), findsOneWidget);
     expect(find.text('On the way'), findsOneWidget);
-    expect(find.text('4.5 (12)'), findsOneWidget);
-    expect(find.text(' · White · ×1'), findsOneWidget);
+    expect(find.text('COD'), findsOneWidget);
+    expect(find.text('FREE SHIPPING'), findsOneWidget);
+    expect(find.text('4.5 (12) | 19 Sold'), findsOneWidget);
+    expect(find.text('Cebu'), findsOneWidget);
     expect(find.text('+3'), findsOneWidget);
     expect(find.text('₱199.00'), findsOneWidget);
 
