@@ -72,4 +72,58 @@ if ($SetupOnly) {
     return $worktree
 }
 
-$worktree
+# Windows PowerShell 5.1 joins -ArgumentList without quoting, so quote each argument ourselves.
+function ConvertTo-ArgumentString([string[]]$Arguments) {
+    ($Arguments | ForEach-Object {
+        if ($_ -match '[\s"]') { '"' + ($_ -replace '(\\*)"', '$1$1\"' -replace '(\\+)$', '$1$1') + '"' } else { $_ }
+    }) -join ' '
+}
+
+function Get-LogTail {
+    @('agent.log', 'agent.err.log') | ForEach-Object { Join-Path $orchDir $_ } |
+        Where-Object { Test-Path $_ } | ForEach-Object { Get-Content $_ -Tail 40 }
+}
+
+$mainTreeBefore = (git -C $RepoRoot status --porcelain) -join "`n"
+$baseCommit = git -C $worktree rev-parse HEAD
+$stopwatch = [Diagnostics.Stopwatch]::StartNew()
+
+$process = Start-Process -FilePath $exe -ArgumentList (ConvertTo-ArgumentString $agentArgs) -WorkingDirectory $worktree `
+    -NoNewWindow -PassThru `
+    -RedirectStandardOutput (Join-Path $orchDir 'agent.log') -RedirectStandardError (Join-Path $orchDir 'agent.err.log')
+$null = $process.Handle # caches the handle so ExitCode is readable after exit
+
+$timedOut = -not $process.WaitForExit([int]($TimeoutMinutes * 60000))
+if ($timedOut) {
+    taskkill /T /F /PID $process.Id | Out-Null
+    $process.WaitForExit()
+}
+$stopwatch.Stop()
+$exitCode = if ($timedOut) { 'killed' } else { $process.ExitCode }
+
+$summaryPath = Join-Path $orchDir 'SUMMARY.md'
+$summary = if (Test-Path $summaryPath) { (Get-Content -Raw $summaryPath).Trim() } else { '' }
+
+$status = if ($timedOut) { 'TIMEOUT' } elseif ($exitCode -ne 0) { 'FAILED' } elseif (-not $summary) { 'NO_SUMMARY' } else { 'OK' }
+
+$warnings = @()
+$commitCount = [int](git -C $worktree rev-list --count "$baseCommit..HEAD")
+if ($commitCount -gt 0) { $warnings += "WARNING: $commitCount commits on branch" }
+if (((git -C $RepoRoot status --porcelain) -join "`n") -ne $mainTreeBefore) { $warnings += 'WARNING: main tree changed' }
+
+git -C $worktree add -N . 2>$null
+$diffStat = (git -C $worktree diff --stat $baseCommit) -join "`n"
+
+$summarySection = @()
+if ($summary) { $summarySection += $summary }
+if ($status -ne 'OK') { $summarySection += "--- last log lines ---"; $summarySection += Get-LogTail }
+
+$result = @(
+    "Status: $status"
+    "Agent: $Agent  Model: $Model  Exit: $exitCode  Duration: $($stopwatch.Elapsed.ToString('mm\:ss'))"
+    "Worktree: $worktree  Branch: $branch"
+) + $warnings + @('## Summary') + $summarySection + @('## Diff', $(if ($diffStat) { $diffStat } else { '(no changes)' }))
+
+$resultPath = Join-Path $orchDir 'RESULT.md'
+Set-Content -Path $resultPath -Value $result -Encoding utf8
+$resultPath

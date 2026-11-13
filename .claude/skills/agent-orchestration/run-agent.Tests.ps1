@@ -68,6 +68,42 @@ try {
     $threw = $null
     try { & $runner -Agent foo -Model m -Task t -PromptFile $prompt -RepoRoot $repo -DryRun | Out-Null } catch { $threw = $_ }
     Assert ($threw -ne $null) 'bad agent rejected'
+
+    function Invoke-Fake([string]$mode, [double]$timeout = 1) {
+        $env:FAKE_MODE = $mode
+        $resultPath = & $runner -Agent fake -Model fake-model -Task "mode-$mode" -PromptFile $prompt -RepoRoot $repo -TimeoutMinutes $timeout
+        return Get-Content -Raw $resultPath
+    }
+
+    $res = Invoke-Fake 'ok'
+    Assert ($res.StartsWith('Status: OK')) 'ok: status'
+    Assert ($res -match '(?s)## Diff.*hello\.txt') 'ok: diff lists hello.txt'
+    Assert ($res -match '(?s)## Summary\s+Created hello\.txt') 'ok: summary included'
+    Assert ($res -notmatch 'WARNING') 'ok: no warnings'
+
+    $res = Invoke-Fake 'nosummary'
+    Assert ($res.StartsWith('Status: NO_SUMMARY')) 'nosummary: status'
+
+    $res = Invoke-Fake 'fail'
+    Assert ($res.StartsWith('Status: FAILED')) 'fail: status'
+    Assert ($res -match 'Exit: 3') 'fail: exit code'
+    Assert ($res -match '(?s)## Summary.*not logged in') 'fail: log tail in summary'
+
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $res = Invoke-Fake 'hang' 0.1
+    $sw.Stop()
+    Assert ($res.StartsWith('Status: TIMEOUT')) 'hang: status'
+    Assert ($sw.Elapsed.TotalSeconds -lt 30) 'hang: returns promptly'
+    $orphans = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*fake-agent.ps1*' })
+    Assert ($orphans.Count -eq 0) 'hang: no orphan process'
+
+    $res = Invoke-Fake 'commit'
+    Assert ($res -match 'WARNING: 1 commits on branch') 'commit: warning'
+    Assert ($res -match '(?s)## Diff.*hello\.txt') 'commit: diff includes committed file'
+
+    $env:FAKE_MAIN_TREE = $repo
+    $res = Invoke-Fake 'maintree'
+    Assert ($res -match 'WARNING: main tree changed') 'maintree: warning'
 }
 finally {
     Remove-TempRepo $repo
