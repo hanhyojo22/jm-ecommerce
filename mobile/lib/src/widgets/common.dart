@@ -150,7 +150,12 @@ class EmptyState extends StatelessWidget {
 
 /// A neutral placeholder block used while content is loading.
 class SkeletonBox extends StatelessWidget {
-  const SkeletonBox({super.key, this.width, this.height, this.radius = 6});
+  const SkeletonBox({
+    super.key,
+    this.width,
+    this.height,
+    this.radius = appDetailRadius,
+  });
 
   final double? width;
   final double? height;
@@ -176,7 +181,7 @@ class NetworkThumb extends StatelessWidget {
     required this.url,
     this.width,
     this.height,
-    this.radius = appSurfaceRadius,
+    this.radius = appDetailRadius,
     this.fit = BoxFit.cover,
     this.cacheWidth,
     this.cacheKey,
@@ -285,7 +290,7 @@ class StoreAvatar extends StatelessWidget {
     }
     final shape = square
         ? RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius / 3),
+            borderRadius: BorderRadius.circular(appDetailRadius),
           )
         : const CircleBorder();
     final fallback = Container(
@@ -454,7 +459,7 @@ class ProductCard extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(appSurfaceRadius),
+                  borderRadius: BorderRadius.circular(appDetailRadius),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -616,7 +621,7 @@ class _FeedDiscountBadge extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        borderRadius: BorderRadius.circular(appDetailRadius),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -796,7 +801,7 @@ class StatusPill extends StatelessWidget {
         color: color.withValues(
           alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.12,
         ),
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        borderRadius: BorderRadius.circular(appDetailRadius),
       ),
       child: Text(
         statusLabel(status),

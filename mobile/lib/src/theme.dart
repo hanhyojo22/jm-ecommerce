@@ -6,11 +6,10 @@ const _accent = Color(0xFFE0A63B);
 const _lightSurface = Color(0xFFF7F6F2);
 const _darkSurface = Color(0xFF0F1513);
 
-/// The home feed's surface edge: tight 4px corners on a flat white panel.
-/// Cards, fields and buttons across every page reuse it so the app reads as
-/// one marketplace instead of mixing pillowy Material shapes with sharp feed
-/// tiles.
-const appSurfaceRadius = 4.0;
+/// Shared corners for cards and controls, small details, and modal surfaces.
+const appSurfaceRadius = 8.0;
+const appDetailRadius = 4.0;
+const appModalRadius = 16.0;
 
 ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
   final dark = brightness == Brightness.dark;
@@ -76,7 +75,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       dragHandleColor: scheme.outline,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(appSurfaceRadius),
+          top: Radius.circular(appModalRadius),
         ),
       ),
     ),
@@ -84,7 +83,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       backgroundColor: surfaceLowest,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        borderRadius: BorderRadius.circular(appModalRadius),
       ),
     ),
     snackBarTheme: SnackBarThemeData(
@@ -144,6 +143,13 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(appSurfaceRadius),
         ),

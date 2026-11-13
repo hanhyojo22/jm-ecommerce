@@ -331,7 +331,7 @@ class _OrdersTopBar extends StatelessWidget {
             color: focused
                 ? scheme.surfaceContainerLowest
                 : scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
             border: Border.all(
               color: focused
                   ? scheme.primary
@@ -401,7 +401,7 @@ class _OrdersTopBar extends StatelessWidget {
     );
 
     final filterButton = InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(appSurfaceRadius),
       onTap: onFilterTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
@@ -521,7 +521,7 @@ class _OrderCard extends StatelessWidget {
                 children: [
                   Flexible(
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(appSurfaceRadius),
                       onTap: openStore,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -591,7 +591,7 @@ class _OrderCard extends StatelessWidget {
                           url: line.imageUrl,
                           width: 40,
                           height: 40,
-                          radius: 6,
+                          radius: appDetailRadius,
                         ),
                       ),
                     Flexible(
@@ -700,7 +700,7 @@ class _OrderLineRow extends StatelessWidget {
           url: line.imageUrl,
           width: thumbSize,
           height: thumbSize,
-          radius: appSurfaceRadius,
+          radius: appDetailRadius,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -729,7 +729,7 @@ class _OrderLineRow extends StatelessWidget {
                     color: scheme.surfaceContainerHighest.withValues(
                       alpha: 0.65,
                     ),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(appDetailRadius),
                   ),
                   child: Text(
                     line.variantLabel!,
@@ -792,7 +792,7 @@ class _OrderAction extends StatelessWidget {
     const size = Size(0, 36);
     const padding = EdgeInsets.symmetric(horizontal: 14);
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(appSurfaceRadius),
     );
 
     if (emphasised) {

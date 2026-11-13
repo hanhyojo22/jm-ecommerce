@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../config.dart';
+import '../theme.dart';
 import '../widgets/shell.dart';
 
 class AuthGate extends StatelessWidget {
@@ -39,8 +40,7 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _pendingConnection = connection);
     final auth = ClerkAuth.of(context, listen: false);
     try {
-      if (connection.strategy.provider ==
-              clerk.Strategy.oauthGoogle.provider &&
+      if (connection.strategy.provider == clerk.Strategy.oauthGoogle.provider &&
           AppConfig.googleWebClientId.isNotEmpty) {
         await _signInWithNativeGoogle(auth);
       } else {
@@ -143,7 +143,9 @@ class _SignInScreenState extends State<SignInScreen> {
                           height: 30,
                           decoration: BoxDecoration(
                             color: scheme.primary,
-                            borderRadius: BorderRadius.circular(9),
+                            borderRadius: BorderRadius.circular(
+                              appDetailRadius,
+                            ),
                           ),
                           child: Icon(
                             Icons.shopping_bag_outlined,

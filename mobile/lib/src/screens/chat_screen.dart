@@ -1173,7 +1173,7 @@ class _DocumentAttachment extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: foreground.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(appSurfaceRadius),
+              borderRadius: BorderRadius.circular(appDetailRadius),
             ),
             child: Icon(
               Icons.picture_as_pdf_outlined,
@@ -1360,7 +1360,7 @@ class _Bubble extends StatelessWidget {
                                             child: ClipRRect(
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                    appSurfaceRadius,
+                                                    appDetailRadius,
                                                   ),
                                               child: CachedNetworkImage(
                                                 imageUrl: imageUrl,
@@ -1572,7 +1572,9 @@ class _Bubble extends StatelessWidget {
                                               220,
                                             ),
                                             fit: BoxFit.contain,
-                                            radius: photoOnly ? 0 : 10,
+                                            radius: photoOnly
+                                                ? 0
+                                                : appDetailRadius,
                                           ),
                                         ),
                                       ),
@@ -1809,7 +1811,7 @@ class _OrderInquiryCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(appSurfaceRadius + 2),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Material(
@@ -1843,7 +1845,7 @@ class _OrderInquiryCard extends StatelessWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(
-                              appSurfaceRadius,
+                              appDetailRadius,
                             ),
                             child: imageUrl == null
                                 ? _photoPlaceholder(scheme)
@@ -1990,7 +1992,7 @@ class _Badge extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(appDetailRadius),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),

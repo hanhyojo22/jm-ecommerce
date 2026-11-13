@@ -53,7 +53,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   };
 
   ShapeBorder _cardShape(ColorScheme scheme) => RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(14),
+    borderRadius: BorderRadius.circular(appSurfaceRadius),
     side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
   );
 
@@ -312,7 +312,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   height: 34,
                   decoration: BoxDecoration(
                     color: scheme.primary.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(appDetailRadius),
                   ),
                   child: Icon(
                     Icons.location_on_rounded,
@@ -452,7 +452,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   children: [
                     Flexible(
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(appSurfaceRadius),
                         onTap: storeSlug != null && storeSlug.isNotEmpty
                             ? () => context.push('/store/$storeSlug')
                             : null,
@@ -515,7 +515,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     onReturnInfo: () => _showGuaranteeSheet(order),
                   ),
                 ],
-                if (sellerOrder.latestReturnStatus case final returnStatus?) ...[
+                if (sellerOrder.latestReturnStatus
+                    case final returnStatus?) ...[
                   const SizedBox(height: 12),
                   Text(
                     'Return request: ${statusLabel(returnStatus)}',
@@ -722,7 +723,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     ),
                     const SizedBox(width: 6),
                     InkWell(
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(appSurfaceRadius),
                       onTap: () async {
                         await Clipboard.setData(
                           ClipboardData(text: order.number),
@@ -738,7 +739,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: scheme.primary.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(appSurfaceRadius),
                         ),
                         child: Text(
                           'Copy',
@@ -853,7 +854,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     // list; the store stays reachable from its name on the store card.
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(appSurfaceRadius),
     );
 
     return DecoratedBox(
@@ -1294,7 +1295,7 @@ class _OrderDetailItemRow extends StatelessWidget {
     final scheme = theme.colorScheme;
     final thumbSize = largeText ? 58.0 : 80.0;
     final buttonShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(appSurfaceRadius),
     );
 
     return Column(
@@ -1307,7 +1308,7 @@ class _OrderDetailItemRow extends StatelessWidget {
               url: line.imageUrl,
               width: thumbSize,
               height: thumbSize,
-              radius: 8,
+              radius: appDetailRadius,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1336,7 +1337,7 @@ class _OrderDetailItemRow extends StatelessWidget {
                         color: scheme.surfaceContainerHighest.withValues(
                           alpha: 0.65,
                         ),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(appDetailRadius),
                       ),
                       child: Text(
                         line.variantLabel!,

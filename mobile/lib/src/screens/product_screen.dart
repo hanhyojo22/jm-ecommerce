@@ -64,23 +64,39 @@ class _ProductSkeleton extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SkeletonBox(width: 132, height: 30, radius: 8),
+                  SkeletonBox(width: 132, height: 30, radius: appDetailRadius),
                   SizedBox(height: 12),
-                  SkeletonBox(width: double.infinity, height: 22, radius: 6),
+                  SkeletonBox(
+                    width: double.infinity,
+                    height: 22,
+                    radius: appDetailRadius,
+                  ),
                   SizedBox(height: 8),
-                  SkeletonBox(width: 210, height: 22, radius: 6),
+                  SkeletonBox(width: 210, height: 22, radius: appDetailRadius),
                   SizedBox(height: 14),
-                  SkeletonBox(width: 160, height: 16, radius: 6),
+                  SkeletonBox(width: 160, height: 16, radius: appDetailRadius),
                   SizedBox(height: 22),
-                  SkeletonBox(width: double.infinity, height: 72, radius: 18),
+                  SkeletonBox(
+                    width: double.infinity,
+                    height: 72,
+                    radius: appSurfaceRadius,
+                  ),
                   SizedBox(height: 26),
-                  SkeletonBox(width: 140, height: 20, radius: 6),
+                  SkeletonBox(width: 140, height: 20, radius: appDetailRadius),
                   SizedBox(height: 12),
-                  SkeletonBox(width: double.infinity, height: 14, radius: 6),
+                  SkeletonBox(
+                    width: double.infinity,
+                    height: 14,
+                    radius: appDetailRadius,
+                  ),
                   SizedBox(height: 8),
-                  SkeletonBox(width: double.infinity, height: 14, radius: 6),
+                  SkeletonBox(
+                    width: double.infinity,
+                    height: 14,
+                    radius: appDetailRadius,
+                  ),
                   SizedBox(height: 8),
-                  SkeletonBox(width: 240, height: 14, radius: 6),
+                  SkeletonBox(width: 240, height: 14, radius: appDetailRadius),
                 ],
               ),
             ),
@@ -646,7 +662,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(appDetailRadius),
                           border: Border.all(
                             width: 2,
                             color: selected
@@ -910,7 +926,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                             ),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(
+                                appDetailRadius,
+                              ),
                             ),
                             child: Text(
                               '${money(addMoney(product.compareAtPrice!, '-$effectivePrice'))} off',
@@ -1173,7 +1191,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(appSurfaceRadius),
+                          borderRadius: BorderRadius.circular(appDetailRadius),
                         ),
                         child: Text(
                           'SKU $sku',
@@ -1844,13 +1862,19 @@ class _VariationSheetState extends State<_VariationSheet> {
                     ),
                   ),
                   child: photo != null
-                      ? NetworkThumb(url: photo, radius: 5, cacheWidth: 220)
+                      ? NetworkThumb(
+                          url: photo,
+                          radius: appDetailRadius,
+                          cacheWidth: 220,
+                        )
                       : DecoratedBox(
                           decoration: BoxDecoration(
                             color:
                                 swatch ??
                                 theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(2),
+                            borderRadius: BorderRadius.circular(
+                              appDetailRadius,
+                            ),
                           ),
                         ),
                 ),
@@ -1923,7 +1947,7 @@ class _VariationSheetState extends State<_VariationSheet> {
                   url: photo,
                   width: 88,
                   height: 88,
-                  radius: 12,
+                  radius: appDetailRadius,
                   cacheWidth: 300,
                 ),
               ),

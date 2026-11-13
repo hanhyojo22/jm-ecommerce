@@ -10,6 +10,7 @@ import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/checkout_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -337,7 +338,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       url: line.imageUrl,
                       width: 44,
                       height: 44,
-                      radius: 10,
+                      radius: appDetailRadius,
                     ),
                     const SizedBox(width: 10),
                     Expanded(

@@ -8,6 +8,7 @@ import '../core/push_notifications.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/order_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 
@@ -329,7 +330,7 @@ class _LazadaAccountHeader extends StatelessWidget {
                   if (!largeText) ...[
                     const SizedBox(width: 8),
                     InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(appSurfaceRadius),
                       onTap: onMemberTap,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -347,7 +348,7 @@ class _LazadaAccountHeader extends StatelessWidget {
                               )!,
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(appSurfaceRadius),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -446,7 +447,7 @@ class _AccountOrdersSection extends StatelessWidget {
                   ),
                 ),
                 InkWell(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(appSurfaceRadius),
                   onTap: () => onOpenTab('all'),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -481,7 +482,7 @@ class _AccountOrdersSection extends StatelessWidget {
                 for (final item in _shortcuts)
                   Expanded(
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(appSurfaceRadius),
                       onTap: () => onOpenTab(item.key),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -612,13 +613,13 @@ class _HighlightMiniCard extends StatelessWidget {
     final dark = scheme.brightness == Brightness.dark;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(appSurfaceRadius),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
         decoration: BoxDecoration(
           color: dark ? scheme.surfaceContainerHigh : tint,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
         ),
         child: Column(
           children: [
@@ -660,7 +661,7 @@ class _HighlightMiniCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: scheme.primary,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(appSurfaceRadius),
                 ),
                 child: Text(
                   ctaLabel,
@@ -720,7 +721,7 @@ class _LazadaChannelsSection extends StatelessWidget {
                   ),
                 ),
                 InkWell(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(appSurfaceRadius),
                   onTap: onShopTap,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -810,13 +811,13 @@ class _ChannelTile extends StatelessWidget {
     final scheme = theme.colorScheme;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(appSurfaceRadius),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: scheme.surfaceContainerHighest.withValues(alpha: 0.38),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -846,7 +847,7 @@ class _ChannelTile extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(appDetailRadius),
               ),
               child: Icon(icon, size: 32, color: accent),
             ),
@@ -940,7 +941,7 @@ class _LazadaToolsGridSection extends StatelessWidget {
           for (final item in items)
             Expanded(
               child: InkWell(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(appSurfaceRadius),
                 onTap: item.onTap,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(

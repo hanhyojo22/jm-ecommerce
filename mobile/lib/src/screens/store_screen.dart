@@ -134,7 +134,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
             padding: const EdgeInsetsDirectional.only(start: 12, end: 4),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
               border: Border.all(
                 color: focused
                     ? scheme.secondary
@@ -390,7 +390,9 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
                 child: ExcludeSemantics(
                   child: Card(
                     clipBehavior: Clip.antiAlias,
-                    child: SizedBox.expand(child: SkeletonBox(radius: 18)),
+                    child: SizedBox.expand(
+                      child: SkeletonBox(radius: appSurfaceRadius),
+                    ),
                   ),
                 ),
               ),
@@ -508,6 +510,7 @@ class _StoreHero extends StatelessWidget {
             Positioned.fill(
               child: NetworkThumb(
                 url: store.bannerUrl,
+                radius: 0,
                 fit: BoxFit.cover,
                 cacheWidth: 1200,
               ),
@@ -1057,6 +1060,7 @@ class StoreProductCard extends StatelessWidget {
                       NetworkThumb(
                         url: product.thumbnailUrl,
                         width: double.infinity,
+                        radius: 0,
                         cacheWidth: 600,
                       ),
                       if (!product.inStock)
@@ -1224,7 +1228,7 @@ class _DiscountBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: scheme.primary,
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        borderRadius: BorderRadius.circular(appDetailRadius),
       ),
       child: Text(
         '-$percent%',
@@ -1249,7 +1253,7 @@ class _SoldOutBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLowest.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        borderRadius: BorderRadius.circular(appDetailRadius),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(
@@ -1275,7 +1279,7 @@ class _FreeShippingBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        borderRadius: BorderRadius.circular(appDetailRadius),
         border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Row(

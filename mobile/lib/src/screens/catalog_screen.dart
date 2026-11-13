@@ -250,9 +250,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     // it grows a little with large text instead of clipping it.
     final headerScaler = MediaQuery.textScalerOf(context)
         .clamp(maxScaleFactor: 1.6);
-    // 56dp outer height leaves a full 48dp touch target inside the 2dp border and 2dp inset.
-    final barHeight = headerScaler.scale(56).clamp(56.0, 68.0);
-    final innerHeight = barHeight - 4;
+    final barHeight = headerScaler.scale(48).clamp(48.0, 56.0);
     // Pad the single text line evenly so the field fills the pill (one 48dp tap target)
     // with hint and typed text centred; textAlignVertical alone did not centre it here.
     final inputLine = TextPainter(
@@ -260,12 +258,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       textDirection: TextDirection.ltr,
       textScaler: headerScaler,
     )..layout();
-    final inputPadding = ((innerHeight - inputLine.height) / 2).clamp(
-      0.0,
-      24.0,
-    );
+    final inputPadding = ((barHeight - inputLine.height) / 2).clamp(0.0, 24.0);
     inputLine.dispose();
-    final trailingSize = innerHeight - 4;
+    final trailingSize = barHeight - 12;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final searchListenables = Listenable.merge([
       _searchController,
@@ -290,11 +285,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           decoration: BoxDecoration(
             color: scheme.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(barHeight / 2),
-            // Constant width so focusing never shifts the layout.
-            border: Border.all(
-              color: hasFocus ? scheme.secondary : Colors.transparent,
-              width: 2,
-            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: hasFocus ? 0.16 : 0.08),
@@ -303,13 +293,21 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               ),
             ],
           ),
+          // Paint the ring over the field to preserve 48dp button touch areas.
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(barHeight / 2),
+            border: Border.all(
+              color: hasFocus ? scheme.secondary : Colors.transparent,
+              width: 2,
+            ),
+          ),
           child: Row(
             children: [
               Padding(
-                padding: const EdgeInsetsDirectional.only(start: 18, end: 10),
+                padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
                 child: Icon(
                   Icons.search_rounded,
-                  size: 22,
+                  size: 20,
                   color: active ? scheme.primary : scheme.onSurfaceVariant,
                 ),
               ),
@@ -368,6 +366,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         style: IconButton.styleFrom(
                           fixedSize: Size.square(trailingSize),
                           minimumSize: Size.square(trailingSize),
+                          tapTargetSize: MaterialTapTargetSize.padded,
                           padding: EdgeInsets.zero,
                         ),
                         icon: const Icon(Icons.close_rounded, size: 20),
@@ -380,6 +379,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         foregroundColor: scheme.onPrimary,
                         fixedSize: Size.square(trailingSize),
                         minimumSize: Size.square(trailingSize),
+                        tapTargetSize: MaterialTapTargetSize.padded,
                         padding: EdgeInsets.zero,
                         shape: const CircleBorder(),
                       ),
@@ -416,7 +416,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               16,
               MediaQuery.paddingOf(context).top + 8,
               16,
-              14,
+              12,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -854,7 +854,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Expanded(
-                        child: SkeletonBox(width: double.infinity, radius: 10),
+                        child: SkeletonBox(
+                          width: double.infinity,
+                          radius: appSurfaceRadius,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       SkeletonBox(width: cardWidth - 24, height: 12),
@@ -979,7 +982,7 @@ class _SearchSuggestionsPanel extends StatelessWidget {
     return TextFieldTapRegion(
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.08),
@@ -991,7 +994,7 @@ class _SearchSuggestionsPanel extends StatelessWidget {
         child: Material(
           color: theme.colorScheme.surfaceContainerLowest,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
             side: BorderSide(color: theme.colorScheme.outlineVariant),
           ),
           clipBehavior: Clip.antiAlias,
@@ -1093,7 +1096,7 @@ class _SuggestionTile extends StatelessWidget {
               url: product.thumbnailUrl,
               width: 44,
               height: 44,
-              radius: 10,
+              radius: appDetailRadius,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1290,7 +1293,7 @@ class _TopDeals extends StatelessWidget {
                         excludeSemantics: true,
                         child: Material(
                           color: scheme.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(appSurfaceRadius),
                           clipBehavior: Clip.antiAlias,
                           child: InkWell(
                             onTap: () => context.push(
@@ -1317,7 +1320,7 @@ class _TopDeals extends StatelessWidget {
                                           decoration: BoxDecoration(
                                             color: scheme.errorContainer,
                                             borderRadius: BorderRadius.circular(
-                                              appSurfaceRadius,
+                                              appDetailRadius,
                                             ),
                                           ),
                                           child: Padding(
@@ -1506,7 +1509,7 @@ class _CampaignCard extends StatelessWidget {
 
     return Material(
       color: scheme.primary,
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(appSurfaceRadius),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,
@@ -1609,7 +1612,7 @@ class _StorePromo extends StatelessWidget {
       excludeSemantics: true,
       child: Material(
         color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('/store/${store.slug}'),
