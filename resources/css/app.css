@@ -434,7 +434,7 @@
 }
 
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) > div:first-child { max-width: none; padding-block: .5rem; }
-:is([data-header-role='seller'], [data-header-role='customer-workspace']) form label { height: 2.5rem; }
+:is([data-header-role='seller'], [data-header-role='customer-workspace']) [data-header-search-shell] { height: 2.5rem; }
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) form input { font-size: 13px; }
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) form button[type='submit'] { height: 2rem; font-size: .75rem; }
 :is([data-header-role='seller'], [data-header-role='customer-workspace']) [aria-label='Account menu'] { min-height: 2.5rem; }
@@ -815,30 +815,7 @@
 }
 
 [data-header-design='bold-modular'] {
-    box-shadow: 0 1px 0 rgb(15 23 42 / 0.04);
-}
-
-[data-header-design='bold-modular'] form[role='search'] label,
-[data-header-design='bold-modular'] form:not([role='search']) label {
-    border-radius: 8px;
-    background: var(--color-bg);
-    border-color: var(--color-border);
-    box-shadow: inset 0 1px 2px rgb(15 23 42 / 0.03);
-}
-
-[data-header-design='bold-modular'] form label:focus-within {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 4px rgb(29 78 216 / 0.12);
-}
-
-[data-header-design='bold-modular'] button[type='submit'] {
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgb(29 78 216 / 0.18);
-}
-
-[data-header-design='bold-modular'] a[aria-label^='Cart'] span.bg-brand,
-[data-header-design='bold-modular'] a[aria-label^='Messages'] span.bg-brand {
-    background: var(--color-warning-text);
+    box-shadow: 0 1px 0 rgb(24 44 72 / 0.05);
 }
 
 [data-header-design='bold-modular'] button,
@@ -847,7 +824,7 @@
 }
 
 [data-header-design='bold-modular'] details > summary {
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--color-bg);
 }
 
@@ -856,7 +833,7 @@
 }
 
 [data-header-design='bold-modular'] [data-header-marketplace-link] {
-    border-radius: 8px;
+    border-radius: 6px;
     background: var(--color-accent);
     color: var(--color-surface);
 }
@@ -908,10 +885,6 @@
 @media (max-width: 640px) {
     [data-header-category-nav] .page-container {
         scroll-padding-inline: 18px;
-    }
-
-    [data-header-design='bold-modular'] form label {
-        border-radius: 8px;
     }
 }
 
