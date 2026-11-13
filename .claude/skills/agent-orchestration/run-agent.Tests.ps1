@@ -18,13 +18,18 @@ function New-TempRepo {
     git -C $repo config user.email t@t
     git -C $repo config user.name t
     Set-Content -Path (Join-Path $repo 'README.md') -Value 'x' -Encoding ascii
+    Set-Content -Path (Join-Path $repo '.gitignore') -Value "vendor/`r`nnode_modules/`r`n.env" -Encoding ascii
     git -C $repo add .
     git -C $repo commit -qm init
+    New-Item -ItemType Directory -Force (Join-Path $repo 'vendor') | Out-Null
+    Set-Content -Path (Join-Path $repo 'vendor\autoload.php') -Value '<?php' -Encoding ascii
+    Set-Content -Path (Join-Path $repo '.env') -Value 'APP_KEY=x' -Encoding ascii
     return $repo
 }
 
 function Remove-TempRepo([string]$repo) {
-    Remove-Item -Recurse -Force (Split-Path $repo -Parent) -ErrorAction SilentlyContinue
+    # rmdir /s does not follow junctions, unlike Remove-Item -Recurse in PS 5.1
+    cmd /c rmdir /s /q "`"$(Split-Path $repo -Parent)`"" 2>$null
 }
 
 $prompt = Join-Path $env:TEMP 'orch-test-prompt.md'
@@ -38,6 +43,7 @@ try {
     Assert ($r.exe -eq 'codex') 'codex dry run: exe'
     $a = @($r.args)
     Assert (($a[0] -eq 'exec') -and ($a -contains '-C') -and ($a -contains $expectedWt) -and ($a -contains '-m') -and ($a -contains 'gpt-6.1-sol') -and ($a -contains '-s') -and ($a -contains 'workspace-write') -and ($a -contains '-o')) 'codex dry run: args'
+    Assert ($a -contains (Join-Path $expectedWt '.orch\last-message.md')) 'codex dry run: -o writes last-message.md, not SUMMARY.md'
     Assert ($a[-1] -eq $msg) 'codex dry run: ends with fixed message'
 
     Assert ($r.worktree -eq $expectedWt) 'worktree path'
@@ -58,6 +64,8 @@ try {
     Assert ((Test-Path $copied) -and ((Get-FileHash $copied).Hash -eq (Get-FileHash $prompt).Hash)) 'spaces in repo path: prompt copied byte for byte'
     Assert ((git -C $repo branch --list 'orch/space-codex') -ne $null) 'spaces in repo path: branch created'
     Assert ([string]::IsNullOrEmpty((git -C $wt status --porcelain))) '.orch is excluded from git'
+    Assert (Test-Path (Join-Path $wt 'vendor\autoload.php')) 'setup: vendor linked into worktree'
+    Assert ((Get-Content (Join-Path $wt '.env')) -eq 'APP_KEY=x') 'setup: .env copied into worktree'
 
     Set-Content -Path (Join-Path $wt 'keep.txt') -Value 'mine' -Encoding ascii
     $threw = $null
@@ -104,6 +112,37 @@ try {
     $env:FAKE_MAIN_TREE = $repo
     $res = Invoke-Fake 'maintree'
     Assert ($res -match 'WARNING: main tree changed') 'maintree: warning'
+    Remove-Item (Join-Path $repo 'stray.txt')
+
+    $res = Invoke-Fake 'lastmsg'
+    Assert ($res.StartsWith('Status: OK') -and ($res -match 'From codex -o')) 'lastmsg: last-message.md used when SUMMARY.md missing'
+
+    $res = Invoke-Fake 'embedded'
+    Assert ($res.StartsWith('Status: OK')) 'embedded: git stderr warning does not kill the runner'
+
+    Add-Content (Join-Path $repo 'README.md') 'user edit' -Encoding ascii
+    $res = Invoke-Fake 'dirtyedit'
+    Assert ($res -match 'WARNING: main tree changed') 'dirtyedit: agent edit to an already-dirty file is caught'
+    git -C $repo checkout -q -- README.md
+
+    $env:FAKE_MODE = 'ok'
+    $res = Get-Content -Raw (& $runner -Agent fake -Model fake-model -Task 'round' -PromptFile $prompt -RepoRoot $repo)
+    Assert ($res -match 'Base: [0-9a-f]{40}') 'result has Base line'
+    $env:FAKE_MODE = 'ok2'
+    $res = Get-Content -Raw (& $runner -Agent fake -Model fake-model -Task 'round' -PromptFile $prompt -RepoRoot $repo -Continue)
+    Assert ($res.StartsWith('Status: OK')) 'continue: status'
+    Assert (($res -match 'hello\.txt') -and ($res -match 'hello2\.txt')) 'continue: diff against original base'
+    Assert (($res -match 'second round') -and ($res -notmatch 'Created hello\.txt')) 'continue: stale summary cleared'
+
+    $threw = $null
+    try { & $runner -Agent fake -Model m -Task 'nope' -PromptFile $prompt -RepoRoot $repo -Continue | Out-Null } catch { $threw = $_.Exception.Message }
+    Assert ($threw -like '*no worktree*') 'continue: missing worktree throws'
+
+    $roundWt = Join-Path (Split-Path $repo -Parent) 'orch test repo-orch\round-fake'
+    & $runner -Agent fake -Model m -Task 'round' -RepoRoot $repo -Cleanup | Out-Null
+    Assert (-not (Test-Path $roundWt)) 'cleanup: worktree removed'
+    Assert ((git -C $repo branch --list 'orch/round-fake') -eq $null) 'cleanup: branch deleted'
+    Assert (Test-Path (Join-Path $repo 'vendor\autoload.php')) 'cleanup: main vendor untouched'
 }
 finally {
     Remove-TempRepo $repo

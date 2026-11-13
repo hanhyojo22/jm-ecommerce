@@ -23,6 +23,25 @@ switch ($env:FAKE_MODE) {
         Set-Content (Join-Path $env:FAKE_MAIN_TREE 'stray.txt') 'oops' -Encoding ascii
         Set-Content .orch\SUMMARY.md 'Wrote outside worktree' -Encoding ascii
     }
+    'ok2' {
+        Set-Content hello2.txt 'hi' -Encoding ascii
+        Set-Content .orch\SUMMARY.md 'second round' -Encoding ascii
+    }
+    'lastmsg' {
+        Set-Content hello.txt 'hi' -Encoding ascii
+        Set-Content .orch\last-message.md 'From codex -o' -Encoding ascii
+    }
+    'embedded' {
+        git init -q sub
+        Set-Content sub\x.txt 'x' -Encoding ascii
+        git -C sub add x.txt
+        git -C sub -c user.email=t@t -c user.name=t commit -qm x
+        Set-Content .orch\SUMMARY.md 'Made nested repo' -Encoding ascii
+    }
+    'dirtyedit' {
+        Add-Content (Join-Path $env:FAKE_MAIN_TREE 'README.md') 'agent edit' -Encoding ascii
+        Set-Content .orch\SUMMARY.md 'Edited main README' -Encoding ascii
+    }
     default { Write-Output "fake-agent: unknown FAKE_MODE '$env:FAKE_MODE'"; exit 8 }
 }
 exit 0

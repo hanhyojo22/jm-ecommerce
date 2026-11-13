@@ -25,14 +25,15 @@ If a task is under ~30 lines or touches a single file, do it directly. Splitting
 5. **Wait.** You're notified when each runner exits. Don't poll.
 6. **Read `<worktree>\.orch\RESULT.md` only.** The runner prints its path, and the worktree is `<repo-parent>\<repo>-orch\<slug>-<agent>`.
 7. **Review** with the checklist below.
-8. **Fix round**, if needed: run the agent again in its worktree with a short follow-up:
-   - Codex: `codex exec resume --last -C <worktree> "<follow-up>"`
-   - OpenCode: `opencode run -c "<follow-up>"` (working directory = the worktree)
-   - Antigravity: `agy -c -p "<follow-up>" --mode auto` (working directory = the worktree)
-
-   Make small fixes (a few lines) yourself rather than spending a round on them.
-9. **Report** to the user: one short block per slug (status, what changed, tests, your verdict). **Merge only after they approve:** `git merge --no-ff orch/<slug>-<agent>`.
-10. **Clean up** every run, kept or not: `git worktree remove --force <worktree>` and `git branch -D orch/<slug>-<agent>`. If an OpenCode worktree won't delete ("used by another process"), the user's own running OpenCode service (`opencode.exe serve --service`) is holding it. Don't kill it; run `git worktree prune` once they close OpenCode.
+8. **Fix round**, if needed: write a new prompt file (the original prompt plus a "Review feedback" section listing exactly what to fix), then rerun the runner with the same `-Agent`/`-Task` plus `-Continue`. This starts a fresh agent session on the same worktree, with the timeout, warnings and a new RESULT.md. The diff is still measured from the original base. Don't use the CLIs' own resume (`resume --last`, `-c`): with parallel runs it can pick up another slug's session. Make small fixes (a few lines) yourself rather than spending a round on them.
+9. **Report** to the user: one short block per slug (status, what changed, tests, your verdict). **Merge only after they approve.** Agents leave their work uncommitted, so commit it in the worktree first, then merge:
+   ```
+   git -C <worktree> add -A
+   git -C <worktree> commit -m "<message>"
+   git merge --no-ff orch/<slug>-<agent>
+   ```
+   (`.orch/` is excluded and `vendor`/`node_modules` are gitignored links, so neither gets committed.)
+10. **Clean up** every run, kept or not, only through the runner: `run-agent.ps1 -Agent <agent> -Model x -Task <slug> -Cleanup`. Never use `Remove-Item -Recurse` on a worktree: it follows the `vendor`/`node_modules` links and deletes the main repo's copies. If cleanup says a process holds the folder, the user's own OpenCode service (`opencode.exe serve --service`) is usually the cause. Don't kill it; run `git worktree prune` after they close OpenCode.
 11. **Deploy.** If backend code was merged, follow `.ai/rules/general.md` (deploy to Render). Agents never deploy.
 
 ## Routing table
@@ -73,6 +74,7 @@ Copy exactly and fill in the angle brackets:
 - <matching .claude/skills/jmmart-*/SKILL.md, e.g. jmmart-money-and-orders for checkout>
 
 ## Acceptance check
+vendor/, node_modules/ and .env are already linked or copied into this worktree; run everything from here, never from another directory.
 Run: <exact command, e.g. php artisan test --compact tests/Feature/CartTest.php>
 It must pass. Run vendor/bin/pint --dirty --format agent if you changed PHP.
 
@@ -85,13 +87,13 @@ what changed, the tests you ran with their results, and open questions.
 
 1. Read `RESULT.md`. Any `WARNING:` line is a blocker:
    - `commits on branch`: the agent ignored the rules. Check the commits.
-   - `main tree changed`: inspect `git status` in the main repo right away. The user's uncommitted work may have been touched.
+   - `main tree changed`: inspect `git status` in the main repo right away. The user's uncommitted work may have been touched. Your own or the user's edits during the run, and parallel runs that touched it, also trigger this; check before blaming the agent.
 2. Status:
    - `OK`: continue.
    - `FAILED`: read the log lines in RESULT.md. A login or quota error goes to the user (`! codex login` etc.); don't retry blindly.
    - `NO_SUMMARY` or `TIMEOUT`: check the Diff section. Partial work may still be usable.
 3. **Run the acceptance command yourself** in the worktree. Never trust the summary's claim that tests pass.
-4. Read the full diff (`git -C <worktree> diff <base>`) only for money, tenant, auth or migration files. For other files, the stat plus a spot check of the largest file is enough.
+4. Read the full diff (`git -C <worktree> diff <Base from RESULT.md>`) only for money, tenant, auth or migration files. For other files, the stat plus a spot check of the largest file is enough.
 5. Check against the project skills that apply (tenant isolation, money and orders, writing actions).
 6. `vendor/bin/pint --dirty --format agent` in the worktree before merging.
 
@@ -111,4 +113,4 @@ Once three or more lines agree, update the routing table above.
 
 ## Testing this skill
 
-`powershell -NoProfile -File .claude/skills/agent-orchestration/run-agent.Tests.ps1` runs the runner against `fake-agent.ps1` in a temp repo. It covers argument quoting, every status, both warnings, timeout kill, and an existing-branch error.
+`powershell -NoProfile -File .claude/skills/agent-orchestration/run-agent.Tests.ps1` runs the runner against `fake-agent.ps1` in a temp repo. It covers argument quoting, every status, warnings (including edits to already-dirty files), timeout kill, existing-branch errors, dependency linking, `-Continue` and `-Cleanup`.
