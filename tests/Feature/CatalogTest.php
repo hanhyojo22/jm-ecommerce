@@ -145,7 +145,7 @@ class CatalogTest extends TestCase
 
         $this->get(route('home'))
             ->assertOk()
-            ->assertSee('Find your kind of good.')
+            ->assertSee('Shop by category')
             ->assertSee($category->name)
             ->assertSee('id="marketplace-search"', false)
             ->assertSee('Mobile marketplace navigation')
@@ -229,7 +229,7 @@ class CatalogTest extends TestCase
 
         $this->actingAs($buyer)->get(route('home'))
             ->assertOk()
-            ->assertSee('A good find at a better price.')
+            ->assertSee('Biggest price drops')
             ->assertSee($deal->name)
             ->assertSee(route('cart.store', $deal), false)
             ->assertSee('Add to cart');
@@ -245,16 +245,27 @@ class CatalogTest extends TestCase
             ->assertViewHas('flashDeals', fn ($deals): bool => $deals->pluck('id')->all() === [$bigSaving->id, $smallSaving->id]);
     }
 
-    public function test_homepage_shows_available_fallback_recommendations_without_viewing_history(): void
+    public function test_homepage_deals_band_skips_products_already_trending(): void
+    {
+        $trendingDeal = $this->product(['price' => 50, 'compare_at_price' => 100]);
+        $this->attachReview($trendingDeal, false);
+        $otherDeal = $this->product(['price' => 90, 'compare_at_price' => 100]);
+
+        $this->get(route('home'))
+            ->assertViewHas('bestSellers', fn ($products): bool => $products->contains('id', $trendingDeal->id))
+            ->assertViewHas('flashDeals', fn ($deals): bool => $deals->pluck('id')->all() === [$otherDeal->id]);
+    }
+
+    public function test_homepage_does_not_repeat_trending_products_in_fallback_recommendations(): void
     {
         $product = $this->product();
         $this->attachReview($product, false);
 
         $this->get(route('home'))
             ->assertSee('Trending products')
-            ->assertDontSee('Popular picks')
-            ->assertSee('home-recommended-heading')
-            ->assertViewHas('recommendedProducts', fn ($products): bool => $products->contains('id', $product->id));
+            ->assertViewHas('bestSellers', fn ($products): bool => $products->contains('id', $product->id))
+            ->assertViewHas('recommendedProducts', fn ($products): bool => ! $products->contains('id', $product->id))
+            ->assertDontSee('home-recommended-heading');
     }
 
     public function test_submitted_search_recommends_related_products_and_can_be_cleared(): void
@@ -286,10 +297,10 @@ class CatalogTest extends TestCase
             ->assertSessionMissing('marketplace.recent_searches');
     }
 
-    public function test_homepage_loads_new_arrivals_in_public_batches_of_twenty(): void
+    public function test_homepage_loads_new_arrivals_in_public_batches_of_eight(): void
     {
-        $newest = $this->product(['name' => 'Arrival 41']);
-        foreach (range(40, 1) as $number) {
+        $newest = $this->product(['name' => 'Arrival 17']);
+        foreach (range(16, 1) as $number) {
             $product = new Product([
                 'tenant_id' => $newest->tenant_id,
                 'store_id' => $newest->store_id,
@@ -300,18 +311,20 @@ class CatalogTest extends TestCase
                 'stock_quantity' => 3,
                 'status' => 'active',
             ]);
-            $product->created_at = now()->subMinutes(41 - $number);
+            $product->created_at = now()->subMinutes(17 - $number);
             $product->save();
         }
         $this->product(['name' => 'Hidden arrival', 'status' => 'draft']);
 
         $firstPage = $this->get(route('home'));
         $firstPage
-            ->assertSee('Arrival 41')
-            ->assertSee('Arrival 22')
-            ->assertDontSee('Arrival 21')
             ->assertDontSee('Hidden arrival')
-            ->assertSee('data-new-arrivals-more', false);
+            ->assertSee('All new arrivals')
+            ->assertDontSee('data-new-arrivals-more', false);
+        $this->assertSame(
+            array_map(fn (int $number): string => "Arrival {$number}", range(17, 10)),
+            $firstPage->viewData('newProducts')->pluck('name')->all(),
+        );
         $nextUrl = $firstPage->viewData('newProducts')->nextPageUrl();
         $this->assertNotNull($nextUrl);
         $this->assertStringStartsWith('/?new_cursor=', $nextUrl);
@@ -321,20 +334,44 @@ class CatalogTest extends TestCase
         $secondPage = $this->getJson($nextUrl);
         $secondPage
             ->assertOk()
-            ->assertSee('Arrival 21')
-            ->assertDontSee('Arrival 41')
-            ->assertDontSee('Arrival 22')
+            ->assertSee('Arrival 9')
+            ->assertDontSee('Arrival 17')
+            ->assertDontSee('Arrival 10')
             ->assertDontSee('Later arrival')
             ->assertDontSee('Hidden arrival')
             ->assertJsonStructure(['html', 'next_url']);
         $this->assertStringStartsWith('/?new_cursor=', $secondPage->json('next_url'));
         $this->get($nextUrl)
-            ->assertSee('Arrival 21')
-            ->assertDontSee('Arrival 22');
+            ->assertSee('Arrival 9')
+            ->assertDontSee('Arrival 10');
         $this->getJson($secondPage->json('next_url'))
             ->assertOk()
             ->assertSee('Arrival 1')
             ->assertJsonPath('next_url', null);
+    }
+
+    public function test_homepage_store_window_shows_only_that_stores_active_products(): void
+    {
+        $saleItem = $this->product(['name' => 'Window Lantern', 'price' => 400, 'compare_at_price' => 500, 'free_shipping' => true]);
+        $this->product(['name' => 'Window Kettle', 'tenant_id' => $saleItem->tenant_id, 'store_id' => $saleItem->store_id, 'slug' => 'window-kettle', 'sku' => 'WINDOW-KETTLE', 'free_shipping' => false]);
+        $this->product(['name' => 'Window Draft', 'tenant_id' => $saleItem->tenant_id, 'store_id' => $saleItem->store_id, 'slug' => 'window-draft', 'sku' => 'WINDOW-DRAFT', 'status' => 'draft']);
+        $otherStoreItem = $this->product(['name' => 'Elsewhere Lamp']);
+
+        $response = $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('role="tablist"', false)
+            ->assertSee($saleItem->store->name)
+            ->assertSee('Window Lantern')
+            ->assertDontSee('Window Draft');
+
+        $store = $response->viewData('stores')->firstWhere('id', $saleItem->store_id);
+        $this->assertSame(2, $store->public_products_count);
+        $this->assertSame(1, $store->on_sale_products_count);
+        $this->assertEqualsCanonicalizing(
+            ['Window Lantern', 'Window Kettle'],
+            $response->viewData('storeWindowProducts')->get($saleItem->store_id)->pluck('name')->all(),
+        );
+        $this->assertSame(['Elsewhere Lamp'], $response->viewData('storeWindowProducts')->get($otherStoreItem->store_id)->pluck('name')->all());
     }
 
     public function test_new_arrivals_rejects_invalid_cursors(): void
@@ -366,6 +403,13 @@ class CatalogTest extends TestCase
         $category = Category::create(['name' => 'Audio', 'slug' => 'audio', 'is_active' => true]);
         $viewed = $this->product(['name' => 'Viewed headphones', 'category_id' => $category->id]);
         $related = $this->product(['name' => 'Related speaker', 'category_id' => $category->id]);
+        foreach (range(1, 3) as $number) {
+            $this->product(['name' => "Related extra {$number}", 'category_id' => $category->id]);
+        }
+        Product::query()->update(['created_at' => now()->subDay()]);
+        foreach (range(1, 8) as $number) {
+            $this->product(['name' => "Newer filler {$number}"]);
+        }
 
         $this->withCookie(CookiePreferences::COOKIE_NAME, json_encode([
             'version' => CookiePreferences::VERSION,

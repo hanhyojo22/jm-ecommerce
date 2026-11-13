@@ -23,7 +23,7 @@ use Illuminate\View\View;
 
 class CatalogController extends Controller
 {
-    private const NEW_ARRIVALS_PAGE_SIZE = 20;
+    private const NEW_ARRIVALS_PAGE_SIZE = 8;
 
     public function home(Request $request): View|JsonResponse
     {
@@ -70,6 +70,7 @@ class CatalogController extends Controller
 
             return $position === false ? 99 : $position;
         })
+            ->filter(fn (Category $category): bool => $category->product_count > 0)
             ->take(12)
             ->values();
 
@@ -80,15 +81,17 @@ class CatalogController extends Controller
             ->cursorPaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_cursor', $cursor)
             ->withPath(route('home', absolute: false))
             ->fragment('new-arrivals');
+        $bestSellers = TopProductQuery::featured(4);
+        // Trending keeps the real top sellers; the deals band shows the next-largest drops instead of repeating them.
         $flashDeals = (clone $homeProducts)
             ->whereNotNull('compare_at_price')
             ->whereColumn('compare_at_price', '>', 'price')
             ->where('stock_quantity', '>', 0)
+            ->whereNotIn('products.id', $bestSellers->pluck('id'))
             ->orderByRaw('(compare_at_price - price) / compare_at_price desc')
             ->orderByDesc('id')
             ->limit(4)
             ->get();
-        $bestSellers = TopProductQuery::featured(8);
         $featuredProduct = $flashDeals->first() ?? $bestSellers->first() ?? $newProducts->first();
 
         $recentProductIds = CookiePreferences::fromRequest($request)['functional'] ?? false
@@ -99,15 +102,31 @@ class CatalogController extends Controller
             ->get()
             ->sortBy(fn (Product $product): int => array_search($product->id, $recentProductIds, true))
             ->values();
-        $recommendedProducts = RecommendationQuery::forRequest($request);
+        $shownProductIds = $flashDeals->pluck('id')->merge($bestSellers->pluck('id'))->merge($newProducts->getCollection()->pluck('id'));
+        $recommendedProducts = RecommendationQuery::forRequest($request, limit: 16)->whereNotIn('id', $shownProductIds)->values();
+        $recommendedProducts = $recommendedProducts->count() >= 4 ? $recommendedProducts->take(4) : collect();
 
         $stores = $this->publicStores()
             ->whereHas('products', fn (Builder $query) => $query->where('status', 'active'))
-            ->withCount(['products as public_products_count' => fn (Builder $query) => $query->where('status', 'active')])
+            ->withCount([
+                'products as public_products_count' => fn (Builder $query) => $query->where('status', 'active'),
+                'products as on_sale_products_count' => fn (Builder $query) => $query->where('status', 'active')->whereColumn('compare_at_price', '>', 'price'),
+            ])
             ->orderByDesc('public_products_count')
             ->orderBy('name')
             ->limit(4)
             ->get();
+
+        // Each store's shop window: photographed products first, then best sellers.
+        $storeWindowProducts = $stores->mapWithKeys(fn ($store) => [$store->id => (clone $homeProducts)
+            ->where('store_id', $store->id)
+            ->withExists('thumbnail as has_thumbnail')
+            ->orderByDesc('has_thumbnail')
+            ->orderByDesc('sold_quantity')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->each->setRelation('store', $store)]);
 
         return view('marketplace.home', [
             'categories' => $categories,
@@ -118,6 +137,7 @@ class CatalogController extends Controller
             'recommendedProducts' => $recommendedProducts,
             'recentlyViewed' => $recentlyViewed,
             'stores' => $stores,
+            'storeWindowProducts' => $storeWindowProducts,
             'cartItemCount' => $request->user()?->cartItemCount() ?? 0,
         ]);
     }

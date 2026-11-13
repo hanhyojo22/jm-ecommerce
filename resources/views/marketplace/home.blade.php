@@ -2,35 +2,126 @@
     @section('title', 'Marketplace · JMMart')
 
     <div class="page-container">
-        @php($heroProducts = $newProducts->getCollection()->filter(fn ($item) => $item->thumbnail !== null)->take(2)->values())
-        <section class="py-6 sm:py-8" aria-labelledby="marketplace-home-heading">
-            <div class="marketplace-hero">
-                <div class="marketplace-hero-copy">
-                    <p class="text-xs font-semibold uppercase tracking-[.15em] text-brand">Your local marketplace, reimagined</p>
-                    <h1 id="marketplace-home-heading" class="mt-5 font-display text-[36px] font-semibold leading-[1.05] tracking-[-.03em] sm:text-[48px]">Good finds.<br>Closer to <span class="text-brand">home.</span></h1>
-                    <p class="mt-5 max-w-sm text-sm leading-7 text-muted">Discover everyday favorites from stores you'll love. Thoughtfully picked, locally connected.</p>
-                    <a href="{{ route('catalog.index') }}" class="mt-6 inline-flex min-h-12 items-center gap-4 rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Explore the marketplace <span aria-hidden="true">&rarr;</span></a>
+        @if ($stores->isNotEmpty())
+            <section class="pt-6 sm:pt-8" aria-labelledby="marketplace-home-heading"
+                x-data="{ active: 0, count: {{ $stores->count() }}, show(index) { this.active = (index + this.count) % this.count; this.$refs['storeTab' + this.active].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); }, select(index) { this.show(index); this.$refs['storeTab' + this.active].focus({ preventScroll: true }); } }">
+                <div class="mb-4 flex items-end justify-between gap-4">
+                    <div>
+                        <h1 id="marketplace-home-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Shop local stores</h1>
+                        <p class="mt-1 text-sm text-muted">Independent sellers, one cart. Pay when your order arrives.</p>
+                    </div>
+                    <a href="{{ route('catalog.stores') }}" class="marketplace-section-link inline-flex shrink-0 items-center gap-1">All stores <x-returns.icon name="chevron-right" class="size-4" /></a>
                 </div>
-                <div class="marketplace-hero-art" aria-hidden="true">
-                    <div class="marketplace-hero-orbit"></div>
-                    @foreach ([0, 1] as $index)
-                        <div class="marketplace-hero-photo marketplace-hero-photo-{{ $index }}"><img src="{{ isset($heroProducts[$index]) ? Storage::disk('product_images')->url($heroProducts[$index]->thumbnail->path) : asset('images/home-product-collection.jpg') }}" alt="" width="400" height="440" fetchpriority="{{ $index === 0 ? 'high' : 'auto' }}"></div>
+
+                <div class="store-window-tabs" role="tablist" aria-label="Featured stores">
+                    @foreach ($stores as $index => $store)
+                        <button type="button" role="tab" id="store-tab-{{ $store->id }}" aria-controls="store-panel-{{ $store->id }}"
+                            x-ref="storeTab{{ $index }}"
+                            :aria-selected="(active === {{ $index }}).toString()" aria-selected="{{ $index === 0 ? 'true' : 'false' }}"
+                            :tabindex="active === {{ $index }} ? 0 : -1" tabindex="{{ $index === 0 ? 0 : -1 }}"
+                            @click="show({{ $index }})"
+                            @keydown.arrow-right.prevent="select({{ $index }} + 1)" @keydown.arrow-left.prevent="select({{ $index }} - 1)"
+                            @keydown.home.prevent="select(0)" @keydown.end.prevent="select(count - 1)"
+                            class="store-tab">
+                            {{ $store->name }} <span class="store-tab-count">{{ number_format($store->public_products_count) }}</span>
+                        </button>
                     @endforeach
-                    <div class="marketplace-hero-note"><span class="grid size-9 place-items-center rounded-full bg-emerald-50 text-success">&#10003;</span><span><strong class="block text-xs">Small stores. Big discoveries.</strong><span class="mt-1 block text-xs text-muted">Shop from trusted marketplace sellers</span></span></div>
                 </div>
-            </div>
-        </section>
-        <section class="grid grid-cols-2 mb-8 rounded-lg border border-line bg-white py-4 sm:grid-cols-4 sm:py-7" aria-label="Marketplace benefits">
-            <div class="flex gap-3 p-3 sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><p><strong class="block text-sm text-ink">Secure checkout</strong><span class="text-xs leading-5 text-muted">Your order details stay protected</span></p></div>
-            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="m8.5 13.5-1.5 7.5 5-2.5 5 2.5-1.5-7.5"/></svg><p><strong class="block text-sm text-ink">Independent sellers</strong><span class="text-xs leading-5 text-muted">Discover unique local stores</span></p></div>
-            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 7h13v10H3zM16 10h4l2 3v4h-4"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg><p><strong class="block text-sm text-ink">Free shipping</strong><span class="text-xs leading-5 text-muted">On selected items</span></p></div>
-            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21C7 17 3 13.5 3 9.5 3 7 5 5 7.5 5c1.7 0 3.3.9 4.5 2.6C13.2 5.9 15 5 16.5 5 19 5 21 7 21 9.5c0 4-4 7.5-9 11.5Z"/></svg><p><strong class="block text-sm text-ink">Cash on delivery</strong><span class="text-xs leading-5 text-muted">Pay when your order arrives</span></p></div>
-        </section>
+
+                @foreach ($stores as $index => $store)
+                    @php
+                        $windowProducts = $storeWindowProducts->get($store->id, collect());
+                    @endphp
+                    <div role="tabpanel" id="store-panel-{{ $store->id }}" aria-labelledby="store-tab-{{ $store->id }}" tabindex="0"
+                        x-show="active === {{ $index }}" @if ($index > 0) x-cloak @endif
+                        x-transition:enter="store-window-enter" x-transition:enter-start="store-window-enter-start"
+                        class="store-window">
+                        <div class="store-window-copy">
+                            <div class="store-window-id">
+                                <span class="store-window-mark">
+                                    @if ($store->logo_path)
+                                        <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-full object-cover">
+                                    @else
+                                        {{ Str::upper(Str::substr($store->name, 0, 1)) }}
+                                    @endif
+                                </span>
+                                <h2 class="store-window-name">{{ $store->name }}</h2>
+                            </div>
+                            <p class="store-window-about">{{ $store->description ? Str::limit($store->description, 150) : 'An independent seller on JMMart. Every order is cash on delivery.' }}</p>
+                            <dl class="store-window-facts">
+                                <div><dt>Products</dt><dd>{{ number_format($store->public_products_count) }}</dd></div>
+                                @if ($store->on_sale_products_count > 0)
+                                    <div><dt>On sale</dt><dd>{{ number_format($store->on_sale_products_count) }}</dd></div>
+                                @endif
+                            </dl>
+                            <a href="{{ route('catalog.store', $store->slug) }}" class="store-window-visit">Visit {{ $store->name }} <x-returns.icon name="chevron-right" class="size-4" /></a>
+                        </div>
+
+                        <ul class="store-window-shelf" aria-label="Products from {{ $store->name }}">
+                            @foreach ($windowProducts as $product)
+                                @php
+                                    $displayPrice = (string) $product->price;
+                                    if ($product->variants_min_price !== null && (! $product->variants_using_base_price_exists || bccomp((string) $product->variants_min_price, $displayPrice, 2) < 0)) {
+                                        $displayPrice = (string) $product->variants_min_price;
+                                    }
+                                    $isOnSale = $product->compare_at_price !== null && bccomp((string) $product->compare_at_price, $displayPrice, 2) > 0;
+                                @endphp
+                                <li>
+                                    <a href="{{ route('catalog.show', [$store->slug, $product->slug]) }}" class="store-window-tile">
+                                        @if ($product->thumbnail)
+                                            <img src="{{ Storage::disk('product_images')->url($product->thumbnail->path) }}" alt="" width="480" height="480" loading="{{ $index === 0 ? 'eager' : 'lazy' }}" @if ($index === 0 && $loop->first) fetchpriority="high" @endif>
+                                        @else
+                                            <span class="store-window-tile-empty" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 10h8M8 14h5"/></svg></span>
+                                        @endif
+                                        @if ($product->stock_quantity < 1)
+                                            <span class="store-window-flag">Sold out</span>
+                                        @elseif ($isOnSale)
+                                            <span class="store-window-flag store-window-flag-sale">On sale</span>
+                                        @endif
+                                        <span class="store-window-label">
+                                            <span class="store-window-product">{{ $product->name }}</span>
+                                            <span class="store-window-price">₱{{ number_format((float) $displayPrice, fmod((float) $displayPrice, 1) === 0.0 ? 0 : 2) }}@if ($isOnSale) <s>₱{{ number_format((float) $product->compare_at_price, fmod((float) $product->compare_at_price, 1) === 0.0 ? 0 : 2) }}</s>@endif</span>
+                                        </span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                        <a href="{{ route('catalog.store', $store->slug) }}" class="store-window-visit store-window-visit-end">Visit {{ $store->name }} <x-returns.icon name="chevron-right" class="size-4" /></a>
+                    </div>
+                @endforeach
+            </section>
+        @else
+            <section class="pt-6 sm:pt-8" aria-labelledby="marketplace-home-heading">
+                <h1 id="marketplace-home-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Shop local stores</h1>
+                <p class="mt-1 text-sm text-muted">Independent sellers, one cart. Pay when your order arrives.</p>
+            </section>
+        @endif
+
+        @if ($flashDeals->isNotEmpty())
+            @php
+                $largestDiscount = $flashDeals->map(fn ($product): int => (int) round((1 - ((float) $product->price / (float) $product->compare_at_price)) * 100))->max();
+            @endphp
+            <section id="flash-deals" class="scroll-mt-[136px] py-8 sm:py-10" aria-labelledby="home-deals-heading">
+                <div class="grid gap-6 rounded-[var(--radius-surface)] bg-ink p-5 text-white sm:p-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-7">
+                    <div class="flex flex-col items-start justify-center">
+                        <p class="text-[56px] font-extrabold leading-none tracking-[-.04em] tabular-nums">−{{ $largestDiscount }}%</p>
+                        <h2 id="home-deals-heading" class="marketplace-section-title mt-3 text-white">Biggest price drops</h2>
+                        <p class="mt-2 text-sm leading-6 text-[var(--color-sidebar-text)]">The largest discounts sellers are offering right now, across every store.</p>
+                        <a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center gap-1 rounded-md bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">All deals <x-returns.icon name="chevron-right" class="size-4" /></a>
+                    </div>
+                    <div @class(["grid grid-cols-2 gap-3", "xl:grid-cols-4" => $flashDeals->count() === 4, "xl:grid-cols-3" => $flashDeals->count() === 3])>
+                        @foreach ($flashDeals as $product)
+                            <x-marketplace.top-product-card :product="$product" />
+                        @endforeach
+                    </div>
+                </div>
+            </section>
+        @endif
 
         @if ($categories->isNotEmpty())
             <section id="shop-by-category" class="marketplace-section scroll-mt-[136px]" aria-labelledby="home-categories-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-categories-heading" class="marketplace-section-title">Find your kind of good.</h2><p class="marketplace-section-subtitle">A little of everything. Something for you.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">View all <span aria-hidden="true">→</span></a></div>
-                <div class="grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
+                <div class="marketplace-section-head"><div><h2 id="home-categories-heading" class="marketplace-section-title">Shop by category</h2><p class="marketplace-section-subtitle">Every category with products in it today.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link inline-flex items-center gap-1">View all <x-returns.icon name="chevron-right" class="size-4" /></a></div>
+                <div class="grid grid-cols-3 gap-2 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
                     @foreach ($categories as $category)
                         <x-marketplace.category-card :category="$category" :show-count="true" :href="route('catalog.index', ['category' => $category->slug])" />
                     @endforeach
@@ -40,51 +131,30 @@
 
         @if ($bestSellers->isNotEmpty())
             <section class="marketplace-section" aria-labelledby="home-trending-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-trending-heading" class="marketplace-section-title">Trending products</h2><p class="marketplace-section-subtitle">Popular with buyers across the marketplace.</p></div><a href="{{ route('catalog.top-products') }}" class="marketplace-section-link">View all <span aria-hidden="true">→</span></a></div>
-                <div class="marketplace-product-grid">
+                <div class="marketplace-section-head"><div><h2 id="home-trending-heading" class="marketplace-section-title">Trending products</h2><p class="marketplace-section-subtitle">Ranked by how many buyers ordered them.</p></div><a href="{{ route('catalog.top-products') }}" class="marketplace-section-link inline-flex items-center gap-1">View all <x-returns.icon name="chevron-right" class="size-4" /></a></div>
+                <ol class="marketplace-product-grid">
                     @foreach ($bestSellers->take(4) as $product)
-                        <x-marketplace.top-product-card :product="$product" />
+                        <li class="flex min-w-0 flex-col">
+                            <p class="trending-rank"><span>{{ $loop->iteration }}</span> {{ number_format((int) ($product->sold_quantity ?? $product->net_quantity_sold ?? 0)) }} sold</p>
+                            <x-marketplace.top-product-card :product="$product" />
+                        </li>
                     @endforeach
-                </div>
+                </ol>
             </section>
         @endif
 
         @if ($newProducts->isNotEmpty())
-            <section id="new-arrivals" data-new-arrivals data-next-url="{{ $newProducts->nextPageUrl() ?? '' }}" class="marketplace-section scroll-mt-24" aria-labelledby="home-new-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-new-heading" class="marketplace-section-title">New arrivals</h2><p class="marketplace-section-subtitle">Recently added by marketplace sellers.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="marketplace-section-link">View all <span aria-hidden="true">→</span></a></div>
-                <div id="new-arrivals-products" data-new-arrivals-grid class="marketplace-product-grid">
+            <section id="new-arrivals" class="marketplace-section scroll-mt-24" aria-labelledby="home-new-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-new-heading" class="marketplace-section-title">New arrivals</h2><p class="marketplace-section-subtitle">The latest listings from every store.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="marketplace-section-link inline-flex items-center gap-1">All new arrivals <x-returns.icon name="chevron-right" class="size-4" /></a></div>
+                <div class="marketplace-product-grid">
                     @include('marketplace.catalog._new-arrival-cards', ['products' => $newProducts])
-                </div>
-                <div data-new-arrivals-skeleton hidden class="mt-4 marketplace-product-grid" aria-hidden="true">
-                    @for ($i = 0; $i < 4; $i++)
-                        <div class="marketplace-surface overflow-hidden"><div class="aspect-[1.15] animate-pulse motion-reduce:animate-none bg-slate-200"></div><div class="space-y-2 p-4"><div class="h-4 animate-pulse motion-reduce:animate-none rounded-md bg-slate-200"></div><div class="h-4 w-2/3 animate-pulse motion-reduce:animate-none rounded-md bg-slate-200"></div></div></div>
-                    @endfor
-                </div>
-                @if ($newProducts->hasMorePages())
-                    <div class="mt-7 flex flex-col items-center gap-3">
-                        <a href="{{ $newProducts->nextPageUrl() }}" data-new-arrivals-more aria-controls="new-arrivals-products" class="inline-flex min-h-11 items-center justify-center rounded-md border border-line bg-white px-6 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand aria-disabled:cursor-wait aria-disabled:opacity-60">Load More</a>
-                        <p data-new-arrivals-status role="status" aria-live="polite" class="text-sm text-muted"></p>
-                    </div>
-                @endif
-            </section>
-        @endif
-
-        @if ($flashDeals->isNotEmpty())
-            <section id="flash-deals" class="scroll-mt-[136px] py-8 sm:py-10" aria-labelledby="home-deals-heading">
-                <div class="grid gap-6 rounded-[var(--radius-surface)] bg-ink p-5 text-white sm:p-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-7">
-                    <div class="flex flex-col items-start justify-center"><p class="text-xs font-semibold uppercase tracking-[.12em] text-blue-300">Deals</p><h2 id="home-deals-heading" class="marketplace-section-title mt-2 text-white">A good find at a better price.</h2><p class="mt-2 text-sm leading-6 text-slate-300">Browse products currently discounted by their sellers.</p><a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center rounded-md bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100">View all deals <span class="ml-2" aria-hidden="true">→</span></a></div>
-                    <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
-                        @foreach ($flashDeals as $product)
-                            <x-marketplace.top-product-card :product="$product" />
-                        @endforeach
-                    </div>
                 </div>
             </section>
         @endif
 
         @if ($recommendedProducts->isNotEmpty())
             <section class="marketplace-section" aria-labelledby="home-recommended-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-recommended-heading" class="marketplace-section-title">Recommended for you</h2><p class="marketplace-section-subtitle">Marketplace favorites, tuned to what you browse.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">Explore marketplace <span aria-hidden="true">→</span></a></div>
+                <div class="marketplace-section-head"><div><h2 id="home-recommended-heading" class="marketplace-section-title">Recommended for you</h2><p class="marketplace-section-subtitle">Based on what you browse, plus popular picks you haven't seen above.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link inline-flex items-center gap-1">Explore marketplace <x-returns.icon name="chevron-right" class="size-4" /></a></div>
                 <div class="marketplace-product-grid">
                     @foreach ($recommendedProducts as $product)
                         <x-marketplace.top-product-card :product="$product" />
@@ -105,36 +175,18 @@
         @endif
 
         @if (! auth()->user()?->isPlatformAdministrator() && ! (auth()->user()?->account_type === 'seller' && auth()->user()->sellerTenant()))
-            <section class="my-8 grid overflow-hidden rounded-[var(--radius-surface)] border border-line bg-white sm:grid-cols-[1.1fr_.9fr]" aria-labelledby="home-seller-heading">
-                <div class="p-6 sm:p-9"><p class="text-xs font-semibold uppercase tracking-[.12em] text-brand">Sell on JMMart</p><h2 id="home-seller-heading" class="marketplace-section-title mt-2 max-w-[20ch]">Open a storefront and grow your business.</h2><p class="mt-3 max-w-xl text-sm leading-6 text-muted">Reach shoppers and manage your products and orders from Seller Center.</p>
-                    @auth
-                        <a href="{{ route('seller-application.create') }}" class="mt-5 inline-flex min-h-11 items-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Start selling</a>
-                    @else
-                        <a href="{{ route('login', ['redirect' => '/start-selling']) }}" class="mt-5 inline-flex min-h-11 items-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover">Start selling</a>
-                    @endauth
+            <section class="my-10 seller-window" aria-labelledby="home-seller-heading">
+                <div>
+                    <h2 id="home-seller-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Open the next shop window on JMMart.</h2>
+                    <p class="mt-3 max-w-xl text-sm leading-6 text-muted">List your products, take cash-on-delivery orders, and answer customer reviews from Seller Center.</p>
                 </div>
-                <div class="grid min-h-56 place-items-center bg-gradient-to-br from-blue-50 to-indigo-100 p-6"><div class="w-full max-w-[300px] rounded-lg bg-white p-5 shadow-[0_20px_44px_rgba(15,23,42,.12)]"><p class="text-sm font-semibold text-ink">Your seller workspace</p><p class="mt-1 text-xs text-muted">Products · Orders · Store settings</p><div class="mt-5 grid grid-cols-3 gap-2"><span class="h-12 rounded-lg bg-blue-100"></span><span class="h-12 rounded-lg bg-blue-200"></span><span class="h-12 rounded-lg bg-brand"></span></div></div></div>
-            </section>
-        @endif
-
-
-
-        @if ($stores->isNotEmpty())
-            <section class="marketplace-section" aria-labelledby="home-stores-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-stores-heading" class="marketplace-section-title">Stores to explore</h2><p class="marketplace-section-subtitle">Meet the independent sellers behind the products.</p></div><a href="{{ route('catalog.stores') }}" class="marketplace-section-link">Browse stores <span aria-hidden="true">→</span></a></div>
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    @foreach ($stores as $store)
-                        <a href="{{ route('catalog.store', $store->slug) }}" class="marketplace-surface p-5 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
-                            <span class="flex items-center gap-3">
-                                <span class="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-blue-50 text-lg font-semibold text-brand">@if ($store->logo_path)<img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-full object-cover">@else{{ Str::upper(Str::substr($store->name, 0, 1)) }}@endif</span>
-                                <span class="min-w-0"><span class="block truncate text-sm font-semibold text-ink">{{ $store->name }}</span><span class="mt-1 block text-xs text-muted">{{ number_format($store->public_products_count) }} {{ Str::plural('product', $store->public_products_count) }}</span></span>
-                            </span>
-                            <span class="mt-4 flex min-h-10 items-center justify-between border-t border-line pt-3 text-sm font-semibold text-ink">Visit store <span class="text-brand" aria-hidden="true">→</span></span>
-                        </a>
-                    @endforeach
-                </div>
+                <ol class="seller-window-steps">
+                    <li><strong>Apply</strong><span>Tell us about your store. We review every seller.</span></li>
+                    <li><strong>List products</strong><span>Add photos, prices, variants and stock.</span></li>
+                    <li><strong>Fulfill orders</strong><span>Deliver orders and collect payment on delivery.</span></li>
+                </ol>
+                <a href="{{ auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling']) }}" class="inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Start selling</a>
             </section>
         @endif
     </div>
-
 </x-app-layout>
