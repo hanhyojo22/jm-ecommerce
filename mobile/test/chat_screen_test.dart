@@ -115,14 +115,12 @@ void main() {
 
     expect(find.text('Order #JM-1042'), findsOneWidget);
     expect(find.text('On the way'), findsOneWidget);
-    expect(find.text('Rice cooker'), findsOneWidget);
-    expect(find.text('White'), findsOneWidget);
-    expect(find.text('×2'), findsOneWidget);
-    expect(find.text('Measuring cup'), findsOneWidget);
-    expect(find.text('Steamer tray'), findsNothing);
-    expect(find.text('+1 more product'), findsOneWidget);
-    expect(find.text('5 items · Total ₱199.00'), findsOneWidget);
-    expect(find.text('View order'), findsOneWidget);
+    expect(find.text('Rice cooker, Spare lid +2 more'), findsOneWidget);
+    expect(find.text('₱199.00'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('open-order-item-image-order-msg-3')),
+      findsOneWidget,
+    );
 
     await tester.tap(
       find.byKey(const ValueKey('open-order-item-image-order-msg-0')),

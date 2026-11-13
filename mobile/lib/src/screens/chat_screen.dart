@@ -1764,12 +1764,13 @@ bool _isSameChatMinute(String first, String second) {
       firstTime.minute == secondTime.minute;
 }
 
-/// Chat card for an order inquiry: order number and status, the ordered
-/// products (photos open full screen), and the total with a link to the order.
+/// Compact chat card for an order inquiry: order number and status, a strip of
+/// product photos (each opens full screen), and the item names with the total.
 class _OrderInquiryCard extends StatelessWidget {
   const _OrderInquiryCard({required this.messageId, required this.snapshot});
 
-  static const _visibleItems = 3;
+  static const _visiblePhotos = 4;
+  static const _photoSize = 40.0;
 
   final String messageId;
   final Map<String, dynamic> snapshot;
@@ -1780,7 +1781,6 @@ class _OrderInquiryCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final orderId = snapshot['order_id'] as String?;
     final status = snapshot['status'] as String?;
-    final itemCount = (snapshot['item_count'] as num?)?.toInt();
     final items = [
       for (final item in snapshot['items'] as List? ?? const [])
         if (item is Map) Map<String, dynamic>.from(item),
@@ -1792,16 +1792,20 @@ class _OrderInquiryCard extends StatelessWidget {
         'image_url': snapshot['image_url'],
       });
     }
-    final hiddenItems = items.length - _visibleItems;
+    final hiddenItems = items.length - _visiblePhotos;
+    final names = items.map((item) => '${item['name']}').toList();
+    final summary = names.length > 2
+        ? '${names.take(2).join(', ')} +${names.length - 2} more'
+        : names.join(', ');
 
     return Container(
       key: ValueKey('order-card-$messageId'),
-      width: MediaQuery.sizeOf(context).width * 0.78,
+      width: MediaQuery.sizeOf(context).width * 0.72,
       margin: const EdgeInsets.only(bottom: 6),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(appSurfaceRadius + 4),
+        borderRadius: BorderRadius.circular(appSurfaceRadius + 2),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: Material(
@@ -1810,20 +1814,13 @@ class _OrderInquiryCard extends StatelessWidget {
           onTap: orderId == null
               ? null
               : () => context.push('/orders/$orderId'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                color: scheme.surfaceContainerHigh.withValues(alpha: 0.6),
-                padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
-                child: Row(
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Icon(
-                      Icons.receipt_long_outlined,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Order #${snapshot['number']}',
@@ -1835,69 +1832,73 @@ class _OrderInquiryCard extends StatelessWidget {
                     if (status != null) StatusPill(status: status),
                   ],
                 ),
-              ),
-              for (final (index, item) in items.take(_visibleItems).indexed)
-                _OrderInquiryItem(
-                  imageKey: ValueKey('open-order-item-image-$messageId-$index'),
-                  item: item,
-                ),
-              if (hiddenItems > 0)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                  child: Text(
-                    '+$hiddenItems more ${hiddenItems == 1 ? 'product' : 'products'}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
+                if (items.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      for (final (index, item)
+                          in items.take(_visiblePhotos).indexed)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 6),
+                          child: _OrderInquiryPhoto(
+                            key: ValueKey(
+                              'open-order-item-image-$messageId-$index',
+                            ),
+                            item: item,
+                            size: _photoSize,
+                          ),
+                        ),
+                      if (hiddenItems > 0)
+                        Container(
+                          width: _photoSize,
+                          height: _photoSize,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(
+                              appSurfaceRadius,
+                            ),
+                          ),
+                          child: Text(
+                            '+$hiddenItems',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-              Divider(height: 1, color: scheme.outlineVariant),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-                child: Row(
+                ],
+                const SizedBox(height: 8),
+                Row(
                   children: [
                     Expanded(
-                      child: Text.rich(
-                        TextSpan(
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                          children: [
-                            if (itemCount != null)
-                              TextSpan(
-                                text:
-                                    '$itemCount ${itemCount == 1 ? 'item' : 'items'} · ',
-                              ),
-                            const TextSpan(text: 'Total '),
-                            TextSpan(
-                              text: '₱${snapshot['total']}',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: scheme.onSurface,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                      child: Text(
+                        summary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ),
-                    if (orderId != null) ...[
-                      Text(
-                        'View order',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: scheme.primary,
-                        ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '₱${snapshot['total']}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
+                    ),
+                    if (orderId != null)
                       Icon(
                         Icons.chevron_right_rounded,
-                        size: 20,
-                        color: scheme.primary,
+                        size: 18,
+                        color: scheme.onSurfaceVariant,
                       ),
-                    ],
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1905,92 +1906,47 @@ class _OrderInquiryCard extends StatelessWidget {
   }
 }
 
-class _OrderInquiryItem extends StatelessWidget {
-  const _OrderInquiryItem({required this.imageKey, required this.item});
+class _OrderInquiryPhoto extends StatelessWidget {
+  const _OrderInquiryPhoto({super.key, required this.item, required this.size});
 
-  final Key imageKey;
   final Map<String, dynamic> item;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final name = '${item['name'] ?? 'Product'}';
-    final variant = item['variant'] as String?;
-    final quantity = (item['quantity'] as num?)?.toInt();
     final imageUrl = item['image_url'] as String?;
     final placeholder = ColoredBox(
       color: scheme.surfaceContainerHigh,
       child: Icon(
         Icons.inventory_2_outlined,
-        size: 20,
+        size: 18,
         color: scheme.onSurfaceVariant,
       ),
     );
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-      child: Row(
-        children: [
-          Semantics(
-            button: imageUrl != null,
-            label: imageUrl == null ? null : 'View photo of $name',
-            child: GestureDetector(
-              key: imageKey,
-              behavior: HitTestBehavior.opaque,
-              onTap: imageUrl == null
-                  ? null
-                  : () => ImageViewer.open(context, url: imageUrl, title: name),
-              child: SizedBox.square(
-                dimension: 48,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(appSurfaceRadius),
-                  child: imageUrl == null
-                      ? placeholder
-                      : CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, _, _) => placeholder,
-                        ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
+    return Semantics(
+      button: imageUrl != null,
+      label: imageUrl == null ? name : 'View photo of $name',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: imageUrl == null
+            ? null
+            : () => ImageViewer.open(context, url: imageUrl, title: name),
+        child: SizedBox.square(
+          dimension: size,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
+            child: imageUrl == null
+                ? placeholder
+                : CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, _, _) => placeholder,
                   ),
-                ),
-                if (variant != null && variant.isNotEmpty)
-                  Text(
-                    variant,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-              ],
-            ),
           ),
-          if (quantity != null) ...[
-            const SizedBox(width: 8),
-            Text(
-              '×$quantity',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

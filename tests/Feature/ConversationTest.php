@@ -281,8 +281,7 @@ class ConversationTest extends TestCase
 
         $this->actingAs($buyer)->get(route('messages.show', $conversation))
             ->assertOk()
-            ->assertSeeInOrder(['#JM-1042', 'Shipped', 'Rice cooker', 'Spare lid', 'Measuring cup', '+1 more product', '4 items', '₱199.00', 'View order'])
-            ->assertDontSee('Steamer tray');
+            ->assertSeeInOrder(['Order #JM-1042', 'Shipped', 'title="Steamer tray"', 'Rice cooker, Spare lid +2 more', '₱199.00'], false);
     }
 
     public function test_seller_can_open_a_conversation_page(): void
