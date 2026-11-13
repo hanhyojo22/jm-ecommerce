@@ -37,7 +37,7 @@ class JmMartApp extends StatelessWidget {
         routerConfig: appRouter,
         // ClerkErrorListener needs MaterialApp's ScaffoldMessenger.
         builder: (context, child) => ClerkErrorListener(
-          handler: _showClerkError,
+          handler: showClerkError,
           child: child ?? const SizedBox.shrink(),
         ),
       ),
@@ -49,11 +49,11 @@ class JmMartApp extends StatelessWidget {
 /// connection, DNS failure, timeout) rather than an auth problem.
 @visibleForTesting
 bool isClerkNetworkFailure(String message) => RegExp(
-  r'SocketException|Failed host lookup|ClientException|Network is unreachable|Connection (refused|reset|timed out)|HandshakeException',
+  r'SocketException|Failed host lookup|ClientException|Network is unreachable|Connection (refused|reset|timed out)|HandshakeException|TimeoutException',
 ).hasMatch(message);
 
 const clerkOfflineMessage =
-    "You're offline. JMMart will reconnect when your connection is back.";
+    'Cannot reach the sign-in service. Check your connection and try again.';
 
 DateTime? _lastOfflineNotice;
 
@@ -63,12 +63,13 @@ DateTime? _lastOfflineNotice;
 /// Network failures from Clerk's background token refresh get one plain
 /// message instead of the raw exception, at most every 30 seconds, because
 /// the SDK retries and would otherwise stack the same error.
-void _showClerkError(BuildContext context, clerk.ClerkError error) {
+@visibleForTesting
+void showClerkError(BuildContext context, clerk.ClerkError error) {
   if (error.code == clerk.ClerkErrorCode.clientAppError &&
       error.message.contains('net::ERR_')) {
     return;
   }
-  if (isClerkNetworkFailure(error.message)) {
+  if (isClerkNetworkFailure(error.toString())) {
     final now = DateTime.now();
     if (_lastOfflineNotice != null &&
         now.difference(_lastOfflineNotice!) < const Duration(seconds: 30)) {
