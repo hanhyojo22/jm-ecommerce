@@ -793,8 +793,8 @@ class CatalogTest extends TestCase
         $cancelledSellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => 199, 'quantity' => 400, 'line_total' => 79600]);
 
         $this->get(route('catalog.index'))
-            ->assertSee('1.2k sold')
-            ->assertDontSee('1.6k sold');
+            ->assertSee('1.2k Sold')
+            ->assertDontSee('1.6k Sold');
     }
 
     public function test_catalog_pagination_preserves_category_and_sort_queries(): void

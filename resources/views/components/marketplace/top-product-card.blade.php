@@ -18,7 +18,7 @@
 @endphp
 
 <article class="group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface shadow-[0_1px_2px_rgba(24,44,72,.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,.10)]">
-    <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" @if ($product->stock_quantity < 1) aria-label="{{ $product->name }}, sold out" @endif class="relative block aspect-[1.15] overflow-hidden bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]">
+    <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" @if ($product->stock_quantity < 1) aria-label="{{ $product->name }}, sold out" @endif class="relative block aspect-square overflow-hidden rounded-t-[var(--radius-surface)] bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]">
         @if ($product->thumbnail)
             <img src="{{ Storage::disk('product_images')->url($product->thumbnail->path) }}" alt="{{ $product->name }}" width="320" height="320" loading="{{ $eager ? 'eager' : 'lazy' }}" class="h-full w-full object-cover" />
         @else
@@ -30,22 +30,25 @@
         @if ($product->stock_quantity < 1)
             <x-marketplace.sold-out-overlay compact />
         @endif
-        <span class="pointer-events-none absolute bottom-0 left-0 flex max-w-full flex-wrap text-[11px] font-extrabold leading-tight tracking-[0.01em] text-white">
-            @if ($product->free_shipping)
-                <span class="whitespace-nowrap bg-brand px-1.5 py-1">FREE SHIPPING</span>
-            @endif
-            <span class="whitespace-nowrap bg-warning-text px-1.5 py-1"><span aria-hidden="true">COD</span><span class="sr-only">Cash on delivery</span></span>
-        </span>
     </a>
-    @if ($isOnSale)<span class="absolute left-3 top-3 rounded-full bg-red-600 px-2 py-1 text-xs font-semibold leading-none text-white">-{{ $discountPercent }}%</span>@endif
     <div class="flex flex-1 flex-col gap-1.5 p-3.5 sm:p-4">
-        <a href="{{ route('catalog.store', $product->store->slug) }}" title="{{ $product->store->name }}" class="mb-0.5 flex min-h-6 min-w-0 items-center gap-1.5 text-xs font-medium text-muted hover:text-brand"><svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 10h18l-2-7H5l-2 7Zm2 0v11h14V10M9 21v-7h6v7"/></svg><span class="truncate">{{ $product->store->name }}</span></a>
-        <h3 class="min-h-[42px] text-sm font-medium leading-[1.5] text-ink"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="line-clamp-2 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->name }}</a></h3>
-        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"><p class="text-lg font-bold leading-6 tabular-nums {{ $isOnSale ? 'text-danger' : 'text-ink' }}">₱{{ number_format($displayPrice, $priceDecimals) }}</p>@if ($isOnSale)<del class="whitespace-nowrap text-meta font-medium tabular-nums text-muted line-through decoration-[1.5px] decoration-muted/70" aria-label="Original price ₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}">₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}</del>@endif</div>
-        <div class="flex min-h-4 flex-wrap items-center gap-x-1 gap-y-0.5 text-xs leading-[1.55] text-muted sm:flex-nowrap">
-            @if ($product->published_reviews_count)<svg viewBox="0 0 20 20" class="size-3.5 shrink-0 fill-amber-400" aria-hidden="true"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z" /></svg><span class="shrink-0">{{ number_format((float) $product->published_reviews_avg_rating, 1) }}</span><span class="shrink-0 text-muted">({{ $formatCount((int) $product->published_reviews_count) }})</span>@else<span class="shrink-0">No reviews yet</span>@endif
-            @if ($soldCount > 0)<span aria-hidden="true">·</span><span class="shrink-0">{{ $formatCount($soldCount) }} sold</span>@endif
+        <div class="flex flex-wrap items-center gap-1 text-[11px] font-bold leading-none text-white">
+            <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-warning-text px-1.5"><span aria-hidden="true">COD</span><span class="sr-only">Cash on delivery</span></span>
+            @if ($product->free_shipping)
+                <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-brand px-1.5">FREE SHIPPING</span>
+            @endif
         </div>
+        <h3 class="min-h-12 text-[16px] font-medium leading-6 text-ink"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="line-clamp-2 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->name }}</a></h3>
+        <div class="flex flex-wrap items-center gap-2">
+            <p class="text-[20px] font-bold leading-6 tabular-nums {{ $isOnSale ? 'text-danger' : 'text-ink' }}">₱{{ number_format($displayPrice, $priceDecimals) }}</p>
+            @if ($isOnSale)<span class="rounded bg-red-50 px-1.5 py-1 text-xs font-semibold leading-none text-danger">-{{ $discountPercent }}%</span>@endif
+        </div>
+        @if ($isOnSale)<del class="text-meta font-medium tabular-nums text-muted line-through decoration-[1.5px] decoration-muted/70" aria-label="Original price ₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}">₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}</del>@endif
+        <div class="flex min-h-4 flex-wrap items-center gap-x-1 gap-y-0.5 text-xs leading-[1.55] text-muted">
+            @if ($product->published_reviews_count)<svg viewBox="0 0 20 20" class="size-3.5 shrink-0 fill-amber-400" aria-hidden="true"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z" /></svg><span class="shrink-0">{{ number_format((float) $product->published_reviews_avg_rating, 1) }}</span><span class="shrink-0 text-muted">({{ $formatCount((int) $product->published_reviews_count) }})</span>@else<span class="shrink-0">No reviews yet</span>@endif
+            @if ($soldCount > 0)<span class="h-3 w-px shrink-0 bg-line" aria-hidden="true"></span><span class="shrink-0">{{ $formatCount($soldCount) }} Sold</span>@endif
+        </div>
+        <a href="{{ route('catalog.store', $product->store->slug) }}" title="{{ $product->store->name }}" class="mb-0.5 flex min-h-6 min-w-0 items-center gap-1.5 text-xs font-medium text-muted hover:text-brand"><svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 10h18l-2-7H5l-2 7Zm2 0v11h14V10M9 21v-7h6v7"/></svg><span class="truncate">{{ $product->store->name }}</span></a>
         @if ($product->variants_exists && $product->stock_quantity > 0 && ! $isOwnStore)
             <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}#purchase" class="mt-auto inline-flex min-h-11 items-center justify-center rounded-md border border-line px-3 text-sm font-semibold text-brand hover:border-brand hover:bg-blue-50">Choose options</a>
         @elseif ($isBuyer)
