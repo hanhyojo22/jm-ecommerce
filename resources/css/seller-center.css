@@ -850,16 +850,18 @@ select.pe-input { padding-right: 36px; }
 .seller-workspace [data-seller-reviews] .seller-review-composer { margin: 12px 0 0 48px; }
 .seller-workspace [data-seller-reviews] .seller-review-composer form { margin-top: 0; }
 .seller-workspace [data-seller-reviews] .seller-inline-reply { flex-basis: 100%; min-width: 0; width: 100%; margin-top: 6px; }
-.seller-workspace [data-seller-reviews] .seller-reply-field { display: flex; width: min(560px, 100%); min-width: 0; align-items: center; gap: 0; border: 1px solid var(--sc-line); border-radius: 8px; background: var(--sc-sunken); overflow: hidden; }
+.seller-workspace [data-seller-reviews] .seller-reply-field { display: flex; width: min(560px, 100%); min-width: 0; align-items: center; gap: 0; border: 1px solid var(--sc-line); border-radius: 12px; background: var(--sc-sunken); }
 .seller-workspace [data-seller-reviews] .seller-reply-field:focus-within { border-color: var(--sc-accent); outline: 2px solid var(--sc-accent-soft); outline-offset: 1px; }
 .seller-workspace [data-seller-reviews] .seller-reply-field :is(input, textarea) { flex: 1; width: 100%; min-width: 0; min-height: 44px; border: 0; border-radius: 0; background: transparent; padding: 10px 12px; color: var(--sc-ink); font-size: 13px; line-height: 1.5; box-shadow: none; outline: none; }
 .seller-workspace [data-seller-reviews] .seller-reply-field textarea { resize: vertical; }
 .seller-workspace [data-seller-reviews] .seller-reply-field :is(input, textarea)::placeholder { color: var(--sc-muted); opacity: 1; }
-.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send { display: inline-flex; width: 44px; min-height: 44px; flex-shrink: 0; align-items: center; justify-content: center; border: 0; border-radius: 0; background: var(--sc-accent); padding: 0; color: #fff; cursor: pointer; }
-.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:hover { background: var(--color-accent-hover); }
-.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
-.seller-workspace [data-seller-reviews] .seller-reply-send svg { width: 18px; height: 18px; }
-.seller-workspace [data-seller-reviews] .seller-reply-send:disabled { opacity: .55; cursor: wait; }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send { display: inline-flex; width: 44px; min-height: 44px; margin: 3px; flex-shrink: 0; align-items: center; justify-content: center; border: 0; border-radius: 9px; background: var(--sc-ink); padding: 0; color: #fff; box-shadow: 0 2px 5px rgb(17 31 51 / 18%); cursor: pointer; touch-action: manipulation; transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:hover:not(:disabled) { background: var(--color-sidebar); box-shadow: 0 3px 7px rgb(17 31 51 / 22%); }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:active:not(:disabled) { transform: scale(.96); box-shadow: 0 1px 2px rgb(17 31 51 / 16%); }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 3px; }
+.seller-workspace [data-seller-reviews] .seller-reply-send svg { width: 19px; height: 19px; transition: transform 160ms cubic-bezier(.16, 1, .3, 1); }
+.seller-workspace [data-seller-reviews] .seller-reply-send:hover:not(:disabled) svg { transform: translate(1px, -1px); }
+.seller-workspace [data-seller-reviews] .seller-reply-send:disabled { opacity: .55; box-shadow: none; cursor: wait; }
 
 /* Product conversations */
 .seller-workspace [data-seller-reviews] .seller-review-discussion-list { overflow: hidden; }
