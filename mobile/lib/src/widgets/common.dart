@@ -348,16 +348,14 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
       fontSize: discovery ? 13 : null,
       fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
       height: 1.3,
     );
     // Hold two title lines so single- and double-line names keep every row aligned.
-    final titleHeight =
-        MediaQuery.textScalerOf(context).scale(titleStyle?.fontSize ?? 14) *
-        1.3 *
-        2;
+    final titleHeight = scaler.scale(titleStyle?.fontSize ?? 14) * 1.3 * 2;
     final discount = discountPercent(
       product.effectivePrice,
       product.compareAtPrice,
@@ -376,49 +374,45 @@ class ProductCard extends StatelessWidget {
             color: onSale ? theme.colorScheme.error : theme.colorScheme.primary,
             letterSpacing: -0.3,
           );
-    // Lazada-style pair: the sale price leads, the old price is struck beside it.
-    final pricePair = Row(
+    // Lazada-style stack: the sale price leads, the old price sits struck below.
+    final priceColumn = Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(money(product.effectivePrice), style: salePriceStyle),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(money(product.effectivePrice), style: salePriceStyle),
+        ),
         if (onSale) ...[
-          const SizedBox(width: 5),
-          Text(
-            money(product.compareAtPrice),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              decoration: TextDecoration.lineThrough,
-              decorationColor: theme.colorScheme.onSurfaceVariant,
-              decorationThickness: 1.5,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          const SizedBox(height: 1),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              money(product.compareAtPrice),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                decoration: TextDecoration.lineThrough,
+                decorationColor: theme.colorScheme.onSurfaceVariant,
+                decorationThickness: 1.5,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
         ],
       ],
     );
     final price = discovery
-        ? Align(
-            alignment: Alignment.centerLeft,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: pricePair,
-            ),
+        ? SizedBox(
+            // Reserve the two-line stack so cards with and without a markdown
+            // keep their photos and price rows aligned.
+            height: scaler.scale(38),
+            child: Align(alignment: Alignment.topLeft, child: priceColumn),
           )
         : Row(
             children: [
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: pricePair,
-                  ),
-                ),
-              ),
+              Expanded(child: priceColumn),
               if (product.ratingCount > 0) ...[
                 const SizedBox(width: 8),
                 Row(

@@ -416,7 +416,7 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
         8 +
         scaler.scale(35) +
         6 +
-        scaler.scale(20) +
+        scaler.scale(38) +
         4 +
         scaler.scale(15.6) +
         11;
@@ -1106,40 +1106,49 @@ class StoreProductCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Row(
+                      SizedBox(
+                        // Reserve the two-line stack so every grid row keeps
+                        // the same photo height whether or not it is on sale.
+                        height: scaler.scale(38),
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: Column(
                             mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                money(product.effectivePrice),
-                                maxLines: 1,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: discount != null
-                                      ? scheme.error
-                                      : scheme.primary,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.25,
-                                  letterSpacing: -0.4,
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  money(product.effectivePrice),
+                                  maxLines: 1,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: discount != null
+                                        ? scheme.error
+                                        : scheme.primary,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.25,
+                                    letterSpacing: -0.4,
+                                  ),
                                 ),
                               ),
                               if (discount != null) ...[
-                                const SizedBox(width: 5),
-                                Text(
-                                  money(product.compareAtPrice),
-                                  maxLines: 1,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: scheme.onSurfaceVariant,
-                                    decoration: TextDecoration.lineThrough,
-                                    decorationColor: scheme.onSurfaceVariant,
-                                    decorationThickness: 1.5,
-                                    fontFeatures: const [
-                                      FontFeature.tabularFigures(),
-                                    ],
+                                const SizedBox(height: 1),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    money(product.compareAtPrice),
+                                    maxLines: 1,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                      decoration: TextDecoration.lineThrough,
+                                      decorationColor: scheme.onSurfaceVariant,
+                                      decorationThickness: 1.5,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],

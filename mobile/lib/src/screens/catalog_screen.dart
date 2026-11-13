@@ -518,7 +518,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                 crossAxisCount: columns,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                mainAxisExtent: cardWidth + scaler.scale(138),
+                mainAxisExtent: cardWidth + scaler.scale(157),
               );
 
               return NotificationListener<ScrollNotification>(
@@ -1223,8 +1223,7 @@ class _TopDeals extends StatelessWidget {
       height: 1.3,
       letterSpacing: -0.3,
     );
-    final priceHeight =
-        scaler.scale(priceStyle?.fontSize ?? 15) * (priceStyle?.height ?? 1.3);
+    final priceHeight = scaler.scale(36);
 
     return Padding(
       padding: const EdgeInsets.only(top: 16),
@@ -1365,21 +1364,25 @@ class _TopDeals extends StatelessWidget {
                                     ),
                                     child: Align(
                                       alignment: Alignment.centerLeft,
-                                      child: FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.baseline,
-                                          textBaseline: TextBaseline.alphabetic,
-                                          children: [
-                                            Text(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
                                               money(product.effectivePrice),
                                               maxLines: 1,
                                               style: priceStyle,
                                             ),
-                                            const SizedBox(width: 4),
-                                            Text(
+                                          ),
+                                          const SizedBox(height: 1),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
                                               money(product.compareAtPrice),
                                               maxLines: 1,
                                               style: theme.textTheme.bodySmall
@@ -1394,8 +1397,8 @@ class _TopDeals extends StatelessWidget {
                                                     decorationThickness: 1.5,
                                                   ),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),

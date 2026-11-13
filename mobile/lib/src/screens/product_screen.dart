@@ -734,7 +734,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     bool showStore = true,
   }) => SizedBox(
     // Same sizing rule as the home grid: square photo plus scaled copy.
-    height: 150 + MediaQuery.textScalerOf(context).scale(showStore ? 138 : 100),
+    height: 150 + MediaQuery.textScalerOf(context).scale(showStore ? 157 : 119),
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: padding,
