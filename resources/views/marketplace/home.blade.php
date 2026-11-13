@@ -178,17 +178,31 @@
         @endif
 
         @if (! auth()->user()?->isPlatformAdministrator() && ! (auth()->user()?->account_type === 'seller' && auth()->user()->sellerTenant()))
-            <section class="my-10 seller-window" aria-labelledby="home-seller-heading">
-                <div>
-                    <h2 id="home-seller-heading" class="marketplace-section-title">Open the next shop window on JMMart.</h2>
-                    <p class="mt-3 max-w-xl text-sm leading-6 text-muted">List your products, take cash-on-delivery orders, and answer customer reviews from Seller Center.</p>
+            <section class="seller-window" aria-labelledby="home-seller-heading" data-seller-invitation>
+                <div class="seller-window-main">
+                    <div class="seller-window-copy">
+                        <h2 id="home-seller-heading" class="seller-window-title"><span>Your products.</span><span>Your next chapter.</span></h2>
+                        <p class="seller-window-description">Bring your shop to JMMart. Share your products and manage your orders, all from Seller Center.</p>
+                        <a href="{{ auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling']) }}" class="seller-window-action">Start selling <x-returns.icon name="chevron-right" class="size-4" /></a>
+                    </div>
+                    <div class="seller-window-visual">
+                        <img src="{{ asset('images/banners/seller-invitation.jpg') }}" alt="" width="1536" height="1024" loading="lazy" decoding="async">
+                    </div>
                 </div>
-                <ol class="seller-window-steps">
-                    <li><strong>Apply</strong><span>Tell us about your store. We review every seller.</span></li>
-                    <li><strong>List products</strong><span>Add photos, prices, variants and stock.</span></li>
-                    <li><strong>Fulfill orders</strong><span>Deliver orders and collect payment on delivery.</span></li>
+                <ol class="seller-window-steps" aria-label="How selling on JMMart works">
+                    <li>
+                        <span class="seller-window-step-icon"><x-returns.icon name="shield" class="size-5" /></span>
+                        <div><h3>Apply for a shop</h3><p>Tell us about your business. We review every seller application.</p></div>
+                    </li>
+                    <li>
+                        <span class="seller-window-step-icon"><x-returns.icon name="package" class="size-5" /></span>
+                        <div><h3>Make it yours</h3><p>Add your products, photos, prices, and variants once approved.</p></div>
+                    </li>
+                    <li>
+                        <span class="seller-window-step-icon"><x-returns.icon name="truck" class="size-5" /></span>
+                        <div><h3>Fulfill your orders</h3><p>Prepare deliveries and collect payment with cash on delivery.</p></div>
+                    </li>
                 </ol>
-                <a href="{{ auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling']) }}" class="inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Start selling</a>
             </section>
         @endif
     </div>
