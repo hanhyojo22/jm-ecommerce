@@ -26,7 +26,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $message = 'Read .orch/PROMPT.md and complete the task. Write your summary to .orch/SUMMARY.md.'
-$linkedDirs = @('vendor', 'node_modules')
+$linkedDirs = @('vendor', 'node_modules', 'public\build')
 
 # Under EAP=Stop, PS 5.1 turns redirected native stderr into a terminating error; git warnings must not kill the run.
 function Invoke-GitQuiet {
