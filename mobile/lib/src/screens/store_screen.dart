@@ -1024,6 +1024,8 @@ class StoreProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final scaler = MediaQuery.textScalerOf(context);
+    final titleHeight = scaler.scale(35);
     final discount = _discountPercent(product);
     final meta = _meta(context);
     final labels = <String>[
@@ -1090,13 +1092,16 @@ class StoreProductCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        product.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
+                      SizedBox(
+                        height: titleHeight,
+                        child: Text(
+                          product.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),

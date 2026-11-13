@@ -165,7 +165,7 @@
 .prototype-product .pd-suggestions-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; }
 .prototype-product .pd-suggestions-head h2 { font-size:15px; font-weight:600; }
 .prototype-product .pd-suggestions-link { color:var(--pd-blue); font-size:13px; font-weight:600; white-space:nowrap; }
-.prototype-product .pd-suggestions-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); align-items:start; gap:16px; }
+.prototype-product .pd-suggestions-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px; }
 @media(max-width:900px) { .prototype-product .pd-suggestions-grid { grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; } }
 
 /* Sticky buy bar. Hidden (and out of the tab order) until the main buttons scroll away. */
