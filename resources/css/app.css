@@ -1167,7 +1167,8 @@ body:has(footer) [data-cookie-floating] {
 .marketplace-home .marketplace-section-title { font-size: 21px; letter-spacing: -.02em; }
 .marketplace-home .marketplace-section-subtitle { font-size: 13px; }
 .marketplace-home .marketplace-section-link { display: inline-flex; min-height: 44px; align-items: center; font-size: 12px; }
-.home-category-grid { display: flex; gap: 10px; overflow-x: auto; padding: 3px 3px 8px; scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
+.home-category-grid { display: flex; gap: 10px; overflow-x: auto; padding: 3px 3px 8px; scrollbar-width: none; }
+.home-category-grid::-webkit-scrollbar { display: none; }
 .home-category-grid > a { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 10px; min-height: 76px; flex: 0 0 176px; border-color: var(--color-border); padding: 12px; text-align: left; }
 .home-category-grid > a:hover { border-color: var(--color-accent); background: var(--color-info-wash); box-shadow: none; }
 .home-category-grid > a > span:first-child { grid-column: 1; grid-row: 1 / span 2; width: 40px; height: 40px; }
