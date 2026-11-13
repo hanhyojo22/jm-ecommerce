@@ -927,7 +927,7 @@ body:has(footer) [data-cookie-floating] {
 .store-tab:hover { background: var(--color-border-strong); }
 .store-tab:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .store-tab[aria-selected="true"] { background: var(--color-fg); color: #fff; }
-.store-tab-count { color: var(--color-muted); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.store-tab-count { color: var(--color-fg); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .store-tab[aria-selected="true"] .store-tab-count { color: var(--color-sidebar-text); }
 
 .store-window { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 32px; padding: 28px; border-radius: 0 8px 8px 8px; background: var(--color-fg); color: #fff; }
