@@ -183,6 +183,30 @@ class CatalogTest extends TestCase
         }
     }
 
+    public function test_product_cards_show_the_store_city_including_ranked_products(): void
+    {
+        $product = $this->product();
+        $product->store->update(['city' => 'Cebu City']);
+        $this->attachReview($product, false);
+
+        foreach ([route('home'), route('catalog.index'), route('catalog.store', $product->store->slug), route('catalog.top-products')] as $url) {
+            $this->get($url)
+                ->assertSee('title="Cebu City"', false)
+                ->assertDontSee('Location unavailable')
+                ->assertDontSee($product->store->address_line);
+        }
+    }
+
+    public function test_product_cards_show_a_fallback_when_the_store_city_is_missing(): void
+    {
+        $product = $this->product();
+        $product->store->update(['city' => '']);
+
+        $this->get(route('catalog.index'))
+            ->assertSee('Location unavailable')
+            ->assertDontSee($product->store->address_line);
+    }
+
     public function test_paid_shipping_product_card_shows_cod_without_free_shipping_badge(): void
     {
         $product = $this->product(['free_shipping' => false]);

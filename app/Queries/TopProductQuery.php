@@ -109,7 +109,7 @@ class TopProductQuery
 
         return Product::query()
             ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
-            ->with(['thumbnail', 'store:id,name,slug,status,logo_path'])
+            ->with(['thumbnail', 'store:id,name,slug,status,city,logo_path'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
             ->withCount(['reviews as published_reviews_count' => fn (Builder $query) => $query->published()])
