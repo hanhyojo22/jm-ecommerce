@@ -2,19 +2,7 @@
     @section('title', 'Marketplace · JMMart')
 
     <div class="page-container marketplace-home" data-homepage>
-        <section class="home-intro" aria-labelledby="home-discovery-heading">
-            <div>
-                <h1 id="home-discovery-heading">Good finds. Great local stores.</h1>
-                <p>Independent sellers, one cart. Pay when your order arrives.</p>
-            </div>
-            <a href="{{ route('catalog.index') }}" class="home-browse-button">Browse marketplace <x-returns.icon name="chevron-right" class="size-4" /></a>
-            <nav class="home-shortcuts" aria-label="Homepage shortcuts">
-                @if ($newProducts->isNotEmpty())<a href="#new-arrivals">New arrivals</a>@endif
-                @if ($flashDeals->isNotEmpty())<a href="#flash-deals">Price drops</a>@endif
-                @if ($bestSellers->isNotEmpty())<a href="#trending-products">Trending</a>@endif
-                @if ($stores->isNotEmpty())<a href="#marketplace-home-heading">Local stores</a>@endif
-            </nav>
-        </section>
+        <h1 class="sr-only">Marketplace</h1>
 
         @if ($categories->isNotEmpty())
             <section id="shop-by-category" class="marketplace-section scroll-mt-[136px]" aria-labelledby="home-categories-heading">

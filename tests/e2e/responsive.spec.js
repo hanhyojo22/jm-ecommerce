@@ -509,7 +509,9 @@ test('homepage shows compact product rows at desktop, tablet, and phone sizes', 
         page.waitForEvent('domcontentloaded'),
         page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
     ]);
-    await expect(page.getByRole('heading', { name: 'Good finds. Great local stores.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Shop by category', exact: true })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Homepage shortcuts' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Browse marketplace', exact: true })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Marketplace sections' })).toBeVisible();
     await expect(page.getByRole('banner').getByRole('link', { name: 'JMMart marketplace home' })).toBeVisible();
 
