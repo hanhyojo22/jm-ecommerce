@@ -1,13 +1,81 @@
 <x-app-layout>
     @section('title', 'Marketplace · JMMart')
 
-    <div class="page-container">
+    <div class="page-container marketplace-home" data-homepage>
+        <section class="home-intro" aria-labelledby="home-discovery-heading">
+            <div>
+                <h1 id="home-discovery-heading">Good finds. Great local stores.</h1>
+                <p>Independent sellers, one cart. Pay when your order arrives.</p>
+            </div>
+            <a href="{{ route('catalog.index') }}" class="home-browse-button">Browse marketplace <x-returns.icon name="chevron-right" class="size-4" /></a>
+            <nav class="home-shortcuts" aria-label="Homepage shortcuts">
+                @if ($newProducts->isNotEmpty())<a href="#new-arrivals">New arrivals</a>@endif
+                @if ($flashDeals->isNotEmpty())<a href="#flash-deals">Price drops</a>@endif
+                @if ($bestSellers->isNotEmpty())<a href="#trending-products">Trending</a>@endif
+                @if ($stores->isNotEmpty())<a href="#marketplace-home-heading">Local stores</a>@endif
+            </nav>
+        </section>
+
+        @if ($categories->isNotEmpty())
+            <section id="shop-by-category" class="marketplace-section scroll-mt-[136px]" aria-labelledby="home-categories-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-categories-heading" class="marketplace-section-title">Shop by category</h2><p class="marketplace-section-subtitle">Every category with products in it today.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link inline-flex items-center gap-1">View all <x-returns.icon name="chevron-right" class="size-4" /></a></div>
+                <div class="home-category-grid">
+                    @foreach ($categories as $category)
+                        <x-marketplace.category-card :category="$category" :show-count="true" :href="route('catalog.index', ['category' => $category->slug])" />
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
+        @if ($newProducts->isNotEmpty())
+            <section id="new-arrivals" class="marketplace-section scroll-mt-24" aria-labelledby="home-new-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-new-heading" class="marketplace-section-title">New arrivals</h2><p class="marketplace-section-subtitle">The latest listings from every store.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="marketplace-section-link inline-flex items-center gap-1">All new arrivals <x-returns.icon name="chevron-right" class="size-4" /></a></div>
+                <div class="marketplace-product-grid">
+                    @include('marketplace.catalog._new-arrival-cards', ['products' => $newProducts])
+                </div>
+            </section>
+        @endif
+
+        @if ($flashDeals->isNotEmpty())
+            @php
+                $largestDiscount = $flashDeals->map(fn ($product): int => (int) round((1 - ((float) $product->price / (float) $product->compare_at_price)) * 100))->max();
+            @endphp
+            <section id="flash-deals" class="marketplace-section home-deals scroll-mt-24" aria-labelledby="home-deals-heading">
+                <div class="marketplace-section-head">
+                    <div>
+                        <div class="home-deals-title"><h2 id="home-deals-heading" class="marketplace-section-title">Biggest price drops</h2><span>Up to {{ $largestDiscount }}% off</span></div>
+                        <p class="marketplace-section-subtitle">Real savings from independent stores.</p>
+                    </div>
+                    <a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="marketplace-section-link inline-flex items-center gap-1">All deals <x-returns.icon name="chevron-right" class="size-4" /></a>
+                </div>
+                <div class="marketplace-product-grid">
+                    @foreach ($flashDeals as $product)
+                        <x-marketplace.top-product-card :product="$product" />
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
+        @if ($bestSellers->isNotEmpty())
+            <section id="trending-products" class="marketplace-section scroll-mt-24" aria-labelledby="home-trending-heading">
+                <div class="marketplace-section-head"><div><h2 id="home-trending-heading" class="marketplace-section-title">Trending products</h2><p class="marketplace-section-subtitle">Ranked by how many buyers ordered them.</p></div><a href="{{ route('catalog.top-products') }}" class="marketplace-section-link inline-flex items-center gap-1">View all <x-returns.icon name="chevron-right" class="size-4" /></a></div>
+                <ol class="marketplace-product-grid">
+                    @foreach ($bestSellers->take(6) as $product)
+                        <li class="flex min-w-0 flex-col">
+                            <p class="trending-rank"><span>{{ $loop->iteration }}</span> {{ number_format((int) ($product->sold_quantity ?? $product->net_quantity_sold ?? 0)) }} sold</p>
+                            <x-marketplace.top-product-card :product="$product" />
+                        </li>
+                    @endforeach
+                </ol>
+            </section>
+        @endif
+
         @if ($stores->isNotEmpty())
-            <section class="pt-6 sm:pt-8" aria-labelledby="marketplace-home-heading"
+            <section class="marketplace-section home-stores" aria-labelledby="marketplace-home-heading"
                 x-data="{ active: 0, count: {{ $stores->count() }}, show(index) { this.active = (index + this.count) % this.count; this.$refs['storeTab' + this.active].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); }, select(index) { this.show(index); this.$refs['storeTab' + this.active].focus({ preventScroll: true }); } }">
                 <div class="mb-4 flex items-end justify-between gap-4">
                     <div>
-                        <h1 id="marketplace-home-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Shop local stores</h1>
+                        <h2 id="marketplace-home-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Shop local stores</h2>
                         <p class="mt-1 text-sm text-muted">Independent sellers, one cart. Pay when your order arrives.</p>
                     </div>
                     <a href="{{ route('catalog.stores') }}" class="marketplace-section-link inline-flex shrink-0 items-center gap-1">All stores <x-returns.icon name="chevron-right" class="size-4" /></a>
@@ -91,64 +159,9 @@
                 @endforeach
             </section>
         @else
-            <section class="pt-6 sm:pt-8" aria-labelledby="marketplace-home-heading">
-                <h1 id="marketplace-home-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Shop local stores</h1>
+            <section class="marketplace-section home-stores" aria-labelledby="marketplace-home-heading">
+                <h2 id="marketplace-home-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Shop local stores</h2>
                 <p class="mt-1 text-sm text-muted">Independent sellers, one cart. Pay when your order arrives.</p>
-            </section>
-        @endif
-
-        @if ($flashDeals->isNotEmpty())
-            @php
-                $largestDiscount = $flashDeals->map(fn ($product): int => (int) round((1 - ((float) $product->price / (float) $product->compare_at_price)) * 100))->max();
-            @endphp
-            <section id="flash-deals" class="scroll-mt-[136px] py-8 sm:py-10" aria-labelledby="home-deals-heading">
-                <div class="grid gap-6 rounded-[var(--radius-surface)] bg-ink p-5 text-white sm:p-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-7">
-                    <div class="flex flex-col items-start justify-center">
-                        <p class="text-[56px] font-extrabold leading-none tracking-[-.04em] tabular-nums">−{{ $largestDiscount }}%</p>
-                        <h2 id="home-deals-heading" class="marketplace-section-title mt-3 text-white">Biggest price drops</h2>
-                        <p class="mt-2 text-sm leading-6 text-[var(--color-sidebar-text)]">The largest discounts sellers are offering right now, across every store.</p>
-                        <a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center gap-1 rounded-md bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">All deals <x-returns.icon name="chevron-right" class="size-4" /></a>
-                    </div>
-                    <div @class(["grid grid-cols-2 gap-3", "xl:grid-cols-4" => $flashDeals->count() === 4, "xl:grid-cols-3" => $flashDeals->count() === 3])>
-                        @foreach ($flashDeals as $product)
-                            <x-marketplace.top-product-card :product="$product" />
-                        @endforeach
-                    </div>
-                </div>
-            </section>
-        @endif
-
-        @if ($categories->isNotEmpty())
-            <section id="shop-by-category" class="marketplace-section scroll-mt-[136px]" aria-labelledby="home-categories-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-categories-heading" class="marketplace-section-title">Shop by category</h2><p class="marketplace-section-subtitle">Every category with products in it today.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link inline-flex items-center gap-1">View all <x-returns.icon name="chevron-right" class="size-4" /></a></div>
-                <div class="grid grid-cols-3 gap-2 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
-                    @foreach ($categories as $category)
-                        <x-marketplace.category-card :category="$category" :show-count="true" :href="route('catalog.index', ['category' => $category->slug])" />
-                    @endforeach
-                </div>
-            </section>
-        @endif
-
-        @if ($bestSellers->isNotEmpty())
-            <section class="marketplace-section" aria-labelledby="home-trending-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-trending-heading" class="marketplace-section-title">Trending products</h2><p class="marketplace-section-subtitle">Ranked by how many buyers ordered them.</p></div><a href="{{ route('catalog.top-products') }}" class="marketplace-section-link inline-flex items-center gap-1">View all <x-returns.icon name="chevron-right" class="size-4" /></a></div>
-                <ol class="marketplace-product-grid">
-                    @foreach ($bestSellers->take(4) as $product)
-                        <li class="flex min-w-0 flex-col">
-                            <p class="trending-rank"><span>{{ $loop->iteration }}</span> {{ number_format((int) ($product->sold_quantity ?? $product->net_quantity_sold ?? 0)) }} sold</p>
-                            <x-marketplace.top-product-card :product="$product" />
-                        </li>
-                    @endforeach
-                </ol>
-            </section>
-        @endif
-
-        @if ($newProducts->isNotEmpty())
-            <section id="new-arrivals" class="marketplace-section scroll-mt-24" aria-labelledby="home-new-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-new-heading" class="marketplace-section-title">New arrivals</h2><p class="marketplace-section-subtitle">The latest listings from every store.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="marketplace-section-link inline-flex items-center gap-1">All new arrivals <x-returns.icon name="chevron-right" class="size-4" /></a></div>
-                <div class="marketplace-product-grid">
-                    @include('marketplace.catalog._new-arrival-cards', ['products' => $newProducts])
-                </div>
             </section>
         @endif
 
@@ -167,7 +180,7 @@
             <section class="marketplace-section" aria-labelledby="home-recent-heading">
                 <div class="marketplace-section-head"><div><h2 id="home-recent-heading" class="marketplace-section-title">Recently viewed</h2><p class="marketplace-section-subtitle">Pick up where you left off.</p></div><form method="POST" action="{{ route('catalog.recently-viewed.clear') }}">@csrf @method('DELETE')<button type="submit" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Clear history</button></form></div>
                 <div class="marketplace-product-grid">
-                    @foreach ($recentlyViewed->take(4) as $product)
+                    @foreach ($recentlyViewed->take(6) as $product)
                         <x-marketplace.top-product-card :product="$product" />
                     @endforeach
                 </div>

@@ -503,39 +503,47 @@ test('seller order detail and product editor remain usable at each viewport', as
     }
 });
 
-test('homepage remains usable without page-level horizontal overflow', async ({ page }) => {
+test('homepage shows compact product rows at desktop, tablet, and phone sizes', async ({ page }, testInfo) => {
     await page.goto('/');
-
+    await Promise.all([
+        page.waitForEvent('domcontentloaded'),
+        page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
+    ]);
+    await expect(page.getByRole('heading', { name: 'Good finds. Great local stores.' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Marketplace sections' })).toBeVisible();
     await expect(page.getByRole('banner').getByRole('link', { name: 'JMMart marketplace home' })).toBeVisible();
 
-    const dimensions = await page.evaluate(() => ({
-        viewport: document.documentElement.clientWidth,
-        document: document.documentElement.scrollWidth,
-    }));
-
-    expect(dimensions.document).toBeLessThanOrEqual(dimensions.viewport);
+    const widths = testInfo.project.name === 'desktop-chromium' ? [1440, 1024, 768, 390] : [page.viewportSize().width];
+    for (const width of widths) {
+        await page.setViewportSize({ width, height: 900 });
+        const grid = page.locator('#new-arrivals .marketplace-product-grid');
+        const expectedColumns = width >= 1024 ? 6 : width >= 768 ? 4 : width >= 560 ? 3 : 2;
+        const columns = await grid.evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+        expect(columns).toBe(expectedColumns);
+        await expect(grid.locator('article')).toHaveCount(12);
+        const row = await grid.locator('article').evaluateAll((cards) => cards.map((card) => ({ top: Math.round(card.getBoundingClientRect().top), width: card.getBoundingClientRect().width })));
+        expect(row.slice(0, expectedColumns).every((card) => card.top === row[0].top)).toBe(true);
+        expect(row[expectedColumns].top).toBeGreaterThan(row[0].top);
+        if (width >= 1024) expect(row[0].width).toBeLessThan(220);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+        await page.screenshot({ path: testInfo.outputPath(`homepage-${width}.png`), fullPage: true });
+    }
+    expect((await new AxeBuilder({ page }).include('[data-homepage]').analyze()).violations).toEqual([]);
 });
 
-test('new arrivals append the next page without horizontal overflow', async ({ page }, testInfo) => {
+test('new arrivals link opens the complete catalog with newest sorting', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Reject Optional' }).click();
-    await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+    await Promise.all([
+        page.waitForEvent('domcontentloaded'),
+        page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
+    ]);
     const arrivals = page.locator('#new-arrivals');
-    const loadMore = arrivals.getByRole('link', { name: 'Load More' });
 
-    await expect(arrivals.locator('article')).toHaveCount(20);
-    await expect(loadMore).toHaveAttribute('href', /new_cursor=/);
-    if (testInfo.project.name === 'desktop-chromium') {
-        await page.route(/[?&]new_cursor=/, route => route.fulfill({ status: 500, body: 'Try again' }), { times: 1 });
-        await loadMore.click();
-        await expect(arrivals.locator('[data-new-arrivals-status]')).toHaveText('Could not load more products. Please try again.');
-        await expect(loadMore).toBeEnabled();
-    }
-    await loadMore.click();
-    await expect(arrivals.locator('article').nth(20)).toBeVisible();
-    await expect(loadMore).toHaveCount(0);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+    await expect(arrivals.locator('article')).toHaveCount(12);
+    await arrivals.getByRole('link', { name: 'All new arrivals' }).click();
+    await expect(page).toHaveURL(/sort=newest/);
+    await expect(page.locator('#product-results article').first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
 
 test('customer header uses the intended shopping and account layouts', async ({ browser }) => {

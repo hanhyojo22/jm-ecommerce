@@ -245,6 +245,16 @@ class CatalogTest extends TestCase
             ->assertViewHas('flashDeals', fn ($deals): bool => $deals->pluck('id')->all() === [$bigSaving->id, $smallSaving->id]);
     }
 
+    public function test_homepage_supplies_six_deals_for_a_complete_desktop_row(): void
+    {
+        foreach (range(1, 7) as $number) {
+            $this->product(['name' => "Deal {$number}", 'price' => 50, 'compare_at_price' => 100]);
+        }
+
+        $this->get(route('home'))
+            ->assertViewHas('flashDeals', fn ($products): bool => $products->count() === 6);
+    }
+
     public function test_homepage_deals_band_skips_products_already_trending(): void
     {
         $trendingDeal = $this->product(['price' => 50, 'compare_at_price' => 100]);
@@ -297,10 +307,10 @@ class CatalogTest extends TestCase
             ->assertSessionMissing('marketplace.recent_searches');
     }
 
-    public function test_homepage_loads_new_arrivals_in_public_batches_of_eight(): void
+    public function test_homepage_loads_new_arrivals_in_public_batches_of_twelve(): void
     {
-        $newest = $this->product(['name' => 'Arrival 17']);
-        foreach (range(16, 1) as $number) {
+        $newest = $this->product(['name' => 'Arrival 25']);
+        foreach (range(24, 1) as $number) {
             $product = new Product([
                 'tenant_id' => $newest->tenant_id,
                 'store_id' => $newest->store_id,
@@ -311,7 +321,7 @@ class CatalogTest extends TestCase
                 'stock_quantity' => 3,
                 'status' => 'active',
             ]);
-            $product->created_at = now()->subMinutes(17 - $number);
+            $product->created_at = now()->subMinutes(25 - $number);
             $product->save();
         }
         $this->product(['name' => 'Hidden arrival', 'status' => 'draft']);
@@ -322,7 +332,7 @@ class CatalogTest extends TestCase
             ->assertSee('All new arrivals')
             ->assertDontSee('data-new-arrivals-more', false);
         $this->assertSame(
-            array_map(fn (int $number): string => "Arrival {$number}", range(17, 10)),
+            array_map(fn (int $number): string => "Arrival {$number}", range(25, 14)),
             $firstPage->viewData('newProducts')->pluck('name')->all(),
         );
         $nextUrl = $firstPage->viewData('newProducts')->nextPageUrl();
@@ -334,16 +344,16 @@ class CatalogTest extends TestCase
         $secondPage = $this->getJson($nextUrl);
         $secondPage
             ->assertOk()
-            ->assertSee('Arrival 9')
-            ->assertDontSee('Arrival 17')
-            ->assertDontSee('Arrival 10')
+            ->assertSee('Arrival 13')
+            ->assertDontSee('Arrival 25')
+            ->assertDontSee('Arrival 14')
             ->assertDontSee('Later arrival')
             ->assertDontSee('Hidden arrival')
             ->assertJsonStructure(['html', 'next_url']);
         $this->assertStringStartsWith('/?new_cursor=', $secondPage->json('next_url'));
         $this->get($nextUrl)
-            ->assertSee('Arrival 9')
-            ->assertDontSee('Arrival 10');
+            ->assertSee('Arrival 13')
+            ->assertDontSee('Arrival 14');
         $this->getJson($secondPage->json('next_url'))
             ->assertOk()
             ->assertSee('Arrival 1')
@@ -407,7 +417,7 @@ class CatalogTest extends TestCase
             $this->product(['name' => "Related extra {$number}", 'category_id' => $category->id]);
         }
         Product::query()->update(['created_at' => now()->subDay()]);
-        foreach (range(1, 8) as $number) {
+        foreach (range(1, 12) as $number) {
             $this->product(['name' => "Newer filler {$number}"]);
         }
 

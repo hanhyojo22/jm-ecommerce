@@ -17,7 +17,7 @@
     $formatCount = static fn (int $count): string => $count < 1000 ? number_format($count) : number_format($count / 1000, $count % 1000 === 0 ? 0 : 1).'k';
 @endphp
 
-<article class="group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface shadow-[0_1px_2px_rgba(24,44,72,.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,.10)]">
+<article class="marketplace-product-card group relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface shadow-[0_1px_2px_rgba(24,44,72,.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(15,23,42,.10)]">
     <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" @if ($product->stock_quantity < 1) aria-label="{{ $product->name }}, sold out" @endif class="relative block aspect-square overflow-hidden rounded-t-[var(--radius-surface)] bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]">
         @if ($product->thumbnail)
             <img src="{{ Storage::disk('product_images')->url($product->thumbnail->path) }}" alt="{{ $product->name }}" width="320" height="320" loading="{{ $eager ? 'eager' : 'lazy' }}" class="h-full w-full object-cover" />
@@ -31,16 +31,16 @@
             <x-marketplace.sold-out-overlay compact />
         @endif
     </a>
-    <div class="flex flex-1 flex-col gap-1.5 p-3.5 sm:p-4">
+    <div class="product-card-body flex flex-1 flex-col gap-1.5 p-3.5 sm:p-4">
         <div class="flex flex-wrap items-center gap-1 text-[11px] font-bold leading-none text-white">
             <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-warning-text px-1.5"><span aria-hidden="true">COD</span><span class="sr-only">Cash on delivery</span></span>
             @if ($product->free_shipping)
                 <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-brand px-1.5">FREE SHIPPING</span>
             @endif
         </div>
-        <h3 class="min-h-12 text-[16px] font-medium leading-6 text-ink"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="line-clamp-2 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->name }}</a></h3>
+        <h3 class="product-card-title min-h-12 text-[16px] font-medium leading-6 text-ink"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="line-clamp-2 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->name }}</a></h3>
         <div class="flex flex-wrap items-center gap-2">
-            <p class="text-[20px] font-bold leading-6 tabular-nums {{ $isOnSale ? 'text-danger' : 'text-ink' }}">₱{{ number_format($displayPrice, $priceDecimals) }}</p>
+            <p class="product-card-price text-[20px] font-bold leading-6 tabular-nums {{ $isOnSale ? 'text-danger' : 'text-ink' }}">₱{{ number_format($displayPrice, $priceDecimals) }}</p>
             @if ($isOnSale)<span class="rounded bg-red-50 px-1.5 py-1 text-xs font-semibold leading-none text-danger">-{{ $discountPercent }}%</span>@endif
         </div>
         @if ($isOnSale)<del class="text-meta font-medium tabular-nums text-muted line-through decoration-[1.5px] decoration-muted/70" aria-label="Original price ₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}">₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}</del>@endif

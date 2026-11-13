@@ -23,7 +23,7 @@ use Illuminate\View\View;
 
 class CatalogController extends Controller
 {
-    private const NEW_ARRIVALS_PAGE_SIZE = 8;
+    private const NEW_ARRIVALS_PAGE_SIZE = 12;
 
     public function home(Request $request): View|JsonResponse
     {
@@ -81,7 +81,7 @@ class CatalogController extends Controller
             ->cursorPaginate(self::NEW_ARRIVALS_PAGE_SIZE, ['*'], 'new_cursor', $cursor)
             ->withPath(route('home', absolute: false))
             ->fragment('new-arrivals');
-        $bestSellers = TopProductQuery::featured(4);
+        $bestSellers = TopProductQuery::featured(6);
         // Trending keeps the real top sellers; the deals band shows the next-largest drops instead of repeating them.
         $flashDeals = (clone $homeProducts)
             ->whereNotNull('compare_at_price')
@@ -90,7 +90,7 @@ class CatalogController extends Controller
             ->whereNotIn('products.id', $bestSellers->pluck('id'))
             ->orderByRaw('(compare_at_price - price) / compare_at_price desc')
             ->orderByDesc('id')
-            ->limit(4)
+            ->limit(6)
             ->get();
         $featuredProduct = $flashDeals->first() ?? $bestSellers->first() ?? $newProducts->first();
 
@@ -103,8 +103,8 @@ class CatalogController extends Controller
             ->sortBy(fn (Product $product): int => array_search($product->id, $recentProductIds, true))
             ->values();
         $shownProductIds = $flashDeals->pluck('id')->merge($bestSellers->pluck('id'))->merge($newProducts->getCollection()->pluck('id'));
-        $recommendedProducts = RecommendationQuery::forRequest($request, limit: 16)->whereNotIn('id', $shownProductIds)->values();
-        $recommendedProducts = $recommendedProducts->count() >= 4 ? $recommendedProducts->take(4) : collect();
+        $recommendedProducts = RecommendationQuery::forRequest($request, limit: 30)->whereNotIn('id', $shownProductIds)->values();
+        $recommendedProducts = $recommendedProducts->count() >= 4 ? $recommendedProducts->take(6) : collect();
 
         $stores = $this->publicStores()
             ->whereHas('products', fn (Builder $query) => $query->where('status', 'active'))
