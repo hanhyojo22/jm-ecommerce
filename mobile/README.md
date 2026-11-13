@@ -32,7 +32,12 @@ Put the login config in `mobile/.env` (gitignored):
 ```
 CLERK_PUBLISHABLE_KEY=pk_test_...
 API_BASE_URL=https://jmmart-marketplace.onrender.com/api/v1
+GOOGLE_WEB_CLIENT_ID=....apps.googleusercontent.com
 ```
+
+`GOOGLE_WEB_CLIENT_ID` enables Android's native Google account picker. Without
+it, Google sign-in falls back to Clerk's in-app web view, which cannot see the
+phone's signed-in Google accounts.
 
 ```powershell
 flutter run --dart-define-from-file=.env

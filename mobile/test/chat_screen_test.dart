@@ -16,6 +16,7 @@ import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/chat_providers.dart';
 import 'package:jmmart/src/screens/chat_screen.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/widgets/image_viewer.dart';
 
 void main() {
   testWidgets('pending product context is sent with the first message', (
@@ -72,6 +73,46 @@ void main() {
     expect(find.text('Wireless Mouse'), findsOneWidget);
     expect(find.text('₱42000.00'), findsOneWidget);
     expect(find.text('₱850.00'), findsOneWidget);
+    await _disposeChat(tester);
+  });
+
+  testWidgets('an order card shows its items and opens the photo', (
+    tester,
+  ) async {
+    final api = _FakeApiClient();
+    api.serverMessages = [
+      ChatMessage.fromJson({
+        'id': 'order-msg',
+        'sender_id': 'buyer-1',
+        'is_mine': true,
+        'type': 'text',
+        'body': 'When will this ship?',
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+        'context_snapshot': {
+          'type': 'order',
+          'number': 'JM-1042',
+          'total': '199.00',
+          'status': 'shipped',
+          'order_id': 'order-1',
+          'item_name': 'Rice cooker',
+          'item_count': 3,
+          'image_url': 'http://localhost/media/rice-cooker.jpg',
+        },
+      }),
+    ];
+
+    await _pumpChat(tester, api);
+
+    expect(find.text('Order JM-1042'), findsOneWidget);
+    expect(find.text('Rice cooker +2 more'), findsOneWidget);
+    expect(find.text('₱199.00 · On the way'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey('open-context-image-order-msg')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(ImageViewer), findsOneWidget);
     await _disposeChat(tester);
   });
 

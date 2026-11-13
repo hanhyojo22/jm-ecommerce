@@ -509,6 +509,12 @@ class ConversationApiTest extends TestCase
             'tenant_id' => $product->tenant_id, 'store_id' => $store->id,
             'status' => 'pending', 'subtotal' => '199.00', 'shipping_amount' => '0.00', 'total' => '199.00',
         ]);
+        foreach (['Rice cooker' => 'products/rice-cooker.jpg', 'Spare lid' => null] as $name => $imagePath) {
+            $sellerOrder->items()->create([
+                'product_id' => $product->id, 'product_name' => $name, 'sku' => 'SKU-'.str()->random(6),
+                'unit_price' => '99.50', 'quantity' => 1, 'line_total' => '99.50', 'image_path' => $imagePath,
+            ]);
+        }
 
         $this->actingAs($buyer)->postJson('/api/v1/conversations/start', ['seller_order_id' => $sellerOrder->id])
             ->assertOk()->assertJsonPath('data.id', $conversation->id);
@@ -517,7 +523,10 @@ class ConversationApiTest extends TestCase
             'seller_order_id' => $sellerOrder->id,
         ])->assertCreated()
             ->assertJsonPath('data.context_snapshot.number', 'JM-1042')
-            ->assertJsonPath('data.context_snapshot.total', '199.00');
+            ->assertJsonPath('data.context_snapshot.total', '199.00')
+            ->assertJsonPath('data.context_snapshot.item_name', 'Rice cooker')
+            ->assertJsonPath('data.context_snapshot.item_count', 2)
+            ->assertJsonPath('data.context_snapshot.image_url', Storage::disk('product_images')->url('products/rice-cooker.jpg'));
         $this->getJson('/api/v1/conversations?filter=order')->assertOk()
             ->assertJsonCount(1, 'data');
         $this->assertDatabaseCount('conversations', 1);

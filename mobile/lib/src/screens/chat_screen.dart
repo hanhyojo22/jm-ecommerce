@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1311,6 +1312,14 @@ class _Bubble extends StatelessWidget {
                                     ? '/product/$storeSlug/$productSlug'
                                     : null)
                               : (orderId != null ? '/orders/$orderId' : null);
+                          final imageUrl = snapshot['image_url'] as String?;
+                          final title = isProduct
+                              ? '${snapshot['title']}'
+                              : 'Order ${snapshot['number']}';
+                          final itemName = snapshot['item_name'] as String?;
+                          final itemCount =
+                              (snapshot['item_count'] as num?)?.toInt() ?? 1;
+                          final status = snapshot['status'] as String?;
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 6),
@@ -1331,16 +1340,38 @@ class _Bubble extends StatelessWidget {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (snapshot['image_url'] is String)
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                          appSurfaceRadius,
-                                        ),
-                                        child: Image.network(
-                                          snapshot['image_url'] as String,
-                                          width: 48,
-                                          height: 48,
-                                          fit: BoxFit.cover,
+                                    if (imageUrl != null)
+                                      Semantics(
+                                        button: true,
+                                        label: 'View photo',
+                                        child: GestureDetector(
+                                          key: ValueKey(
+                                            'open-context-image-${message.id}',
+                                          ),
+                                          onTap: () => ImageViewer.open(
+                                            context,
+                                            url: imageUrl,
+                                            title: title,
+                                          ),
+                                          behavior: HitTestBehavior.opaque,
+                                          child: SizedBox.square(
+                                            dimension: 64,
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                    appSurfaceRadius,
+                                                  ),
+                                              child: CachedNetworkImage(
+                                                imageUrl: imageUrl,
+                                                fit: BoxFit.cover,
+                                                errorWidget: (_, _, _) =>
+                                                    const Icon(
+                                                      Icons
+                                                          .image_not_supported_outlined,
+                                                    ),
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       )
                                     else
@@ -1361,24 +1392,54 @@ class _Bubble extends StatelessWidget {
                                               .onSurfaceVariant,
                                         ),
                                       ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 10),
                                     Flexible(
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            isProduct
-                                                ? '${snapshot['title']}'
-                                                : 'Order ${snapshot['number']}',
+                                            title,
                                             maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.titleSmall,
                                           ),
+                                          if (!isProduct && itemName != null)
+                                            Text(
+                                              itemCount > 1
+                                                  ? '$itemName +${itemCount - 1} more'
+                                                  : itemName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme.textTheme.bodySmall,
+                                            ),
                                           Text(
-                                            '₱${isProduct ? snapshot['price'] : snapshot['total']}',
+                                            isProduct
+                                                ? '₱${snapshot['price']}'
+                                                : [
+                                                    '₱${snapshot['total']}',
+                                                    if (status != null)
+                                                      statusLabel(status),
+                                                  ].join(' · '),
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
                                           ),
                                         ],
                                       ),
                                     ),
+                                    if (destination != null) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 20,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),

@@ -63,8 +63,12 @@
                                         </a>
                                     @elseif ($message->context_snapshot['type'] === 'order')
                                         <a @if (filled($message->context_snapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $message->context_snapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif class="flex items-center gap-3 rounded-lg border border-line bg-canvas p-3 transition hover:bg-line/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-                                            <span class="grid size-12 shrink-0 place-items-center rounded-md bg-white text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7.5h14l1 13H4l1-13ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
-                                            <span class="min-w-0 flex-1"><span class="block truncate font-semibold text-ink">Order {{ $message->context_snapshot['number'] ?? '' }}</span><span class="block text-sm text-muted">₱{{ $message->context_snapshot['total'] ?? '0.00' }} · {{ Str::headline($message->context_snapshot['status'] ?? '') }}</span></span>
+                                            @if (filled($message->context_snapshot['image_path'] ?? null))
+                                                <img src="{{ Storage::disk('product_images')->url($message->context_snapshot['image_path']) }}" alt="" class="size-12 shrink-0 rounded-md object-cover">
+                                            @else
+                                                <span class="grid size-12 shrink-0 place-items-center rounded-md bg-white text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7.5h14l1 13H4l1-13ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
+                                            @endif
+                                            <span class="min-w-0 flex-1"><span class="block truncate font-semibold text-ink">Order {{ $message->context_snapshot['number'] ?? '' }}</span>@if (filled($message->context_snapshot['item_name'] ?? null))<span class="block truncate text-sm text-ink/80">{{ $message->context_snapshot['item_name'] }}@if (($message->context_snapshot['item_count'] ?? 1) > 1) +{{ $message->context_snapshot['item_count'] - 1 }} more @endif</span>@endif<span class="block text-sm text-muted">₱{{ $message->context_snapshot['total'] ?? '0.00' }} · {{ Str::headline($message->context_snapshot['status'] ?? '') }}</span></span>
                                         </a>
                                     @endif
                                 </div>
