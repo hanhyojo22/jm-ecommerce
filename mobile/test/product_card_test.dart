@@ -9,8 +9,8 @@ void main() {
     (tester) async {
       await tester.pumpWidget(_card(discovery: true));
       final name = find.text('Cargo Pants');
-      // A one-line name still holds two lines, keeping every card in a row aligned.
-      expect(tester.getSize(name).height, greaterThan(30));
+      // A one-line name takes only the space it needs, with no reserved blank line.
+      expect(tester.getSize(name).height, lessThan(30));
       final nameBottom = tester.getBottomLeft(name).dy;
       final priceTop = tester.getTopLeft(find.text('₱255.00')).dy;
       expect(priceTop - nameBottom, lessThanOrEqualTo(6));

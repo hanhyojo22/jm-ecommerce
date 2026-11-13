@@ -348,14 +348,11 @@ class ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scaler = MediaQuery.textScalerOf(context);
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
       fontSize: discovery ? 13 : null,
       fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
       height: 1.3,
     );
-    // Hold two title lines so single- and double-line names keep every row aligned.
-    final titleHeight = scaler.scale(titleStyle?.fontSize ?? 14) * 1.3 * 2;
     final discount = discountPercent(
       product.effectivePrice,
       product.compareAtPrice,
@@ -404,12 +401,7 @@ class ProductCard extends StatelessWidget {
       ],
     );
     final price = discovery
-        ? SizedBox(
-            // Reserve the two-line stack so cards with and without a markdown
-            // keep their photos and price rows aligned.
-            height: scaler.scale(38),
-            child: Align(alignment: Alignment.topLeft, child: priceColumn),
-          )
+        ? priceColumn
         : Row(
             children: [
               Expanded(child: priceColumn),
@@ -501,14 +493,11 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: titleHeight),
-                    child: Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: titleStyle,
-                    ),
+                  Text(
+                    product.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: titleStyle,
                   ),
                   if (discovery) ...[
                     const SizedBox(height: 4),

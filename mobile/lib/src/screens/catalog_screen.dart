@@ -1286,7 +1286,7 @@ class _TopDeals extends StatelessWidget {
                 ),
               ),
               SizedBox(
-                height: tileWidth + priceHeight + 24,
+                height: tileWidth + priceHeight + 16,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),

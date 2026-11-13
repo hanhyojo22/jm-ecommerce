@@ -1024,8 +1024,6 @@ class StoreProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final scaler = MediaQuery.textScalerOf(context);
-    final titleHeight = scaler.scale(35);
     final discount = _discountPercent(product);
     final meta = _meta(context);
     final labels = <String>[
@@ -1093,67 +1091,59 @@ class StoreProductCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(
-                        height: titleHeight,
-                        child: Text(
-                          product.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            height: 1.25,
-                          ),
+                      Text(
+                        product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
                         ),
                       ),
                       const SizedBox(height: 6),
-                      SizedBox(
-                        // Reserve the two-line stack so every grid row keeps
-                        // the same photo height whether or not it is on sale.
-                        height: scaler.scale(38),
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                money(product.effectivePrice),
+                                maxLines: 1,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: discount != null
+                                      ? scheme.error
+                                      : scheme.primary,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.25,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                            ),
+                            if (discount != null) ...[
+                              const SizedBox(height: 1),
                               FittedBox(
                                 fit: BoxFit.scaleDown,
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  money(product.effectivePrice),
+                                  money(product.compareAtPrice),
                                   maxLines: 1,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    color: discount != null
-                                        ? scheme.error
-                                        : scheme.primary,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.25,
-                                    letterSpacing: -0.4,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: scheme.onSurfaceVariant,
+                                    decorationThickness: 1.5,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
                               ),
-                              if (discount != null) ...[
-                                const SizedBox(height: 1),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    money(product.compareAtPrice),
-                                    maxLines: 1,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: scheme.onSurfaceVariant,
-                                      decoration: TextDecoration.lineThrough,
-                                      decorationColor: scheme.onSurfaceVariant,
-                                      decorationThickness: 1.5,
-                                      fontFeatures: const [
-                                        FontFeature.tabularFigures(),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ],
-                          ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 4),
