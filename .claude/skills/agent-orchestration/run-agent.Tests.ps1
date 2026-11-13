@@ -18,7 +18,7 @@ function New-TempRepo {
     git -C $repo config user.email t@t
     git -C $repo config user.name t
     Set-Content -Path (Join-Path $repo 'README.md') -Value 'x' -Encoding ascii
-    Set-Content -Path (Join-Path $repo '.gitignore') -Value "vendor/`r`nnode_modules/`r`n.env" -Encoding ascii
+    Set-Content -Path (Join-Path $repo '.gitignore') -Value "vendor/`r`nnode_modules/`r`npublic/build/`r`n.env" -Encoding ascii
     git -C $repo add .
     git -C $repo commit -qm init
     New-Item -ItemType Directory -Force (Join-Path $repo 'vendor') | Out-Null
@@ -26,6 +26,8 @@ function New-TempRepo {
     New-Item -ItemType Directory -Force (Join-Path $repo 'vendor\composer') | Out-Null
     Set-Content -Path (Join-Path $repo 'vendor\composer\installed.json') -Value '{}' -Encoding ascii
     Set-Content -Path (Join-Path $repo '.env') -Value 'APP_KEY=x' -Encoding ascii
+    New-Item -ItemType Directory -Force (Join-Path $repo 'public\build') | Out-Null
+    Set-Content -Path (Join-Path $repo 'public\build\manifest.json') -Value '{}' -Encoding ascii
     return $repo
 }
 
@@ -67,6 +69,8 @@ try {
     Assert ((git -C $repo branch --list 'orch/space-codex') -ne $null) 'spaces in repo path: branch created'
     Assert ([string]::IsNullOrEmpty((git -C $wt status --porcelain))) '.orch is excluded from git'
     Assert (Test-Path (Join-Path $wt 'vendor\autoload.php')) 'setup: vendor linked into worktree'
+    $buildCopy = Get-Item (Join-Path $wt 'public\build')
+    Assert ((Test-Path (Join-Path $wt 'public\build\manifest.json')) -and -not ($buildCopy.Attributes -band [IO.FileAttributes]::ReparsePoint)) 'setup: public/build copied, not linked'
     Assert (-not (Test-Path (Join-Path $wt '.env'))) 'setup: .env not copied by default'
     $envWt = & $runner -Agent codex -Model m -Task withenv -PromptFile $prompt -RepoRoot $repo -SetupOnly -WithEnv
     Assert ((Get-Content (Join-Path $envWt '.env')) -eq 'APP_KEY=x') 'setup: -WithEnv copies .env'

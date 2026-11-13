@@ -26,7 +26,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $message = 'Read .orch/PROMPT.md and complete the task. Write your summary to .orch/SUMMARY.md.'
-$linkedDirs = @('vendor', 'node_modules', 'public\build')
+$linkedDirs = @('vendor', 'node_modules')
+# Built assets are executed by the browser, so agents get a private copy rather than a link into the main repo.
+$copiedDirs = @('public\build')
 
 # Under EAP=Stop, PS 5.1 turns redirected native stderr into a terminating error; git warnings must not kill the run.
 function Invoke-GitQuiet {
@@ -105,6 +107,11 @@ else {
     foreach ($dir in $linkedDirs) {
         if (Test-Path (Join-Path $RepoRoot $dir)) {
             New-Item -ItemType Junction -Path (Join-Path $worktree $dir) -Target (Join-Path $RepoRoot $dir) | Out-Null
+        }
+    }
+    foreach ($dir in $copiedDirs) {
+        if (Test-Path (Join-Path $RepoRoot $dir)) {
+            Copy-Item -Recurse -Path (Join-Path $RepoRoot $dir) -Destination (Join-Path $worktree $dir)
         }
     }
     if ($WithEnv -and (Test-Path (Join-Path $RepoRoot '.env'))) { Copy-Item (Join-Path $RepoRoot '.env') (Join-Path $worktree '.env') }
