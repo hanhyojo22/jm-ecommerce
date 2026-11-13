@@ -73,10 +73,10 @@
         @if ($stores->isNotEmpty())
             <section class="marketplace-section home-stores" aria-labelledby="marketplace-home-heading"
                 x-data="{ active: 0, count: {{ $stores->count() }}, show(index) { this.active = (index + this.count) % this.count; this.$refs['storeTab' + this.active].scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); }, select(index) { this.show(index); this.$refs['storeTab' + this.active].focus({ preventScroll: true }); } }">
-                <div class="mb-4 flex items-end justify-between gap-4">
+                <div class="marketplace-section-head">
                     <div>
-                        <h2 id="marketplace-home-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Shop local stores</h2>
-                        <p class="mt-1 text-sm text-muted">Independent sellers, one cart. Pay when your order arrives.</p>
+                        <h2 id="marketplace-home-heading" class="marketplace-section-title">Shop local stores</h2>
+                        <p class="marketplace-section-subtitle">Independent sellers, one cart. Pay when your order arrives.</p>
                     </div>
                     <a href="{{ route('catalog.stores') }}" class="marketplace-section-link inline-flex shrink-0 items-center gap-1">All stores <x-returns.icon name="chevron-right" class="size-4" /></a>
                 </div>
@@ -178,7 +178,7 @@
 
         @if ($recentlyViewed->isNotEmpty())
             <section class="marketplace-section" aria-labelledby="home-recent-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-recent-heading" class="marketplace-section-title">Recently viewed</h2><p class="marketplace-section-subtitle">Pick up where you left off.</p></div><form method="POST" action="{{ route('catalog.recently-viewed.clear') }}">@csrf @method('DELETE')<button type="submit" class="shrink-0 text-sm font-semibold text-brand hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Clear history</button></form></div>
+                <div class="marketplace-section-head"><div><h2 id="home-recent-heading" class="marketplace-section-title">Recently viewed</h2><p class="marketplace-section-subtitle">Pick up where you left off.</p></div><form method="POST" action="{{ route('catalog.recently-viewed.clear') }}">@csrf @method('DELETE')<button type="submit" class="marketplace-section-link shrink-0 hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand">Clear history</button></form></div>
                 <div class="marketplace-product-grid">
                     @foreach ($recentlyViewed->take(6) as $product)
                         <x-marketplace.top-product-card :product="$product" />
@@ -190,7 +190,7 @@
         @if (! auth()->user()?->isPlatformAdministrator() && ! (auth()->user()?->account_type === 'seller' && auth()->user()->sellerTenant()))
             <section class="my-10 seller-window" aria-labelledby="home-seller-heading">
                 <div>
-                    <h2 id="home-seller-heading" class="text-2xl font-bold tracking-[-.02em] text-ink sm:text-[28px]">Open the next shop window on JMMart.</h2>
+                    <h2 id="home-seller-heading" class="marketplace-section-title">Open the next shop window on JMMart.</h2>
                     <p class="mt-3 max-w-xl text-sm leading-6 text-muted">List your products, take cash-on-delivery orders, and answer customer reviews from Seller Center.</p>
                 </div>
                 <ol class="seller-window-steps">
