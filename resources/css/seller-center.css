@@ -855,13 +855,12 @@ select.pe-input { padding-right: 36px; }
 .seller-workspace [data-seller-reviews] .seller-reply-field :is(input, textarea) { flex: 1; width: 100%; min-width: 0; min-height: 44px; border: 0; border-radius: 0; background: transparent; padding: 10px 12px; color: var(--sc-ink); font-size: 13px; line-height: 1.5; box-shadow: none; outline: none; }
 .seller-workspace [data-seller-reviews] .seller-reply-field textarea { resize: vertical; }
 .seller-workspace [data-seller-reviews] .seller-reply-field :is(input, textarea)::placeholder { color: var(--sc-muted); opacity: 1; }
-.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send { display: inline-flex; width: 44px; min-height: 44px; margin: 3px; flex-shrink: 0; align-items: center; justify-content: center; border: 0; border-radius: 9px; background: var(--sc-ink); padding: 0; color: #fff; box-shadow: 0 2px 5px rgb(17 31 51 / 18%); cursor: pointer; touch-action: manipulation; transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease; }
-.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:hover:not(:disabled) { background: var(--color-sidebar); box-shadow: 0 3px 7px rgb(17 31 51 / 22%); }
-.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:active:not(:disabled) { transform: scale(.96); box-shadow: 0 1px 2px rgb(17 31 51 / 16%); }
-.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 3px; }
-.seller-workspace [data-seller-reviews] .seller-reply-send svg { width: 19px; height: 19px; transition: transform 160ms cubic-bezier(.16, 1, .3, 1); }
-.seller-workspace [data-seller-reviews] .seller-reply-send:hover:not(:disabled) svg { transform: translate(1px, -1px); }
-.seller-workspace [data-seller-reviews] .seller-reply-send:disabled { opacity: .55; box-shadow: none; cursor: wait; }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send { display: inline-flex; width: 36px; min-height: 36px; margin: 0 3px; flex-shrink: 0; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: transparent; padding: 0; color: var(--sc-accent); cursor: pointer; touch-action: manipulation; transition: background-color 160ms ease, color 160ms ease; }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:hover:not(:disabled) { background: var(--sc-accent-soft); color: var(--color-accent-hover); }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:active:not(:disabled) { background: var(--color-selected); }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: -3px; }
+.seller-workspace [data-seller-reviews] .seller-reply-send svg { width: 18px; height: 18px; }
+.seller-workspace [data-seller-reviews] .seller-reply-send:disabled { opacity: .55; cursor: wait; }
 
 /* Product conversations */
 .seller-workspace [data-seller-reviews] .seller-review-discussion-list { overflow: hidden; }
@@ -884,6 +883,7 @@ select.pe-input { padding-right: 36px; }
 .seller-feedback .sc-empty { padding: 44px 20px; }
 
 @media (max-width: 640px) {
+    .seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send { width: 44px; min-height: 44px; }
     .seller-review-summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 16px; padding: 16px; }
     .seller-review-summary > :is(.seller-review-summary-label, .seller-review-score, .seller-review-stars, .seller-review-summary-meta) { grid-column: 1; }
     .seller-review-bars { grid-column: 2; grid-row: 1 / span 4; align-self: center; margin-top: 0; padding-top: 0; border-top: 0; }

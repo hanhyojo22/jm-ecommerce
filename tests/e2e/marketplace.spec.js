@@ -576,7 +576,7 @@ test('seller reviews show real conversations and working replies at desktop and 
         await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Does this tote come in blue?');
         await expect(seller.page.locator('.seller-review-discussion').getByLabel('Your reply').first()).toBeVisible();
         await expect(seller.page.locator('.seller-review-discussion details')).toHaveCount(0);
-        expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Send reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgb(24, 44, 72)');
+        expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Send reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
         await seller.page.locator('.seller-review-discussion').getByLabel('Your reply').first().fill('Yes, blue is available.');
         const replyRequests = [];
         seller.page.on('requestfinished', (request) => {
