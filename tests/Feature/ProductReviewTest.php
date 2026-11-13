@@ -193,6 +193,9 @@ class ProductReviewTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $seller->id, 'action' => 'product_review.response_saved', 'entity_id' => $review->id]);
         $this->actingAs($seller)->get(route('seller.reviews.index'))
             ->assertOk()
+            ->assertViewHas('respondedCount', 1)
+            ->assertViewHas('responseRate', 100)
+            ->assertViewHas('awaitingReplyCount', 0)
             ->assertSeeInOrder(['Great delivery.', 'Thank you']);
     }
 
@@ -204,18 +207,23 @@ class ProductReviewTest extends TestCase
         $secondItem = $item->sellerOrder->items()->create(['product_id' => $item->product_id, 'product_name' => $item->product_name, 'sku' => $item->sku, 'unit_price' => 100, 'quantity' => 1, 'line_total' => 100]);
         ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $secondItem->id, 'user_id' => $buyer->id, 'rating' => 4, 'body' => 'Second review.']);
         $hiddenItem = $item->sellerOrder->items()->create(['product_id' => $item->product_id, 'product_name' => $item->product_name, 'sku' => $item->sku, 'unit_price' => 100, 'quantity' => 1, 'line_total' => 100]);
-        ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $hiddenItem->id, 'user_id' => $buyer->id, 'rating' => 1, 'body' => 'Hidden buyer review.', 'status' => 'hidden']);
+        $hiddenReview = ProductReview::create(['product_id' => $item->product_id, 'order_item_id' => $hiddenItem->id, 'user_id' => $buyer->id, 'rating' => 1, 'body' => 'Hidden buyer review.', 'status' => 'hidden']);
+        $hiddenReview->responses()->create(['user_id' => $seller->id, 'author_type' => 'seller', 'body' => 'Hidden review response.']);
         $discussion = $item->product->discussions()->create(['user_id' => $buyer->id, 'author_type' => 'buyer', 'body' => 'Does this come in blue?']);
-        [$otherBuyer, $otherItem] = $this->deliveredOrderItem();
-        ProductReview::create(['product_id' => $otherItem->product_id, 'order_item_id' => $otherItem->id, 'user_id' => $otherBuyer->id, 'rating' => 1, 'body' => 'Other store review.']);
+        [$otherBuyer, $otherItem, $otherSeller] = $this->deliveredOrderItem();
+        $otherReview = ProductReview::create(['product_id' => $otherItem->product_id, 'order_item_id' => $otherItem->id, 'user_id' => $otherBuyer->id, 'rating' => 1, 'body' => 'Other store review.']);
+        $otherReview->responses()->create(['user_id' => $otherSeller->id, 'author_type' => 'seller', 'body' => 'Other store response.']);
         $otherItem->product->discussions()->create(['user_id' => $otherBuyer->id, 'author_type' => 'buyer', 'body' => 'Other store question.']);
 
         $this->actingAs($seller)->get(route('seller.reviews.index'))
             ->assertOk()
             ->assertSee('Reviews &amp; conversations', false)
+            ->assertViewHas('respondedCount', 1)
+            ->assertViewHas('responseRate', 50)
+            ->assertViewHas('awaitingReplyCount', 1)
             ->assertSee('4.5')
             ->assertSee('2 product reviews')
-            ->assertSee('3 conversations')
+            ->assertSee('1 conversation')
             ->assertSee('5 star: 1 review')
             ->assertSee('4 star: 1 review')
             ->assertSee('Store response.')
@@ -237,6 +245,9 @@ class ProductReviewTest extends TestCase
         $this->actingAs($seller)->get(route('seller.reviews.index'))
             ->assertOk()
             ->assertSee('0 product reviews')
+            ->assertViewHas('respondedCount', 0)
+            ->assertViewHas('responseRate', 0)
+            ->assertViewHas('awaitingReplyCount', 0)
             ->assertSee('No reviews yet')
             ->assertSee('No product conversations yet')
             ->assertDontSee('4.9');

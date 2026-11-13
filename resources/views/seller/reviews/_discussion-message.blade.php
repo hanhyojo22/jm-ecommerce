@@ -7,7 +7,7 @@
         <span @class(['seller-review-avatar', 'seller-review-avatar-store' => $official]) aria-hidden="true">{{ Str::upper(Str::substr($author, 0, 2)) }}</span>
     @endif
     <div class="min-w-0 flex-1">
-        <div class="seller-review-bubble">
+        <div @class(['seller-review-bubble', 'is-seller-response' => $official])>
             <div class="flex flex-wrap items-center gap-2"><strong>{{ $author }}</strong>@if ($official)<span class="seller-review-badge">Seller</span>@endif</div>
             <p>{{ $entry->body }}</p>
         </div>

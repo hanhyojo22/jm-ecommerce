@@ -1,4 +1,4 @@
-<article data-review-thread
+<article id="review-{{ $review->id }}" data-review-thread class="scroll-mt-24"
     x-data="{
         pendingReplies: [],
         rootSubmitting: false,
@@ -103,7 +103,13 @@
     }"
 >
     @if ($sellerView)
-        <p class="seller-review-product">{{ $review->product->name }}@if ($review->status !== 'published') <span class="seller-review-badge">{{ ucfirst(str_replace('_', ' ', $review->status)) }}</span>@endif</p>
+        <div class="seller-review-product">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z" /><path d="m4 7.5 8 4.5 8-4.5M12 12v9" /></svg>
+            <a href="{{ route('seller.products.show', $review->product) }}">{{ $review->product->name }}</a>
+            @if ($review->status !== 'published')
+                <span class="seller-review-status">{{ ucfirst(str_replace('_', ' ', $review->status)) }}</span>
+            @endif
+        </div>
     @endif
     <div class="flex min-w-0 gap-3">
         <span class="grid size-9 shrink-0 place-items-center rounded-full bg-slate-100 text-sm font-semibold text-slate-600" aria-hidden="true">{{ Str::upper(Str::substr($review->user->name, 0, 1)) }}</span>
@@ -111,9 +117,21 @@
             <div class="review-comment-body">
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                     <span class="font-semibold text-ink">{{ $review->user->name }}</span>
-                    <span class="rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-success">Verified buyer</span>
+                    <span class="review-verified inline-flex items-center gap-1 rounded-md bg-green-50 px-1.5 py-0.5 text-xs font-medium text-success"><svg class="size-3 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m4.5 10.5 3.3 3.3 7.7-7.7" /></svg>Verified buyer</span>
+                    @if ($sellerView && $review->status === 'published' && $rootResponse === null)
+                        <span class="seller-review-needs-reply">Needs reply</span>
+                    @endif
                 </div>
-                <div class="mt-1 flex gap-0.5 text-amber-500" role="img" aria-label="{{ $review->rating }} out of 5 stars">@foreach (range(1, 5) as $star)<span class="text-sm {{ $star <= $review->rating ? '' : 'text-slate-200' }}">&#9733;</span>@endforeach</div>
+                <div class="review-stars mt-1 flex flex-wrap items-center gap-0.5 text-amber-500">
+                    <span class="inline-flex gap-px" role="img" aria-label="{{ $review->rating }} out of 5 stars">
+                        @foreach (range(1, 5) as $star)
+                            <svg viewBox="0 0 20 20" fill="currentColor" @class(['is-empty text-slate-200' => $star > $review->rating, 'size-3.5 shrink-0']) aria-hidden="true"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z" /></svg>
+                        @endforeach
+                    </span>
+                    @if ($sellerView)
+                        <time class="review-time" datetime="{{ $review->created_at->toIso8601String() }}" title="{{ $review->created_at->format('M j, Y g:i A') }}">{{ $review->created_at->diffForHumans() }}</time>
+                    @endif
+                </div>
                 @if ($review->title)<h3 class="mt-1 text-sm font-semibold text-ink">{{ $review->title }}</h3>@endif
                 @if ($review->body)<p class="mt-1 whitespace-pre-line break-words text-sm leading-6 text-ink">{{ $review->body }}</p>@endif
                 @if ($review->photos->isNotEmpty())
@@ -126,7 +144,9 @@
                 @endif
             </div>
             <div class="review-actions">
-                <time datetime="{{ $review->created_at->toIso8601String() }}" title="{{ $review->created_at->format('M j, Y g:i A') }}">{{ $review->created_at->diffForHumans() }}</time>
+                @if (! $sellerView)
+                    <time datetime="{{ $review->created_at->toIso8601String() }}" title="{{ $review->created_at->format('M j, Y g:i A') }}">{{ $review->created_at->diffForHumans() }}</time>
+                @endif
                 @if (count($thread))
                     <button type="button" wire:click="$toggle('repliesExpanded')" aria-expanded="{{ $repliesExpanded ? 'true' : 'false' }}" class="text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $repliesExpanded ? 'Hide replies' : 'View replies ('.count($thread).')' }}</button>
                 @endif
@@ -153,7 +173,7 @@
                 @php($response = $entry['response'])
                 @php($official = $response->author_type === 'seller')
                 @php($isRootResponse = $response->parent_response_id === null && $official)
-                <div wire:key="reply-{{ $response->id }}" class="review-reply min-w-0 border-l-2 border-line pl-3 sm:pl-4 {{ $entry['depth'] === 1 ? 'ml-5 sm:ml-6' : 'ml-9 sm:ml-12' }}">
+                <div wire:key="reply-{{ $response->id }}" @class(['review-reply min-w-0 border-l-2 border-line pl-3 sm:pl-4', 'review-reply-depth-1 ml-5 sm:ml-6' => $entry['depth'] === 1, 'review-reply-depth-2 ml-9 sm:ml-12' => $entry['depth'] > 1])>
                     <div class="flex min-w-0 gap-2.5">
                         @if ($official && $store->logo_path)
                             <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-8 shrink-0 rounded-full object-cover">
@@ -161,8 +181,8 @@
                             <span class="grid size-8 shrink-0 place-items-center rounded-full {{ $official ? 'bg-blue-50 text-brand' : 'bg-slate-100 text-slate-600' }} text-xs font-semibold" aria-hidden="true">{{ Str::upper(Str::substr($official ? $store->name : $response->user->name, 0, 1)) }}</span>
                         @endif
                         <div class="min-w-0 flex-1">
-                            <div class="review-comment-body">
-                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"><span class="font-semibold text-ink">{{ $official ? $store->name : $response->user->name }}</span>@if ($official)<span class="rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-brand">Seller</span>@endif</div>
+                            <div @class(['review-comment-body', 'is-seller-response' => $official])>
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm"><span class="font-semibold text-ink">{{ $official ? $store->name : $response->user->name }}</span>@if ($official)<span class="seller-review-badge rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-brand">Seller</span>@endif</div>
                                 <p @if ($isRootResponse) data-root-response @endif class="mt-0.5 whitespace-pre-line break-words text-sm leading-6 text-ink">{{ $response->body }}</p>
                             </div>
                             <div class="review-actions">
@@ -189,15 +209,15 @@
             @endforeach
             <div wire:ignore>
                 <template x-for="pending in pendingReplies" :key="pending.id">
-                    <div class="review-reply min-w-0 border-l-2 border-line pl-3 sm:pl-4" :class="pending.depth > 1 ? 'ml-9 sm:ml-12' : 'ml-5 sm:ml-6'" data-pending-reply aria-busy="true">
+                    <div class="review-reply min-w-0 border-l-2 border-line pl-3 sm:pl-4" :class="pending.depth > 1 ? 'review-reply-depth-2 ml-9 sm:ml-12' : 'review-reply-depth-1 ml-5 sm:ml-6'" data-pending-reply aria-busy="true">
                         <div class="flex min-w-0 gap-2.5">
                             <img x-show="pending.isSeller && authorImage" :src="authorImage" alt="" class="size-8 shrink-0 rounded-full object-cover">
                             <span x-show="! (pending.isSeller && authorImage)" class="grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold" :class="pending.isSeller ? 'bg-blue-50 text-brand' : 'bg-slate-100 text-slate-600'" x-text="pending.initial"></span>
                             <div class="min-w-0 flex-1">
-                                <div class="review-comment-body">
+                                <div class="review-comment-body" :class="pending.isSeller ? 'is-seller-response' : ''">
                                     <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                                         <span class="font-semibold text-ink" x-text="pending.author"></span>
-                                        <span x-show="pending.isSeller" class="rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-brand">Seller</span>
+                                        <span x-show="pending.isSeller" class="seller-review-badge rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-semibold text-brand">Seller</span>
                                     </div>
                                     <p class="mt-0.5 whitespace-pre-line break-words text-sm leading-6 text-ink" x-text="pending.body"></p>
                                 </div>
@@ -215,7 +235,7 @@
     @endif
 
     @if ($composerOpen)
-        <div class="ml-5 border-l-2 border-line pl-3 sm:ml-6 sm:pl-4">@include('livewire.reviews.reply-composer')</div>
+        <div @class(['seller-review-composer' => $sellerView, 'ml-5 border-l-2 border-line pl-3 sm:ml-6 sm:pl-4' => ! $sellerView])>@include('livewire.reviews.reply-composer')</div>
     @endif
     @if ($saved)<p class="ml-12 mt-2 text-xs font-medium text-success" role="status">Your response was posted.</p>@endif
 </article>

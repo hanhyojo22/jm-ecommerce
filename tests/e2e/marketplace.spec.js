@@ -563,7 +563,8 @@ test('seller reviews show real conversations and working replies at desktop and 
 
         await seller.page.goto('/seller/reviews');
         await expect(seller.page.getByRole('heading', { name: 'Reviews & conversations' })).toBeVisible();
-        await expect(seller.page.locator('.seller-review-score')).toHaveText('5.0');
+        await expect(seller.page.locator('.seller-review-score')).toContainText('5.0');
+        await seller.page.getByRole('tab', { name: 'Product conversations' }).click();
         await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Does this tote come in blue?');
         await seller.page.locator('.seller-review-discussion').getByText('Reply', { exact: true }).first().click();
         expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgb(32, 91, 244)');
@@ -602,7 +603,10 @@ test('seller reviews show real conversations and working replies at desktop and 
         for (const width of [1440, 390]) {
             await seller.page.setViewportSize({ width, height: 900 });
             await seller.page.evaluate(() => window.scrollTo(0, 0));
-            await seller.page.screenshot({ path: testInfo.outputPath(`seller-reviews-${width}.png`), fullPage: true });
+            await seller.page.getByRole('tab', { name: 'Product reviews' }).click();
+            await seller.page.screenshot({ path: testInfo.outputPath(`seller-reviews-reviews-${width}.png`), fullPage: true });
+            await seller.page.getByRole('tab', { name: 'Product conversations' }).click();
+            await seller.page.screenshot({ path: testInfo.outputPath(`seller-reviews-conversations-${width}.png`), fullPage: true });
             const sizes = await seller.page.evaluate(() => ({ viewport: document.documentElement.clientWidth, page: document.documentElement.scrollWidth }));
             expect(sizes.page, `${width}px seller reviews`).toBeLessThanOrEqual(sizes.viewport);
         }

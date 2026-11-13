@@ -25,6 +25,9 @@ class ProductReviewController extends Controller
             ->pluck('total', 'rating');
         $reviewCount = $ratingCounts->sum();
         $averageRating = $reviewCount ? $ratingCounts->sum(fn ($count, $rating) => $count * $rating) / $reviewCount : null;
+        $respondedCount = (clone $storeReviews)->published()->whereHas('response')->count();
+        $responseRate = $reviewCount > 0 ? (int) round($respondedCount / $reviewCount * 100) : 0;
+        $awaitingReplyCount = max(0, $reviewCount - $respondedCount);
         $reviews = $storeReviews
             ->with(['product.store', 'user:id,name', 'photos', 'responses.user:id,name'])
             ->latest()
@@ -40,7 +43,7 @@ class ProductReviewController extends Controller
             ->paginate(10, ['*'], 'discussion_page')
             ->withQueryString();
 
-        return view('seller.reviews.index', compact('tenant', 'reviews', 'ratingCounts', 'reviewCount', 'averageRating', 'discussions', 'discussionCount'));
+        return view('seller.reviews.index', compact('tenant', 'reviews', 'ratingCounts', 'reviewCount', 'averageRating', 'respondedCount', 'responseRate', 'awaitingReplyCount', 'discussions', 'discussionCount'));
     }
 
     public function respond(Request $request, ProductReview $review, SaveSellerReviewResponse $saveResponse): RedirectResponse
