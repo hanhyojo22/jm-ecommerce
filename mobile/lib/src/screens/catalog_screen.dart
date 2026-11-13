@@ -1217,7 +1217,7 @@ class _TopDeals extends StatelessWidget {
     final scheme = theme.colorScheme;
     final scaler = MediaQuery.textScalerOf(context);
     final priceStyle = theme.textTheme.titleSmall?.copyWith(
-      color: scheme.primary,
+      color: scheme.error,
       fontWeight: FontWeight.w800,
       fontSize: 15,
       height: 1.3,
@@ -1367,10 +1367,34 @@ class _TopDeals extends StatelessWidget {
                                       alignment: Alignment.centerLeft,
                                       child: FittedBox(
                                         fit: BoxFit.scaleDown,
-                                        child: Text(
-                                          money(product.effectivePrice),
-                                          maxLines: 1,
-                                          style: priceStyle,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.baseline,
+                                          textBaseline: TextBaseline.alphabetic,
+                                          children: [
+                                            Text(
+                                              money(product.effectivePrice),
+                                              maxLines: 1,
+                                              style: priceStyle,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              money(product.compareAtPrice),
+                                              maxLines: 1,
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontSize: 11,
+                                                    color:
+                                                        scheme.onSurfaceVariant,
+                                                    decoration: TextDecoration
+                                                        .lineThrough,
+                                                    decorationColor:
+                                                        scheme.onSurfaceVariant,
+                                                    decorationThickness: 1.5,
+                                                  ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),

@@ -87,6 +87,22 @@ void main() {
     await tester.pumpWidget(_card(discovery: true));
     expect(find.text('Sold out'), findsNothing);
   });
+
+  testWidgets('discovery cards strike the old price beside the sale price', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_card(discovery: true, compareAtPrice: '300.00'));
+
+    final oldPrice = tester.widget<Text>(find.text('₱300.00'));
+    expect(oldPrice.style?.decoration, TextDecoration.lineThrough);
+    expect(find.text('-15%'), findsOneWidget);
+
+    final salePrice = tester.widget<Text>(find.text('₱255.00'));
+    expect(
+      salePrice.style?.color,
+      Theme.of(tester.element(find.text('₱255.00'))).colorScheme.error,
+    );
+  });
 }
 
 Widget _card({
@@ -96,6 +112,7 @@ Widget _card({
   bool discovery = false,
   bool inStock = true,
   int ratingCount = 0,
+  String? compareAtPrice,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -111,6 +128,7 @@ Widget _card({
               slug: 'cargo-pants',
               price: '255.00',
               effectivePrice: '255.00',
+              compareAtPrice: compareAtPrice,
               inStock: inStock,
               hasVariants: false,
               requiresVariantSelection: false,

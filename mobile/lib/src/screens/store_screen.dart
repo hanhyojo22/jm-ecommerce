@@ -1031,6 +1031,7 @@ class StoreProductCard extends StatelessWidget {
     final labels = <String>[
       product.name,
       money(product.effectivePrice),
+      if (discount != null) 'was ${money(product.compareAtPrice)}',
       if (discount != null) '$discount percent off',
       if (product.freeShipping) 'Free shipping',
       if (!product.inStock) 'Sold out',
@@ -1109,15 +1110,40 @@ class StoreProductCard extends StatelessWidget {
                         alignment: Alignment.centerLeft,
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text(
-                            money(product.effectivePrice),
-                            maxLines: 1,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: scheme.primary,
-                              fontWeight: FontWeight.w800,
-                              height: 1.25,
-                              letterSpacing: -0.4,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                money(product.effectivePrice),
+                                maxLines: 1,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: discount != null
+                                      ? scheme.error
+                                      : scheme.primary,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.25,
+                                  letterSpacing: -0.4,
+                                ),
+                              ),
+                              if (discount != null) ...[
+                                const SizedBox(width: 5),
+                                Text(
+                                  money(product.compareAtPrice),
+                                  maxLines: 1,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: scheme.onSurfaceVariant,
+                                    decorationThickness: 1.5,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ),

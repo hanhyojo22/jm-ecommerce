@@ -362,63 +362,83 @@ class ProductCard extends StatelessWidget {
       product.effectivePrice,
       product.compareAtPrice,
     );
-    final price = Wrap(
-      alignment: discovery ? WrapAlignment.start : WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 8,
-      runSpacing: 4,
+    final onSale = discount > 0;
+    final salePriceStyle = discovery
+        ? theme.textTheme.titleMedium?.copyWith(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: onSale ? theme.colorScheme.error : theme.colorScheme.primary,
+            letterSpacing: -0.4,
+            height: 1.15,
+          )
+        : theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: onSale ? theme.colorScheme.error : theme.colorScheme.primary,
+            letterSpacing: -0.3,
+          );
+    // Lazada-style pair: the sale price leads, the old price is struck beside it.
+    final pricePair = Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: [
-        Text(
-          money(product.effectivePrice),
-          style: discovery
-              ? theme.textTheme.titleMedium?.copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.primary,
-                  letterSpacing: -0.4,
-                  height: 1.15,
-                )
-              : theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.primary,
-                  letterSpacing: -0.3,
-                ),
-        ),
-        if (discovery && discount > 0)
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.errorContainer,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              child: Text(
-                '-$discount%',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onErrorContainer,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+        Text(money(product.effectivePrice), style: salePriceStyle),
+        if (onSale) ...[
+          const SizedBox(width: 5),
+          Text(
+            money(product.compareAtPrice),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              decoration: TextDecoration.lineThrough,
+              decorationColor: theme.colorScheme.onSurfaceVariant,
+              decorationThickness: 1.5,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
-        if (!discovery && product.ratingCount > 0)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.star_rounded,
-                size: 15,
-                color: theme.colorScheme.secondary,
-              ),
-              const SizedBox(width: 2),
-              Text(
-                product.ratingAverage.toStringAsFixed(1),
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
-          ),
+        ],
       ],
     );
+    final price = discovery
+        ? Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: pricePair,
+            ),
+          )
+        : Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: pricePair,
+                  ),
+                ),
+              ),
+              if (product.ratingCount > 0) ...[
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.star_rounded,
+                      size: 15,
+                      color: theme.colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      product.ratingAverage.toStringAsFixed(1),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -439,6 +459,12 @@ class ProductCard extends StatelessWidget {
                       radius: 0,
                       cacheWidth: 600,
                     ),
+                    if (onSale)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: _FeedDiscountBadge(percent: discount),
+                      ),
                     if (discovery)
                       Positioned(
                         left: 0,
@@ -605,6 +631,36 @@ String _compactCount(int count) {
       : thousands.toStringAsFixed(1);
 
   return '${value.endsWith('.0') ? value.substring(0, value.length - 2) : value}k';
+}
+
+/// The discount flag on the top-right of a product photo.
+class _FeedDiscountBadge extends StatelessWidget {
+  const _FeedDiscountBadge({required this.percent});
+
+  final int percent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        child: Text(
+          '-$percent%',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onErrorContainer,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The tri-colour benefit band marketplace feeds use at the foot of a photo.
