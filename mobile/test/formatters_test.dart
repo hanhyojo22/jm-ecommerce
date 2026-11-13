@@ -15,12 +15,17 @@ void main() {
     });
   });
 
-  test('discountPercent floors the markdown and ignores non-sales', () {
-    expect(discountPercent('104.25', '299.00'), 65);
-    expect(discountPercent('200.00', '200.00'), 0);
-    expect(discountPercent('250.00', '200.00'), 0);
-    expect(discountPercent('200.00', null), 0);
-  });
+  test(
+    'discountPercent rounds the markdown like the web and ignores non-sales',
+    () {
+      expect(discountPercent('104.25', '299.00'), 65);
+      expect(discountPercent('55000.00', '75000.00'), 27);
+      expect(discountPercent('6700.00', '9000.00'), 26);
+      expect(discountPercent('200.00', '200.00'), 0);
+      expect(discountPercent('250.00', '200.00'), 0);
+      expect(discountPercent('200.00', null), 0);
+    },
+  );
 
   test('initials skip symbols between words', () {
     expect(initials('Trail & Tide'), 'TT');

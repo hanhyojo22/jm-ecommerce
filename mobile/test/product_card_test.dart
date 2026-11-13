@@ -16,27 +16,54 @@ void main() {
       expect(priceTop - nameBottom, lessThanOrEqualTo(6));
       final rating = find.text('No reviews yet');
       expect(rating, findsOneWidget);
-      final storeTop = tester.getTopLeft(find.text('JM Store')).dy;
-      expect(storeTop - tester.getBottomLeft(rating).dy, lessThanOrEqualTo(8));
+      final locationTop = tester.getTopLeft(find.text('Laguna')).dy;
+      expect(
+        locationTop - tester.getBottomLeft(rating).dy,
+        lessThanOrEqualTo(8),
+      );
     },
   );
 
-  testWidgets('discovery seller links do not open the product', (tester) async {
-    var storeTaps = 0;
-    var productTaps = 0;
-    await tester.pumpWidget(
-      _card(
-        discovery: true,
-        onTap: () => productTaps++,
-        onStoreTap: () => storeTaps++,
-      ),
+  testWidgets('discovery cards hug their content with a square photo', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_card(discovery: true));
+    final plainHeight = tester.getSize(find.byType(ProductCard)).height;
+    final locationBottom = tester.getBottomLeft(find.text('Laguna')).dy;
+    final cardBottom = tester.getBottomLeft(find.byType(Card)).dy;
+    // No blank band under the last line.
+    expect(cardBottom - locationBottom, lessThanOrEqualTo(16));
+
+    await tester.pumpWidget(_card(discovery: true, compareAtPrice: '300.00'));
+    // The struck price adds height to its own card instead of being reserved on every card.
+    expect(
+      tester.getSize(find.byType(ProductCard)).height,
+      greaterThan(plainHeight),
     );
+  });
 
-    await tester.tap(find.text('JM Store'));
-    await tester.pump();
+  testWidgets('cards show the store location instead of the store name', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      var productTaps = 0;
+      await tester.pumpWidget(
+        _card(discovery: true, onTap: () => productTaps++),
+      );
 
-    expect(storeTaps, 1);
-    expect(productTaps, 0);
+      expect(find.text('JM Store'), findsNothing);
+      expect(
+        find.bySemanticsLabel(RegExp('Store location: Laguna')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Laguna'));
+      await tester.pump();
+      expect(productTaps, 1);
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('discovery ratings include the review count for TalkBack', (
@@ -55,27 +82,12 @@ void main() {
     }
   });
 
-  testWidgets('tapping the store row opens the store, not the product', (
+  testWidgets('the store location can be hidden on a store page', (
     tester,
   ) async {
-    var storeTaps = 0;
-    var productTaps = 0;
+    await tester.pumpWidget(_card(discovery: true, showStore: false));
 
-    await tester.pumpWidget(
-      _card(onTap: () => productTaps++, onStoreTap: () => storeTaps++),
-    );
-
-    await tester.tap(find.text('JM Store'));
-    await tester.pump();
-
-    expect(storeTaps, 1);
-    expect(productTaps, 0);
-  });
-
-  testWidgets('the store row can be hidden on a store page', (tester) async {
-    await tester.pumpWidget(_card(showStore: false));
-
-    expect(find.text('JM Store'), findsNothing);
+    expect(find.text('Laguna'), findsNothing);
   });
 
   testWidgets('discovery cards label sold out stock', (tester) async {
@@ -111,7 +123,6 @@ void main() {
 
 Widget _card({
   VoidCallback? onTap,
-  VoidCallback? onStoreTap,
   bool showStore = true,
   bool discovery = false,
   bool inStock = true,
@@ -123,7 +134,8 @@ Widget _card({
       body: Center(
         child: SizedBox(
           width: 180,
-          height: 280,
+          // Feed cards hug their content, as in the masonry feed.
+          height: discovery ? null : 280,
           child: ProductCard(
             discovery: discovery,
             product: Product(
@@ -145,10 +157,10 @@ Widget _card({
                 id: 'store-1',
                 name: 'JM Store',
                 slug: 'jm',
+                city: 'Laguna',
               ),
             ),
             onTap: onTap ?? () {},
-            onStoreTap: onStoreTap,
             showStore: showStore,
           ),
         ),

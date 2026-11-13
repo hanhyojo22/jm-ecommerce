@@ -332,7 +332,6 @@ class ProductCard extends StatelessWidget {
     super.key,
     required this.product,
     required this.onTap,
-    this.onStoreTap,
     this.showStore = true,
     this.discovery = false,
     this.showAddToCart = false,
@@ -340,7 +339,6 @@ class ProductCard extends StatelessWidget {
 
   final Product product;
   final VoidCallback onTap;
-  final VoidCallback? onStoreTap;
   final bool showStore;
   final bool discovery;
   final bool showAddToCart;
@@ -426,69 +424,73 @@ class ProductCard extends StatelessWidget {
             ],
           );
 
+    final photo = Padding(
+      padding: EdgeInsets.zero,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          NetworkThumb(
+            url: product.thumbnailUrl,
+            width: double.infinity,
+            radius: 0,
+            cacheWidth: 600,
+          ),
+          if (onSale)
+            Positioned(
+              right: 8,
+              top: 8,
+              child: _FeedDiscountBadge(percent: discount),
+            ),
+          if (discovery)
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: _FeedBadges(product: product),
+            ),
+          if (discovery && !product.inStock)
+            Positioned(
+              left: 8,
+              top: 8,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(appSurfaceRadius),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    'Sold out',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Column(
+          // Feed cards hug their details; other cards fill their grid cell.
+          mainAxisSize: discovery ? MainAxisSize.min : MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.zero,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    NetworkThumb(
-                      url: product.thumbnailUrl,
-                      width: double.infinity,
-                      radius: 0,
-                      cacheWidth: 600,
-                    ),
-                    if (onSale)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: _FeedDiscountBadge(percent: discount),
-                      ),
-                    if (discovery)
-                      Positioned(
-                        left: 0,
-                        bottom: 0,
-                        child: _FeedBadges(product: product),
-                      ),
-                    if (discovery && !product.inStock)
-                      Positioned(
-                        left: 8,
-                        top: 8,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(
-                              appSurfaceRadius,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            child: Text(
-                              'Sold out',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
+            // Feed photos are a fixed square so every photo in a row lines up; spare height sits under the details.
+            if (discovery)
+              AspectRatio(aspectRatio: 1, child: photo)
+            else
+              Expanded(child: photo),
             Padding(
               padding: discovery
-                  ? const EdgeInsets.fromLTRB(8, 8, 8, 0)
+                  ? const EdgeInsets.fromLTRB(8, 8, 8, 10)
                   : const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,47 +543,32 @@ class ProductCard extends StatelessWidget {
                     ),
                   ] else
                     const SizedBox(height: 4),
-                  if (showStore && product.store != null)
-                    InkWell(
-                      onTap: onStoreTap,
-                      borderRadius: BorderRadius.circular(appSurfaceRadius),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 48),
-                        child: Padding(
-                          padding: discovery
-                              ? const EdgeInsets.only(top: 4)
-                              : EdgeInsets.zero,
-                          child: Row(
-                            crossAxisAlignment: discovery
-                                ? CrossAxisAlignment.start
-                                : CrossAxisAlignment.center,
-                            children: [
-                              StoreAvatar(
-                                name: product.store!.name,
-                                logoUrl: product.store!.logoUrl,
-                                radius: 9,
-                              ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  product.store!.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                              if (discovery && onStoreTap != null) ...[
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.chevron_right_rounded,
-                                  size: 16,
+                  // Like marketplace feeds, the card names where the store is, not the store itself.
+                  if (showStore && (product.store?.city ?? '').isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Semantics(
+                        label: 'Store location: ${product.store!.city}',
+                        excludeSemantics: true,
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              size: 15,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                product.store!.city!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
-                              ],
-                            ],
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

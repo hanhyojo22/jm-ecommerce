@@ -84,8 +84,9 @@ class CatalogController extends Controller
             ->whereNotNull('compare_at_price')
             ->whereColumn('compare_at_price', '>', 'price')
             ->where('stock_quantity', '>', 0)
-            ->orderByDesc('compare_at_price')
-            ->limit(3)
+            ->orderByRaw('(compare_at_price - price) / compare_at_price desc')
+            ->orderByDesc('id')
+            ->limit(4)
             ->get();
         $bestSellers = TopProductQuery::featured(8);
         $featuredProduct = $flashDeals->first() ?? $bestSellers->first() ?? $newProducts->first();
@@ -103,6 +104,7 @@ class CatalogController extends Controller
         $stores = $this->publicStores()
             ->whereHas('products', fn (Builder $query) => $query->where('status', 'active'))
             ->withCount(['products as public_products_count' => fn (Builder $query) => $query->where('status', 'active')])
+            ->orderByDesc('public_products_count')
             ->orderBy('name')
             ->limit(4)
             ->get();

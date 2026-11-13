@@ -639,6 +639,30 @@ void main() {
     expect(find.text('See all'), findsNothing);
   });
 
+  testWidgets('See all opens the deals list and Back returns home', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..deals = [_product(50, name: 'Big saving', compareAt: '110000.00')];
+    await _pumpCatalog(tester, api);
+
+    await tester.tap(find.text('See all'));
+    await tester.pumpAndSettle();
+    expect(api.dealsFeedRequests, 1);
+    expect(find.text('Deals'), findsOneWidget);
+    expect(find.text(_campaignTitle), findsNothing);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text(_campaignTitle), findsOneWidget);
+
+    await tester.tap(find.text('See all'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+    expect(find.text(_campaignTitle), findsOneWidget);
+  });
+
   testWidgets('top deals stay hidden when nothing is on sale', (tester) async {
     await _pumpCatalog(tester, _CatalogApi());
     expect(find.text('See all'), findsNothing);
@@ -744,6 +768,7 @@ class _CatalogApi extends ApiClient {
   Completer<ProductPage>? pendingPage;
   Completer<ProductPage>? pendingFirstPage;
   List<Product> deals = const [];
+  int dealsFeedRequests = 0;
 
   @override
   Future<List<Category>> categories() async {
@@ -775,9 +800,19 @@ class _CatalogApi extends ApiClient {
     String? category,
     String? seller,
     String? sort,
+    bool onSale = false,
     int page = 1,
     int perPage = 20,
   }) async {
+    if (onSale) {
+      if (perPage == catalogPageSize) dealsFeedRequests++;
+      return ProductPage(
+        products: deals,
+        page: 1,
+        lastPage: 1,
+        total: deals.length,
+      );
+    }
     lastQuery = query;
     lastCategory = category;
     lastSort = sort;
@@ -832,3 +867,5 @@ class _CatalogApi extends ApiClient {
     ];
   }
 }
+
+const _campaignTitle = 'Good finds.\nCloser to home.';

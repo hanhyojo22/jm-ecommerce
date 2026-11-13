@@ -920,10 +920,10 @@ body:has(footer) [data-cookie-floating] {
 }
 
 /* Marketplace handoff: shared tokens and real product imagery. */
-.marketplace-hero { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; min-height: 365px; overflow: hidden; border: 1px solid #dfe7f5; border-radius: 8px; background: #eaf0fa; }
+.marketplace-hero { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; min-height: 365px; overflow: hidden; border: 1px solid var(--color-info-line); border-radius: 8px; background: var(--color-info-wash); }
 .marketplace-hero-copy { z-index: 1; padding: 48px 40px; }
 .marketplace-hero-art { position: relative; min-width: 0; }
-.marketplace-hero-orbit { position: absolute; width: 420px; height: 420px; top: -35px; left: 5%; border: 1px solid #d7e3f6; border-radius: 50%; box-shadow: 0 0 0 44px #eaf0fa, 0 0 0 45px #d7e3f6; }
+.marketplace-hero-orbit { position: absolute; width: 420px; height: 420px; top: -35px; left: 5%; border: 1px solid var(--color-info-line); border-radius: 50%; box-shadow: 0 0 0 44px var(--color-info-wash), 0 0 0 45px var(--color-info-line); }
 .marketplace-hero-photo { position: absolute; overflow: hidden; width: 46%; height: 70%; top: 12%; border: 8px solid white; border-radius: 8px; background: white; box-shadow: 0 20px 40px #182c4820; }
 .marketplace-hero-photo img { width: 100%; height: 100%; object-fit: cover; }
 .marketplace-hero-photo-0 { left: 3%; transform: rotate(-8deg); }

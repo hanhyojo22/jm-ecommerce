@@ -26,7 +26,8 @@ int discountPercent(String price, String? compareAt) {
     return 0;
   }
 
-  return ((was - now) * 100) ~/ was;
+  // Rounded to the nearest percent, matching the web cards.
+  return ((was - now) * 100 + was ~/ 2) ~/ was;
 }
 
 int _minorUnits(String value) {

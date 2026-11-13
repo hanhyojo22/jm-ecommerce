@@ -750,9 +750,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
             showStore: showStore,
             onTap: () =>
                 context.push('/product/${item.store?.slug ?? ''}/${item.slug}'),
-            onStoreTap: item.store == null
-                ? null
-                : () => context.push('/store/${item.store!.slug}'),
           ),
         );
       },

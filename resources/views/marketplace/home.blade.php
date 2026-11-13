@@ -23,7 +23,7 @@
         <section class="grid grid-cols-2 mb-8 rounded-lg border border-line bg-white py-4 sm:grid-cols-4 sm:py-7" aria-label="Marketplace benefits">
             <div class="flex gap-3 p-3 sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg><p><strong class="block text-sm text-ink">Secure checkout</strong><span class="text-xs leading-5 text-muted">Your order details stay protected</span></p></div>
             <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="9" r="5"/><path d="m8.5 13.5-1.5 7.5 5-2.5 5 2.5-1.5-7.5"/></svg><p><strong class="block text-sm text-ink">Independent sellers</strong><span class="text-xs leading-5 text-muted">Discover unique local stores</span></p></div>
-            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 7h13v10H3zM16 10h4l2 3v4h-4"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg><p><strong class="block text-sm text-ink">Free shipping</strong><span class="text-xs leading-5 text-muted">On every marketplace order</span></p></div>
+            <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 7h13v10H3zM16 10h4l2 3v4h-4"/><circle cx="7" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg><p><strong class="block text-sm text-ink">Free shipping</strong><span class="text-xs leading-5 text-muted">On selected items</span></p></div>
             <div class="flex gap-3 border-line p-3 sm:border-l sm:px-4"><svg class="mt-0.5 size-6 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 21C7 17 3 13.5 3 9.5 3 7 5 5 7.5 5c1.7 0 3.3.9 4.5 2.6C13.2 5.9 15 5 16.5 5 19 5 21 7 21 9.5c0 4-4 7.5-9 11.5Z"/></svg><p><strong class="block text-sm text-ink">Cash on delivery</strong><span class="text-xs leading-5 text-muted">Pay when your order arrives</span></p></div>
         </section>
 
@@ -72,8 +72,8 @@
         @if ($flashDeals->isNotEmpty())
             <section id="flash-deals" class="scroll-mt-[136px] py-8 sm:py-10" aria-labelledby="home-deals-heading">
                 <div class="grid gap-6 rounded-[var(--radius-surface)] bg-ink p-5 text-white sm:p-7 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-7">
-                    <div class="flex flex-col items-start justify-center"><p class="text-xs font-semibold uppercase tracking-[.12em] text-blue-300">Flash deals</p><h2 id="home-deals-heading" class="marketplace-section-title mt-2 text-white">A good find at a better price.</h2><p class="mt-2 text-sm leading-6 text-slate-300">Browse products currently discounted by their sellers.</p><a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center rounded-md bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100">View all deals <span class="ml-2" aria-hidden="true">→</span></a></div>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="flex flex-col items-start justify-center"><p class="text-xs font-semibold uppercase tracking-[.12em] text-blue-300">Deals</p><h2 id="home-deals-heading" class="marketplace-section-title mt-2 text-white">A good find at a better price.</h2><p class="mt-2 text-sm leading-6 text-slate-300">Browse products currently discounted by their sellers.</p><a href="{{ route('catalog.index', ['on_sale' => 1]) }}" class="mt-4 inline-flex min-h-11 items-center rounded-md bg-white px-4 text-sm font-semibold text-ink transition hover:bg-slate-100">View all deals <span class="ml-2" aria-hidden="true">→</span></a></div>
+                    <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
                         @foreach ($flashDeals as $product)
                             <x-marketplace.top-product-card :product="$product" />
                         @endforeach
@@ -84,7 +84,7 @@
 
         @if ($recommendedProducts->isNotEmpty())
             <section class="marketplace-section" aria-labelledby="home-recommended-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-recommended-heading" class="marketplace-section-title">Recommended for you</h2><p class="marketplace-section-subtitle">Products selected from your shopping interests and marketplace favorites.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">Explore marketplace <span aria-hidden="true">→</span></a></div>
+                <div class="marketplace-section-head"><div><h2 id="home-recommended-heading" class="marketplace-section-title">Recommended for you</h2><p class="marketplace-section-subtitle">Marketplace favorites, tuned to what you browse.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link">Explore marketplace <span aria-hidden="true">→</span></a></div>
                 <div class="marketplace-product-grid">
                     @foreach ($recommendedProducts as $product)
                         <x-marketplace.top-product-card :product="$product" />
@@ -121,7 +121,7 @@
 
         @if ($stores->isNotEmpty())
             <section class="marketplace-section" aria-labelledby="home-stores-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-stores-heading" class="marketplace-section-title">Popular stores</h2><p class="marketplace-section-subtitle">Meet the independent sellers behind the products.</p></div><a href="{{ route('catalog.stores') }}" class="marketplace-section-link">Browse stores <span aria-hidden="true">→</span></a></div>
+                <div class="marketplace-section-head"><div><h2 id="home-stores-heading" class="marketplace-section-title">Stores to explore</h2><p class="marketplace-section-subtitle">Meet the independent sellers behind the products.</p></div><a href="{{ route('catalog.stores') }}" class="marketplace-section-link">Browse stores <span aria-hidden="true">→</span></a></div>
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ($stores as $store)
                         <a href="{{ route('catalog.store', $store->slug) }}" class="marketplace-surface p-5 transition hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-[0_12px_28px_rgba(15,23,42,.10)] focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">

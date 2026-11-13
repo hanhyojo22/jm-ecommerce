@@ -94,6 +94,7 @@ class ApiClient {
     String? category,
     String? seller,
     String? sort,
+    bool onSale = false,
     int page = 1,
     int perPage = 20,
   }) async {
@@ -119,6 +120,7 @@ class ApiClient {
             if (category != null && category.isNotEmpty) 'category': category,
             if (seller != null && seller.isNotEmpty) 'seller': seller,
             if (sort != null && sort.isNotEmpty) 'sort': sort,
+            if (onSale) 'on_sale': 1,
             'page': page,
             'per_page': perPage,
           },

@@ -229,10 +229,20 @@ class CatalogTest extends TestCase
 
         $this->actingAs($buyer)->get(route('home'))
             ->assertOk()
-            ->assertSee('Flash deals')
+            ->assertSee('A good find at a better price.')
             ->assertSee($deal->name)
             ->assertSee(route('cart.store', $deal), false)
             ->assertSee('Add to cart');
+    }
+
+    public function test_homepage_deals_lead_with_the_deepest_discount(): void
+    {
+        $smallSaving = $this->product(['price' => 900, 'compare_at_price' => 1000]);
+        $bigSaving = $this->product(['price' => 50, 'compare_at_price' => 100]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertViewHas('flashDeals', fn ($deals): bool => $deals->pluck('id')->all() === [$bigSaving->id, $smallSaving->id]);
     }
 
     public function test_homepage_shows_available_fallback_recommendations_without_viewing_history(): void

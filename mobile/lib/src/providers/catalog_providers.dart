@@ -4,10 +4,15 @@ import '../models/models.dart';
 import 'auth_providers.dart';
 
 class CatalogFilter {
-  const CatalogFilter({this.query = '', this.category});
+  const CatalogFilter({this.query = '', this.category, this.onSale = false});
 
   final String query;
   final String? category;
+
+  /// The "See all" deals list: only discounted products.
+  final bool onSale;
+
+  bool get isDefault => query.isEmpty && category == null && !onSale;
 
   String get sort => query.trim().isEmpty ? 'popular' : 'relevance';
 
@@ -18,16 +23,19 @@ class CatalogFilter {
   }) => CatalogFilter(
     query: query ?? this.query,
     category: clearCategory ? null : (category ?? this.category),
+    // Searching or picking a category leaves the deals list.
+    onSale: false,
   );
 
   @override
   bool operator ==(Object other) =>
       other is CatalogFilter &&
       other.query == query &&
-      other.category == category;
+      other.category == category &&
+      other.onSale == onSale;
 
   @override
-  int get hashCode => Object.hash(query, category);
+  int get hashCode => Object.hash(query, category, onSale);
 }
 
 class CatalogFilterNotifier extends Notifier<CatalogFilter> {
@@ -38,6 +46,10 @@ class CatalogFilterNotifier extends Notifier<CatalogFilter> {
 
   void setCategory(String? slug) =>
       state = state.copyWith(category: slug, clearCategory: slug == null);
+
+  void showDeals() => state = const CatalogFilter(onSale: true);
+
+  void reset() => state = const CatalogFilter();
 }
 
 final catalogFilterProvider =
@@ -96,6 +108,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
           query: filter.query,
           category: filter.category,
           sort: filter.sort,
+          onSale: filter.onSale,
           perPage: catalogPageSize,
         );
 
@@ -131,6 +144,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
             query: current.filter.query,
             category: current.filter.category,
             sort: current.filter.sort,
+            onSale: current.filter.onSale,
             page: current.page + 1,
             perPage: catalogPageSize,
           );
@@ -172,6 +186,15 @@ final productsProvider =
     AsyncNotifierProvider.autoDispose<ProductsNotifier, ProductFeed>(
       ProductsNotifier.new,
     );
+
+/// Discounted products for the home deals strip, independent of the feed's first page.
+final dealsProvider = FutureProvider.autoDispose<List<Product>>(
+  (ref) async =>
+      (await ref
+              .watch(apiClientProvider)
+              .products(sort: 'popular', onSale: true, perPage: 12))
+          .products,
+);
 
 final categoriesProvider = FutureProvider.autoDispose<List<Category>>(
   (ref) => ref.watch(apiClientProvider).categories(),

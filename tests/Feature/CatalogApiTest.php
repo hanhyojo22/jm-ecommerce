@@ -32,6 +32,7 @@ class CatalogApiTest extends TestCase
             ->assertJsonPath('data.0.id', $visible->id)
             ->assertJsonPath('data.0.name', 'Cedar Lamp')
             ->assertJsonPath('data.0.store.logo_url', Storage::disk('public')->url('store-logos/cedar-lamp.png'))
+            ->assertJsonPath('data.0.store.city', $visible->store->city)
             ->assertJsonPath('meta.per_page', 12);
     }
 
