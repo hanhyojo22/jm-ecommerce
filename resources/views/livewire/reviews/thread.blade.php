@@ -12,7 +12,7 @@
             if (this.rootSubmitting) return;
 
             const form = event.target;
-            const input = form.querySelector('textarea');
+            const input = form.querySelector('input[type=text], textarea');
             const body = (input?.value ?? '').trim();
 
             if (! body) {
@@ -153,7 +153,7 @@
                 @if (! $sellerView && $actingAsStore && ! $rootResponse && $review->status === 'published')
                     <button type="button" wire:click="$set('composerOpen', true)" class="text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reply</button>
                 @endif
-                @if ($sellerView && $actingAsStore && ! $composerOpen)
+                @if ($sellerView && $actingAsStore && $rootResponse && ! $composerOpen)
                     <button type="button" wire:click="openResponse" class="text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $rootResponse ? 'Edit response' : 'Reply' }}</button>
                 @endif
                 @if (! $sellerView)
@@ -188,19 +188,27 @@
                             <div class="review-actions">
                                 <time datetime="{{ $response->created_at->toIso8601String() }}" title="{{ $response->created_at->format('M j, Y g:i A') }}">{{ $response->created_at->diffForHumans() }}</time>
                                 @if (($official && $canCustomerReply) || (! $official && $actingAsStore && $review->status === 'published'))
-                                    <details class="review-reply-composer">
-                                        <summary class="cursor-pointer text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reply</summary>
+                                    @if ($sellerView)
+                                        <div class="review-reply-composer seller-inline-reply">
+                                    @else
+                                        <details class="review-reply-composer">
+                                            <summary class="cursor-pointer text-brand hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Reply</summary>
+                                    @endif
                                         <form x-on:submit.prevent="submitReply($event, '{{ $response->id }}')" data-optimistic-submit data-depth="{{ $entry['depth'] }}" data-reply-to="{{ $official ? $store->name : $response->user->name }}" aria-label="Reply to {{ $official ? $store->name : $response->user->name }}">
                                             <label for="customer-reply-{{ $response->id }}" class="sr-only">Write a reply</label>
-                                            <div class="mt-2 flex min-w-0 items-center gap-2">
+                                            <div @class(['flex min-w-0 items-center gap-2', 'seller-reply-field' => $sellerView, 'mt-2' => ! $sellerView])>
                                                 <input id="customer-reply-{{ $response->id }}" type="text" wire:model="replyBodies.{{ $response->id }}" maxlength="2000" required placeholder="Write a reply..." class="field-control min-w-0 flex-1 text-sm">
-                                                <button type="submit" x-bind:disabled="submittingReply['{{ $response->id }}']" class="min-h-10 shrink-0 rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{{ $official ? 'Send' : 'Post reply' }}</button>
+                                                @if ($sellerView)
+                                                    <button type="submit" x-bind:disabled="submittingReply['{{ $response->id }}']" class="seller-reply-send" aria-label="Send reply" title="Send reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg></button>
+                                                @else
+                                                    <button type="submit" x-bind:disabled="submittingReply['{{ $response->id }}']" class="min-h-10 shrink-0 rounded-lg bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60">{{ $official ? 'Send' : 'Post reply' }}</button>
+                                                @endif
                                             </div>
                                             @error('replyBodies.'.$response->id)<p class="mt-1 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
                                             <span x-show="submittingReply['{{ $response->id }}']" class="mt-1 text-xs text-muted" role="status">Sending...</span>
                                             @if ($savedReplyId === $response->id)<p class="mt-1 text-xs font-medium text-success" role="status">Reply sent.</p>@endif
                                         </form>
-                                    </details>
+                                    @if ($sellerView)</div>@else</details>@endif
                                 @endif
                             </div>
                         </div>
@@ -234,7 +242,7 @@
         </div>
     @endif
 
-    @if ($composerOpen)
+    @if ($composerOpen || ($sellerView && $actingAsStore && ! $rootResponse))
         <div @class(['seller-review-composer' => $sellerView, 'ml-5 border-l-2 border-line pl-3 sm:ml-6 sm:pl-4' => ! $sellerView])>@include('livewire.reviews.reply-composer')</div>
     @endif
     @if ($saved)<p class="ml-12 mt-2 text-xs font-medium text-success" role="status">Your response was posted.</p>@endif

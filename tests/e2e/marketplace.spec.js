@@ -401,15 +401,23 @@ test('customer adds an item to the cart on the session token the request carries
     }
 });
 
-test('seller refreshes an expired session before posting a review response', async ({ browser }) => {
+test('seller refreshes an expired session before posting a review response', async ({ browser }, testInfo) => {
     const { context, page } = await openAsRole(browser, 'seller');
 
     try {
         await page.goto('/seller/reviews');
-        await page.locator('[data-seller-reviews] [data-review-thread]').first().getByRole('button', { name: /^(Reply|Edit response)$/ }).click();
+        await rejectOptionalCookies(page);
+        await expect(page.getByLabel('Seller response')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Reply', exact: true })).toHaveCount(0);
+        for (const width of [1440, 390]) {
+            await page.setViewportSize({ width, height: 900 });
+            await page.locator('[data-review-thread]').first().screenshot({ path: testInfo.outputPath(`inline-review-reply-${width}.png`) });
+        }
+        const editResponse = page.locator('[data-seller-reviews] [data-review-thread]').first().getByRole('button', { name: 'Edit response' });
+        if (await editResponse.isVisible()) await editResponse.click();
         await page.getByLabel('Seller response').fill('Thank you for your feedback.');
         const refresh = page.waitForResponse((response) => response.url().endsWith('/auth/session') && response.request().method() === 'POST');
-        await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
+        await page.getByRole('button', { name: /^(Send|Update) response$/ }).click();
 
         await expect((await refresh).ok()).toBeTruthy();
         await expect(page).toHaveURL(/\/seller\/reviews$/);
@@ -432,11 +440,12 @@ test('buyer and seller continue a review thread without reloading and keep it co
         await seller.page.goto('/seller/reviews');
         await rejectOptionalCookies(seller.page);
         const sellerThread = seller.page.locator('[data-seller-reviews] [data-review-thread]').filter({ hasText: 'QA Canvas Tote' }).first();
-        const responseButton = sellerThread.getByRole('button', { name: /^(Reply|Edit response)$/ });
-        const alreadyResponded = await responseButton.textContent() === 'Edit response';
-        await responseButton.click();
+        const responseButton = sellerThread.getByRole('button', { name: 'Edit response' });
+        const alreadyResponded = await responseButton.isVisible();
+        if (alreadyResponded) await responseButton.click();
+        await expect(sellerThread.getByLabel('Seller response')).toBeVisible();
         await sellerThread.getByLabel('Seller response').fill('Thanks for reviewing the tote.');
-        await sellerThread.getByRole('button', { name: alreadyResponded ? 'Update response' : 'Post response' }).click();
+        await sellerThread.getByRole('button', { name: alreadyResponded ? 'Update response' : 'Send response' }).click();
         await expect(sellerThread).toContainText('Thanks for reviewing the tote.');
         await expect(sellerThread.getByLabel('Seller response')).toBeHidden();
 
@@ -523,16 +532,15 @@ test('seller response stays on the form when session renewal fails', async ({ br
     try {
         await page.goto('/seller/reviews');
         await rejectOptionalCookies(page);
-        await page.locator('[data-seller-reviews] [data-review-thread]').first().getByRole('button', { name: /^(Reply|Edit response)$/ }).click();
+        const editResponse = page.locator('[data-seller-reviews] [data-review-thread]').first().getByRole('button', { name: 'Edit response' });
+        if (await editResponse.isVisible()) await editResponse.click();
 
-        // The composer arrives over Livewire, so it has to be open before the session is broken —
-        // otherwise the 401 lands on the request that was still fetching it.
         const composer = page.getByLabel('Seller response');
         await expect(composer).toBeVisible();
 
         await page.route('**/auth/session', (route) => route.fulfill({ status: 401, body: 'Session expired' }));
         await composer.fill('Please keep this draft.');
-        await page.getByRole('button', { name: /^(Post|Update) response$/ }).click();
+        await page.getByRole('button', { name: /^(Send|Update) response$/ }).click();
 
         await expect(page.getByRole('alert')).toContainText('session could not be refreshed');
         await expect(page).toHaveURL(/\/seller\/reviews$/);
@@ -566,8 +574,9 @@ test('seller reviews show real conversations and working replies at desktop and 
         await expect(seller.page.locator('.seller-review-score')).toContainText('5.0');
         await seller.page.getByRole('tab', { name: 'Product conversations' }).click();
         await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Does this tote come in blue?');
-        await seller.page.locator('.seller-review-discussion').getByText('Reply', { exact: true }).first().click();
-        expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgb(32, 91, 244)');
+        await expect(seller.page.locator('.seller-review-discussion').getByLabel('Your reply').first()).toBeVisible();
+        await expect(seller.page.locator('.seller-review-discussion details')).toHaveCount(0);
+        expect(await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Send reply' }).first().evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgb(32, 91, 244)');
         await seller.page.locator('.seller-review-discussion').getByLabel('Your reply').first().fill('Yes, blue is available.');
         const replyRequests = [];
         seller.page.on('requestfinished', (request) => {
@@ -580,7 +589,7 @@ test('seller reviews show real conversations and working replies at desktop and 
             await replyPending;
             await route.continue();
         });
-        await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).first().click();
+        await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Send reply' }).first().click();
         const optimisticSellerReply = seller.page.locator('[data-pending-seller-reply]').filter({ hasText: 'Yes, blue is available.' });
         await expect(optimisticSellerReply).toBeVisible();
         await expect(optimisticSellerReply).toContainText('Sending...');
@@ -594,9 +603,18 @@ test('seller reviews show real conversations and working replies at desktop and 
         await expect.poll(() => storeAvatar.evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
         expect(replyRequests).toContainEqual(expect.stringMatching(/\/discussions$/));
         expect(replyRequests).not.toContain('/seller/reviews');
-        await seller.page.locator('.seller-review-discussion').getByText('Reply', { exact: true }).last().click();
+        const followupForm = seller.page.locator('.seller-review-discussion [data-discussion-reply-form]').last();
+        await followupForm.getByLabel('Your reply').fill('Please keep this unsent draft.');
+        await seller.page.route('**/products/*/discussions', (route) => route.abort());
+        await followupForm.getByRole('button', { name: 'Send reply' }).click();
+        await expect(followupForm.locator('[data-discussion-feedback]')).toBeVisible();
+        await expect(followupForm.getByLabel('Your reply')).toHaveValue('Please keep this unsent draft.');
+        await expect(followupForm.getByRole('button', { name: 'Send reply' }).locator('svg')).toHaveCount(1);
+        await expect(seller.page.locator('[data-pending-seller-reply]')).toHaveCount(0);
+        await seller.page.getByRole('button', { name: 'Dismiss', exact: true }).click();
+        await seller.page.unroute('**/products/*/discussions');
         await seller.page.locator('.seller-review-discussion').getByLabel('Your reply').last().fill('Any shade of blue works.');
-        await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Post reply' }).last().click();
+        await seller.page.locator('.seller-review-discussion').getByRole('button', { name: 'Send reply' }).last().click();
         await expect(seller.page.locator('[data-seller-reviews]')).toContainText('Any shade of blue works.');
         expect(replyRequests).not.toContain('/seller/reviews');
 

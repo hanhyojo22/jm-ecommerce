@@ -847,8 +847,19 @@ select.pe-input { padding-right: 36px; }
 .seller-workspace [data-seller-reviews] .seller-review-badge { border-radius: 4px; background: var(--sc-accent-soft); padding: 1px 6px; color: var(--sc-accent); font-size: 11px; font-weight: 600; line-height: 18px; }
 
 /* Reply composer sits on the thread, not in a modal. */
-.seller-workspace [data-seller-reviews] .seller-review-composer { margin: 12px 0 0 48px; border-radius: 8px; background: var(--sc-sunken); padding: 12px; }
+.seller-workspace [data-seller-reviews] .seller-review-composer { margin: 12px 0 0 48px; }
 .seller-workspace [data-seller-reviews] .seller-review-composer form { margin-top: 0; }
+.seller-workspace [data-seller-reviews] .seller-inline-reply { flex-basis: 100%; min-width: 0; width: 100%; margin-top: 6px; }
+.seller-workspace [data-seller-reviews] .seller-reply-field { display: flex; width: min(560px, 100%); min-width: 0; align-items: center; gap: 0; border: 1px solid var(--sc-line); border-radius: 8px; background: var(--sc-sunken); overflow: hidden; }
+.seller-workspace [data-seller-reviews] .seller-reply-field:focus-within { border-color: var(--sc-accent); outline: 2px solid var(--sc-accent-soft); outline-offset: 1px; }
+.seller-workspace [data-seller-reviews] .seller-reply-field :is(input, textarea) { flex: 1; width: 100%; min-width: 0; min-height: 44px; border: 0; border-radius: 0; background: transparent; padding: 10px 12px; color: var(--sc-ink); font-size: 13px; line-height: 1.5; box-shadow: none; outline: none; }
+.seller-workspace [data-seller-reviews] .seller-reply-field textarea { resize: vertical; }
+.seller-workspace [data-seller-reviews] .seller-reply-field :is(input, textarea)::placeholder { color: var(--sc-muted); opacity: 1; }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send { display: inline-flex; width: 44px; min-height: 44px; flex-shrink: 0; align-items: center; justify-content: center; border: 0; border-radius: 0; background: var(--sc-accent); padding: 0; color: #fff; cursor: pointer; }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:hover { background: var(--color-accent-hover); }
+.seller-workspace [data-seller-reviews] .seller-reply-field .seller-reply-send:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+.seller-workspace [data-seller-reviews] .seller-reply-send svg { width: 18px; height: 18px; }
+.seller-workspace [data-seller-reviews] .seller-reply-send:disabled { opacity: .55; cursor: wait; }
 
 /* Product conversations */
 .seller-workspace [data-seller-reviews] .seller-review-discussion-list { overflow: hidden; }
@@ -865,12 +876,7 @@ select.pe-input { padding-right: 36px; }
 .seller-workspace [data-seller-reviews] .seller-review-bubble strong { color: var(--sc-ink); font-size: 13px; }
 .seller-workspace [data-seller-reviews] .seller-review-bubble p { margin-top: 4px; color: var(--sc-ink); font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .seller-workspace [data-seller-reviews] .seller-review-actions { padding: 2px 0 0 42px; }
-.seller-workspace [data-seller-reviews] .seller-review-reply[open] { flex-basis: 100%; }
-.seller-workspace [data-seller-reviews] .seller-review-reply form { display: grid; width: min(560px, 100%); justify-items: start; gap: 8px; padding: 6px 0 12px; }
-.seller-workspace [data-seller-reviews] .seller-review-reply textarea { width: 100%; min-height: 80px; resize: vertical; }
-.seller-workspace [data-seller-reviews] .seller-review-reply button { min-height: 40px; border: 0; border-radius: var(--sc-radius-sm); background: var(--sc-accent); padding: 0 14px; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
-.seller-workspace [data-seller-reviews] .seller-review-reply button:hover { background: var(--color-accent-hover); }
-.seller-workspace [data-seller-reviews] .seller-review-reply button:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 2px; }
+.seller-workspace [data-seller-reviews] .seller-review-reply form { width: 100%; padding-bottom: 8px; }
 
 /* Empty states stay inside the working surface. */
 .seller-feedback .sc-empty { padding: 44px 20px; }

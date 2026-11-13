@@ -1422,12 +1422,10 @@ document.querySelector('[data-seller-reviews]')?.addEventListener('submit', asyn
 
     const button = form.querySelector('button[type="submit"]');
     const feedback = form.querySelector('[data-discussion-feedback]');
-    const details = form.closest('details');
-    const originalLabel = button?.textContent;
 
     if (button) {
         button.disabled = true;
-        button.textContent = 'Posting...';
+        button.setAttribute('aria-busy', 'true');
     }
 
     if (feedback) {
@@ -1435,7 +1433,6 @@ document.querySelector('[data-seller-reviews]')?.addEventListener('submit', asyn
     }
 
     textarea.value = '';
-    if (details) details.open = false;
 
     try {
         const result = await submitDiscussionForm(form, body);
@@ -1447,12 +1444,10 @@ document.querySelector('[data-seller-reviews]')?.addEventListener('submit', asyn
 
         pending.outerHTML = result.html;
         form.reset();
-        if (details) details.open = false;
         document.querySelector('[data-discussion-announcement]')?.replaceChildren('Reply posted.');
     } catch (error) {
         pending.remove();
         textarea.value = body;
-        if (details) details.open = true;
         if (feedback) {
             feedback.textContent = error.message || 'Could not confirm your reply. Refresh before trying again.';
             feedback.hidden = false;
@@ -1461,7 +1456,7 @@ document.querySelector('[data-seller-reviews]')?.addEventListener('submit', asyn
         delete form.dataset.submitting;
         if (button) {
             button.disabled = false;
-            button.textContent = originalLabel;
+            button.removeAttribute('aria-busy');
         }
     }
 });

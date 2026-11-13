@@ -1,4 +1,18 @@
 <form x-on:submit.prevent="submitRoot($event)" data-optimistic-submit class="mt-2 min-w-0">
+    @if ($sellerView)
+        <label for="reply-body-{{ $review->id }}" class="sr-only">Seller response</label>
+        <div class="seller-reply-field">
+            @if ($rootResponse)
+                <textarea id="reply-body-{{ $review->id }}" wire:model="body" rows="1" maxlength="2000" required placeholder="Edit your response..." class="field-control"></textarea>
+            @else
+                <input id="reply-body-{{ $review->id }}" type="text" wire:model="body" maxlength="2000" required placeholder="Write a reply..." class="field-control">
+            @endif
+            <button type="submit" x-bind:disabled="rootSubmitting" class="seller-reply-send" aria-label="{{ $rootResponse ? 'Update response' : 'Send response' }}" title="{{ $rootResponse ? 'Update response' : 'Send response' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg></button>
+        </div>
+        @error('body')<p class="mt-1 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
+        <span x-show="rootSubmitting" x-cloak class="text-xs text-muted" role="status">Sending...</span>
+        @if ($rootResponse)<button type="button" wire:click="cancelReply" class="sc-link mt-1 text-xs">Cancel editing</button>@endif
+    @else
     <div class="flex min-w-0 gap-2.5">
         @if ($actingAsStore && $store->logo_path)
             <img src="{{ Storage::disk('public')->url($store->logo_path) }}" alt="" class="size-8 shrink-0 rounded-full object-cover">
@@ -17,4 +31,5 @@
             </div>
         </div>
     </div>
+    @endif
 </form>
