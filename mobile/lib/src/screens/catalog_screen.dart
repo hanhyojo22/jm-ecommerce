@@ -253,8 +253,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     // 56dp outer height leaves a full 48dp touch target inside the 2dp border and 2dp inset.
     final barHeight = headerScaler.scale(56).clamp(56.0, 68.0);
     final innerHeight = barHeight - 4;
-    final compactSearch =
-        MediaQuery.sizeOf(context).width < 360 || headerScaler.scale(14) > 18;
     // Pad the single text line evenly so the field fills the pill (one 48dp tap target)
     // with hint and typed text centred; textAlignVertical alone did not centre it here.
     final inputLine = TextPainter(
@@ -273,8 +271,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       _searchController,
       _searchFocus,
     ]);
-    // Marketplace-style search: a crisp white field with leading search icon,
-    // focus-aware border/elevation, and an inset Search CTA button on the right.
+    // Pill search: soft white field on the brand band, a focus ring instead of a
+    // permanent border, and a round inset submit button.
     final searchBar = ListenableBuilder(
       listenable: searchListenables,
       builder: (context, child) {
@@ -291,28 +289,27 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: scheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(barHeight / 2),
+            // Constant width so focusing never shifts the layout.
             border: Border.all(
-              color: hasFocus
-                  ? scheme.secondary
-                  : scheme.secondary.withValues(alpha: 0.88),
+              color: hasFocus ? scheme.secondary : Colors.transparent,
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: hasFocus ? 0.18 : 0.10),
-                blurRadius: hasFocus ? 12 : 6,
-                offset: const Offset(0, 2),
+                color: Colors.black.withValues(alpha: hasFocus ? 0.16 : 0.08),
+                blurRadius: hasFocus ? 16 : 8,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: Row(
             children: [
               Padding(
-                padding: const EdgeInsetsDirectional.only(start: 12, end: 8),
+                padding: const EdgeInsetsDirectional.only(start: 18, end: 10),
                 child: Icon(
                   Icons.search_rounded,
-                  size: 20,
+                  size: 22,
                   color: active ? scheme.primary : scheme.onSurfaceVariant,
                 ),
               ),
@@ -375,47 +372,24 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         ),
                         icon: const Icon(Icons.close_rounded, size: 20),
                       ),
-                    compactSearch && hasText
-                        ? IconButton.filled(
-                            tooltip: 'Search',
-                            onPressed: () =>
-                                _submitSearch(_searchController.text),
-                            style: IconButton.styleFrom(
-                              backgroundColor: scheme.primary,
-                              foregroundColor: scheme.onPrimary,
-                              fixedSize: Size.square(trailingSize),
-                              minimumSize: Size.square(trailingSize),
-                              padding: EdgeInsets.zero,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                            ),
-                            icon: const Icon(
-                              Icons.arrow_forward_rounded,
-                              size: 20,
-                            ),
-                          )
-                        : FilledButton(
-                            onPressed: () =>
-                                _submitSearch(_searchController.text),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: scheme.primary,
-                              foregroundColor: scheme.onPrimary,
-                              minimumSize: Size(74, trailingSize),
-                              fixedSize: Size.fromHeight(trailingSize),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              textStyle: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.1,
-                              ),
-                            ),
-                            child: const Text('Search'),
-                          ),
+                    IconButton.filled(
+                      tooltip: 'Search',
+                      onPressed: () => _submitSearch(_searchController.text),
+                      style: IconButton.styleFrom(
+                        backgroundColor: scheme.primary,
+                        foregroundColor: scheme.onPrimary,
+                        fixedSize: Size.square(trailingSize),
+                        minimumSize: Size.square(trailingSize),
+                        padding: EdgeInsets.zero,
+                        shape: const CircleBorder(),
+                      ),
+                      icon: Icon(
+                        hasText
+                            ? Icons.arrow_forward_rounded
+                            : Icons.search_rounded,
+                        size: 22,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -440,57 +414,14 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           child: Padding(
             padding: EdgeInsetsDirectional.fromSTEB(
               16,
-              MediaQuery.paddingOf(context).top + 6,
+              MediaQuery.paddingOf(context).top + 8,
               16,
-              12,
+              14,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [
-                // Value strip above the search, as on large marketplace homepages.
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      Text(
-                        'JMMart',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: scheme.onPrimary,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Local sellers ',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  color: scheme.onPrimary,
-                                ),
-                              ),
-                              const TextSpan(
-                                text: '· Free shipping on selected items',
-                              ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          textAlign: TextAlign.end,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: scheme.onPrimary.withValues(alpha: 0.88),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                searchBar,
-              ],
+              children: [searchBar],
             ),
           ),
         ),

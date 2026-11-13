@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
@@ -98,31 +99,39 @@ class _AppShellState extends ConsumerState<AppShell>
         appBar: index == 0 || index == 1 || index == 3 || index == 4
             ? null
             : AppBar(title: Text(_titles[index]), titleSpacing: 20),
-        body: IndexedStack(
-          index: index,
-          children: [
-            const CatalogScreen(),
-            if (tab.loaded.contains(1))
-              const OrdersScreen()
-            else
-              const SizedBox(),
-            if (tab.loaded.contains(2))
-              const MessagesScreen()
-            else
-              const SizedBox(),
-            if (tab.loaded.contains(3))
-              CartScreen(
-                embedded: true,
-                onBrowseProducts: () =>
-                    ref.read(shellTabProvider.notifier).select(0),
-              )
-            else
-              const SizedBox(),
-            if (tab.loaded.contains(4))
-              const AccountScreen()
-            else
-              const SizedBox(),
-          ],
+        // Tabs with light headers need dark status-bar icons; the Shop tab's band sets its own.
+        body: AnnotatedRegion<SystemUiOverlayStyle>(
+          value:
+              (Theme.of(context).brightness == Brightness.dark
+                      ? SystemUiOverlayStyle.light
+                      : SystemUiOverlayStyle.dark)
+                  .copyWith(statusBarColor: Colors.transparent),
+          child: IndexedStack(
+            index: index,
+            children: [
+              const CatalogScreen(),
+              if (tab.loaded.contains(1))
+                const OrdersScreen()
+              else
+                const SizedBox(),
+              if (tab.loaded.contains(2))
+                const MessagesScreen()
+              else
+                const SizedBox(),
+              if (tab.loaded.contains(3))
+                CartScreen(
+                  embedded: true,
+                  onBrowseProducts: () =>
+                      ref.read(shellTabProvider.notifier).select(0),
+                )
+              else
+                const SizedBox(),
+              if (tab.loaded.contains(4))
+                const AccountScreen()
+              else
+                const SizedBox(),
+            ],
+          ),
         ),
         bottomNavigationBar: DecoratedBox(
           decoration: BoxDecoration(

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/order_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
 
@@ -527,12 +528,12 @@ class _OrderCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            StoreAvatar(
-                              name: order.store?.name ?? 'Store',
-                              logoUrl: order.store?.logoUrl,
-                              radius: 14,
+                            Icon(
+                              Icons.storefront_outlined,
+                              size: 18,
+                              color: scheme.onSurface,
                             ),
-                            const SizedBox(width: 7),
+                            const SizedBox(width: 6),
                             Flexible(
                               child: Text(
                                 order.store?.name ?? 'Store',
@@ -556,11 +557,17 @@ class _OrderCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // Status reads as coloured text at the header's end, as in marketplace order lists.
                   Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: StatusPill(status: order.status),
+                    child: Text(
+                      statusLabel(order.status),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: statusColour(context, order.status),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -623,46 +630,41 @@ class _OrderCard extends StatelessWidget {
                   textAlign: TextAlign.end,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 2),
+              Text(
+                [
+                  if (order.orderShortNumber != null) order.orderShortNumber!,
+                  if (order.orderCreatedAt != null)
+                    shortDate(order.orderCreatedAt),
+                ].join(' · '),
+                textAlign: TextAlign.end,
+                style: muted,
+              ),
+              const SizedBox(height: 10),
+              // Actions sit at the trailing edge, as in marketplace order lists.
               Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.end,
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  Text(
-                    [
-                      if (order.orderShortNumber != null)
-                        order.orderShortNumber!,
-                      if (order.orderCreatedAt != null)
-                        shortDate(order.orderCreatedAt),
-                    ].join(' · '),
-                    style: muted,
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (!largeText && !order.canConfirmReceipt)
-                        _OrderAction(
-                          label: order.status == 'delivered'
-                              ? 'Return/Refund'
-                              : 'Order details',
-                          emphasised: false,
-                          accentOutline: false,
-                          onPressed: openOrder,
-                        ),
-                      _OrderAction(
-                        label: order.canConfirmReceipt
-                            ? 'Tap to confirm receipt'
-                            : order.status == 'delivered'
-                            ? 'Buy again'
-                            : 'View order',
-                        emphasised: order.canConfirmReceipt,
-                        accentOutline: !order.canConfirmReceipt,
-                        onPressed: openOrder,
-                      ),
-                    ],
+                  if (!largeText && !order.canConfirmReceipt)
+                    _OrderAction(
+                      label: order.status == 'delivered'
+                          ? 'Return/Refund'
+                          : 'Order details',
+                      emphasised: false,
+                      accentOutline: false,
+                      onPressed: openOrder,
+                    ),
+                  _OrderAction(
+                    label: order.canConfirmReceipt
+                        ? 'Tap to confirm receipt'
+                        : order.status == 'delivered'
+                        ? 'Buy again'
+                        : 'View order',
+                    emphasised: order.canConfirmReceipt,
+                    accentOutline: !order.canConfirmReceipt,
+                    onPressed: openOrder,
                   ),
                 ],
               ),
@@ -698,7 +700,7 @@ class _OrderLineRow extends StatelessWidget {
           url: line.imageUrl,
           width: thumbSize,
           height: thumbSize,
-          radius: 6,
+          radius: appSurfaceRadius,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -741,19 +743,19 @@ class _OrderLineRow extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 6),
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 2,
+              // Price at the start, quantity at the trailing edge.
+              Row(
                 children: [
-                  Text(
-                    money(line.unitPrice),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                  Expanded(
+                    child: Text(
+                      money(line.unitPrice),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     'Qty: ${line.quantity}',
                     style: theme.textTheme.bodySmall?.copyWith(
