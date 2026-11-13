@@ -32,7 +32,7 @@ If a task is under ~30 lines or touches a single file, do it directly. Splitting
 
    Make small fixes (a few lines) yourself rather than spending a round on them.
 9. **Report** to the user: one short block per slug (status, what changed, tests, your verdict). **Merge only after they approve:** `git merge --no-ff orch/<slug>-<agent>`.
-10. **Clean up** every run, kept or not: `git worktree remove --force <worktree>` and `git branch -D orch/<slug>-<agent>`.
+10. **Clean up** every run, kept or not: `git worktree remove --force <worktree>` and `git branch -D orch/<slug>-<agent>`. If an OpenCode worktree won't delete ("used by another process"), the user's own running OpenCode service (`opencode.exe serve --service`) is holding it. Don't kill it; run `git worktree prune` once they close OpenCode.
 11. **Deploy.** If backend code was merged, follow `.ai/rules/general.md` (deploy to Render). Agents never deploy.
 
 ## Routing table

@@ -81,7 +81,8 @@ function ConvertTo-ArgumentString([string[]]$Arguments) {
 
 function Get-LogTail {
     @('agent.log', 'agent.err.log') | ForEach-Object { Join-Path $orchDir $_ } |
-        Where-Object { Test-Path $_ } | ForEach-Object { Get-Content $_ -Tail 40 }
+        Where-Object { Test-Path $_ } | ForEach-Object { Get-Content $_ -Tail 40 -Encoding UTF8 } |
+        ForEach-Object { $_ -replace "\x1b\[[0-9;]*m", '' }
 }
 
 $mainTreeBefore = (git -C $RepoRoot status --porcelain) -join "`n"
