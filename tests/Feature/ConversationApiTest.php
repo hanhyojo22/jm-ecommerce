@@ -6,6 +6,7 @@ use App\Actions\MarkConversationRead;
 use App\Models\Conversation;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductReview;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -509,11 +510,15 @@ class ConversationApiTest extends TestCase
             'tenant_id' => $product->tenant_id, 'store_id' => $store->id,
             'status' => 'pending', 'subtotal' => '199.00', 'shipping_amount' => '0.00', 'total' => '199.00',
         ]);
-        foreach ([['Rice cooker', 'products/rice-cooker.jpg', 'White', 1], ['Spare lid', null, null, 2]] as [$name, $imagePath, $variant, $quantity]) {
-            $sellerOrder->items()->create([
+        foreach ([['Rice cooker', 'products/rice-cooker.jpg', 'White', 1, 5], ['Spare lid', null, null, 2, 4]] as [$name, $imagePath, $variant, $quantity, $rating]) {
+            $item = $sellerOrder->items()->create([
                 'product_id' => $product->id, 'product_name' => $name, 'sku' => 'SKU-'.str()->random(6),
                 'variant_label' => $variant, 'unit_price' => '66.33', 'quantity' => $quantity,
                 'line_total' => '99.50', 'image_path' => $imagePath,
+            ]);
+            ProductReview::create([
+                'product_id' => $product->id, 'order_item_id' => $item->id, 'user_id' => $buyer->id,
+                'rating' => $rating, 'title' => 'Review', 'body' => 'Works well.', 'status' => 'published',
             ]);
         }
 
@@ -528,8 +533,8 @@ class ConversationApiTest extends TestCase
             ->assertJsonPath('data.context_snapshot.item_count', 3)
             ->assertJsonPath('data.context_snapshot.image_url', Storage::disk('product_images')->url('products/rice-cooker.jpg'))
             ->assertJsonPath('data.context_snapshot.items', [
-                ['name' => 'Rice cooker', 'variant' => 'White', 'quantity' => 1, 'image_path' => 'products/rice-cooker.jpg', 'image_url' => Storage::disk('product_images')->url('products/rice-cooker.jpg')],
-                ['name' => 'Spare lid', 'variant' => null, 'quantity' => 2, 'image_path' => null, 'image_url' => null],
+                ['name' => 'Rice cooker', 'variant' => 'White', 'quantity' => 1, 'image_path' => 'products/rice-cooker.jpg', 'rating' => 4.5, 'rating_count' => 2, 'image_url' => Storage::disk('product_images')->url('products/rice-cooker.jpg')],
+                ['name' => 'Spare lid', 'variant' => null, 'quantity' => 2, 'image_path' => null, 'rating' => 4.5, 'rating_count' => 2, 'image_url' => null],
             ]);
         $this->getJson('/api/v1/conversations?filter=order')->assertOk()
             ->assertJsonCount(1, 'data');

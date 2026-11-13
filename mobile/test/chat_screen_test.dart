@@ -101,6 +101,8 @@ void main() {
               'name': 'Rice cooker',
               'variant': 'White',
               'quantity': 1,
+              'rating': 4.5,
+              'rating_count': 12,
               'image_url': 'http://localhost/media/rice-cooker.jpg',
             },
             {'name': 'Spare lid', 'quantity': 2, 'image_url': null},
@@ -113,17 +115,16 @@ void main() {
 
     await _pumpChat(tester, api);
 
-    expect(find.text('Order #JM-1042'), findsOneWidget);
+    expect(find.textContaining('JM-1042'), findsNothing);
+    expect(find.text('Rice cooker'), findsOneWidget);
     expect(find.text('On the way'), findsOneWidget);
-    expect(find.text('Rice cooker, Spare lid +2 more'), findsOneWidget);
+    expect(find.text('4.5 (12)'), findsOneWidget);
+    expect(find.text(' · White · ×1'), findsOneWidget);
+    expect(find.text('+3'), findsOneWidget);
     expect(find.text('₱199.00'), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey('open-order-item-image-order-msg-3')),
-      findsOneWidget,
-    );
 
     await tester.tap(
-      find.byKey(const ValueKey('open-order-item-image-order-msg-0')),
+      find.byKey(const ValueKey('open-order-item-image-order-msg')),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

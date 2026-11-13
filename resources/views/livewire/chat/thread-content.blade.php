@@ -64,32 +64,36 @@
                                     @elseif ($message->context_snapshot['type'] === 'order')
                                         @php($orderSnapshot = $message->context_snapshot)
                                         @php($orderItems = $orderSnapshot['items'] ?? [])
-                                        @php($orderNames = array_column($orderItems, 'name'))
+                                        @php($firstItem = $orderItems[0] ?? null)
+                                        @php($firstImage = $firstItem['image_path'] ?? $orderSnapshot['image_path'] ?? null)
+                                        @php($firstVariant = $firstItem['variant'] ?? null)
                                         @php($orderStatusStyles = ['pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'confirmed' => 'bg-brand/10 text-brand-hover ring-brand/20', 'processing' => 'bg-brand/10 text-brand-hover ring-brand/20', 'shipped' => 'bg-brand/10 text-brand-hover ring-brand/20', 'delivered' => 'bg-success/10 text-success ring-success/20', 'cancelled' => 'bg-danger/10 text-danger-text ring-danger/20'])
-                                        <a @if (filled($orderSnapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $orderSnapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif data-chat-order-card class="{{ $message->sender_id === auth()->id() ? 'ml-auto ' : '' }}block max-w-sm rounded-lg border border-line bg-white p-2.5 transition hover:border-brand/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-                                            <span class="flex items-center justify-between gap-2">
-                                                <span class="truncate text-sm font-semibold text-ink">Order #{{ $orderSnapshot['number'] ?? '' }}</span>
-                                                @if (filled($orderSnapshot['status'] ?? null))
-                                                    <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset {{ $orderStatusStyles[$orderSnapshot['status']] ?? 'bg-canvas text-muted ring-line' }}">{{ Str::headline($orderSnapshot['status']) }}</span>
+                                        <a @if (filled($orderSnapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $orderSnapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif data-chat-order-card class="{{ $message->sender_id === auth()->id() ? 'ml-auto ' : '' }}flex max-w-sm items-center gap-2.5 rounded-lg border border-line bg-white p-2 transition hover:border-brand/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            <span class="relative size-12 shrink-0">
+                                                @if (filled($firstImage))
+                                                    <img src="{{ Storage::disk('product_images')->url($firstImage) }}" alt="" loading="lazy" class="size-12 rounded-md border border-line object-cover">
+                                                @else
+                                                    <span class="grid size-12 place-items-center rounded-md bg-canvas text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9ZM4.5 7.75 12 12l7.5-4.25M12 12v8.5"/></svg></span>
+                                                @endif
+                                                @if (count($orderItems) > 1)
+                                                    <span class="absolute bottom-0.5 right-0.5 rounded bg-black/65 px-1 text-[11px] font-semibold leading-4 text-white">+{{ count($orderItems) - 1 }}</span>
                                                 @endif
                                             </span>
-                                            @if ($orderItems !== [])
-                                                <span class="mt-2 flex gap-1.5">
-                                                    @foreach (array_slice($orderItems, 0, 4) as $item)
-                                                        @if (filled($item['image_path'] ?? null))
-                                                            <img src="{{ Storage::disk('product_images')->url($item['image_path']) }}" alt="{{ $item['name'] }}" title="{{ $item['name'] }}" loading="lazy" class="size-10 shrink-0 rounded-md border border-line object-cover">
-                                                        @else
-                                                            <span title="{{ $item['name'] }}" class="grid size-10 shrink-0 place-items-center rounded-md bg-canvas text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="size-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9ZM4.5 7.75 12 12l7.5-4.25M12 12v8.5"/></svg></span>
-                                                        @endif
-                                                    @endforeach
-                                                    @if (count($orderItems) > 4)
-                                                        <span class="grid size-10 shrink-0 place-items-center rounded-md bg-canvas text-xs font-semibold text-muted">+{{ count($orderItems) - 4 }}</span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="flex items-center gap-1.5">
+                                                    <span class="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{{ $firstItem['name'] ?? $orderSnapshot['item_name'] ?? 'Order '.($orderSnapshot['number'] ?? '') }}</span>
+                                                    @if (filled($orderSnapshot['status'] ?? null))
+                                                        <span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset {{ $orderStatusStyles[$orderSnapshot['status']] ?? 'bg-canvas text-muted ring-line' }}">{{ Str::headline($orderSnapshot['status']) }}</span>
                                                     @endif
                                                 </span>
-                                            @endif
-                                            <span class="mt-2 flex items-center gap-2 text-sm">
-                                                <span class="min-w-0 flex-1 truncate text-muted">{{ count($orderNames) > 2 ? implode(', ', array_slice($orderNames, 0, 2)).' +'.(count($orderNames) - 2).' more' : implode(', ', $orderNames) }}</span>
-                                                <span class="shrink-0 font-semibold tabular-nums text-ink">₱{{ $orderSnapshot['total'] ?? '0.00' }}</span>
+                                                <span class="mt-1 flex items-center gap-1 text-xs text-muted">
+                                                    @if (($firstItem['rating_count'] ?? 0) > 0)
+                                                        <svg viewBox="0 0 20 20" fill="currentColor" class="size-3.5 shrink-0 text-amber-500" aria-hidden="true"><path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.5 7.7l5.9-.9L10 1.5z"/></svg>
+                                                        <span class="shrink-0">{{ number_format($firstItem['rating'], 1) }} ({{ $firstItem['rating_count'] }})</span>
+                                                    @endif
+                                                    <span class="min-w-0 flex-1 truncate">{{ collect([($firstItem['rating_count'] ?? 0) > 0 ? '' : null, filled($firstVariant) ? $firstVariant : null, isset($firstItem['quantity']) ? '×'.$firstItem['quantity'] : null])->reject(fn ($part) => $part === null)->implode(' · ') }}</span>
+                                                    <span class="shrink-0 text-sm font-semibold tabular-nums text-ink">₱{{ $orderSnapshot['total'] ?? '0.00' }}</span>
+                                                </span>
                                             </span>
                                         </a>
                                     @endif

@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -40,7 +41,10 @@ class ConversationContext
                 'image_path' => $imagePath, 'slug' => $product->slug, 'store_slug' => $product->store->slug,
             ]];
         }
-        $order = SellerOrder::query()->with(['order', 'items'])->findOrFail($sellerOrderId);
+        $order = SellerOrder::query()->with(['order', 'items.product' => fn ($query) => $query
+            ->withCount(['reviews as published_reviews_count' => fn (Builder $reviews) => $reviews->published()])
+            ->withAvg(['reviews as published_reviews_avg_rating' => fn (Builder $reviews) => $reviews->published()], 'rating'),
+        ])->findOrFail($sellerOrderId);
         abort_unless($order->store_id === $conversation->store_id && $order->order->user_id === $sender->id, 404);
         [$whole, $fraction] = array_pad(explode('.', (string) $order->total, 2), 2, '');
 
@@ -52,6 +56,8 @@ class ConversationContext
             'items' => $order->items->map(fn ($item): array => [
                 'name' => $item->product_name, 'variant' => $item->variant_label,
                 'quantity' => (int) $item->quantity, 'image_path' => $item->image_path,
+                'rating' => round((float) ($item->product?->published_reviews_avg_rating ?? 0), 1),
+                'rating_count' => (int) ($item->product?->published_reviews_count ?? 0),
             ])->all(),
         ]];
     }

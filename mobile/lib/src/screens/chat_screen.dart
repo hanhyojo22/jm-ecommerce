@@ -1764,13 +1764,13 @@ bool _isSameChatMinute(String first, String second) {
       firstTime.minute == secondTime.minute;
 }
 
-/// Compact chat card for an order inquiry: order number and status, a strip of
-/// product photos (each opens full screen), and the item names with the total.
+/// One-row chat card for an order inquiry: the first product's photo (opens
+/// full screen, "+N" when the order has more), its name and order status, and
+/// its rating, variant, quantity and the order total.
 class _OrderInquiryCard extends StatelessWidget {
   const _OrderInquiryCard({required this.messageId, required this.snapshot});
 
-  static const _visiblePhotos = 4;
-  static const _photoSize = 40.0;
+  static const _photoSize = 52.0;
 
   final String messageId;
   final Map<String, dynamic> snapshot;
@@ -1779,24 +1779,25 @@ class _OrderInquiryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
     final orderId = snapshot['order_id'] as String?;
     final status = snapshot['status'] as String?;
     final items = [
       for (final item in snapshot['items'] as List? ?? const [])
         if (item is Map) Map<String, dynamic>.from(item),
     ];
+    final first = items.isEmpty ? null : items.first;
     // Inquiries sent before item lists were stored only carry one photo.
-    if (items.isEmpty && snapshot['image_url'] is String) {
-      items.add({
-        'name': snapshot['item_name'] ?? 'Ordered product',
-        'image_url': snapshot['image_url'],
-      });
-    }
-    final hiddenItems = items.length - _visiblePhotos;
-    final names = items.map((item) => '${item['name']}').toList();
-    final summary = names.length > 2
-        ? '${names.take(2).join(', ')} +${names.length - 2} more'
-        : names.join(', ');
+    final imageUrl = (first?['image_url'] ?? snapshot['image_url']) as String?;
+    final name =
+        '${first?['name'] ?? snapshot['item_name'] ?? 'Order ${snapshot['number']}'}';
+    final rating = (first?['rating'] as num?)?.toDouble() ?? 0;
+    final ratingCount = (first?['rating_count'] as num?)?.toInt() ?? 0;
+    final variant = first?['variant'] as String?;
+    final quantity = (first?['quantity'] as num?)?.toInt();
+    final moreItems = items.length - 1;
 
     return Container(
       key: ValueKey('order-card-$messageId'),
@@ -1815,87 +1816,128 @@ class _OrderInquiryCard extends StatelessWidget {
               ? null
               : () => context.push('/orders/$orderId'),
           child: Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.all(8),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Order #${snapshot['number']}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                    ),
-                    if (status != null) StatusPill(status: status),
-                  ],
-                ),
-                if (items.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      for (final (index, item)
-                          in items.take(_visiblePhotos).indexed)
-                        Padding(
-                          padding: const EdgeInsetsDirectional.only(end: 6),
-                          child: _OrderInquiryPhoto(
-                            key: ValueKey(
-                              'open-order-item-image-$messageId-$index',
-                            ),
-                            item: item,
-                            size: _photoSize,
+                Semantics(
+                  button: imageUrl != null,
+                  label: imageUrl == null ? null : 'View photo of $name',
+                  child: GestureDetector(
+                    key: ValueKey('open-order-item-image-$messageId'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: imageUrl == null
+                        ? null
+                        : () => ImageViewer.open(
+                            context,
+                            url: imageUrl,
+                            title: name,
                           ),
-                        ),
-                      if (hiddenItems > 0)
-                        Container(
-                          width: _photoSize,
-                          height: _photoSize,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: scheme.surfaceContainerHigh,
+                    child: SizedBox.square(
+                      dimension: _photoSize,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(
                             borderRadius: BorderRadius.circular(
                               appSurfaceRadius,
                             ),
+                            child: imageUrl == null
+                                ? _photoPlaceholder(scheme)
+                                : CachedNetworkImage(
+                                    imageUrl: imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (_, _, _) =>
+                                        _photoPlaceholder(scheme),
+                                  ),
                           ),
-                          child: Text(
-                            '+$hiddenItems',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: scheme.onSurfaceVariant,
+                          if (moreItems > 0)
+                            Positioned(
+                              right: 2,
+                              bottom: 2,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '+$moreItems',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
+                          if (status != null) ...[
+                            const SizedBox(width: 6),
+                            StatusPill(status: status),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (ratingCount > 0) ...[
+                            Icon(
+                              Icons.star_rounded,
+                              size: 15,
+                              color: Colors.amber.shade700,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${rating.toStringAsFixed(1)} ($ratingCount)',
+                              style: muted,
+                            ),
+                          ],
+                          Expanded(
+                            child: Text(
+                              [
+                                if (ratingCount > 0) '',
+                                if (variant != null && variant.isNotEmpty)
+                                  variant,
+                                if (quantity != null) '×$quantity',
+                              ].join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: muted,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '₱${snapshot['total']}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        summary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '₱${snapshot['total']}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    if (orderId != null)
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                  ],
                 ),
               ],
             ),
@@ -1904,50 +1946,13 @@ class _OrderInquiryCard extends StatelessWidget {
       ),
     );
   }
-}
 
-class _OrderInquiryPhoto extends StatelessWidget {
-  const _OrderInquiryPhoto({super.key, required this.item, required this.size});
-
-  final Map<String, dynamic> item;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final name = '${item['name'] ?? 'Product'}';
-    final imageUrl = item['image_url'] as String?;
-    final placeholder = ColoredBox(
-      color: scheme.surfaceContainerHigh,
-      child: Icon(
-        Icons.inventory_2_outlined,
-        size: 18,
-        color: scheme.onSurfaceVariant,
-      ),
-    );
-
-    return Semantics(
-      button: imageUrl != null,
-      label: imageUrl == null ? name : 'View photo of $name',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: imageUrl == null
-            ? null
-            : () => ImageViewer.open(context, url: imageUrl, title: name),
-        child: SizedBox.square(
-          dimension: size,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(appSurfaceRadius),
-            child: imageUrl == null
-                ? placeholder
-                : CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    errorWidget: (_, _, _) => placeholder,
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _photoPlaceholder(ColorScheme scheme) => ColoredBox(
+    color: scheme.surfaceContainerHigh,
+    child: Icon(
+      Icons.inventory_2_outlined,
+      size: 20,
+      color: scheme.onSurfaceVariant,
+    ),
+  );
 }
