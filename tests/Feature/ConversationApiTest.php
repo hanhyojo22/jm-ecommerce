@@ -509,10 +509,11 @@ class ConversationApiTest extends TestCase
             'tenant_id' => $product->tenant_id, 'store_id' => $store->id,
             'status' => 'pending', 'subtotal' => '199.00', 'shipping_amount' => '0.00', 'total' => '199.00',
         ]);
-        foreach (['Rice cooker' => 'products/rice-cooker.jpg', 'Spare lid' => null] as $name => $imagePath) {
+        foreach ([['Rice cooker', 'products/rice-cooker.jpg', 'White', 1], ['Spare lid', null, null, 2]] as [$name, $imagePath, $variant, $quantity]) {
             $sellerOrder->items()->create([
                 'product_id' => $product->id, 'product_name' => $name, 'sku' => 'SKU-'.str()->random(6),
-                'unit_price' => '99.50', 'quantity' => 1, 'line_total' => '99.50', 'image_path' => $imagePath,
+                'variant_label' => $variant, 'unit_price' => '66.33', 'quantity' => $quantity,
+                'line_total' => '99.50', 'image_path' => $imagePath,
             ]);
         }
 
@@ -524,9 +525,12 @@ class ConversationApiTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.context_snapshot.number', 'JM-1042')
             ->assertJsonPath('data.context_snapshot.total', '199.00')
-            ->assertJsonPath('data.context_snapshot.item_name', 'Rice cooker')
-            ->assertJsonPath('data.context_snapshot.item_count', 2)
-            ->assertJsonPath('data.context_snapshot.image_url', Storage::disk('product_images')->url('products/rice-cooker.jpg'));
+            ->assertJsonPath('data.context_snapshot.item_count', 3)
+            ->assertJsonPath('data.context_snapshot.image_url', Storage::disk('product_images')->url('products/rice-cooker.jpg'))
+            ->assertJsonPath('data.context_snapshot.items', [
+                ['name' => 'Rice cooker', 'variant' => 'White', 'quantity' => 1, 'image_path' => 'products/rice-cooker.jpg', 'image_url' => Storage::disk('product_images')->url('products/rice-cooker.jpg')],
+                ['name' => 'Spare lid', 'variant' => null, 'quantity' => 2, 'image_path' => null, 'image_url' => null],
+            ]);
         $this->getJson('/api/v1/conversations?filter=order')->assertOk()
             ->assertJsonCount(1, 'data');
         $this->assertDatabaseCount('conversations', 1);

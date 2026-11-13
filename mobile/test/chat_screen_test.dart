@@ -94,21 +94,38 @@ void main() {
           'total': '199.00',
           'status': 'shipped',
           'order_id': 'order-1',
-          'item_name': 'Rice cooker',
-          'item_count': 3,
+          'item_count': 5,
           'image_url': 'http://localhost/media/rice-cooker.jpg',
+          'items': [
+            {
+              'name': 'Rice cooker',
+              'variant': 'White',
+              'quantity': 1,
+              'image_url': 'http://localhost/media/rice-cooker.jpg',
+            },
+            {'name': 'Spare lid', 'quantity': 2, 'image_url': null},
+            {'name': 'Measuring cup', 'quantity': 1, 'image_url': null},
+            {'name': 'Steamer tray', 'quantity': 1, 'image_url': null},
+          ],
         },
       }),
     ];
 
     await _pumpChat(tester, api);
 
-    expect(find.text('Order JM-1042'), findsOneWidget);
-    expect(find.text('Rice cooker +2 more'), findsOneWidget);
-    expect(find.text('₱199.00 · On the way'), findsOneWidget);
+    expect(find.text('Order #JM-1042'), findsOneWidget);
+    expect(find.text('On the way'), findsOneWidget);
+    expect(find.text('Rice cooker'), findsOneWidget);
+    expect(find.text('White'), findsOneWidget);
+    expect(find.text('×2'), findsOneWidget);
+    expect(find.text('Measuring cup'), findsOneWidget);
+    expect(find.text('Steamer tray'), findsNothing);
+    expect(find.text('+1 more product'), findsOneWidget);
+    expect(find.text('5 items · Total ₱199.00'), findsOneWidget);
+    expect(find.text('View order'), findsOneWidget);
 
     await tester.tap(
-      find.byKey(const ValueKey('open-context-image-order-msg')),
+      find.byKey(const ValueKey('open-order-item-image-order-msg-0')),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));

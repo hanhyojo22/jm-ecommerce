@@ -62,13 +62,46 @@
                                             <span class="min-w-0 flex-1"><span class="block truncate font-semibold text-ink">{{ $message->context_snapshot['title'] ?? 'Product' }}</span><span class="block text-sm text-muted">₱{{ $message->context_snapshot['price'] ?? '0.00' }}</span></span>
                                         </a>
                                     @elseif ($message->context_snapshot['type'] === 'order')
-                                        <a @if (filled($message->context_snapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $message->context_snapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif class="flex items-center gap-3 rounded-lg border border-line bg-canvas p-3 transition hover:bg-line/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
-                                            @if (filled($message->context_snapshot['image_path'] ?? null))
-                                                <img src="{{ Storage::disk('product_images')->url($message->context_snapshot['image_path']) }}" alt="" class="size-12 shrink-0 rounded-md object-cover">
-                                            @else
-                                                <span class="grid size-12 shrink-0 place-items-center rounded-md bg-white text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7.5h14l1 13H4l1-13ZM9 8V6a3 3 0 0 1 6 0v2"/></svg></span>
+                                        @php($orderSnapshot = $message->context_snapshot)
+                                        @php($orderItems = $orderSnapshot['items'] ?? [])
+                                        @php($orderStatusStyles = ['pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'confirmed' => 'bg-brand/10 text-brand-hover ring-brand/20', 'processing' => 'bg-brand/10 text-brand-hover ring-brand/20', 'shipped' => 'bg-brand/10 text-brand-hover ring-brand/20', 'delivered' => 'bg-success/10 text-success ring-success/20', 'cancelled' => 'bg-danger/10 text-danger-text ring-danger/20'])
+                                        <a @if (filled($orderSnapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $orderSnapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif data-chat-order-card class="group/order block overflow-hidden rounded-xl border border-line bg-white shadow-sm transition hover:border-brand/40 hover:shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                            <span class="flex items-center justify-between gap-3 border-b border-line bg-canvas/70 px-4 py-2.5">
+                                                <span class="flex min-w-0 items-center gap-2">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-4 shrink-0 text-muted" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 7.5h14l1 13H4l1-13ZM9 8V6a3 3 0 0 1 6 0v2"/></svg>
+                                                    <span class="truncate text-sm"><span class="text-muted">Order</span> <span class="font-semibold text-ink">#{{ $orderSnapshot['number'] ?? '' }}</span></span>
+                                                </span>
+                                                @if (filled($orderSnapshot['status'] ?? null))
+                                                    <span class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset {{ $orderStatusStyles[$orderSnapshot['status']] ?? 'bg-canvas text-muted ring-line' }}">{{ Str::headline($orderSnapshot['status']) }}</span>
+                                                @endif
+                                            </span>
+                                            @if ($orderItems !== [])
+                                                <span class="block divide-y divide-line">
+                                                    @foreach (array_slice($orderItems, 0, 3) as $item)
+                                                        <span class="flex items-center gap-3 px-4 py-2.5">
+                                                            @if (filled($item['image_path'] ?? null))
+                                                                <img src="{{ Storage::disk('product_images')->url($item['image_path']) }}" alt="" loading="lazy" class="size-12 shrink-0 rounded-lg border border-line object-cover">
+                                                            @else
+                                                                <span class="grid size-12 shrink-0 place-items-center rounded-lg bg-canvas text-muted" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9ZM4.5 7.75 12 12l7.5-4.25M12 12v8.5"/></svg></span>
+                                                            @endif
+                                                            <span class="min-w-0 flex-1">
+                                                                <span class="block truncate text-sm font-medium text-ink">{{ $item['name'] }}</span>
+                                                                @if (filled($item['variant'] ?? null))<span class="block truncate text-xs text-muted">{{ $item['variant'] }}</span>@endif
+                                                            </span>
+                                                            <span class="shrink-0 text-sm tabular-nums text-muted">×{{ $item['quantity'] }}</span>
+                                                        </span>
+                                                    @endforeach
+                                                    @if (count($orderItems) > 3)
+                                                        <span class="block px-4 py-2 text-xs font-medium text-muted">+{{ count($orderItems) - 3 }} more {{ Str::plural('product', count($orderItems) - 3) }}</span>
+                                                    @endif
+                                                </span>
                                             @endif
-                                            <span class="min-w-0 flex-1"><span class="block truncate font-semibold text-ink">Order {{ $message->context_snapshot['number'] ?? '' }}</span>@if (filled($message->context_snapshot['item_name'] ?? null))<span class="block truncate text-sm text-ink/80">{{ $message->context_snapshot['item_name'] }}@if (($message->context_snapshot['item_count'] ?? 1) > 1) +{{ $message->context_snapshot['item_count'] - 1 }} more @endif</span>@endif<span class="block text-sm text-muted">₱{{ $message->context_snapshot['total'] ?? '0.00' }} · {{ Str::headline($message->context_snapshot['status'] ?? '') }}</span></span>
+                                            <span class="flex items-center justify-between gap-3 border-t border-line px-4 py-2.5 text-sm">
+                                                <span class="text-muted">@if (isset($orderSnapshot['item_count'])){{ $orderSnapshot['item_count'] }} {{ Str::plural('item', $orderSnapshot['item_count']) }} · @endif Total <span class="font-semibold tabular-nums text-ink">₱{{ $orderSnapshot['total'] ?? '0.00' }}</span></span>
+                                                @if (filled($orderSnapshot['order_id'] ?? null))
+                                                    <span class="inline-flex shrink-0 items-center gap-1 font-semibold text-brand-hover">View order<svg viewBox="0 0 20 20" fill="currentColor" class="size-4 transition group-hover/order:translate-x-0.5" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.17 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z" clip-rule="evenodd"/></svg></span>
+                                                @endif
+                                            </span>
                                         </a>
                                     @endif
                                 </div>

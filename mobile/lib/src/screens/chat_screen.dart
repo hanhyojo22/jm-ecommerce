@@ -1300,7 +1300,12 @@ class _Bubble extends StatelessWidget {
                       ? CrossAxisAlignment.end
                       : CrossAxisAlignment.start,
                   children: [
-                    if (snapshot != null)
+                    if (snapshot != null && snapshot['type'] == 'order')
+                      _OrderInquiryCard(
+                        messageId: message.id,
+                        snapshot: snapshot,
+                      )
+                    else if (snapshot != null)
                       Builder(
                         builder: (context) {
                           final isProduct = snapshot['type'] == 'product';
@@ -1316,10 +1321,6 @@ class _Bubble extends StatelessWidget {
                           final title = isProduct
                               ? '${snapshot['title']}'
                               : 'Order ${snapshot['number']}';
-                          final itemName = snapshot['item_name'] as String?;
-                          final itemCount =
-                              (snapshot['item_count'] as num?)?.toInt() ?? 1;
-                          final status = snapshot['status'] as String?;
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 6),
@@ -1404,23 +1405,8 @@ class _Bubble extends StatelessWidget {
                                             overflow: TextOverflow.ellipsis,
                                             style: theme.textTheme.titleSmall,
                                           ),
-                                          if (!isProduct && itemName != null)
-                                            Text(
-                                              itemCount > 1
-                                                  ? '$itemName +${itemCount - 1} more'
-                                                  : itemName,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: theme.textTheme.bodySmall,
-                                            ),
                                           Text(
-                                            isProduct
-                                                ? '₱${snapshot['price']}'
-                                                : [
-                                                    '₱${snapshot['total']}',
-                                                    if (status != null)
-                                                      statusLabel(status),
-                                                  ].join(' · '),
+                                            '₱${snapshot['price']}',
                                             style: theme.textTheme.bodySmall
                                                 ?.copyWith(
                                                   color: theme
@@ -1776,4 +1762,236 @@ bool _isSameChatMinute(String first, String second) {
       firstTime.day == secondTime.day &&
       firstTime.hour == secondTime.hour &&
       firstTime.minute == secondTime.minute;
+}
+
+/// Chat card for an order inquiry: order number and status, the ordered
+/// products (photos open full screen), and the total with a link to the order.
+class _OrderInquiryCard extends StatelessWidget {
+  const _OrderInquiryCard({required this.messageId, required this.snapshot});
+
+  static const _visibleItems = 3;
+
+  final String messageId;
+  final Map<String, dynamic> snapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final orderId = snapshot['order_id'] as String?;
+    final status = snapshot['status'] as String?;
+    final itemCount = (snapshot['item_count'] as num?)?.toInt();
+    final items = [
+      for (final item in snapshot['items'] as List? ?? const [])
+        if (item is Map) Map<String, dynamic>.from(item),
+    ];
+    // Inquiries sent before item lists were stored only carry one photo.
+    if (items.isEmpty && snapshot['image_url'] is String) {
+      items.add({
+        'name': snapshot['item_name'] ?? 'Ordered product',
+        'image_url': snapshot['image_url'],
+      });
+    }
+    final hiddenItems = items.length - _visibleItems;
+
+    return Container(
+      key: ValueKey('order-card-$messageId'),
+      width: MediaQuery.sizeOf(context).width * 0.78,
+      margin: const EdgeInsets.only(bottom: 6),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(appSurfaceRadius + 4),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: orderId == null
+              ? null
+              : () => context.push('/orders/$orderId'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                color: scheme.surfaceContainerHigh.withValues(alpha: 0.6),
+                padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Order #${snapshot['number']}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                    ),
+                    if (status != null) StatusPill(status: status),
+                  ],
+                ),
+              ),
+              for (final (index, item) in items.take(_visibleItems).indexed)
+                _OrderInquiryItem(
+                  imageKey: ValueKey('open-order-item-image-$messageId-$index'),
+                  item: item,
+                ),
+              if (hiddenItems > 0)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Text(
+                    '+$hiddenItems more ${hiddenItems == 1 ? 'product' : 'products'}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              Divider(height: 1, color: scheme.outlineVariant),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          children: [
+                            if (itemCount != null)
+                              TextSpan(
+                                text:
+                                    '$itemCount ${itemCount == 1 ? 'item' : 'items'} · ',
+                              ),
+                            const TextSpan(text: 'Total '),
+                            TextSpan(
+                              text: '₱${snapshot['total']}',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: scheme.onSurface,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (orderId != null) ...[
+                      Text(
+                        'View order',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: scheme.primary,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 20,
+                        color: scheme.primary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderInquiryItem extends StatelessWidget {
+  const _OrderInquiryItem({required this.imageKey, required this.item});
+
+  final Key imageKey;
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final name = '${item['name'] ?? 'Product'}';
+    final variant = item['variant'] as String?;
+    final quantity = (item['quantity'] as num?)?.toInt();
+    final imageUrl = item['image_url'] as String?;
+    final placeholder = ColoredBox(
+      color: scheme.surfaceContainerHigh,
+      child: Icon(
+        Icons.inventory_2_outlined,
+        size: 20,
+        color: scheme.onSurfaceVariant,
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      child: Row(
+        children: [
+          Semantics(
+            button: imageUrl != null,
+            label: imageUrl == null ? null : 'View photo of $name',
+            child: GestureDetector(
+              key: imageKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: imageUrl == null
+                  ? null
+                  : () => ImageViewer.open(context, url: imageUrl, title: name),
+              child: SizedBox.square(
+                dimension: 48,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(appSurfaceRadius),
+                  child: imageUrl == null
+                      ? placeholder
+                      : CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, _, _) => placeholder,
+                        ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (variant != null && variant.isNotEmpty)
+                  Text(
+                    variant,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (quantity != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              '×$quantity',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

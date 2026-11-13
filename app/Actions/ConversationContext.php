@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class ConversationContext
 {
-    /** @return array{product_id?: string, seller_order_id?: string, context_snapshot?: array<string, string|int|null>} */
+    /** @return array{product_id?: string, seller_order_id?: string, context_snapshot?: array<string, mixed>} */
     public function forMessage(Conversation $conversation, User $sender, ?string $productId, ?string $sellerOrderId, bool $preserveImage = true): array
     {
         if ($productId !== null && $sellerOrderId !== null) {
@@ -43,13 +43,16 @@ class ConversationContext
         $order = SellerOrder::query()->with(['order', 'items'])->findOrFail($sellerOrderId);
         abort_unless($order->store_id === $conversation->store_id && $order->order->user_id === $sender->id, 404);
         [$whole, $fraction] = array_pad(explode('.', (string) $order->total, 2), 2, '');
-        $firstItem = $order->items->first();
 
         return ['seller_order_id' => $order->id, 'context_snapshot' => [
             'type' => 'order', 'number' => $order->order->number, 'total' => $whole.'.'.str_pad($fraction, 2, '0'),
             'status' => $order->status, 'order_id' => $order->order_id,
-            'item_name' => $firstItem?->product_name, 'item_count' => $order->items->count(),
+            'item_count' => (int) $order->items->sum('quantity'),
             'image_path' => $order->items->firstWhere('image_path', '!=', null)?->image_path,
+            'items' => $order->items->map(fn ($item): array => [
+                'name' => $item->product_name, 'variant' => $item->variant_label,
+                'quantity' => (int) $item->quantity, 'image_path' => $item->image_path,
+            ])->all(),
         ]];
     }
 }
