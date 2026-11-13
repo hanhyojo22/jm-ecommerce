@@ -4,6 +4,8 @@
     <div class="page-container marketplace-home" data-homepage>
         <h1 class="sr-only">Marketplace</h1>
 
+        <x-marketplace.hero-carousel />
+
         @if ($categories->isNotEmpty())
             <section id="shop-by-category" class="marketplace-section scroll-mt-[136px]" aria-labelledby="home-categories-heading">
                 <div class="marketplace-section-head"><div><h2 id="home-categories-heading" class="marketplace-section-title">Shop by category</h2><p class="marketplace-section-subtitle">Every category with products in it today.</p></div><a href="{{ route('catalog.index') }}" class="marketplace-section-link inline-flex items-center gap-1">View all <x-returns.icon name="chevron-right" class="size-4" /></a></div>

@@ -533,6 +533,68 @@ test('homepage shows compact product rows at desktop, tablet, and phone sizes', 
     expect((await new AxeBuilder({ page }).include('[data-homepage]').analyze()).violations).toEqual([]);
 });
 
+test('homepage hero supports slide controls, keyboard navigation, and touch gestures', async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await Promise.all([
+        page.waitForEvent('domcontentloaded'),
+        page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
+    ]);
+
+    const hero = page.getByRole('region', { name: 'Marketplace highlights' });
+    const first = hero.getByRole('button', { name: 'Show slide 1: New arrivals' });
+    const second = hero.getByRole('button', { name: 'Show slide 2: Everyday living' });
+    const third = hero.getByRole('button', { name: 'Show slide 3: Local finds' });
+    const next = hero.getByRole('button', { name: 'Next slide', exact: true });
+    const previous = hero.getByRole('button', { name: 'Previous slide', exact: true });
+
+    await expect(first).toHaveAttribute('aria-pressed', 'true');
+    await expect(hero.getByRole('heading', { name: /Everyday finds/ })).toBeVisible();
+    await previous.click();
+    await expect(third).toHaveAttribute('aria-pressed', 'true');
+    await expect(hero.getByRole('heading', { name: /Small shops/ })).toBeVisible();
+    await next.click();
+    await expect(first).toHaveAttribute('aria-pressed', 'true');
+    await next.click();
+    await expect(second).toHaveAttribute('aria-pressed', 'true');
+    await expect(hero.getByRole('heading', { name: /Make room/ })).toBeVisible();
+    await expect(hero.getByRole('link', { name: 'Explore new arrivals' })).toHaveCount(0);
+    await expect.poll(() => hero.locator('.home-hero-slide:visible img').evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+    await expect(hero.locator('.home-hero-slide:visible')).toHaveCSS('transition-duration', '0s');
+
+    await third.click();
+    await expect(third).toHaveAttribute('aria-pressed', 'true');
+    await third.press('ArrowLeft');
+    await expect(second).toHaveAttribute('aria-pressed', 'true');
+    await third.press('ArrowRight');
+    await expect(third).toHaveAttribute('aria-pressed', 'true');
+    await third.press('Home');
+    await expect(first).toHaveAttribute('aria-pressed', 'true');
+    await expect(third).toBeFocused();
+
+    const swipe = async (endX, endY) => hero.locator('.home-hero-stage').evaluate((stage, end) => {
+        const start = new Touch({ identifier: 1, target: stage, clientX: 260, clientY: 100 });
+        const finish = new Touch({ identifier: 1, target: stage, clientX: end.x, clientY: end.y });
+        stage.dispatchEvent(new TouchEvent('touchstart', { bubbles: true, changedTouches: [start] }));
+        stage.dispatchEvent(new TouchEvent('touchend', { bubbles: true, changedTouches: [finish] }));
+    }, { x: endX, y: endY });
+    await swipe(100, 110);
+    await expect(second).toHaveAttribute('aria-pressed', 'true');
+    await swipe(255, 260);
+    await expect(second).toHaveAttribute('aria-pressed', 'true');
+    await swipe(350, 105);
+    await expect(first).toHaveAttribute('aria-pressed', 'true');
+
+    await third.press('End');
+    await expect(third).toHaveAttribute('aria-pressed', 'true');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).include('[data-home-hero]').analyze()).violations).toEqual([]);
+    await hero.screenshot({ path: testInfo.outputPath('hero-local-finds.png') });
+    const destination = await hero.getByRole('link', { name: 'Discover stores', exact: true }).getAttribute('href');
+    await hero.getByRole('link', { name: 'Discover stores', exact: true }).click();
+    await expect(page).toHaveURL(destination);
+});
+
 test('new arrivals link opens the complete catalog with newest sorting', async ({ page }) => {
     await page.goto('/');
     await Promise.all([
