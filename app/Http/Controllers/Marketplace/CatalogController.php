@@ -106,28 +106,6 @@ class CatalogController extends Controller
         $recommendedProducts = RecommendationQuery::forRequest($request, limit: 30)->whereNotIn('id', $shownProductIds)->values();
         $recommendedProducts = $recommendedProducts->count() >= 4 ? $recommendedProducts->take(6) : collect();
 
-        $stores = $this->publicStores()
-            ->whereHas('products', fn (Builder $query) => $query->where('status', 'active'))
-            ->withCount([
-                'products as public_products_count' => fn (Builder $query) => $query->where('status', 'active'),
-                'products as on_sale_products_count' => fn (Builder $query) => $query->where('status', 'active')->whereColumn('compare_at_price', '>', 'price'),
-            ])
-            ->orderByDesc('public_products_count')
-            ->orderBy('name')
-            ->limit(4)
-            ->get();
-
-        // Each store's shop window: photographed products first, then best sellers.
-        $storeWindowProducts = $stores->mapWithKeys(fn ($store) => [$store->id => (clone $homeProducts)
-            ->where('store_id', $store->id)
-            ->withExists('thumbnail as has_thumbnail')
-            ->orderByDesc('has_thumbnail')
-            ->orderByDesc('sold_quantity')
-            ->orderByDesc('id')
-            ->limit(5)
-            ->get()
-            ->each->setRelation('store', $store)]);
-
         return view('marketplace.home', [
             'categories' => $categories,
             'newProducts' => $newProducts,
@@ -136,8 +114,6 @@ class CatalogController extends Controller
             'flashDeals' => $flashDeals,
             'recommendedProducts' => $recommendedProducts,
             'recentlyViewed' => $recentlyViewed,
-            'stores' => $stores,
-            'storeWindowProducts' => $storeWindowProducts,
             'cartItemCount' => $request->user()?->cartItemCount() ?? 0,
         ]);
     }

@@ -384,28 +384,20 @@ class CatalogTest extends TestCase
             ->assertJsonPath('next_url', null);
     }
 
-    public function test_homepage_store_window_shows_only_that_stores_active_products(): void
+    public function test_homepage_omits_the_store_showcase_and_keeps_public_products(): void
     {
-        $saleItem = $this->product(['name' => 'Window Lantern', 'price' => 400, 'compare_at_price' => 500, 'free_shipping' => true]);
-        $this->product(['name' => 'Window Kettle', 'tenant_id' => $saleItem->tenant_id, 'store_id' => $saleItem->store_id, 'slug' => 'window-kettle', 'sku' => 'WINDOW-KETTLE', 'free_shipping' => false]);
-        $this->product(['name' => 'Window Draft', 'tenant_id' => $saleItem->tenant_id, 'store_id' => $saleItem->store_id, 'slug' => 'window-draft', 'sku' => 'WINDOW-DRAFT', 'status' => 'draft']);
-        $otherStoreItem = $this->product(['name' => 'Elsewhere Lamp']);
+        $product = $this->product(['name' => 'Window Lantern']);
+        $this->product(['name' => 'Window Draft', 'tenant_id' => $product->tenant_id, 'store_id' => $product->store_id, 'slug' => 'window-draft', 'sku' => 'WINDOW-DRAFT', 'status' => 'draft']);
+        $this->product(['name' => 'Elsewhere Lamp']);
 
-        $response = $this->get(route('home'))
+        $this->get(route('home'))
             ->assertOk()
-            ->assertSee('role="tablist"', false)
-            ->assertSee($saleItem->store->name)
+            ->assertDontSee('Shop local stores')
+            ->assertDontSee('role="tablist"', false)
+            ->assertSee(route('catalog.stores'), false)
             ->assertSee('Window Lantern')
+            ->assertSee('Elsewhere Lamp')
             ->assertDontSee('Window Draft');
-
-        $store = $response->viewData('stores')->firstWhere('id', $saleItem->store_id);
-        $this->assertSame(2, $store->public_products_count);
-        $this->assertSame(1, $store->on_sale_products_count);
-        $this->assertEqualsCanonicalizing(
-            ['Window Lantern', 'Window Kettle'],
-            $response->viewData('storeWindowProducts')->get($saleItem->store_id)->pluck('name')->all(),
-        );
-        $this->assertSame(['Elsewhere Lamp'], $response->viewData('storeWindowProducts')->get($otherStoreItem->store_id)->pluck('name')->all());
     }
 
     public function test_new_arrivals_rejects_invalid_cursors(): void
