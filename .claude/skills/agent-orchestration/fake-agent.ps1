@@ -27,6 +27,10 @@ switch ($env:FAKE_MODE) {
         Set-Content hello2.txt 'hi' -Encoding ascii
         Set-Content .orch\SUMMARY.md 'second round' -Encoding ascii
     }
+    'vendoredit' {
+        Set-Content vendor\composer\installed.json '{"changed":true}' -Encoding ascii
+        Set-Content .orch\SUMMARY.md 'Ran composer require' -Encoding ascii
+    }
     'lastmsg' {
         Set-Content hello.txt 'hi' -Encoding ascii
         Set-Content .orch\last-message.md 'From codex -o' -Encoding ascii

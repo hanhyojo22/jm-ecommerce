@@ -36,6 +36,20 @@ If a task is under ~30 lines or touches a single file, do it directly. Splitting
 10. **Clean up** every run, kept or not, only through the runner: `run-agent.ps1 -Agent <agent> -Model x -Task <slug> -Cleanup`. Never use `Remove-Item -Recurse` on a worktree: it follows the `vendor`/`node_modules` links and deletes the main repo's copies. If cleanup says a process holds the folder, the user's own OpenCode service (`opencode.exe serve --service`) is usually the cause. Don't kill it; run `git worktree prune` after they close OpenCode.
 11. **Deploy.** If backend code was merged, follow `.ai/rules/general.md` (deploy to Render). Agents never deploy.
 
+## Security boundaries
+
+Agents run with your Windows user's full permissions. A worktree keeps their edits separate; it is **not** a sandbox.
+
+| Agent | Isolation | Allowed work |
+|---|---|---|
+| Codex | `-s workspace-write` sandbox | Any task, including money, tenant and auth code |
+| Antigravity | `--sandbox` (terminal restrictions) | Any task; prefer Codex for the riskiest code |
+| OpenCode | **None**: `--auto` approves every command | Low-risk tasks only (UI, copy, boilerplate tests). Never money, tenant, auth, migrations or anything near secrets |
+
+- `.env` is **not** copied into worktrees; `phpunit.xml` supplies the test environment. Pass `-WithEnv` only when a task truly needs real config, only to Codex, and tell the user first.
+- `vendor/` and `node_modules/` are shared links to the main repo. A `WARNING: dependencies changed` line means an agent installed or removed packages. Run `composer install` / `npm ci` in the main repo to restore them, and treat the run as suspect.
+- Never put secrets, tokens or customer data in a prompt file.
+
 ## Routing table
 
 | Task type | First choice | Cheap choice | Reviewer |
@@ -47,7 +61,7 @@ If a task is under ~30 lines or touches a single file, do it directly. Splitting
 | Search or exploration only | `agy` `gemini-3.8-flash-low` | an `opencode/*-free` model | none |
 
 Rules:
-- Never send money, tenant, auth or migration work to a free model.
+- Never send money, tenant, auth or migration work to a free model, or to OpenCode (see Security boundaries).
 - The reviewer is always a different model family from the author.
 - Model lists change. Check them with `agy models`, `opencode models` and `~/.codex/config.toml`.
 - This table is a starting guess. Update it when the ledger (below) shows a pattern.
@@ -74,7 +88,7 @@ Copy exactly and fill in the angle brackets:
 - <matching .claude/skills/jmmart-*/SKILL.md, e.g. jmmart-money-and-orders for checkout>
 
 ## Acceptance check
-vendor/, node_modules/ and .env are already linked or copied into this worktree; run everything from here, never from another directory.
+vendor/ and node_modules/ are linked into this worktree and phpunit.xml supplies the test environment; run everything from here, never from another directory. Do not run composer/npm install or require.
 Run: <exact command, e.g. php artisan test --compact tests/Feature/CartTest.php>
 It must pass. Run vendor/bin/pint --dirty --format agent if you changed PHP.
 

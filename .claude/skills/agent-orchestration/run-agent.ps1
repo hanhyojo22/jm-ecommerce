@@ -19,7 +19,9 @@ param(
     [switch]$DryRun,
     [switch]$SetupOnly,
     [switch]$Continue,
-    [switch]$Cleanup
+    [switch]$Cleanup,
+    # Copies the main repo's .env (real secrets) into the worktree. Off by default: phpunit.xml supplies test env.
+    [switch]$WithEnv
 )
 
 $ErrorActionPreference = 'Stop'
@@ -69,7 +71,7 @@ switch ($Agent) {
     }
     'agy' {
         $exe = 'agy'
-        $agentArgs = @('-p', $message, '--mode', 'auto', '--model', $Model)
+        $agentArgs = @('-p', $message, '--mode', 'auto', '--sandbox', '--model', $Model)
     }
     'fake' {
         $exe = 'powershell'
@@ -105,7 +107,7 @@ else {
             New-Item -ItemType Junction -Path (Join-Path $worktree $dir) -Target (Join-Path $RepoRoot $dir) | Out-Null
         }
     }
-    if (Test-Path (Join-Path $RepoRoot '.env')) { Copy-Item (Join-Path $RepoRoot '.env') (Join-Path $worktree '.env') }
+    if ($WithEnv -and (Test-Path (Join-Path $RepoRoot '.env'))) { Copy-Item (Join-Path $RepoRoot '.env') (Join-Path $worktree '.env') }
 
     New-Item -ItemType Directory -Force $orchDir | Out-Null
     Set-Content -Path (Join-Path $orchDir 'BASE') -Value (git -C $worktree rev-parse HEAD) -Encoding ascii
@@ -146,7 +148,16 @@ function Get-MainTreeSnapshot {
     }
 }
 
+# shortcut: only detects installs/removals via the package manifests, not hand edits deep inside vendor/node_modules; upgrade to a full hash if agents start patching dependencies.
+function Get-DependencyFingerprint {
+    @('vendor\composer\installed.json', 'node_modules\.package-lock.json') | ForEach-Object {
+        $path = Join-Path $RepoRoot $_
+        if (Test-Path $path) { (Get-FileHash $path).Hash } else { 'none' }
+    }
+}
+
 $baseCommit = (Get-Content (Join-Path $orchDir 'BASE')).Trim()
+$dependenciesBefore = (Get-DependencyFingerprint) -join ','
 $headBefore = git -C $worktree rev-parse HEAD
 $mainTreeBefore = Get-MainTreeSnapshot
 $stopwatch = [Diagnostics.Stopwatch]::StartNew()
@@ -175,6 +186,7 @@ $status = if ($timedOut) { 'TIMEOUT' } elseif ($exitCode -ne 0) { 'FAILED' } els
 
 $commitCount = [int](git -C $worktree rev-list --count "$headBefore..HEAD")
 if ($commitCount -gt 0) { $warnings += "WARNING: $commitCount commits on branch" }
+if (((Get-DependencyFingerprint) -join ',') -ne $dependenciesBefore) { $warnings += 'WARNING: dependencies changed (vendor/node_modules are shared with the main repo; run composer install / npm ci there)' }
 if ((Get-MainTreeSnapshot) -ne $mainTreeBefore) { $warnings += 'WARNING: main tree changed (the agent, the user, or a parallel run touched it)' }
 
 Invoke-GitQuiet -C $worktree add -N .

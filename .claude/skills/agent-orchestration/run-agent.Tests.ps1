@@ -23,6 +23,8 @@ function New-TempRepo {
     git -C $repo commit -qm init
     New-Item -ItemType Directory -Force (Join-Path $repo 'vendor') | Out-Null
     Set-Content -Path (Join-Path $repo 'vendor\autoload.php') -Value '<?php' -Encoding ascii
+    New-Item -ItemType Directory -Force (Join-Path $repo 'vendor\composer') | Out-Null
+    Set-Content -Path (Join-Path $repo 'vendor\composer\installed.json') -Value '{}' -Encoding ascii
     Set-Content -Path (Join-Path $repo '.env') -Value 'APP_KEY=x' -Encoding ascii
     return $repo
 }
@@ -55,7 +57,7 @@ try {
     Assert ($r.workingDir -eq $r.worktree) 'opencode dry run: workingDir'
 
     $r = & $runner -Agent agy -Model gemini-4-argon-high -Task t -PromptFile $prompt -RepoRoot $repo -DryRun | ConvertFrom-Json
-    Assert ((@($r.args) -join '|') -eq "-p|$msg|--mode|auto|--model|gemini-4-argon-high") 'agy dry run: args'
+    Assert ((@($r.args) -join '|') -eq "-p|$msg|--mode|auto|--sandbox|--model|gemini-4-argon-high") 'agy dry run: args include --sandbox'
     Assert ($r.workingDir -eq $r.worktree) 'agy dry run: workingDir'
     Assert (-not (Test-Path (Split-Path $expectedWt -Parent))) 'dry run creates nothing'
 
@@ -65,7 +67,9 @@ try {
     Assert ((git -C $repo branch --list 'orch/space-codex') -ne $null) 'spaces in repo path: branch created'
     Assert ([string]::IsNullOrEmpty((git -C $wt status --porcelain))) '.orch is excluded from git'
     Assert (Test-Path (Join-Path $wt 'vendor\autoload.php')) 'setup: vendor linked into worktree'
-    Assert ((Get-Content (Join-Path $wt '.env')) -eq 'APP_KEY=x') 'setup: .env copied into worktree'
+    Assert (-not (Test-Path (Join-Path $wt '.env'))) 'setup: .env not copied by default'
+    $envWt = & $runner -Agent codex -Model m -Task withenv -PromptFile $prompt -RepoRoot $repo -SetupOnly -WithEnv
+    Assert ((Get-Content (Join-Path $envWt '.env')) -eq 'APP_KEY=x') 'setup: -WithEnv copies .env'
 
     Set-Content -Path (Join-Path $wt 'keep.txt') -Value 'mine' -Encoding ascii
     $threw = $null
@@ -113,6 +117,11 @@ try {
     $res = Invoke-Fake 'maintree'
     Assert ($res -match 'WARNING: main tree changed') 'maintree: warning'
     Remove-Item (Join-Path $repo 'stray.txt')
+
+    $env:FAKE_MAIN_TREE = $repo
+    $res = Invoke-Fake 'vendoredit'
+    Assert ($res -match 'WARNING: dependencies changed') 'vendoredit: write through vendor link is flagged'
+    Set-Content -Path (Join-Path $repo 'vendor\composer\installed.json') -Value '{}' -Encoding ascii
 
     $res = Invoke-Fake 'lastmsg'
     Assert ($res.StartsWith('Status: OK') -and ($res -match 'From codex -o')) 'lastmsg: last-message.md used when SUMMARY.md missing'
