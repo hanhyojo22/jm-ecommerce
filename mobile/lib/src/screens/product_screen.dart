@@ -2060,7 +2060,14 @@ class _VariationSheetState extends State<_VariationSheet> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          // useSafeArea leaves the bottom inset to the sheet, so clear the
+          // 3-button / gesture navigation bar here.
+          padding: EdgeInsets.fromLTRB(
+            16,
+            8,
+            16,
+            16 + MediaQuery.viewPaddingOf(context).bottom,
+          ),
           child: FilledButton(
             style: FilledButton.styleFrom(
               minimumSize: const Size(48, 52),
