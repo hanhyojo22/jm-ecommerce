@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../models/models.dart';
+import '../models/store_branch.dart';
 import 'api_exception.dart';
 import 'attachment_picker.dart';
 
@@ -432,6 +433,11 @@ class ApiClient {
           await _data('POST', '/orders/seller-orders/$sellerOrderId/received'),
         ),
       );
+
+  Future<List<StoreBranch>> storeLocations() async =>
+      listOf(await _data('GET', '/store-locations'))
+          .map(StoreBranch.fromJson)
+          .toList(growable: false);
 
   Future<List<Address>> addresses() async {
     final body = await _data('GET', '/delivery-addresses');

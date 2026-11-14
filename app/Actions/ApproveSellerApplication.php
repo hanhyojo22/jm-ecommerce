@@ -65,6 +65,7 @@ class ApproveSellerApplication
                 'phone' => $application->phone,
                 'address_line' => $application->address_line,
                 'city' => $application->city,
+                ...$application->only(Store::LOCATION_DETAILS),
                 'status' => 'active',
             ]);
 

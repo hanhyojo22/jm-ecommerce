@@ -158,6 +158,23 @@ class CatalogApiTest extends TestCase
             ->assertJsonMissing(['slug' => $suspended->store->slug]);
     }
 
+    public function test_store_locations_list_only_public_stores_with_a_pin_and_hide_private_addresses(): void
+    {
+        $pinned = $this->product()->store;
+        $pinned->update(['latitude' => 14.5547, 'longitude' => 121.0244, 'delivery_radius_km' => 8, 'province' => 'Metro Manila', 'pickup_address' => 'Secret warehouse']);
+        $this->product();
+        $this->product([], 'active', 'suspended')->store->update(['latitude' => 14.6, 'longitude' => 121.0]);
+
+        $this->getJson(route('api.v1.store-locations.index'))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', $pinned->slug)
+            ->assertJsonPath('data.0.latitude', 14.5547)
+            ->assertJsonPath('data.0.delivery_radius_km', 8)
+            ->assertJsonPath('data.0.province', 'Metro Manila')
+            ->assertJsonMissingPath('data.0.pickup_address');
+    }
+
     public function test_suggestions_and_top_products_are_public(): void
     {
         $product = $this->product(['name' => 'Copper Headphones', 'price' => '299.00']);

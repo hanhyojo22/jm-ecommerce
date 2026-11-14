@@ -12,6 +12,7 @@ import '../providers/catalog_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
+import '../widgets/store_locator.dart';
 
 class CatalogScreen extends ConsumerStatefulWidget {
   const CatalogScreen({super.key});
@@ -552,6 +553,13 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             ),
                           ),
                         ),
+                        if (browsing)
+                          const SliverPadding(
+                            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            sliver: SliverToBoxAdapter(
+                              child: StoreRecommendationCard(),
+                            ),
+                          ),
                         if (browsing && deals != null)
                           SliverToBoxAdapter(
                             child: _TopDeals(

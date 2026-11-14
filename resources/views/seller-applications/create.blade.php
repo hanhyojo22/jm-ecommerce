@@ -432,6 +432,38 @@
                                         @include('seller-applications.field', ['name' => 'delivery_areas', 'label' => 'Supported delivery areas', 'required' => true, 'help' => 'For example: Metro Manila, Luzon'])
                                     </div>
                                 </section>
+
+                                <section class="onboarding-section" aria-labelledby="map-location-heading"
+                                    x-data="{ locating: false, locationError: '', useCurrentLocation() { if (! navigator.geolocation) { this.locationError = 'This browser cannot share its location. Enter the coordinates instead.'; return; } this.locating = true; this.locationError = ''; navigator.geolocation.getCurrentPosition((position) => { this.$refs.latitude.value = position.coords.latitude.toFixed(7); this.$refs.longitude.value = position.coords.longitude.toFixed(7); this.locating = false; }, () => { this.locating = false; this.locationError = 'We could not get your location. Allow location access or enter the coordinates instead.'; }, { enableHighAccuracy: true, timeout: 15000 }); } }">
+                                    <div class="onboarding-section-head">
+                                        <h3 id="map-location-heading">Map location <span class="font-normal text-muted">(optional)</span></h3>
+                                        <p>Buyers see this pin and your delivery radius when the JMMart app suggests nearby stores. You can add it later in store settings.</p>
+                                    </div>
+                                    <div class="onboarding-grid">
+                                        <div>
+                                            <label for="latitude" class="mb-1.5 block text-sm font-semibold text-ink">Latitude</label>
+                                            <input id="latitude" name="latitude" x-ref="latitude" type="number" step="any" min="-90" max="90" inputmode="decimal" value="{{ old('latitude', $application?->latitude) }}" class="field-control">
+                                            <x-input-error :messages="$errors->get('latitude')" class="mt-1" />
+                                        </div>
+                                        <div>
+                                            <label for="longitude" class="mb-1.5 block text-sm font-semibold text-ink">Longitude</label>
+                                            <input id="longitude" name="longitude" x-ref="longitude" type="number" step="any" min="-180" max="180" inputmode="decimal" value="{{ old('longitude', $application?->longitude) }}" class="field-control">
+                                            <x-input-error :messages="$errors->get('longitude')" class="mt-1" />
+                                        </div>
+                                        <div>
+                                            <label for="delivery_radius_km" class="mb-1.5 block text-sm font-semibold text-ink">Delivery radius (km)</label>
+                                            <input id="delivery_radius_km" name="delivery_radius_km" type="number" min="1" max="500" inputmode="numeric" value="{{ old('delivery_radius_km', $application?->delivery_radius_km) }}" class="field-control">
+                                            <x-input-error :messages="$errors->get('delivery_radius_km')" class="mt-1" />
+                                        </div>
+                                        <div class="flex flex-wrap items-end gap-3">
+                                            <button type="button" class="onboarding-button onboarding-button--outline" @click="useCurrentLocation()" :disabled="locating" :aria-busy="locating">
+                                                <span x-show="!locating">Use my current location</span>
+                                                <span x-cloak x-show="locating">Finding location…</span>
+                                            </button>
+                                        </div>
+                                        <p x-cloak x-show="locationError" x-text="locationError" role="alert" class="onboarding-span-2 text-sm text-rose-700"></p>
+                                    </div>
+                                </section>
                             @elseif ($step === 5)
                                 <div x-data="{ idType: @js(old('id_type', $application?->id_type ?? '')) }">
                                 <section class="onboarding-section" aria-labelledby="id-heading">

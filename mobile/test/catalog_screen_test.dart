@@ -10,6 +10,7 @@ import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 import 'package:jmmart/src/screens/catalog_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
@@ -705,6 +706,7 @@ Future<void> _pumpCatalog(
       overrides: [
         apiClientProvider.overrideWithValue(api),
         cartCountProvider.overrideWithValue(0),
+        storeBranchesProvider.overrideWith((ref) async => const []),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),

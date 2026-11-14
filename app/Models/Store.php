@@ -12,7 +12,22 @@ class Store extends Model
 {
     use HasUlids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', 'paymongo_account_id', 'paymongo_account_status'];
+    /**
+     * Address, shipping and location details the seller gives at onboarding and keeps in store settings.
+     *
+     * @var list<string>
+     */
+    public const LOCATION_DETAILS = ['region', 'province', 'barangay', 'postal_code', 'pickup_address', 'return_address', 'processing_days', 'fulfillment_methods', 'delivery_areas', 'latitude', 'longitude', 'delivery_radius_km'];
+
+    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', 'paymongo_account_id', 'paymongo_account_status', ...self::LOCATION_DETAILS];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return ['latitude' => 'float', 'longitude' => 'float', 'processing_days' => 'integer', 'delivery_radius_km' => 'integer'];
+    }
 
     /**
      * A store takes online payments once PayMongo has activated its child account, because the

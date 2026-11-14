@@ -12,13 +12,13 @@ class SellerApplication extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['store_name', 'store_description', 'seller_name', 'phone', 'address_line', 'city', 'store_category', 'logo_path', 'status', 'submitted_at', 'tenant_id', 'reviewed_at', 'reviewed_by', 'review_note', 'seller_type', 'date_of_birth', 'business_name', 'registration_number', 'bir_details', 'representative_name', 'store_slug', 'banner_path', 'support_contact', 'region', 'province', 'barangay', 'postal_code', 'pickup_address', 'return_address', 'processing_days', 'fulfillment_methods', 'delivery_areas', 'id_type', 'id_number', 'completed_steps', 'correction_steps'];
+    protected $fillable = ['store_name', 'store_description', 'seller_name', 'phone', 'address_line', 'city', 'store_category', 'logo_path', 'status', 'submitted_at', 'tenant_id', 'reviewed_at', 'reviewed_by', 'review_note', 'seller_type', 'date_of_birth', 'business_name', 'registration_number', 'bir_details', 'representative_name', 'store_slug', 'banner_path', 'support_contact', 'region', 'province', 'barangay', 'postal_code', 'pickup_address', 'return_address', 'processing_days', 'fulfillment_methods', 'delivery_areas', 'id_type', 'id_number', 'completed_steps', 'correction_steps', 'latitude', 'longitude', 'delivery_radius_km'];
 
     protected $hidden = ['id_number'];
 
     protected function casts(): array
     {
-        return ['submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'date_of_birth' => 'date', 'id_number' => 'encrypted', 'completed_steps' => 'array', 'correction_steps' => 'array'];
+        return ['submitted_at' => 'datetime', 'reviewed_at' => 'datetime', 'date_of_birth' => 'date', 'id_number' => 'encrypted', 'completed_steps' => 'array', 'correction_steps' => 'array', 'latitude' => 'float', 'longitude' => 'float', 'processing_days' => 'integer', 'delivery_radius_km' => 'integer'];
     }
 
     public function user(): BelongsTo

@@ -17,6 +17,13 @@ use Throwable;
 
 class StoreSettingsController extends Controller
 {
+    /**
+     * Saved fields in the order the undo payload is checked against.
+     *
+     * @var list<string>
+     */
+    private const UNDO_FIELDS = ['description', 'phone', 'address_line', 'city', ...Store::LOCATION_DETAILS, 'logo_path'];
+
     public function edit(Request $request): View
     {
         $tenant = $this->managedTenant($request);
@@ -36,7 +43,7 @@ class StoreSettingsController extends Controller
     public function update(UpdateStoreSettingsRequest $request, StorePublicImage $storePublicImage): RedirectResponse
     {
         $tenant = $request->user()->sellerTenant() ?? abort(403);
-        $data = $request->safe()->only(['description', 'phone', 'address_line', 'city']);
+        $data = [...$request->safe()->only(['description', 'phone', 'address_line', 'city']), ...$this->locationDetails($request)];
         try {
             $newLogoPath = $request->hasFile('logo')
                 ? $storePublicImage->handle($request->file('logo'), 'store-logos', 'public')
@@ -59,7 +66,7 @@ class StoreSettingsController extends Controller
                     ->firstOrFail();
                 $oldLogoPath = $lockedStore->logo_path;
                 $logoPath = $newLogoPath ?? ($request->boolean('remove_logo') ? null : $oldLogoPath);
-                $oldValues = $lockedStore->only(['description', 'phone', 'address_line', 'city', 'logo_path']);
+                $oldValues = $lockedStore->only(self::UNDO_FIELDS);
                 $newValues = [...$data, 'logo_path' => $logoPath];
 
                 $lockedStore->update($newValues);
@@ -120,7 +127,7 @@ class StoreSettingsController extends Controller
             return back()->withErrors(['undo' => 'These saved changes are no longer available to undo.']);
         }
 
-        $fields = ['description', 'phone', 'address_line', 'city', 'logo_path'];
+        $fields = self::UNDO_FIELDS;
         $before = $undo['before'] ?? null;
         $after = $undo['after'] ?? null;
 
@@ -168,6 +175,26 @@ class StoreSettingsController extends Controller
         $request->session()->forget('seller_store_settings_undo');
 
         return to_route('seller.store-settings.edit')->with('status', 'Last store details save undone.');
+    }
+
+    /**
+     * Every location field, with numbers in the same form the model casts return, so a saved
+     * value compares equal to what is read back for undo.
+     *
+     * @return array<string, string|int|float|null>
+     */
+    private function locationDetails(UpdateStoreSettingsRequest $request): array
+    {
+        return collect(Store::LOCATION_DETAILS)->mapWithKeys(function (string $field) use ($request): array {
+            $value = $request->validated($field);
+
+            return [$field => match (true) {
+                $value === null => null,
+                in_array($field, ['latitude', 'longitude'], true) => round((float) $value, 7),
+                in_array($field, ['processing_days', 'delivery_radius_km'], true) => (int) $value,
+                default => $value,
+            }];
+        })->all();
     }
 
     private function managedTenant(Request $request): Tenant

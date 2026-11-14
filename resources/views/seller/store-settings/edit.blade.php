@@ -131,6 +131,71 @@
                     </div>
                 </section>
 
+                @php
+                    $shippingFields = [
+                        'region' => ['label' => 'Region', 'autocomplete' => 'address-level1', 'maxlength' => 100],
+                        'province' => ['label' => 'Province', 'autocomplete' => 'address-level1', 'maxlength' => 100],
+                        'barangay' => ['label' => 'Barangay', 'autocomplete' => 'address-level3', 'maxlength' => 100],
+                        'postal_code' => ['label' => 'Postal code', 'autocomplete' => 'postal-code', 'maxlength' => 4, 'inputmode' => 'numeric'],
+                        'pickup_address' => ['label' => 'Pickup address', 'maxlength' => 255, 'wide' => true, 'help' => 'Where couriers collect your orders.'],
+                        'return_address' => ['label' => 'Return address', 'maxlength' => 255, 'wide' => true, 'help' => 'Where buyer returns are sent.'],
+                        'processing_days' => ['label' => 'Processing days', 'type' => 'number', 'min' => 1, 'max' => 30, 'help' => 'Business days before you hand orders to the courier.'],
+                        'fulfillment_methods' => ['label' => 'Fulfillment methods', 'maxlength' => 120, 'help' => 'For example: courier pickup, drop-off'],
+                        'delivery_areas' => ['label' => 'Supported delivery areas', 'maxlength' => 1000, 'wide' => true, 'help' => 'For example: Metro Manila, Luzon'],
+                    ];
+                @endphp
+                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="shipping-details-heading">
+                    <h2 id="shipping-details-heading" class="text-lg font-semibold text-ink">Pickup &amp; shipping</h2>
+                    <p class="mt-0.5 text-sm text-muted">Only you and JMMart see your pickup and return addresses.</p>
+                    <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-2">
+                        @foreach ($shippingFields as $name => $field)
+                            <div @class(['min-w-0', 'sm:col-span-2' => $field['wide'] ?? false])>
+                                <label for="{{ $name }}" class="block text-sm font-semibold text-ink">{{ $field['label'] }}</label>
+                                <input id="{{ $name }}" name="{{ $name }}" type="{{ $field['type'] ?? 'text' }}" value="{{ old($name, $store->{$name}) }}"
+                                    @isset($field['autocomplete']) autocomplete="{{ $field['autocomplete'] }}" @endisset
+                                    @isset($field['maxlength']) maxlength="{{ $field['maxlength'] }}" @endisset
+                                    @isset($field['inputmode']) inputmode="{{ $field['inputmode'] }}" @endisset
+                                    @isset($field['min']) min="{{ $field['min'] }}" max="{{ $field['max'] }}" @endisset
+                                    @isset($field['help']) aria-describedby="{{ $name }}-help" @endisset
+                                    @error($name) aria-invalid="true" @enderror
+                                    class="field-control mt-2 text-base lg:text-sm @error($name) border-rose-500 @enderror">
+                                @isset($field['help'])<p id="{{ $name }}-help" class="mt-1.5 text-xs text-muted">{{ $field['help'] }}</p>@endisset
+                                <x-input-error :messages="$errors->get($name)" class="mt-2" />
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+
+                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="map-location-heading"
+                    x-data="{ locating: false, locationError: '', useCurrentLocation() { if (! navigator.geolocation) { this.locationError = 'This browser cannot share its location. Enter the coordinates instead.'; return; } this.locating = true; this.locationError = ''; navigator.geolocation.getCurrentPosition((position) => { this.$refs.latitude.value = position.coords.latitude.toFixed(7); this.$refs.longitude.value = position.coords.longitude.toFixed(7); this.locating = false; dirty = true; }, () => { this.locating = false; this.locationError = 'We could not get your location. Allow location access or enter the coordinates instead.'; }, { enableHighAccuracy: true, timeout: 15000 }); } }">
+                    <h2 id="map-location-heading" class="text-lg font-semibold text-ink">Map location</h2>
+                    <p class="mt-0.5 text-sm text-muted">Buyers see this pin and your delivery radius when the JMMart app suggests nearby stores. Leave it empty to stay out of nearby suggestions.</p>
+                    <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">
+                        <div class="min-w-0">
+                            <label for="latitude" class="block text-sm font-semibold text-ink">Latitude</label>
+                            <input id="latitude" name="latitude" x-ref="latitude" type="number" step="any" min="-90" max="90" inputmode="decimal" value="{{ old('latitude', $store->latitude) }}" @error('latitude') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('latitude') border-rose-500 @enderror">
+                            <x-input-error :messages="$errors->get('latitude')" class="mt-2" />
+                        </div>
+                        <div class="min-w-0">
+                            <label for="longitude" class="block text-sm font-semibold text-ink">Longitude</label>
+                            <input id="longitude" name="longitude" x-ref="longitude" type="number" step="any" min="-180" max="180" inputmode="decimal" value="{{ old('longitude', $store->longitude) }}" @error('longitude') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('longitude') border-rose-500 @enderror">
+                            <x-input-error :messages="$errors->get('longitude')" class="mt-2" />
+                        </div>
+                        <div class="min-w-0">
+                            <label for="delivery_radius_km" class="block text-sm font-semibold text-ink">Delivery radius (km)</label>
+                            <input id="delivery_radius_km" name="delivery_radius_km" type="number" min="1" max="500" inputmode="numeric" value="{{ old('delivery_radius_km', $store->delivery_radius_km) }}" @error('delivery_radius_km') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('delivery_radius_km') border-rose-500 @enderror">
+                            <x-input-error :messages="$errors->get('delivery_radius_km')" class="mt-2" />
+                        </div>
+                    </div>
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <button type="button" class="seller-outline-button min-h-11" @click="useCurrentLocation()" :disabled="locating" :aria-busy="locating">
+                            <span x-show="!locating">Use my current location</span>
+                            <span x-cloak x-show="locating">Finding location…</span>
+                        </button>
+                        <p x-cloak x-show="locationError" x-text="locationError" role="alert" class="text-sm text-rose-700"></p>
+                    </div>
+                </section>
+
                 <div class="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-[#f5f7fa]/95 px-1 py-3 backdrop-blur">
                     <p class="mr-auto text-sm text-muted" x-show="dirty" x-cloak>You have unsaved changes.</p>
                     <a href="{{ route('seller.dashboard') }}" class="seller-outline-button min-h-11">Cancel</a>

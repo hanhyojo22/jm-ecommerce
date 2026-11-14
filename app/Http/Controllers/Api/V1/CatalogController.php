@@ -129,6 +129,23 @@ class CatalogController extends Controller
         return StoreResource::collection($stores)->response();
     }
 
+    /**
+     * Stores that have set a map pin, for the app's nearest-store suggestion.
+     *
+     * shortcut: returns up to 200 stores and the app sorts by distance; move the distance sort into SQL when more stores have pins.
+     */
+    public function storeLocations(): JsonResponse
+    {
+        $stores = CatalogQuery::publicStores()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderBy('name')
+            ->limit(200)
+            ->get();
+
+        return StoreResource::collection($stores)->response();
+    }
+
     public function store(string $store): JsonResponse
     {
         $store = CatalogQuery::publicStores()

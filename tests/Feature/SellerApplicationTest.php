@@ -6,9 +6,12 @@ use App\Actions\ApproveSellerApplication;
 use App\Actions\SuspendStore;
 use App\Models\AuditLog;
 use App\Models\SellerApplication;
+use App\Models\Store;
+use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SellerApplicationTest extends TestCase
@@ -82,6 +85,61 @@ class SellerApplicationTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $administrator->id, 'action' => 'seller_application.approved']);
         $this->assertSame(1, TenantMember::query()->where('tenant_id', $tenant->id)->count());
         $this->assertSame(1, AuditLog::query()->count());
+    }
+
+    public function test_approval_copies_the_onboarding_address_shipping_and_location_to_the_store(): void
+    {
+        $administrator = User::factory()->administrator()->create();
+        $customer = User::factory()->seller()->create(['email_verified_at' => now()]);
+        $details = [
+            'region' => 'NCR',
+            'province' => 'Metro Manila',
+            'barangay' => 'San Lorenzo',
+            'postal_code' => '1223',
+            'pickup_address' => 'Warehouse 2, Chino Roces Ave',
+            'return_address' => '10 Market Street, Manila',
+            'processing_days' => 3,
+            'fulfillment_methods' => 'Courier pickup',
+            'delivery_areas' => 'Metro Manila',
+            'latitude' => 14.5547,
+            'longitude' => 121.0244,
+            'delivery_radius_km' => 8,
+        ];
+        $application = $customer->sellerApplications()->create([
+            'store_name' => 'Northwind Goods',
+            'seller_name' => 'Ava Seller',
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'status' => 'pending',
+            'submitted_at' => now(),
+            ...$details,
+        ]);
+
+        $tenant = app(ApproveSellerApplication::class)->handle($administrator, $application);
+
+        $this->assertSame($details, $tenant->store->only(array_keys($details)));
+    }
+
+    public function test_location_migration_backfills_existing_stores_from_their_approved_application(): void
+    {
+        $this->artisan('migrate:rollback', ['--step' => 1])->assertSuccessful();
+        $customer = User::factory()->seller()->create();
+        $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Goods', 'slug' => 'northwind-goods', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
+        DB::table('seller_applications')->insert([
+            'id' => (string) str()->ulid(),
+            'user_id' => $customer->id,
+            'tenant_id' => $tenant->id,
+            'status' => 'approved',
+            'province' => 'Metro Manila',
+            'pickup_address' => 'Warehouse 2, Chino Roces Ave',
+            'processing_days' => 3,
+        ]);
+
+        $this->artisan('migrate')->assertSuccessful();
+
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'province' => 'Metro Manila', 'pickup_address' => 'Warehouse 2, Chino Roces Ave', 'processing_days' => 3, 'latitude' => null]);
     }
 
     public function test_approved_seller_cannot_submit_or_receive_a_second_store_application(): void

@@ -291,6 +291,57 @@ class SellerStoreSettingsTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 0);
     }
 
+    public function test_owner_can_save_location_details_and_undo_a_later_save(): void
+    {
+        [$owner, , $store] = $this->seller();
+        $details = [
+            'description' => null,
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'region' => 'NCR',
+            'province' => 'Metro Manila',
+            'barangay' => 'San Lorenzo',
+            'postal_code' => '1223',
+            'pickup_address' => 'Warehouse 2, Chino Roces Ave',
+            'return_address' => '10 Market Street, Manila',
+            'processing_days' => '3',
+            'fulfillment_methods' => 'Courier pickup',
+            'delivery_areas' => 'Metro Manila',
+            'latitude' => '14.5547123',
+            'longitude' => '121.0244456',
+            'delivery_radius_km' => '8',
+        ];
+
+        $this->actingAs($owner)->patch(route('seller.store-settings.update'), $details)
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'pickup_address' => 'Warehouse 2, Chino Roces Ave', 'delivery_radius_km' => 8]);
+        $this->assertEqualsWithDelta(14.5547123, $store->fresh()->latitude, 0.0000001);
+
+        // Resending the saved coordinates must still compare equal, or undo is refused.
+        $this->patch(route('seller.store-settings.update'), [...$details, 'phone' => '+639179999999'])
+            ->assertSessionHasNoErrors();
+        $this->post(route('seller.store-settings.undo'))
+            ->assertSessionHas('status', 'Last store details save undone.');
+
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'phone' => '+639171234567', 'province' => 'Metro Manila']);
+    }
+
+    public function test_coordinates_must_be_given_together_and_in_range(): void
+    {
+        [$owner, , $store] = $this->seller();
+
+        $this->actingAs($owner)->patch(route('seller.store-settings.update'), [
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'latitude' => '95',
+            'delivery_radius_km' => '0',
+        ])->assertSessionHasErrors(['latitude', 'longitude', 'delivery_radius_km']);
+
+        $this->assertDatabaseHas('stores', ['id' => $store->id, 'latitude' => null]);
+    }
+
     private function seller(): array
     {
         $owner = User::factory()->seller()->create(['email_verified_at' => now()]);

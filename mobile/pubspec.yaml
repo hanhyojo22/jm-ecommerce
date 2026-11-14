@@ -55,6 +55,7 @@ dependencies:
     path: packages/conversation_shortcuts
   google_sign_in: ^7.2.0
   app_links: ^7.2.2
+  geolocator: ^14.1.2
 
 dev_dependencies:
   flutter_test:
