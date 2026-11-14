@@ -204,7 +204,12 @@ void main() {
       isNull,
     );
     api.pending!.complete(api.addedCart);
+    await tester.pump();
+    // The centred confirmation follows the thumbnail landing in the cart.
+    await tester.pump(const Duration(milliseconds: 1200));
+    expect(find.text('Added to cart'), findsOneWidget);
     await tester.pumpAndSettle();
+    expect(find.text('Added to cart'), findsNothing);
     expect(find.text('3'), findsOneWidget);
     expect(find.text('Checkout route'), findsNothing);
   });

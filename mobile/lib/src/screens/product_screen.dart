@@ -256,10 +256,11 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     }
 
     _purchase.value = buyNow;
+    Future<void>? landed;
     if (!buyNow) {
       // Feedback lands on the tap, not after the server round trip.
       final images = _galleryImages;
-      flyToCart(
+      landed = flyToCart(
         context: context,
         source: _addButtonKey,
         target: _cartIconKey,
@@ -286,6 +287,12 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       if (!mounted) {
         return;
       }
+      // Confirm only once the server agreed and the thumbnail has landed.
+      landed?.then((_) {
+        if (mounted) {
+          showAddedToCartToast(context);
+        }
+      });
       if (buyNow) {
         final line = cart.lines
             .where(

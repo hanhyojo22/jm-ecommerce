@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
@@ -70,8 +71,8 @@ class CartBadgeIconState extends ConsumerState<CartBadgeIcon>
 
 /// Flies a thumbnail of the product from [source] along an arc into [target],
 /// then bounces the cart. Skipped (bounce only) when the system asks for
-/// reduced motion or either end is off screen.
-void flyToCart({
+/// reduced motion or either end is off screen. Completes once it has landed.
+Future<void> flyToCart({
   required BuildContext context,
   required GlobalKey source,
   required GlobalKey<CartBadgeIconState> target,
@@ -86,9 +87,10 @@ void flyToCart({
       to == null ||
       MediaQuery.disableAnimationsOf(context)) {
     target.currentState?.pulse();
-    return;
+    return Future.value();
   }
 
+  final landed = Completer<void>();
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder: (_) => _Flight(
@@ -98,10 +100,111 @@ void flyToCart({
       onLanded: () {
         entry.remove();
         target.currentState?.pulse();
+        landed.complete();
       },
     ),
   );
   overlay.insert(entry);
+  return landed.future;
+}
+
+/// Brief centred "Added to cart" confirmation, as marketplace apps show after
+/// the item lands in the cart. Ignores touches and removes itself.
+void showAddedToCartToast(BuildContext context) {
+  final overlay = Overlay.maybeOf(context, rootOverlay: true);
+  if (overlay == null) {
+    return;
+  }
+  late final OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => _AddedToast(onDone: () => entry.remove()),
+  );
+  overlay.insert(entry);
+}
+
+class _AddedToast extends StatefulWidget {
+  const _AddedToast({required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  State<_AddedToast> createState() => _AddedToastState();
+}
+
+class _AddedToastState extends State<_AddedToast>
+    with SingleTickerProviderStateMixin {
+  // Pop in, hold, fade out.
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  )..forward().whenComplete(widget.onDone);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+
+    return IgnorePointer(
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final t = _controller.value;
+            final opacity = t < 0.12
+                ? t / 0.12
+                : t > 0.8
+                ? (1 - t) / 0.2
+                : 1.0;
+            final scale = reduceMotion
+                ? 1.0
+                : lerpDouble(
+                    0.8,
+                    1,
+                    Curves.easeOutBack.transform((t / 0.15).clamp(0, 1)),
+                  )!;
+            return Opacity(
+              opacity: opacity.clamp(0, 1),
+              child: Transform.scale(scale: scale, child: child),
+            );
+          },
+          child: Semantics(
+            liveRegion: true,
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(14),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_circle_rounded,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Added to cart',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 Offset? _centerOf(GlobalKey key) {
@@ -135,7 +238,7 @@ class _FlightState extends State<_Flight> with SingleTickerProviderStateMixin {
 
   late final _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 680),
+    duration: const Duration(milliseconds: 1000),
   )..forward().whenComplete(widget.onLanded);
 
   // Launch quickly, then ease into the cart.
