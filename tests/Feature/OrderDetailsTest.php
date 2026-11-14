@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
+use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -67,7 +69,7 @@ class OrderDetailsTest extends TestCase
         return $order;
     }
 
-    private function storeOrder(Order $order, string $storeName, string $productName, string $status): void
+    private function storeOrder(Order $order, string $storeName, string $productName, string $status): SellerOrder
     {
         $suffix = str()->lower(str()->random(6));
         $tenant = Tenant::create(['name' => $storeName, 'slug' => 'tenant-'.$suffix, 'status' => 'active']);
@@ -76,6 +78,8 @@ class OrderDetailsTest extends TestCase
 
         $sellerOrder = $order->sellerOrders()->create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'status' => $status, 'subtotal' => '299.00', 'shipping_amount' => '0.00', 'total' => '299.00']);
         $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $productName, 'sku' => $product->sku, 'unit_price' => '299.00', 'quantity' => 1, 'line_total' => '299.00']);
+
+        return $sellerOrder;
     }
 
     public function test_order_modal_returns_the_compact_ledger_body(): void
@@ -107,8 +111,7 @@ class OrderDetailsTest extends TestCase
 
         $response->assertSee('Order #LEDGER-1')
             ->assertSee('Placed')
-            ->assertSee('Confirmed')
-            ->assertSee('Shipped')
+            ->assertDontSee('aria-label="Order progress"', false)
             ->assertSee('Delivered')
             ->assertSee('Canvas Tote')
             ->assertSee('Ava Buyer')
@@ -119,5 +122,125 @@ class OrderDetailsTest extends TestCase
             ->assertSee('Done')
             // The compact ledger is read-only and carries no shipment action.
             ->assertDontSee('Mark as shipped');
+    }
+
+    public function test_paid_cash_orders_do_not_ask_for_payment_again(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer);
+        $order->update(['status' => 'delivered']);
+        $order->payment()->update(['status' => 'paid']);
+        $this->storeOrder($order, 'Paid Store', 'Paid Item', 'delivered')->update(['cod_collected_at' => now()]);
+
+        $this->actingAs($buyer)->get(route('orders.show', $order))
+            ->assertSee('Paid in cash. Your payment has been recorded.')
+            ->assertDontSee('Payment is due when the order arrives.')
+            ->assertDontSee('Pay each store in cash when its items arrive.');
+    }
+
+    public function test_partial_cash_collection_is_explained_without_claiming_the_whole_order_is_paid(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer);
+        $this->storeOrder($order, 'Paid Store', 'Paid Item', 'delivered')->update(['cod_collected_at' => now()]);
+        $this->storeOrder($order, 'Unpaid Store', 'Unpaid Item', 'shipped');
+
+        $this->actingAs($buyer)->get(route('orders.show', $order))
+            ->assertSee('Cash has been collected for part of this order.')
+            ->assertSee('COD collected')
+            ->assertSee('COD collection not recorded')
+            ->assertDontSee('Paid in cash. Your payment has been recorded.');
+
+        $this->withHeader('X-Order-Modal', '1')->get(route('orders.show', $order))
+            ->assertSee('Cash on delivery · Partly collected')
+            ->assertDontSee('Cash on delivery · Due on delivery');
+    }
+
+    public function test_review_prompts_follow_remaining_unreviewed_items(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer);
+        $order->update(['status' => 'delivered']);
+        $sellerOrder = $this->storeOrder($order, 'Review Store', 'Reviewed Item', 'delivered');
+        $reviewed = $sellerOrder->items()->firstOrFail();
+        $reviewed->review()->create(['product_id' => $reviewed->product_id, 'user_id' => $buyer->id, 'rating' => 5, 'status' => 'published']);
+        $remaining = $sellerOrder->items()->create(['product_id' => $reviewed->product_id, 'product_name' => 'Remaining Item', 'sku' => 'REMAINING', 'unit_price' => '0.00', 'quantity' => 1, 'line_total' => '0.00']);
+
+        $this->actingAs($buyer)->withHeader('X-Order-Modal', '1')->get(route('orders.show', $order))
+            ->assertSee('Review your items')
+            ->assertSee('#review-item-'.$remaining->id, false)
+            ->assertDontSee('#review-item-'.$reviewed->id, false);
+
+        $remaining->review()->create(['product_id' => $remaining->product_id, 'user_id' => $buyer->id, 'rating' => 4, 'status' => 'published']);
+
+        $this->get(route('orders.show', $order))
+            ->assertSee('View your reviews')
+            ->assertDontSee('Review your items')
+            ->assertDontSee('Review items')
+            ->assertDontSee('Review what you received.');
+        $this->flushHeaders()->get(route('orders.index'))
+            ->assertSee('Your reviews are saved')
+            ->assertDontSee('ready to review');
+    }
+
+    public function test_own_store_and_removed_products_are_not_suggested_for_review(): void
+    {
+        $buyer = User::factory()->seller()->create();
+        $order = $this->order($buyer);
+        $order->update(['status' => 'delivered']);
+        $ownStore = $this->storeOrder($order, 'Own Store', 'Own Item', 'delivered');
+        TenantMember::create(['tenant_id' => $ownStore->tenant_id, 'user_id' => $buyer->id, 'role' => 'owner']);
+        $removed = $this->storeOrder($order, 'Other Store', 'Removed Item', 'delivered');
+        $removed->items()->update(['product_id' => null]);
+
+        $this->actingAs($buyer)->withHeader('X-Order-Modal', '1')->get(route('orders.show', $order))
+            ->assertSee('Done')
+            ->assertDontSee('Review your items')
+            ->assertDontSee('Review items');
+        $this->flushHeaders()->get(route('orders.show', $order))
+            ->assertDontSee('Write a review')
+            ->assertDontSee('Share your experience by reviewing your items.');
+    }
+
+    public function test_return_forms_stay_collapsed_until_requested_or_recovering_input(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer);
+        $sellerOrder = $this->storeOrder($order, 'Return Store', 'Return Item', 'delivered');
+        $sellerOrder->update(['delivered_at' => now()]);
+
+        $response = $this->actingAs($buyer)->get(route('orders.show', $order));
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(0, $xpath->query('//section[@id="returns"]//details[@open]')->length);
+
+        $response = $this->withSession(['_old_input' => ['store_order' => $sellerOrder->id, 'details' => 'My item arrived damaged.']])
+            ->get(route('orders.show', $order));
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(1, $xpath->query('//section[@id="returns"]//details[@open]')->length);
+        $response->assertSee('My item arrived damaged.');
+    }
+
+    public function test_help_defaults_to_an_available_request_for_the_selected_store(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer);
+        $delivered = $this->storeOrder($order, 'Delivered Store', 'Delivered Item', 'delivered');
+        $pending = $this->storeOrder($order, 'Pending Store', 'Pending Item', 'pending');
+
+        $response = $this->actingAs($buyer)->get(route('orders.show', [$order, 'seller_order_id' => $delivered->id]));
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(1, $xpath->query('//select[@name="type"]/option[@value="cancellation"][@disabled]')->length);
+        $this->assertSame(1, $xpath->query('//select[@name="type"]/option[@value="other"][@selected]')->length);
+
+        $response = $this->get(route('orders.show', [$order, 'seller_order_id' => $pending->id]));
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(0, $xpath->query('//select[@name="type"]/option[@value="cancellation"][@disabled]')->length);
+        $this->assertSame(1, $xpath->query('//select[@name="type"]/option[@value="cancellation"][@selected]')->length);
     }
 }

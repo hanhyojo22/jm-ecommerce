@@ -32,13 +32,8 @@ test('customer finds purchases and opens order actions at each viewport', async 
         ]);
         await expect(filters.getByRole('link', { name: /^All/ })).toHaveAttribute('aria-current', 'page');
         const rowsOrder = page.locator('article[data-order-number="QA-ROWS-001"]');
-        // The card answers "where is my order" up top, then lists every item in the order.
-        const journey = rowsOrder.getByRole('list', { name: /^Order progress/ });
-        await expect(journey.getByRole('listitem')).toHaveCount(4);
-        await expect(journey).toContainText('Confirmed');
-        await expect(journey).toContainText('Packed');
-        await expect(journey).toContainText('Shipped');
-        await expect(journey).toContainText('Delivered');
+        // Completed purchases keep their item history without repeating the delivery tracker.
+        await expect(rowsOrder.getByRole('list', { name: /^Order progress/ })).toHaveCount(0);
         const items = rowsOrder.locator('ul');
         const chatRow = items.locator('li').filter({ hasText: 'QA Chat Sample' });
         await expect(chatRow).toContainText('Blue / Medium');
@@ -46,7 +41,7 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(chatRow).toContainText('₱49.98');
         await expect(items.locator('li')).toHaveCount(4);
         await expect(items.getByText('QA Retired Pouch')).toBeVisible();
-        await expect(rowsOrder).not.toContainText('5 items');
+        await expect(rowsOrder.locator('.purchase-fact').filter({ hasText: 'Items' })).toContainText('5');
         await expect(rowsOrder).toContainText('Order total');
         await expect(rowsOrder).toContainText('₱80.97');
         await expect(rowsOrder).not.toContainText('QA Canvas Tote and 3 more');
@@ -82,6 +77,9 @@ test('customer finds purchases and opens order actions at each viewport', async 
         // The whole card is the target now; the order page still opens in the details dialog.
         await purchase.getByRole('link', { name: /^Order QA-REVIEW-001/ }).click();
         await expect(page.getByRole('heading', { name: 'Order #QA-REVIEW-001', exact: true })).toBeVisible();
+        await expect(page.getByRole('dialog').getByRole('link', { name: 'Review your items', exact: true })).toHaveCount(0);
+        await expect(page.getByRole('dialog').getByRole('link', { name: 'View your reviews', exact: true })).toBeVisible();
+        await expect(page.getByRole('dialog').getByRole('link', { name: 'Get help', exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Close order details' }).click();
         await expect(page.getByRole('dialog')).toBeHidden();
         await expect(purchase.getByRole('link', { name: /^Order QA-REVIEW-001/ })).toBeFocused();
@@ -90,13 +88,58 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(page.getByRole('dialog')).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Order #QA-ROWS-001', exact: true })).toBeVisible();
         await page.locator('.open-full').click();
+        await expect(page.locator('#returns details')).not.toHaveAttribute('open');
+        const summaryBox = await page.locator('section[aria-labelledby="order-summary-heading"]').boundingBox();
+        const returnsBox = await page.locator('#returns').boundingBox();
+        if (testInfo.project.name !== 'desktop-chromium') {
+            expect(summaryBox.y).toBeLessThan(returnsBox.y);
+        }
+        await page.locator('#returns summary').click();
         await expect(page.locator('#returns').getByRole('button', { name: 'Request seller review' })).toBeVisible();
         await page.goto('/orders');
         await purchase.getByRole('link', { name: /^Order QA-REVIEW-001/ }).click();
         await page.locator('.open-full').click();
+        await expect(page.getByText('Paid in cash. Your payment has been recorded.')).toBeVisible();
+        await expect(page.locator('#order-help select[name="type"]')).toHaveValue('other');
+        await expect(page.locator('#order-help option[value="cancellation"]')).toHaveJSProperty('disabled', true);
+        await page.getByRole('button', { name: 'Edit review', exact: true }).click();
+        const reviewDialog = page.getByRole('dialog', { name: 'Edit your review' });
+        await expect(reviewDialog.getByRole('radio', { name: 'Excellent' })).toBeFocused();
+        await reviewDialog.getByRole('button', { name: 'Close review form' }).click();
+        await expect(page.getByRole('button', { name: 'Edit review', exact: true })).toBeFocused();
         await page.getByRole('button', { name: 'Message seller' }).first().click();
         await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
     } finally {
+        await context.close();
+    }
+});
+
+test('buyer can close order details while the request is still loading', async ({ browser }) => {
+    const { context, page } = await openAsRole(browser, 'customer');
+    let releaseRequest;
+    const heldRequest = new Promise((resolve) => { releaseRequest = resolve; });
+
+    try {
+        await page.goto('/orders');
+        const reject = page.getByRole('button', { name: 'Reject Optional', exact: true });
+        if (await reject.isVisible()) {
+            await reject.click();
+            await expect(page.locator('[data-cookie-banner]')).toHaveCount(0);
+        }
+        await page.route('**/orders/*', async (route) => {
+            await heldRequest;
+            await route.continue();
+        });
+        const purchase = page.locator('article[data-order-number="QA-REVIEW-001"] > a');
+        await purchase.click();
+        const dialog = page.locator('dialog.buyer-order-dialog');
+        await expect(dialog.getByRole('status')).toBeVisible();
+        await dialog.getByRole('button', { name: 'Close order details' }).click();
+        await expect(dialog).toBeHidden();
+        await expect(purchase).toBeFocused();
+    } finally {
+        releaseRequest();
+        await page.unrouteAll({ behavior: 'wait' });
         await context.close();
     }
 });

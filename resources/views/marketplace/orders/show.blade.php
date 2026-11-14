@@ -17,9 +17,24 @@
             && $order->sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null);
         $methodLabel = \App\Models\Payment::METHOD_LABELS[$order->payment?->method] ?? 'Cash on delivery';
         $storeCount = $order->sellerOrders->count();
+        $collectedStores = $order->sellerOrders->where('status', '!=', 'cancelled')->whereNotNull('cod_collected_at')->count();
+        $paymentDescription = match (true) {
+            ! $order->payment => 'Payment details unavailable.',
+            $order->payment->status === 'refunded' => 'Your payment has been refunded. See the order summary for each store’s status.',
+            $order->payment->status === 'paid' => $isOnlinePayment ? 'Paid online through PayMongo.' : 'Paid in cash. Your payment has been recorded.',
+            $order->status === 'cancelled' => 'This order was cancelled. See the order summary for each store’s payment status.',
+            $order->payment->status === 'failed' => 'Your payment was unsuccessful. Contact support for help with this order.',
+            $isOnlinePayment => 'Complete your payment online through PayMongo.',
+            $collectedStores > 0 => 'Cash has been collected for part of this order. See each store’s collection status in the order summary.',
+            $order->status === 'delivered' => 'Cash collection has not been recorded. Contact the store if you have already paid.',
+            default => 'Pay each store in cash when its items arrive.',
+        };
         $isMultiStore = $storeCount > 1;
         $deliveredStores = $order->sellerOrders->where('status', 'delivered')->count();
         $cancelledStores = $order->sellerOrders->where('status', 'cancelled')->count();
+        $hasUnreviewedItems = $order->sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status === 'delivered'
+            && ! in_array($sellerOrder->tenant_id, $ownedTenantIds, true)
+            && $sellerOrder->items->contains(fn ($item): bool => $item->product_id !== null && $item->review === null));
         $allSettled = $storeCount > 0 && $deliveredStores + $cancelledStores === $storeCount;
         $anyStoreMoved = $order->sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status !== 'pending');
         $multiStoreHeadline = $allSettled && $deliveredStores > 0 ? 'Delivered' : ($anyStoreMoved ? 'Order in progress' : 'Order received');
@@ -40,11 +55,11 @@
 
         if ($isMultiStore) {
             $progressNote = $allSettled && $deliveredStores > 0
-                ? 'Every store has finished with your order. Share your experience by reviewing your items.'
+                ? 'Every store has finished with your order.'.($hasUnreviewedItems ? ' Share your experience by reviewing your items.' : '')
                 : 'Each store delivers its own items, so they arrive on their own timing.';
         } else {
             $progressNote = $order->status === 'delivered'
-                ? 'Your order has arrived. Share your experience by reviewing your items.'
+                ? 'Your order has arrived.'.($hasUnreviewedItems ? ' Share your experience by reviewing your items.' : '')
                 : 'We will update this page as your order moves toward delivery.';
         }
     @endphp
@@ -92,13 +107,11 @@
                     <h2 id="delivery-payment-heading" class="text-lg font-semibold text-ink">Delivery &amp; payment</h2>
                     <div class="mt-5 grid gap-6 sm:grid-cols-2">
                         <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Delivery address</h3><address class="mt-3 not-italic text-sm leading-6 text-muted">@if($order->recipient_name)<p class="font-semibold text-ink">{{ $order->recipient_name }}</p>@endif @if($order->address_line)<p>{{ $order->address_line }}</p>@endif @if($order->city || $order->province || $order->postal_code)<p>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endif @if($order->phone)<p class="mt-2">{{ $order->phone }}</p>@endif @if($order->delivery_note)<p class="mt-2 whitespace-pre-line"><span class="font-semibold text-ink">Delivery note:</span> {{ $order->delivery_note }}</p>@endif</address></div>
-                        <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Payment method</h3><p class="mt-3 text-sm font-semibold text-ink">{{ $methodLabel }}</p><p class="mt-1 text-sm leading-6 text-muted">{{ $isOnlinePayment ? ($order->payment->status === 'paid' ? 'Paid' : 'Pay').' online through PayMongo; each store receives its share automatically. Shipping is free.' : 'Payment is due when the order arrives. Shipping is free.' }}</p></div>
+                        <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Payment method</h3><p class="mt-3 text-sm font-semibold text-ink">{{ $methodLabel }}</p><p class="mt-1 text-sm leading-6 text-muted">{{ $paymentDescription }}</p></div>
                     </div>
                 </section>
-                @include('marketplace.orders._returns')
-                @include('marketplace.orders._issues')
             </div>
-            <aside class="lg:sticky lg:top-24">
+            <aside class="lg:sticky lg:top-24 lg:row-span-2">
                 <section class="rounded-lg border border-line bg-surface p-5 shadow-sm sm:p-6" aria-labelledby="order-summary-heading">
                     <h2 id="order-summary-heading" class="text-lg font-semibold text-ink">Order summary</h2>
                     <dl class="mt-5 space-y-4 text-sm">
@@ -128,6 +141,10 @@
                     <div class="mt-5 border-t border-line pt-5 text-sm"><p class="font-semibold text-ink">Need help with this order?</p><a href="#order-help" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">Request help →</a><p class="text-xs leading-5 text-muted">Each seller handles their own items and delivery timing.</p></div>
                 </section>
             </aside>
+            <div class="min-w-0 space-y-6 lg:col-start-1">
+                @include('marketplace.orders._returns')
+                @include('marketplace.orders._issues')
+            </div>
         </div>
         </div>
     </div>

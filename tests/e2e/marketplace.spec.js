@@ -11,6 +11,7 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
         // The card link opens a quick-view modal; the return form lives on the full order page.
         await buyer.page.goto(await buyer.page.locator('article[data-order-number="QA-REVIEW-001"] > a').getAttribute('href'));
         const returns = buyer.page.locator('#returns');
+        await returns.locator('summary').click();
         await returns.getByRole('spinbutton').fill('1');
         await returns.getByLabel('Details').fill('The item arrived damaged and I need help.');
         await returns.getByRole('button', { name: 'Request seller review' }).click();

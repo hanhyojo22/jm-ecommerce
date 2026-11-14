@@ -12,6 +12,11 @@
     $anyStoreMoved = $sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status !== 'pending');
     $partialDelivered = $deliveredStores > 0 && $deliveredStores < $activeCount;
     $itemCount = $sellerOrders->sum(fn ($sellerOrder): int => (int) $sellerOrder->items->sum('quantity'));
+    $firstReviewable = $sellerOrders
+        ->filter(fn ($sellerOrder): bool => $sellerOrder->status === 'delivered' && ! in_array($sellerOrder->tenant_id, $ownedTenantIds, true))
+        ->flatMap(fn ($sellerOrder) => $sellerOrder->items)
+        ->first(fn ($item): bool => $item->product_id !== null && $item->review === null);
+    $firstReviewed = $sellerOrders->where('status', 'delivered')->flatMap(fn ($sellerOrder) => $sellerOrder->items)->first(fn ($item): bool => $item->review !== null);
 
     $statusLabels = ['pending' => 'Awaiting store', 'confirmed' => 'Preparing', 'processing' => 'Preparing', 'shipped' => 'On the way', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'];
     $statusTones = ['pending' => 'neutral', 'confirmed' => 'neutral', 'processing' => 'neutral', 'shipped' => 'moving', 'delivered' => 'good', 'cancelled' => 'danger'];
@@ -23,10 +28,12 @@
         ? $order->created_at->copy()->addHours((int) config('marketplace.online_payment.payment_hours'))
         : null;
     $methodLabel = \App\Models\Payment::METHOD_LABELS[$order->payment?->method] ?? 'Cash on delivery';
+    $partlyCollectedCash = ! $isOnlinePayment && $order->payment?->status !== 'paid' && $activeStores->whereNotNull('cod_collected_at')->isNotEmpty();
     $paymentLine = ! $order->payment ? $methodLabel : match (true) {
         $order->payment->status === 'paid' => $methodLabel.' · Paid',
         $order->payment->status === 'refunded' => $methodLabel.' · Refunded',
         $order->payment->status === 'failed' => $methodLabel.' · Failed',
+        $partlyCollectedCash => $methodLabel.' · Partly collected',
         default => $methodLabel.($isOnlinePayment ? ' · Awaiting payment' : ' · Due on delivery'),
     };
     $feeAmount = (string) ($order->payment?->fee_amount ?? '0');
@@ -53,6 +60,7 @@
         $isCancelled => 'No payment was taken for this order.',
         $order->payment->status === 'failed' => 'Payment failed. Try again from the full order page.',
         $order->payment->status === 'paid' => $isOnlinePayment ? 'Paid online through PayMongo.' : 'Cash collected by the store.',
+        $partlyCollectedCash => 'Cash collected for some stores. See the full order page for each store’s collection status.',
         $isOnlinePayment && $payBy => 'Due by '.$payBy->format('M j, g:i A').'.',
         $isDelivered => 'Cash due to the store.',
         default => 'Pay the store in cash when your order arrives.',
@@ -63,6 +71,7 @@
         $isCancelled => ['x-circle', 'No payment was taken.'],
         $awaitingOnlinePayment => ['clock', 'Payment due by '.$payBy->format('M j, g:i A').'.'],
         $order->payment?->status === 'paid' => ['check', $isOnlinePayment ? 'Paid in full via '.$methodLabel.'.' : 'Paid in cash.'],
+        $partlyCollectedCash => ['card', 'Cash collected for some stores.'],
         $isOnlinePayment => ['clock', 'Payment due by '.($payBy?->format('M j, g:i A') ?? 'the deadline').'.'],
         $isDelivered => ['card', 'Cash due to the store.'],
         default => ['card', 'Cash due on delivery.'],
@@ -133,11 +142,12 @@
             default => 'receipt',
         };
         [$pillLabel, $pillTone] = [$statusLabels[$order->status], $statusTones[$order->status]];
-        $statusSub = $storeSummary.($isDelivered ? ' Review what you received.' : '');
+        $statusSub = $storeSummary.($firstReviewable ? ' Review what you received.' : '');
     }
 
     $currentStep = match ($order->status) {
-        'pending', 'confirmed', 'processing' => 2,
+        'pending' => 1,
+        'confirmed', 'processing' => 2,
         'shipped' => 3,
         'delivered' => 4,
         default => 0,
@@ -145,7 +155,6 @@
     $allActiveShipped = $activeCount > 0 && $activeStores->every(fn ($sellerOrder): bool => $sellerOrder->shipped_at !== null);
     $shippedDate = $allActiveShipped ? $activeStores->pluck('shipped_at')->filter()->max() : null;
     $deliveredDate = $isDelivered ? $activeStores->pluck('delivered_at')->filter()->max() : null;
-    $firstReviewable = $sellerOrders->flatMap(fn ($sellerOrder) => $sellerOrder->items)->first(fn ($item): bool => $item->product_id !== null);
 
     $markPalettes = [
         ['#e8eef8', '#31507c'],
@@ -155,7 +164,7 @@
     ];
 @endphp
 
-<header @class(['dialog-head', 'no-tracker' => $isCancelled])>
+<header @class(['dialog-head', 'no-tracker' => $isCancelled || $isDelivered])>
     <h2 id="dlgTitle" class="sr-only">Order #{{ $order->number }}</h2>
     <div class="head-top">
         <div class="head-id">
@@ -166,11 +175,6 @@
             <span class="order-ref" title="{{ $order->number }}">{{ \App\Models\Order::shortNumber($order->number) }}</span>
             <button type="button" class="copy-ref" x-data="{ copied: false }" @click="navigator.clipboard?.writeText(@js($order->number)); copied = true; setTimeout(() => copied = false, 1500)" :class="copied && 'is-copied'" :aria-label="copied ? 'Order number copied' : 'Copy full order number'" title="Copy full order number">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>
-            </button>
-        </div>
-        <div class="head-actions">
-            <button type="button" class="icon-btn" data-modal-focus aria-label="Close order details" onclick="this.closest('dialog').close()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
             </button>
         </div>
     </div>
@@ -203,14 +207,14 @@
         <div class="status-copy">
             <div class="status-line">
                 <p class="status-title">{{ $title }}</p>
-                <span class="pill pill-{{ $pillTone }}"><i aria-hidden="true"></i>{{ $pillLabel }}</span>
+                @if ($pillLabel !== $title)<span class="pill pill-{{ $pillTone }}"><i aria-hidden="true"></i>{{ $pillLabel }}</span>@endif
             </div>
             <p class="status-sub">{{ $statusSub }}</p>
             <p class="head-meta" id="dlgMeta">Placed {{ $order->created_at->format('M j, Y · g:i A') }}<span class="meta-dot" aria-hidden="true">·</span>{{ $itemCount }} {{ Str::plural('item', $itemCount) }}<span class="meta-dot" aria-hidden="true">·</span>₱{{ number_format($order->total, 2) }}</p>
         </div>
     </div>
 
-    @if (! $isCancelled)
+    @if (! $isCancelled && ! $isDelivered)
         <ol class="tracker" style="--steps: 4" aria-label="Order progress">
             @foreach (['Placed', 'Confirmed', 'Shipped', 'Delivered'] as $index => $label)
                 @php
@@ -306,7 +310,9 @@
                     $initials = \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($sellerOrder->store->name, 0, 2));
                 }
                 [$markBg, $markInk] = $markPalettes[$loop->index % count($markPalettes)];
-                $reviewable = $sellerOrder->items->first(fn ($item): bool => $item->product_id !== null);
+                $reviewable = ! in_array($sellerOrder->tenant_id, $ownedTenantIds, true)
+                    ? $sellerOrder->items->first(fn ($item): bool => $item->product_id !== null && $item->review === null)
+                    : null;
             @endphp
             <section class="shipment">
                 <header class="shipment-head">
@@ -422,12 +428,14 @@
 
 <footer class="dialog-foot">
     <div class="foot-left">
-        <span class="foot-help">Need help with this order? <a href="{{ route('orders.show', $order) }}#order-help">Contact support</a></span>
+        <span class="foot-help"><a href="{{ route('orders.show', $order) }}#order-help">Get help</a></span>
     </div>
     <div class="foot-actions">
         <a href="{{ route('orders.show', $order) }}" class="btn btn-ghost open-full">Open full page</a>
-        @if ($isDelivered && $firstReviewable)
+        @if ($firstReviewable)
             <a href="{{ route('orders.show', $order) }}#review-item-{{ $firstReviewable->id }}" class="btn btn-primary">Review your items</a>
+        @elseif ($firstReviewed)
+            <a href="{{ route('orders.show', $order) }}#review-item-{{ $firstReviewed->id }}" class="btn btn-primary">View your reviews</a>
         @else
             <button type="button" class="btn btn-primary" onclick="this.closest('dialog').close()">Done</button>
         @endif

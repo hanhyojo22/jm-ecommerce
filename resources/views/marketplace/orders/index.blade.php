@@ -16,19 +16,21 @@
 
         dialog.buyer-order-dialog .dialog-head { flex: none; padding: 20px 24px 0; background: linear-gradient(180deg, #fff 0%, #fbfcff 100%); border-bottom: 1px solid var(--color-line-soft); }
         dialog.buyer-order-dialog .dialog-head.no-tracker { padding-bottom: 18px; }
-        dialog.buyer-order-dialog .head-top { display: flex; align-items: flex-start; gap: 12px; }
+        dialog.buyer-order-dialog .head-top { min-height: 44px; padding-right: 44px; display: flex; align-items: flex-start; gap: 12px; }
         dialog.buyer-order-dialog .head-id { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; min-width: 0; }
-        dialog.buyer-order-dialog .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--color-muted); white-space: nowrap; }
+        dialog.buyer-order-dialog .eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--color-muted); white-space: nowrap; }
         dialog.buyer-order-dialog .eyebrow svg { width: 14px; height: 14px; flex: none; }
         dialog.buyer-order-dialog .order-ref { font-size: 12px; font-weight: 650; letter-spacing: -.01em; color: var(--color-fg); white-space: nowrap; }
-        dialog.buyer-order-dialog .copy-ref { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; transition: background .15s, color .15s; }
+        dialog.buyer-order-dialog .copy-ref { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 6px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; transition: background .15s, color .15s; }
         dialog.buyer-order-dialog .copy-ref:hover { background: var(--color-sunken); color: var(--color-fg); }
         dialog.buyer-order-dialog .copy-ref.is-copied { color: var(--color-success); background: var(--color-success-wash); }
         dialog.buyer-order-dialog .copy-ref svg { width: 14px; height: 14px; }
-        dialog.buyer-order-dialog .head-actions { display: flex; align-items: center; gap: 2px; margin-left: auto; flex: none; }
-        dialog.buyer-order-dialog .icon-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; transition: background .15s, color .15s; }
+        dialog.buyer-order-dialog .icon-btn { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; transition: background .15s, color .15s; }
         dialog.buyer-order-dialog .icon-btn:hover { background: var(--color-sunken); color: var(--color-fg); }
         dialog.buyer-order-dialog .icon-btn svg { width: 18px; height: 18px; }
+        dialog.buyer-order-dialog .dialog-close { position: absolute; top: 12px; right: 12px; z-index: 2; background: var(--color-surface); }
+        dialog.buyer-order-dialog .icon-btn:focus-visible, dialog.buyer-order-dialog .copy-ref:focus-visible, dialog.buyer-order-dialog .copy-mini:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+        dialog.buyer-order-dialog .foot-help a { display: inline-flex; align-items: center; min-height: 44px; }
 
         dialog.buyer-order-dialog .head-status { display: flex; align-items: flex-start; gap: 12px; margin-top: 12px; }
         dialog.buyer-order-dialog .status-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: none; border-radius: 12px; }
@@ -40,11 +42,11 @@
         dialog.buyer-order-dialog .status-copy { min-width: 0; flex: 1; }
         dialog.buyer-order-dialog .status-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         dialog.buyer-order-dialog .status-title { font-size: 22px; font-weight: 650; line-height: 1.18; letter-spacing: -.025em; color: var(--color-fg); text-wrap: balance; }
-        dialog.buyer-order-dialog .status-sub { max-width: 58ch; margin-top: 4px; font-size: 12.5px; line-height: 1.5; color: var(--color-muted); }
-        dialog.buyer-order-dialog .head-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-top: 7px; font-size: 11.5px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .status-sub { max-width: 58ch; margin-top: 4px; font-size: 14px; line-height: 1.5; color: var(--color-muted); }
+        dialog.buyer-order-dialog .head-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-top: 7px; font-size: 12px; color: var(--color-muted); }
         dialog.buyer-order-dialog .meta-dot { padding: 0 6px; color: var(--color-border-strong); }
 
-        dialog.buyer-order-dialog .pill { display: inline-flex; align-items: center; gap: 5px; flex: none; max-width: 100%; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
+        dialog.buyer-order-dialog .pill { display: inline-flex; align-items: center; gap: 5px; flex: none; max-width: 100%; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
         dialog.buyer-order-dialog .pill i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
         dialog.buyer-order-dialog .pill-neutral { background: var(--color-sunken); color: var(--color-muted); box-shadow: inset 0 0 0 1px var(--color-line-soft); }
         dialog.buyer-order-dialog .pill-moving { background: var(--color-info-wash); color: var(--color-accent-hover); box-shadow: inset 0 0 0 1px var(--color-info-line); }
@@ -66,20 +68,20 @@
         dialog.buyer-order-dialog .tracker-step.partial .node { border-color: var(--color-success); background: conic-gradient(var(--color-success) 0 50%, #fff 50% 100%); box-shadow: inset 0 0 0 3px #fff; }
         dialog.buyer-order-dialog .tracker-step.done.final .node { border-color: var(--color-success); background: var(--color-success); }
         dialog.buyer-order-dialog .tracker-step.done.final .step-label { color: var(--color-success); }
-        dialog.buyer-order-dialog .step-label { overflow: hidden; max-width: 100%; font-size: 10.5px; font-weight: 650; line-height: 1.25; color: var(--color-muted); text-overflow: ellipsis; white-space: nowrap; }
+        dialog.buyer-order-dialog .step-label { overflow: hidden; max-width: 100%; font-size: 12px; font-weight: 650; line-height: 1.25; color: var(--color-muted); text-overflow: ellipsis; white-space: nowrap; }
         dialog.buyer-order-dialog .tracker-step.done .step-label { color: var(--color-fg); }
         dialog.buyer-order-dialog .tracker-step.current .step-label { color: var(--color-accent-hover); }
-        dialog.buyer-order-dialog .step-date { font-size: 9.5px; font-weight: 500; line-height: 1.2; color: var(--color-muted); white-space: nowrap; }
+        dialog.buyer-order-dialog .step-date { font-size: 12px; font-weight: 500; line-height: 1.2; color: var(--color-muted); white-space: nowrap; }
 
         dialog.buyer-order-dialog .dialog-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px 22px; background: var(--color-surface); overscroll-behavior: contain; }
         dialog.buyer-order-dialog .dialog-foot { display: flex; align-items: center; gap: 8px; flex: none; padding: 12px 24px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--color-border); background: #fff; }
         dialog.buyer-order-dialog .foot-left { display: flex; align-items: center; gap: 7px; min-width: 0; margin-right: auto; }
         dialog.buyer-order-dialog .foot-actions { display: flex; align-items: center; gap: 8px; flex: none; }
-        dialog.buyer-order-dialog .foot-help { font-size: 11.5px; color: var(--color-muted); white-space: nowrap; }
+        dialog.buyer-order-dialog .foot-help { font-size: 12px; color: var(--color-muted); white-space: nowrap; }
         dialog.buyer-order-dialog .foot-help a { font-weight: 600; color: var(--color-accent); text-underline-offset: 2px; }
         dialog.buyer-order-dialog .foot-help a:hover { text-decoration: underline; }
 
-        dialog.buyer-order-dialog .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 0 13px; border: 1px solid transparent; border-radius: 8px; font-size: 12.5px; font-weight: 650; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer; touch-action: manipulation; transition: background .15s, border-color .15s, color .15s, transform .1s; }
+        dialog.buyer-order-dialog .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 0 13px; border: 1px solid transparent; border-radius: 8px; font-size: 14px; font-weight: 650; line-height: 1; white-space: nowrap; text-decoration: none; cursor: pointer; touch-action: manipulation; transition: background .15s, border-color .15s, color .15s, transform .1s; }
         dialog.buyer-order-dialog .btn svg { width: 15px; height: 15px; flex: none; }
         dialog.buyer-order-dialog .btn:active { transform: translateY(1px); }
         dialog.buyer-order-dialog .btn-primary { background: var(--color-accent); color: #fff; box-shadow: 0 1px 2px rgb(32 91 244 / 22%); }
@@ -100,7 +102,7 @@
         dialog.buyer-order-dialog .notice-danger .notice-icon { color: var(--color-danger); }
         dialog.buyer-order-dialog .notice-info .notice-icon { color: var(--color-accent); }
         dialog.buyer-order-dialog .notice-body { flex: 1; min-width: 180px; }
-        dialog.buyer-order-dialog .notice-title { font-size: 12.5px; font-weight: 650; line-height: 1.4; color: var(--color-fg); }
+        dialog.buyer-order-dialog .notice-title { font-size: 14px; font-weight: 650; line-height: 1.4; color: var(--color-fg); }
         dialog.buyer-order-dialog .notice-copy { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--color-muted); }
         dialog.buyer-order-dialog .notice-copy a { font-weight: 650; color: var(--color-accent); text-underline-offset: 2px; }
         dialog.buyer-order-dialog .notice-copy a:hover { text-decoration: underline; }
@@ -112,10 +114,10 @@
         dialog.buyer-order-dialog .shipments { display: flex; flex-direction: column; gap: 10px; }
         dialog.buyer-order-dialog .shipment { overflow: hidden; border: 1px solid var(--color-border); border-radius: 12px; background: #fff; }
         dialog.buyer-order-dialog .shipment-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 13px; background: var(--color-sunken); border-bottom: 1px solid var(--color-line-soft); }
-        dialog.buyer-order-dialog .store-mark { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--mark-bg, #e8eef8); color: var(--mark-ink, #31507c); font-size: 10.5px; font-weight: 700; letter-spacing: .02em; }
+        dialog.buyer-order-dialog .store-mark { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--mark-bg, #e8eef8); color: var(--mark-ink, #31507c); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
         dialog.buyer-order-dialog .store-copy { min-width: 0; flex: 1; }
-        dialog.buyer-order-dialog .store-name { overflow: hidden; font-size: 12.5px; font-weight: 650; line-height: 1.3; color: var(--color-fg); text-overflow: ellipsis; white-space: nowrap; }
-        dialog.buyer-order-dialog .store-meta { margin-top: 1px; font-size: 11px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .store-name { overflow: hidden; font-size: 14px; font-weight: 650; line-height: 1.3; color: var(--color-fg); text-overflow: ellipsis; white-space: nowrap; }
+        dialog.buyer-order-dialog .store-meta { margin-top: 1px; font-size: 12px; color: var(--color-muted); }
         dialog.buyer-order-dialog .shipment .pill { margin-left: auto; }
         dialog.buyer-order-dialog .item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 11px 13px; }
         dialog.buyer-order-dialog .item + .item { border-top: 1px solid var(--color-line-soft); }
@@ -123,27 +125,27 @@
         dialog.buyer-order-dialog .thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
         dialog.buyer-order-dialog .thumb svg { display: block; width: 100%; height: 100%; color: #94a3b8; }
         dialog.buyer-order-dialog .item-copy { min-width: 0; }
-        dialog.buyer-order-dialog .item-title { font-size: 12.5px; font-weight: 600; line-height: 1.35; color: var(--color-fg); overflow-wrap: anywhere; }
-        dialog.buyer-order-dialog .item-meta { margin-top: 1px; font-size: 11px; line-height: 1.45; color: var(--color-muted); overflow-wrap: anywhere; }
-        dialog.buyer-order-dialog .item-amount { align-self: start; padding-top: 1px; font-size: 12.5px; font-weight: 650; text-align: right; white-space: nowrap; color: var(--color-fg); }
+        dialog.buyer-order-dialog .item-title { font-size: 14px; font-weight: 600; line-height: 1.35; color: var(--color-fg); overflow-wrap: anywhere; }
+        dialog.buyer-order-dialog .item-meta { margin-top: 1px; font-size: 12px; line-height: 1.45; color: var(--color-muted); overflow-wrap: anywhere; }
+        dialog.buyer-order-dialog .item-amount { align-self: start; padding-top: 1px; font-size: 14px; font-weight: 650; text-align: right; white-space: nowrap; color: var(--color-fg); }
         dialog.buyer-order-dialog .shipment-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 9px 13px; border-top: 1px solid var(--color-line-soft); background: #fcfdff; }
-        dialog.buyer-order-dialog .subtotal-label { font-size: 11px; color: var(--color-muted); }
-        dialog.buyer-order-dialog .subtotal-value { font-size: 12.5px; font-weight: 650; color: var(--color-fg); }
+        dialog.buyer-order-dialog .subtotal-label { font-size: 12px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .subtotal-value { font-size: 14px; font-weight: 650; color: var(--color-fg); }
         dialog.buyer-order-dialog .shipment-action { margin-left: auto; }
 
         dialog.buyer-order-dialog .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
         dialog.buyer-order-dialog .fact { min-width: 0; padding: 13px; border: 1px solid var(--color-border); border-radius: 12px; }
-        dialog.buyer-order-dialog .fact-label { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--color-muted); }
+        dialog.buyer-order-dialog .fact-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; color: var(--color-muted); }
         dialog.buyer-order-dialog .fact-label svg { width: 14px; height: 14px; }
-        dialog.buyer-order-dialog .fact-main { margin-top: 7px; font-size: 12.5px; font-weight: 650; line-height: 1.4; color: var(--color-fg); }
-        dialog.buyer-order-dialog .fact-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; font-size: 11.5px; line-height: 1.5; color: var(--color-muted); overflow-wrap: anywhere; }
-        dialog.buyer-order-dialog .fact-note { margin-top: 8px; padding: 7px 9px; border-radius: 7px; background: var(--color-sunken); border-left: 2px solid var(--color-border-strong); font-size: 11.5px; line-height: 1.5; color: var(--color-muted); }
+        dialog.buyer-order-dialog .fact-main { margin-top: 7px; font-size: 14px; font-weight: 650; line-height: 1.4; color: var(--color-fg); }
+        dialog.buyer-order-dialog .fact-line { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--color-muted); overflow-wrap: anywhere; }
+        dialog.buyer-order-dialog .fact-note { margin-top: 8px; padding: 7px 9px; border-radius: 7px; background: var(--color-sunken); border-left: 2px solid var(--color-border-strong); font-size: 12px; line-height: 1.5; color: var(--color-muted); }
         dialog.buyer-order-dialog .dot { display: inline-block; width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
         dialog.buyer-order-dialog .dot-good { color: var(--color-success); background: var(--color-success); }
         dialog.buyer-order-dialog .dot-warn { color: var(--color-warning-text); background: var(--color-warning); }
         dialog.buyer-order-dialog .dot-neutral { color: var(--color-muted); background: var(--color-muted); }
         dialog.buyer-order-dialog .dot-danger { color: var(--color-danger); background: var(--color-danger); }
-        dialog.buyer-order-dialog .copy-mini { display: inline-grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 5px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; }
+        dialog.buyer-order-dialog .copy-mini { display: inline-grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 5px; background: transparent; color: var(--color-muted); cursor: pointer; touch-action: manipulation; }
         dialog.buyer-order-dialog .copy-mini:hover { background: var(--color-sunken); color: var(--color-fg); }
         dialog.buyer-order-dialog .copy-mini.is-copied { color: var(--color-success); }
         dialog.buyer-order-dialog .copy-mini svg { width: 12px; height: 12px; }
@@ -155,38 +157,38 @@
         dialog.buyer-order-dialog .row dt { color: var(--color-muted); }
         dialog.buyer-order-dialog .row dd { margin: 0; font-weight: 600; color: var(--color-fg); }
         dialog.buyer-order-dialog .receipt-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--color-border); background: var(--color-sunken); }
-        dialog.buyer-order-dialog .receipt-total .label { font-size: 12.5px; font-weight: 600; color: var(--color-fg); }
+        dialog.buyer-order-dialog .receipt-total .label { font-size: 14px; font-weight: 600; color: var(--color-fg); }
         dialog.buyer-order-dialog .receipt-total .value { font-size: 24px; font-weight: 650; line-height: 1; letter-spacing: -.035em; color: var(--color-fg); }
-        dialog.buyer-order-dialog .receipt-note { display: flex; align-items: center; gap: 6px; padding: 0 14px 12px; background: var(--color-sunken); font-size: 11px; color: var(--color-muted); }
+        dialog.buyer-order-dialog .receipt-note { display: flex; align-items: center; gap: 6px; padding: 0 14px 12px; background: var(--color-sunken); font-size: 12px; color: var(--color-muted); }
         dialog.buyer-order-dialog .receipt-note svg { width: 13px; height: 13px; flex: none; }
         dialog.buyer-order-dialog .num { font-variant-numeric: tabular-nums; }
 
         @media (max-width: 720px) {
-            dialog.buyer-order-dialog .dialog-head { padding: 44px 16px 0; }
+            dialog.buyer-order-dialog .dialog-head { padding: 16px 16px 0; }
             dialog.buyer-order-dialog .dialog-head.no-tracker { padding-bottom: 16px; }
             dialog.buyer-order-dialog .dialog-body { padding: 14px 16px 16px; }
             dialog.buyer-order-dialog .dialog-foot { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 16px 20px; }
             dialog.buyer-order-dialog .foot-left { margin-right: 0; width: 100%; }
             dialog.buyer-order-dialog .foot-actions { width: 100%; }
             dialog.buyer-order-dialog .foot-actions .btn { flex: 1; min-height: 44px; }
-            dialog.buyer-order-dialog .foot-help { display: none; }
+            dialog.buyer-order-dialog .foot-help { display: flex; justify-content: center; }
             dialog.buyer-order-dialog .icon-btn { width: 44px; height: 44px; }
-            dialog.buyer-order-dialog .copy-ref { width: 32px; height: 32px; }
+            dialog.buyer-order-dialog .copy-ref { width: 44px; height: 44px; }
             dialog.buyer-order-dialog .status-icon { width: 40px; height: 40px; border-radius: 11px; }
             dialog.buyer-order-dialog .status-title { font-size: 20px; }
-            dialog.buyer-order-dialog .status-sub { font-size: 12px; }
-            dialog.buyer-order-dialog .step-label { font-size: 9.5px; }
+            dialog.buyer-order-dialog .status-sub { font-size: 14px; }
+            dialog.buyer-order-dialog .step-label { font-size: 12px; }
             dialog.buyer-order-dialog .step-date { display: none; }
             dialog.buyer-order-dialog .tracker-step::before { top: 10px; }
             dialog.buyer-order-dialog .node { width: 22px; height: 22px; }
             dialog.buyer-order-dialog .node svg { width: 11px; height: 11px; }
             dialog.buyer-order-dialog .facts { grid-template-columns: 1fr; }
             dialog.buyer-order-dialog .notice-action { margin-left: 0; width: 100%; min-height: 44px; }
-            dialog.buyer-order-dialog .head-meta { font-size: 11px; }
+            dialog.buyer-order-dialog .head-meta { font-size: 12px; }
         }
         @media (max-width: 400px) {
             dialog.buyer-order-dialog .shipment-action { width: 100%; margin-left: 0; }
-            dialog.buyer-order-dialog .shipment-action .btn { width: 100%; min-height: 40px; }
+            dialog.buyer-order-dialog .shipment-action .btn { width: 100%; min-height: 44px; }
         }
         @media (prefers-reduced-motion: reduce) {
             dialog.buyer-order-dialog .copy-ref, dialog.buyer-order-dialog .icon-btn, dialog.buyer-order-dialog .btn, dialog.buyer-order-dialog .node { transition: none; }
@@ -196,28 +198,26 @@
         .purchase-hero { position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px 28px; overflow: hidden; padding: 20px 22px; border: 1px solid var(--color-border); border-radius: 16px; background: linear-gradient(135deg, #f4f8ff 0%, #ffffff 56%); }
         .purchase-hero::before { content: ''; position: absolute; top: -80px; right: -20px; width: 230px; height: 230px; border-radius: 50%; background: radial-gradient(circle, rgb(32 91 244 / 8%) 0%, transparent 68%); pointer-events: none; }
         .purchase-hero-copy { position: relative; min-width: 0; }
-        .purchase-eyebrow { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 5px; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--color-muted); }
-        .purchase-eyebrow svg { width: 14px; height: 14px; color: var(--color-accent); }
-        .purchase-hero-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 5px; font-size: 12.5px; color: var(--color-muted); }
+        .purchase-hero-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 5px; font-size: 14px; color: var(--color-muted); }
         .purchase-hero-count { font-weight: 600; color: var(--color-fg); }
         .purchase-hero-sep { color: var(--color-border-strong); }
         .purchase-search-group { width: 100%; max-width: 420px; }
         .purchase-search { display: flex; align-items: center; gap: 8px; width: 100%; }
         .purchase-search-field { position: relative; flex: 1; min-width: 0; }
-        .purchase-search-submit { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: 8px; background: var(--color-accent); color: #fff; font-size: 12.5px; font-weight: 650; cursor: pointer; touch-action: manipulation; transition: background .15s; }
+        .purchase-search-submit { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid transparent; border-radius: 8px; background: var(--color-accent); color: #fff; font-size: 14px; font-weight: 650; cursor: pointer; touch-action: manipulation; transition: background .15s; }
         .purchase-search-submit:hover { background: var(--color-accent-hover); }
         .purchase-search-submit:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
         @media (min-width: 640px) { .purchase-search-group { width: 360px; } }
         @media (min-width: 1024px) { .purchase-search-submit { min-height: 40px; } }
 
         .purchase-attention { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 14px; }
-        .purchase-attention-title { display: inline-flex; align-items: center; gap: 6px; margin-right: 2px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
-        .purchase-attention-title svg { width: 14px; height: 14px; color: var(--color-warning-text); }
-        .purchase-attention-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 10px 0 11px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-fg); font-size: 11.5px; font-weight: 600; text-decoration: none; transition: box-shadow .15s; }
+        .purchase-attention-title { display: inline-flex; align-items: center; gap: 6px; margin-right: 2px; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
+        .purchase-attention-title svg { width: 14px; height: 14px; color: var(--color-muted); }
+        .purchase-attention-chip { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 10px 0 11px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-fg); font-size: 12px; font-weight: 600; text-decoration: none; transition: box-shadow .15s; }
         .purchase-attention-chip:hover { box-shadow: 0 2px 6px rgb(24 44 72 / 9%); }
         .purchase-attention-chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
         .purchase-attention-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--color-muted); }
-        .purchase-attention-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-sunken); color: var(--color-muted); font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .purchase-attention-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-sunken); color: var(--color-muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
         .purchase-attention-chip.is-warm { border-color: var(--color-warning-line); background: var(--color-warning-wash); color: var(--color-warning-text); }
         .purchase-attention-chip.is-warm .purchase-attention-dot { background: var(--color-warning); }
         .purchase-attention-chip.is-warm .purchase-attention-count { background: #fff; color: var(--color-warning-text); }
@@ -228,22 +228,25 @@
 
         .purchase-tabs-wrap { min-width: 0; margin-top: 18px; padding: 4px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-sunken); }
         /* Relative keeps mobile Chrome from widening the layout viewport to the scroll track's full width. */
-        .purchase-tabs { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-        .purchase-tabs::-webkit-scrollbar { display: none; }
-        .purchase-tab { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 8px; color: var(--color-muted); font-size: 12.5px; font-weight: 600; line-height: 1; white-space: nowrap; text-decoration: none; transition: background .15s, color .15s, box-shadow .15s; }
+        .purchase-tabs { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
+        .purchase-tabs::-webkit-scrollbar { height: 5px; }
+        .purchase-tabs::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 4px; }
+        .purchase-filter-hint { display: none; }
+        @media (max-width: 639px) { .purchase-filter-hint { display: block; margin-top: 6px; font-size: 12px; color: var(--color-muted); text-align: right; } }
+        .purchase-tab { display: inline-flex; flex: none; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; border-radius: 8px; color: var(--color-muted); font-size: 14px; font-weight: 600; line-height: 1; white-space: nowrap; text-decoration: none; transition: background .15s, color .15s, box-shadow .15s; }
         .purchase-tab:hover { background: rgb(255 255 255 / 65%); color: var(--color-fg); }
         .purchase-tab[aria-current='page'] { background: var(--color-surface); color: var(--color-fg); box-shadow: 0 1px 2px rgb(24 44 72 / 8%), inset 0 0 0 1px var(--color-border); }
         .purchase-tab:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-        .purchase-tab-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-paper); color: var(--color-muted); font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .purchase-tab-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--color-paper); color: var(--color-muted); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
         .purchase-tab[aria-current='page'] .purchase-tab-count { background: var(--color-info-wash); color: var(--color-accent-hover); }
         .purchase-tab-count.is-warm { background: var(--color-warning-wash); color: var(--color-warning-text); box-shadow: inset 0 0 0 1px var(--color-warning-line); }
         @media (max-width: 639px) { .purchase-tab { min-height: 44px; padding: 0 13px; } }
 
         .purchase-day { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
         .purchase-day-title { font-size: 12px; font-weight: 650; color: var(--color-fg); }
-        .purchase-day-date { font-size: 11px; font-weight: 500; color: var(--color-muted); }
+        .purchase-day-date { font-size: 12px; font-weight: 500; color: var(--color-muted); }
         .purchase-day-rule { flex: 1; height: 1px; background: var(--color-border); }
-        .purchase-day-count { font-size: 10.5px; font-weight: 600; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+        .purchase-day-count { font-size: 12px; font-weight: 600; color: var(--color-muted); font-variant-numeric: tabular-nums; }
 
         /* One card per store order: identity and state, the journey, every item, then the receipt. */
         .purchase-card { display: grid; grid-template-columns: minmax(0, 1fr) 228px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface); box-shadow: 0 1px 2px rgb(24 44 72 / 4%); color: inherit; text-decoration: none; transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease; }
@@ -251,15 +254,15 @@
         .purchase-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
         .purchase-card-head { grid-column: 1 / -1; display: flex; align-items: center; gap: 11px; padding: 13px 16px; border-bottom: 1px solid var(--color-line-soft); background: linear-gradient(180deg, #fff 0%, #fbfcff 100%); }
-        .purchase-store-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--mark-bg, #e8effc); color: var(--mark-ink, #1e3a6e); font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+        .purchase-store-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--mark-bg, #e8effc); color: var(--mark-ink, #1e3a6e); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
         img.purchase-store-mark { border: 1px solid var(--color-line-soft); background: #fff; object-fit: cover; }
         .purchase-store-copy { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-        .purchase-store-name { overflow: hidden; font-size: 13.5px; font-weight: 650; line-height: 1.25; color: var(--color-fg); text-overflow: ellipsis; white-space: nowrap; }
-        .purchase-store-meta { display: flex; align-items: center; min-width: 0; margin-top: 2px; overflow: hidden; font-size: 11.5px; line-height: 1.3; color: var(--color-muted); white-space: nowrap; }
+        .purchase-store-name { overflow: hidden; font-size: 14px; font-weight: 650; line-height: 1.25; color: var(--color-fg); text-overflow: ellipsis; white-space: nowrap; }
+        .purchase-store-meta { display: flex; align-items: center; min-width: 0; margin-top: 2px; overflow: hidden; font-size: 12px; line-height: 1.3; color: var(--color-muted); white-space: nowrap; }
         .purchase-meta-sep { padding: 0 5px; color: var(--color-border-strong); }
         .purchase-order-number { overflow: hidden; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
 
-        .purchase-status { display: inline-flex; align-items: center; gap: 6px; flex: none; max-width: 100%; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
+        .purchase-status { display: inline-flex; align-items: center; gap: 6px; flex: none; max-width: 100%; padding: 4px 9px; border-radius: 999px; font-size: 12px; font-weight: 650; line-height: 1.4; white-space: nowrap; }
         .purchase-status-dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: currentColor; }
         .purchase-status.is-neutral { background: var(--color-sunken); color: var(--color-fg); box-shadow: inset 0 0 0 1px var(--color-border); }
         .purchase-status.is-good { background: var(--color-success-wash); color: var(--color-success); box-shadow: inset 0 0 0 1px var(--color-success-line); }
@@ -281,7 +284,7 @@
         .purchase-step.is-current .purchase-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
         .purchase-step.is-current.is-pay .purchase-dot { border-color: var(--color-warning); color: var(--color-warning-text); box-shadow: 0 0 0 4px rgb(245 158 11 / 14%); }
         .purchase-step.is-done.is-final .purchase-dot { border-color: var(--color-success); background: var(--color-success); }
-        .purchase-step-label { overflow: hidden; max-width: 100%; font-size: 10.5px; font-weight: 600; line-height: 1.3; color: var(--color-muted); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+        .purchase-step-label { overflow: hidden; max-width: 100%; font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--color-muted); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
         .purchase-step.is-done .purchase-step-label { color: var(--color-fg); }
         .purchase-step.is-current .purchase-step-label { color: var(--color-accent-hover); }
         .purchase-step.is-current.is-pay .purchase-step-label { color: var(--color-warning-text); }
@@ -294,23 +297,23 @@
         .purchase-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
         .purchase-thumb svg { position: absolute; inset: 0; width: 17px; height: 17px; margin: auto; color: #94a3b8; }
         .purchase-item-copy { min-width: 0; }
-        .purchase-item-title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--color-fg); overflow-wrap: anywhere; }
-        .purchase-item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-top: 2px; font-size: 11.5px; line-height: 1.4; color: var(--color-muted); }
+        .purchase-item-title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 14px; font-weight: 600; line-height: 1.35; color: var(--color-fg); overflow-wrap: anywhere; }
+        .purchase-item-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; margin-top: 2px; font-size: 12px; line-height: 1.4; color: var(--color-muted); }
         .purchase-variant { font-weight: 600; color: var(--color-accent-hover); }
         .purchase-meta-dot { padding: 0 5px; color: var(--color-border-strong); }
-        .purchase-item-amount { align-self: center; font-size: 13px; font-weight: 650; color: var(--color-fg); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+        .purchase-item-amount { align-self: center; font-size: 14px; font-weight: 650; color: var(--color-fg); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 
         .purchase-card-rail { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 16px 18px; border-left: 1px solid var(--color-line-soft); background: linear-gradient(180deg, #fbfcff 0%, var(--color-sunken) 100%); }
         .purchase-total-block { display: flex; flex-direction: column; gap: 2px; }
-        .purchase-total-label { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
+        .purchase-total-label { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--color-muted); }
         .purchase-total-value { font-size: 22px; font-weight: 650; line-height: 1.05; letter-spacing: -.035em; color: var(--color-fg); font-variant-numeric: tabular-nums; }
         .purchase-facts { display: grid; gap: 5px; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--color-border); }
-        .purchase-fact { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 11px; line-height: 1.35; }
+        .purchase-fact { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.35; }
         .purchase-fact dt { color: var(--color-muted); }
         .purchase-fact dd { overflow: hidden; margin: 0; font-weight: 600; color: var(--color-fg); text-align: right; text-overflow: ellipsis; white-space: nowrap; }
 
         .purchase-card-foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 16px; border-top: 1px solid var(--color-line-soft); background: var(--color-surface); }
-        .purchase-note { min-width: 0; overflow: hidden; font-size: 11.5px; line-height: 1.4; color: var(--color-muted); text-overflow: ellipsis; white-space: nowrap; }
+        .purchase-note { min-width: 0; overflow: hidden; font-size: 12px; line-height: 1.4; color: var(--color-muted); text-overflow: ellipsis; white-space: nowrap; }
         .purchase-cta { display: inline-flex; align-items: center; gap: 5px; flex: none; font-size: 12px; font-weight: 650; color: var(--color-accent-hover); }
         .purchase-cta svg { width: 14px; height: 14px; transition: transform .16s ease; }
         .purchase-card:hover .purchase-cta svg { transform: translateX(2px); }
@@ -319,7 +322,7 @@
         .purchase-empty-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--color-info-wash); color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-info-line); }
         .purchase-empty-icon svg { width: 24px; height: 24px; }
         .purchase-empty h3 { margin-top: 14px; font-size: 16px; font-weight: 650; letter-spacing: -.015em; color: var(--color-fg); }
-        .purchase-empty p { max-width: 40ch; margin-top: 6px; font-size: 12.5px; line-height: 1.6; color: var(--color-muted); }
+        .purchase-empty p { max-width: 40ch; margin-top: 6px; font-size: 14px; line-height: 1.6; color: var(--color-muted); }
         .purchase-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
 
         .purchase-loadmore { display: flex; flex-direction: column; align-items: stretch; gap: 12px; padding: 14px 16px; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); text-align: center; }
@@ -329,7 +332,7 @@
             .purchase-card-head { grid-column: 1; }
             .purchase-card-rail { grid-column: 1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 6px 16px; padding: 11px 16px; border-top: 1px solid var(--color-line-soft); border-left: 0; background: var(--color-sunken); }
             .purchase-total-block { flex-direction: row; align-items: baseline; gap: 7px; flex: none; }
-            .purchase-total-label { font-size: 10.5px; letter-spacing: .06em; }
+            .purchase-total-label { font-size: 12px; letter-spacing: .06em; }
             .purchase-total-value { font-size: 17px; }
             .purchase-facts { display: flex; flex-wrap: wrap; gap: 2px 10px; margin: 0 0 0 auto; padding: 0; border: 0; }
             .purchase-fact { display: inline-flex; gap: 3px; }
@@ -342,7 +345,7 @@
             .purchase-hero-meta { font-size: 12px; }
             .purchase-card-head { padding: 12px 14px; }
             .purchase-journey { padding: 13px 12px 11px; }
-            .purchase-step-label { font-size: 10px; }
+            .purchase-step-label { font-size: 12px; }
             .purchase-item { padding: 10px 14px; }
             .purchase-card-foot { padding: 10px 14px; }
             .purchase-card-rail { padding: 11px 14px; }
@@ -388,7 +391,7 @@
         ];
         $emptyCopy = [
             'all' => ['Your first purchase starts here', 'Your orders and delivery updates will appear here.'],
-            'to_pay' => ['Nothing to pay', 'Orders you pay a store for directly, by GCash, Maya, or bank transfer, wait here until you send the payment.'],
+            'to_pay' => ['Nothing to pay', 'Orders awaiting online payment through PayMongo appear here. Cash on delivery is paid when your items arrive.'],
             'awaiting_confirmation' => ['Nothing waiting on a store', 'Orders a store has not confirmed yet appear here.'],
             'to_dispatch' => ['Nothing being prepared', 'Orders a store has confirmed and is getting ready to ship appear here.'],
             'to_receive' => ['Nothing on the way', 'Shipped orders appear here until you confirm they arrived.'],
@@ -404,7 +407,8 @@
         // What waits on the buyer, surfaced before any tab is opened.
         $attentionItems = array_values(array_filter([
             ($attentionCounts['to_pay'] ?? 0) > 0 ? ['label' => 'Payment due', 'count' => $attentionCounts['to_pay'], 'tab' => 'to_pay', 'tone' => 'warm'] : null,
-            ($attentionCounts['to_receive'] ?? 0) > 0 ? ['label' => 'Delivery to confirm', 'count' => $attentionCounts['to_receive'], 'tab' => 'to_receive', 'tone' => 'info'] : null,
+            ($attentionCounts['to_receive'] ?? 0) > 0 ? ['label' => 'On the way', 'count' => $attentionCounts['to_receive'], 'tab' => 'to_receive', 'tone' => 'info'] : null,
+            $tabCounts['to_review'] > 0 ? ['label' => 'Ready to review', 'count' => $tabCounts['to_review'], 'tab' => 'to_review', 'tone' => 'info'] : null,
             ($attentionCounts['returns'] ?? 0) > 0 ? ['label' => 'Return needs you', 'count' => $attentionCounts['returns'], 'tab' => 'returns', 'tone' => 'warm'] : null,
             ($attentionCounts['refunds'] ?? 0) > 0 ? ['label' => 'Refund on the way', 'count' => $attentionCounts['refunds'], 'tab' => 'all', 'tone' => 'neutral'] : null,
         ]));
@@ -414,10 +418,6 @@
         <div data-purchases class="min-w-0">
             <section class="purchase-hero" aria-labelledby="purchases-title">
                 <div class="purchase-hero-copy">
-                    <p class="purchase-eyebrow">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
-                        Purchase history
-                    </p>
                     <h1 id="purchases-title">My purchases</h1>
                     <p class="purchase-hero-meta">
                         @if ($sellerOrders->total() > 0)
@@ -454,10 +454,10 @@
             @enderror
 
             @if ($attentionItems !== [])
-                <section class="purchase-attention" aria-label="Needs your attention">
+                <section class="purchase-attention" aria-label="Order updates">
                     <p class="purchase-attention-title">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5 21 20H3L12 3.5Z"/><path d="M12 9.5v4.5M12 17h.01"/></svg>
-                        Needs your attention
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7h.01"/></svg>
+                        Order updates
                     </p>
                     @foreach ($attentionItems as $item)
                         <a href="{{ route('orders.index', [...request()->except('tab', 'page'), 'tab' => $item['tab']]) }}" class="purchase-attention-chip is-{{ $item['tone'] }}">
@@ -490,6 +490,7 @@
                     @endforeach
                 </nav>
             </div>
+            <p class="purchase-filter-hint">Swipe for more statuses <span aria-hidden="true">→</span></p>
             @if (filled($filters['status'] ?? null) && isset($statusStyles[$filters['status']]))
                 <p class="mt-2 text-meta text-muted">Filtered to checkouts marked {{ $statusStyles[$filters['status']][0] }} <span aria-hidden="true">·</span> <a href="{{ route('orders.index', request()->except('status', 'page')) }}" class="{{ $inlineLink }}">Show all</a></p>
             @endif
@@ -587,8 +588,9 @@
                                         [$statusLabel, $statusVariant] = ['Cancel requested', 'warn'];
                                     }
                                     $items = $sellerOrder->items;
-                                    $lineCount = $items->count();
                                     $itemCount = $items->sum('quantity');
+                                    $reviewableCount = in_array($sellerOrder->tenant_id, $ownedTenantIds, true) ? 0 : $items->filter(fn ($item): bool => $item->product_id !== null && $item->review === null)->count();
+                                    $hasReviews = $items->contains(fn ($item): bool => $item->review !== null);
                                     $status = $sellerOrder->status;
                                     $reached = match ($status) {
                                         'delivered' => 4,
@@ -597,21 +599,23 @@
                                         'pending' => 1,
                                         default => 0,
                                     };
-                                    $journeySteps = $needsPayment
-                                        ? ['Payment due', 'Confirmed', 'Shipped', 'Delivered']
-                                        : ['Confirmed', 'Packed', 'Shipped', 'Delivered'];
+                                    $journeySteps = ['Placed', 'Confirmed', 'Shipped', 'Delivered'];
                                     $journeyNote = match (true) {
                                         $needsPayment => 'Pay before the store can prepare it',
                                         $status === 'pending' => 'Waiting for the store to confirm',
                                         in_array($status, ['confirmed', 'processing'], true) => 'The store is preparing your order',
                                         $status === 'shipped' => 'On the way to you',
-                                        $status === 'delivered' => 'Review the items you received',
+                                        $status === 'delivered' && $reviewableCount > 0 => $reviewableCount.' '.Str::plural('product', $reviewableCount).' ready to review',
+                                        $status === 'delivered' && $hasReviews => 'Your reviews are saved',
+                                        $status === 'delivered' => 'Your items were delivered',
                                         $status === 'cancelled' => 'This order was cancelled',
                                         default => '',
                                     };
                                     $journeyAction = match (true) {
                                         $needsPayment => 'Complete payment',
                                         $status === 'shipped' => 'Track order',
+                                        $status === 'delivered' && $reviewableCount > 0 => 'Review items',
+                                        $status === 'delivered' && $hasReviews => 'View reviews',
                                         default => 'View order',
                                     };
                                     // The pill is the order's own state; buyer/store lateness replaces it with the turn that matters now.
@@ -646,9 +650,6 @@
                                                 {{-- Time first: the long order number is the part allowed to truncate on a phone. --}}
                                                 <span class="purchase-store-meta">
                                                     <span>{{ $order->created_at->format('g:i A') }}</span>
-                                                    @if ($order->payment)
-                                                        <span class="max-sm:hidden"><span class="purchase-meta-sep" aria-hidden="true">·</span>{{ \App\Models\Payment::METHOD_LABELS[$order->payment->method] ?? ucfirst($order->payment->method) }}</span>
-                                                    @endif
                                                     <span class="purchase-meta-sep" aria-hidden="true">·</span>
                                                     <span class="purchase-order-number">{{ $order->number }}</span>
                                                 </span>
@@ -661,7 +662,7 @@
 
                                         <div class="purchase-card-body">
                                             {{-- Where the order is, in one glance. Cancelled orders have no journey to show. --}}
-                                            @if ($status !== 'cancelled')
+                                            @if (! in_array($status, ['cancelled', 'delivered'], true))
                                                 <ol class="purchase-journey" aria-label="Order progress: {{ implode(', ', $journeySteps) }}">
                                                     @foreach ($journeySteps as $index => $stepLabel)
                                                         @php
@@ -725,9 +726,8 @@
                                                 <span class="purchase-total-value">₱{{ number_format($sellerOrder->total, 2) }}</span>
                                             </span>
                                             <dl class="purchase-facts">
-                                                <div class="purchase-fact"><dt>Products</dt><dd>{{ $lineCount }}</dd></div>
+                                                <div class="purchase-fact"><dt>Items</dt><dd>{{ $itemCount }}</dd></div>
                                                 <div class="purchase-fact"><dt>Payment</dt><dd>{{ $paymentLabel }}</dd></div>
-                                                <div class="purchase-fact"><dt>Placed</dt><dd>{{ $order->created_at->format('M j') }}</dd></div>
                                                 @if ($sellerOrder->delivered_at)
                                                     <div class="purchase-fact"><dt>Delivered</dt><dd>{{ $sellerOrder->delivered_at->format('M j') }}</dd></div>
                                                 @endif
@@ -803,7 +803,11 @@
                 @endif
             </section>
 
-            <dialog x-ref="modal" class="buyer-order-dialog" aria-labelledby="dlgTitle" aria-describedby="dlgMeta" aria-label="Order details" @close="closed()" @click="if ($event.target === $refs.modal) close()">
+            <dialog x-ref="modal" class="buyer-order-dialog" :aria-labelledby="html ? 'dlgTitle' : 'order-dialog-title'" :aria-describedby="html ? 'dlgMeta' : null" aria-label="Order details" @close="closed()" @click="if ($event.target === $refs.modal) close()">
+                <h2 id="order-dialog-title" class="sr-only">Order details</h2>
+                <button type="button" class="icon-btn dialog-close" data-modal-focus autofocus aria-label="Close order details" @click="close()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+                </button>
                 <div x-show="loading && ! html" class="buyer-modal-body" role="status" aria-live="polite" aria-busy="true">
                     <span class="sr-only">Loading order details</span>
                     <div class="sk">

@@ -59,6 +59,7 @@ class OrderController extends Controller
                 'items.product:id,store_id,slug',
                 'items.product.thumbnail',
                 'items.product.store:id,slug',
+                'items.review:id,order_item_id',
                 'issues' => fn ($query) => $query->latest(),
                 'returnCases' => fn ($query) => $query->latest('id'),
             ])
@@ -74,6 +75,7 @@ class OrderController extends Controller
             'tabs' => $tabs,
             'tabCounts' => $tabCounts,
             'attentionCounts' => $attentionCounts,
+            'ownedTenantIds' => $ownedTenantIds,
         ]);
     }
 
@@ -83,11 +85,10 @@ class OrderController extends Controller
 
         $order = $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment');
 
-        if ($request->header('X-Order-Modal')) {
-            return view('marketplace.orders._modal-ledger', ['order' => $order]);
-        }
-
-        return view('marketplace.orders.show', ['order' => $order]);
+        return view($request->header('X-Order-Modal') ? 'marketplace.orders._modal-ledger' : 'marketplace.orders.show', [
+            'order' => $order,
+            'ownedTenantIds' => BuyerOrderQuery::ownedTenantIds($request->user()),
+        ]);
     }
 
     /**
