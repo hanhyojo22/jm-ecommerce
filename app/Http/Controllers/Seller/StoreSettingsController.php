@@ -46,8 +46,6 @@ class StoreSettingsController extends Controller
         $branch = $this->branch($request, $tenant);
         $data = [
             ...$request->safe()->only(['description', 'phone', 'address_line', 'city']),
-            // Head office switches a branch on or off; a branch the platform suspended stays suspended.
-            'status' => $branch->status === 'suspended' ? 'suspended' : ($request->validated('status') ?? $branch->status),
             ...$this->locationDetails($request),
         ];
         try {
@@ -74,7 +72,10 @@ class StoreSettingsController extends Controller
                 $oldLogoPath = $lockedStore->logo_path;
                 $logoPath = $newLogoPath ?? ($request->boolean('remove_logo') ? null : $oldLogoPath);
                 $oldValues = $lockedStore->only(self::UNDO_FIELDS);
-                $newValues = [...$data, 'logo_path' => $logoPath];
+                // Head office opens or closes a branch; one the platform suspended stays suspended. Read from the locked row.
+                $status = $lockedStore->status === 'suspended' ? 'suspended' : ($request->validated('status') ?? $lockedStore->status);
+                // Same key order as UNDO_FIELDS, which undo checks.
+                $newValues = array_replace(array_fill_keys(self::UNDO_FIELDS, null), $data, ['status' => $status, 'logo_path' => $logoPath]);
 
                 $lockedStore->update($newValues);
 

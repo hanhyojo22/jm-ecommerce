@@ -118,6 +118,18 @@ class BranchAccessTest extends TestCase
         $this->assertSame('active', $otherBranch->fresh()->status);
     }
 
+    public function test_head_office_cannot_reopen_a_branch_the_platform_suspended(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $makati->update(['status' => 'suspended']);
+
+        $this->actingAs($this->member($tenant, 'owner'))
+            ->patch(route('seller.store-settings.update', ['branch' => $makati->id]), ['phone' => '+639170000000', 'address_line' => '10 Rizal Street', 'city' => 'Makati', 'status' => 'active'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['suspended', '+639170000000'], [$makati->fresh()->status, $makati->fresh()->phone]);
+    }
+
     public function test_branch_staff_count_stock_only_at_their_own_branch(): void
     {
         [$tenant, $makati, $cebu] = $this->pharmacy();
