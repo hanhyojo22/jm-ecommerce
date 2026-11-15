@@ -1,6 +1,7 @@
 const identities = {
     customer: 'qa-customer-identity',
     integrationCustomer: 'qa-integration-identity',
+    pharmacyCustomer: 'qa-pharmacy-customer-identity',
     seller: 'qa-seller-identity',
     otherSeller: 'qa-other-seller-identity',
     admin: 'qa-admin-identity',

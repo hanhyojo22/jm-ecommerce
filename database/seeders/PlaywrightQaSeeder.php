@@ -23,6 +23,7 @@ class PlaywrightQaSeeder extends Seeder
 
         $this->call(CategorySeeder::class);
 
+        User::factory()->create(['name' => 'QA Pharmacy Customer', 'email' => 'qa-pharmacy-customer@example.test', 'clerk_user_id' => 'qa-pharmacy-customer-identity']);
         User::factory()->create(['name' => 'QA Integration Customer', 'email' => 'qa-integration@example.test', 'clerk_user_id' => 'qa-integration-identity']);
 
         $customer = User::factory()->create([
@@ -61,6 +62,7 @@ class PlaywrightQaSeeder extends Seeder
         [$otherTenant, $otherStore] = $this->storeFor($otherSeller, 'qa-southwind', 'QA Southwind');
 
         $product = $this->product($tenant, $store, $category, 'QA Canvas Tote', 'qa-canvas-tote', 'QA-TOTE-001', '19.99', 25);
+        $this->product($tenant, $store, $category, 'QA Amoxicillin 500 mg', 'qa-amoxicillin', 'QA-RX-001', '15.00', 30)->update(['requires_prescription' => true, 'generic_name' => 'Amoxicillin', 'dosage_form' => 'Capsule', 'strength' => '500 mg']);
         $chatProduct = $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);
         $this->product($otherTenant, $otherStore, $category, 'Other Seller QA Product', 'other-qa-product', 'QA-OTHER-001', '39.99', 10);
         $historyProduct = $this->product($otherTenant, $otherStore, $category, 'QA History Sample', 'qa-history-sample', 'QA-HISTORY-001', '29.99', 10);
