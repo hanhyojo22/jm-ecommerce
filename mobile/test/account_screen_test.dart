@@ -58,7 +58,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
       );
       addTearDown(container.dispose);
@@ -101,7 +101,7 @@ Future<void> _pump(WidgetTester tester, _AccountApi api) async {
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),

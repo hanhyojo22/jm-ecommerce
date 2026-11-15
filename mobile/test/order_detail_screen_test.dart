@@ -238,7 +238,7 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
       child: router == null
           ? MaterialApp(

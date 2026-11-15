@@ -9,7 +9,9 @@ import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../providers/store_locator_providers.dart';
 import '../theme.dart';
+import 'store_locator.dart';
 
 class AsyncView<T> extends StatelessWidget {
   const AsyncView({
@@ -721,6 +723,13 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
 
   Future<void> _add() async {
     if (_adding) {
+      return;
+    }
+    // The cart buys from one branch, so one has to be chosen first.
+    if (await ref.read(activeBranchIdProvider.future) == null) {
+      if (mounted) {
+        await showBranchSelectorSheet(context);
+      }
       return;
     }
     setState(() => _adding = true);

@@ -39,6 +39,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _paymentMethod = 'cod';
   String _fulfillment = 'delivery';
   PickedAttachment? _prescription;
+  ({double latitude, double longitude})? _pin;
   bool _placing = false;
 
   /// Why delivery can't be offered: the API needs the phone's location as the
@@ -160,9 +161,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final method = _method;
       // shortcut: the delivery pin is where the phone is, not the typed address;
       // add a map pin picker when customers order for someone elsewhere.
-      final pin = method == 'delivery'
-          ? await ref.read(locationServiceProvider).currentPosition()
-          : null;
+      // Kept for retries: the request id's replay check compares the pin too.
+      if (method == 'delivery' && _pin == null) {
+        final here = await ref.read(locationServiceProvider).currentPosition();
+        _pin = (latitude: here.latitude, longitude: here.longitude);
+      }
+      final pin = method == 'delivery' ? _pin : null;
       final placed = await ref
           .read(apiClientProvider)
           .placeOrder(

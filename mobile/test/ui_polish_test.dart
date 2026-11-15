@@ -46,7 +46,7 @@ void main() {
       ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(_OrderApi()),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
         child: _app(const OrderDetailScreen(orderId: 'order-1')),
       ),
@@ -66,7 +66,7 @@ void main() {
         ProviderScope(
           overrides: [
             apiClientProvider.overrideWithValue(_DeliveredOrderApi()),
-            activeBranchIdProvider.overrideWith((ref) async => null),
+            activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           ],
           child: _app(const OrderDetailScreen(orderId: 'order-1')),
         ),
@@ -108,7 +108,7 @@ void main() {
       ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(_CartApi()),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
         child: _app(const CartScreen()),
       ),
@@ -127,7 +127,7 @@ void main() {
       ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
         child: _app(const CartScreen()),
       ),
@@ -149,7 +149,7 @@ void main() {
       ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
         child: _app(const CartScreen()),
       ),
@@ -171,7 +171,7 @@ void main() {
       ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(_OrdersApi()),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
         child: _app(const Scaffold(body: OrdersScreen())),
       ),
@@ -193,7 +193,7 @@ void main() {
         ProviderScope(
           overrides: [
             apiClientProvider.overrideWithValue(api),
-            activeBranchIdProvider.overrideWith((ref) async => null),
+            activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           ],
           child: _app(const Scaffold(body: OrdersScreen())),
         ),
@@ -290,7 +290,7 @@ Future<void> _pumpStore(WidgetTester tester) async {
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(_StoreApi()),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
       child: _app(const StoreScreen(slug: 'store')),
     ),

@@ -11,6 +11,7 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../providers/checkout_providers.dart';
+import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/fly_to_cart.dart';
@@ -251,6 +252,16 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     }
     if (product.variants.isNotEmpty && !optionsConfirmed) {
       await _openVariationSheet(buyNow: buyNow);
+      return;
+    }
+    // The cart buys from one branch, so one has to be chosen first.
+    if (await ref.read(activeBranchIdProvider.future) == null) {
+      if (mounted) {
+        await showBranchSelectorSheet(context);
+      }
+      return;
+    }
+    if (!mounted) {
       return;
     }
 

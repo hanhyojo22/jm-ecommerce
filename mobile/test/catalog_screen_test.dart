@@ -78,7 +78,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           cartCountProvider.overrideWithValue(0),
         ],
       );
@@ -250,7 +250,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         cartCountProvider.overrideWithValue(0),
       ],
     );
@@ -285,7 +285,7 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             apiClientProvider.overrideWithValue(api),
-            activeBranchIdProvider.overrideWith((ref) async => null),
+            activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
             cartCountProvider.overrideWithValue(0),
           ],
         );
@@ -320,7 +320,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         cartCountProvider.overrideWithValue(0),
       ],
     );
@@ -709,7 +709,7 @@ Future<void> _pumpCatalog(
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         cartCountProvider.overrideWithValue(0),
         storeBranchesProvider.overrideWith((ref) async => const []),
       ],

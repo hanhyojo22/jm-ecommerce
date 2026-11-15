@@ -111,7 +111,7 @@ Future<void> _pumpProduct(WidgetTester tester, _ReviewApi api) async {
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),

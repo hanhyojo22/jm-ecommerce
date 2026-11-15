@@ -71,7 +71,7 @@ void main() {
 Widget _app(ApiClient api, Widget child) => ProviderScope(
   overrides: [
     apiClientProvider.overrideWithValue(api),
-    activeBranchIdProvider.overrideWith((ref) async => null),
+    activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
   ],
   child: MaterialApp(home: Scaffold(body: child)),
 );

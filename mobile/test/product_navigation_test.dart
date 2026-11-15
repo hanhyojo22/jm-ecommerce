@@ -12,6 +12,7 @@ import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/screens/product_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/core/location_service.dart';
 import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
@@ -324,6 +325,20 @@ void main() {
     },
   );
 
+  testWidgets('adding with no branch chosen opens the branch picker instead', (
+    tester,
+  ) async {
+    final api = _ProductApi();
+    await _pump(tester, api, branch: null);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Add to cart'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose a branch'), findsOneWidget);
+    expect(find.text('Makati branch'), findsOneWidget);
+    expect(api.adds, 0);
+  });
+
   testWidgets('no branch nearby has it says so', (tester) async {
     await _pump(tester, _ProductApi()..inStock = false);
 
@@ -421,6 +436,7 @@ Future<void> _pump(
   double height = 844,
   double scale = 1,
   BranchDistance? stockedElsewhere,
+  String? branch = 'B-TEST',
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -446,7 +462,27 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(api),
-        activeBranchIdProvider.overrideWith((ref) async => null),
+        activeBranchIdProvider.overrideWith((ref) async => branch),
+        nearestStoreProvider.overrideWith(
+          () => _FixedLocator(
+            const StoreLocatorState(
+              branches: [
+                BranchDistance(
+                  StoreBranch(
+                    id: 'makati',
+                    branchId: 'B-MAKATI',
+                    name: 'Makati branch',
+                    address: 'Makati',
+                    latitude: 14.55,
+                    longitude: 121.02,
+                  ),
+                  null,
+                ),
+              ],
+              issue: LocationIssue.denied,
+            ),
+          ),
+        ),
         stockedElsewhereProvider.overrideWith(
           (ref, productId) async => stockedElsewhere,
         ),
@@ -465,6 +501,15 @@ Future<void> _pump(
     ),
   );
   await tester.pumpAndSettle();
+}
+
+class _FixedLocator extends NearestStoreNotifier {
+  _FixedLocator(this.fixed);
+
+  final StoreLocatorState fixed;
+
+  @override
+  Future<StoreLocatorState> build() async => fixed;
 }
 
 class _ProductApi extends ApiClient {

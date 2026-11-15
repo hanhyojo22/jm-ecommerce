@@ -20,7 +20,7 @@ void main() {
       ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
         child: const MaterialApp(
           home: Scaffold(
@@ -59,7 +59,7 @@ void main() {
         ProviderScope(
           overrides: [
             apiClientProvider.overrideWithValue(api),
-            activeBranchIdProvider.overrideWith((ref) async => null),
+            activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           ],
           child: const MaterialApp(
             home: Scaffold(
@@ -97,7 +97,7 @@ void main() {
       ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => null),
+          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
         child: const MaterialApp(
           home: Scaffold(
