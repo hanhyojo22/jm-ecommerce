@@ -159,17 +159,6 @@ class BranchAccessTest extends TestCase
         $this->assertTrue($this->member($tenant, 'staff', $makati)->can('view', $makatiOrder));
     }
 
-    public function test_branch_staff_cannot_reach_company_money_pages(): void
-    {
-        [$tenant, $makati] = $this->pharmacy();
-        $branchOwner = $this->member($tenant, 'owner', $makati);
-
-        $this->actingAs($branchOwner)->get(route('seller.earnings.index'))->assertForbidden();
-        $this->actingAs($branchOwner)->get(route('seller.platform-fees.index'))->assertForbidden();
-        $this->actingAs($branchOwner)->post(route('seller.online-payments.store'))->assertForbidden();
-        $this->actingAs($branchOwner)->get(route('seller.dashboard'))->assertOk()->assertDontSee(route('seller.earnings.index'), false);
-    }
-
     public function test_branch_staff_count_stock_only_at_their_own_branch(): void
     {
         [$tenant, $makati, $cebu] = $this->pharmacy();

@@ -6,7 +6,6 @@ use App\Models\Order;
 use App\Models\OrderIssue;
 use App\Models\Product;
 use App\Models\ReturnCase;
-use App\Models\SellerEarning;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -97,7 +96,6 @@ class ReturnCaseTest extends TestCase
         $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'awaiting_confirmation']);
         $this->assertDatabaseHas('return_case_outcomes', ['return_case_id' => $case->id, 'kind' => 'refund', 'amount' => '500.00']);
         $this->assertDatabaseHas('orders', ['id' => $sellerOrder->order_id, 'total' => '500.00']);
-        $this->assertDatabaseCount('seller_earnings', 0);
         $evidence = $case->evidence()->where('kind', 'refund')->sole();
         Storage::disk('chat_attachments')->assertExists($evidence->path);
         $this->actingAs($otherSeller)->get(route('returns.evidence', [$case, $evidence]))->assertNotFound();
@@ -151,36 +149,11 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($secondSeller)->patch(route('seller.orders.cod-collection', $first))->assertNotFound();
         $this->actingAs($secondSeller)->patch(route('seller.orders.cod-collection', $second))->assertSessionHas('status');
         $this->assertDatabaseHas('payments', ['order_id' => $first->order_id, 'status' => 'paid']);
-        $this->assertDatabaseCount('seller_earnings', 0);
         $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
         $item = $first->items()->sole();
         $this->actingAs($admin)->post(route('admin.returns.store', $first), $this->requestData($item->id, 1) + ['order_issue_id' => $issue->id])->assertRedirect();
         $this->assertDatabaseHas('return_cases', ['seller_order_id' => $first->id, 'order_issue_id' => $issue->id]);
         $this->assertDatabaseHas('order_issues', ['id' => $issue->id, 'details' => 'Historical support request.', 'status' => 'resolved']);
-    }
-
-    public function test_migration_backfills_delivery_and_voids_only_unpaid_cod_earnings(): void
-    {
-        [, , $available] = $this->deliveredOrder();
-        [, , $paidOut] = $this->deliveredOrder();
-        $available->order()->firstOrFail()->payment()->update(['status' => 'paid']);
-        $paidOut->order()->firstOrFail()->payment()->update(['status' => 'paid']);
-        foreach ([$available, $paidOut] as $order) {
-            SellerEarning::create([
-                'seller_order_id' => $order->id, 'tenant_id' => $order->tenant_id, 'store_id' => $order->store_id,
-                'gross_amount' => $order->total, 'commission_amount' => '0.00', 'net_amount' => $order->total,
-                'status' => $order->id === $available->id ? 'available' : 'paid_out', 'available_at' => now(),
-            ]);
-        }
-        $migration = require database_path('migrations/2026_10_18_141808_create_return_cases_and_cod_tracking.php');
-        $migration->down();
-        $migration->up();
-
-        $this->assertNotNull($available->fresh()->delivered_at);
-        $this->assertNotNull($available->fresh()->cod_collected_at);
-        $this->assertNotNull($available->earning()->sole()->voided_at);
-        $this->assertNull($paidOut->earning()->sole()->voided_at);
-        $this->assertSame('paid_out', $paidOut->earning()->sole()->status);
     }
 
     public function test_admin_cod_correction_is_scoped_to_one_seller_order(): void

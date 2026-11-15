@@ -2,14 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Actions\IssuePlatformFeeStatements;
 use App\Actions\ReturnCaseWorkflow;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ReturnCase;
-use App\Models\SellerEarning;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -32,7 +30,7 @@ class OnlinePaymentTest extends TestCase
     {
         parent::setUp();
 
-        config()->set('services.paymongo', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsk_test', 'merchant_id' => 'org_jmmart', 'base_url' => 'https://api.paymongo.com']);
+        config()->set('services.paymongo', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsk_test', 'base_url' => 'https://api.paymongo.com']);
         Http::fake([
             'api.paymongo.com/v1/checkout_sessions/*/expire' => Http::response(['data' => ['id' => 'cs_old']]),
             'api.paymongo.com/v1/checkout_sessions' => Http::response(['data' => ['id' => 'cs_1', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_1']]]),
@@ -43,22 +41,23 @@ class OnlinePaymentTest extends TestCase
         ]);
     }
 
-    public function test_online_checkout_needs_a_connected_store_and_splits_its_share(): void
+    public function test_online_checkout_needs_the_pharmacys_paymongo_account_and_pays_it_in_full(): void
     {
-        $product = $this->product(connected: false);
+        $product = $this->product();
         $buyer = $this->buyerWithCart($product, 2);
 
+        config()->set('services.paymongo.secret_key', null);
         $this->actingAs($buyer)->post(route('checkout.store'), [...$this->delivery(), 'payment_method' => 'gcash'])->assertSessionHasErrors('payment_method');
         $this->assertDatabaseCount('orders', 0);
 
-        $product->store->update(['paymongo_account_id' => 'org_a', 'paymongo_account_status' => 'activated']);
+        config()->set('services.paymongo.secret_key', 'sk_test_x');
         $order = $this->checkOut($buyer);
 
         $this->get(route('orders.pay', $order))->assertRedirect('https://checkout.paymongo.com/cs_1');
-        // ₱40.00 order: the store gets ₱39.60 after JMMart's 1%; the buyer covers GCash's 2.5% with a ₱1.03 fee line.
+        // ₱40.00 order, all to the pharmacy's own account; the buyer covers GCash's 2.5% with a ₱1.03 fee line.
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/checkout_sessions')
             && $request['data']['attributes']['payment_method_types'] === ['gcash']
-            && $request['data']['attributes']['split_payment']['recipients'] === [['merchant_id' => 'org_a', 'split_type' => 'fixed', 'value' => 3960]]
+            && ! isset($request['data']['attributes']['split_payment'])
             && collect($request['data']['attributes']['line_items'])->sum(fn (array $line): int => $line['amount'] * $line['quantity']) === 4103);
         $this->assertSame('1.03', (string) $order->payment->refresh()->fee_amount);
         $this->assertSame('cs_1', $order->payment->checkout_session_id);
@@ -133,7 +132,7 @@ class OnlinePaymentTest extends TestCase
         $this->assertSame('confirmed', $sellerOrder->refresh()->status);
     }
 
-    public function test_cancelling_a_paid_store_order_refunds_it_from_the_store_and_the_fee(): void
+    public function test_cancelling_a_paid_store_order_refunds_it_in_full(): void
     {
         $order = $this->paidOrder();
         $sellerOrder = $order->sellerOrders()->sole();
@@ -144,27 +143,9 @@ class OnlinePaymentTest extends TestCase
             && $request['data']['attributes']['amount'] === 4000
             && $request['data']['attributes']['payment_id'] === 'pay_1'
             && $request->hasHeader('Idempotency-Key', 'cancelled-order:'.$sellerOrder->id)
-            && $request['data']['attributes']['split_refund']['refund_sources'] === [
-                ['merchant_id' => 'org_a', 'split_type' => 'fixed', 'value' => 3960],
-                ['merchant_id' => 'org_jmmart', 'split_type' => 'fixed', 'value' => 40],
-            ]);
+            && ! isset($request['data']['attributes']['split_refund']));
         $this->assertSame('ref_1', $sellerOrder->refresh()->gateway_refund_id);
         $this->assertSame(5, $sellerOrder->items()->first()->product->stock_quantity);
-    }
-
-    public function test_a_delivered_online_order_is_neither_billed_nor_paid_out(): void
-    {
-        $order = $this->paidOrder();
-        $sellerOrder = $order->sellerOrders()->sole();
-        foreach (['confirmed', 'processing', 'shipped', 'delivered'] as $status) {
-            app(UpdateSellerOrderStatus::class)->handle($sellerOrder->refresh(), $status, null);
-        }
-
-        $earning = SellerEarning::query()->where('seller_order_id', $sellerOrder->id)->sole();
-        $this->assertTrue($earning->fee_collected_at_payment);
-        $this->assertNotNull($earning->voided_at);
-        $this->assertSame('0.40', (string) $earning->commission_amount);
-        $this->assertSame('0.00', app(IssuePlatformFeeStatements::class)->preview($sellerOrder->tenant_id)['commission']);
     }
 
     public function test_an_unpaid_online_order_is_released_after_the_payment_window(): void
@@ -225,22 +206,6 @@ class OnlinePaymentTest extends TestCase
         app(ReturnCaseWorkflow::class)->act($case, User::factory()->administrator()->create(), 'reopen');
     }
 
-    public function test_only_the_store_owner_connects_paymongo(): void
-    {
-        $product = $this->product(connected: false);
-        $owner = $product->store->tenant->members()->first()->user;
-        $manager = User::factory()->seller()->create(['email_verified_at' => now()]);
-        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $manager->id, 'role' => 'manager']);
-
-        $this->actingAs($manager)->post(route('seller.online-payments.store'))->assertForbidden();
-        $this->actingAs($owner)->post(route('seller.online-payments.store'))->assertRedirect('https://verify.paymongo.com/v_1');
-        $this->assertSame('org_store', $product->store->refresh()->paymongo_account_id);
-        $this->assertFalse($product->store->acceptsOnlinePayments());
-
-        $this->post(route('seller.online-payments.refresh'))->assertRedirect(route('seller.store-settings.edit'));
-        $this->assertTrue($product->store->refresh()->acceptsOnlinePayments());
-    }
-
     private function paidOrder(): Order
     {
         $order = $this->checkOut($this->buyerWithCart($this->product(), 2));
@@ -286,15 +251,14 @@ class OnlinePaymentTest extends TestCase
         return $buyer;
     }
 
-    private function product(bool $connected = true): Product
+    private function product(): Product
     {
         $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
         $suffix = str()->lower(str()->random(6));
-        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active', 'platform_fee_accepted_at' => now()->subMonth(), 'platform_fee_rate' => '0.01']);
+        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active']);
         $store = Store::create([
             'tenant_id' => $tenant->id, 'name' => "Store {$suffix}", 'slug' => "store-{$suffix}", 'phone' => '+639171234567',
             'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active',
-            ...($connected ? ['paymongo_account_id' => 'org_a', 'paymongo_account_status' => 'activated'] : []),
         ]);
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner']);
 

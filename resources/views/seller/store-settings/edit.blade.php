@@ -260,7 +260,6 @@
                 </div>
             </form>
 
-            @include('seller.store-settings._payment-methods')
         </div>
     </div>
 </x-app-layout>

@@ -92,7 +92,7 @@ class CodRefusalTest extends TestCase
     private function storeWithOwner(): array
     {
         $suffix = str()->lower(str()->random(8));
-        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active', 'platform_fee_accepted_at' => now()->subYears(2), 'platform_fee_policy_version' => '2.0', 'platform_fee_rate' => '0.01']);
+        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => "Store {$suffix}", 'slug' => "store-{$suffix}", 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         $owner = User::factory()->seller()->create();
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner']);

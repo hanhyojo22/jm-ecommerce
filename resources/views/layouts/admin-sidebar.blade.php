@@ -33,9 +33,7 @@
         [
             'label' => 'Operations',
             'items' => [
-                ['label' => 'Payouts', 'href' => route('admin.payouts.index'), 'icon' => 'payouts', 'active' => request()->routeIs('admin.payouts.*')],
                 ['label' => 'Notifications', 'href' => route('admin.announcements.create'), 'icon' => 'announcements', 'active' => request()->routeIs('admin.announcements.*')],
-                ['label' => 'Platform fees', 'href' => route('admin.platform-fees.index'), 'icon' => 'fees', 'active' => request()->routeIs('admin.platform-fees.*')],
                 ['label' => 'Audit log', 'href' => route('admin.audit-logs.index'), 'icon' => 'audit', 'active' => request()->routeIs('admin.audit-logs.*')],
             ],
         ],

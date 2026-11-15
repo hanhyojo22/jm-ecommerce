@@ -14,7 +14,7 @@ use RuntimeException;
 class PayMongo
 {
     /**
-     * @param  array<string, mixed>  $attributes  checkout session attributes, including `split_payment`
+     * @param  array<string, mixed>  $attributes  checkout session attributes
      * @return array{id: string, checkout_url: string}
      */
     public function createCheckoutSession(array $attributes): array
@@ -46,11 +46,9 @@ class PayMongo
     }
 
     /**
-     * Refunds part of a split payment, taking each amount back from the account that received it.
-     *
-     * @param  array<string, string>  $sources  merchant ID => peso amount it gives back
+     * Refunds part of a payment from the pharmacy's PayMongo account.
      */
-    public function refund(string $paymentId, string $amount, array $sources, ?string $idempotencyKey = null): string
+    public function refund(string $paymentId, string $amount, ?string $idempotencyKey = null): string
     {
         $client = $this->client();
 
@@ -62,9 +60,6 @@ class PayMongo
             'amount' => self::centavos($amount),
             'payment_id' => $paymentId,
             'reason' => 'requested_by_customer',
-            'split_refund' => ['refund_sources' => collect($sources)
-                ->map(fn (string $share, string $merchantId): array => ['merchant_id' => $merchantId, 'split_type' => 'fixed', 'value' => self::centavos($share)])
-                ->values()->all()],
         ]]])->throw()->json('data.id');
 
         if (! is_string($refundId) || $refundId === '') {
@@ -74,27 +69,6 @@ class PayMongo
         return $refundId;
     }
 
-    public function createChildAccount(): string
-    {
-        return $this->client()->post('/v2/accounts', ['type' => 'merchant'])->throw()->json('data.id');
-    }
-
-    /** The hosted page where the store owner captures their ID and selfie; it expires after 72 hours. */
-    public function identityVerificationUrl(string $accountId): string
-    {
-        return $this->client()->post("/v2/accounts/{$accountId}/identity_verification")->throw()->json('data.url');
-    }
-
-    /** One of pending, under_review, activated, or declined. */
-    public function accountStatus(string $accountId): string
-    {
-        return $this->client()->get("/v2/accounts/{$accountId}")->throw()->json('data.activation_status');
-    }
-
-    /**
-     * PayMongo signs `timestamp.raw_body` with the endpoint's secret and sends it as
-     * `Paymongo-Signature: t=…,te=…,li=…` (te for test events, li for live ones).
-     */
     public function hasValidSignature(?string $header, string $body, bool $livemode): bool
     {
         $secret = config('services.paymongo.webhook_secret');
@@ -112,6 +86,14 @@ class PayMongo
 
         return filled($parts->get('t')) && filled($signature)
             && hash_equals(hash_hmac('sha256', $parts->get('t').'.'.$body, $secret), $signature);
+    }
+
+    /**
+     * Online payments are on when the pharmacy's PayMongo account is configured.
+     */
+    public static function isConfigured(): bool
+    {
+        return filled(config('services.paymongo.secret_key'));
     }
 
     public static function centavos(string $amount): int

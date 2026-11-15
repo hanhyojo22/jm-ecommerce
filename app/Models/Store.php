@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\PayMongo;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,7 @@ class Store extends Model
      */
     public const LOCATION_DETAILS = ['region', 'province', 'barangay', 'postal_code', 'pickup_address', 'return_address', 'processing_days', 'fulfillment_methods', 'delivery_areas', 'latitude', 'longitude', 'delivery_radius_km'];
 
-    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', 'paymongo_account_id', 'paymongo_account_status', ...self::LOCATION_DETAILS];
+    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', ...self::LOCATION_DETAILS];
 
     /**
      * @return array<string, string>
@@ -33,9 +34,12 @@ class Store extends Model
      * A store takes online payments once PayMongo has activated its child account, because the
      * checkout splits the store's share straight to that account.
      */
+    /**
+     * Every branch takes online payments once the pharmacy's PayMongo account is set up.
+     */
     public function acceptsOnlinePayments(): bool
     {
-        return filled($this->paymongo_account_id) && $this->paymongo_account_status === 'activated';
+        return PayMongo::isConfigured();
     }
 
     public function tenant(): BelongsTo

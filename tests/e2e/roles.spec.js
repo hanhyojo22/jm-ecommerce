@@ -66,7 +66,7 @@ test('seller catalog shows real products and opens working details at desktop an
 test('seller workspace sections centre with their catalog gutters', async ({ browser }) => {
     test.setTimeout(90_000);
     const { context, page } = await openAsRole(browser, 'seller');
-    const sections = ['/seller/orders', '/seller/reviews', '/seller/earnings', '/seller/store-settings'];
+    const sections = ['/seller/orders', '/seller/reviews', '/seller/store-settings'];
 
     try {
         for (const [width, height, expectedPadding] of [[1682, 800, 32], [390, 844, 17]]) {

@@ -153,7 +153,6 @@
                     <dl class="sc-dl mt-4">
                         <div><dt>Method</dt><dd class="font-medium">{{ \App\Models\Payment::METHOD_LABELS[$sellerOrder->order->payment?->method] ?? 'Cash on delivery' }}</dd></div>
                         <div><dt>Payment status</dt><dd class="mt-1"><x-marketplace.order-status :status="$paymentStatus" payment /></dd></div>
-                        @if ($isOnline && $sellerOrder->cod_collected_at)<div><dt>Your share</dt><dd class="font-medium tabular-nums">₱{{ number_format(\App\Actions\StartOnlinePayment::storeShare($sellerOrder, $sellerOrder->order), 2) }} <span class="text-muted">after JMMart’s fee</span></dd></div>@endif
                         @if ($sellerOrder->gateway_refund_id)<div><dt>Refund</dt><dd class="font-medium">Refunded through PayMongo</dd></div>@endif
                     </dl>
                     <x-input-error :messages="$errors->get('payment')" class="mt-3" />

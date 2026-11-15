@@ -4,7 +4,7 @@
     $user = auth()->user();
     $isBuyer = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $cartBadge = $cartItemCount > 99 ? '99+' : $cartItemCount;
-    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*') || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
+    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*') || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
     $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'profile.edit');
     $customerPageTitle = match (true) {
         request()->routeIs('orders.show') => 'Order details',
@@ -21,8 +21,6 @@
         request()->routeIs('seller.returns.*') => 'Returns',
         request()->routeIs('seller.products.*') => 'Products',
         request()->routeIs('seller.reviews.*') => 'Reviews',
-        request()->routeIs('seller.earnings.*') => 'Earnings',
-        request()->routeIs('seller.platform-fees.*') => 'Platform fees',
         request()->routeIs('seller.store-settings.*') => 'Branch details',
         request()->routeIs('seller.branches.*') => 'Branches',
         request()->routeIs('seller.branch-stock.*') => 'Branch stock',

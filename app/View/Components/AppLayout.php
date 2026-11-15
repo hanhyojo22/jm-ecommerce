@@ -12,7 +12,6 @@ class AppLayout extends Component
         'admin.moderation' => 'Moderation',
         'admin.orders.index' => 'Marketplace orders',
         'admin.orders.show' => 'Order details',
-        'admin.payouts.index' => 'Seller payouts',
         'admin.products.index' => 'Marketplace products',
         'admin.products.show' => 'Product moderation',
         'admin.stores.index' => 'Stores overview',
@@ -33,7 +32,6 @@ class AppLayout extends Component
         'seller.products.edit' => 'Edit product',
         'seller.orders.index' => 'Seller orders',
         'seller.orders.show' => 'Seller order details',
-        'seller.earnings.index' => 'Earnings',
         'seller.reviews.index' => 'Product reviews',
     ];
 

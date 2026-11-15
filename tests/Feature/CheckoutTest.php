@@ -421,7 +421,6 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseHas('orders', ['id' => $order->id, 'total' => '39.98']);
         $this->actingAs($seller)->get(route('orders.index'))->assertOk()->assertSee($order->number);
         $this->actingAs($seller)->get(route('seller.orders.index'))->assertOk()->assertDontSee($order->number);
-        $this->assertDatabaseCount('seller_earnings', 0);
     }
 
     public function test_seller_checkout_offers_only_their_saved_delivery_addresses(): void

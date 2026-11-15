@@ -261,7 +261,6 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
         ['products', '/seller/products'],
         ['add-product', '/seller/products/create'],
         ['reviews', '/seller/reviews'],
-        ['earnings', '/seller/earnings'],
         ['storefront', '/stores/qa-northwind-store'],
         ['store-settings', '/seller/store-settings'],
     ];
@@ -706,7 +705,7 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
     try {
         // Seller Center pages centre in their content column at the 1400px measure. Orders and
         // Products are working surfaces, so they fill the content column instead.
-        for (const path of ['/seller', '/seller/orders', '/seller/products', '/seller/reviews', '/seller/earnings', '/seller/store-settings']) {
+        for (const path of ['/seller', '/seller/orders', '/seller/products', '/seller/reviews', '/seller/store-settings']) {
             const center = await measure(seller.page, path);
             const fillsColumn = path === '/seller/orders' || path === '/seller/products';
             expect(center.width, path).toBe(fillsColumn ? center.mainWidth : 1400);

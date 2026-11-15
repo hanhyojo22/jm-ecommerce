@@ -28,7 +28,6 @@ class OrderReceivedTest extends TestCase
         $this->actingAs($buyer)->post(route('orders.received', $sellerOrder))->assertSessionHasNoErrors();
 
         $this->assertSame('delivered', $sellerOrder->fresh()->status);
-        $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $sellerOrder->id, 'commission_amount' => '2.00']);
     }
 
     public function test_only_the_buyer_confirms_and_only_a_shipped_order(): void
@@ -56,7 +55,6 @@ class OrderReceivedTest extends TestCase
         $this->artisan('orders:auto-deliver')->assertSuccessful();
 
         $this->assertSame('delivered', $stale->fresh()->status);
-        $this->assertDatabaseHas('seller_earnings', ['seller_order_id' => $stale->id, 'commission_amount' => '3.00']);
         $this->assertDatabaseHas('audit_logs', ['entity_id' => $stale->id, 'action' => 'seller_order.status_updated', 'actor_user_id' => null]);
         $this->assertSame('shipped', $recent->fresh()->status);
         $this->assertSame('shipped', $disputed->fresh()->status);
@@ -81,7 +79,6 @@ class OrderReceivedTest extends TestCase
 
         $this->assertSame('cancelled', $sellerOrder->fresh()->status);
         $this->assertSame('resolved', $issue->fresh()->status);
-        $this->assertDatabaseMissing('seller_earnings', ['seller_order_id' => $sellerOrder->id]);
     }
 
     public function test_a_store_cannot_cancel_a_shipped_order_itself_even_after_reporting_it(): void
@@ -115,7 +112,7 @@ class OrderReceivedTest extends TestCase
     private function storeWithOwner(): array
     {
         $suffix = str()->lower(str()->random(8));
-        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active', 'platform_fee_accepted_at' => now()->subYear(), 'platform_fee_policy_version' => '2.0', 'platform_fee_rate' => '0.01']);
+        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => "Store {$suffix}", 'slug' => "store-{$suffix}", 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         $owner = User::factory()->seller()->create();
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner']);

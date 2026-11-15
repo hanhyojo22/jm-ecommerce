@@ -30,7 +30,6 @@ class AdminOrderControllerTest extends TestCase
 
         $this->assertDatabaseHas('payments', ['id' => $order->payment->id, 'status' => 'paid']);
         $this->assertNotNull($order->sellerOrders()->sole()->cod_collected_at);
-        $this->assertDatabaseCount('seller_earnings', 0);
 
         $auditLog = AuditLog::query()->where('action', 'payment.cod_marked_paid')->firstOrFail();
         $this->assertSame($administrator->id, $auditLog->actor_user_id);
@@ -70,7 +69,6 @@ class AdminOrderControllerTest extends TestCase
         $cancelledSellerOrder = $order->sellerOrders()->where('store_id', $cancelledStore->id)->firstOrFail();
         $this->assertNotNull($deliveredSellerOrder->cod_collected_at);
         $this->assertNull($cancelledSellerOrder->cod_collected_at);
-        $this->assertDatabaseCount('seller_earnings', 0);
         $this->assertDatabaseCount('audit_logs', 1);
     }
 

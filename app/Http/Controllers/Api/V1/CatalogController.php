@@ -344,7 +344,7 @@ class CatalogController extends Controller
                 'variants',
                 'category:id,name,slug',
                 'store' => fn ($query) => $query
-                    ->select(['id', 'name', 'slug', 'status', 'city', 'logo_path', 'description', 'paymongo_account_id', 'paymongo_account_status']),
+                    ->select(['id', 'name', 'slug', 'status', 'city', 'logo_path', 'description']),
             ])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')

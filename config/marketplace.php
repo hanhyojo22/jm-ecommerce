@@ -4,29 +4,11 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Platform Fee
-    |--------------------------------------------------------------------------
-    |
-    | Stores collect cash on delivery, so JMMart bills its share monthly
-    | instead of deducting it. The rate is a string for bcmath, and each
-    | earning keeps the rate it was charged at.
-    |
-    */
-
-    'platform_fee' => [
-        'rate' => '0.01',
-        'policy_version' => '2.0',
-        'due_days' => 15,
-        'payment_instructions' => env('PLATFORM_FEE_PAYMENT_INSTRUCTIONS'),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Orders
     |--------------------------------------------------------------------------
     |
     | A shipped store order the buyer never confirms is marked delivered after
-    | this many days, so it starts its return window and is billed its fee.
+    | this many days, so it starts its return window.
     | Orders with an open help request wait for support instead.
     |
     */
@@ -42,12 +24,10 @@ return [
     | Online Payments (PayMongo)
     |--------------------------------------------------------------------------
     |
-    | One PayMongo checkout pays every store in the order: each store's share
-    | is split to its PayMongo account and JMMart keeps its platform fee. The
-    | buyer pays PayMongo's fee as a separate line. PayMongo takes its fee
-    | before splitting, and if the shares exceed what is left the split fails
-    | silently, so these rates must be at least what the PayMongo contract
-    | charges. An order still unpaid after `payment_hours` is cancelled.
+    | One PayMongo checkout pays the pharmacy's own account. The buyer pays
+    | PayMongo's fee as a separate line, so these rates must be at least what
+    | the PayMongo contract charges. An order still unpaid after
+    | `payment_hours` is cancelled.
     |
     */
 

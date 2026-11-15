@@ -26,7 +26,7 @@ class UpdateSellerOrderStatus
         'shipped' => ['delivered'],
     ];
 
-    public function __construct(private RecordSellerEarning $recordSellerEarning, private RefundOnlinePayment $refundOnlinePayment) {}
+    public function __construct(private RefundOnlinePayment $refundOnlinePayment) {}
 
     /**
      * A null actor is JMMart itself, completing an order the buyer never confirmed or cancelling
@@ -91,7 +91,6 @@ class UpdateSellerOrderStatus
             ]);
 
             if ($status === 'delivered') {
-                $this->recordSellerEarning->handle($sellerOrder);
                 // The parcel arrived after all, so a failed delivery report has nothing left to decide.
                 $sellerOrder->issues()->where('status', 'open')->where('type', 'failed_delivery')
                     ->update(['status' => 'resolved', 'resolution_note' => 'Closed automatically: the order was marked delivered.', 'resolved_by' => $actor?->id]);

@@ -25,13 +25,10 @@
                 ['label' => 'Reviews', 'href' => route('seller.reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('seller.reviews.*')],
             ],
         ],
-        ...(auth()->user()?->headOfficeTenant(['owner', 'manager', 'staff']) === null ? [] : [[
+        [
             'label' => 'Business',
-            'items' => [
-                ['label' => 'Earnings', 'href' => route('seller.earnings.index'), 'icon' => 'earnings', 'active' => request()->routeIs('seller.earnings.*')],
-                ['label' => 'Platform fees', 'href' => route('seller.platform-fees.index'), 'icon' => 'fees', 'active' => request()->routeIs('seller.platform-fees.*')],
-            ],
-        ]]),
+            'items' => [],
+        ],
     ];
     if ($storefrontTenant) {
         $storeItems = [

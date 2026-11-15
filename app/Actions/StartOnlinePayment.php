@@ -6,7 +6,6 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\SellerOrder;
 use App\Services\PayMongo;
-use App\Support\PlatformFee;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
@@ -18,9 +17,8 @@ class StartOnlinePayment
     /**
      * Opens a PayMongo checkout for what the buyer still owes and returns its URL.
      *
-     * Each store's share (its total less JMMart's fee) is split to the store's PayMongo account and
-     * JMMart keeps the remainder. PayMongo takes its own fee before splitting, so the buyer pays a
-     * fee line sized to cover it; see config('marketplace.online_payment.fees').
+     * The whole amount goes to the pharmacy's own PayMongo account. PayMongo takes its own fee,
+     * so the buyer pays a fee line sized to cover it; see config('marketplace.online_payment.fees').
      *
      * The app passes its own return URLs so a finished checkout comes back to the app
      * instead of the web order page. The web leaves them null and keeps its routes.
@@ -40,7 +38,7 @@ class StartOnlinePayment
 
     private function start(Order $order, ?string $successUrl, ?string $cancelUrl): string
     {
-        $order->refresh()->load(['payment', 'sellerOrders.store', 'sellerOrders.tenant', 'sellerOrders.items']);
+        $order->refresh()->load(['payment', 'sellerOrders.store', 'sellerOrders.items']);
         $payment = $order->payment;
         $sellerOrders = $order->sellerOrders->reject(fn (SellerOrder $sellerOrder): bool => $sellerOrder->status === 'cancelled');
 
@@ -68,26 +66,11 @@ class StartOnlinePayment
             'reference_number' => $order->number,
             'description' => "JMMart order {$order->number}",
             'metadata' => ['order_id' => $order->id, 'payment_id' => $payment->id],
-            'split_payment' => ['recipients' => $sellerOrders->map(fn (SellerOrder $sellerOrder): array => [
-                'merchant_id' => $sellerOrder->store->paymongo_account_id,
-                'split_type' => 'fixed',
-                'value' => PayMongo::centavos(self::storeShare($sellerOrder, $order)),
-            ])->values()->all()],
         ]);
 
         $payment->update(['checkout_session_id' => $session['id'], 'fee_amount' => $fee]);
 
         return $session['checkout_url'];
-    }
-
-    /**
-     * What the store receives: its total less JMMart's fee at the rate agreed when the order was placed.
-     */
-    public static function storeShare(SellerOrder $sellerOrder, Order $order): string
-    {
-        $total = (string) $sellerOrder->total;
-
-        return bcsub($total, PlatformFee::on($total, $sellerOrder->tenant->platformFeeRateAt($order->created_at)), 2);
     }
 
     /**
