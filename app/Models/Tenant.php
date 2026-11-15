@@ -107,7 +107,10 @@ class Tenant extends Model
             ->whereHas('tenantMemberships', fn ($query) => $query
                 ->where('tenant_id', $this->id)
                 ->whereIn('role', ['owner', 'manager', 'staff'])
-                ->where(fn ($branch) => $branch->whereNull('store_id')->orWhere('store_id', $storeId)))
+                // Same rule as the order policies: staff of a closed branch can no longer open its orders.
+                ->where(fn ($query) => $query
+                    ->whereNull('store_id')
+                    ->orWhere(fn ($branch) => $branch->where('store_id', $storeId)->whereHas('store', fn ($store) => $store->where('status', 'active')))))
             ->get();
     }
 }

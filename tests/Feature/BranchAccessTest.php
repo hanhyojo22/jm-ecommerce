@@ -142,6 +142,9 @@ class BranchAccessTest extends TestCase
         // Closing the first branch must not silence alerts for the others.
         $makati->update(['status' => 'inactive']);
         $this->assertEqualsCanonicalizing([$headOffice->id, $cebuStaff->id], $tenant->fresh()->activeNotifiableStaff($cebu->id)->pluck('id')->all());
+
+        // Staff of the closed branch stop hearing about its orders; head office still does.
+        $this->assertSame([$headOffice->id], $tenant->fresh()->activeNotifiableStaff($makati->id)->pluck('id')->all());
     }
 
     public function test_branch_staff_cannot_authorize_another_branchs_order_records(): void
