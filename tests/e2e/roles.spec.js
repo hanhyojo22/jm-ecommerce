@@ -66,7 +66,7 @@ test('seller catalog shows real products and opens working details at desktop an
 test('seller workspace sections centre with their catalog gutters', async ({ browser }) => {
     test.setTimeout(90_000);
     const { context, page } = await openAsRole(browser, 'seller');
-    const sections = ['/seller/orders', '/messages?context=selling', '/seller/reviews', '/seller/earnings', '/seller/store-settings'];
+    const sections = ['/seller/orders', '/seller/reviews', '/seller/earnings', '/seller/store-settings'];
 
     try {
         for (const [width, height, expectedPadding] of [[1682, 800, 32], [390, 844, 17]]) {
@@ -74,7 +74,7 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
 
             for (const section of sections) {
                 await page.goto(section);
-                const containerSelector = section.startsWith('/messages') ? '.account-measure-messages' : '.seller-workspace-page';
+                const containerSelector = '.seller-workspace-page';
                 await expect(page.locator(containerSelector)).toBeVisible();
 
                 const layout = await page.evaluate((selector) => {
@@ -98,8 +98,8 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
                 expect(layout.leftSlack, section).toBe(layout.rightSlack);
                 expect(layout.paddingInline, section).toBe(expectedPadding);
                 if (width === 1682) {
-                    // Messages and Orders stretch across the whole content column; the rest take the 1400px measure.
-                    expect(layout.width, section).toBe({ '/messages?context=selling': 1386, '/seller/orders': 1386 }[section] ?? 1336);
+                    // Orders stretch across the whole content column; the rest take the 1400px measure.
+                    expect(layout.width, section).toBe({ '/seller/orders': 1386 }[section] ?? 1336);
                 }
                 if (layout.headerLeft !== null) {
                     expect(layout.headerLeft, section).toBe(layout.contentLeft);
@@ -265,13 +265,13 @@ test('administrator can open the marketplace dashboard and order queue', async (
     }
 });
 
-test('customer and admin are refused seller administration and buyer messaging respectively', async ({ browser }) => {
+test('customer and admin are refused seller administration and buyer pages respectively', async ({ browser }) => {
     const customer = await openAsRole(browser, 'customer');
     const admin = await openAsRole(browser, 'admin');
 
     try {
         const customerResponse = await customer.page.goto('/seller/products');
-        const adminResponse = await admin.page.goto('/messages');
+        const adminResponse = await admin.page.goto('/cart');
 
         expect(customerResponse?.status()).toBe(403);
         expect(adminResponse?.status()).toBe(403);

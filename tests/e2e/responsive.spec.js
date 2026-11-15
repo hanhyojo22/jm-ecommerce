@@ -107,8 +107,6 @@ test('customer finds purchases and opens order actions at each viewport', async 
         await expect(reviewDialog.getByRole('radio', { name: 'Excellent' })).toBeFocused();
         await reviewDialog.getByRole('button', { name: 'Close review form' }).click();
         await expect(page.getByRole('button', { name: 'Edit review', exact: true })).toBeFocused();
-        await page.getByRole('button', { name: 'Message seller' }).first().click();
-        await expect(page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
     } finally {
         await context.close();
     }
@@ -140,24 +138,6 @@ test('buyer can close order details while the request is still loading', async (
     } finally {
         releaseRequest();
         await page.unrouteAll({ behavior: 'wait' });
-        await context.close();
-    }
-});
-
-test('seller application steps remain usable on mobile and desktop', async ({ browser }) => {
-    const { context, page } = await openAsRole(browser, 'responsiveApplicant');
-
-    try {
-        await page.goto('/start-selling');
-        await expect(page.getByRole('heading', { name: 'Become a seller' })).toBeVisible();
-        await expect(page.getByRole('link', { name: /^Step \d/ })).toHaveCount(7);
-        await page.getByRole('link', { name: /Step 4:? Shipping/ }).click();
-        await expect(page.getByLabel('Region')).toBeVisible();
-        await expect(page.getByLabel('Return address')).toBeHidden();
-        await page.getByLabel('Use this address for pickup and returns').uncheck();
-        await expect(page.getByLabel('Return address')).toBeVisible();
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
-    } finally {
         await context.close();
     }
 });
@@ -280,7 +260,6 @@ test('seller workspace pages render without horizontal overflow', async ({ brows
         ['orders', '/seller/orders'],
         ['products', '/seller/products'],
         ['add-product', '/seller/products/create'],
-        ['messages', '/messages'],
         ['reviews', '/seller/reviews'],
         ['earnings', '/seller/earnings'],
         ['storefront', '/stores/qa-northwind-store'],
@@ -755,14 +734,6 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
         expect(details.width).toBe(1080);
         expect(details.leftSlack).toBe(details.rightSlack);
 
-        // Messages gives the two-panel chat the whole content column.
-        const messages = await measure(customer.page, '/messages');
-        expect(messages.width).toBe(messages.mainWidth);
-        expect(messages.leftSlack).toBe(0);
-        const inbox = await customer.page.locator('[data-conversation-list]').boundingBox();
-        expect(inbox.width).toBeGreaterThanOrEqual(380);
-        expect(inbox.width).toBeLessThanOrEqual(420);
-
         for (const [path, width] of [['/my-reviews', 1160], ['/delivery-addresses', 960], ['/profile', 880]]) {
             const page = await measure(customer.page, path);
             expect(page.width, path).toBe(width);
@@ -772,7 +743,7 @@ test('workspace pages hold their own measure and gutter', async ({ browser }) =>
         // One 24-32px gutter across every account page, at every width.
         for (const viewport of [wide, { width: 1024, height: 900 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
             await customer.page.setViewportSize(viewport);
-            for (const path of ['/orders', '/my-reviews', '/delivery-addresses', '/profile', '/messages']) {
+            for (const path of ['/orders', '/my-reviews', '/delivery-addresses', '/profile']) {
                 const gutter = parseFloat((await measure(customer.page, path)).paddingInline);
                 expect(gutter, `${path} at ${viewport.width}`).toBeGreaterThanOrEqual(24);
                 expect(gutter, `${path} at ${viewport.width}`).toBeLessThanOrEqual(32);

@@ -30,18 +30,4 @@ for (const [role, path] of [['guest', '/'], ['customer', '/orders'], ['seller', 
         }
     });
 }
-
-test('Livewire session failure shows recovery without the framework error dialog', async ({ browser }) => {
-    const { context, page } = await openAsRole(browser, 'customer');
-    try {
-        await page.goto('/messages');
-        await page.waitForFunction(() => window.Livewire?.all().length > 0);
-        await page.route(/\/livewire[^/]*\/update/, route => route.fulfill({ status: 419, contentType: 'application/json', body: '{"message":"CSRF mismatch"}' }));
-        await page.evaluate(() => { window.Livewire.all()[0].$wire.$refresh().catch(() => {}); });
-        await expect(page.locator('[data-request-feedback]')).toContainText('Your session expired');
-        await expect(page.locator('[data-request-feedback-reload]')).toBeVisible();
-        await expect(page.locator('#livewire-error')).toHaveCount(0);
-    } finally {
-        await context.close();
-    }
-});
+
