@@ -38,6 +38,7 @@
 
         if ($canManageStore) {
             $storeItems[] = ['label' => 'Branches', 'href' => route('seller.branches.index'), 'icon' => 'storefront', 'active' => request()->routeIs('seller.branches.*')];
+            $storeItems[] = ['label' => 'Staff', 'href' => route('seller.staff.index'), 'icon' => 'settings', 'active' => request()->routeIs('seller.staff.*')];
             $storeItems[] = ['label' => 'Store settings', 'href' => route('seller.store-settings.edit'), 'icon' => 'settings', 'active' => request()->routeIs('seller.store-settings.*')];
         }
 

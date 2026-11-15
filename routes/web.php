@@ -37,6 +37,7 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
 use App\Http\Controllers\Seller\ReturnCaseController as SellerReturnCaseController;
 use App\Http\Controllers\Seller\SellerOrderController;
+use App\Http\Controllers\Seller\StaffController;
 use App\Http\Controllers\Seller\StoreSettingsController;
 use App\Http\Controllers\WebPushKeyController;
 use App\Http\Controllers\WorkspacePreferenceController;
@@ -144,6 +145,10 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::get('/seller/branches/create', [BranchController::class, 'create'])->name('seller.branches.create');
     Route::post('/seller/branches', [BranchController::class, 'store'])->middleware('throttle:10,1')->name('seller.branches.store');
     Route::patch('/seller/delivery-fee', [BranchController::class, 'updateDeliveryFee'])->middleware('throttle:10,1')->name('seller.delivery-fee.update');
+    Route::get('/seller/staff', [StaffController::class, 'index'])->name('seller.staff.index');
+    Route::post('/seller/staff', [StaffController::class, 'store'])->middleware('throttle:10,1')->name('seller.staff.store');
+    Route::patch('/seller/staff/{member}', [StaffController::class, 'update'])->middleware('throttle:10,1')->name('seller.staff.update');
+    Route::delete('/seller/staff/{member}', [StaffController::class, 'destroy'])->middleware('throttle:10,1')->name('seller.staff.destroy');
     Route::get('/seller/branch-stock', [BranchStockController::class, 'index'])->name('seller.branch-stock.index');
     Route::patch('/seller/branch-stock', [BranchStockController::class, 'update'])->middleware('throttle:30,1')->name('seller.branch-stock.update');
     Route::get('/seller/products', [ProductController::class, 'index'])->name('seller.products.index');
