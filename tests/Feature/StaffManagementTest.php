@@ -32,6 +32,19 @@ class StaffManagementTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'tenant_member.added', 'actor_user_id' => $owner->id]);
     }
 
+    public function test_an_existing_account_is_never_taken_over_as_staff(): void
+    {
+        [$tenant] = $this->pharmacy('botika');
+        $owner = $this->member($tenant, 'owner');
+        $customer = User::factory()->create(['email' => 'shopper@example.com']);
+
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'Shopper@Example.com', 'role' => 'staff'])
+            ->assertSessionHasErrors('email');
+
+        $this->assertSame('buyer', $customer->fresh()->account_type);
+        $this->assertDatabaseMissing('tenant_members', ['user_id' => $customer->id]);
+    }
+
     public function test_branch_staff_cannot_manage_staff(): void
     {
         [$tenant, $branch] = $this->pharmacy('botika');

@@ -15,8 +15,8 @@ use Illuminate\Validation\ValidationException;
 class AddStaffMember
 {
     /**
-     * Adds an employee to the pharmacy. A new email gets an account they claim by signing in through
-     * Clerk with it; an existing customer account is promoted. One person works for one company only.
+     * Adds an employee to the pharmacy. The email must be new: it gets an account they claim by signing
+     * in through Clerk with it.
      *
      * @param  array{email: string, role: string, store_id: ?string, is_pharmacist: bool}  $details
      */
@@ -26,14 +26,13 @@ class AddStaffMember
             $email = Str::lower(trim($details['email']));
             $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
 
-            if ($user?->account_type === 'admin') {
-                throw ValidationException::withMessages(['email' => 'That email belongs to a JMMart administrator.']);
-            }
-            if ($user !== null && $user->tenantMemberships()->exists()) {
-                throw ValidationException::withMessages(['email' => 'That person already works for a pharmacy.']);
+            // Existing accounts are never taken over: becoming staff changes what that person can do
+            // (staff cannot buy from their own company), so it needs an email nobody uses yet.
+            if ($user !== null) {
+                throw ValidationException::withMessages(['email' => 'That email already has a JMMart account. Use a work email that has not signed up yet.']);
             }
 
-            $user ??= User::query()->create(['name' => Str::before($email, '@'), 'email' => $email, 'password' => Hash::make(Str::random(64)), 'is_active' => true]);
+            $user = User::query()->create(['name' => Str::before($email, '@'), 'email' => $email, 'password' => Hash::make(Str::random(64)), 'is_active' => true]);
             $user->forceFill(['account_type' => 'seller', 'preferred_workspace' => 'seller'])->save();
 
             $member = TenantMember::query()->create([
