@@ -67,11 +67,6 @@ class SellerOrder extends Model
         return $this->belongsTo(Store::class);
     }
 
-    public function storeRating(): HasOne
-    {
-        return $this->hasOne(StoreRating::class);
-    }
-
     public function earning(): HasOne
     {
         return $this->hasOne(SellerEarning::class);

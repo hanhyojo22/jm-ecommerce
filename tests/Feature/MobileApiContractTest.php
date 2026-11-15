@@ -104,7 +104,7 @@ class MobileApiContractTest extends TestCase
             ->json('data.id');
 
         $sellerOrderShape = [
-            'id', 'status', 'subtotal', 'shipping_amount', 'total', 'can_confirm_receipt', 'can_rate_store',
+            'id', 'status', 'subtotal', 'shipping_amount', 'total', 'can_confirm_receipt',
             'store' => ['id', 'name', 'slug'],
             'items' => ['*' => [
                 'id', 'product_id', 'product_name', 'sku', 'variant_label', 'unit_price', 'quantity',
