@@ -18,7 +18,7 @@ class PharmacySeederTest extends TestCase
         $this->seed(PharmacySeeder::class);
 
         $branches = Store::query()->get();
-        $this->assertCount(3, $branches);
+        $this->assertCount(4, $branches);
         $this->assertTrue($branches->every(fn (Store $branch): bool => $branch->status === 'active' && $branch->latitude !== null));
         $this->assertSame(20, Product::query()->count());
         $this->assertSame(6, Product::query()->where('requires_prescription', true)->count());
@@ -30,7 +30,7 @@ class PharmacySeederTest extends TestCase
         BranchStock::query()->where('product_id', $cefalexin->id)->update(['quantity' => 5]);
         $this->seed(PharmacySeeder::class);
 
-        $this->assertSame(3, Store::query()->count());
+        $this->assertSame(4, Store::query()->count());
         $this->assertSame(20, Product::query()->count());
         $this->assertSame(5, (int) BranchStock::query()->where('product_id', $cefalexin->id)->value('quantity'));
     }
