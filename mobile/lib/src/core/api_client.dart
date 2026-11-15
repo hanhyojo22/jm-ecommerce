@@ -97,6 +97,7 @@ class ApiClient {
     bool onSale = false,
     int page = 1,
     int perPage = 20,
+    String? branch,
   }) async {
     final trimmedQuery = query?.trim() ?? '';
     CancelToken? cancelToken;
@@ -121,6 +122,7 @@ class ApiClient {
             if (seller != null && seller.isNotEmpty) 'seller': seller,
             if (sort != null && sort.isNotEmpty) 'sort': sort,
             if (onSale) 'on_sale': 1,
+            'branch': ?branch,
             'page': page,
             'per_page': perPage,
           },
@@ -273,8 +275,15 @@ class ApiClient {
   Future<Product> product({
     required String store,
     required String slug,
+    String? branch,
   }) async => Product.fromJson(
-    mapOf(await _data('GET', '/stores/$store/products/$slug')),
+    mapOf(
+      await _data(
+        'GET',
+        '/stores/$store/products/$slug',
+        query: {'branch': ?branch},
+      ),
+    ),
   );
 
   Future<Cart> cart() async =>
@@ -286,6 +295,7 @@ class ApiClient {
     int quantity = 1,
     String? variantId,
     bool buyNow = false,
+    String? branch,
   }) async => Cart.fromJson(
     mapOf(
       await _data(
@@ -295,10 +305,16 @@ class ApiClient {
           'product_id': productId,
           'quantity': quantity,
           'variant_id': ?variantId,
+          'branch': ?branch,
           if (buyNow) 'buy_now': true,
         },
       ),
     ),
+  );
+
+  /// Moves the cart to [branchId]; lines that branch cannot fill come back unavailable.
+  Future<Cart> setCartBranch(String branchId) async => Cart.fromJson(
+    mapOf(await _data('PATCH', '/cart/branch', data: {'branch': branchId})),
   );
 
   Future<Cart> updateCartItem(String itemId, int quantity) async =>

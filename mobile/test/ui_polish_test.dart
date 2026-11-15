@@ -9,6 +9,7 @@ import 'package:jmmart/src/screens/order_detail_screen.dart';
 import 'package:jmmart/src/screens/orders_screen.dart';
 import 'package:jmmart/src/screens/store_screen.dart';
 import 'package:jmmart/src/theme.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   test('light and dark themes expose distinct readable surfaces', () {
@@ -43,7 +44,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(_OrderApi())],
+        overrides: [
+          apiClientProvider.overrideWithValue(_OrderApi()),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
         child: _app(const OrderDetailScreen(orderId: 'order-1')),
       ),
     );
@@ -62,6 +66,7 @@ void main() {
         ProviderScope(
           overrides: [
             apiClientProvider.overrideWithValue(_DeliveredOrderApi()),
+            activeBranchIdProvider.overrideWith((ref) async => null),
           ],
           child: _app(const OrderDetailScreen(orderId: 'order-1')),
         ),
@@ -101,7 +106,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(_CartApi())],
+        overrides: [
+          apiClientProvider.overrideWithValue(_CartApi()),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
         child: _app(const CartScreen()),
       ),
     );
@@ -117,7 +125,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(api)],
+        overrides: [
+          apiClientProvider.overrideWithValue(api),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
         child: _app(const CartScreen()),
       ),
     );
@@ -136,7 +147,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(api)],
+        overrides: [
+          apiClientProvider.overrideWithValue(api),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
         child: _app(const CartScreen()),
       ),
     );
@@ -155,7 +169,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(_OrdersApi())],
+        overrides: [
+          apiClientProvider.overrideWithValue(_OrdersApi()),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
         child: _app(const Scaffold(body: OrdersScreen())),
       ),
     );
@@ -174,7 +191,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [apiClientProvider.overrideWithValue(api)],
+          overrides: [
+            apiClientProvider.overrideWithValue(api),
+            activeBranchIdProvider.overrideWith((ref) async => null),
+          ],
           child: _app(const Scaffold(body: OrdersScreen())),
         ),
       );
@@ -268,7 +288,10 @@ void main() {
 Future<void> _pumpStore(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(_StoreApi())],
+      overrides: [
+        apiClientProvider.overrideWithValue(_StoreApi()),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
       child: _app(const StoreScreen(slug: 'store')),
     ),
   );
@@ -483,6 +506,7 @@ class _StoreApi extends ApiClient {
 
   @override
   Future<ProductPage> products({
+    String? branch,
     String? query,
     String? category,
     String? seller,

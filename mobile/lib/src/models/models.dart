@@ -489,12 +489,16 @@ class CartLine {
 class Cart {
   const Cart({
     this.id,
+    this.branchId,
     required this.lines,
     required this.selectedCount,
     required this.subtotal,
   });
 
   final String? id;
+
+  /// The branch the cart buys from (a ULID); null until one is chosen.
+  final String? branchId;
   final List<CartLine> lines;
   final int selectedCount;
   final String subtotal;
@@ -503,6 +507,7 @@ class Cart {
 
   factory Cart.fromJson(Map<String, dynamic> json) => Cart(
     id: json['id'] as String?,
+    branchId: mapOf(json['branch'])['id'] as String?,
     lines: listOf(json['items']).map(CartLine.fromJson).toList(growable: false),
     selectedCount: integer(json['selected_count']),
     subtotal: str(json['subtotal'], '0.00'),

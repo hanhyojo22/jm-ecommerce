@@ -32,14 +32,14 @@ class StoreRecommendationCard extends ConsumerWidget {
             null => _LocationFallback(issue: value.issue!),
           },
           AsyncError() => _Message(
-            text: 'Could not load nearby stores.',
+            text: 'Could not load nearby branches.',
             action: TextButton(
               onPressed: () => ref.invalidate(storeBranchesProvider),
               child: const Text('Retry'),
             ),
           ),
           _ => const _Message(
-            text: 'Finding your nearest store…',
+            text: 'Finding your nearest branch…',
             leading: SizedBox.square(
               dimension: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
@@ -71,7 +71,7 @@ class _Recommendation extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isManualPick ? 'Your store' : 'Nearest store',
+                isManualPick ? 'Your branch' : 'Nearest branch',
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -134,9 +134,9 @@ class _LocationFallback extends ConsumerWidget {
     final theme = Theme.of(context);
     final message = switch (issue) {
       LocationIssue.serviceDisabled =>
-        'Turn on location to find your nearest store.',
+        'Turn on location to find your nearest branch.',
       LocationIssue.denied || LocationIssue.deniedForever =>
-        'Allow location access to find your nearest store.',
+        'Allow location access to find your nearest branch.',
       LocationIssue.unavailable => 'We could not get your location.',
     };
 
@@ -230,14 +230,14 @@ class _BranchSelectorSheet extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
           child: Text(
-            'Choose a store',
+            'Choose a branch',
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
         if (state.nearest != null && state.selectedBranchId != null)
           ListTile(
             leading: const Icon(Icons.my_location),
-            title: const Text('Use nearest store'),
+            title: const Text('Use nearest branch'),
             onTap: () {
               notifier.useNearest();
               Navigator.pop(context);

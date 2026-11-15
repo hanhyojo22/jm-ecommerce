@@ -10,6 +10,7 @@ import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/screens/cart_screen.dart';
 import 'package:jmmart/src/theme.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   testWidgets('selection waits for confirmation before enabling checkout', (
@@ -72,7 +73,10 @@ void main() {
   test('quantity response after provider disposal completes safely', () async {
     final api = _CartApi()..pending = Completer<Cart>();
     final container = ProviderContainer(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
     );
     container.listen(cartProvider, (_, _) {});
     await container.read(cartProvider.future);
@@ -89,7 +93,10 @@ void main() {
     () async {
       final api = _CartApi();
       final container = ProviderContainer(
-        overrides: [apiClientProvider.overrideWithValue(api)],
+        overrides: [
+          apiClientProvider.overrideWithValue(api),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
       );
       addTearDown(container.dispose);
       container.listen(cartProvider, (_, _) {});
@@ -275,7 +282,10 @@ Future<void> _pump(
   addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
       child: MaterialApp(
         theme: buildAppTheme(
           brightness: dark ? Brightness.dark : Brightness.light,

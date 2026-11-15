@@ -10,12 +10,16 @@ import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   test('badge counts total quantity and add uses the returned cart', () async {
     final api = _CartApi();
     final container = ProviderContainer(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
     );
     addTearDown(container.dispose);
     container.listen(cartCountProvider, (_, _) {});
@@ -100,7 +104,10 @@ Future<void> _pumpCard(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
       child: MaterialApp(
         theme: buildAppTheme(),
         home: Scaffold(
@@ -163,6 +170,7 @@ class _CartApi extends ApiClient {
 
   @override
   Future<Cart> addToCart({
+    String? branch,
     required String productId,
     int quantity = 1,
     String? variantId,

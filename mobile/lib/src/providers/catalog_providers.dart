@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
 import 'auth_providers.dart';
+import 'store_locator_providers.dart';
 
 class CatalogFilter {
   const CatalogFilter({this.query = '', this.category, this.onSale = false});
@@ -102,6 +103,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
   @override
   Future<ProductFeed> build() async {
     final filter = ref.watch(catalogFilterProvider);
+    final branch = await ref.watch(activeBranchIdProvider.future);
     final page = await ref
         .watch(apiClientProvider)
         .products(
@@ -110,6 +112,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
           sort: filter.sort,
           onSale: filter.onSale,
           perPage: catalogPageSize,
+          branch: branch,
         );
 
     return ProductFeed(
@@ -147,6 +150,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
             onSale: current.filter.onSale,
             page: current.page + 1,
             perPage: catalogPageSize,
+            branch: ref.read(activeBranchIdProvider).value,
           );
 
       if (!_isCurrentFeed(current)) {
@@ -192,7 +196,12 @@ final dealsProvider = FutureProvider.autoDispose<List<Product>>(
   (ref) async =>
       (await ref
               .watch(apiClientProvider)
-              .products(sort: 'popular', onSale: true, perPage: 12))
+              .products(
+                sort: 'popular',
+                onSale: true,
+                perPage: 12,
+                branch: await ref.watch(activeBranchIdProvider.future),
+              ))
           .products,
 );
 
@@ -228,8 +237,13 @@ class ProductKey {
 }
 
 final productProvider = FutureProvider.autoDispose.family<Product, ProductKey>(
-  (ref, key) =>
-      ref.watch(apiClientProvider).product(store: key.store, slug: key.slug),
+  (ref, key) async => ref
+      .watch(apiClientProvider)
+      .product(
+        store: key.store,
+        slug: key.slug,
+        branch: await ref.watch(activeBranchIdProvider.future),
+      ),
 );
 
 final productReviewsProvider = FutureProvider.autoDispose

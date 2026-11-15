@@ -78,6 +78,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           apiClientProvider.overrideWithValue(api),
+          activeBranchIdProvider.overrideWith((ref) async => null),
           cartCountProvider.overrideWithValue(0),
         ],
       );
@@ -249,6 +250,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
         cartCountProvider.overrideWithValue(0),
       ],
     );
@@ -283,6 +285,7 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             apiClientProvider.overrideWithValue(api),
+            activeBranchIdProvider.overrideWith((ref) async => null),
             cartCountProvider.overrideWithValue(0),
           ],
         );
@@ -317,6 +320,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
         cartCountProvider.overrideWithValue(0),
       ],
     );
@@ -705,6 +709,7 @@ Future<void> _pumpCatalog(
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
         cartCountProvider.overrideWithValue(0),
         storeBranchesProvider.overrideWith((ref) async => const []),
       ],
@@ -798,6 +803,7 @@ class _CatalogApi extends ApiClient {
 
   @override
   Future<ProductPage> products({
+    String? branch,
     String? query,
     String? category,
     String? seller,

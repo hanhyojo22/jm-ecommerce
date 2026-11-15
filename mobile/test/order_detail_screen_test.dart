@@ -11,6 +11,7 @@ import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/screens/order_detail_screen.dart';
 import 'package:jmmart/src/screens/orders_screen.dart';
 import 'package:jmmart/src/theme.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   testWidgets('store links open the registered storefront route', (
@@ -201,7 +202,10 @@ Future<void> _pump(
   }
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
       child: router == null
           ? MaterialApp(
               theme: theme,

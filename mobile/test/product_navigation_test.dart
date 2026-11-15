@@ -12,6 +12,7 @@ import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/screens/product_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   for (final height in [640.0, 844.0]) {
@@ -405,7 +406,10 @@ Future<void> _pump(
   addTearDown(router.dispose);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
       child: MaterialApp.router(
         theme: buildAppTheme(),
         routerConfig: router,
@@ -456,6 +460,7 @@ class _ProductApi extends ApiClient {
 
   @override
   Future<Product> product({
+    String? branch,
     required String store,
     required String slug,
   }) async => Product.fromJson({
@@ -520,6 +525,7 @@ class _ProductApi extends ApiClient {
   Future<Cart> cart() async => current;
   @override
   Future<Cart> addToCart({
+    String? branch,
     required String productId,
     int quantity = 1,
     String? variantId,

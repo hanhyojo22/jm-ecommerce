@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
 import 'auth_providers.dart';
+import 'store_locator_providers.dart';
 
 class CartNotifier extends AsyncNotifier<Cart> {
   @override
@@ -34,6 +35,7 @@ class CartNotifier extends AsyncNotifier<Cart> {
             quantity: quantity,
             variantId: variantId,
             buyNow: buyNow,
+            branch: await ref.read(activeBranchIdProvider.future),
           );
       if (ref.mounted) {
         state = AsyncData(cart);

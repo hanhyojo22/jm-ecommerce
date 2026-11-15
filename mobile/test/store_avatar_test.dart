@@ -6,6 +6,7 @@ import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   testWidgets('supplied store photo needs no lookup', (tester) async {
@@ -68,7 +69,10 @@ void main() {
 }
 
 Widget _app(ApiClient api, Widget child) => ProviderScope(
-  overrides: [apiClientProvider.overrideWithValue(api)],
+  overrides: [
+    apiClientProvider.overrideWithValue(api),
+    activeBranchIdProvider.overrideWith((ref) async => null),
+  ],
   child: MaterialApp(home: Scaffold(body: child)),
 );
 

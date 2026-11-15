@@ -9,6 +9,7 @@ import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/screens/product_discussions.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   testWidgets('failed comment keeps its text and shows the error', (
@@ -17,7 +18,10 @@ void main() {
     final api = _DiscussionApi();
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(api)],
+        overrides: [
+          apiClientProvider.overrideWithValue(api),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
         child: const MaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(
@@ -53,7 +57,10 @@ void main() {
       final api = _DiscussionApi();
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [apiClientProvider.overrideWithValue(api)],
+          overrides: [
+            apiClientProvider.overrideWithValue(api),
+            activeBranchIdProvider.overrideWith((ref) async => null),
+          ],
           child: const MaterialApp(
             home: Scaffold(
               body: SingleChildScrollView(
@@ -88,7 +95,10 @@ void main() {
     final api = _DiscussionApi()..withRoot = true;
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(api)],
+        overrides: [
+          apiClientProvider.overrideWithValue(api),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
         child: const MaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(

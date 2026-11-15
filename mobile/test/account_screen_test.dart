@@ -8,6 +8,7 @@ import 'package:jmmart/src/providers/order_providers.dart';
 import 'package:jmmart/src/screens/account_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/shell.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   test('cart reminders default on unless the account turned them off', () {
@@ -55,7 +56,10 @@ void main() {
     (tester) async {
       final api = _AccountApi();
       final container = ProviderContainer(
-        overrides: [apiClientProvider.overrideWithValue(api)],
+        overrides: [
+          apiClientProvider.overrideWithValue(api),
+          activeBranchIdProvider.overrideWith((ref) async => null),
+        ],
       );
       addTearDown(container.dispose);
 
@@ -95,7 +99,10 @@ SwitchListTile _switch(WidgetTester tester) =>
 Future<void> _pump(WidgetTester tester, _AccountApi api) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
       child: MaterialApp(
         theme: buildAppTheme(),
         home: const Scaffold(body: AccountScreen()),

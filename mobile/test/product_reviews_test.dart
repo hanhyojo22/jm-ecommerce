@@ -10,6 +10,7 @@ import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/screens/product_screen.dart';
 import 'package:jmmart/src/theme.dart';
+import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
   testWidgets('failed product rating keeps the draft visible', (tester) async {
@@ -108,7 +109,10 @@ void main() {
 Future<void> _pumpProduct(WidgetTester tester, _ReviewApi api) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [apiClientProvider.overrideWithValue(api)],
+      overrides: [
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => null),
+      ],
       child: MaterialApp(
         theme: buildAppTheme(),
         home: const ProductScreen(
@@ -143,6 +147,7 @@ class _ReviewApi extends ApiClient {
 
   @override
   Future<Product> product({
+    String? branch,
     required String store,
     required String slug,
   }) async => Product.fromJson({

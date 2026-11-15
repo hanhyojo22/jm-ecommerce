@@ -1,9 +1,11 @@
 import 'models.dart';
 
-/// A store that has set a map pin; [id] is the store slug.
+/// A branch that has set a map pin; [id] is its slug and [branchId] the ULID
+/// the catalog, cart and checkout APIs take as `branch`.
 class StoreBranch {
   const StoreBranch({
     required this.id,
+    this.branchId = '',
     required this.name,
     required this.address,
     required this.latitude,
@@ -13,6 +15,7 @@ class StoreBranch {
 
   factory StoreBranch.fromJson(Map<String, dynamic> json) => StoreBranch(
     id: str(json['slug']),
+    branchId: str(json['id']),
     name: str(json['name']),
     address: [
       str(json['city']),
@@ -26,6 +29,7 @@ class StoreBranch {
   );
 
   final String id;
+  final String branchId;
   final String name;
   final String address;
   final double latitude;
