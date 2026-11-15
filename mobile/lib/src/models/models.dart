@@ -253,42 +253,6 @@ class DiscussionPage {
   final int lastPage;
 }
 
-class StoreRating {
-  const StoreRating({
-    required this.id,
-    required this.rating,
-    this.comment,
-    required this.author,
-    required this.createdAt,
-  });
-
-  final String id;
-  final int rating;
-  final String? comment;
-  final String author;
-  final String createdAt;
-
-  factory StoreRating.fromJson(Map<String, dynamic> json) => StoreRating(
-    id: str(json['id']),
-    rating: integer(json['rating']),
-    comment: json['comment'] as String?,
-    author: str(json['author']),
-    createdAt: str(json['created_at']),
-  );
-}
-
-class StoreRatingPage {
-  const StoreRatingPage({
-    required this.ratings,
-    required this.page,
-    required this.lastPage,
-  });
-
-  final List<StoreRating> ratings;
-  final int page;
-  final int lastPage;
-}
-
 class ReviewPage {
   const ReviewPage({
     required this.reviews,
@@ -765,8 +729,6 @@ class SellerOrder {
     this.deliveredAt,
     this.codCollectedAt,
     required this.canConfirmReceipt,
-    this.canRateStore = false,
-    this.storeRating,
     this.latestReturnStatus,
     this.store,
     required this.lines,
@@ -786,10 +748,6 @@ class SellerOrder {
   final String? deliveredAt;
   final String? codCollectedAt;
   final bool canConfirmReceipt;
-  final bool canRateStore;
-
-  /// The stars this buyer gave the store for this order, if any.
-  final int? storeRating;
   final String? latestReturnStatus;
   final StoreInfo? store;
   final List<OrderLine> lines;
@@ -812,11 +770,7 @@ class SellerOrder {
       deliveredAt: json['delivered_at'] as String?,
       codCollectedAt: json['cod_collected_at'] as String?,
       canConfirmReceipt: boolean(json['can_confirm_receipt']),
-      canRateStore: boolean(json['can_rate_store']),
       latestReturnStatus: mapOf(json['latest_return'])['status'] as String?,
-      storeRating: json['store_rating'] == null
-          ? null
-          : integer(mapOf(json['store_rating'])['rating']),
       store: json['store'] == null
           ? null
           : StoreInfo.fromJson(mapOf(json['store'])),
@@ -911,152 +865,4 @@ class PlacedOrder {
     paymentUrl: json['payment_url'] as String?,
     paymentError: json['payment_error'] as String?,
   );
-}
-
-class ChatAttachment {
-  const ChatAttachment({
-    required this.id,
-    required this.name,
-    required this.mimeType,
-    this.url,
-    required this.isImage,
-  });
-
-  final String id;
-  final String name;
-  final String mimeType;
-  final String? url;
-  final bool isImage;
-
-  factory ChatAttachment.fromJson(Map<String, dynamic> json) => ChatAttachment(
-    id: str(json['id']),
-    name: str(json['name']),
-    mimeType: str(json['mime_type']),
-    url: json['url'] as String?,
-    isImage: boolean(json['is_image']),
-  );
-}
-
-class ChatMessage {
-  const ChatMessage({
-    required this.id,
-    required this.senderId,
-    required this.isMine,
-    required this.type,
-    required this.body,
-    this.clientMessageId,
-    required this.createdAt,
-    this.receipt,
-    this.attachments = const [],
-    this.productId,
-    this.sellerOrderId,
-    this.contextSnapshot,
-    this.replyTo,
-  });
-
-  final String id;
-  final String senderId;
-  final bool isMine;
-  final String type;
-  final String body;
-  final String? clientMessageId;
-  final String createdAt;
-  final String? receipt;
-  final List<ChatAttachment> attachments;
-  final String? productId;
-  final String? sellerOrderId;
-  final Map<String, dynamic>? contextSnapshot;
-  final ChatReply? replyTo;
-
-  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
-    id: str(json['id']),
-    senderId: str(json['sender_id']),
-    isMine: boolean(json['is_mine']),
-    type: str(json['type'], 'text'),
-    body: str(json['body']),
-    clientMessageId: json['client_message_id'] as String?,
-    createdAt: str(json['created_at']),
-    receipt: json['receipt'] as String?,
-    productId: json['product_id'] as String?,
-    sellerOrderId: json['seller_order_id'] as String?,
-    contextSnapshot: json['context_snapshot'] == null
-        ? null
-        : mapOf(json['context_snapshot']),
-    replyTo: json['reply_to'] == null
-        ? null
-        : ChatReply.fromJson(mapOf(json['reply_to'])),
-    attachments: listOf(json['attachments'])
-        .map(ChatAttachment.fromJson)
-        .toList(growable: false),
-  );
-}
-
-/// The quoted message shown above a reply.
-class ChatReply {
-  const ChatReply({
-    required this.id,
-    required this.body,
-    required this.isMine,
-    this.contextLabel,
-  });
-
-  final String id;
-  final String body;
-  final bool isMine;
-  final String? contextLabel;
-
-  factory ChatReply.fromJson(Map<String, dynamic> json) => ChatReply(
-    id: str(json['id']),
-    body: str(json['body']),
-    isMine: boolean(json['is_mine']),
-    contextLabel: json['context_label'] as String?,
-  );
-}
-
-class Conversation {
-  const Conversation({
-    required this.id,
-    this.latestMessageAt,
-    required this.unreadCount,
-    this.store,
-    this.productName,
-    this.productSlug,
-    this.productImageUrl,
-    this.sellerOrderId,
-    this.orderNumber,
-    this.latestMessage,
-  });
-
-  final String id;
-  final String? latestMessageAt;
-  final int unreadCount;
-  final StoreInfo? store;
-  final String? productName;
-  final String? productSlug;
-  final String? productImageUrl;
-  final String? sellerOrderId;
-  final String? orderNumber;
-  final ChatMessage? latestMessage;
-
-  factory Conversation.fromJson(Map<String, dynamic> json) {
-    final product = mapOf(json['product']);
-    final sellerOrder = mapOf(json['seller_order']);
-
-    return Conversation(
-      id: str(json['id']),
-      latestMessageAt: json['latest_message_at'] as String?,
-      unreadCount: integer(json['unread_count']),
-      store: json['store'] == null
-          ? null
-          : StoreInfo.fromJson(mapOf(json['store'])),
-      productName: product['name'] as String?,
-      productSlug: product['slug'] as String?,
-      productImageUrl: product['thumbnail_url'] as String?,
-      sellerOrderId: sellerOrder['id'] as String?,
-      orderNumber: sellerOrder['short_number'] as String?,
-      latestMessage: json['latest_message'] == null
-          ? null
-          : ChatMessage.fromJson(mapOf(json['latest_message'])),
-    );
-  }
 }

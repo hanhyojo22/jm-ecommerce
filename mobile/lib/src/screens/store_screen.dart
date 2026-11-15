@@ -9,7 +9,6 @@ import '../models/models.dart';
 import '../providers/catalog_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/store_ratings_sheet.dart';
 
 const _shopGreenDeep = Color(0xFF071F1B);
 const _shopGreen = Color(0xFF0B3B34);
@@ -674,9 +673,6 @@ class _StoreStatsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ratingCount = store.ratingCount ?? 0;
-    final rated = ratingCount > 0;
-    final ratingValue = rated ? store.ratingAverage.toStringAsFixed(1) : '—';
     final soldValue = stats == null ? '—' : _compactCount(stats!.sold);
 
     return Container(
@@ -688,21 +684,6 @@ class _StoreStatsPanel extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(appSurfaceRadius),
-              onTap: () => showStoreRatings(context, store),
-              child: _StatCell(
-                icon: rated ? Icons.star_rounded : Icons.star_outline_rounded,
-                value: ratingValue,
-                label: rated ? '$ratingCount ratings' : 'ratings',
-                semanticsLabel: rated
-                    ? 'Store rated $ratingValue out of 5 from $ratingCount ratings. Show ratings'
-                    : 'No store ratings yet. Show ratings',
-              ),
-            ),
-          ),
-          const _StatDivider(),
           Expanded(
             child: _StatCell(
               value: soldValue,
@@ -731,13 +712,11 @@ class _StatCell extends StatelessWidget {
     required this.value,
     required this.label,
     required this.semanticsLabel,
-    this.icon,
   });
 
   final String value;
   final String label;
   final String semanticsLabel;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -752,10 +731,6 @@ class _StatCell extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 16, color: _shopGold),
-                const SizedBox(width: 4),
-              ],
               Flexible(
                 child: Text(
                   value,

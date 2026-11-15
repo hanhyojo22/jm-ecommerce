@@ -53,40 +53,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a delivered order lets the buyer rate the store once', (
-    tester,
-  ) async {
-    _scale = 1;
-    final api = _RateStoreApi();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [apiClientProvider.overrideWithValue(api)],
-        child: _app(const OrderDetailScreen(orderId: 'order-1')),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(find.text('Rate store'), 300);
-    await tester.ensureVisible(find.text('Rate store'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Rate store'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('4 stars'));
-    await tester.tap(find.text('Submit rating'));
-    await tester.pumpAndSettle();
-
-    expect(api.ratedStars, 4);
-    expect(find.text('Rate store'), findsNothing);
-  });
-
   testWidgets(
-    'order detail renders stepper, delivery card, chat, order number copy, and summary toggle',
+    'order detail renders stepper, delivery card, order help, order number copy, and summary toggle',
     (tester) async {
       _phone(tester, scale: 1);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [apiClientProvider.overrideWithValue(_RateStoreApi())],
+          overrides: [
+            apiClientProvider.overrideWithValue(_DeliveredOrderApi()),
+          ],
           child: _app(const OrderDetailScreen(orderId: 'order-1')),
         ),
       );
@@ -102,8 +78,8 @@ void main() {
       expect(find.text('Delivery Address'), findsOneWidget);
       expect(find.text('JMMart Money Back Guarantee'), findsOneWidget);
 
-      await tester.scrollUntilVisible(find.text('Chat with Seller'), 200);
-      expect(find.text('Chat with Seller'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Order help'), 200);
+      expect(find.text('Order help'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('View Order Summary'), 250);
       await tester.ensureVisible(find.text('View Order Summary'));
@@ -319,7 +295,7 @@ Widget _app(Widget home) => MaterialApp(
   home: home,
 );
 
-OrderDetail _order({bool canRateStore = false}) => OrderDetail(
+OrderDetail _order({String status = 'pending'}) => OrderDetail(
   id: 'order-1',
   number: 'JM-1001',
   shortNumber: '#1001',
@@ -339,8 +315,7 @@ OrderDetail _order({bool canRateStore = false}) => OrderDetail(
   sellerOrders: [
     SellerOrder(
       id: 'seller-order-1',
-      status: canRateStore ? 'delivered' : 'pending',
-      canRateStore: canRateStore,
+      status: status,
       subtotal: '1998.00',
       shippingAmount: '0.00',
       total: '1998.00',
@@ -379,25 +354,12 @@ class _OrderApi extends ApiClient {
   Future<OrderDetail> order(String id) async => _order();
 }
 
-class _RateStoreApi extends ApiClient {
-  _RateStoreApi()
+class _DeliveredOrderApi extends ApiClient {
+  _DeliveredOrderApi()
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
-  int? ratedStars;
-
   @override
-  Future<OrderDetail> order(String id) async =>
-      _order(canRateStore: ratedStars == null);
-
-  @override
-  Future<void> rateStore({
-    required String sellerOrderId,
-    required int rating,
-    String? comment,
-  }) async {
-    expect(sellerOrderId, 'seller-order-1');
-    ratedStars = rating;
-  }
+  Future<OrderDetail> order(String id) async => _order(status: 'delivered');
 }
 
 class _CartApi extends ApiClient {

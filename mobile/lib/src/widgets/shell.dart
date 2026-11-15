@@ -4,12 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../providers/cart_providers.dart';
-import '../providers/chat_providers.dart';
 import '../providers/push_providers.dart';
 import '../screens/account_screen.dart';
 import '../screens/cart_screen.dart';
 import '../screens/catalog_screen.dart';
-import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
 
 class ShellTabState {
@@ -38,38 +36,7 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell>
-    with WidgetsBindingObserver {
-  static const _titles = [
-    'Discover',
-    'Orders',
-    'Messages',
-    'Your cart',
-    'Account',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  /// A push received while backgrounded/killed never reaches [onMessage] in
-  /// push_notifications.dart, so the unread badge would otherwise stay stale
-  /// until something else happened to re-fetch conversations.
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      ref.invalidate(conversationsProvider);
-    }
-  }
-
+class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     // Cached by Riverpod: runs once per signed-in session, not on every tab switch.
@@ -77,12 +44,6 @@ class _AppShellState extends ConsumerState<AppShell>
 
     final tab = ref.watch(shellTabProvider);
     final index = tab.index;
-    final unread =
-        ref
-            .watch(conversationsProvider)
-            .value
-            ?.fold<int>(0, (sum, item) => sum + item.unreadCount) ??
-        0;
     final cartCount = ref.watch(cartCountProvider);
     final scheme = Theme.of(context).colorScheme;
 
@@ -95,10 +56,7 @@ class _AppShellState extends ConsumerState<AppShell>
         }
       },
       child: Scaffold(
-        // Shopping tabs draw their own marketplace headers.
-        appBar: index == 0 || index == 1 || index == 3 || index == 4
-            ? null
-            : AppBar(title: Text(_titles[index]), titleSpacing: 20),
+        // Every tab draws its own header.
         // Tabs with light headers need dark status-bar icons; the Shop tab's band sets its own.
         body: AnnotatedRegion<SystemUiOverlayStyle>(
           value:
@@ -115,10 +73,6 @@ class _AppShellState extends ConsumerState<AppShell>
               else
                 const SizedBox(),
               if (tab.loaded.contains(2))
-                const MessagesScreen()
-              else
-                const SizedBox(),
-              if (tab.loaded.contains(3))
                 CartScreen(
                   embedded: true,
                   onBrowseProducts: () =>
@@ -126,7 +80,7 @@ class _AppShellState extends ConsumerState<AppShell>
                 )
               else
                 const SizedBox(),
-              if (tab.loaded.contains(4))
+              if (tab.loaded.contains(3))
                 const AccountScreen()
               else
                 const SizedBox(),
@@ -176,20 +130,6 @@ class _AppShellState extends ConsumerState<AppShell>
                     color: scheme.primary,
                   ),
                   label: 'Orders',
-                ),
-                NavigationDestination(
-                  icon: _NavBadge(
-                    count: unread,
-                    child: const Icon(PhosphorIconsBold.chatCircleDots),
-                  ),
-                  selectedIcon: _NavBadge(
-                    count: unread,
-                    child: PhosphorIcon(
-                      PhosphorIconsDuotone.chatCircleDots,
-                      color: scheme.primary,
-                    ),
-                  ),
-                  label: 'Messages',
                 ),
                 NavigationDestination(
                   icon: _NavBadge(

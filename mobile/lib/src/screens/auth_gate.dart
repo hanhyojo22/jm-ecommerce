@@ -181,7 +181,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Your orders, saved stores and seller chats, on every device.',
+                      'Your orders, saved addresses and prescriptions, on every device.',
                       style: TextStyle(
                         color: scheme.onSurfaceVariant,
                         fontSize: 16,

@@ -4,7 +4,6 @@ import 'providers/catalog_providers.dart';
 import 'screens/auth_gate.dart';
 import 'screens/addresses_screen.dart';
 import 'screens/cart_screen.dart';
-import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
@@ -37,15 +36,6 @@ final appRouter = GoRouter(
       path: '/orders/:id',
       builder: (context, state) =>
           OrderDetailScreen(orderId: state.pathParameters['id'] ?? ''),
-    ),
-    GoRoute(
-      path: '/conversations/:id',
-      builder: (context, state) => ChatScreen(
-        conversationId: state.pathParameters['id'] ?? '',
-        productId: state.uri.queryParameters['product_id'],
-        sellerOrderId: state.uri.queryParameters['seller_order_id'],
-        focusComposer: state.uri.queryParameters['reply'] == '1',
-      ),
     ),
     GoRoute(
       path: '/addresses',

@@ -41,7 +41,7 @@ class AccountScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Orders are protected from checkout until delivery confirmation. You can message any seller directly from your order details or the Messages tab.',
+                'Orders are protected from checkout until delivery confirmation. Need help with an item? Ask for order help from your order details.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -135,9 +135,7 @@ class AccountScreen extends ConsumerWidget {
               _LazadaToolsGridSection(
                 onAddressesTap: () => context.push('/addresses'),
                 onReviewsTap: () => _openOrdersTab(ref, 'to_review'),
-                onMessagesTap: () =>
-                    ref.read(shellTabProvider.notifier).select(2),
-                onCartTap: () => ref.read(shellTabProvider.notifier).select(3),
+                onCartTap: () => ref.read(shellTabProvider.notifier).select(2),
                 onShopTap: () => ref.read(shellTabProvider.notifier).select(0),
                 onFastDeliveryTap: () => _openOrdersTab(ref, 'to_receive'),
                 onProtectionTap: () => _showHelpSheet(context),
@@ -871,12 +869,11 @@ class _ChannelTile extends StatelessWidget {
 }
 
 /// Lazada 2x4 bottom utility icon grid (Delivery addresses, My Reviews,
-/// Messages, Cart, Followed Stores, Buyer Protection, Fast Deliveries, Help).
+/// Cart, Followed Stores, Buyer Protection, Fast Deliveries, Help).
 class _LazadaToolsGridSection extends StatelessWidget {
   const _LazadaToolsGridSection({
     required this.onAddressesTap,
     required this.onReviewsTap,
-    required this.onMessagesTap,
     required this.onCartTap,
     required this.onShopTap,
     required this.onFastDeliveryTap,
@@ -886,7 +883,6 @@ class _LazadaToolsGridSection extends StatelessWidget {
 
   final VoidCallback onAddressesTap;
   final VoidCallback onReviewsTap;
-  final VoidCallback onMessagesTap;
   final VoidCallback onCartTap;
   final VoidCallback onShopTap;
   final VoidCallback onFastDeliveryTap;
@@ -908,11 +904,6 @@ class _LazadaToolsGridSection extends StatelessWidget {
         icon: Icons.rate_review_outlined,
         label: 'My Reviews',
         onTap: onReviewsTap,
-      ),
-      (
-        icon: Icons.chat_bubble_outline_rounded,
-        label: 'Messages',
-        onTap: onMessagesTap,
       ),
       (icon: Icons.shopping_bag_outlined, label: 'Your Cart', onTap: onCartTap),
     ];

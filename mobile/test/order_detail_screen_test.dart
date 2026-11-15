@@ -65,25 +65,6 @@ void main() {
     },
   );
 
-  testWidgets('repeated chat taps start one request and failure recovers', (
-    tester,
-  ) async {
-    final api = _OrderApi()..pendingChat = Completer<Conversation>();
-    await _pump(tester, api);
-    await tester.ensureVisible(find.text('Chat with Seller'));
-    await tester.tap(find.text('Chat with Seller'));
-    await tester.pump();
-    await tester.tap(find.text('Chat with Seller'));
-    await tester.pump();
-    expect(api.chats, 1);
-    api.pendingChat!.completeError(
-      const ApiException(code: 'network', message: 'Could not open chat'),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Could not open chat'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
   testWidgets(
     'delivered order shows existing return status without unbacked promises',
     (tester) async {
@@ -244,10 +225,8 @@ class _OrderApi extends ApiClient {
   bool payable = false;
   bool failRead = false;
   int confirmations = 0;
-  int chats = 0;
   String? returnStatus;
   Completer<String?>? pendingPayment;
-  Completer<Conversation>? pendingChat;
 
   @override
   Future<OrderDetail> order(String id) async {
@@ -320,13 +299,4 @@ class _OrderApi extends ApiClient {
     String? successUrl,
     String? cancelUrl,
   }) async => pendingPayment == null ? null : await pendingPayment!.future;
-
-  @override
-  Future<Conversation> startConversation({
-    String? productId,
-    String? sellerOrderId,
-  }) {
-    chats++;
-    return pendingChat!.future;
-  }
 }

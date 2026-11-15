@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import '../models/models.dart';
 import '../models/store_branch.dart';
 import 'api_exception.dart';
-import 'attachment_picker.dart';
 
 typedef TokenProvider = Future<String?> Function();
 
@@ -224,43 +223,6 @@ class ApiClient {
     );
   }
 
-  Future<StoreRatingPage> storeRatings({
-    required String store,
-    int page = 1,
-  }) async {
-    final body = mapOf(
-      await _raw(
-        'GET',
-        '/stores/${Uri.encodeComponent(store)}/ratings',
-        query: {'page': page, 'per_page': 10},
-      ),
-    );
-    final meta = mapOf(body['meta']);
-    return StoreRatingPage(
-      ratings: listOf(body['data'])
-          .map(StoreRating.fromJson)
-          .toList(growable: false),
-      page: integer(meta['current_page'], page),
-      lastPage: integer(meta['last_page'], page),
-    );
-  }
-
-  Future<void> rateStore({
-    required String sellerOrderId,
-    required int rating,
-    String? comment,
-  }) async {
-    await _raw(
-      'POST',
-      '/orders/seller-orders/$sellerOrderId/store-rating',
-      data: {
-        'rating': rating,
-        if (comment != null && comment.trim().isNotEmpty)
-          'comment': comment.trim(),
-      },
-    );
-  }
-
   Future<DiscussionPage> productDiscussions({
     required String store,
     required String product,
@@ -463,111 +425,6 @@ class ApiClient {
     await _raw('DELETE', '/delivery-addresses/$id');
   }
 
-  Future<List<Conversation>> conversations({String? search}) async {
-    final body = await _data(
-      'GET',
-      '/conversations',
-      query: {
-        'per_page': 50,
-        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-      },
-    );
-
-    return listOf(body).map(Conversation.fromJson).toList(growable: false);
-  }
-
-  Future<Conversation> conversation(String id) async =>
-      Conversation.fromJson(mapOf(await _data('GET', '/conversations/$id')));
-
-  Future<Conversation> startConversation({
-    String? productId,
-    String? sellerOrderId,
-  }) async {
-    final data = await _data(
-      'POST',
-      '/conversations/start',
-      data: {'product_id': ?productId, 'seller_order_id': ?sellerOrderId},
-    );
-
-    return Conversation.fromJson(mapOf(data));
-  }
-
-  Future<void> reportMessage({
-    required String conversationId,
-    required String messageId,
-    required String reason,
-  }) async {
-    await _data(
-      'POST',
-      '/conversations/$conversationId/messages/$messageId/report',
-      data: {'reason': reason},
-    );
-  }
-
-  Future<List<ChatMessage>> messages(String conversationId) async {
-    final body = await _data('GET', '/conversations/$conversationId/messages');
-
-    return listOf(body).map(ChatMessage.fromJson).toList(growable: false);
-  }
-
-  Future<ChatMessage> sendMessage({
-    required String conversationId,
-    required String body,
-    required String clientMessageId,
-    String? productId,
-    String? sellerOrderId,
-    String? replyToId,
-  }) async => ChatMessage.fromJson(
-    mapOf(
-      await _data(
-        'POST',
-        '/conversations/$conversationId/messages',
-        data: {
-          'body': body,
-          'client_message_id': clientMessageId,
-          'product_id': ?productId,
-          'seller_order_id': ?sellerOrderId,
-          'reply_to_id': ?replyToId,
-        },
-      ),
-    ),
-  );
-
-  Future<ChatMessage> sendAttachment({
-    required String conversationId,
-    required PickedAttachment attachment,
-    required String clientMessageId,
-    String body = '',
-    String? productId,
-    String? sellerOrderId,
-  }) async => ChatMessage.fromJson(
-    mapOf(
-      await _data(
-        'POST',
-        '/conversations/$conversationId/attachments',
-        data: FormData.fromMap({
-          'attachment': MultipartFile.fromBytes(
-            attachment.bytes,
-            filename: attachment.name,
-            contentType: DioMediaType.parse(attachment.mimeType),
-          ),
-          'client_message_id': clientMessageId,
-          if (body.trim().isNotEmpty) 'body': body.trim(),
-          'product_id': ?productId,
-          'seller_order_id': ?sellerOrderId,
-        }),
-      ),
-    ),
-  );
-
-  Future<void> markRead(String conversationId) async {
-    await _raw('POST', '/conversations/$conversationId/read');
-  }
-
-  Future<void> typing(String conversationId) async {
-    await _raw('POST', '/conversations/$conversationId/typing');
-  }
-
   Future<void> submitReview({
     required String orderItemId,
     required int rating,
@@ -598,19 +455,6 @@ class ApiClient {
       ),
     ),
   );
-
-  Future<String> broadcastAuth({
-    required String socketId,
-    required String channelName,
-  }) async {
-    final body = await _raw(
-      'POST',
-      '/broadcasting/auth',
-      data: {'socket_id': socketId, 'channel_name': channelName},
-    );
-
-    return str(body is Map ? body['auth'] : null);
-  }
 
   Future<void> registerDeviceToken(String token) async {
     await _raw(

@@ -427,7 +427,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
-  /// Card 3: Store & Order Items card with Help & Chat with Seller footer.
+  /// Card 3: Store & Order Items card with an Order help footer.
   Widget _sellerOrderCard(OrderDetail order, SellerOrder sellerOrder) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -525,9 +525,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     ),
                   ),
                 ],
-                if (sellerOrder.canConfirmReceipt ||
-                    sellerOrder.canRateStore ||
-                    sellerOrder.storeRating != null) ...[
+                if (sellerOrder.canConfirmReceipt) ...[
                   const SizedBox(height: 12),
                   Wrap(
                     alignment: WrapAlignment.end,
@@ -538,24 +536,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         FilledButton.tonal(
                           onPressed: _busy ? null : () => _confirm(sellerOrder),
                           child: const Text('Confirm received'),
-                        ),
-                      if (sellerOrder.canRateStore)
-                        OutlinedButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () => _rateStore(sellerOrder),
-                          icon: const Icon(Icons.storefront_outlined, size: 18),
-                          label: const Text('Rate store'),
-                        )
-                      else if (sellerOrder.storeRating != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Text(
-                            'You rated this store ${sellerOrder.storeRating} out of 5',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
                         ),
                     ],
                   ),
@@ -600,47 +580,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                             Icons.chevron_right_rounded,
                             size: 17,
                             color: scheme.onSurfaceVariant,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                VerticalDivider(width: 1, color: scheme.outlineVariant),
-                Expanded(
-                  child: InkWell(
-                    onTap: _busy ? null : () => _chat(sellerOrder),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 11,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_rounded,
-                            size: 16,
-                            color: scheme.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              'Chat with Seller',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                                color: scheme.primary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: 17,
-                            color: scheme.primary,
                           ),
                         ],
                       ),
@@ -927,7 +866,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Your payment is protected until you confirm that your order has arrived in good condition. Need help with an item? Message the store directly using "Chat with Seller".',
+                'Your payment is protected until you confirm that your order has arrived in good condition. Need help with an item? Tap "Order help".',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -1065,70 +1004,6 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         _snack(
           'Thanks for confirming your ${sellerOrder.store?.name ?? 'store'} order.',
         );
-      }
-    } on ApiException catch (error) {
-      if (mounted) {
-        _snack(error.friendly);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  Future<void> _chat(SellerOrder sellerOrder) async {
-    if (_busy) {
-      return;
-    }
-    setState(() => _busy = true);
-
-    try {
-      final conversation = await ref
-          .read(apiClientProvider)
-          .startConversation(sellerOrderId: sellerOrder.id);
-
-      if (mounted) {
-        context.push(
-          '/conversations/${conversation.id}?seller_order_id=${sellerOrder.id}',
-        );
-      }
-    } on ApiException catch (error) {
-      if (mounted) {
-        _snack(error.friendly);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
-    }
-  }
-
-  Future<void> _rateStore(SellerOrder sellerOrder) async {
-    final input = await showStoreRatingSheet(
-      context,
-      sellerOrder.store?.name ?? 'this store',
-    );
-
-    if (input == null || !mounted) {
-      return;
-    }
-
-    final container = ProviderScope.containerOf(context, listen: false);
-    setState(() => _busy = true);
-
-    try {
-      await container
-          .read(apiClientProvider)
-          .rateStore(
-            sellerOrderId: sellerOrder.id,
-            rating: input.rating,
-            comment: input.body,
-          );
-      container.invalidate(orderProvider(widget.orderId));
-
-      if (mounted) {
-        _snack('Thanks for rating ${sellerOrder.store?.name ?? 'the store'}.');
       }
     } on ApiException catch (error) {
       if (mounted) {
@@ -1444,22 +1319,6 @@ Future<ReviewInput?> showProductReviewSheet(
     fieldLabel: 'Your review (optional)',
     submitLabel: 'Publish review',
     maxLength: 3000,
-  ),
-);
-
-Future<ReviewInput?> showStoreRatingSheet(
-  BuildContext context,
-  String storeName,
-) => showModalBottomSheet<ReviewInput>(
-  context: context,
-  isScrollControlled: true,
-  showDragHandle: true,
-  useSafeArea: true,
-  builder: (context) => _ReviewSheet(
-    title: 'Rate $storeName',
-    fieldLabel: 'How was the seller? (optional)',
-    submitLabel: 'Submit rating',
-    maxLength: 1000,
   ),
 );
 

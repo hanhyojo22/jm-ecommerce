@@ -15,7 +15,6 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/fly_to_cart.dart';
 import '../widgets/image_viewer.dart';
-import '../widgets/store_ratings_sheet.dart';
 import 'order_detail_screen.dart';
 import 'product_discussions.dart';
 
@@ -126,7 +125,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   final _purchase = ValueNotifier<bool?>(null);
   final _cartIconKey = GlobalKey<CartBadgeIconState>();
   final _addButtonKey = GlobalKey();
-  bool _chatting = false;
   bool _showDiscussions = false;
   int _imageIndex = 0;
   final _galleryController = PageController();
@@ -333,30 +331,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     }
   }
 
-  Future<void> _openChat() async {
-    setState(() => _chatting = true);
-
-    try {
-      final conversation = await ref
-          .read(apiClientProvider)
-          .startConversation(productId: product.id);
-
-      if (mounted) {
-        context.push(
-          '/conversations/${conversation.id}?product_id=${product.id}',
-        );
-      }
-    } on ApiException catch (error) {
-      if (mounted) {
-        _snack(error.friendly);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _chatting = false);
-      }
-    }
-  }
-
   void _snack(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -388,12 +362,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     final enabled = available && inFlight == null;
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 17;
 
-    Widget shortcut(
-      String label,
-      Widget icon,
-      VoidCallback onTap, {
-      bool busy = false,
-    }) => SizedBox(
+    Widget shortcut(String label, Widget icon, VoidCallback onTap) => SizedBox(
       width: largeText ? 88 : 54,
       child: TextButton(
         style: TextButton.styleFrom(
@@ -404,20 +373,11 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
             borderRadius: BorderRadius.circular(appSurfaceRadius),
           ),
         ),
-        onPressed: inFlight == true || busy ? null : onTap,
+        onPressed: inFlight == true ? null : onTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            busy
-                ? SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: theme.colorScheme.primary,
-                      semanticsLabel: 'Opening chat',
-                    ),
-                  )
-                : SizedBox.square(dimension: 22, child: Center(child: icon)),
+            SizedBox.square(dimension: 22, child: Center(child: icon)),
             const SizedBox(height: 4),
             Text(
               label,
@@ -445,12 +405,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           () => context.push(
             '/store/${product.store?.slug ?? widget.productKey.store}',
           ),
-        ),
-        shortcut(
-          'Chat',
-          const Icon(Icons.chat_bubble_outline_rounded, size: 22),
-          _openChat,
-          busy: _chatting,
         ),
       ],
     );
@@ -1082,46 +1036,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                InkWell(
-                                  onTap: () =>
-                                      showStoreRatings(context, product.store!),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 2,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          (product.store!.ratingCount ?? 0) > 0
-                                              ? Icons.star_rounded
-                                              : Icons.star_outline_rounded,
-                                          size: 16,
-                                          color:
-                                              (product.store!.ratingCount ??
-                                                      0) >
-                                                  0
-                                              ? theme.colorScheme.secondary
-                                              : theme
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Flexible(
-                                          child: Text(
-                                            storeRatingLabel(product.store!),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                   ),
                                 ),
                               ],
