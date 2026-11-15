@@ -33,7 +33,7 @@ class CartItem extends Model
      */
     public function availableQuantity(): int
     {
-        $branch = $this->cart?->store;
+        $branch = $this->cart?->branchFor($this->product->tenant_id);
 
         return $branch === null ? 0 : ($this->branchQuantity ??= BranchInventory::available($branch->id, $this->product_id, $this->product_variant_id));
     }
@@ -44,7 +44,7 @@ class CartItem extends Model
      */
     public function isAvailable(): bool
     {
-        $branch = $this->cart?->store;
+        $branch = $this->cart?->branchFor($this->product->tenant_id);
 
         return $branch !== null
             && $branch->status === 'active'

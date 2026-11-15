@@ -23,5 +23,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // Branch stock is what shoppers can buy; give each product its count at its first branch.
+        $this->call(BranchStockSeeder::class);
     }
 }

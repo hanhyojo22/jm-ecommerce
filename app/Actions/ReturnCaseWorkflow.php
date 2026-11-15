@@ -324,18 +324,24 @@ class ReturnCaseWorkflow
             $item = $line->orderItem;
             $product = Product::withTrashed()->lockForUpdate()->find($item->product_id);
             $variant = $item->product_variant_id ? $product?->variants()->whereKey($item->product_variant_id)->lockForUpdate()->first() : null;
+            // The branch that filled the order sends the replacement and gets it back if cancelled.
+            $branchId = $case->sellerOrder->store_id;
             if ($restore) {
-                $product?->increment('stock_quantity', $line->quantity);
-                $variant?->increment('stock_quantity', $line->quantity);
+                if ($product !== null && ($item->product_variant_id === null || $variant !== null)) {
+                    app(BranchInventory::class)->put($branchId, $product, $variant, $line->quantity);
+                }
                 $this->event($case, $actor, 'replacement_stock_restored', null, ['order_item_id' => $item->id, 'quantity' => $line->quantity]);
 
                 continue;
             }
-            if ($product === null || $product->stock_quantity < $line->quantity || ($item->product_variant_id && ($variant === null || $variant->stock_quantity < $line->quantity))) {
+            if ($product === null || ($item->product_variant_id && $variant === null)) {
                 throw ValidationException::withMessages(['action' => 'Replacement stock is unavailable. Ask support to change the remedy.']);
             }
-            $product->decrement('stock_quantity', $line->quantity);
-            $variant?->decrement('stock_quantity', $line->quantity);
+            try {
+                app(BranchInventory::class)->take($branchId, $product, $variant, $line->quantity);
+            } catch (ValidationException) {
+                throw ValidationException::withMessages(['action' => 'Replacement stock is unavailable. Ask support to change the remedy.']);
+            }
             $this->event($case, $actor, 'replacement_stock_reduced', null, ['order_item_id' => $item->id, 'quantity' => $line->quantity]);
         }
     }
@@ -353,8 +359,7 @@ class ReturnCaseWorkflow
         if ($item->product_variant_id !== null && $variant === null) {
             throw ValidationException::withMessages(['quantity' => 'The original variant no longer exists.']);
         }
-        $product->increment('stock_quantity', $quantity);
-        $variant?->increment('stock_quantity', $quantity);
+        app(BranchInventory::class)->put($item->sellerOrder->store_id, $product, $variant, $quantity);
         $line->increment('restocked_quantity', $quantity);
     }
 

@@ -94,6 +94,9 @@ class PlaywrightQaSeeder extends Seeder
         $rowSellerOrder->items()->create(['product_id' => $chatProduct->id, 'product_name' => $chatProduct->name, 'sku' => $chatProduct->sku, 'variant_label' => 'Blue / Medium', 'unit_price' => '24.99', 'quantity' => 2, 'line_total' => '49.98']);
         $rowSellerOrder->items()->create(['product_name' => 'QA Archived Accessory', 'sku' => 'QA-ARCHIVE-001', 'unit_price' => '5.00', 'quantity' => 1, 'line_total' => '5.00']);
         $rowSellerOrder->items()->create(['product_name' => 'QA Retired Pouch', 'sku' => 'QA-RETIRED-001', 'unit_price' => '6.00', 'quantity' => 1, 'line_total' => '6.00']);
+
+        // Branch stock is what shoppers can buy; give each product its count at its first branch.
+        $this->call(BranchStockSeeder::class);
     }
 
     /**

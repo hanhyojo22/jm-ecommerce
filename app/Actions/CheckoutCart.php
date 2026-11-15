@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,8 @@ use Illuminate\Validation\ValidationException;
 
 class CheckoutCart
 {
+    public function __construct(private BranchInventory $inventory) {}
+
     /**
      * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      * @param  'cod'|'gcash'|'maya'|'card'  $paymentMethod  an online method is paid through one PayMongo checkout opened right after this
@@ -66,6 +69,14 @@ class CheckoutCart
                     throw ValidationException::withMessages(['cart' => 'Select an item to check out.']);
                 }
 
+                // Lock the branch so it cannot close part-way through this checkout.
+                $branchId = $cart->branchFor((string) Product::query()->whereKey($items->first()->product_id)->value('tenant_id'))?->id;
+                $branch = $branchId === null ? null : Store::query()->whereKey($branchId)->lockForUpdate()->first();
+
+                if ($branch === null || $branch->status !== 'active') {
+                    throw ValidationException::withMessages(['cart' => 'Your branch is closed. Choose another branch before checking out.']);
+                }
+
                 $products = Product::query()
                     ->with(['store', 'tenant'])
                     ->whereIn('id', $items->pluck('product_id'))
@@ -76,7 +87,7 @@ class CheckoutCart
 
                 $managedTenantIds = $user->tenantMemberships()->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all();
 
-                $lines = $items->map(function ($item) use ($products, $managedTenantIds, $paymentMethod): array {
+                $lines = $items->map(function ($item) use ($products, $managedTenantIds, $paymentMethod, $branch): array {
                     $product = $products->get($item->product_id);
 
                     $variant = $product !== null && $item->product_variant_id !== null
@@ -90,21 +101,19 @@ class CheckoutCart
                     if (
                         $product === null
                         || $product->status !== 'active'
-                        || $product->store->status !== 'active'
                         || $product->tenant->status !== 'active'
-                        || $product->stock_quantity < $item->quantity
-                        || ($item->product_variant_id !== null && ($variant === null || $variant->stock_quantity < $item->quantity))
+                        || $product->tenant_id !== $branch->tenant_id
+                        || ($item->product_variant_id !== null && $variant === null)
                         || ($item->product_variant_id === null && $product->variants()->exists())
                     ) {
                         throw ValidationException::withMessages(['cart' => 'A product in your cart is unavailable.']);
                     }
 
-                    if ($paymentMethod !== 'cod' && ! $product->store->acceptsOnlinePayments()) {
-                        throw ValidationException::withMessages(['payment_method' => "{$product->store->name} does not take online payments yet. Choose cash on delivery."]);
+                    if ($paymentMethod !== 'cod' && ! $branch->acceptsOnlinePayments()) {
+                        throw ValidationException::withMessages(['payment_method' => 'Online payments are not available yet. Choose cash on delivery.']);
                     }
 
-                    $product->decrement('stock_quantity', $item->quantity);
-                    $variant?->decrement('stock_quantity', $item->quantity);
+                    $this->inventory->take($branch->id, $product, $variant, $item->quantity);
 
                     $unitPrice = (string) ($variant?->price ?? $product->price);
 
@@ -139,14 +148,14 @@ class CheckoutCart
                 ]);
                 $user->deliveryAddresses()->firstOrCreate(collect($delivery)->except('delivery_note')->all());
 
-                $lines->groupBy(fn (array $line): string => $line['product']->store_id)
-                    ->each(function ($storeLines) use ($order): void {
-                        $firstLine = $storeLines->first();
+                // One branch fills the whole order.
+                $lines->groupBy(fn (array $line): string => $branch->id)
+                    ->each(function ($storeLines) use ($order, $branch): void {
                         $subtotal = $this->sumTotals($storeLines->pluck('total')->all());
 
                         $sellerOrder = $order->sellerOrders()->create([
-                            'tenant_id' => $firstLine['product']->tenant_id,
-                            'store_id' => $firstLine['product']->store_id,
+                            'tenant_id' => $branch->tenant_id,
+                            'store_id' => $branch->id,
                             'status' => 'pending',
                             'subtotal' => $subtotal,
                             'shipping_amount' => '0.00',

@@ -72,8 +72,12 @@ class BranchInventory
             ->groupBy('variant_key')
             ->pluck('total', 'variant_key');
 
-        Product::withTrashed()->whereKey($product->id)->update(['stock_quantity' => (int) $byVariant->sum()]);
-        foreach ($product->variants()->pluck('id') as $variantId) {
+        $variantIds = $product->variants()->pluck('id');
+        // Once a product has variants it is sold per variant, so an old whole-product count no longer counts.
+        $total = $variantIds->isEmpty() ? (int) ($byVariant['default'] ?? 0) : (int) $byVariant->only($variantIds->all())->sum();
+
+        Product::withTrashed()->whereKey($product->id)->update(['stock_quantity' => $total]);
+        foreach ($variantIds as $variantId) {
             ProductVariant::query()->whereKey($variantId)->update(['stock_quantity' => (int) ($byVariant[$variantId] ?? 0)]);
         }
     }

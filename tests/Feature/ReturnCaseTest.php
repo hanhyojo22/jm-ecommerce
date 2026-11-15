@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Order;
 use App\Models\OrderIssue;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\ReturnCase;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -418,7 +421,7 @@ class ReturnCaseTest extends TestCase
         $tenant = Tenant::create(['name' => 'Seller '.$suffix, 'slug' => 'seller-'.$suffix, 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Store '.$suffix, 'slug' => 'store-'.$suffix, 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner']);
-        $product = Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => 'tote-'.$suffix, 'sku' => 'SKU-'.$suffix, 'price' => '250.00', 'stock_quantity' => 5, 'status' => 'active']);
+        $product = tap(Product::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => 'tote-'.$suffix, 'sku' => 'SKU-'.$suffix, 'price' => '250.00', 'stock_quantity' => 5, 'status' => 'active']), fn (Product $product) => $this->stock($product, (int) (5)));
         $total = bcmul('250.00', (string) $quantity, 2);
         $order = Order::create(['user_id' => $buyer->id, 'number' => 'RET-'.$suffix, 'status' => 'delivered', 'recipient_name' => 'Buyer', 'phone' => '+639171234567', 'address_line' => 'Buyer Street', 'city' => 'Manila', 'subtotal' => $total, 'shipping_amount' => '0.00', 'total' => $total]);
         $order->payment()->create(['method' => 'cod', 'status' => 'pending', 'amount' => $total]);
@@ -426,5 +429,17 @@ class ReturnCaseTest extends TestCase
         $item = $sellerOrder->items()->create(['product_id' => $product->id, 'product_name' => $product->name, 'sku' => $product->sku, 'unit_price' => '250.00', 'quantity' => $quantity, 'line_total' => $total]);
 
         return [$buyer, $seller, $sellerOrder, $item, $product];
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

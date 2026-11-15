@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
@@ -144,7 +147,7 @@ class CartReminderTest extends TestCase
             'city' => 'Manila',
             'status' => 'active',
         ]);
-        $product = Product::create([
+        $product = tap(Product::create([
             'tenant_id' => $tenant->id,
             'store_id' => $store->id,
             'name' => 'Cart Tote',
@@ -153,11 +156,23 @@ class CartReminderTest extends TestCase
             'price' => '199.00',
             'stock_quantity' => 5,
             'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) (5)));
         $cart = Cart::create(['user_id' => $buyer->id]);
         CartItem::create(['cart_id' => $cart->id, 'product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 1]);
         $this->idleSince($cart, $updatedAt);
 
         return [$buyer, $cart];
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

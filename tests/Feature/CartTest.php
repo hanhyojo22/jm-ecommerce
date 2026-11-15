@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
@@ -43,7 +46,7 @@ class CartTest extends TestCase
         $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])
             ->assertRedirect(route('cart.index'));
 
-        $product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'NAVY-M', 'stock_quantity' => 5]);
+        tap($product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'NAVY-M', 'stock_quantity' => 5]), fn (ProductVariant $variant) => $this->stock($product, (int) (5), $variant));
         $this->actingAs($buyer)->get(route('cart.index'))
             ->assertOk()
             ->assertSee('Choose a color and size again');
@@ -54,7 +57,7 @@ class CartTest extends TestCase
         $buyer = User::factory()->create();
         $product = $this->product();
         $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1]);
-        $product->update(['stock_quantity' => 0]);
+        $this->stock($product, 0);
 
         $this->actingAs($buyer)->get(route('cart.index'))
             ->assertSee('Sold out')
@@ -65,7 +68,7 @@ class CartTest extends TestCase
     {
         $buyer = User::factory()->create();
         $product = $this->product();
-        $product->update(['stock_quantity' => 0]);
+        $this->stock($product, 0);
 
         $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])
             ->assertSessionHasErrors('quantity');
@@ -248,7 +251,7 @@ class CartTest extends TestCase
         $buyer = User::factory()->create();
         $product = $this->product();
         $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 2]);
-        $product->update(['stock_quantity' => 1]);
+        $this->stock($product, 1);
 
         $this->actingAs($buyer)->get(route('cart.index'))->assertSee('Only 1 available');
 
@@ -257,18 +260,18 @@ class CartTest extends TestCase
 
     private function product(string $slug = 'canvas-tote', string $sku = 'TOTE-001'): Product
     {
-        $tenant = Tenant::create(['name' => 'Northwind '.$sku, 'slug' => 'northwind-'.str()->lower($sku), 'status' => 'active']);
-        $store = Store::create([
+        // Every product comes from one pharmacy branch, because a cart buys from one branch.
+        $tenant = Tenant::firstOrCreate(['slug' => 'northwind'], ['name' => 'Northwind', 'status' => 'active']);
+        $store = Store::firstOrCreate(['slug' => 'northwind-goods'], [
             'tenant_id' => $tenant->id,
-            'name' => 'Northwind Goods '.$sku,
-            'slug' => 'northwind-goods-'.str()->lower($sku),
+            'name' => 'Northwind Goods',
             'phone' => '+639171234567',
             'address_line' => '10 Market Street',
             'city' => 'Manila',
             'status' => 'active',
         ]);
 
-        return Product::create([
+        return tap(Product::create([
             'tenant_id' => $tenant->id,
             'store_id' => $store->id,
             'name' => 'Canvas Tote',
@@ -277,7 +280,7 @@ class CartTest extends TestCase
             'price' => '299.00',
             'stock_quantity' => 5,
             'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) (5)));
     }
 
     public function test_adding_a_product_again_ticks_an_item_the_buyer_had_unticked(): void
@@ -308,5 +311,17 @@ class CartTest extends TestCase
         }
 
         $this->actingAs($buyer)->postJson(route('cart.store', $product), ['quantity' => 1])->assertOk();
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

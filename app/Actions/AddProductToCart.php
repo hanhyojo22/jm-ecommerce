@@ -81,7 +81,7 @@ class AddProductToCart
         if ($branchId !== null) {
             $cart->update(['store_id' => CatalogQuery::publicStores()->whereKey($branchId)->firstOrFail()->id]);
         } elseif ($cart->store_id === null) {
-            $cart->update(['store_id' => CatalogQuery::publicStores()->where('tenant_id', $product->tenant_id)->oldest()->value('id')]);
+            $cart->update(['store_id' => $cart->branchFor($product->tenant_id)?->id]);
         }
 
         $branch = $cart->store()->first();

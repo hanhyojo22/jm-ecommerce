@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
 use App\Actions\ReturnCaseWorkflow;
 use App\Actions\UpdateSellerOrderStatus;
+use App\Models\BranchStock;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\ReturnCase;
 use App\Models\SellerOrder;
 use App\Models\Store;
@@ -262,10 +265,10 @@ class OnlinePaymentTest extends TestCase
         ]);
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner']);
 
-        return Product::create([
+        return tap(Product::create([
             'tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => "canvas-tote-{$suffix}",
             'sku' => "TOTE-{$suffix}", 'price' => '20.00', 'stock_quantity' => 5, 'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) (5)));
     }
 
     /**
@@ -274,5 +277,17 @@ class OnlinePaymentTest extends TestCase
     private function delivery(): array
     {
         return ['recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'province' => 'Metro Manila', 'postal_code' => '1000'];
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

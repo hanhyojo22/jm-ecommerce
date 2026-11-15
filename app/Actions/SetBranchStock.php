@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class SetBranchStock
 {
+    public function __construct(private BranchInventory $inventory) {}
+
     /**
      * Records a stock count for one branch. Only the company's own products count, and a
      * product with variants is counted per variant, never as a whole.
@@ -62,6 +64,10 @@ class SetBranchStock
                     );
                     $changes[] = ['product_id' => $productId, 'variant_key' => $variantKey, 'from' => $stock?->quantity ?? 0, 'to' => $quantity];
                 }
+            }
+
+            foreach (collect($changes)->pluck('product_id')->unique() as $changedProductId) {
+                $this->inventory->syncTotals($products[$changedProductId]);
             }
 
             if ($changes !== []) {

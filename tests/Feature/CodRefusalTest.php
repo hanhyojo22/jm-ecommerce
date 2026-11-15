@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderIssue;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -43,7 +46,7 @@ class CodRefusalTest extends TestCase
         $this->confirmedRefusal($store, $buyer);
         $this->confirmedRefusal($store, $buyer);
         $inProgress = $this->sellerOrder($store, $buyer, 'pending');
-        $product = Product::create(['tenant_id' => $store->tenant_id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-1', 'price' => '100.00', 'stock_quantity' => 5, 'status' => 'active']);
+        $product = tap(Product::create(['tenant_id' => $store->tenant_id, 'store_id' => $store->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-1', 'price' => '100.00', 'stock_quantity' => 5, 'status' => 'active']), fn (Product $product) => $this->stock($product, (int) (5)));
         Cart::create(['user_id' => $buyer->id])->items()->create(['product_id' => $product->id, 'quantity' => 1]);
 
         $this->actingAs($owner)->get(route('seller.orders.show', $inProgress))->assertOk()->assertSee('This buyer refused 2 cash-on-delivery parcels');
@@ -129,5 +132,17 @@ class CodRefusalTest extends TestCase
     private function delivery(): array
     {
         return ['recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'province' => 'Metro Manila', 'postal_code' => '1000'];
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

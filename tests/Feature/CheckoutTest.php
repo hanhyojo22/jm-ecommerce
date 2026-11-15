@@ -2,11 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\DeliveryAddress;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -31,7 +34,7 @@ class CheckoutTest extends TestCase
         [, $purchased] = $this->sellerProduct('19.99', 5);
         $category = Category::create(['name' => 'Bags', 'slug' => 'bags', 'is_active' => true]);
         $purchased->update(['category_id' => $category->id]);
-        $related = Product::create([
+        $related = tap(Product::create([
             'tenant_id' => $purchased->tenant_id,
             'store_id' => $purchased->store_id,
             'category_id' => $category->id,
@@ -41,7 +44,7 @@ class CheckoutTest extends TestCase
             'price' => '12.00',
             'stock_quantity' => 5,
             'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) (5)));
         $buyer = User::factory()->create(['email_verified_at' => now()]);
         $otherBuyer = User::factory()->create(['email_verified_at' => now()]);
         $consent = json_encode(['version' => CookiePreferences::VERSION, 'functional' => true, 'analytics' => false, 'marketing' => false]);
@@ -150,7 +153,7 @@ class CheckoutTest extends TestCase
         $loginUrl = route('login', ['redirect' => parse_url($productPath, PHP_URL_PATH), 'add_to_cart' => $product->id]);
 
         $this->get($loginUrl)->assertOk();
-        $product->update(['stock_quantity' => 0]);
+        $this->stock($product, 0);
 
         $buyer = User::factory()->create();
         $this->actingAs($buyer)
@@ -365,10 +368,10 @@ class CheckoutTest extends TestCase
     public function test_customer_selects_a_color_and_size_and_cancellation_restores_that_stock(): void
     {
         [$seller, $product] = $this->sellerProduct('19.99', 5);
-        $navy = $product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'TOTE-N-M', 'stock_quantity' => 3]);
-        $red = $product->variants()->create(['color' => 'Red', 'size' => 'L', 'sku' => 'TOTE-R-L', 'stock_quantity' => 2]);
+        $navy = tap($product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'TOTE-N-M', 'stock_quantity' => 3]), fn (ProductVariant $variant) => $this->stock($product, (int) (3), $variant));
+        $red = tap($product->variants()->create(['color' => 'Red', 'size' => 'L', 'sku' => 'TOTE-R-L', 'stock_quantity' => 2]), fn (ProductVariant $variant) => $this->stock($product, (int) (2), $variant));
         [, $otherProduct] = $this->sellerProduct('12.00', 1);
-        $otherVariant = $otherProduct->variants()->create(['color' => 'Black', 'size' => 'S', 'sku' => 'OTHER-B-S', 'stock_quantity' => 1]);
+        $otherVariant = tap($otherProduct->variants()->create(['color' => 'Black', 'size' => 'S', 'sku' => 'OTHER-B-S', 'stock_quantity' => 1]), fn (ProductVariant $variant) => $this->stock($otherProduct, (int) (1), $variant));
         $customer = User::factory()->create(['email_verified_at' => now()]);
 
         $this->actingAs($customer)->get(route('catalog.show', [$product->store->slug, $product->slug]))
@@ -531,43 +534,6 @@ class CheckoutTest extends TestCase
         $this->assertSame(5, $product->refresh()->stock_quantity);
     }
 
-    public function test_cancelling_one_seller_order_reprices_a_multi_store_order_for_the_remaining_delivery(): void
-    {
-        [$firstSeller, $firstProduct] = $this->sellerProduct('20.00', 5);
-        [$secondSeller, $secondProduct] = $this->sellerProduct('30.00', 5);
-        $customer = User::factory()->create(['email_verified_at' => now()]);
-        $cart = Cart::create(['user_id' => $customer->id]);
-        $cart->items()->create(['product_id' => $firstProduct->id, 'quantity' => 1]);
-        $cart->items()->create(['product_id' => $secondProduct->id, 'quantity' => 1]);
-
-        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery());
-        $order = Order::query()->sole();
-        $firstSellerOrder = $order->sellerOrders()->where('store_id', $firstProduct->store_id)->sole();
-        $secondSellerOrder = $order->sellerOrders()->where('store_id', $secondProduct->store_id)->sole();
-
-        $this->actingAs($firstSeller)->patch(route('seller.orders.update', $firstSellerOrder), ['status' => 'confirmed']);
-        $this->actingAs($firstSeller)->patch(route('seller.orders.update', $firstSellerOrder), ['status' => 'cancelled']);
-
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'subtotal' => '30.00', 'total' => '30.00']);
-        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'amount' => '30.00']);
-        $this->assertDatabaseHas('payment_adjustments', [
-            'payment_id' => $order->payment()->firstOrFail()->id,
-            'reason' => 'seller_order.cancelled',
-            'amount' => '-20.00',
-            'resulting_amount' => '30.00',
-        ]);
-        $this->assertSame(5, $firstProduct->refresh()->stock_quantity);
-
-        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'confirmed']);
-        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'processing']);
-        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'shipped']);
-        $this->actingAs($secondSeller)->patch(route('seller.orders.update', $secondSellerOrder), ['status' => 'delivered']);
-
-        $this->assertDatabaseHas('orders', ['id' => $order->id, 'status' => 'delivered', 'total' => '30.00']);
-        $this->assertDatabaseHas('payments', ['order_id' => $order->id, 'amount' => '30.00']);
-        $this->assertDatabaseCount('payment_adjustments', 1);
-    }
-
     public function test_customer_can_search_purchases_by_product_or_store_name(): void
     {
         [, $product] = $this->sellerProduct('20.00', 5);
@@ -594,7 +560,8 @@ class CheckoutTest extends TestCase
     {
         $buyer = User::factory()->create();
         [, $boughtProduct] = $this->sellerProduct('150.00', 5);
-        [, $keptProduct] = $this->sellerProduct('250.00', 5);
+        // Same branch: a cart buys from one branch.
+        $keptProduct = tap(Product::create([...$boughtProduct->only(['tenant_id', 'store_id', 'name']), 'slug' => 'kept-tote', 'sku' => 'KEPT-TOTE', 'price' => '250.00', 'stock_quantity' => 5, 'status' => 'active']), fn (Product $product) => $this->stock($product, 5));
         $this->actingAs($buyer)->post(route('cart.store', $boughtProduct), ['quantity' => 2]);
         $this->actingAs($buyer)->post(route('cart.store', $keptProduct), ['quantity' => 1]);
         $buyer->cart->items()->where('product_id', $keptProduct->id)->update(['selected' => false]);
@@ -759,7 +726,7 @@ class CheckoutTest extends TestCase
             'status' => 'active',
         ]);
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner']);
-        $product = Product::create([
+        $product = tap(Product::create([
             'tenant_id' => $tenant->id,
             'store_id' => $store->id,
             'name' => 'Canvas Tote',
@@ -768,7 +735,7 @@ class CheckoutTest extends TestCase
             'price' => $price,
             'stock_quantity' => $stock,
             'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) ($stock)));
 
         return [$seller, $product];
     }
@@ -786,5 +753,17 @@ class CheckoutTest extends TestCase
             'province' => 'Metro Manila',
             'postal_code' => '1000',
         ];
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

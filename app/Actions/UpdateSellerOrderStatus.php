@@ -242,9 +242,9 @@ class UpdateSellerOrderStatus
             $product = $products->get($item->product_id);
 
             if ($product !== null) {
-                $product->increment('stock_quantity', $item->quantity);
-                if ($item->product_variant_id !== null) {
-                    $product->variants()->whereKey($item->product_variant_id)->first()?->increment('stock_quantity', $item->quantity);
+                $variant = $item->product_variant_id === null ? null : $product->variants()->whereKey($item->product_variant_id)->first();
+                if ($item->product_variant_id === null || $variant !== null) {
+                    app(BranchInventory::class)->put($sellerOrder->store_id, $product, $variant, $item->quantity);
                 }
             }
         }

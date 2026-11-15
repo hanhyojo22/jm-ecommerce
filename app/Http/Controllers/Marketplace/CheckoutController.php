@@ -27,6 +27,7 @@ class CheckoutController extends Controller
             ->withCount('items')
             ->with([
                 'items' => fn ($query) => $query->where('selected', true),
+                'items.cart.store',
                 'items.product.store',
                 'items.product.tenant',
                 'items.product.thumbnail',

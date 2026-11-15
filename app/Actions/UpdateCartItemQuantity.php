@@ -27,7 +27,7 @@ class UpdateCartItemQuantity
         $variant = $cartItem->product_variant_id !== null
             ? $product->variants()->find($cartItem->product_variant_id)
             : null;
-        $branch = $cartItem->cart->store;
+        $branch = $cartItem->cart->branchFor($product->tenant_id);
         $availableStock = $branch === null ? 0 : BranchInventory::available($branch->id, $product->id, $variant?->id);
 
         if (

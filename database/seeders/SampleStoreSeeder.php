@@ -94,6 +94,9 @@ class SampleStoreSeeder extends Seeder
             $this->storeImage($path, $this->placeholderImage($sample['name'], $sample['color'], $index));
             $product->images()->create(['path' => $path, 'position' => 0]);
         }
+
+        // Branch stock is what shoppers can buy; give each product its count at its first branch.
+        $this->call(BranchStockSeeder::class);
     }
 
     /**

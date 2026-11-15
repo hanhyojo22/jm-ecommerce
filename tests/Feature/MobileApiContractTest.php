@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -56,7 +59,7 @@ class MobileApiContractTest extends TestCase
     {
         [$buyer, $product] = $this->buyerAndProduct();
         $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 2])
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 2])
             ->assertCreated();
 
         $cart = $this->actingAs($buyer)
@@ -86,7 +89,7 @@ class MobileApiContractTest extends TestCase
     {
         [$buyer, $product] = $this->buyerAndProduct();
         $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 1])
             ->assertCreated();
         $orderId = $this->actingAs($buyer)
             ->postJson('/api/v1/checkout', [
@@ -167,7 +170,7 @@ class MobileApiContractTest extends TestCase
         ]);
         TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner']);
 
-        $product = Product::create([
+        $product = tap(Product::create([
             'tenant_id' => $tenant->id,
             'store_id' => $store->id,
             'name' => 'Contract Tote',
@@ -176,8 +179,20 @@ class MobileApiContractTest extends TestCase
             'price' => '199.00',
             'stock_quantity' => 5,
             'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) (5)));
 
         return [$buyer, $product];
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

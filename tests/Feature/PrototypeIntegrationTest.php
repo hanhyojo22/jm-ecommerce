@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
@@ -159,12 +162,13 @@ class PrototypeIntegrationTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'draft']);
     }
 
-    public function test_seller_shopping_uses_variant_prices_and_creates_separate_cod_store_orders(): void
+    public function test_seller_shopping_uses_variant_prices_and_creates_one_cod_branch_order(): void
     {
         [$shopper] = $this->listing();
         [, $first] = $this->listing();
         [, $second] = $this->listing();
-        $variant = $first->variants()->create(['color' => 'Blue', 'size' => 'M', 'sku' => 'BLUE-M', 'stock_quantity' => 4, 'price' => '12.35']);
+        $this->moveToBranchOf($second, $first);
+        $variant = tap($first->variants()->create(['color' => 'Blue', 'size' => 'M', 'sku' => 'BLUE-M', 'stock_quantity' => 4, 'price' => '12.35']), fn (ProductVariant $variant) => $this->stock($first, (int) (4), $variant));
         $first->images()->create(['color' => 'Blue', 'position' => 1, 'path' => 'products/blue.jpg']);
         $second->update(['price' => '7.20']);
         $this->actingAs($shopper)->post(route('cart.store', $first), ['quantity' => 2, 'variant_id' => $variant->id])->assertRedirect();
@@ -175,7 +179,7 @@ class PrototypeIntegrationTest extends TestCase
         $order = Order::query()->with('sellerOrders.items', 'payment')->sole();
         $this->assertSame($shopper->id, $order->user_id);
         $this->assertSame(0, bccomp('31.90', (string) $order->total, 2));
-        $this->assertCount(2, $order->sellerOrders);
+        $this->assertCount(1, $order->sellerOrders);
         $this->assertSame('cod', $order->payment->method);
         $line = $order->sellerOrders->flatMap->items->firstWhere('product_id', $first->id);
         $this->assertSame('12.35', (string) $line->unit_price);
@@ -192,7 +196,8 @@ class PrototypeIntegrationTest extends TestCase
         $buyer = User::factory()->create();
         [, $otherProduct] = $this->listing();
         [, $product] = $this->listing();
-        $variant = $product->variants()->create(['color' => 'Black', 'size' => 'M', 'sku' => 'BLACK-M', 'stock_quantity' => 2, 'price' => '11.00']);
+        $this->moveToBranchOf($otherProduct, $product);
+        $variant = tap($product->variants()->create(['color' => 'Black', 'size' => 'M', 'sku' => 'BLACK-M', 'stock_quantity' => 2, 'price' => '11.00']), fn (ProductVariant $variant) => $this->stock($product, (int) (2), $variant));
         $this->actingAs($buyer)->post(route('cart.store', $otherProduct), ['quantity' => 1])->assertRedirect();
         $this->post(route('cart.store', $product), ['quantity' => 2, 'variant_id' => $variant->id])->assertRedirect();
         $this->post(route('cart.store', $product), ['quantity' => 1, 'variant_id' => $variant->id])->assertSessionHasErrors('quantity');
@@ -204,7 +209,7 @@ class PrototypeIntegrationTest extends TestCase
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('payments', 0);
         $product->update(['status' => 'active']);
-        $variant->update(['stock_quantity' => 0]);
+        $this->stock($product, 0, $variant);
         $this->post(route('cart.store', $product), ['quantity' => 1, 'variant_id' => $variant->id])->assertSessionHasErrors('quantity');
         $this->post(route('checkout.store'), $this->delivery())->assertSessionHasErrors('cart');
         $this->assertDatabaseCount('orders', 0);
@@ -243,5 +248,26 @@ class PrototypeIntegrationTest extends TestCase
     private function delivery(): array
     {
         return ['recipient_name' => 'Test Shopper', 'phone' => '09171234567', 'address_line' => '1 Market Street', 'city' => 'Cebu', 'province' => 'Cebu', 'postal_code' => '6000'];
+    }
+
+    /**
+     * Sells a product from another product's company and branch, keeping its stock count.
+     */
+    private function moveToBranchOf(Product $product, Product $other): void
+    {
+        $product->update(['tenant_id' => $other->tenant_id, 'store_id' => $other->store_id]);
+        $this->stock($product, $product->stock_quantity);
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }

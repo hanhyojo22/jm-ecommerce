@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
@@ -25,7 +28,7 @@ class CartApiTest extends TestCase
         [$buyer, $product] = $this->buyerAndProduct();
 
         $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 2])
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 2])
             ->assertCreated()
             ->assertJsonCount(1, 'data.items')
             ->assertJsonPath('data.items.0.quantity', 2)
@@ -64,7 +67,7 @@ class CartApiTest extends TestCase
     public function test_buy_now_adds_and_selects_only_that_item_in_one_request(): void
     {
         [$buyer, $product] = $this->buyerAndProduct();
-        $other = Product::create([
+        $other = tap(Product::create([
             'tenant_id' => $product->tenant_id,
             'store_id' => $product->store_id,
             'name' => 'API Mug',
@@ -73,14 +76,14 @@ class CartApiTest extends TestCase
             'price' => '50.00',
             'stock_quantity' => 5,
             'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) (5)));
 
         $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $other->id, 'quantity' => 1])
+            ->postJson('/api/v1/cart/items', ['branch' => $other->store_id, 'product_id' => $other->id, 'quantity' => 1])
             ->assertCreated();
 
         $response = $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1, 'buy_now' => true])
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 1, 'buy_now' => true])
             ->assertCreated()
             ->assertJsonCount(2, 'data.items')
             ->assertJsonPath('data.selected_count', 1)
@@ -93,22 +96,23 @@ class CartApiTest extends TestCase
     public function test_a_product_with_variants_requires_the_buyer_to_choose_one(): void
     {
         [$buyer, $product] = $this->buyerAndProduct();
-        $variant = $product->variants()->create([
+        $variant = tap($product->variants()->create([
             'color' => 'Black',
             'size' => 'Large',
             'sku' => 'API-TOTE-BLACK',
             'stock_quantity' => 4,
             'price' => null,
-        ]);
+        ]), fn (ProductVariant $variant) => $this->stock($product, (int) (4), $variant));
 
         $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 1])
             ->assertUnprocessable()
             ->assertJsonPath('error.code', 'validation.failed')
             ->assertJsonPath('error.fields.variant_id.0', 'Choose an available color and size.');
 
         $this->actingAs($buyer)
             ->postJson('/api/v1/cart/items', [
+                'branch' => $product->store_id,
                 'product_id' => $product->id,
                 'quantity' => 1,
                 'variant_id' => $variant->id,
@@ -124,7 +128,7 @@ class CartApiTest extends TestCase
         $otherBuyer = User::factory()->create();
 
         $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 1])
             ->assertCreated();
         $itemId = $this->actingAs($buyer)->getJson('/api/v1/cart')->json('data.items.0.id');
 
@@ -153,7 +157,7 @@ class CartApiTest extends TestCase
         $buyer->update(['account_type' => 'seller']);
 
         $this->actingAs($buyer)
-            ->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 1])
             ->assertUnprocessable()
             ->assertJsonPath('error.fields.cart.0', 'You cannot buy products from a store you manage.');
     }
@@ -178,7 +182,7 @@ class CartApiTest extends TestCase
         ]);
         $tenant->members()->create(['user_id' => $seller->id, 'role' => 'owner']);
 
-        $product = Product::create([
+        $product = tap(Product::create([
             'tenant_id' => $tenant->id,
             'store_id' => $store->id,
             'name' => 'API Tote',
@@ -187,8 +191,20 @@ class CartApiTest extends TestCase
             'price' => '199.00',
             'stock_quantity' => 5,
             'status' => 'active',
-        ]);
+        ]), fn (Product $product) => $this->stock($product, (int) (5)));
 
         return [$buyer, $product];
+    }
+
+    /**
+     * Sets a product's (or variant's) units on hand at its first branch, keeping the company total in step.
+     */
+    private function stock(Product $product, int $quantity, ?ProductVariant $variant = null): void
+    {
+        BranchStock::query()->updateOrCreate(
+            ['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => $variant?->id ?? 'default'],
+            ['product_variant_id' => $variant?->id, 'quantity' => $quantity],
+        );
+        app(BranchInventory::class)->syncTotals($product);
     }
 }
