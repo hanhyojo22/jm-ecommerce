@@ -24,8 +24,9 @@ class ProductVariantResource extends JsonResource
             'size' => $this->size !== '' ? $this->size : null,
             'sku' => $this->sku,
             'price' => $this->price !== null ? (string) $this->price : null,
-            'stock_quantity' => (int) $this->stock_quantity,
-            'in_stock' => $this->stock_quantity > 0,
+            // At a chosen branch the controller sets branch_quantity; otherwise the company-wide count.
+            'stock_quantity' => (int) ($this->resource->getAttributes()['branch_quantity'] ?? $this->stock_quantity),
+            'in_stock' => (int) ($this->resource->getAttributes()['branch_quantity'] ?? $this->stock_quantity) > 0,
         ];
     }
 }

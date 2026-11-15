@@ -10,6 +10,7 @@ use App\Http\Resources\Api\V1\ProductSummaryResource;
 use App\Http\Resources\Api\V1\StoreResource;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Store;
 use App\Queries\CatalogQuery;
 use App\Queries\RecommendationQuery;
 use App\Queries\TopProductQuery;
@@ -46,7 +47,7 @@ class CatalogController extends Controller
     {
         $filters = $this->filters($request);
         $perPage = (int) ($filters['per_page'] ?? 12);
-        $catalog = CatalogQuery::search($filters, null, $perPage);
+        $catalog = CatalogQuery::search($filters, null, $perPage, $this->branch($filters['branch'] ?? null));
 
         return ProductSummaryResource::collection($catalog['products'])
             ->additional([
@@ -160,10 +161,18 @@ class CatalogController extends Controller
 
     public function show(Request $request, string $store, string $product): JsonResponse
     {
+        $branch = $this->branch($request->validate(['branch' => ['nullable', 'string', 'ulid']])['branch'] ?? null);
         $product = $this->detailQuery()
             ->whereHas('store', fn (Builder $query) => $query->where('slug', $store))
             ->where('slug', $product)
             ->firstOrFail();
+
+        if ($branch !== null) {
+            // Every count below comes from this branch; a variant it has none of reads 0.
+            $counts = $product->branchStocks()->where('store_id', $branch->id)->pluck('quantity', 'variant_key');
+            $product->variants->each(fn ($variant) => $variant->setAttribute('branch_quantity', (int) ($counts[$variant->id] ?? 0)));
+            $product->setAttribute('branch_quantity', $product->variants->isEmpty() ? (int) ($counts['default'] ?? 0) : $product->variants->sum('branch_quantity'));
+        }
 
         $distribution = $product->reviews()
             ->published()
@@ -195,10 +204,51 @@ class CatalogController extends Controller
                         ->mapWithKeys(fn (int $rating): array => [$rating => (int) $distribution->get($rating, 0)])
                         ->all(),
                 ],
+                'branch' => $branch === null ? null : ['id' => $branch->id, 'name' => $branch->name],
                 'related_products' => ProductSummaryResource::collection($relatedProducts)->resolve($request),
                 'more_from_store' => ProductSummaryResource::collection($moreFromStore)->resolve($request),
             ],
         ]);
+    }
+
+    /**
+     * Open branches that have the product (or one variant of it) on hand, nearest first when
+     * the phone's location is given, so the app can say "Available at Cebu, 2.3 km away".
+     */
+    public function availability(Request $request, string $product): JsonResponse
+    {
+        $data = $request->validate([
+            'lat' => ['nullable', 'required_with:lng', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'required_with:lat', 'numeric', 'between:-180,180'],
+            'variant' => ['nullable', 'string', 'ulid'],
+        ]);
+        $product = CatalogQuery::publishedProducts()->whereKey($product)->firstOrFail();
+        $variantKey = $data['variant'] ?? 'default';
+
+        $branches = CatalogQuery::publicStores()
+            ->where('tenant_id', $product->tenant_id)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->withSum(['branchStocks as branch_quantity' => fn (Builder $stock) => $stock
+                ->where('product_id', $product->id)
+                ->where('variant_key', $variantKey)], 'quantity')
+            ->get()
+            ->filter(fn ($branch): bool => (int) $branch->branch_quantity > 0)
+            ->map(fn ($branch): array => [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'city' => $branch->city,
+                'latitude' => $branch->latitude,
+                'longitude' => $branch->longitude,
+                'quantity' => (int) $branch->branch_quantity,
+                'distance_km' => isset($data['lat'])
+                    ? round($this->distanceKm((float) $data['lat'], (float) $data['lng'], $branch->latitude, $branch->longitude), 1)
+                    : null,
+            ])
+            ->sortBy(fn (array $branch): float => $branch['distance_km'] ?? INF)
+            ->values();
+
+        return response()->json(['data' => $branches]);
     }
 
     public function reviews(Request $request, string $store, string $product): JsonResponse
@@ -261,7 +311,29 @@ class CatalogController extends Controller
             'min_rating' => ['nullable', 'integer', 'between:1,5'],
             'with_photos' => ['nullable', 'boolean'],
             'per_page' => ['nullable', 'integer', 'between:1,48'],
+            'branch' => ['nullable', 'string', 'ulid'],
         ]);
+    }
+
+    /**
+     * The branch a shopper picked, if any. A closed or unknown branch is a 404 so the app
+     * asks for another rather than silently showing everything.
+     */
+    private function branch(?string $branchId): ?Store
+    {
+        return $branchId === null ? null : CatalogQuery::publicStores()->whereKey($branchId)->firstOrFail();
+    }
+
+    /**
+     * Great-circle distance; branches are few, so this runs in PHP rather than per-database SQL.
+     */
+    private function distanceKm(float $fromLat, float $fromLng, float $toLat, float $toLng): float
+    {
+        $dLat = deg2rad($toLat - $fromLat);
+        $dLng = deg2rad($toLng - $fromLng);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($fromLat)) * cos(deg2rad($toLat)) * sin($dLng / 2) ** 2;
+
+        return 6371 * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     private function detailQuery(): Builder
@@ -288,7 +360,7 @@ class CatalogController extends Controller
     private function summaryQuery(): Builder
     {
         return CatalogQuery::publishedProducts()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'dosage_form', 'strength', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
             ->with(['thumbnail', 'category:id,name,slug'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')

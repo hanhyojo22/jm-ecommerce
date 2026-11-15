@@ -28,11 +28,15 @@ class ProductSummaryResource extends JsonResource
             'effective_price' => $this->effectivePrice(),
             'has_variants' => (bool) ($this->variants_exists ?? false),
             'requires_variant_selection' => (bool) ($this->variants_exists ?? false),
+            'generic_name' => $this->generic_name,
+            'dosage_form' => $this->dosage_form,
+            'strength' => $this->strength,
+            'requires_prescription' => (bool) $this->requires_prescription,
             'brand' => $this->brand,
             'condition' => $this->condition,
             'free_shipping' => (bool) $this->free_shipping,
-            'stock_quantity' => (int) $this->stock_quantity,
-            'in_stock' => $this->stock_quantity > 0,
+            'stock_quantity' => $this->availableQuantity(),
+            'in_stock' => $this->availableQuantity() > 0,
             'thumbnail_url' => $this->thumbnailUrl(),
             'store' => $this->whenLoaded('store', fn (): array => [
                 'id' => $this->store->id,
@@ -72,6 +76,14 @@ class ProductSummaryResource extends JsonResource
         }
 
         return $price;
+    }
+
+    /**
+     * Units at the shopper's branch when one was chosen (branch_quantity), otherwise company-wide.
+     */
+    private function availableQuantity(): int
+    {
+        return (int) ($this->resource->getAttributes()['branch_quantity'] ?? $this->stock_quantity);
     }
 
     private function thumbnailUrl(): ?string

@@ -90,7 +90,7 @@ class CatalogQuery
      *     brands: Collection<int, string>
      * }
      */
-    public static function search(array $filters, ?Store $seller = null, int $perPage = 12): array
+    public static function search(array $filters, ?Store $seller = null, int $perPage = 12, ?Store $branch = null): array
     {
         $search = trim($filters['q'] ?? '');
         $normalizedSearch = Str::lower($search);
@@ -113,7 +113,7 @@ class CatalogQuery
                         ->orWhereHas('members.user', fn (Builder $seller) => $seller->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm]))))));
 
         $products = (clone $catalogProducts)
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'dosage_form', 'strength', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
             ->with(['thumbnail', 'category:id,name,slug'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
@@ -131,6 +131,11 @@ class CatalogQuery
             ->when(! empty($filters['on_sale']), fn (Builder $query) => $query->whereNotNull('compare_at_price')->whereColumn('compare_at_price', '>', 'price'))
             ->when(! empty($filters['min_rating']), fn ($query) => $query->whereRaw('(SELECT AVG(rating) FROM product_reviews WHERE product_reviews.product_id = products.id AND product_reviews.status = ?) >= ?', ['published', $filters['min_rating']]))
             ->when(! empty($filters['with_photos']), fn (Builder $query) => $query->whereHas('reviews', fn (Builder $review) => $review->published()->whereHas('photos')));
+
+        // shortcut: facets stay company-wide even when a branch narrows the list; scope them per branch if filters show empty choices.
+        if ($branch !== null) {
+            self::inStockAt($products, $branch);
+        }
 
         match ($filters['sort'] ?? 'relevance') {
             'popular' => TopProductQuery::orderByPopularity($products),
@@ -235,15 +240,31 @@ class CatalogQuery
     }
 
     /**
-     * Products a shopper may see: published, inside an active store and tenant.
+     * Products a shopper may see: published by an active company with at least one open
+     * branch. Medicines belong to the company, so closing one branch (even the first, which
+     * products still point at) hides nothing; which branch has them is inStockAt()'s job.
      */
     public static function publishedProducts(): Builder
     {
         return Product::query()
             ->with('store:id,name,slug,status,city,logo_path')
             ->where('status', 'active')
-            ->whereHas('store', fn ($query) => $query->where('status', 'active'))
-            ->whereHas('tenant', fn ($query) => $query->where('status', 'active'));
+            ->whereHas('tenant', fn ($query) => $query
+                ->where('status', 'active')
+                ->whereHas('stores', fn ($store) => $store->where('status', 'active')));
+    }
+
+    /**
+     * Narrows products to those the branch has on hand and adds `branch_quantity`, the units
+     * there across all of a product's variants.
+     */
+    public static function inStockAt(Builder $products, Store $branch): Builder
+    {
+        $atBranch = fn (Builder $stock): Builder => $stock->where('store_id', $branch->id)->where('quantity', '>', 0);
+
+        return $products
+            ->whereHas('branchStocks', $atBranch)
+            ->withSum(['branchStocks as branch_quantity' => $atBranch], 'quantity');
     }
 
     /**
