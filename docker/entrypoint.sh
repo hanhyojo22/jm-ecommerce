@@ -28,11 +28,10 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force --no-interaction
 fi
 
-# Demo data for a fresh test server. Turn it off after the first deploy: re-seeding resets branch stock.
+# Pharmacy demo data for a test server: branches and medicines. Re-running only adds what is missing.
 # Named seeders only: DatabaseSeeder uses factories, and Faker is not installed in this image.
 if [ "${RUN_SEEDERS:-false}" = "true" ]; then
-    php artisan db:seed --class=CatalogSeeder --force --no-interaction
-    php artisan db:seed --class=BranchStockSeeder --force --no-interaction
+    php artisan db:seed --class=PharmacySeeder --force --no-interaction
 fi
 
 if [ "${RUN_OPTIMIZATIONS:-true}" = "true" ]; then
