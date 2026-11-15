@@ -30,6 +30,14 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = "JMMart"
+    }
+
+    // `-P pharmacy=true` builds the pharmacy test app beside the live one: its
+    // own app ID and name. Firebase only knows the live ID, so push is off there.
+    if (project.hasProperty("pharmacy")) {
+        defaultConfig.applicationIdSuffix = ".pharmacy"
+        defaultConfig.manifestPlaceholders["appLabel"] = "JMMart Rx"
     }
 
     buildTypes {
@@ -54,4 +62,8 @@ dependencies {
 
 flutter {
     source = "../.."
+}
+
+if (project.hasProperty("pharmacy")) {
+    tasks.matching { it.name.contains("GoogleServices") }.configureEach { enabled = false }
 }

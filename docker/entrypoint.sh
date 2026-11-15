@@ -23,6 +23,13 @@ if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force --no-interaction
 fi
 
+# Demo data for a fresh test server. Turn it off after the first deploy: re-seeding resets branch stock.
+# Named seeders only: DatabaseSeeder uses factories, and Faker is not installed in this image.
+if [ "${RUN_SEEDERS:-false}" = "true" ]; then
+    php artisan db:seed --class=CatalogSeeder --force --no-interaction
+    php artisan db:seed --class=BranchStockSeeder --force --no-interaction
+fi
+
 if [ "${RUN_OPTIMIZATIONS:-true}" = "true" ]; then
     php artisan config:cache
     php artisan route:cache
