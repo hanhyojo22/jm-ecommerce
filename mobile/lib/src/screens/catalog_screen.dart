@@ -1120,30 +1120,6 @@ class _SuggestionTile extends StatelessWidget {
                       height: 1.2,
                     ),
                   ),
-                  if (product.store != null) ...[
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        StoreAvatar(
-                          name: product.store!.name,
-                          logoUrl: product.store!.logoUrl,
-                          storeSlug: product.store!.slug,
-                          radius: 9,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            product.store!.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                   if (largeText) ...[
                     const SizedBox(height: 4),
                     Text(
