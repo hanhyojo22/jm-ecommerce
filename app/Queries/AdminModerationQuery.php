@@ -3,7 +3,6 @@
 namespace App\Queries;
 
 use App\Models\AuditLog;
-use App\Models\MessageReport;
 use App\Models\ProductReview;
 use App\Models\SellerApplication;
 use App\Models\Store;
@@ -23,25 +22,22 @@ class AdminModerationQuery
         'store.suspension_appeal.reopened',
         'store.suspension_appeal.rejected',
         'product_review.moderated',
-        'message_report.reviewed',
-        'message_report.dismissed',
     ];
 
-    /** @return array{applications:int,appeals:int,productReports:int,chatReports:int,suspendedStores:int,recentDecisions:int,attention:int} */
+    /** @return array{applications:int,appeals:int,productReports:int,suspendedStores:int,recentDecisions:int,attention:int} */
     public static function counts(): array
     {
         $counts = [
             'applications' => SellerApplication::query()->whereIn('status', ['pending', 'submitted', 'under_review'])->count(),
             'appeals' => StoreSuspensionAppeal::query()->where('status', 'pending')->count(),
             'productReports' => ProductReview::query()->published()->whereHas('reports')->count(),
-            'chatReports' => MessageReport::query()->where('status', 'pending')->count(),
             'suspendedStores' => Store::query()->where('status', 'suspended')->count(),
             'recentDecisions' => AuditLog::query()
                 ->whereIn('action', self::RECENT_DECISION_ACTIONS)
                 ->where('created_at', '>=', now()->subDays(7))
                 ->count(),
         ];
-        $counts['attention'] = $counts['applications'] + $counts['appeals'] + $counts['productReports'] + $counts['chatReports'];
+        $counts['attention'] = $counts['applications'] + $counts['appeals'] + $counts['productReports'];
 
         return $counts;
     }
@@ -56,7 +52,6 @@ class AdminModerationQuery
             ->concat(self::applications($direction))
             ->concat(self::appeals($direction))
             ->concat(self::productReports($direction))
-            ->concat(self::chatReports($direction))
             ->when($type !== 'all', fn (Collection $items): Collection => $items->where('type', $type));
 
         $items = $sort === 'newest'
@@ -126,31 +121,6 @@ class AdminModerationQuery
                 'Review author: '.($review->user?->name ?? 'Customer'),
                 $review->reports_count.' '.Str::plural('customer report', $review->reports_count),
                 Carbon::parse($review->reports_max_created_at),
-            ));
-    }
-
-    /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */
-    private static function chatReports(string $direction): Collection
-    {
-        return MessageReport::query()
-            ->where('status', 'pending')
-            ->with([
-                'reporter:id,name',
-                'message:id,conversation_id,body',
-                'message.conversation:id,store_id',
-                'message.conversation.store:id,name',
-            ])
-            ->orderBy('created_at', $direction)
-            ->limit(self::ITEM_LIMIT)
-            ->get(['id', 'conversation_message_id', 'reporter_id', 'reason', 'created_at'])
-            ->map(fn (MessageReport $report): array => self::item(
-                'chat_report',
-                $report->id,
-                null,
-                $report->message?->conversation?->store?->name ?? 'Order conversation',
-                'Reported by '.($report->reporter?->name ?? 'marketplace customer'),
-                Str::headline($report->reason),
-                $report->created_at,
             ));
     }
 

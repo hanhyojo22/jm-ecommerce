@@ -352,9 +352,6 @@
         <span class="sc-order-hint max-lg:hidden">Esc to close · ← → to switch orders</span>
     </div>
     <div class="sc-order-foot-actions">
-        @if ($conversation)
-            <a href="{{ route('messages.show', $conversation) }}" class="seller-outline-button sc-order-secondary">Message buyer</a>
-        @endif
         @if ($canManageOrders && $nextTransition)
             <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" class="sc-order-primary-form" @if ($nextTransition === 'shipped') data-confirm-title="Mark this order as shipped?" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="{{ ucfirst($sellerOrder->status) }}" data-confirm-to="Shipped" data-confirm="Your customer is told the parcel has left your store. Do this only once it’s with your courier." data-confirm-action="Mark as shipped" @endif>
                 @csrf

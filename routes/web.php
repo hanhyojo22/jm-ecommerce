@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Admin\AdminAccountController;
 use App\Http\Controllers\Admin\AnnouncementController;
-use App\Http\Controllers\Admin\ChatReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GovernanceController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
@@ -19,8 +18,6 @@ use App\Http\Controllers\CookiePreferencesController;
 use App\Http\Controllers\Marketplace\CartController;
 use App\Http\Controllers\Marketplace\CatalogController;
 use App\Http\Controllers\Marketplace\CheckoutController;
-use App\Http\Controllers\Marketplace\ConversationAttachmentController;
-use App\Http\Controllers\Marketplace\ConversationController;
 use App\Http\Controllers\Marketplace\DeliveryAddressController;
 use App\Http\Controllers\Marketplace\OrderController;
 use App\Http\Controllers\Marketplace\OrderIssueController;
@@ -45,8 +42,6 @@ use App\Http\Controllers\SellerApplicationController;
 use App\Http\Controllers\SellerSuspensionAppealController;
 use App\Http\Controllers\WebPushKeyController;
 use App\Http\Controllers\WorkspacePreferenceController;
-use App\Livewire\Chat\Inbox as ChatInbox;
-use App\Livewire\Chat\Thread as ChatThread;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CatalogController::class, 'home'])->name('home');
@@ -99,8 +94,6 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::patch('/reviews/{review}', [MarketplaceProductReviewController::class, 'update'])->middleware('throttle:10,1')->name('reviews.update');
     Route::delete('/reviews/{review}', [MarketplaceProductReviewController::class, 'destroy'])->middleware('throttle:10,1')->name('reviews.destroy');
     Route::post('/reviews/{review}/report', [MarketplaceProductReviewController::class, 'report'])->middleware('throttle:10,1')->name('reviews.report');
-    Route::post('/messages/products/{product}', [ConversationController::class, 'startForProduct'])->middleware('throttle:10,1')->name('messages.products.start');
-    Route::post('/messages/seller-orders/{sellerOrder}', [ConversationController::class, 'startForSellerOrder'])->middleware('throttle:10,1')->name('messages.seller-orders.start');
 });
 
 Route::middleware(['auth', 'clerk.verified'])->group(function (): void {
@@ -110,16 +103,6 @@ Route::middleware(['auth', 'clerk.verified'])->group(function (): void {
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])
         ->middleware('throttle:20,1')
         ->name('push-subscriptions.destroy');
-});
-
-Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
-    Route::get('/messages', ChatInbox::class)->name('messages.index');
-    Route::get('/messages/{conversation}', ChatThread::class)->name('messages.show');
-    Route::post('/messages/{conversation}/block', [ConversationController::class, 'block'])->middleware('throttle:10,1')->name('messages.block');
-    Route::delete('/messages/{conversation}/block', [ConversationController::class, 'unblock'])->middleware('throttle:10,1')->name('messages.unblock');
-    Route::post('/messages/{conversation}/messages/{message}/report', [ConversationController::class, 'report'])->middleware('throttle:10,1')->name('messages.report');
-    Route::post('/messages/{conversation}/attachments', [ConversationAttachmentController::class, 'store'])->middleware('throttle:10,1')->name('messages.attachments.store');
-    Route::get('/messages/attachments/{attachment}', [ConversationAttachmentController::class, 'show'])->name('messages.attachments.show');
 });
 
 Route::get('/returns/cases/{returnCase}/evidence/{evidence}', [BuyerReturnCaseController::class, 'evidence'])
@@ -188,8 +171,6 @@ Route::post('/seller/suspension-appeals', [SellerSuspensionAppealController::cla
     ->name('seller.suspension-appeals.store');
 
 Route::middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])->group(function (): void {
-    Route::get('/admin/chat-reports', [ChatReportController::class, 'index'])->name('admin.chat-reports.index');
-    Route::patch('/admin/chat-reports/{report}', [ChatReportController::class, 'update'])->middleware('throttle:admin-mutations')->name('admin.chat-reports.update');
     Route::get('/admin/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('admin.seller-applications.index');
     Route::get('/admin/seller-applications/{sellerApplication}', [AdminSellerApplicationController::class, 'show'])->name('admin.seller-applications.show');
     Route::post('/admin/seller-applications/{sellerApplication}/approve', [AdminSellerApplicationController::class, 'approve'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.approve');

@@ -668,17 +668,7 @@
                 <section class="returns-panel returns-help-panel" aria-labelledby="help-heading">
                     <p class="returns-section-kicker">Support</p>
                     <h2 id="help-heading" class="returns-section-title">Get help</h2>
-                    @if ($role === 'buyer')
-                        <p class="mt-1 text-sm leading-6 text-muted">Questions about the goods or the return? Message the store directly. Keep bank details out of chat.</p>
-                        <form method="POST" action="{{ route('messages.seller-orders.start', $case->sellerOrder) }}" class="mt-4">@csrf
-                            <button type="submit" class="button-secondary w-full">Message {{ $case->sellerOrder->store->name }}</button>
-                        </form>
-                    @elseif ($role === 'seller')
-                        <p class="mt-1 text-sm leading-6 text-muted">Keep the conversation on record. Bank or refund destination details stay out of chat, reviews, and case notes.</p>
-                        <a href="{{ route('messages.index') }}" class="mt-3 inline-flex min-h-11 items-center font-semibold">Message the buyer in your inbox</a>
-                    @else
-                        <p class="mt-1 text-sm leading-6 text-muted">Refund destinations are coordinated privately, outside the app. Never record bank details in case notes.</p>
-                    @endif
+                    <p class="mt-1 text-sm leading-6 text-muted">Refund destinations are coordinated privately, outside the app. Never record bank details in case notes.</p>
                     <div class="mt-4 space-y-2 border-t border-white/15 pt-4 text-sm">
                         <p>JMMart support: <a class="font-semibold" href="mailto:itservices@jmsolutionitservices.com?subject=Return%20case%20{{ urlencode($case->sellerOrder->order->number) }}">itservices@jmsolutionitservices.com</a></p>
                         <p><a class="font-semibold" href="{{ route('returns') }}">Return and refund policy</a></p>

@@ -30,7 +30,7 @@
         <div class="divide-y divide-line px-4">
             <section class="py-3">
                 <div class="flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Strictly Necessary</h3><span class="text-xs font-semibold text-brand">Always active</span></div>
-                <p class="mt-1 text-sm leading-5 text-muted">Sign-in, security, cart, checkout, and temporary chat drafts.</p>
+                <p class="mt-1 text-sm leading-5 text-muted">Sign-in, security, cart, and checkout.</p>
             </section>
             <label class="flex cursor-pointer items-start justify-between gap-3 py-3">
                 <span><span class="block text-sm font-semibold">Functional</span><span class="mt-1 block text-sm leading-5 text-muted">Shopping recommendations and Seller Center settings.</span></span>

@@ -37,7 +37,6 @@ class SellerDashboardTest extends TestCase
             ->assertSee('Search your products by name or SKU')
             ->assertSee('Search seller help')
             ->assertSee('data-seller-help-search', false)
-            ->assertSee('Reply to buyer messages')
             ->assertSee('Update store details')
             ->assertSee('All time · seller order totals; cancelled orders excluded')
             ->assertSee('Unique buyers')

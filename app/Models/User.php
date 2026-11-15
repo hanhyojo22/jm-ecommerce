@@ -100,16 +100,6 @@ class User extends Authenticatable
         return $this->hasMany(ProductReview::class);
     }
 
-    public function conversations(): HasMany
-    {
-        return $this->hasMany(Conversation::class, 'buyer_id');
-    }
-
-    public function sentConversationMessages(): HasMany
-    {
-        return $this->hasMany(ConversationMessage::class, 'sender_id');
-    }
-
     public function isPlatformAdministrator(): bool
     {
         return $this->account_type === 'admin' && in_array($this->platform_role, ['super_admin', 'admin'], true);

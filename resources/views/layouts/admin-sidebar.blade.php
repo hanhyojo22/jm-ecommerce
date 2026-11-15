@@ -29,7 +29,6 @@
             'items' => [
                 ['label' => 'Moderation', 'href' => route('admin.moderation'), 'icon' => 'reports', 'active' => request()->routeIs('admin.moderation')],
                 ['label' => 'Reviews', 'href' => route('admin.reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('admin.reviews.*')],
-                ['label' => 'Chat reports', 'href' => route('admin.chat-reports.index'), 'icon' => 'reports', 'active' => request()->routeIs('admin.chat-reports.*')],
             ],
         ],
         [

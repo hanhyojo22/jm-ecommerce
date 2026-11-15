@@ -123,7 +123,7 @@ class SellerApplicationTest extends TestCase
 
     public function test_location_migration_backfills_existing_stores_from_their_approved_application(): void
     {
-        $this->artisan('migrate:rollback', ['--step' => 1])->assertSuccessful();
+        $this->artisan('migrate:rollback', ['--path' => 'database/migrations/2026_11_14_143434_add_location_details_to_stores.php'])->assertSuccessful();
         $customer = User::factory()->seller()->create();
         $tenant = Tenant::create(['name' => 'Northwind', 'slug' => 'northwind', 'status' => 'active']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Goods', 'slug' => 'northwind-goods', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => 'active']);

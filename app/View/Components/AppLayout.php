@@ -10,7 +10,6 @@ class AppLayout extends Component
     private const PAGE_TITLES = [
         'dashboard' => 'Admin dashboard',
         'admin.moderation' => 'Moderation',
-        'admin.chat-reports.index' => 'Chat reports',
         'admin.seller-applications.index' => 'Seller applications',
         'admin.seller-applications.show' => 'Review application',
         'admin.orders.index' => 'Marketplace orders',

@@ -4,10 +4,8 @@ use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CheckoutController;
-use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DeliveryAddressController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
-use App\Http\Controllers\Api\V1\MessageAttachmentController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderIssueController;
 use App\Http\Controllers\Api\V1\ProductDiscussionController;
@@ -145,32 +143,6 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/products/{product}/review-eligibility', [ProductReviewController::class, 'eligibility'])
             ->middleware('throttle:api')
             ->name('api.v1.products.review-eligibility');
-        Route::get('/conversations', [ConversationController::class, 'index'])
-            ->middleware('throttle:api')
-            ->name('api.v1.conversations.index');
-        Route::post('/conversations/start', [ConversationController::class, 'start'])
-            ->middleware('throttle:10,1')
-            ->name('api.v1.conversations.start');
-        Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])
-            ->middleware('throttle:api')
-            ->name('api.v1.conversations.show');
-        Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages'])
-            ->middleware('throttle:api')
-            ->name('api.v1.conversations.messages.index');
-        Route::post('/conversations/{conversation}/messages', [ConversationController::class, 'send'])
-            ->name('api.v1.conversations.messages.store');
-        Route::post('/conversations/{conversation}/read', [ConversationController::class, 'read'])
-            ->middleware('throttle:conversation-read')
-            ->name('api.v1.conversations.read');
-        Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])
-            ->middleware('throttle:60,1')
-            ->name('api.v1.conversations.typing');
-        Route::post('/conversations/{conversation}/attachments', [ConversationController::class, 'attach'])
-            ->middleware('throttle:10,1')
-            ->name('api.v1.conversations.attachments.store');
-        Route::post('/conversations/{conversation}/messages/{message}/report', [ConversationController::class, 'report'])
-            ->middleware('throttle:10,1')
-            ->name('api.v1.conversations.messages.report');
 
         Route::post('/device-tokens', [DeviceTokenController::class, 'store'])
             ->middleware('throttle:api')
@@ -186,14 +158,6 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/broadcasting/auth', fn (Request $request) => Broadcast::auth($request))
         ->middleware(['auth', 'throttle:api'])
         ->name('api.v1.broadcasting.auth');
-
-    /*
-     * Private chat media is served through a short-lived signed URL that the message
-     * payload carries, so an image widget does not have to send a bearer token.
-     */
-    Route::get('/media/attachments/{attachment}', [MessageAttachmentController::class, 'show'])
-        ->middleware(['signed', 'throttle:api'])
-        ->name('api.v1.media.attachments.show');
 
     Route::get('/media/return-evidence/{evidence}', [ReturnCaseEvidenceController::class, 'show'])
         ->middleware(['signed', 'throttle:api'])
