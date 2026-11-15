@@ -300,6 +300,8 @@ class Product {
     required this.inStock,
     required this.hasVariants,
     required this.requiresVariantSelection,
+    this.requiresPrescription = false,
+    this.branchName,
     required this.freeShipping,
     required this.stockQuantity,
     required this.soldQuantity,
@@ -328,6 +330,10 @@ class Product {
   final bool inStock;
   final bool hasVariants;
   final bool requiresVariantSelection;
+  final bool requiresPrescription;
+
+  /// The branch whose stock [inStock] and [stockQuantity] describe; null when company-wide.
+  final String? branchName;
   final bool freeShipping;
   final int stockQuantity;
   final int soldQuantity;
@@ -362,6 +368,8 @@ class Product {
       inStock: boolean(json['in_stock']),
       hasVariants: boolean(json['has_variants']),
       requiresVariantSelection: boolean(json['requires_variant_selection']),
+      requiresPrescription: boolean(json['requires_prescription']),
+      branchName: mapOf(json['branch'])['name'] as String?,
       freeShipping: boolean(json['free_shipping']),
       stockQuantity: integer(json['stock_quantity']),
       soldQuantity: integer(json['sold_quantity']),
@@ -423,6 +431,7 @@ class CartLine {
     required this.storeSlug,
     required this.hasVariants,
     this.variantLabel,
+    this.requiresPrescription = false,
   });
 
   final String id;
@@ -440,6 +449,7 @@ class CartLine {
   final String storeSlug;
   final bool hasVariants;
   final String? variantLabel;
+  final bool requiresPrescription;
 
   CartLine withSelected(bool value) => value == selected
       ? this
@@ -459,6 +469,7 @@ class CartLine {
           storeSlug: storeSlug,
           hasVariants: hasVariants,
           variantLabel: variantLabel,
+          requiresPrescription: requiresPrescription,
         );
 
   factory CartLine.fromJson(Map<String, dynamic> json) {
@@ -482,6 +493,7 @@ class CartLine {
       storeSlug: str(store['slug']),
       hasVariants: boolean(product['has_variants']),
       variantLabel: variant.isEmpty ? null : variant['label'] as String?,
+      requiresPrescription: boolean(product['requires_prescription']),
     );
   }
 }

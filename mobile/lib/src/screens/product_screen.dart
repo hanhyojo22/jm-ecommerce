@@ -15,6 +15,7 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/fly_to_cart.dart';
 import '../widgets/image_viewer.dart';
+import '../widgets/store_locator.dart';
 import 'order_detail_screen.dart';
 import 'product_discussions.dart';
 
@@ -920,6 +921,14 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         ),
                       ),
                     ],
+                    if (product.requiresPrescription) ...[
+                      const SizedBox(height: 8),
+                      const PrescriptionBadge(),
+                    ],
+                    if (!product.inStock) ...[
+                      const SizedBox(height: 10),
+                      StockedElsewhereNotice(productId: product.id),
+                    ],
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 6,
@@ -1022,8 +1031,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Stock on this page is the chosen branch's, so the card names it.
                                 Text(
-                                  product.store!.name,
+                                  product.branchName ?? product.store!.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.titleMedium?.copyWith(
@@ -1031,7 +1041,10 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                                   ),
                                 ),
                                 Text(
-                                  product.store!.city ?? 'Marketplace store',
+                                  product.branchName != null
+                                      ? 'Your branch'
+                                      : product.store!.city ??
+                                            'Pharmacy branch',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.bodySmall?.copyWith(

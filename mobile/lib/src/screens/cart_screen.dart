@@ -548,6 +548,10 @@ class _CartLineRow extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (line.requiresPrescription) ...[
+                  const SizedBox(height: 4),
+                  const PrescriptionBadge(),
+                ],
                 if (!line.available) ...[
                   const SizedBox(height: 4),
                   Text(

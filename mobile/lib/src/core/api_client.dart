@@ -412,6 +412,14 @@ class ApiClient {
         ),
       );
 
+  /// ULIDs of the open branches that have [productId] on hand.
+  Future<Set<String>> branchesWithStock(String productId) async => {
+    for (final branch in listOf(
+      await _data('GET', '/products/$productId/availability'),
+    ))
+      str(branch['id']),
+  };
+
   Future<List<StoreBranch>> storeLocations() async =>
       listOf(await _data('GET', '/store-locations'))
           .map(StoreBranch.fromJson)

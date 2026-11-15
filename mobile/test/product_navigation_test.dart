@@ -12,6 +12,7 @@ import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/screens/product_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
@@ -293,6 +294,42 @@ void main() {
     }
   });
 
+  testWidgets(
+    'a prescription medicine out of stock here points to the nearest branch that has it',
+    (tester) async {
+      await _pump(
+        tester,
+        _ProductApi()
+          ..inStock = false
+          ..requiresPrescription = true,
+        stockedElsewhere: const BranchDistance(
+          StoreBranch(
+            id: 'cebu',
+            branchId: 'B-CEBU',
+            name: 'Cebu branch',
+            address: 'Cebu',
+            latitude: 10.3,
+            longitude: 123.9,
+          ),
+          2.3,
+        ),
+      );
+
+      expect(find.text('Rx · Prescription required'), findsOneWidget);
+      expect(
+        find.text('Available at Cebu branch · 2.3 km away'),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(TextButton, 'Switch'), findsOneWidget);
+    },
+  );
+
+  testWidgets('no branch nearby has it says so', (tester) async {
+    await _pump(tester, _ProductApi()..inStock = false);
+
+    expect(find.text('Out of stock at nearby branches.'), findsOneWidget);
+  });
+
   for (final action in ['Store']) {
     testWidgets('$action shortcut opens its destination', (tester) async {
       await _pump(tester, _ProductApi());
@@ -383,6 +420,7 @@ Future<void> _pump(
   double width = 390,
   double height = 844,
   double scale = 1,
+  BranchDistance? stockedElsewhere,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -409,6 +447,9 @@ Future<void> _pump(
       overrides: [
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => null),
+        stockedElsewhereProvider.overrideWith(
+          (ref, productId) async => stockedElsewhere,
+        ),
       ],
       child: MaterialApp.router(
         theme: buildAppTheme(),
@@ -437,6 +478,7 @@ class _ProductApi extends ApiClient {
   String effectivePrice = '250.00';
   int? addedQuantity;
   bool inStock = true;
+  bool requiresPrescription = false;
   bool failSelection = false;
   bool honorsBuyNow = false;
   bool sentBuyNow = false;
@@ -470,6 +512,7 @@ class _ProductApi extends ApiClient {
     'price': '250.00',
     'effective_price': effectivePrice,
     'in_stock': inStock,
+    'requires_prescription': requiresPrescription,
     'stock_quantity': 5,
     'images': coloredVariants
         ? [

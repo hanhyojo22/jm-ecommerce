@@ -66,6 +66,10 @@ class _CartBranchApi extends ApiClient {
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   String? savedBranchId;
+  Set<String> stocked = {};
+
+  @override
+  Future<Set<String>> branchesWithStock(String productId) async => stocked;
 
   @override
   Future<Cart> cart() async => Cart(
@@ -153,6 +157,25 @@ void main() {
     expect(api.savedBranchId, 'B-FAR');
     expect(await container.read(activeBranchIdProvider.future), 'B-FAR');
   });
+
+  test(
+    'stocked elsewhere suggests the nearest other branch that has it',
+    () async {
+      final api = _CartBranchApi(null)..stocked = {'B-NEAR', 'B-FAR'};
+      final container = _container(api: api);
+
+      // Near is the active branch, so the suggestion is the other one.
+      final other = await container.read(stockedElsewhereProvider('p1').future);
+      expect(other!.branch.id, 'far');
+
+      api.stocked = {'B-NEAR'};
+      container.invalidate(stockedElsewhereProvider('p1'));
+      expect(
+        await container.read(stockedElsewhereProvider('p1').future),
+        isNull,
+      );
+    },
+  );
 
   test('no pinned stores skips the location request', () async {
     final state = await _container(

@@ -268,3 +268,48 @@ class _BranchSelectorSheet extends ConsumerWidget {
     );
   }
 }
+
+/// Shown on a product the active branch has run out of: the nearest branch that
+/// has it, with a one-tap switch.
+class StockedElsewhereNotice extends ConsumerWidget {
+  const StockedElsewhereNotice({super.key, required this.productId});
+
+  final String productId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final elsewhere = ref.watch(stockedElsewhereProvider(productId));
+
+    return switch (elsewhere) {
+      AsyncData(value: final BranchDistance other) => Row(
+        children: [
+          Icon(Icons.storefront_outlined, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              [
+                'Available at ${other.branch.name}',
+                if (other.distanceKm != null) _distanceLabel(other.distanceKm!),
+              ].join(' · '),
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+          TextButton(
+            onPressed: () => ref
+                .read(nearestStoreProvider.notifier)
+                .selectBranch(other.branch.id),
+            child: const Text('Switch'),
+          ),
+        ],
+      ),
+      AsyncData() => Text(
+        'Out of stock at nearby branches.',
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      _ => const SizedBox.shrink(),
+    };
+  }
+}

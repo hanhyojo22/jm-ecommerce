@@ -104,14 +104,11 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
     final chosen = next.activeBranch?.branch.branchId;
     if (chosen != null && chosen.isNotEmpty) {
       // Saved on the cart, which also re-checks its lines against the new branch.
-      ref
-          .read(apiClientProvider)
-          .setCartBranch(chosen)
-          .then((_) {
-            if (ref.mounted) {
-              ref.invalidate(cartProvider);
-            }
-          }, onError: (_) {});
+      ref.read(apiClientProvider).setCartBranch(chosen).then((_) {
+        if (ref.mounted) {
+          ref.invalidate(cartProvider);
+        }
+      }, onError: (_) {});
     }
   }
 }
@@ -125,11 +122,31 @@ final nearestStoreProvider =
 /// the nearest; null (company-wide) when neither is known yet.
 final activeBranchIdProvider = FutureProvider<String?>((ref) async {
   try {
-    final id = (await ref.watch(
-      nearestStoreProvider.future,
-    )).activeBranch?.branch.branchId;
+    final id = (await ref.watch(nearestStoreProvider.future))
+        .activeBranch
+        ?.branch
+        .branchId;
     return id == null || id.isEmpty ? null : id;
   } catch (_) {
     return null;
   }
 });
+
+/// The closest branch other than the active one that has [productId] on hand,
+/// using the distances the locator already measured; null when none does.
+final stockedElsewhereProvider = FutureProvider.autoDispose
+    .family<BranchDistance?, String>((ref, productId) async {
+      final stocked = await ref
+          .watch(apiClientProvider)
+          .branchesWithStock(productId);
+      final locator = await ref.watch(nearestStoreProvider.future);
+      final active = locator.activeBranch?.branch.branchId;
+
+      return locator.branches
+          .where(
+            (b) =>
+                b.branch.branchId != active &&
+                stocked.contains(b.branch.branchId),
+          )
+          .firstOrNull;
+    });
