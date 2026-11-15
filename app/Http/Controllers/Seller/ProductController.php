@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Actions\BranchInventory;
 use App\Actions\StorePublicImage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
@@ -11,6 +12,7 @@ use App\Models\Category;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Store;
 use App\Models\Tenant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -128,6 +130,10 @@ class ProductController extends Controller
                     foreach ($variantImagePaths[$index] ?? [] as $path) {
                         $product->images()->create(['path' => $path, 'position' => $position++, 'color' => $savedVariant->color]);
                     }
+                    $this->openingStock($store, $product, $savedVariant->id, (int) $variant['stock_quantity']);
+                }
+                if ($variants === []) {
+                    $this->openingStock($store, $product, null, (int) $data['stock_quantity']);
                 }
 
                 AuditLog::query()->create([
@@ -167,9 +173,9 @@ class ProductController extends Controller
         $removedImageIds = $data['remove_images'] ?? [];
         $imageOrder = $data['image_order'] ?? [];
         unset($data['image'], $data['images'], $data['variants'], $data['remove_images'], $data['image_order']);
-        if ($variants !== []) {
-            $data['stock_quantity'] = array_sum(array_column($variants, 'stock_quantity'));
-        }
+        // Stock is counted per branch on the Branch stock page; an edit never changes it.
+        unset($data['stock_quantity']);
+        $variants = array_map(fn (array $variant): array => collect($variant)->except('stock_quantity')->all(), $variants);
         $imagePaths = [];
         $variantImagePaths = [];
         $removedPaths = [];
@@ -238,6 +244,7 @@ class ProductController extends Controller
                 }
 
                 $this->renumberImages($product, $imageOrder);
+                app(BranchInventory::class)->syncTotals($product);
 
                 if ($isLive) {
                     if ($photosWereComplete && (! $product->images()->exists() || $product->hasVariantsWithoutPhotos())) {
@@ -394,6 +401,16 @@ class ProductController extends Controller
         $this->authorize('update', $product);
 
         return $product;
+    }
+
+    /**
+     * Puts a new product's starting count at the first branch; later counts are made per branch.
+     */
+    private function openingStock(Store $branch, Product $product, ?string $variantId, int $quantity): void
+    {
+        if ($quantity > 0) {
+            app(BranchInventory::class)->put($branch->id, $product, $variantId === null ? null : $product->variants()->find($variantId), $quantity);
+        }
     }
 
     private function canManageProducts(Request $request, Tenant $tenant): bool
