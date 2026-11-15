@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\BranchInventory;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
@@ -30,7 +31,8 @@ class SellerProductTest extends TestCase
             'brand' => 'Aurora', 'condition' => 'refurbished', 'price' => '299.00', 'compare_at_price' => '399.00', 'stock_quantity' => 12, 'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'brand' => 'Aurora', 'condition' => 'refurbished', 'compare_at_price' => '399.00', 'status' => 'draft']);
+        $this->assertDatabaseHas('products', ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'sku' => 'TOTE-001', 'brand' => 'Aurora', 'condition' => 'refurbished', 'compare_at_price' => '399.00', 'stock_quantity' => 12, 'status' => 'draft']);
+        $this->assertSame(12, BranchInventory::available($store->id, Product::query()->sole()->id, null));
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.created']);
     }
 
@@ -70,6 +72,7 @@ class SellerProductTest extends TestCase
         $product = Product::query()->with(['variants', 'images'])->sole();
         $this->assertSame($tenant->id, $product->tenant_id);
         $this->assertSame(5, $product->stock_quantity);
+        $this->assertSame(3, BranchInventory::available($product->store_id, $product->id, $product->variants->firstWhere('size', 'M')->id));
         $this->assertCount(2, $product->variants);
         $this->assertCount(2, $product->images);
         foreach ($product->images as $image) {
@@ -164,19 +167,21 @@ class SellerProductTest extends TestCase
         $this->assertSame(2, $product->refresh()->stock_quantity);
     }
 
-    public function test_seller_can_update_option_stock_without_changing_the_product_price(): void
+    public function test_product_edit_ignores_option_stock_because_branches_count_it(): void
     {
         [$owner, $tenant, $store] = $this->seller();
         $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Cotton shirt', 'slug' => 'cotton-shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'stock_quantity' => 2, 'status' => 'draft']);
-        $variant = $product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'SHIRT-N-M', 'stock_quantity' => 2]);
+        $variant = $product->variants()->create(['color' => 'Navy', 'size' => 'M', 'sku' => 'SHIRT-N-M', 'stock_quantity' => 0]);
+        app(BranchInventory::class)->put($store->id, $product, $variant, 2);
 
         $this->actingAs($owner)->patch(route('seller.products.update', $product), [
             'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'status' => 'draft',
             'variants' => [['id' => $variant->id, 'color' => 'Navy', 'size' => 'M', 'sku' => 'SHIRT-N-M', 'stock_quantity' => 5]],
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertSame(5, $product->refresh()->stock_quantity);
-        $this->assertSame(5, $variant->refresh()->stock_quantity);
+        $this->assertSame(2, $product->refresh()->stock_quantity);
+        $this->assertSame(2, $variant->refresh()->stock_quantity);
+        $this->assertSame(2, BranchInventory::available($store->id, $product->id, $variant->id));
         $this->assertSame('499.00', $product->price);
     }
 
@@ -184,7 +189,8 @@ class SellerProductTest extends TestCase
     {
         [$owner, $tenant, $store] = $this->seller();
         $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Cotton shirt', 'slug' => 'cotton-shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'stock_quantity' => 2, 'status' => 'draft']);
-        $black = $product->variants()->create(['color' => 'Black', 'sku' => 'SHIRT-B', 'stock_quantity' => 2]);
+        $black = $product->variants()->create(['color' => 'Black', 'sku' => 'SHIRT-B', 'stock_quantity' => 0]);
+        app(BranchInventory::class)->put($store->id, $product, $black, 2);
 
         $this->actingAs($owner)->patch(route('seller.products.update', $product), [
             'name' => 'Cotton shirt', 'sku' => 'SHIRT', 'price' => '499.00', 'status' => 'draft',
@@ -196,7 +202,7 @@ class SellerProductTest extends TestCase
 
         $this->assertSame(['L', 'M'], $product->variants()->pluck('size')->all());
         $this->assertSame('M', $black->refresh()->size);
-        $this->assertSame(5, $product->refresh()->stock_quantity);
+        $this->assertSame(2, $product->refresh()->stock_quantity);
     }
 
     public function test_seller_cannot_view_another_tenants_product_listing(): void
@@ -536,7 +542,8 @@ class SellerProductTest extends TestCase
     public function test_owner_can_update_their_own_product(): void
     {
         [$owner, $tenant, $store] = $this->seller();
-        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 2, 'status' => 'active']);
+        $product = $store->products()->create(['tenant_id' => $tenant->id, 'name' => 'Canvas Tote', 'slug' => 'canvas-tote', 'sku' => 'TOTE-001', 'price' => '299.00', 'stock_quantity' => 0, 'status' => 'active']);
+        app(BranchInventory::class)->put($store->id, $product, null, 2);
 
         $this->actingAs($owner)->patch(route('seller.products.update', $product), [
             'name' => 'Canvas Tote Deluxe',
@@ -549,12 +556,12 @@ class SellerProductTest extends TestCase
             'status' => 'active',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 7, 'status' => 'active']);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote Deluxe', 'brand' => 'Field & Co.', 'condition' => 'new', 'compare_at_price' => '449.00', 'stock_quantity' => 2, 'status' => 'active']);
         $this->assertNotNull($product->refresh()->content_changed_at);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.updated', 'entity_id' => $product->id]);
     }
 
-    public function test_stock_and_price_edits_keep_a_live_listing_on_sale_without_a_re_check(): void
+    public function test_price_edits_keep_a_live_listing_on_sale_without_a_re_check(): void
     {
         [$owner, $tenant, $store] = $this->seller();
         $product = $this->completeListing($tenant, $store, 'active');
@@ -564,7 +571,7 @@ class SellerProductTest extends TestCase
             'price' => '249.00', 'stock_quantity' => 9, 'status' => 'draft',
         ])->assertRedirect(route('seller.products.index'));
 
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'active', 'price' => '249.00', 'stock_quantity' => 9, 'content_changed_at' => null]);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'active', 'price' => '249.00', 'content_changed_at' => null]);
     }
 
     public function test_live_listing_cannot_lose_its_last_photo(): void

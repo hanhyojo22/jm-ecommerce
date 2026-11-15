@@ -236,7 +236,8 @@ class ProductController extends Controller
                         $savedVariant = $product->variants()->whereKey($id)->firstOrFail();
                         $savedVariant->update($variant);
                     } else {
-                        $savedVariant = $product->variants()->create($variant);
+                        // A variant added on edit starts at zero everywhere; branches count it on Branch stock.
+                        $savedVariant = $product->variants()->create($variant + ['stock_quantity' => 0]);
                     }
                     foreach ($variantImagePaths[$index] ?? [] as $path) {
                         $product->images()->create(['path' => $path, 'position' => $position++, 'color' => $savedVariant->color]);
