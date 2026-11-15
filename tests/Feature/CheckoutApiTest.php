@@ -243,6 +243,8 @@ class CheckoutApiTest extends TestCase
     private function delivery(): array
     {
         return [
+            'delivery_latitude' => 14.5995,
+            'delivery_longitude' => 120.9842,
             'recipient_name' => 'Ava Buyer',
             'phone' => '+639171234567',
             'address_line' => '100 Market Street',

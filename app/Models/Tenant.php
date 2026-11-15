@@ -14,7 +14,12 @@ class Tenant extends Model
 {
     use HasFactory, HasUlids, SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'status'];
+    protected $fillable = ['name', 'slug', 'status', 'delivery_fee', 'free_delivery_minimum'];
+
+    protected function casts(): array
+    {
+        return ['delivery_fee' => 'decimal:2', 'free_delivery_minimum' => 'decimal:2'];
+    }
 
     public function members(): HasMany
     {

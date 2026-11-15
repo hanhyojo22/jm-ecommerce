@@ -99,6 +99,8 @@ class MobileApiContractTest extends TestCase
                 'city' => 'Manila',
                 'province' => 'Metro Manila',
                 'postal_code' => '1000',
+                'delivery_latitude' => 14.5995,
+                'delivery_longitude' => 120.9842,
                 'payment_method' => 'cod',
                 'client_request_id' => 'contract-1',
             ])

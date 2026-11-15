@@ -85,26 +85,28 @@ class CheckoutController extends Controller
     public function store(Request $request, CheckoutCart $checkout, SendOrderReceipt $sendReceipt, NotifySellersOfNewOrder $notifySellers): RedirectResponse
     {
         $data = $request->validate([
+            'fulfillment_method' => ['sometimes', Rule::in(['delivery', 'pickup'])],
             'recipient_name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
-            'address_line' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:100'],
-            'province' => ['required', 'string', 'max:100'],
-            'postal_code' => ['required', 'regex:/^\d{4}$/'],
+            'address_line' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:255'],
+            'city' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
+            'province' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
+            'postal_code' => ['required_unless:fulfillment_method,pickup', 'nullable', 'regex:/^\d{4}$/'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
             'client_request_id' => ['nullable', 'string', 'max:100'],
         ]);
         $paymentMethod = $data['payment_method'] ?? 'cod';
+        $fulfillmentMethod = $data['fulfillment_method'] ?? 'delivery';
+        // shortcut: the web checkout has no map pin until Phase 7, so its deliveries skip the radius check.
         $order = $checkout->handle(
             $request->user(),
-            Arr::except($data, ['payment_method', 'client_request_id']),
+            Arr::only($data, ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code', 'delivery_note']),
             $paymentMethod,
             $data['client_request_id'] ?? null,
+            $fulfillmentMethod,
         );
-        $paymentNote = $paymentMethod === 'cod'
-            ? 'payable on delivery. Each store confirms its delivery timing.'
-            : 'to be paid by '.Payment::METHOD_LABELS[$paymentMethod].'. If you left the payment page, pay from your order page so the stores can confirm and ship.';
+        $paymentNote = CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod);
         $buyer = $request->user();
 
         $sendReceipt->handle($buyer, $order, $paymentNote);

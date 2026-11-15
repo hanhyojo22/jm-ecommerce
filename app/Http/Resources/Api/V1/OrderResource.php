@@ -24,6 +24,8 @@ class OrderResource extends JsonResource
             'status' => $this->status,
             'created_at' => $this->created_at?->toIso8601String(),
             'subtotal' => (string) $this->subtotal,
+            'fulfillment_method' => $this->fulfillment_method,
+            'delivery_pin' => $this->delivery_latitude === null ? null : ['latitude' => $this->delivery_latitude, 'longitude' => $this->delivery_longitude],
             'shipping_amount' => (string) $this->shipping_amount,
             'total' => (string) $this->total,
             'delivery' => [

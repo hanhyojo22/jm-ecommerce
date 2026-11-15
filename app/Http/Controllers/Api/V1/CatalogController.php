@@ -14,6 +14,7 @@ use App\Models\Store;
 use App\Queries\CatalogQuery;
 use App\Queries\RecommendationQuery;
 use App\Queries\TopProductQuery;
+use App\Support\Distance;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -242,7 +243,7 @@ class CatalogController extends Controller
                 'longitude' => $branch->longitude,
                 'quantity' => (int) $branch->branch_quantity,
                 'distance_km' => isset($data['lat'])
-                    ? round($this->distanceKm((float) $data['lat'], (float) $data['lng'], $branch->latitude, $branch->longitude), 1)
+                    ? round(Distance::km((float) $data['lat'], (float) $data['lng'], $branch->latitude, $branch->longitude), 1)
                     : null,
             ])
             ->sortBy(fn (array $branch): float => $branch['distance_km'] ?? INF)
@@ -322,18 +323,6 @@ class CatalogController extends Controller
     private function branch(?string $branchId): ?Store
     {
         return $branchId === null ? null : CatalogQuery::publicStores()->whereKey($branchId)->firstOrFail();
-    }
-
-    /**
-     * Great-circle distance; branches are few, so this runs in PHP rather than per-database SQL.
-     */
-    private function distanceKm(float $fromLat, float $fromLng, float $toLat, float $toLng): float
-    {
-        $dLat = deg2rad($toLat - $fromLat);
-        $dLng = deg2rad($toLng - $fromLng);
-        $a = sin($dLat / 2) ** 2 + cos(deg2rad($fromLat)) * cos(deg2rad($toLat)) * sin($dLng / 2) ** 2;
-
-        return 6371 * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     private function detailQuery(): Builder

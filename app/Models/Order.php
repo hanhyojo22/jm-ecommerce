@@ -29,11 +29,14 @@ class Order extends Model
         'shipping_amount',
         'total',
         'status',
+        'fulfillment_method',
+        'delivery_latitude',
+        'delivery_longitude',
     ];
 
     protected function casts(): array
     {
-        return ['subtotal' => 'decimal:2', 'shipping_amount' => 'decimal:2', 'total' => 'decimal:2'];
+        return ['subtotal' => 'decimal:2', 'shipping_amount' => 'decimal:2', 'total' => 'decimal:2', 'delivery_latitude' => 'float', 'delivery_longitude' => 'float'];
     }
 
     /**

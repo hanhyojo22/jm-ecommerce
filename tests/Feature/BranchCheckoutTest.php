@@ -8,8 +8,10 @@ use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
+use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -21,7 +23,10 @@ class BranchCheckoutTest extends TestCase
     {
         parent::setUp();
 
-        Http::fake();
+        Http::fake([
+            'api.paymongo.com/v1/checkout_sessions' => Http::response(['data' => ['id' => 'cs_1', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_1']]]),
+            '*' => Http::response(),
+        ]);
     }
 
     public function test_an_order_takes_stock_from_the_chosen_branch_and_a_cancel_puts_it_back_there(): void
@@ -87,6 +92,133 @@ class BranchCheckoutTest extends TestCase
         $this->assertSame(5, $this->onHand($cebu, $product));
     }
 
+    public function test_delivery_adds_the_flat_fee_unless_the_items_reach_the_free_delivery_amount(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 20);
+        $cebu->tenant->update(['delivery_fee' => '49.00', 'free_delivery_minimum' => '50.00']);
+        $buyer = $this->buyer();
+
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 2])->assertCreated();
+        $this->getJson('/api/v1/checkout')
+            ->assertOk()
+            ->assertJsonPath('data.branch.id', $cebu->id)
+            ->assertJsonPath('data.fulfillment_methods.delivery.fee', '49.00')
+            ->assertJsonPath('data.fulfillment_methods.delivery.total', '62.00')
+            ->assertJsonPath('data.fulfillment_methods.pickup.total', '13.00');
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])
+            ->assertCreated()
+            ->assertJsonPath('data.fulfillment_method', 'delivery')
+            ->assertJsonPath('data.delivery_pin.latitude', 10.3157);
+        $this->assertDatabaseHas('orders', ['subtotal' => '13.00', 'shipping_amount' => '49.00', 'total' => '62.00']);
+        $this->assertDatabaseHas('payments', ['amount' => '62.00']);
+
+        // Eight tablets at ₱6.50 reach the ₱50 free-delivery amount.
+        $this->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 8])->assertCreated();
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated();
+        $this->assertDatabaseHas('orders', ['subtotal' => '52.00', 'shipping_amount' => '0.00', 'total' => '52.00']);
+    }
+
+    public function test_an_online_payment_charges_the_delivery_fee_as_its_own_line(): void
+    {
+        config()->set('services.paymongo', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsk_test', 'base_url' => 'https://api.paymongo.com']);
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $cebu->tenant->update(['delivery_fee' => '49.00']);
+        $buyer = $this->buyer();
+
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 2])->assertCreated();
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'gcash'])
+            ->assertCreated()
+            ->assertJsonPath('data.payment_url', 'https://checkout.paymongo.com/cs_1');
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/checkout_sessions')
+            && collect($request['data']['attributes']['line_items'])->contains(fn (array $line): bool => $line['name'] === 'Delivery fee' && $line['amount'] === 4900)
+            && collect($request['data']['attributes']['line_items'])->reject(fn (array $line): bool => $line['name'] === 'Payment fee')->sum(fn (array $line): int => $line['amount'] * $line['quantity']) === 6200);
+    }
+
+    public function test_pickup_is_free_needs_no_address_and_names_the_branch(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $cebu->tenant->update(['delivery_fee' => '49.00']);
+        $buyer = $this->buyer();
+
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+        $this->postJson('/api/v1/checkout', ['fulfillment_method' => 'pickup', 'recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'payment_method' => 'cod'])
+            ->assertCreated()
+            ->assertJsonPath('data.fulfillment_method', 'pickup')
+            ->assertJsonPath('data.delivery_pin', null);
+
+        $this->assertDatabaseHas('orders', ['fulfillment_method' => 'pickup', 'address_line' => '10 Rizal Street', 'city' => 'Cebu', 'shipping_amount' => '0.00', 'total' => '6.50']);
+        $this->assertDatabaseCount('delivery_addresses', 0);
+    }
+
+    public function test_delivery_outside_the_branch_radius_is_refused_and_the_app_must_send_a_pin(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $cebu->update(['latitude' => 10.3157, 'longitude' => 123.8854, 'delivery_radius_km' => 5]);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+
+        // Lapu-Lapu is about 13 km away.
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'delivery_latitude' => 10.3103, 'delivery_longitude' => 124.0170, 'payment_method' => 'cod'])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.delivery_latitude.0', fn (string $message): bool => str_contains($message, 'delivers within 5 km'));
+        $this->postJson('/api/v1/checkout', [...collect($this->delivery())->except(['delivery_latitude', 'delivery_longitude'])->all(), 'payment_method' => 'cod'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['delivery_latitude'], 'error.fields');
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertSame(5, $this->onHand($cebu, $product));
+
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated();
+    }
+
+    public function test_a_retry_with_a_different_fulfillment_is_not_mistaken_for_the_first_order(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod', 'client_request_id' => 'retry-1'])->assertCreated();
+
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'fulfillment_method' => 'pickup', 'payment_method' => 'cod', 'client_request_id' => 'retry-1'])
+            ->assertUnprocessable();
+        $this->assertDatabaseCount('orders', 1);
+    }
+
+    public function test_pickup_orders_are_never_marked_collected_automatically(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+        $this->postJson('/api/v1/checkout', ['fulfillment_method' => 'pickup', 'recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'payment_method' => 'cod'])->assertCreated();
+        SellerOrder::query()->update(['status' => 'shipped', 'shipped_at' => now()->subDays(30)]);
+
+        $this->artisan('orders:auto-deliver')->assertSuccessful();
+
+        $this->assertSame('shipped', SellerOrder::query()->sole()->status);
+    }
+
+    public function test_only_head_office_sets_the_delivery_fee(): void
+    {
+        [$makati] = $this->pharmacyWithStock(makati: 1, cebu: 1);
+        $tenant = $makati->tenant;
+        $headOffice = $this->member($tenant);
+        $branchManager = $this->member($tenant, $makati);
+
+        $this->actingAs($branchManager)->patch(route('seller.delivery-fee.update'), ['delivery_fee' => '1.00'])->assertForbidden();
+        $this->actingAs($headOffice)->patch(route('seller.delivery-fee.update'), ['delivery_fee' => '49.00', 'free_delivery_minimum' => '500'])
+            ->assertRedirect(route('seller.branches.index'));
+
+        $this->assertSame(['49.00', '500.00'], [(string) $tenant->fresh()->delivery_fee, (string) $tenant->fresh()->free_delivery_minimum]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'tenant.delivery_fee_updated', 'actor_user_id' => $headOffice->id]);
+    }
+
+    private function member(Tenant $tenant, ?Store $branch = null): User
+    {
+        $user = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'store_id' => $branch?->id, 'user_id' => $user->id, 'role' => 'manager']);
+
+        return $user;
+    }
+
     /** @return array{0: Store, 1: Store, 2: Product} */
     private function pharmacyWithStock(int $makati, int $cebu): array
     {
@@ -120,6 +252,6 @@ class BranchCheckoutTest extends TestCase
     /** @return array<string, string> */
     private function delivery(): array
     {
-        return ['recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'address_line' => '100 Colon Street', 'city' => 'Cebu', 'province' => 'Cebu', 'postal_code' => '6000'];
+        return ['recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'address_line' => '100 Colon Street', 'city' => 'Cebu', 'province' => 'Cebu', 'postal_code' => '6000', 'delivery_latitude' => 10.3157, 'delivery_longitude' => 123.8854];
     }
 }

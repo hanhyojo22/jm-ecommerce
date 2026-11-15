@@ -92,11 +92,16 @@ class StartOnlinePayment
      */
     private function lineItems(Collection $sellerOrders): array
     {
-        return $sellerOrders->flatMap(fn (SellerOrder $sellerOrder) => $sellerOrder->items->map(fn ($item): array => [
+        $items = $sellerOrders->flatMap(fn (SellerOrder $sellerOrder) => $sellerOrder->items->map(fn ($item): array => [
             'name' => $item->product_name.($item->variant_label ? " ({$item->variant_label})" : ''),
             'amount' => PayMongo::centavos((string) $item->unit_price),
             'currency' => 'PHP',
             'quantity' => $item->quantity,
         ]))->values()->all();
+        $deliveryFee = $sellerOrders->reduce(fn (string $sum, SellerOrder $sellerOrder): string => bcadd($sum, (string) $sellerOrder->shipping_amount, 2), '0.00');
+
+        return bccomp($deliveryFee, '0', 2) > 0
+            ? [...$items, ['name' => 'Delivery fee', 'amount' => PayMongo::centavos($deliveryFee), 'currency' => 'PHP', 'quantity' => 1]]
+            : $items;
     }
 }

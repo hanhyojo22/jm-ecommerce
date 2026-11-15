@@ -28,7 +28,7 @@ class CartController extends Controller
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
             'variant_id' => ['nullable', 'ulid'],
             'buy_now' => ['sometimes', 'boolean'],
-            'branch' => [Rule::requiredIf(fn (): bool => $request->user()->cart?->store_id === null), 'nullable', 'ulid'],
+            'branch' => [Rule::requiredIf(fn (): bool => Cart::query()->where('user_id', $request->user()->id)->value('store_id') === null), 'nullable', 'ulid'],
         ]);
 
         $addProductToCart->handle(

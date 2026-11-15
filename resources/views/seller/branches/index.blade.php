@@ -13,6 +13,23 @@
         <div class="page-container seller-workspace-page sc-stack">
             @if (session('status'))<p class="sc-notice" data-tone="success" role="status">{{ session('status') }}</p>@endif
 
+            <form method="POST" action="{{ route('seller.delivery-fee.update') }}" class="sc-card flex flex-wrap items-end gap-4 p-4" aria-labelledby="delivery-fee-heading">
+                @csrf
+                @method('PATCH')
+                <h2 id="delivery-fee-heading" class="w-full font-semibold text-ink">Delivery fee <span class="font-normal text-muted">— the same at every branch; pickup is always free</span></h2>
+                <div>
+                    <label for="delivery_fee" class="block text-sm font-semibold text-ink">Fee per order (₱)</label>
+                    <input id="delivery_fee" name="delivery_fee" type="number" inputmode="decimal" step="0.01" min="0" required value="{{ old('delivery_fee', $tenant->delivery_fee) }}" class="field-control mt-2 w-36 text-base lg:text-sm">
+                    <x-input-error :messages="$errors->get('delivery_fee')" class="mt-2" />
+                </div>
+                <div>
+                    <label for="free_delivery_minimum" class="block text-sm font-semibold text-ink">Free above (₱, optional)</label>
+                    <input id="free_delivery_minimum" name="free_delivery_minimum" type="number" inputmode="decimal" step="0.01" min="0.01" value="{{ old('free_delivery_minimum', $tenant->free_delivery_minimum) }}" class="field-control mt-2 w-36 text-base lg:text-sm">
+                    <x-input-error :messages="$errors->get('free_delivery_minimum')" class="mt-2" />
+                </div>
+                <button type="submit" class="seller-outline-button min-h-11">Save delivery fee</button>
+            </form>
+
             <ul class="sc-card divide-y divide-line" aria-label="Branches">
                 @foreach ($branches as $branch)
                     <li class="flex flex-wrap items-center justify-between gap-3 p-4">

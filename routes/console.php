@@ -67,6 +67,7 @@ Artisan::command('orders:auto-deliver', function (UpdateSellerOrderStatus $updat
         ->where('status', 'shipped')
         ->where('shipped_at', '<', now()->subDays((int) config('marketplace.orders.auto_deliver_days')))
         ->whereDoesntHave('issues', fn ($query) => $query->where('status', 'open'))
+        ->whereHas('order', fn ($query) => $query->where('fulfillment_method', 'delivery'))
         ->get();
     $delivered = 0;
 

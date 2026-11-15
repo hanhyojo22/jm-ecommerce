@@ -72,8 +72,9 @@ class CheckoutController extends Controller
             'cod' => [
                 'available' => ! $codBlocked,
                 'fee' => '0.00',
+                // The refusal limit is for deliveries; paying at the pickup counter stays open.
                 'reason' => $codBlocked
-                    ? 'Because cash-on-delivery parcels were refused recently, you can have one order in progress at a time.'
+                    ? 'Because cash-on-delivery parcels were refused recently, you can have one delivery in progress at a time. Pay online or pick up at the branch.'
                     : null,
             ],
         ];
@@ -86,9 +87,24 @@ class CheckoutController extends Controller
             ];
         }
 
+        $branch = $cart->branchFor($cart->items->first()->product->tenant_id);
+        $deliveryFee = $branch === null ? '0.00' : CheckoutCart::deliveryFee($branch->tenant, $subtotal);
+
         return response()->json(['data' => [
             'items' => CartItemResource::collection($cart->items)->resolve($request),
             'subtotal' => $subtotal,
+            'branch' => $branch === null ? null : [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'address_line' => $branch->address_line,
+                'city' => $branch->city,
+                'delivery_radius_km' => $branch->delivery_radius_km,
+            ],
+            // Pickup is free; delivery adds head office's flat fee unless the items reach the free-delivery amount.
+            'fulfillment_methods' => [
+                'delivery' => ['fee' => $deliveryFee, 'total' => bcadd($subtotal, $deliveryFee, 2)],
+                'pickup' => ['fee' => '0.00', 'total' => $subtotal],
+            ],
             'store_totals' => $storeTotals,
             'addresses' => DeliveryAddressResource::collection($addresses)->resolve($request),
             'preferred_address' => $preferredAddress === null ? null : [
@@ -111,12 +127,15 @@ class CheckoutController extends Controller
         NotifySellersOfNewOrder $notifySellers,
     ): JsonResponse {
         $data = $request->validate([
+            'fulfillment_method' => ['sometimes', Rule::in(['delivery', 'pickup'])],
             'recipient_name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
-            'address_line' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:100'],
-            'province' => ['required', 'string', 'max:100'],
-            'postal_code' => ['required', 'regex:/^\d{4}$/'],
+            'address_line' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:255'],
+            'city' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
+            'province' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
+            'postal_code' => ['required_unless:fulfillment_method,pickup', 'nullable', 'regex:/^\d{4}$/'],
+            'delivery_latitude' => ['required_unless:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-90,90'],
+            'delivery_longitude' => ['required_unless:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-180,180'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
             'client_request_id' => ['nullable', 'string', 'max:100'],
@@ -125,16 +144,17 @@ class CheckoutController extends Controller
         ]);
 
         $paymentMethod = $data['payment_method'] ?? 'cod';
+        $fulfillmentMethod = $data['fulfillment_method'] ?? 'delivery';
         $order = $checkout->handle(
             $request->user(),
-            Arr::except($data, ['payment_method', 'client_request_id', 'success_url', 'cancel_url']),
+            Arr::only($data, ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code', 'delivery_note']),
             $paymentMethod,
             $data['client_request_id'] ?? null,
+            $fulfillmentMethod,
+            $fulfillmentMethod === 'delivery' ? ['latitude' => (float) $data['delivery_latitude'], 'longitude' => (float) $data['delivery_longitude']] : null,
         );
 
-        $sendReceipt->handle($request->user(), $order, $paymentMethod === 'cod'
-            ? 'payable on delivery. Each store confirms its delivery timing.'
-            : 'to be paid by '.Payment::METHOD_LABELS[$paymentMethod].'. If you left the payment page, pay from your order page so the stores can confirm and ship.');
+        $sendReceipt->handle($request->user(), $order, CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod));
         $notifySellers->handle($order);
 
         $paymentUrl = null;

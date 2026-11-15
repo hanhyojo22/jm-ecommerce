@@ -4,9 +4,12 @@ namespace App\Actions;
 
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Store;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Support\Distance;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -20,8 +23,10 @@ class CheckoutCart
      * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      * @param  'cod'|'gcash'|'maya'|'card'  $paymentMethod  an online method is paid through one PayMongo checkout opened right after this
      * @param  ?string  $clientRequestId  a caller-generated key that makes a retried checkout return the original order
+     * @param  'delivery'|'pickup'  $fulfillmentMethod  pickup is collected at the branch: no fee, and 'cod' means pay at the counter
+     * @param  ?array{latitude: float, longitude: float}  $deliveryPin  where the customer dropped the delivery pin; checked against the branch's radius
      */
-    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null): Order
+    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null): Order
     {
         abort_unless($user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(), 403);
 
@@ -31,7 +36,7 @@ class CheckoutCart
             $clientRequestId = null;
         }
 
-        $fingerprint = $clientRequestId === null ? null : $this->fingerprint($delivery, $paymentMethod);
+        $fingerprint = $clientRequestId === null ? null : $this->fingerprint($delivery, $paymentMethod, $fulfillmentMethod, $deliveryPin, Cart::query()->where('user_id', $user->id)->value('store_id'));
 
         if ($clientRequestId !== null) {
             $existing = $this->existingOrder($user, $clientRequestId);
@@ -42,7 +47,7 @@ class CheckoutCart
         }
 
         try {
-            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint): Order {
+            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin): Order {
                 $cart = Cart::query()
                     ->where('user_id', $user->id)
                     ->lockForUpdate()
@@ -54,7 +59,7 @@ class CheckoutCart
 
                 // The cart lock above serializes this buyer's checkouts, so two tabs cannot both slip past.
                 // A prepaid order cannot be refused at the door, so the limit is for COD only.
-                if ($paymentMethod === 'cod' && $user->hasReachedCodOrderLimit()) {
+                if ($paymentMethod === 'cod' && $fulfillmentMethod === 'delivery' && $user->hasReachedCodOrderLimit()) {
                     throw ValidationException::withMessages(['cart' => 'Because cash-on-delivery parcels were refused recently, you can have one order in progress at a time. You can place this order once your current one is delivered.']);
                 }
 
@@ -75,6 +80,18 @@ class CheckoutCart
 
                 if ($branch === null || $branch->status !== 'active') {
                     throw ValidationException::withMessages(['cart' => 'Your branch is closed. Choose another branch before checking out.']);
+                }
+
+                if ($fulfillmentMethod === 'delivery' && $deliveryPin !== null && $branch->delivery_radius_km !== null && $branch->latitude !== null) {
+                    $distance = Distance::km($deliveryPin['latitude'], $deliveryPin['longitude'], $branch->latitude, $branch->longitude);
+                    if ($distance > $branch->delivery_radius_km) {
+                        throw ValidationException::withMessages(['delivery_latitude' => "{$branch->name} delivers within {$branch->delivery_radius_km} km; this address is ".round($distance, 1).' km away. Choose pickup or another branch.']);
+                    }
+                }
+
+                // A pickup order is collected at the branch, so the branch address is what goes on it.
+                if ($fulfillmentMethod === 'pickup') {
+                    $delivery = [...$delivery, 'address_line' => $branch->address_line, 'city' => $branch->city, 'province' => $branch->province, 'postal_code' => $branch->postal_code];
                 }
 
                 $products = Product::query()
@@ -135,6 +152,9 @@ class CheckoutCart
                     ]);
                 }
 
+                $shipping = $fulfillmentMethod === 'pickup' ? '0.00' : self::deliveryFee($branch->tenant, $total);
+                $grandTotal = bcadd($total, $shipping, 2);
+
                 $order = Order::query()->create([
                     ...$delivery,
                     'user_id' => $user->id,
@@ -142,15 +162,20 @@ class CheckoutCart
                     'status' => 'pending',
                     'client_request_id' => $clientRequestId,
                     'client_request_hash' => $fingerprint,
+                    'fulfillment_method' => $fulfillmentMethod,
+                    'delivery_latitude' => $fulfillmentMethod === 'delivery' ? $deliveryPin['latitude'] ?? null : null,
+                    'delivery_longitude' => $fulfillmentMethod === 'delivery' ? $deliveryPin['longitude'] ?? null : null,
                     'subtotal' => $total,
-                    'shipping_amount' => '0.00',
-                    'total' => $total,
+                    'shipping_amount' => $shipping,
+                    'total' => $grandTotal,
                 ]);
-                $user->deliveryAddresses()->firstOrCreate(collect($delivery)->except('delivery_note')->all());
+                if ($fulfillmentMethod === 'delivery') {
+                    $user->deliveryAddresses()->firstOrCreate(collect($delivery)->except('delivery_note')->all());
+                }
 
                 // One branch fills the whole order.
                 $lines->groupBy(fn (array $line): string => $branch->id)
-                    ->each(function ($storeLines) use ($order, $branch): void {
+                    ->each(function ($storeLines) use ($order, $branch, $shipping): void {
                         $subtotal = $this->sumTotals($storeLines->pluck('total')->all());
 
                         $sellerOrder = $order->sellerOrders()->create([
@@ -158,8 +183,8 @@ class CheckoutCart
                             'store_id' => $branch->id,
                             'status' => 'pending',
                             'subtotal' => $subtotal,
-                            'shipping_amount' => '0.00',
-                            'total' => $subtotal,
+                            'shipping_amount' => $shipping,
+                            'total' => bcadd($subtotal, $shipping, 2),
                         ]);
 
                         foreach ($storeLines as $line) {
@@ -180,8 +205,8 @@ class CheckoutCart
                 $order->payment()->create([
                     'method' => $paymentMethod,
                     'status' => 'pending',
-                    'amount' => $total,
-                    'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($total, $paymentMethod),
+                    'amount' => $grandTotal,
+                    'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($grandTotal, $paymentMethod),
                 ]);
                 $cart->items()->whereKey($items->modelKeys())->delete();
                 $cart->touch();
@@ -208,6 +233,28 @@ class CheckoutCart
         }
     }
 
+    /**
+     * How the receipt says the order will be paid.
+     */
+    public static function paymentNote(string $paymentMethod, string $fulfillmentMethod): string
+    {
+        return match (true) {
+            $paymentMethod === 'cod' && $fulfillmentMethod === 'pickup' => 'payable at the branch when you collect it. We will tell you when it is ready for pickup.',
+            $paymentMethod === 'cod' => 'payable on delivery. The branch confirms its delivery timing.',
+            default => 'to be paid by '.Payment::METHOD_LABELS[$paymentMethod].'. If you left the payment page, pay from your order page so the branch can prepare it.',
+        };
+    }
+
+    /**
+     * Head office's flat delivery fee, waived once the items reach its free-delivery amount.
+     */
+    public static function deliveryFee(Tenant $tenant, string $subtotal): string
+    {
+        $minimum = $tenant->free_delivery_minimum;
+
+        return $minimum !== null && bccomp($subtotal, (string) $minimum, 2) >= 0 ? '0.00' : (string) $tenant->delivery_fee;
+    }
+
     private function existingOrder(User $user, string $clientRequestId): ?Order
     {
         return Order::query()
@@ -232,7 +279,7 @@ class CheckoutCart
      *
      * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      */
-    private function fingerprint(array $delivery, string $paymentMethod): string
+    private function fingerprint(array $delivery, string $paymentMethod, string $fulfillmentMethod, ?array $deliveryPin, ?string $branchId): string
     {
         $normalized = [
             'recipient_name' => trim((string) ($delivery['recipient_name'] ?? '')),
@@ -243,6 +290,9 @@ class CheckoutCart
             'postal_code' => trim((string) ($delivery['postal_code'] ?? '')),
             'delivery_note' => trim((string) ($delivery['delivery_note'] ?? '')),
             'payment_method' => $paymentMethod,
+            'fulfillment_method' => $fulfillmentMethod,
+            'delivery_pin' => $deliveryPin === null ? null : [round((float) $deliveryPin['latitude'], 7), round((float) $deliveryPin['longitude'], 7)],
+            'branch_id' => $branchId,
         ];
 
         return hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR));
