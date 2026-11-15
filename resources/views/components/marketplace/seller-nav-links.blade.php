@@ -2,10 +2,7 @@
 
 @php
     $storefrontTenant = auth()->user()?->sellerTenant();
-    $canManageStore = $storefrontTenant && auth()->user()->tenantMemberships()
-        ->where('tenant_id', $storefrontTenant->id)
-        ->whereIn('role', ['owner', 'manager'])
-        ->exists();
+    $canManageStore = auth()->user()?->headOfficeTenant() !== null;
     $groups = [
         [
             'label' => null,

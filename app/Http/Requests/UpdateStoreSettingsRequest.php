@@ -12,12 +12,7 @@ class UpdateStoreSettingsRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $tenant = $this->user()?->sellerTenant();
-
-        return $tenant !== null && $this->user()->tenantMemberships()
-            ->where('tenant_id', $tenant->id)
-            ->whereIn('role', ['owner', 'manager'])
-            ->exists();
+        return $this->user()?->headOfficeTenant() !== null;
     }
 
     /**

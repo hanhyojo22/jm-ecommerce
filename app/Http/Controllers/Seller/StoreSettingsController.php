@@ -199,17 +199,7 @@ class StoreSettingsController extends Controller
 
     private function managedTenant(Request $request): Tenant
     {
-        $tenant = $request->user()->sellerTenant();
-
-        abort_unless(
-            $tenant !== null && $request->user()->tenantMemberships()
-                ->where('tenant_id', $tenant->id)
-                ->whereIn('role', ['owner', 'manager'])
-                ->exists(),
-            403,
-        );
-
-        return $tenant;
+        return $request->user()->headOfficeTenant() ?? abort(403);
     }
 
     private function deleteUploadedLogo(?string $path): void

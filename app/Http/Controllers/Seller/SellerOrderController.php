@@ -7,7 +7,7 @@ use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\OrderIssue;
 use App\Models\SellerOrder;
-use App\Models\Tenant;
+use App\Models\TenantMember;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +23,7 @@ class SellerOrderController extends Controller
 
     public function index(Request $request): View
     {
-        $tenant = $this->activeTenant($request);
+        $member = $this->membership($request);
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:pending,confirmed,processing,shipped,delivered,cancelled'],
@@ -31,9 +31,9 @@ class SellerOrderController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
-        $canManageOrders = $this->canManageOrders($request, $tenant);
+        $canManageOrders = $this->canManageOrders($member);
 
-        $ordersQuery = $this->filteredOrders($tenant, $filters);
+        $ordersQuery = $this->filteredOrders($member, $filters);
         $perPage = in_array((int) $request->query('per_page'), self::PER_PAGE_OPTIONS, true) ? (int) $request->query('per_page') : self::PER_PAGE_OPTIONS[0];
         $orders = $ordersQuery->paginate($perPage)->onEachSide(1)->appends($request->except('order', 'page'));
 
@@ -47,8 +47,8 @@ class SellerOrderController extends Controller
         return view('seller.orders.index', [
             'orders' => $orders,
             'filters' => $filters,
-            'cashToCollectCount' => $tenant->sellerOrders()->where('status', 'delivered')->whereNull('cod_collected_at')->count(),
-            'statusCounts' => $tenant->sellerOrders()
+            'cashToCollectCount' => $member->sellerOrders()->where('status', 'delivered')->whereNull('cod_collected_at')->count(),
+            'statusCounts' => $member->sellerOrders()
                 ->selectRaw('status, count(*) as aggregate')
                 ->groupBy('status')
                 ->pluck('aggregate', 'status'),
@@ -58,11 +58,11 @@ class SellerOrderController extends Controller
 
     public function show(Request $request, SellerOrder $sellerOrder): View
     {
-        $tenant = $this->activeTenant($request);
-        $canManageOrders = $this->canManageOrders($request, $tenant);
+        $member = $this->membership($request);
+        $canManageOrders = $this->canManageOrders($member);
         $isModal = $request->header('X-Order-Modal') === '1';
 
-        $sellerOrder = $tenant->sellerOrders()
+        $sellerOrder = $member->sellerOrders()
             ->whereKey($sellerOrder)
             ->with($isModal ? ['items.product.images', 'order.payment', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'issues', 'returnCases.items.orderItem'])
             ->firstOrFail();
@@ -94,8 +94,8 @@ class SellerOrderController extends Controller
      */
     public function reportFailedDelivery(Request $request, SellerOrder $sellerOrder): RedirectResponse
     {
-        $tenant = $this->activeTenant($request, ['owner', 'manager']);
-        $sellerOrder = $tenant->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
+        $member = $this->membership($request, ['owner', 'manager']);
+        $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
         $data = $request->validate(['details' => ['required', 'string', 'min:10', 'max:2000']]);
 
         DB::transaction(function () use ($sellerOrder, $data): void {
@@ -122,8 +122,8 @@ class SellerOrderController extends Controller
 
     public function update(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
-        $tenant = $this->activeTenant($request, ['owner', 'manager']);
-        $sellerOrder = $tenant->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
+        $member = $this->membership($request, ['owner', 'manager']);
+        $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
 
         $data = $request->validate([
             'status' => ['required', 'in:confirmed,processing,shipped,delivered,cancelled'],
@@ -137,8 +137,8 @@ class SellerOrderController extends Controller
 
     public function collectCod(Request $request, SellerOrder $sellerOrder, MarkCodPaymentPaid $action): RedirectResponse
     {
-        $tenant = $this->activeTenant($request, ['owner', 'manager']);
-        $sellerOrder = $tenant->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
+        $member = $this->membership($request, ['owner', 'manager']);
+        $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
         try {
             $action->collectSellerOrder($request->user(), $sellerOrder, $request->ip());
         } catch (\LogicException $exception) {
@@ -150,7 +150,7 @@ class SellerOrderController extends Controller
 
     public function bulkConfirm(Request $request, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
-        $tenant = $this->activeTenant($request, ['owner', 'manager']);
+        $member = $this->membership($request, ['owner', 'manager']);
         $data = $request->validate([
             'seller_order_ids' => ['required', 'array', 'min:1', 'max:40'],
             'seller_order_ids.*' => ['required', 'string', 'ulid'],
@@ -161,8 +161,8 @@ class SellerOrderController extends Controller
             throw ValidationException::withMessages(['seller_order_ids' => 'Select no more than 20 orders.']);
         }
 
-        DB::transaction(function () use ($tenant, $ids, $request, $updateStatus): void {
-            $sellerOrders = $tenant->sellerOrders()->whereIn('id', $ids)->get()->keyBy('id');
+        DB::transaction(function () use ($member, $ids, $request, $updateStatus): void {
+            $sellerOrders = $member->sellerOrders()->whereIn('id', $ids)->get()->keyBy('id');
 
             if ($sellerOrders->count() !== count($ids) || $sellerOrders->contains(fn (SellerOrder $order): bool => $order->status !== 'pending')) {
                 throw ValidationException::withMessages(['seller_order_ids' => 'Only your pending orders can be confirmed. Refresh the list and try again.']);
@@ -180,9 +180,9 @@ class SellerOrderController extends Controller
      * @param  array<string, mixed>  $filters
      * @return HasMany<SellerOrder>
      */
-    private function filteredOrders(Tenant $tenant, array $filters): HasMany
+    private function filteredOrders(TenantMember $member, array $filters): HasMany
     {
-        return $tenant->sellerOrders()
+        return $member->sellerOrders()
             ->with(['items.product.images', 'order.payment'])
             // Bulk confirm skips orders the buyer asked to cancel; confirming one would fail the batch.
             ->withExists(['issues as has_open_cancellation' => fn (Builder $query): Builder => $query->where('status', 'open')->where('type', 'cancellation')])
@@ -207,19 +207,16 @@ class SellerOrderController extends Controller
             ->latest();
     }
 
-    private function canManageOrders(Request $request, Tenant $tenant): bool
+    private function canManageOrders(TenantMember $member): bool
     {
-        return $request->user()->tenantMemberships()
-            ->where('tenant_id', $tenant->id)
-            ->whereIn('role', ['owner', 'manager'])
-            ->exists();
+        return in_array($member->role, ['owner', 'manager'], true);
     }
 
     /**
      * @param  array<int, string>  $roles
      */
-    private function activeTenant(Request $request, array $roles = ['owner', 'manager', 'staff']): Tenant
+    private function membership(Request $request, array $roles = ['owner', 'manager', 'staff']): TenantMember
     {
-        return $request->user()->sellerTenant($roles) ?? abort(403);
+        return $request->user()->sellerMembership($roles) ?? abort(403);
     }
 }

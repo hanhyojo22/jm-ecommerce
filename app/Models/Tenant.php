@@ -50,9 +50,22 @@ class Tenant extends Model
         return $this->hasMany(TenantMember::class);
     }
 
+    /**
+     * The first branch. Products still hang off it until the catalog reads branch stock.
+     */
     public function store(): HasOne
     {
-        return $this->hasOne(Store::class);
+        return $this->hasOne(Store::class)->oldestOfMany();
+    }
+
+    public function stores(): HasMany
+    {
+        return $this->hasMany(Store::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
     }
 
     public function sellerOrders(): HasMany

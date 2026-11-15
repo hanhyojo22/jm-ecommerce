@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\PlatformFeeStatement;
-use App\Models\Tenant;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,27 +14,29 @@ class DashboardController extends Controller
     public function index(Request $request): Response|RedirectResponse
     {
         try {
-            $tenant = $request->user()->sellerTenant();
+            $member = $request->user()->sellerMembership();
 
-            if ($tenant === null) {
+            if ($member === null) {
                 return to_route('home');
             }
 
-            $store = $tenant->store;
-            $productMetrics = $store->products()
+            $tenant = $member->tenant;
+            // Head office sees the whole company; branch staff see their own branch.
+            $store = $member->store ?? $tenant->store;
+            $productMetrics = $tenant->products()
                 ->toBase()
                 ->selectRaw("count(*) as total_products, sum(case when stock_quantity = 0 then 1 else 0 end) as out_of_stock_products, sum(case when status = 'active' then 1 else 0 end) as active_products")
                 ->first();
-            $orderMetrics = $store->sellerOrders()
+            $orderMetrics = $member->sellerOrders()
                 ->toBase()
                 ->selectRaw("count(*) as total_orders, sum(case when status = 'pending' then 1 else 0 end) as pending_orders, sum(case when status != 'cancelled' then total else 0 end) as sales_total")
                 ->first();
-            $customerCount = $store->sellerOrders()
+            $customerCount = $member->sellerOrders()
                 ->join('orders', 'orders.id', '=', 'seller_orders.order_id')
                 ->where('seller_orders.status', '!=', 'cancelled')
                 ->distinct()
                 ->count('orders.user_id');
-            $salesByDay = $store->sellerOrders()
+            $salesByDay = $member->sellerOrders()
                 ->where('status', '!=', 'cancelled')
                 ->where('created_at', '>=', now()->subDays(29)->startOfDay())
                 ->toBase()
@@ -47,8 +48,8 @@ class DashboardController extends Controller
                     'date' => now()->subDays($daysAgo)->toDateString(),
                     'amount' => $salesByDay->get(now()->subDays($daysAgo)->toDateString(), 0),
                 ]);
-            $canManageProducts = $this->hasRole($request, $tenant, ['owner', 'manager']);
-            $canManageOrders = $canManageProducts;
+            $canManageOrders = in_array($member->role, ['owner', 'manager'], true);
+            $canManageProducts = $canManageOrders && $member->isHeadOffice();
             $storeSettingsUrl = $canManageProducts ? route('seller.store-settings.edit') : null;
 
             return response()->view('seller.dashboard', [
@@ -63,13 +64,13 @@ class DashboardController extends Controller
                 'salesHistory' => $salesHistory,
                 'customerCount' => $customerCount,
                 'outOfStockCount' => (int) $productMetrics->out_of_stock_products,
-                'recentOrders' => $store->sellerOrders()
+                'recentOrders' => $member->sellerOrders()
                     ->with('order')
                     ->withCount('items')
                     ->latest()
                     ->limit(5)
                     ->get(),
-                'recentProducts' => $store->products()
+                'recentProducts' => $tenant->products()
                     ->with('images')
                     ->latest('updated_at')
                     ->limit(4)
@@ -88,16 +89,5 @@ class DashboardController extends Controller
 
             return response()->view('seller.dashboard-unavailable', [], Response::HTTP_SERVICE_UNAVAILABLE);
         }
-    }
-
-    /**
-     * @param  array<int, string>  $roles
-     */
-    private function hasRole(Request $request, Tenant $tenant, array $roles): bool
-    {
-        return $request->user()->tenantMemberships()
-            ->where('tenant_id', $tenant->id)
-            ->whereIn('role', $roles)
-            ->exists();
     }
 }

@@ -177,15 +177,38 @@ class User extends Authenticatable
      */
     public function sellerTenant(array $roles = ['owner', 'manager', 'staff']): ?Tenant
     {
-        $membership = $this->tenantMemberships()
+        return $this->sellerMembership($roles)?->tenant;
+    }
+
+    /**
+     * The workspace membership behind sellerTenant(), which also says whether the member works
+     * at head office or at one branch.
+     *
+     * @param  array<int, string>  $roles
+     */
+    public function sellerMembership(array $roles = ['owner', 'manager', 'staff']): ?TenantMember
+    {
+        return $this->tenantMemberships()
             ->whereIn('role', $roles)
-            ->with(['tenant.store'])
+            ->with(['tenant.store', 'store'])
             ->whereHas('tenant', fn ($query) => $query
                 ->where('status', 'active')
                 ->whereHas('store', fn ($store) => $store->where('status', 'active')))
+            // A branch member whose branch is switched off has no workspace.
+            ->where(fn ($query) => $query->whereNull('store_id')->orWhereHas('store', fn ($store) => $store->where('status', 'active')))
             ->oldest('created_at')
             ->first();
+    }
 
-        return $membership?->tenant;
+    /**
+     * Head-office members manage the medicine list, prices and branches.
+     *
+     * @param  array<int, string>  $roles
+     */
+    public function headOfficeTenant(array $roles = ['owner', 'manager']): ?Tenant
+    {
+        $membership = $this->sellerMembership($roles);
+
+        return $membership?->isHeadOffice() ? $membership->tenant : null;
     }
 }

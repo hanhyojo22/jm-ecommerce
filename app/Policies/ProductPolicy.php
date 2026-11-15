@@ -14,7 +14,7 @@ class ProductPolicy
 
     public function create(User $user): bool
     {
-        return $user->account_type === 'seller' && $user->sellerTenant(['owner', 'manager']) !== null;
+        return $user->account_type === 'seller' && $user->headOfficeTenant() !== null;
     }
 
     public function view(User $user, Product $product): bool
@@ -26,6 +26,6 @@ class ProductPolicy
 
     public function update(User $user, Product $product): bool
     {
-        return $user->sellerTenant(['owner', 'manager'])?->id === $product->tenant_id;
+        return $user->headOfficeTenant()?->id === $product->tenant_id;
     }
 }

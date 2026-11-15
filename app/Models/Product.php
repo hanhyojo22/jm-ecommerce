@@ -20,7 +20,7 @@ class Product extends Model
     public const REVIEWED_FIELDS = ['name', 'description', 'category_id', 'brand', 'condition'];
 
     protected $fillable = [
-        'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
+        'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'dosage_form', 'strength', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'manufacturer', 'requires_prescription', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
     ];
 
     /** Decisions that cost the seller something, so they must say why. Approvals need no reason. */
@@ -72,7 +72,7 @@ class Product extends Model
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean', 'content_changed_at' => 'datetime'];
+        return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean', 'requires_prescription' => 'boolean', 'content_changed_at' => 'datetime'];
     }
 
     public function tenant(): BelongsTo
@@ -93,6 +93,11 @@ class Product extends Model
     public function images(): HasMany
     {
         return $this->hasMany(ProductImage::class)->orderBy('position');
+    }
+
+    public function branchStocks(): HasMany
+    {
+        return $this->hasMany(BranchStock::class);
     }
 
     public function variants(): HasMany

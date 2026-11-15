@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Seller;
 use App\Actions\ReturnCaseWorkflow;
 use App\Http\Controllers\Controller;
 use App\Models\ReturnCase;
+use App\Models\TenantMember;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -31,8 +33,7 @@ class ReturnCaseController extends Controller
 
     public function index(Request $request): View
     {
-        $tenant = $request->user()->sellerTenant() ?? abort(403);
-        $forTenant = fn ($query) => $query->whereHas('sellerOrder', fn ($sellerOrder) => $sellerOrder->where('tenant_id', $tenant->id));
+        $forTenant = $this->forMember($request->user()->sellerMembership() ?? abort(403));
         $filters = $this->filters($request);
 
         $cases = ReturnCase::query()->tap($forTenant)
@@ -65,8 +66,7 @@ class ReturnCaseController extends Controller
 
     public function show(Request $request, ReturnCase $returnCase): View
     {
-        $tenant = $request->user()->sellerTenant() ?? abort(403);
-        $case = ReturnCase::query()->whereKey($returnCase)->whereHas('sellerOrder', fn ($query) => $query->where('tenant_id', $tenant->id))
+        $case = ReturnCase::query()->whereKey($returnCase)->tap($this->forMember($request->user()->sellerMembership() ?? abort(403)))
             ->with('sellerOrder.order', 'sellerOrder.store', 'buyer', 'items.orderItem', 'events.actor', 'evidence.uploader', 'outcome')->firstOrFail();
 
         return view('returns.show', ['case' => $case, 'role' => 'seller']);
@@ -74,8 +74,7 @@ class ReturnCaseController extends Controller
 
     public function update(Request $request, ReturnCase $returnCase, ReturnCaseWorkflow $workflow): RedirectResponse
     {
-        $tenant = $request->user()->sellerTenant(['owner', 'manager']) ?? abort(403);
-        $case = ReturnCase::query()->whereKey($returnCase)->whereHas('sellerOrder', fn ($query) => $query->where('tenant_id', $tenant->id))->firstOrFail();
+        $case = ReturnCase::query()->whereKey($returnCase)->tap($this->forMember($request->user()->sellerMembership(['owner', 'manager']) ?? abort(403)))->firstOrFail();
         $data = $request->validate([
             'action' => ['required', 'in:reject,offer,receive,refund,ship,restock'],
             'note' => ['required_if:action,reject,offer', 'nullable', 'string', 'min:10', 'max:2000'],
@@ -96,6 +95,16 @@ class ReturnCaseController extends Controller
         $workflow->act($case, $request->user(), $data['action'], $data);
 
         return back()->with('status', 'Return case updated.');
+    }
+
+    /**
+     * Limits return cases to the member's company, and to their own branch unless they are head office.
+     */
+    private function forMember(TenantMember $member): Closure
+    {
+        return fn ($query) => $query->whereHas('sellerOrder', fn ($sellerOrder) => $sellerOrder
+            ->where('tenant_id', $member->tenant_id)
+            ->when($member->store_id, fn ($branchOrders, string $storeId) => $branchOrders->where('store_id', $storeId)));
     }
 
     /**

@@ -35,7 +35,7 @@ class ProductController extends Controller
             'stock' => ['nullable', 'in:in_stock,out_of_stock'],
             'sort' => ['nullable', 'in:newest,name,price,stock'],
         ]);
-        $products = $tenant->store->products()
+        $products = $tenant->products()
             ->with(['images', 'category:id,name'])
             ->withCount('variants')
             ->when($filters['search'] ?? null, function ($query, string $search): void {
@@ -63,7 +63,7 @@ class ProductController extends Controller
             'products' => $products->paginate(20)->withQueryString(),
             'store' => $tenant->store,
             'filters' => $filters,
-            'productCounts' => $tenant->store->products()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status'),
+            'productCounts' => $tenant->products()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status'),
             'canManageProducts' => $this->canManageProducts($request, $tenant),
         ]);
     }
@@ -78,7 +78,7 @@ class ProductController extends Controller
     public function show(Request $request, Product $product): View
     {
         $tenant = $this->activeTenant($request);
-        $product = $tenant->store->products()->whereKey($product)->firstOrFail();
+        $product = $tenant->products()->whereKey($product)->firstOrFail();
         $this->authorize('view', $product);
 
         return view('seller.products.show', [
@@ -354,7 +354,7 @@ class ProductController extends Controller
         }
 
         $products = DB::transaction(function () use ($request, $tenant, $productIds) {
-            $products = $tenant->store->products()
+            $products = $tenant->products()
                 ->whereKey($productIds)
                 ->orderBy('id')
                 ->lockForUpdate()
@@ -390,7 +390,7 @@ class ProductController extends Controller
     private function editableProduct(Request $request, Product $product): Product
     {
         $tenant = $this->activeTenant($request);
-        $product = $tenant->store->products()->whereKey($product)->firstOrFail();
+        $product = $tenant->products()->whereKey($product)->firstOrFail();
         $this->authorize('update', $product);
 
         return $product;
@@ -398,7 +398,7 @@ class ProductController extends Controller
 
     private function canManageProducts(Request $request, Tenant $tenant): bool
     {
-        return $request->user()->tenantMemberships()->where('tenant_id', $tenant->id)->whereIn('role', ['owner', 'manager'])->exists();
+        return $request->user()->headOfficeTenant()?->id === $tenant->id;
     }
 
     /**

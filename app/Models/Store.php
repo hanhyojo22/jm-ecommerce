@@ -48,6 +48,11 @@ class Store extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function branchStocks(): HasMany
+    {
+        return $this->hasMany(BranchStock::class);
+    }
+
     public function sellerOrders(): HasMany
     {
         return $this->hasMany(SellerOrder::class);
