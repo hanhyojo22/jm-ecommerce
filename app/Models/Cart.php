@@ -11,7 +11,7 @@ class Cart extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['user_id', 'reminded_at'];
+    protected $fillable = ['user_id', 'store_id', 'reminded_at'];
 
     protected function casts(): array
     {
@@ -21,6 +21,14 @@ class Cart extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The branch this cart buys from; stock and availability are read there.
+     */
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function items(): HasMany

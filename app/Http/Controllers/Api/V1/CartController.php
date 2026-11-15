@@ -12,6 +12,7 @@ use App\Models\CartItem;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CartController extends Controller
 {
@@ -27,6 +28,7 @@ class CartController extends Controller
             'quantity' => ['required', 'integer', 'min:1', 'max:100'],
             'variant_id' => ['nullable', 'ulid'],
             'buy_now' => ['sometimes', 'boolean'],
+            'branch' => [Rule::requiredIf(fn (): bool => $request->user()->cart?->store_id === null), 'nullable', 'ulid'],
         ]);
 
         $addProductToCart->handle(
@@ -35,6 +37,7 @@ class CartController extends Controller
             $data['quantity'],
             $data['variant_id'] ?? null,
             $request->boolean('buy_now'),
+            $data['branch'] ?? null,
         );
 
         return $this->payload($request)->setStatusCode(201);
@@ -85,6 +88,8 @@ class CartController extends Controller
     private function payload(Request $request): JsonResponse
     {
         $cart = $request->user()->cart()->with([
+            'store:id,tenant_id,name,status',
+            'items.cart.store:id,tenant_id,name,status',
             'items.product:id,tenant_id,store_id,name,slug,price,stock_quantity,status',
             'items.product.store:id,name,slug,status',
             'items.product.tenant:id,status',
@@ -110,6 +115,7 @@ class CartController extends Controller
 
         return response()->json(['data' => [
             'id' => $cart?->id,
+            'branch' => $cart?->store === null ? null : ['id' => $cart->store->id, 'name' => $cart->store->name],
             'items' => CartItemResource::collection($items)->resolve($request),
             'selected_count' => $selected->count(),
             'subtotal' => $subtotal,

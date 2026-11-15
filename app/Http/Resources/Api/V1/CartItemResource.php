@@ -34,7 +34,7 @@ class CartItemResource extends JsonResource
                 'name' => $this->product->name,
                 'slug' => $this->product->slug,
                 'price' => (string) $this->product->price,
-                'stock_quantity' => (int) $this->product->stock_quantity,
+                'stock_quantity' => $this->product_variant_id === null ? $this->availableQuantity() : (int) $this->product->stock_quantity,
                 'has_variants' => $this->product->variants->isNotEmpty(),
                 'store' => [
                     'name' => $this->product->store->name,
@@ -50,7 +50,7 @@ class CartItemResource extends JsonResource
                     'color_hex' => $this->variant->swatch(),
                     'size' => $this->variant->size !== '' ? $this->variant->size : null,
                     'price' => $this->variant->price !== null ? (string) $this->variant->price : null,
-                    'stock_quantity' => (int) $this->variant->stock_quantity,
+                    'stock_quantity' => $this->availableQuantity(),
                 ],
             ),
         ];

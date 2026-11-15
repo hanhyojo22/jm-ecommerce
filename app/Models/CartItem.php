@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Actions\BranchInventory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,19 +26,32 @@ class CartItem extends Model
         return ['selected' => 'boolean'];
     }
 
+    private ?int $branchQuantity = null;
+
     /**
-     * Whether this item can still be bought at its current quantity. Requires
-     * the product, its variants and this item's variant to be loaded.
+     * Units of this item on hand at the cart's branch; none when no branch is chosen yet.
+     */
+    public function availableQuantity(): int
+    {
+        $branch = $this->cart?->store;
+
+        return $branch === null ? 0 : ($this->branchQuantity ??= BranchInventory::available($branch->id, $this->product_id, $this->product_variant_id));
+    }
+
+    /**
+     * Whether this item can still be bought at its current quantity from the cart's branch.
+     * Requires the cart's store, the product, its variants and this item's variant to be loaded.
      */
     public function isAvailable(): bool
     {
-        $availableStock = $this->variant?->stock_quantity ?? $this->product->stock_quantity;
+        $branch = $this->cart?->store;
 
-        return $this->product->status === 'active'
-            && $this->product->store->status === 'active'
+        return $branch !== null
+            && $branch->status === 'active'
+            && $branch->tenant_id === $this->product->tenant_id
+            && $this->product->status === 'active'
             && $this->product->tenant->status === 'active'
-            && $this->product->stock_quantity >= $this->quantity
-            && $availableStock >= $this->quantity
+            && $this->availableQuantity() >= $this->quantity
             && ! ($this->product_variant_id !== null && $this->variant === null)
             && ! ($this->product_variant_id === null && $this->product->variants->isNotEmpty());
     }
