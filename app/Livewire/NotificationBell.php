@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Actions\SavePushSubscription;
+use App\Notifications\ChatMessageReceived;
 use App\Support\WebPushAvailability;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,6 +24,7 @@ class NotificationBell extends Component
     public function openNotifications(): void
     {
         $notificationIds = auth()->user()->unreadNotifications()
+            ->where('type', '!=', ChatMessageReceived::class)
             ->latest()->limit(10)->pluck('id')->all();
 
         $this->markAllRead();
@@ -36,7 +38,7 @@ class NotificationBell extends Component
 
     public function markAllRead(): void
     {
-        auth()->user()->unreadNotifications()->update(['read_at' => now()]);
+        auth()->user()->unreadNotifications()->where('type', '!=', ChatMessageReceived::class)->update(['read_at' => now()]);
         $this->openedNotificationIds = [];
     }
 
@@ -81,7 +83,7 @@ class NotificationBell extends Component
 
     public function goTo(string $id): mixed
     {
-        $notification = auth()->user()->notifications()->whereKey($id)->first();
+        $notification = auth()->user()->notifications()->where('type', '!=', ChatMessageReceived::class)->whereKey($id)->first();
 
         if ($notification === null) {
             return null;
@@ -106,8 +108,8 @@ class NotificationBell extends Component
             : collect();
 
         return view('livewire.notification-bell', [
-            'unreadCount' => $user->unreadNotifications()->count(),
-            'notifications' => $user->notifications()
+            'unreadCount' => $user->unreadNotifications()->where('type', '!=', ChatMessageReceived::class)->count(),
+            'notifications' => $user->notifications()->where('type', '!=', ChatMessageReceived::class)
                 ->where(fn (Builder $query) => $query->whereNull('read_at')->orWhereIn('id', $this->openedNotificationIds))
                 ->latest()->limit(10)->get(),
             'pushConfigured' => WebPushAvailability::isConfigured(),

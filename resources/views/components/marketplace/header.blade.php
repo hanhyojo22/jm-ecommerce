@@ -3,15 +3,19 @@
 @php
     $user = auth()->user();
     $isBuyer = $user && in_array($user->account_type, ['buyer', 'seller'], true);
+    $canUseMessages = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $cartBadge = $cartItemCount > 99 ? '99+' : $cartItemCount;
-    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*') || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
-    $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'profile.edit');
+    $buyerMessagesUrl = $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index');
+    $isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== $user?->id);
+    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
+    $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit');
     $customerPageTitle = match (true) {
         request()->routeIs('orders.show') => 'Order details',
         request()->routeIs('returns.show') => 'Return case',
         request()->routeIs('orders.*') => 'My Purchases',
         request()->routeIs('reviews.index') => 'My Reviews',
         request()->routeIs('delivery-addresses.*') => 'Delivery Addresses',
+        request()->routeIs('messages.*') => 'Messages',
         default => 'Settings',
     };
     $isHomepage = request()->routeIs('home') && ! $isSellerWorkspace;
@@ -20,6 +24,7 @@
         request()->routeIs('seller.orders.*') => 'Orders',
         request()->routeIs('seller.returns.*') => 'Returns',
         request()->routeIs('seller.products.*') => 'Products',
+        request()->routeIs('messages.*') => 'Messages',
         request()->routeIs('seller.reviews.*') => 'Reviews',
         request()->routeIs('seller.store-settings.*') => 'Branch details',
         request()->routeIs('seller.branches.*') => 'Branches',
@@ -172,6 +177,10 @@
                     </a>
                 @endif
 
+                @if ($canUseMessages)
+                    <livewire:message-header-badge :seller-workspace="$isSellerWorkspace" />
+                @endif
+
                 @if ($isBuyer && ! $isSellerWorkspace)
                     <a href="{{ route('cart.index') }}" data-cart-link class="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand lg:px-3" aria-label="Cart: {{ $cartItemCount }} {{ Str::plural('item', $cartItemCount) }}">
                         <span class="relative inline-flex shrink-0 items-center justify-center">
@@ -214,6 +223,12 @@
                                     <a href="{{ route('delivery-addresses.index') }}" class="flex min-h-11 items-center gap-2.5 rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">
                                         <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10Z" /><circle cx="12" cy="11" r="2.2" /></svg>
                                         Delivery Addresses
+                                    </a>
+                                @endif
+                                @if ($canUseMessages)
+                                    <a href="{{ $isSellerWorkspace ? route('messages.index', ['context' => 'selling']) : $buyerMessagesUrl }}" class="flex min-h-11 items-center gap-2.5 rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">
+                                        <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z" /></svg>
+                                        Messages
                                     </a>
                                 @endif
                                 <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center gap-2.5 rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">
@@ -435,6 +450,9 @@
                             <a href="{{ route('delivery-addresses.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Delivery Addresses</a>
                             <a href="{{ route('reviews.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
                         </div>
+                    @endif
+                    @if ($canUseMessages)
+                        <a href="{{ $buyerMessagesUrl }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
                     @endif
                     @if ($user?->isPlatformAdministrator())
                         <a href="{{ route('dashboard') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">Admin workspace</a>

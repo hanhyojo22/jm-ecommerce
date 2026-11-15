@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Conversation;
 use App\Models\DeliveryAddress;
+use App\Models\MessageAttachment;
 use App\Models\Order;
 use App\Models\OrderIssue;
 use App\Models\Product;
@@ -99,7 +101,7 @@ class AuthorizationPolicyTest extends TestCase
         $this->actingAs($otherBuyer)->get(route('orders.pay', $order))->assertNotFound();
     }
 
-    public function test_address_and_cart_policies_are_owner_only(): void
+    public function test_address_cart_and_attachment_policies_are_owner_or_participant_only(): void
     {
         [$buyer, , , $tenant, $store] = $this->purchase();
         $otherBuyer = User::factory()->create();
@@ -119,6 +121,26 @@ class AuthorizationPolicyTest extends TestCase
             'variant_key' => 'default',
             'quantity' => 1,
         ]);
+        $conversation = Conversation::create([
+            'buyer_id' => $buyer->id,
+            'store_id' => $store->id,
+            'product_id' => $cartItem->product_id,
+        ]);
+        $message = $conversation->messages()->create([
+            'sender_id' => $buyer->id,
+            'client_message_id' => (string) str()->uuid(),
+            'type' => 'file',
+            'body' => '',
+        ]);
+        $attachment = MessageAttachment::create([
+            'conversation_message_id' => $message->id,
+            'uploaded_by' => $buyer->id,
+            'disk' => 'chat_attachments',
+            'path' => 'chat/receipt.pdf',
+            'original_name' => 'receipt.pdf',
+            'mime_type' => 'application/pdf',
+            'byte_size' => 100,
+        ]);
 
         $this->assertTrue($buyer->can('viewAny', DeliveryAddress::class));
         $this->assertTrue($buyer->can('create', DeliveryAddress::class));
@@ -133,6 +155,10 @@ class AuthorizationPolicyTest extends TestCase
         $this->assertTrue($buyer->can('delete', $cartItem));
         $this->assertFalse($otherBuyer->can('update', $cartItem));
         $this->assertFalse($otherBuyer->can('delete', $cartItem));
+
+        $this->assertTrue($buyer->can('view', $attachment));
+        $this->assertTrue($member->can('view', $attachment));
+        $this->assertFalse($otherBuyer->can('view', $attachment));
     }
 
     /**

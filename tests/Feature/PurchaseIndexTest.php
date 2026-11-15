@@ -170,13 +170,14 @@ class PurchaseIndexTest extends TestCase
     {
         $buyer = User::factory()->create();
         $order = $this->order($buyer, 'CHAT-001', '10.00');
-        $this->sellerOrder($order, 'Chatty Store', 'delivered', '10.00');
+        $sellerOrder = $this->sellerOrder($order, 'Chatty Store', 'delivered', '10.00');
 
         $this->actingAs($buyer)->get(route('orders.index'))
             ->assertOk()
             ->assertSee(route('orders.show', $order), false)
             // The card itself is the way in; chat now starts from the order, not the list.
-            ->assertDontSee('Chat with Chatty Store, order CHAT-001');
+            ->assertDontSee('Chat with Chatty Store, order CHAT-001')
+            ->assertDontSee(route('messages.seller-orders.start', $sellerOrder), false);
     }
 
     public function test_purchase_cards_list_every_item_in_the_order(): void

@@ -6,6 +6,7 @@ use App\Auth\ClerkBackendSessionVerifier;
 use App\Auth\ClerkSessionVerifier;
 use App\Auth\ClerkUserResolver;
 use App\Models\Category;
+use App\Models\Conversation;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -75,6 +76,12 @@ class AppServiceProvider extends ServiceProvider
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));
 
+        // The app marks a thread read on every refresh; its own budget keeps a busy chat
+        // from spending the shared api allowance that browsing and message loads need.
+        RateLimiter::for('conversation-read', fn (Request $request): Limit => Limit::perMinute(60)->by(
+            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+        ));
+
         RateLimiter::for('admin-mutations', fn (Request $request): Limit => Limit::perMinute(20)->by(
             ($request->user()?->id ?? 'guest').'|'.$request->ip(),
         ));
@@ -128,6 +135,22 @@ class AppServiceProvider extends ServiceProvider
                     ->orderBy('name')
                     ->get(['id', 'name', 'slug']),
                 'sellerTenant' => $sellerTenant,
+            ]);
+        });
+
+        View::composer('components.marketplace.footer', function (ViewInstance $view): void {
+            $user = request()->user();
+            $canUseMessages = request()->routeIs('home')
+                && $user && in_array($user->account_type, ['buyer', 'seller'], true);
+
+            $view->with([
+                'mobileNavCanUseMessages' => $canUseMessages,
+                'mobileNavUnreadMessageCount' => $canUseMessages && $user->can('viewAny', Conversation::class)
+                    ? Conversation::query()->visibleTo($user)->where('buyer_id', $user->id)->unreadFor($user)->count()
+                    : 0,
+                'mobileNavMessagesUrl' => $canUseMessages
+                    ? ($user->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index'))
+                    : null,
             ]);
         });
     }

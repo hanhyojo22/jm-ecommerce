@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Actions\MarkCodPaymentPaid;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Conversation;
 use App\Models\OrderIssue;
 use App\Models\SellerOrder;
 use App\Models\TenantMember;
@@ -77,6 +78,7 @@ class SellerOrderController extends Controller
             return view('seller.orders._modal', [
                 'sellerOrder' => $sellerOrder,
                 'canManageOrders' => $canManageOrders,
+                'conversation' => Conversation::query()->where('buyer_id', $sellerOrder->order->user_id)->where('store_id', $sellerOrder->store_id)->first(),
             ]);
         }
 

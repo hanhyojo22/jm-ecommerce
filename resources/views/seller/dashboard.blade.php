@@ -224,6 +224,7 @@
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.products.index', ['stock' => 'out_of_stock']) }}">Review out-of-stock products</a></li>
                         
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('catalog.store', $store->slug) }}">Visit your storefront</a></li>
+                        <li data-seller-help-item class="seller-help-item"><a href="{{ route('messages.index') }}">Reply to buyer messages</a></li>
                         @if ($canManageProducts)<li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.store-settings.edit') }}">Update store details</a></li>@endif
                     </ul>
                     <p class="mt-2 hidden sc-meta" data-seller-help-empty role="status">No help topics match that search.</p>

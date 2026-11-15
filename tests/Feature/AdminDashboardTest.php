@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Conversation;
+use App\Models\MessageReport;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -113,24 +115,61 @@ class AdminDashboardTest extends TestCase
         $reviewReporter = User::factory()->create(['name' => 'Review reporter']);
         $review->reports()->create(['user_id' => $reviewReporter->id, 'reason' => 'spam']);
 
+        $conversation = Conversation::create([
+            'buyer_id' => $context['buyer']->id,
+            'store_id' => $context['store']->id,
+            'product_id' => $context['product']->id,
+        ]);
+        $message = $conversation->messages()->create([
+            'sender_id' => $context['seller']->id,
+            'type' => 'text',
+            'body' => 'A reported private message.',
+        ]);
+        $chatReport = MessageReport::create([
+            'conversation_message_id' => $message->id,
+            'reporter_id' => $context['buyer']->id,
+            'reason' => 'harassment',
+            'status' => 'pending',
+        ]);
+
         $response = $this->actingAs($administrator)->get(route('admin.moderation'));
 
         $response->assertOk()
             ->assertSee('Moderation')
-            ->assertSee('1 item need attention')
+            ->assertSee('2 items need attention')
             ->assertSee($context['product']->name)
             ->assertSee('Subject / context')
             ->assertSee('Reported reviews')
             ->assertSee('Review author: '.$context['buyer']->name)
+            ->assertSee('Reported by '.$context['buyer']->name)
+            ->assertSee('Harassment')
             ->assertSee('Governance shortcuts')
             ->assertSee('Suspended stores')
-            ->assertSee(route('admin.reviews.index', ['review' => $review->id]).'#review-'.$review->id, false);
+            ->assertSee(route('admin.reviews.index', ['review' => $review->id]).'#review-'.$review->id, false)
+            ->assertSee(route('admin.chat-reports.index', ['report' => $chatReport->id]).'#chat-report-'.$chatReport->id, false);
 
         $this->actingAs($administrator)
             ->get(route('admin.reviews.index', ['review' => $review->id]))
             ->assertOk()
             ->assertSee($context['product']->name)
             ->assertSee('A review that needs moderation.');
+
+        $this->actingAs($administrator)
+            ->get(route('admin.chat-reports.index', ['report' => $chatReport->id]))
+            ->assertOk()
+            ->assertSee('harassment')
+            ->assertSee('A reported private message.');
+
+        $this->actingAs($administrator)
+            ->patch(route('admin.chat-reports.update', $chatReport), ['status' => 'reviewed'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('message_reports', ['id' => $chatReport->id, 'status' => 'reviewed']);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_user_id' => $administrator->id,
+            'action' => 'message_report.reviewed',
+            'entity_id' => $chatReport->id,
+        ]);
     }
 
     public function test_category_queue_links_to_all_items_when_dashboard_limit_is_exceeded(): void
@@ -195,12 +234,47 @@ class AdminDashboardTest extends TestCase
             'status' => 'published',
         ]);
 
+        $conversation = Conversation::create([
+            'buyer_id' => $context['buyer']->id,
+            'store_id' => $context['store']->id,
+            'product_id' => $context['product']->id,
+        ]);
+        $pendingMessage = $conversation->messages()->create([
+            'sender_id' => $context['seller']->id,
+            'type' => 'text',
+            'body' => 'Pending report message.',
+        ]);
+        $reviewedMessage = $conversation->messages()->create([
+            'sender_id' => $context['seller']->id,
+            'type' => 'text',
+            'body' => 'Already reviewed message.',
+        ]);
+        MessageReport::create([
+            'conversation_message_id' => $pendingMessage->id,
+            'reporter_id' => $context['buyer']->id,
+            'reason' => 'spam',
+            'status' => 'pending',
+        ]);
+        MessageReport::create([
+            'conversation_message_id' => $reviewedMessage->id,
+            'reporter_id' => $context['buyer']->id,
+            'reason' => 'spam',
+            'status' => 'reviewed',
+        ]);
+
         $this->actingAs($administrator)
             ->get(route('admin.reviews.index', ['reported' => 1]))
             ->assertOk()
             ->assertSee('Reported review moderation')
             ->assertSee('This review has a report.')
             ->assertDontSee('This review has no report.');
+
+        $this->actingAs($administrator)
+            ->get(route('admin.chat-reports.index', ['status' => 'pending']))
+            ->assertOk()
+            ->assertSee('Pending chat reports')
+            ->assertSee('Pending report message.')
+            ->assertDontSee('Already reviewed message.');
     }
 
     public function test_dashboard_shows_an_empty_state_when_no_items_need_moderation(): void

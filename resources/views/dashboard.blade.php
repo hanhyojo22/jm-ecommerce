@@ -1,8 +1,9 @@
 <x-app-layout>
     @php
         $queueTabs = [
-            'all' => ['label' => 'All', 'count' => $counts['attention'], 'description' => 'All open product review reports.'],
+            'all' => ['label' => 'All', 'count' => $counts['attention'], 'description' => 'All open product review reports and chat reports.'],
             'product_report' => ['label' => 'Reported reviews', 'count' => $counts['productReports'], 'description' => 'Published reviews flagged by customers; the count is reviews, not individual reports.'],
+            'chat_report' => ['label' => 'Chat reports', 'count' => $counts['chatReports'], 'description' => 'Messages reported by marketplace customers.'],
         ];
     @endphp
 
@@ -96,6 +97,7 @@
                         @php
                             [$fullQueueUrl, $fullQueueLabel] = match ($activeType) {
                                 'product_report' => [route('admin.reviews.index', ['reported' => 1]), 'Open reported reviews'],
+                                'chat_report' => [route('admin.chat-reports.index', ['status' => 'pending']), 'Open pending chat reports'],
                             };
                         @endphp
                         <p class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
@@ -122,15 +124,17 @@
                             @php
                                 $type = match ($item['type']) {
                                     'product_report' => ['label' => 'Reported review', 'style' => 'bg-danger/10 text-danger-text'],
+                                    'chat_report' => ['label' => 'Chat report', 'style' => 'bg-canvas text-muted'],
                                 };
                                 $receivedAt = $item['received_at'];
                                 $receivedLabel = $receivedAt->diffForHumans();
                             @endphp
                             <article role="listitem" class="grid gap-3 border-b border-line bg-surface px-4 py-4 md:grid-cols-[minmax(7.8rem,1.15fr)_minmax(8rem,1.4fr)_minmax(7rem,1.2fr)_minmax(6.5rem,1fr)_minmax(7rem,1.15fr)] md:items-center md:gap-3 md:px-3 md:py-4">
                                 <div class="flex items-center gap-2.5">
-                                    <svg class="size-5 shrink-0 {{ $item['type'] === 'product_report' ? 'text-danger' : 'text-brand' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <svg class="size-5 shrink-0 {{ $item['type'] === 'product_report' ? 'text-danger' : ($item['type'] === 'chat_report' ? 'text-ink' : 'text-brand') }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         @switch($item['type'])
                                             @case('product_report')<path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" />@break
+                                            @case('chat_report')<path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-9.5A7.5 7.5 0 0 1 10.5 4h2A7.5 7.5 0 0 1 20 11.5Z" />@break
                                         @endswitch
                                     </svg>
                                     <span class="inline-flex max-w-full rounded-full px-2.5 py-1 text-xs font-semibold {{ $type['style'] }}">{{ $type['label'] }}</span>

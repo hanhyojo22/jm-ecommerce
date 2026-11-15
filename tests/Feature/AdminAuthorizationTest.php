@@ -38,6 +38,7 @@ class AdminAuthorizationTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
+        $this->actingAs($administrator)->get(route('admin.chat-reports.index'))->assertOk();
         $this->actingAs($administrator)->get(route('admin.order-issues.index'))->assertOk();
         $this->actingAs($administrator)->get(route('dashboard'))->assertOk();
         $this->actingAs($administrator)->get(route('admin.moderation'))->assertOk();
@@ -45,6 +46,7 @@ class AdminAuthorizationTest extends TestCase
 
     private function assertForbiddenForAllAdminSurfaces(User $user): void
     {
+        $this->actingAs($user)->get(route('admin.chat-reports.index'))->assertForbidden();
         $this->actingAs($user)->get(route('admin.order-issues.index'))->assertForbidden();
         $this->actingAs($user)->get(route('dashboard'))->assertForbidden();
         $this->actingAs($user)->get(route('admin.moderation'))->assertForbidden();

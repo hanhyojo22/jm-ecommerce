@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Notifications\ChatMessageReceived;
 use App\Notifications\MarketplaceNotice;
 use App\Notifications\NewSellerOrderPlaced;
 use App\Notifications\SellerOrderStatusUpdated;
@@ -114,7 +115,7 @@ class PushNotificationsTest extends TestCase
     public function test_a_signed_read_url_marks_the_notification_read_without_a_session(): void
     {
         $user = User::factory()->create();
-        $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
+        $user->notify(new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'));
         $notification = $user->notifications()->first();
 
         $url = URL::temporarySignedRoute(
@@ -131,7 +132,7 @@ class PushNotificationsTest extends TestCase
     public function test_an_unsigned_read_url_is_rejected(): void
     {
         $user = User::factory()->create();
-        $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'));
+        $user->notify(new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'));
         $notification = $user->notifications()->first();
 
         $this->get(route('push-notifications.read', $notification->id))
@@ -143,8 +144,8 @@ class PushNotificationsTest extends TestCase
     public function test_a_signed_read_url_cannot_be_reused_for_another_notification(): void
     {
         $user = User::factory()->create();
-        $user->notify(new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'First update.'));
-        $user->notify(new SellerOrderStatusUpdated('order-1', 'shipped', 'Order #JM-1', 'Second update.'));
+        $user->notify(new ChatMessageReceived('Jane', 'First message', 'conversation-1'));
+        $user->notify(new ChatMessageReceived('Jane', 'Second message', 'conversation-1'));
         [$first, $second] = $user->notifications()->latest()->get()->all();
 
         $url = URL::temporarySignedRoute(
@@ -164,6 +165,7 @@ class PushNotificationsTest extends TestCase
         $notificationId = (string) Str::uuid();
 
         $notifications = [
+            [new ChatMessageReceived('Jane', 'Is this still available?', 'conversation-1'), route('messages.show', 'conversation-1'), 'chat-conversation-1', 'message'],
             [new SellerOrderStatusUpdated('order-1', 'confirmed', 'Order #JM-1', 'Store confirmed your order.'), route('orders.show', 'order-1'), 'order-order-1', 'confirmed'],
             [new NewSellerOrderPlaced('seller-order-1', 'New order', 'A buyer placed an order.'), route('seller.orders.show', 'seller-order-1'), 'seller-order-seller-order-1', 'new_order'],
         ];

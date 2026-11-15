@@ -55,7 +55,7 @@ class SendAdminAnnouncement implements ShouldQueue
 
         return match ($audience) {
             'customers' => $query->where('account_type', 'buyer'),
-            // Active staff of an active store.
+            // Same membership rule as SendChatMessagePush: active staff of an active store.
             'stores' => $query->where('account_type', 'seller')
                 ->whereHas('tenantMemberships', fn ($membership) => $membership
                     ->whereIn('role', ['owner', 'manager', 'staff'])

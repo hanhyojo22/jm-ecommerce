@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\Conversation;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Store;
@@ -80,6 +81,26 @@ class PlaywrightQaSeeder extends Seeder
             $arrival->created_at = now()->subDay()->subMinutes($number);
             $arrival->save();
         }
+
+        $historyConversation = Conversation::query()->create(['buyer_id' => $customer->id, 'store_id' => $otherStore->id]);
+        for ($number = 1; $number <= 225; $number++) {
+            $historyConversation->messages()->create([
+                'sender_id' => $customer->id,
+                'body' => "History message {$number}",
+                ...($number === 225 ? [
+                    'product_id' => $historyProduct->id,
+                    'context_snapshot' => [
+                        'type' => 'product',
+                        'title' => $historyProduct->name,
+                        'price' => $historyProduct->price,
+                        'image_path' => $historyProduct->thumbnail?->path,
+                        'slug' => $historyProduct->slug,
+                        'store_slug' => $otherStore->slug,
+                    ],
+                ] : []),
+            ]);
+        }
+        $historyConversation->update(['latest_message_at' => now()]);
 
         $order = Order::query()->create(['user_id' => $customer->id, 'number' => 'QA-REVIEW-001', 'status' => 'delivered', 'recipient_name' => $customer->name, 'phone' => '+639171234567', 'address_line' => '10 QA Street', 'city' => 'Manila', 'subtotal' => '19.99', 'shipping_amount' => '0', 'total' => '19.99']);
         $order->payment()->create(['method' => 'cod', 'status' => 'paid', 'amount' => '19.99']);

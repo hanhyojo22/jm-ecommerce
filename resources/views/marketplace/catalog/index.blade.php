@@ -140,6 +140,13 @@
                         </div>
                         <div class="flex shrink-0 flex-wrap gap-2">
                             <a href="#product-results" class="inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Browse products</a>
+                            @php($storeFirstProduct = $storeFeatured->first() ?? $storeBestSellers->first() ?? $products->getCollection()->first())
+                            @if ($isBuyer && $storeFirstProduct)
+                                <form method="POST" action="{{ route('messages.products.start', $storeFirstProduct) }}" class="contents">
+                                    @csrf
+                                    <button class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Chat with seller</button>
+                                </form>
+                            @endif
                             <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand">Marketplace</a>
                         </div>
                     </div>

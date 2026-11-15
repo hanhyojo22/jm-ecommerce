@@ -23,6 +23,17 @@
         @if (! auth()->check() || in_array(auth()->user()->account_type, ['buyer', 'seller'], true))
             <a href="{{ auth()->check() ? route('cart.index') : route('login', ['redirect' => '/cart']) }}" class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs text-muted"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 3h2l2.4 12.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Cart</a>
         @endif
+        @if ($mobileNavCanUseMessages)
+            <a href="{{ $mobileNavMessagesUrl }}" class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs text-muted" aria-label="Messages{{ $mobileNavUnreadMessageCount ? ', '.$mobileNavUnreadMessageCount.' unread' : '' }}">
+                <span class="relative">
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z"/></svg>
+                    @if ($mobileNavUnreadMessageCount > 0)
+                        <span aria-hidden="true" class="absolute -right-2 -top-1.5 grid h-[15px] min-w-[15px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[3px] text-[9px] font-semibold leading-none tabular-nums text-white">{{ $mobileNavUnreadMessageCount > 99 ? '99+' : $mobileNavUnreadMessageCount }}</span>
+                    @endif
+                </span>
+                Messages
+            </a>
+        @endif
         <a href="{{ auth()->check() ? route('profile.edit') : route('login') }}" class="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs text-muted"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>Account</a>
     </nav>
 @endif

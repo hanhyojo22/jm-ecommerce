@@ -1,6 +1,8 @@
 
 import './cookie-consent';
 import { showRequestError } from './request-errors';
+import './chat';
+import './image-viewer';
 import './notifications';
 import './web-push';
 import './cart';
@@ -69,7 +71,7 @@ const reverbConfig = {
     scheme: document.querySelector('meta[name="reverb-scheme"]')?.content,
 };
 
-if (document.querySelector('[data-notification-bell]') && reverbConfig.key && reverbConfig.host) {
+if (document.querySelector('[data-conversation-thread], [data-conversation-inbox], [data-notification-bell]') && reverbConfig.key && reverbConfig.host) {
     Promise.all([import('laravel-echo'), import('pusher-js')]).then(([{ default: Echo }, { default: Pusher }]) => {
         window.Pusher = Pusher;
         window.Echo = new Echo({
@@ -667,7 +669,7 @@ const formNeedsClerkSessionCookie = (form) => {
     return action.origin === window.location.origin && action.pathname !== '/sign-out';
 };
 
-// Livewire sends its own fetch requests without submitting a form.
+// Livewire sends its own fetch requests, including chat typing and Send, without submitting a form.
 if (clerkSessionRefreshEndpoint) {
     const browserFetch = window.fetch.bind(window);
 
@@ -682,7 +684,7 @@ if (clerkSessionRefreshEndpoint) {
             } catch (error) {
                 const form = document.activeElement?.closest('form[wire\\:submit], form[data-optimistic-submit]')
                     ?? document.querySelector('form[data-submitting="true"]')
-                    ?? document.querySelector('form[wire\\:submit="submit"], form[data-optimistic-submit]');
+                    ?? document.querySelector('form[wire\\:submit="submit"], form[data-optimistic-submit], [data-conversation-thread] form[wire\\:submit="send"]');
 
                 if (form && !form.querySelector('[data-clerk-refresh-error]')) {
                     const message = document.createElement('p');
@@ -821,6 +823,11 @@ document.addEventListener('submit', async (event) => {
         clearBusy();
         console.warn('Session refresh failed.');
 
+        if (form.hasAttribute('data-chat-upload')) {
+            form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Your session could not be refreshed. Use Retry to try again.' } }));
+            return;
+        }
+
         const message = document.createElement('p');
         message.className = 'mt-3 text-sm font-semibold text-danger';
         message.setAttribute('role', 'alert');
@@ -828,6 +835,51 @@ document.addEventListener('submit', async (event) => {
         form.prepend(message);
     }
 }, true);
+
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-chat-upload') || event.defaultPrevented) {
+        return;
+    }
+
+    event.preventDefault();
+    if (form.dataset.uploading === 'true') {
+        return;
+    }
+
+    form.dataset.uploading = 'true';
+    const request = new XMLHttpRequest();
+    request.open('POST', form.action);
+    request.responseType = 'json';
+    request.timeout = 20000;
+    request.setRequestHeader('Accept', 'application/json');
+    request.upload.addEventListener('progress', (progress) => {
+        if (progress.lengthComputable) {
+            form.dispatchEvent(new CustomEvent('chat-upload-progress', { bubbles: true, detail: { progress: Math.round(progress.loaded / progress.total * 100) } }));
+        }
+    });
+    request.addEventListener('load', () => {
+        delete form.dataset.uploading;
+        if (request.status >= 200 && request.status < 300 && request.response?.message === 'Attachment sent.') {
+            form.dispatchEvent(new CustomEvent('chat-upload-sent', { bubbles: true, detail: request.response }));
+            return;
+        }
+
+        const errors = request.response?.errors;
+        const message = errors ? Object.values(errors).flat()[0] : request.response?.message;
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: message || 'Upload failed. Use Retry to try again.' } }));
+    });
+    request.addEventListener('error', () => {
+        delete form.dataset.uploading;
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Upload failed. Check your connection and use Retry.' } }));
+    });
+    request.addEventListener('timeout', () => {
+        delete form.dataset.uploading;
+        form.dispatchEvent(new CustomEvent('chat-upload-error', { bubbles: true, detail: { message: 'Upload timed out. Use Retry to check whether it was saved.' } }));
+    });
+    request.send(new FormData(form));
+});
 
 const newArrivalsSection = document.querySelector('[data-new-arrivals]');
 newArrivalsSection?.querySelector('[data-new-arrivals-more]')?.addEventListener('click', async (event) => {

@@ -117,6 +117,7 @@
                             <header class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 pb-1 pt-4 max-sm:px-4">
                                 <h3 class="min-w-0 truncate text-sm font-semibold text-ink">{{ $sellerOrder->store->name }}</h3>
                                 <span @class(['inline-flex items-center gap-1.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current', 'text-brand-hover' => $isCod || $storePaid, 'text-warning-text' => ! $isCod && ! $storePaid])>{{ $isCod || $storePaid ? 'Awaiting confirmation' : 'To pay' }}</span>
+                                <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}" class="ml-auto print:hidden">@csrf<button class="inline-flex min-h-10 items-center gap-1 whitespace-nowrap text-xs font-semibold text-brand transition hover:text-brand-hover">Message store {!! $arrow !!}</button></form>
                             </header>
                             <ul class="divide-y divide-line-soft px-5 max-sm:px-4">
                                 @foreach($sellerOrder->items as $item)
