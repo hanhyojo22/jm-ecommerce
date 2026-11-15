@@ -97,7 +97,7 @@ test('variant photos are shared by every size of their color, from the seller fo
         await buyer.page.locator('#purchase').getByRole('button', { name: 'Add to cart', exact: true }).click();
         await expect(buyer.page.getByRole('link', { name: /Cart: \d+ item/ })).toBeVisible();
         await buyer.page.goto('/cart');
-        const line = buyer.page.getByRole('region', { name: 'QA Northwind Store', exact: true });
+        const line = buyer.page.locator('article').filter({ hasText: productName });
         await expect(line).toContainText('White / M');
         await expect(line.locator(`img[src="${whiteSrc}"]`)).toHaveCount(1);
         expect(errors).toEqual([]);
