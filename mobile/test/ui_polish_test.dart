@@ -58,7 +58,7 @@ void main() {
   });
 
   testWidgets(
-    'order detail renders stepper, delivery card, order help, order number copy, and summary toggle',
+    'order detail renders stepper, delivery card, order help, chat, order number copy, and summary toggle',
     (tester) async {
       _phone(tester, scale: 1);
 
@@ -85,6 +85,8 @@ void main() {
 
       await tester.scrollUntilVisible(find.text('Order help'), 200);
       expect(find.text('Order help'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Chat with Seller'), 200);
+      expect(find.text('Chat with Seller'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('View Order Summary'), 250);
       await tester.ensureVisible(find.text('View Order Summary'));

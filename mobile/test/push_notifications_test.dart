@@ -31,6 +31,89 @@ void main() {
     },
   );
 
+  testWidgets(
+    'chat cards use the conversation layout with the store as a round avatar',
+    (tester) async {
+      List<Object?>? shortcut;
+      final details = await tester.runAsync(
+        () => PushNotifications.detailsFor(
+          const RemoteMessage(
+            data: {
+              'type': 'chat',
+              'title': 'JM',
+              'body': 'The navy option is available.',
+              'conversation_id': 'c1',
+              'avatar_url': 'https://example.com/store.png',
+            },
+          ),
+          imageLoader: (_) async => Uint8List.fromList([1, 2, 3]),
+          earlierMessages: (_) async => const [],
+          publishShortcut: (id, name, avatar) async =>
+              shortcut = [id, name, avatar?.toList()],
+        ),
+      );
+      final style = details!.styleInformation as MessagingStyleInformation;
+      final latest = style.messages!.single;
+      expect(latest.text, 'The navy option is available.');
+      expect(latest.person!.name, 'JM');
+      expect((latest.person!.icon! as ByteArrayAndroidIcon).data, [1, 2, 3]);
+      expect(details.largeIcon, isNull);
+      expect(details.icon, '@drawable/ic_stat_notification');
+      expect(details.actions!.map((action) => action.title), [
+        'Reply',
+        'Open chat',
+      ]);
+      expect(details.tag, 'conversation-c1');
+      expect(details.shortcutId, 'conversation-c1');
+      expect(shortcut, [
+        'conversation-c1',
+        'JM',
+        [1, 2, 3],
+      ]);
+    },
+  );
+
+  testWidgets(
+    'a new chat message stacks under the latest earlier ones, and no photo leaves the initial',
+    (tester) async {
+      const store = Person(name: 'JM');
+      final earlier = [
+        for (var i = 1; i <= 6; i++)
+          Message('Earlier $i', DateTime(2026), store),
+      ];
+      String? askedTag;
+      final details = await tester.runAsync(
+        () => PushNotifications.detailsFor(
+          const RemoteMessage(
+            data: {
+              'type': 'chat',
+              'title': 'JM',
+              'body': 'Newest',
+              'conversation_id': 'c1',
+            },
+          ),
+          imageLoader: (_) async => null,
+          publishShortcut: (_, _, _) async {},
+          earlierMessages: (tag) async {
+            askedTag = tag;
+            return earlier;
+          },
+        ),
+      );
+      final messages =
+          (details!.styleInformation as MessagingStyleInformation).messages!;
+      expect(askedTag, 'conversation-c1');
+      expect(messages.map((m) => m.text), [
+        'Earlier 3',
+        'Earlier 4',
+        'Earlier 5',
+        'Earlier 6',
+        'Newest',
+      ]);
+      expect(messages.last.person!.icon, isNull);
+    },
+  );
+
   testWidgets('order photos stay compact and updates share an order tag', (
     tester,
   ) async {
@@ -207,6 +290,10 @@ void main() {
 
   test('push taps open the matching screen', () {
     expect(
+      PushNotifications.routeFor({'type': 'chat', 'conversation_id': 'c1'}),
+      '/conversations/c1',
+    );
+    expect(
       PushNotifications.routeFor({'type': 'order', 'order_id': 'o1'}),
       '/orders/o1',
     );
@@ -327,6 +414,40 @@ void main() {
       expect(await PushNotifications.padToWide(junk), same(junk));
     });
   });
+
+  testWidgets(
+    'chat avatars are centre-cropped into a transparent-cornered circle',
+    (tester) async {
+      await tester.runAsync(() async {
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(recorder).drawRect(
+          const ui.Rect.fromLTWH(0, 0, 60, 40),
+          ui.Paint()..color = const ui.Color(0xFF14665A),
+        );
+        final source = await (await recorder.endRecording().toImage(
+          60,
+          40,
+        )).toByteData(format: ui.ImageByteFormat.png);
+
+        final round = await PushNotifications.cropToCircle(
+          source!.buffer.asUint8List(),
+        );
+        final image = (await (await ui.instantiateImageCodec(
+          round,
+        )).getNextFrame()).image;
+        final pixels = (await image.toByteData())!;
+        int alphaAt(int x, int y) =>
+            pixels.getUint8((y * image.width + x) * 4 + 3);
+
+        expect([image.width, image.height], [40, 40]);
+        expect(alphaAt(0, 0), 0);
+        expect(alphaAt(20, 20), 255);
+
+        final junk = Uint8List.fromList([1, 2, 3]);
+        expect(await PushNotifications.cropToCircle(junk), same(junk));
+      });
+    },
+  );
 
   test('all push types retain the same JMMart brand icon', () {
     expect(

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:conversation_shortcuts/conversation_shortcuts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -29,7 +30,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 /// Registers this device for push, shows a notification while the app is in
 /// the foreground (FCM does not do this automatically), and deep-links a tap
-/// to the relevant order, cart or page.
+/// to the relevant conversation or order.
 ///
 /// shortcut: uses the deprecated `getToken()`/`onTokenRefresh` instead of
 /// the newer `register()`/`onRegistered`, because the latter sends a
@@ -40,6 +41,12 @@ class PushNotifications {
   PushNotifications._();
 
   // IDs must match PushNotifier::buildMessage() on the backend.
+  static const _chatChannel = AndroidNotificationChannel(
+    'chat_messages',
+    'Messages',
+    description: 'New messages from buyers and sellers.',
+    importance: Importance.high,
+  );
   static const _orderChannel = AndroidNotificationChannel(
     'order_updates',
     'Orders',
@@ -64,7 +71,14 @@ class PushNotifications {
   /// Safe to call once per signed-in session; every failure is swallowed so
   /// a push setup problem (denied permission, no Google Play Services) never
   /// blocks sign-in or the rest of the app.
-  static Future<void> register(ApiClient apiClient) async {
+  ///
+  /// [onMessage] runs for every foreground push, read or not, so the caller
+  /// can refresh its own unread-count state (the badge would otherwise only
+  /// catch up the next time something else re-fetches conversations).
+  static Future<void> register(
+    ApiClient apiClient, {
+    VoidCallback? onMessage,
+  }) async {
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
       debugPrint('[Push] permission status: ${settings.authorizationStatus}');
@@ -72,9 +86,10 @@ class PushNotifications {
       if (!_initialized) {
         await _initializeLocal();
 
-        FirebaseMessaging.onMessage.listen(
-          (message) => unawaited(showMessage(message, foreground: true)),
-        );
+        FirebaseMessaging.onMessage.listen((message) {
+          onMessage?.call();
+          unawaited(showMessage(message, foreground: true));
+        });
         FirebaseMessaging.onMessageOpenedApp.listen(
           (message) => _open(routeFor(message.data)),
         );
@@ -135,6 +150,8 @@ class PushNotifications {
     }
 
     return switch (data['type']) {
+      'chat' when id('conversation_id') != null =>
+        '/conversations/${id('conversation_id')}',
       'order' when id('order_id') != null => '/orders/${id('order_id')}',
       'cart' => '/cart',
       'return_case' when id('order_id') != null => '/orders/${id('order_id')}',
@@ -158,7 +175,7 @@ class PushNotifications {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    for (final channel in [_orderChannel, _updatesChannel]) {
+    for (final channel in [_chatChannel, _orderChannel, _updatesChannel]) {
       await android?.createNotificationChannel(channel);
     }
     await _local.initialize(
@@ -169,8 +186,14 @@ class PushNotifications {
     );
   }();
 
-  static void _handleResponse(NotificationResponse? response) =>
-      _open(response?.payload);
+  static void _handleResponse(NotificationResponse? response) {
+    var route = response?.payload;
+    if (response?.actionId == 'reply' &&
+        route?.startsWith('/conversations/') == true) {
+      route = '$route?reply=1';
+    }
+    _open(route);
+  }
 
   /// The in-app destination for an announcement link. Store and product pages
   /// open their native screens; other same-site pages stay full browser links.
@@ -220,6 +243,8 @@ class PushNotifications {
 
   @visibleForTesting
   static String? tagFor(Map<String, dynamic> data) => switch (data['type']) {
+    'chat' when data['conversation_id'] != null =>
+      'conversation-${data['conversation_id']}',
     'order' when data['order_id'] != null => 'order-${data['order_id']}',
     'return_case' when data['return_case_id'] != null =>
       'return-${data['return_case_id']}',
@@ -281,16 +306,22 @@ class PushNotifications {
   static Future<AndroidNotificationDetails> detailsFor(
     RemoteMessage message, {
     Future<Uint8List?> Function(String? url)? imageLoader,
+    Future<List<Message>> Function(String tag)? earlierMessages,
+    Future<void> Function(String id, String name, Uint8List? avatar)?
+    publishShortcut,
   }) async {
     final data = message.data;
+    final isChat = data['type'] == 'chat';
     final channel = switch (data['type']) {
+      'chat' => _chatChannel,
       'announcement' || 'cart' => _updatesChannel,
       _ => _orderChannel,
     };
     final load = imageLoader ?? downloadImage;
-    final photoUrl =
-        data['image_url']?.toString() ??
-        message.notification?.android?.imageUrl;
+    final photoUrl = isChat
+        ? data['avatar_url']?.toString()
+        : data['image_url']?.toString() ??
+              message.notification?.android?.imageUrl;
     Uint8List? photo;
     try {
       photo = await load(photoUrl);
@@ -302,7 +333,40 @@ class PushNotifications {
         : ByteArrayAndroidBitmap(photo);
     StyleInformation style = BigTextStyleInformation(_body(message));
     final tag = tagFor(data);
-    if (photo != null &&
+    if (isChat) {
+      // Android's conversation layout: the store photo becomes a round avatar
+      // on the left with the JMMart badge (or the store's initial when there
+      // is no photo), and new messages stack under the earlier unread ones.
+      final avatar = photo == null ? null : await cropToCircle(photo);
+      final store = Person(
+        key: tag,
+        name: _title(message),
+        icon: avatar == null ? null : ByteArrayAndroidIcon(avatar),
+        important: true,
+      );
+      final earlier = tag == null
+          ? const <Message>[]
+          : await (earlierMessages ?? _activeMessages)(tag);
+      if (tag != null) {
+        try {
+          await (publishShortcut ?? _publishShortcut)(
+            tag,
+            _title(message),
+            avatar,
+          );
+        } catch (error) {
+          // Without the shortcut Android falls back to the older messaging layout.
+          debugPrint('[Push] conversation shortcut failed: $error');
+        }
+      }
+      style = MessagingStyleInformation(
+        const Person(name: 'You'),
+        messages: [
+          ...earlier.skip(math.max(0, earlier.length - _maxStackedMessages)),
+          Message(_body(message), message.sentTime ?? DateTime.now(), store),
+        ],
+      );
+    } else if (photo != null &&
         (data['type'] == 'cart' || data['type'] == 'announcement')) {
       style = BigPictureStyleInformation(
         ByteArrayAndroidBitmap(await padToWide(photo)),
@@ -313,6 +377,7 @@ class PushNotifications {
     }
     final route = routeFor(data);
     final label = switch (data['type']) {
+      'chat' => 'Open chat',
       'order' || 'return_case' => 'View order',
       'cart' => 'View cart',
       'announcement' => switch (route) {
@@ -337,15 +402,25 @@ class PushNotifications {
             data['small_icon']?.toString(),
       ),
       color: _accent,
-      largeIcon: largeIcon,
+      // The conversation avatar replaces the right-side thumbnail for chats.
+      largeIcon: isChat ? null : largeIcon,
       tag: tag,
+      shortcutId: isChat ? tag : null,
       subText: data['subtitle']?.toString(),
-      category: AndroidNotificationCategory.status,
+      category: isChat
+          ? AndroidNotificationCategory.message
+          : AndroidNotificationCategory.status,
       visibility: NotificationVisibility.private,
       styleInformation: style,
       actions: route == null || label == null
           ? null
           : [
+              if (isChat)
+                const AndroidNotificationAction(
+                  'reply',
+                  'Reply',
+                  showsUserInterface: true,
+                ),
               AndroidNotificationAction(
                 'open',
                 label,
@@ -353,6 +428,30 @@ class PushNotifications {
               ),
             ],
     );
+  }
+
+  /// Earlier messages beyond this many drop off the stacked chat notification.
+  static const _maxStackedMessages = 4;
+
+  static Future<void> _publishShortcut(
+    String id,
+    String name,
+    Uint8List? avatar,
+  ) => ConversationShortcuts.publish(id: id, name: name, avatar: avatar);
+
+  /// Messages already showing in this conversation's notification, so a new
+  /// one stacks under them instead of replacing them.
+  static Future<List<Message>> _activeMessages(String tag) async {
+    try {
+      final style = await _local
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.getActiveNotificationMessagingStyle(_idFor(tag), tag: tag);
+      return style?.messages ?? const [];
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// Bounded HTTPS downloads cannot delay a notification indefinitely.
@@ -408,6 +507,48 @@ class PushNotifications {
           return png == null ? bytes : png.buffer.asUint8List();
         } finally {
           padded.dispose();
+        }
+      } finally {
+        image.dispose();
+      }
+    } catch (_) {
+      return bytes;
+    }
+  }
+
+  /// Some Android skins (ASUS ZenUI among them) show conversation avatars as
+  /// rounded squares, so the photo is centre-cropped into a circle here.
+  /// Undecodable bytes pass through.
+  @visibleForTesting
+  static Future<Uint8List> cropToCircle(Uint8List bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(bytes);
+      final image = (await codec.getNextFrame()).image;
+      try {
+        final side = math.min(image.width, image.height).toDouble();
+        // Notifications never draw the avatar larger than this.
+        final size = math.min(side, 256.0).round();
+        final target = ui.Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble());
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(recorder)
+          ..clipPath(ui.Path()..addOval(target))
+          ..drawImageRect(
+            image,
+            ui.Rect.fromLTWH(
+              (image.width - side) / 2,
+              (image.height - side) / 2,
+              side,
+              side,
+            ),
+            target,
+            ui.Paint()..filterQuality = ui.FilterQuality.medium,
+          );
+        final round = await recorder.endRecording().toImage(size, size);
+        try {
+          final png = await round.toByteData(format: ui.ImageByteFormat.png);
+          return png == null ? bytes : png.buffer.asUint8List();
+        } finally {
+          round.dispose();
         }
       } finally {
         image.dispose();

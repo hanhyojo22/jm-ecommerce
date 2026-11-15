@@ -485,7 +485,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
-  /// Card 3: Store & Order Items card with an Order help footer.
+  /// Card 3: Store & Order Items card with Help & Chat with Seller footer.
   Widget _sellerOrderCard(OrderDetail order, SellerOrder sellerOrder) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -638,6 +638,47 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                             Icons.chevron_right_rounded,
                             size: 17,
                             color: scheme.onSurfaceVariant,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                VerticalDivider(width: 1, color: scheme.outlineVariant),
+                Expanded(
+                  child: InkWell(
+                    onTap: _busy ? null : () => _chat(sellerOrder),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 11,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.chat_bubble_rounded,
+                            size: 16,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Chat with Seller',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: scheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 17,
+                            color: scheme.primary,
                           ),
                         ],
                       ),
@@ -924,7 +965,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Your payment is protected until you confirm that your order has arrived in good condition. Need help with an item? Tap "Order help".',
+                'Your payment is protected until you confirm that your order has arrived in good condition. Need help with an item? Message the store directly using "Chat with Seller".',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -1061,6 +1102,33 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
       if (mounted) {
         _snack(
           'Thanks for confirming your ${sellerOrder.store?.name ?? 'store'} order.',
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        _snack(error.friendly);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _chat(SellerOrder sellerOrder) async {
+    if (_busy) {
+      return;
+    }
+    setState(() => _busy = true);
+
+    try {
+      final conversation = await ref
+          .read(apiClientProvider)
+          .startConversation(sellerOrderId: sellerOrder.id);
+
+      if (mounted) {
+        context.push(
+          '/conversations/${conversation.id}?seller_order_id=${sellerOrder.id}',
         );
       }
     } on ApiException catch (error) {
