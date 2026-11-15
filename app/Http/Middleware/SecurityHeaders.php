@@ -20,7 +20,7 @@ class SecurityHeaders
 
         $headers = [
             'Content-Security-Policy' => "base-uri 'self'; frame-ancestors 'none'; object-src 'none'",
-            'Permissions-Policy' => 'geolocation=(), microphone=(), camera=()',
+            'Permissions-Policy' => 'geolocation=(self), microphone=(), camera=()',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'DENY',

@@ -12,7 +12,7 @@ class SecurityHeadersTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('Content-Security-Policy', "base-uri 'self'; frame-ancestors 'none'; object-src 'none'");
-        $response->assertHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        $response->assertHeader('Permissions-Policy', 'geolocation=(self), microphone=(), camera=()');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
         $response->assertHeader('X-Frame-Options', 'DENY');
