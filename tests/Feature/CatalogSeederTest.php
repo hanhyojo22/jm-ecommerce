@@ -32,5 +32,7 @@ class CatalogSeederTest extends TestCase
         }
 
         Storage::disk('product_images')->assertExists('products/catalog/northstar-tech/wireless-over-ear-headphones.webp');
+        // Seeded branches carry a map pin, so the app's branch locator has something to list.
+        $this->getJson(route('api.v1.store-locations.index'))->assertOk()->assertJsonCount(3, 'data');
     }
 }

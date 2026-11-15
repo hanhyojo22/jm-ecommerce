@@ -21,7 +21,8 @@ class CatalogSeeder extends Seeder
     {
         $this->call(CategorySeeder::class);
 
-        foreach ($this->stores() as $slug => $sample) {
+        foreach (array_keys($this->stores()) as $index => $slug) {
+            $sample = $this->stores()[$slug];
             $seller = User::query()->firstOrCreate(
                 ['email' => $slug.'@example.test'],
                 [
@@ -48,6 +49,10 @@ class CatalogSeeder extends Seeder
                     'address_line' => '123 Market Street',
                     'city' => 'Manila',
                     'status' => 'active',
+                    // Spread across Manila so the app's nearest-branch picker has distances to sort.
+                    'latitude' => 14.5995 + $index * 0.02,
+                    'longitude' => 120.9842 + $index * 0.02,
+                    'delivery_radius_km' => 10,
                 ]
             );
 

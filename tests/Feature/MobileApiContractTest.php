@@ -69,7 +69,7 @@ class MobileApiContractTest extends TestCase
                 'id', 'selected_count', 'subtotal',
                 'items' => ['*' => [
                     'id', 'product_id', 'product_variant_id', 'quantity', 'selected', 'available',
-                    'unit_price', 'line_total', 'image_url', 'product' => ['name'],
+                    'unit_price', 'line_total', 'image_url', 'product' => ['name', 'requires_prescription'],
                 ]],
             ]]);
         $this->assertMoney($cart, ['data.subtotal', 'data.items.0.unit_price', 'data.items.0.line_total']);

@@ -184,6 +184,7 @@ class CatalogController extends Controller
         $relatedProducts = $this->summaryQuery()
             ->where('products.id', '!=', $product->id)
             ->when($product->category_id, fn (Builder $query) => $query->where('category_id', $product->category_id))
+            ->when($branch, fn (Builder $query) => CatalogQuery::inStockAt($query, $branch))
             ->latest()
             ->limit(4)
             ->get();
@@ -191,6 +192,7 @@ class CatalogController extends Controller
         $moreFromStore = $this->summaryQuery()
             ->where('products.id', '!=', $product->id)
             ->where('store_id', $product->store_id)
+            ->when($branch, fn (Builder $query) => CatalogQuery::inStockAt($query, $branch))
             ->latest()
             ->limit(4)
             ->get();

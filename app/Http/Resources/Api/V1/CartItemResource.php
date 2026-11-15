@@ -36,6 +36,7 @@ class CartItemResource extends JsonResource
                 'price' => (string) $this->product->price,
                 'stock_quantity' => $this->product_variant_id === null ? $this->availableQuantity() : (int) $this->product->stock_quantity,
                 'has_variants' => $this->product->variants->isNotEmpty(),
+                'requires_prescription' => (bool) $this->product->requires_prescription,
                 'store' => [
                     'name' => $this->product->store->name,
                     'slug' => $this->product->store->slug,

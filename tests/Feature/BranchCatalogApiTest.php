@@ -59,6 +59,22 @@ class BranchCatalogApiTest extends TestCase
             ->assertJsonPath('data.0.id', $paracetamol->id);
     }
 
+    public function test_product_detail_suggests_only_what_the_branch_has_on_hand(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $paracetamol = $this->product($tenant, $makati, 'Paracetamol 500mg');
+        $cetirizine = $this->product($tenant, $makati, 'Cetirizine 10mg');
+        $loratadine = $this->product($tenant, $makati, 'Loratadine 10mg');
+        $this->stock($cebu, $paracetamol, 5);
+        $this->stock($cebu, $cetirizine, 3);
+        $this->stock($makati, $loratadine, 9);
+
+        $response = $this->getJson(route('api.v1.products.show', [$makati->slug, $paracetamol->slug, 'branch' => $cebu->id]))->assertOk();
+
+        $this->assertSame([$cetirizine->id], array_column($response->json('data.related_products'), 'id'));
+        $this->assertSame([$cetirizine->id], array_column($response->json('data.more_from_store'), 'id'));
+    }
+
     public function test_product_detail_reports_the_branchs_own_counts_per_variant(): void
     {
         [$tenant, $makati, $cebu] = $this->pharmacy();

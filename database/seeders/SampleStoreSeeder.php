@@ -47,6 +47,9 @@ class SampleStoreSeeder extends Seeder
                 'phone' => '+639171234567',
                 'address_line' => '123 Sample Street',
                 'city' => 'Manila',
+                'latitude' => 14.5547,
+                'longitude' => 121.0244,
+                'delivery_radius_km' => 10,
                 'status' => 'active',
             ]
         );
