@@ -27,13 +27,11 @@ class SendChatMessagePush implements ShouldQueue
 
     public function handle(MessageSent $event): void
     {
-        $message = $event->message->loadMissing(['conversation.store', 'sender']);
+        $message = $event->message->loadMissing(['conversation.store.tenant', 'sender']);
         $conversation = $message->conversation;
 
-        // Mirrors ConversationPolicy::isActiveStoreMember (via ChecksTenantMembership)
-        // exactly: a deactivated staff member, or staff of a suspended store, can no
-        // longer view the conversation through the API and must not be pushed its
-        // content either.
+        // Mirrors who may open the chat: a deactivated staff member, staff of another
+        // branch, or staff of a suspended store must not be pushed its content.
         $sentByBuyer = $message->sender_id === $conversation->buyer_id;
 
         // Buyers talk to the store, not to whichever staff member replied.
@@ -41,16 +39,10 @@ class SendChatMessagePush implements ShouldQueue
         $preview = filled($message->body) ? Str::limit($message->body, 120) : 'Sent an attachment';
 
         $recipients = $sentByBuyer
-            ? User::query()
-                ->where('account_type', 'seller')
-                ->where('is_active', true)
-                ->whereHas('tenantMemberships', fn ($query) => $query
-                    ->where('tenant_id', $conversation->store->tenant_id)
-                    ->whereIn('role', ['owner', 'manager', 'staff'])
-                    ->whereHas('tenant', fn ($tenant) => $tenant
-                        ->where('status', 'active')
-                        ->whereHas('store', fn ($store) => $store->where('status', 'active'))))
-                ->get()
+            // The chat's branch and head office, the same people who can open it.
+            ? ($conversation->store->status === 'active'
+                ? $conversation->store->tenant->activeNotifiableStaff($conversation->store_id)
+                : collect())
             : collect([$conversation->buyer])->filter(fn (?User $user) => $user?->is_active === true);
 
         foreach ($recipients as $recipient) {

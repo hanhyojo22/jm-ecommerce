@@ -832,7 +832,7 @@ class ConversationTest extends TestCase
         $this->assertFalse(Gate::forUser($otherSeller)->allows('view', $conversation));
     }
 
-    public function test_branch_staff_can_answer_a_chat_with_another_branch_of_their_company(): void
+    public function test_a_chat_belongs_to_its_branch_and_head_office_but_not_other_branches(): void
     {
         $product = $this->product();
         $conversation = Conversation::create(['buyer_id' => User::factory()->create()->id, 'store_id' => $product->store_id, 'product_id' => $product->id]);
@@ -848,10 +848,14 @@ class ConversationTest extends TestCase
         $branchStaff = User::factory()->seller()->create();
         TenantMember::create(['tenant_id' => $product->tenant_id, 'store_id' => $otherBranch->id, 'user_id' => $branchStaff->id, 'role' => 'staff']);
 
-        $this->assertTrue(Gate::forUser($branchStaff)->allows('send', $conversation));
+        $headOffice = User::factory()->seller()->create();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $headOffice->id, 'role' => 'owner']);
+
+        $this->assertFalse(Gate::forUser($branchStaff)->allows('view', $conversation));
+        $this->assertTrue(Gate::forUser($headOffice)->allows('send', $conversation));
     }
 
-    public function test_branch_staff_can_narrow_the_inbox_to_their_branch_and_see_colleagues_replies_on_their_side(): void
+    public function test_branch_staff_inbox_shows_only_their_branch_and_colleagues_replies_on_their_side(): void
     {
         $product = $this->product();
         $cebu = Store::create([
@@ -870,8 +874,8 @@ class ConversationTest extends TestCase
         $otherChat = Conversation::create(['buyer_id' => User::factory()->create()->id, 'store_id' => $product->store_id]);
         $otherChat->messages()->create(['sender_id' => $otherChat->buyer_id, 'type' => 'text', 'body' => 'Question for the first branch']);
 
-        $this->actingAs($cebuStaff)->get(route('messages.index', ['filter' => 'branch']))
-            ->assertOk()->assertSee('My branch')
+        $this->actingAs($cebuStaff)->get(route('messages.index'))
+            ->assertOk()->assertDontSee('My branch')
             ->assertSee(route('messages.show', $cebuChat), false)
             ->assertDontSee(route('messages.show', $otherChat), false);
 

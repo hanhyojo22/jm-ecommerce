@@ -58,7 +58,7 @@ class ConversationPolicy
             return false;
         }
 
-        // Company-wide, like the inbox: any active staff member can answer any branch's chat.
+        // Same rule as the inbox: head office sees every branch's chats, branch staff their own.
         return Conversation::query()->whereKey($conversation->getKey())->visibleTo($user)->exists();
     }
 }

@@ -104,12 +104,16 @@ class Conversation extends Model
             $query->where('buyer_id', $user->id);
 
             if ($user->account_type === 'seller') {
+                // A chat belongs to one branch: head office sees every branch's, branch staff only their own.
+                $memberships = fn () => $user->tenantMemberships()
+                    ->whereIn('role', ['owner', 'manager', 'staff'])
+                    ->whereHas('tenant', fn (Builder $tenant) => $tenant->where('status', 'active'));
+
                 $query->orWhereIn('store_id', Store::query()
                     ->where('status', 'active')
-                    ->whereIn('tenant_id', $user->tenantMemberships()
-                        ->whereIn('role', ['owner', 'manager', 'staff'])
-                        ->whereHas('tenant', fn (Builder $tenant) => $tenant->where('status', 'active'))
-                        ->select('tenant_id'))
+                    ->where(fn (Builder $stores) => $stores
+                        ->whereIn('tenant_id', $memberships()->whereNull('store_id')->select('tenant_id'))
+                        ->orWhereIn('id', $memberships()->whereNotNull('store_id')->select('store_id')))
                     ->select('id'));
             }
         });

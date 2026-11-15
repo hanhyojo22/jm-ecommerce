@@ -116,6 +116,33 @@ class SendChatMessagePushTest extends TestCase
         Notification::assertNotSentTo($manager, ChatMessageReceived::class);
     }
 
+    public function test_staff_of_another_branch_are_not_pushed(): void
+    {
+        Notification::fake();
+
+        [$buyer, $owner, $manager, $conversation] = $this->conversationWithTwoStaff();
+        $otherBranch = Store::create([
+            'tenant_id' => $conversation->store->tenant_id, 'name' => 'Other branch', 'slug' => 'other-'.str()->lower(str()->random(8)),
+            'phone' => '+639171234567', 'address_line' => '1 Osmena Boulevard', 'city' => 'Cebu City', 'status' => 'active',
+        ]);
+        TenantMember::query()->where('user_id', $manager->id)->update(['store_id' => $otherBranch->id]);
+
+        $message = $conversation->messages()->create([
+            'sender_id' => $buyer->id,
+            'client_message_id' => (string) Str::uuid(),
+            'type' => 'text',
+            'body' => 'For the first branch',
+        ]);
+
+        $notifier = Mockery::mock(PushNotifier::class);
+        $notifier->shouldReceive('sendToUser')->once()->with(Mockery::on(fn (User $user) => $user->is($owner)), Mockery::any(), Mockery::any(), Mockery::any());
+
+        (new SendChatMessagePush($notifier))->handle(new MessageSent($message));
+
+        Notification::assertSentTo($owner, ChatMessageReceived::class);
+        Notification::assertNotSentTo($manager, ChatMessageReceived::class);
+    }
+
     public function test_staff_of_a_suspended_store_are_not_pushed(): void
     {
         Notification::fake();

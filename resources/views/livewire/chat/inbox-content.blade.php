@@ -8,7 +8,7 @@
             <input wire:model.live.debounce.300ms="search" id="conversation-search" type="search" placeholder="Search conversations" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
         </label>
         <div class="mt-3 flex gap-1 overflow-x-auto" role="group" aria-label="Conversation filters">
-            @foreach (['all' => 'All', ...($myBranchId ?? null ? ['branch' => 'My branch'] : []), 'unread' => 'Unread', 'product' => 'Products', 'order' => 'Orders'] as $value => $label)
+            @foreach (['all' => 'All', 'unread' => 'Unread', 'product' => 'Products', 'order' => 'Orders'] as $value => $label)
                 <button wire:key="filter-{{ $value }}" wire:click="$set('filter', '{{ $value }}')" type="button" class="min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand {{ $filter === $value ? 'bg-blue-50 text-brand-hover' : 'text-muted hover:bg-canvas hover:text-ink' }}" aria-pressed="{{ $filter === $value ? 'true' : 'false' }}">{{ $label }}</button>
             @endforeach
         </div>
