@@ -2,7 +2,6 @@
 
 namespace App\Queries;
 
-use App\Models\SellerApplication;
 use App\Models\Store;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -49,10 +48,5 @@ class AdminStoreQuery
     public static function total(): int
     {
         return Store::query()->count();
-    }
-
-    public static function pendingReviewCount(): int
-    {
-        return SellerApplication::query()->whereIn('status', ['pending', 'submitted', 'under_review'])->count();
     }
 }

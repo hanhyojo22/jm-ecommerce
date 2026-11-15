@@ -10,7 +10,6 @@ use App\Http\Controllers\Admin\PlatformFeeController as AdminPlatformFeeControll
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductReviewModerationController;
 use App\Http\Controllers\Admin\ReturnCaseController as AdminReturnCaseController;
-use App\Http\Controllers\Admin\SellerApplicationController as AdminSellerApplicationController;
 use App\Http\Controllers\Admin\SellerPayoutController;
 use App\Http\Controllers\Admin\StoreModerationController;
 use App\Http\Controllers\ClerkWebhookController;
@@ -38,8 +37,6 @@ use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewCo
 use App\Http\Controllers\Seller\ReturnCaseController as SellerReturnCaseController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\StoreSettingsController;
-use App\Http\Controllers\SellerApplicationController;
-use App\Http\Controllers\SellerSuspensionAppealController;
 use App\Http\Controllers\WebPushKeyController;
 use App\Http\Controllers\WorkspacePreferenceController;
 use Illuminate\Support\Facades\Route;
@@ -123,13 +120,6 @@ Route::patch('/profile/notifications', NotificationPreferenceController::class)
     ->middleware(['auth', 'account:buyer,seller'])
     ->name('profile.notifications.update');
 
-Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
-    Route::get('/start-selling', [SellerApplicationController::class, 'create'])->name('seller-application.create');
-    Route::get('/start-selling/store-link', [SellerApplicationController::class, 'storeLink'])->middleware('throttle:30,1')->name('seller-application.store-link');
-    Route::post('/start-selling', [SellerApplicationController::class, 'store'])->middleware('throttle:10,1')->name('seller-application.store');
-    Route::post('/start-selling/steps/{step}', [SellerApplicationController::class, 'saveStep'])->middleware('throttle:30,1')->whereNumber('step')->name('seller-application.step');
-});
-
 Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function (): void {
     Route::get('/seller', [SellerDashboardController::class, 'index'])->name('seller.dashboard');
     Route::get('/seller/store-settings', [StoreSettingsController::class, 'edit'])->name('seller.store-settings.edit');
@@ -166,20 +156,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
 
 });
 
-Route::post('/seller/suspension-appeals', [SellerSuspensionAppealController::class, 'store'])
-    ->middleware(['auth', 'clerk.verified', 'account:seller', 'throttle:5,1'])
-    ->name('seller.suspension-appeals.store');
-
 Route::middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])->group(function (): void {
-    Route::get('/admin/seller-applications', [AdminSellerApplicationController::class, 'index'])->name('admin.seller-applications.index');
-    Route::get('/admin/seller-applications/{sellerApplication}', [AdminSellerApplicationController::class, 'show'])->name('admin.seller-applications.show');
-    Route::post('/admin/seller-applications/{sellerApplication}/approve', [AdminSellerApplicationController::class, 'approve'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.approve');
-    Route::post('/admin/seller-applications/{sellerApplication}/reject', [AdminSellerApplicationController::class, 'reject'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.reject');
-    Route::post('/admin/seller-applications/{sellerApplication}/review', [AdminSellerApplicationController::class, 'review'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.review');
-    Route::post('/admin/seller-applications/{sellerApplication}/notes', [AdminSellerApplicationController::class, 'note'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.note');
-    Route::post('/admin/seller-applications/{sellerApplication}/request-information', [AdminSellerApplicationController::class, 'requestInformation'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.request-information');
-    Route::post('/admin/seller-applications/{sellerApplication}/suspend', [AdminSellerApplicationController::class, 'suspend'])->middleware('throttle:admin-mutations')->name('admin.seller-applications.suspend');
-    Route::get('/admin/seller-applications/{sellerApplication}/documents/{document}', [AdminSellerApplicationController::class, 'document'])->scopeBindings()->name('admin.seller-applications.document');
     Route::get('/admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders.index');
     Route::get('/admin/orders/{order}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
     Route::get('/admin/order-issues', [AdminOrderIssueController::class, 'index'])->name('admin.order-issues.index');
@@ -202,14 +179,6 @@ Route::middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])
     Route::get('/admin/stores/{store}', [GovernanceController::class, 'showStore'])->name('admin.stores.show');
     Route::patch('/admin/stores/{store}/suspend', [StoreModerationController::class, 'suspend'])->middleware('throttle:admin-mutations')->name('admin.stores.suspend');
     Route::patch('/admin/stores/{store}/reactivate', [StoreModerationController::class, 'reactivate'])->middleware('throttle:admin-mutations')->name('admin.stores.reactivate');
-    Route::patch('/admin/stores/{store}/appeals/{appeal}', [StoreModerationController::class, 'updateAppeal'])
-        ->middleware('throttle:admin-mutations')
-        ->scopeBindings()
-        ->name('admin.stores.appeals.update');
-    Route::patch('/admin/stores/{store}/appeals/{appeal}/reopen', [StoreModerationController::class, 'reopenAppeal'])
-        ->middleware('throttle:admin-mutations')
-        ->scopeBindings()
-        ->name('admin.stores.appeals.reopen');
     Route::get('/admin/customers', [GovernanceController::class, 'customers'])->name('admin.customers.index');
     Route::get('/admin/customers/{customer}', [GovernanceController::class, 'showCustomer'])->name('admin.customers.show');
     Route::post('/admin/customers/{customer}/lift-cod-limit', [GovernanceController::class, 'liftCodLimit'])->middleware('throttle:admin-mutations')->name('admin.customers.lift-cod-limit');

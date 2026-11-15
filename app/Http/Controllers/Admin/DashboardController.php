@@ -59,7 +59,7 @@ class DashboardController extends Controller
         abort_unless($request->user()->isPlatformAdministrator(), 403);
 
         $filters = $request->validate([
-            'type' => ['nullable', 'in:all,application,appeal,product_report'],
+            'type' => ['nullable', 'in:all,product_report'],
             'sort' => ['nullable', 'in:oldest,newest'],
         ]);
         $activeType = $filters['type'] ?? 'all';
@@ -67,8 +67,6 @@ class DashboardController extends Controller
         $counts = AdminModerationQuery::counts();
         $queueItems = AdminModerationQuery::items($activeType, $activeSort)->map(function (array $item): array {
             [$url, $action] = match ($item['type']) {
-                'application' => [route('admin.seller-applications.show', $item['id']), 'Review'],
-                'appeal' => [route('admin.stores.show', $item['store_id']).'#suspension-appeals', 'Review appeal'],
                 'product_report' => [route('admin.reviews.index', ['review' => $item['id']]).'#review-'.$item['id'], 'Review report'],
             };
 

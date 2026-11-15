@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\SellerApplication;
 use App\Models\SellerOrder;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -56,27 +55,14 @@ class StoreGovernanceTest extends TestCase
             ->assertSee('sort=name', false);
     }
 
-    public function test_store_overview_keeps_pending_applications_separate_from_store_cards_and_counts(): void
+    public function test_store_overview_lists_store_cards_and_counts(): void
     {
         $administrator = User::factory()->administrator()->create();
         $store = $this->store('JM', 'active');
         $this->attachOwner($store, 'Franil Escalicas', 'franil@example.com');
-        $seller = User::factory()->seller()->create();
-        $seller->sellerApplications()->create([
-            'store_name' => 'Pending seller shop',
-            'seller_name' => 'Pending Seller',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'status' => 'pending',
-            'submitted_at' => now(),
-        ]);
-
         $this->actingAs($administrator)->get(route('admin.stores.index'))
             ->assertOk()
             ->assertSee('Stores overview')
-            ->assertSee('1 seller application awaiting review')
-            ->assertSee('Review application')
             ->assertSee('JM')
             ->assertSee('Franil Escalicas')
             ->assertSee('Total stores')
@@ -84,32 +70,15 @@ class StoreGovernanceTest extends TestCase
             ->assertSee('Inactive')
             ->assertSee('Suspended')
             ->assertSee('View store')
-            ->assertDontSee('Pending seller shop')
             ->assertDontSee('<table', false)
-            ->assertSee(route('admin.seller-applications.index'), false)
             ->assertSee(route('admin.stores.show', $store), false);
     }
 
-    public function test_administrator_can_view_store_details_with_verification_products_orders_and_activity(): void
+    public function test_administrator_can_view_store_details_with_products_orders_and_activity(): void
     {
         $administrator = User::factory()->administrator()->create();
         $store = $this->store('Northwind Goods', 'active');
         $owner = $this->attachOwner($store, 'Ava Seller', 'ava@example.com');
-        $application = $owner->sellerApplications()->create([
-            'tenant_id' => $store->tenant_id,
-            'store_name' => 'Northwind Goods',
-            'store_description' => 'Useful things.',
-            'seller_name' => 'Ava Seller',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'store_category' => 'General',
-            'status' => 'approved',
-            'submitted_at' => now()->subDays(5),
-            'reviewed_at' => now()->subDays(4),
-            'reviewed_by' => $administrator->id,
-            'review_note' => 'Documents verified.',
-        ]);
         $product = $this->product($store, 'Canvas Tote', 'TOTE-001', 'active');
         $sellerOrder = $this->sellerOrder($store, 'JM-000001');
 
@@ -119,12 +88,9 @@ class StoreGovernanceTest extends TestCase
             ->assertSee('Northwind Goods')
             ->assertSee('ava@example.com')
             ->assertSee('+639171234567')
-            ->assertSee('General')
-            ->assertSee('Documents verified.')
             ->assertSee($product->name)
             ->assertSee($sellerOrder->order->number)
             ->assertSee('₱500.00');
-        $this->assertNotNull($application->id);
     }
 
     public function test_suspend_requires_reason_updates_store_and_tenant_and_records_audit(): void
@@ -155,35 +121,6 @@ class StoreGovernanceTest extends TestCase
         $this->assertDatabaseHas('audit_logs', [
             'actor_user_id' => $administrator->id,
             'action' => 'store.reactivated',
-        ]);
-    }
-
-    public function test_reject_requires_reason_and_records_audit(): void
-    {
-        $administrator = User::factory()->administrator()->create();
-        $seller = User::factory()->seller()->create();
-        $application = $seller->sellerApplications()->create([
-            'store_name' => 'Northwind Goods',
-            'seller_name' => 'Ava Seller',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'status' => 'pending',
-            'submitted_at' => now(),
-        ]);
-
-        $this->actingAs($administrator)->post(route('admin.seller-applications.reject', $application), ['reason' => 'short'])
-            ->assertSessionHasErrors('reason');
-
-        $this->actingAs($administrator)->post(route('admin.seller-applications.reject', $application), ['reason' => 'Incomplete business documents submitted.'])
-            ->assertRedirect();
-
-        $this->assertDatabaseHas('seller_applications', ['id' => $application->id, 'status' => 'rejected']);
-        $this->assertDatabaseHas('audit_logs', [
-            'actor_user_id' => $administrator->id,
-            'action' => 'seller_application.rejected',
-            'entity_type' => SellerApplication::class,
-            'entity_id' => $application->id,
         ]);
     }
 

@@ -19,7 +19,6 @@
         [
             'label' => 'People',
             'items' => [
-                ['label' => 'Seller applications', 'href' => route('admin.seller-applications.index'), 'icon' => 'applications', 'active' => request()->routeIs('admin.seller-applications.*')],
                 ['label' => 'Customers', 'href' => route('admin.customers.index'), 'icon' => 'customers', 'active' => request()->routeIs('admin.customers.*')],
                 ['label' => 'Admin accounts', 'href' => route('admin.accounts.index'), 'icon' => 'accounts', 'active' => request()->routeIs('admin.accounts.*')],
             ],

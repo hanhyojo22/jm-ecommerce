@@ -896,47 +896,6 @@ body:has(footer) [data-cookie-floating] {
 .trending-rank { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--color-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 .trending-rank span { display: grid; place-items: center; min-width: 28px; height: 28px; border-radius: 6px; background: var(--color-fg); color: #fff; font-size: 14px; font-weight: 700; }
 
-.seller-window { margin-block: 32px; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-surface); background: var(--color-surface); }
-.seller-window-main { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); background: var(--color-sidebar); color: var(--color-surface); }
-.seller-window-copy { align-self: center; padding: 48px; }
-.seller-window-title { font-size: clamp(32px, 3.3vw, 44px); font-weight: 700; line-height: 1.12; letter-spacing: -.03em; text-wrap: balance; }
-.seller-window-title span { display: block; }
-.seller-window-description { max-width: 43ch; margin-top: 20px; color: var(--color-sidebar-text); font-size: 16px; line-height: 1.7; }
-.seller-window-action { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 24px; margin-top: 28px; border-radius: var(--radius-control); background: var(--color-surface); padding: 12px 22px; color: var(--color-fg); font-size: 14px; font-weight: 600; transition: background-color 150ms ease; }
-.seller-window-action:hover { background: var(--color-info-wash); }
-.seller-window-action:focus-visible { outline: 2px solid var(--color-sidebar-focus); outline-offset: 4px; }
-.seller-window-visual { position: relative; min-height: 360px; background: var(--color-paper-deep); }
-.seller-window-visual img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
-.seller-window-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; padding: 28px 36px; }
-.seller-window-steps li { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-content: start; gap: 14px; }
-.seller-window-step-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 50%; background: var(--color-info-wash); color: var(--color-accent); }
-.seller-window-steps h3 { color: var(--color-fg); font-size: 15px; font-weight: 600; line-height: 1.5; }
-.seller-window-steps p { margin-top: 6px; color: var(--color-muted); font-size: 13px; line-height: 1.65; }
-@media (max-width: 1020px) {
-    .seller-window-copy { padding: 36px; }
-    .seller-window-steps { gap: 20px; padding: 24px; }
-    .seller-window-steps li { grid-template-columns: 1fr; gap: 12px; }
-}
-@media (max-width: 767px) {
-    .seller-window-main { grid-template-columns: 1fr; }
-    .seller-window-copy { padding: 28px; }
-    .seller-window-title { font-size: clamp(28px, 6vw, 36px); }
-    .seller-window-description { max-width: 42ch; margin-top: 16px; font-size: 15px; }
-    .seller-window-action { margin-top: 24px; }
-    .seller-window-visual { min-height: 0; aspect-ratio: 16 / 9; }
-    .seller-window-steps { grid-template-columns: 1fr; gap: 24px; }
-    .seller-window-steps li { grid-template-columns: 36px minmax(0, 1fr); gap: 14px; }
-    .seller-window-steps p { font-size: 14px; }
-}
-@media (max-width: 479px) {
-    .seller-window-copy { padding: 24px; }
-    .seller-window-action { width: 100%; justify-content: space-between; }
-    .seller-window-visual { aspect-ratio: 3 / 2; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .seller-window-action { transition: none; }
-}
-
 /*
  * Shared marketplace foundation.
  *

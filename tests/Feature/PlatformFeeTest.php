@@ -314,7 +314,6 @@ class PlatformFeeTest extends TestCase
     public function test_only_the_owner_of_an_existing_store_accepts_the_fee_terms(): void
     {
         [$store, $owner] = $this->storeWithOwner(acceptedFeeTerms: false);
-        $application = $owner->sellerApplications()->create(['store_name' => $store->name, 'status' => 'approved', 'tenant_id' => $store->tenant_id]);
         $staff = User::factory()->seller()->create();
         TenantMember::create(['tenant_id' => $store->tenant_id, 'user_id' => $staff->id, 'role' => 'staff']);
 
@@ -325,7 +324,6 @@ class PlatformFeeTest extends TestCase
         $this->actingAs($owner)->post(route('seller.platform-fees.accept'), ['accept' => '1'])->assertSessionHasNoErrors();
 
         $this->assertNotNull($store->tenant->fresh()->platform_fee_accepted_at);
-        $this->assertTrue($application->policyAcceptances()->where('policy_type', 'fees')->where('version', '2.0')->exists());
         $this->actingAs($owner)->get(route('seller.dashboard'))->assertOk()->assertDontSee('accept the Marketplace Fee Policy');
     }
 

@@ -17,10 +17,6 @@
             <a href="{{ route('catalog.top-products') }}" class="font-semibold text-white underline decoration-white/40 underline-offset-4 transition hover:text-blue-200 hover:decoration-blue-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">Shop best sellers</a>
             <span class="hidden h-3 w-px bg-white/20 md:inline-block" aria-hidden="true"></span>
             <a href="{{ route('catalog.stores') }}" class="hidden font-medium text-[#c5d1e0] transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white md:inline-flex">Local stores</a>
-            @if (! $user?->isPlatformAdministrator() && ! $sellerTenant)
-                <span class="hidden h-3 w-px bg-white/20 lg:inline-block" aria-hidden="true"></span>
-                <a href="{{ auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling']) }}" class="hidden font-medium text-[#c5d1e0] transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:inline-flex">Sell on JMMart</a>
-            @endif
         </div>
     </div>
 </aside>

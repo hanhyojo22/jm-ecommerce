@@ -19,8 +19,6 @@
             </div>
             <div class="mt-5 divide-y divide-line border-t border-line">
                 @foreach ([
-                    ['label' => 'Seller applications', 'count' => $counts['applications'], 'type' => 'application', 'action' => 'Review'],
-                    ['label' => 'Store appeals', 'count' => $counts['appeals'], 'type' => 'appeal', 'action' => 'Review'],
                     ['label' => 'Reported reviews', 'count' => $counts['productReports'], 'type' => 'product_report', 'action' => 'Moderate'],
                 ] as $queue)
                     <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_5rem_7rem]">

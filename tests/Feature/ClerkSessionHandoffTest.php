@@ -24,9 +24,9 @@ class ClerkSessionHandoffTest extends TestCase
             ->assertOk()
             ->assertSee('data-redirect-url=""', false);
 
-        $this->get(route('register', ['redirect' => '/start-selling']))
+        $this->get(route('register', ['redirect' => '/orders']))
             ->assertOk()
-            ->assertSee(route('clerk.handoff', ['redirect' => '/start-selling']), false);
+            ->assertSee(route('clerk.handoff', ['redirect' => '/orders']), false);
     }
 
     public function test_handoff_page_restricts_redirect_destination_to_a_local_path(): void
@@ -69,9 +69,9 @@ class ClerkSessionHandoffTest extends TestCase
         $this->app->instance(ClerkSessionVerifier::class, $verifier);
 
         $this->withHeader('Authorization', 'Bearer valid-session-token')
-            ->postJson(route('clerk.handoff.complete'), ['redirect' => '/start-selling'])
+            ->postJson(route('clerk.handoff.complete'), ['redirect' => '/orders'])
             ->assertOk()
-            ->assertJson(['redirect' => '/start-selling'])
+            ->assertJson(['redirect' => '/orders'])
             ->assertPlainCookie('__session', 'valid-session-token');
 
         Auth::forgetGuards();

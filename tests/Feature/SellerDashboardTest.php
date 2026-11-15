@@ -52,12 +52,12 @@ class SellerDashboardTest extends TestCase
             ->assertSee("View {$store->name} storefront in a new tab");
     }
 
-    public function test_seller_without_active_store_is_redirected_to_application_onboarding(): void
+    public function test_seller_without_active_store_is_redirected_home(): void
     {
         $seller = User::factory()->seller()->create(['email_verified_at' => now()]);
 
         $this->actingAs($seller)->get(route('seller.dashboard'))
-            ->assertRedirect(route('seller-application.create'));
+            ->assertRedirect(route('home'));
     }
 
     public function test_dashboard_query_failure_offers_a_safe_retry(): void

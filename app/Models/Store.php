@@ -52,9 +52,4 @@ class Store extends Model
     {
         return $this->hasMany(SellerOrder::class);
     }
-
-    public function appeals(): HasMany
-    {
-        return $this->hasMany(StoreSuspensionAppeal::class);
-    }
 }

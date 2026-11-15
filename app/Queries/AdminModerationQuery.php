@@ -4,9 +4,7 @@ namespace App\Queries;
 
 use App\Models\AuditLog;
 use App\Models\ProductReview;
-use App\Models\SellerApplication;
 use App\Models\Store;
-use App\Models\StoreSuspensionAppeal;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -16,20 +14,13 @@ class AdminModerationQuery
     private const ITEM_LIMIT = 12;
 
     private const RECENT_DECISION_ACTIONS = [
-        'seller_application.approved',
-        'seller_application.rejected',
-        'store.suspension_appeal.approved',
-        'store.suspension_appeal.reopened',
-        'store.suspension_appeal.rejected',
         'product_review.moderated',
     ];
 
-    /** @return array{applications:int,appeals:int,productReports:int,suspendedStores:int,recentDecisions:int,attention:int} */
+    /** @return array{productReports:int,suspendedStores:int,recentDecisions:int,attention:int} */
     public static function counts(): array
     {
         $counts = [
-            'applications' => SellerApplication::query()->whereIn('status', ['pending', 'submitted', 'under_review'])->count(),
-            'appeals' => StoreSuspensionAppeal::query()->where('status', 'pending')->count(),
             'productReports' => ProductReview::query()->published()->whereHas('reports')->count(),
             'suspendedStores' => Store::query()->where('status', 'suspended')->count(),
             'recentDecisions' => AuditLog::query()
@@ -37,7 +28,7 @@ class AdminModerationQuery
                 ->where('created_at', '>=', now()->subDays(7))
                 ->count(),
         ];
-        $counts['attention'] = $counts['applications'] + $counts['appeals'] + $counts['productReports'];
+        $counts['attention'] = $counts['productReports'];
 
         return $counts;
     }
@@ -49,8 +40,6 @@ class AdminModerationQuery
     {
         $direction = $sort === 'newest' ? 'desc' : 'asc';
         $items = collect()
-            ->concat(self::applications($direction))
-            ->concat(self::appeals($direction))
             ->concat(self::productReports($direction))
             ->when($type !== 'all', fn (Collection $items): Collection => $items->where('type', $type));
 
@@ -59,45 +48,6 @@ class AdminModerationQuery
             : $items->sortBy(fn (array $item): int => $item['received_at']->getTimestamp());
 
         return $items->take(self::ITEM_LIMIT)->values();
-    }
-
-    /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */
-    private static function applications(string $direction): Collection
-    {
-        return SellerApplication::query()
-            ->whereIn('status', ['pending', 'submitted', 'under_review'])
-            ->orderByRaw('COALESCE(submitted_at, created_at) '.$direction)
-            ->limit(self::ITEM_LIMIT)
-            ->get(['id', 'store_name', 'seller_name', 'submitted_at', 'created_at'])
-            ->map(fn (SellerApplication $application): array => self::item(
-                'application',
-                $application->id,
-                null,
-                $application->store_name,
-                $application->seller_name,
-                'New seller application',
-                $application->submitted_at ?? $application->created_at,
-            ));
-    }
-
-    /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */
-    private static function appeals(string $direction): Collection
-    {
-        return StoreSuspensionAppeal::query()
-            ->where('status', 'pending')
-            ->with('store:id,name')
-            ->orderBy('created_at', $direction)
-            ->limit(self::ITEM_LIMIT)
-            ->get(['id', 'store_id', 'created_at'])
-            ->map(fn (StoreSuspensionAppeal $appeal): array => self::item(
-                'appeal',
-                $appeal->id,
-                $appeal->store_id,
-                $appeal->store?->name ?? 'Store appeal',
-                'Suspended store',
-                'Suspension appeal',
-                $appeal->created_at,
-            ));
     }
 
     /** @return Collection<int, array{type:string,id:string,store_id:?string,title:string,subtitle:string,reason:string,received_at:Carbon}> */

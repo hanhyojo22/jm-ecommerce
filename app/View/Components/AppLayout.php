@@ -10,8 +10,6 @@ class AppLayout extends Component
     private const PAGE_TITLES = [
         'dashboard' => 'Admin dashboard',
         'admin.moderation' => 'Moderation',
-        'admin.seller-applications.index' => 'Seller applications',
-        'admin.seller-applications.show' => 'Review application',
         'admin.orders.index' => 'Marketplace orders',
         'admin.orders.show' => 'Order details',
         'admin.payouts.index' => 'Seller payouts',
@@ -29,7 +27,6 @@ class AppLayout extends Component
         'orders.index' => 'My purchases',
         'orders.show' => 'Order details',
         'profile.edit' => 'Account settings',
-        'seller-application.create' => 'Become a seller',
         'seller.dashboard' => 'Seller dashboard',
         'seller.products.index' => 'My products',
         'seller.products.create' => 'Add product',

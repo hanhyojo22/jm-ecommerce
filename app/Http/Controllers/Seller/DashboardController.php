@@ -18,7 +18,7 @@ class DashboardController extends Controller
             $tenant = $request->user()->sellerTenant();
 
             if ($tenant === null) {
-                return to_route('seller-application.create');
+                return to_route('home');
             }
 
             $store = $tenant->store;

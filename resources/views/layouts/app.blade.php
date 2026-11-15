@@ -5,7 +5,6 @@
         @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*') || (request()->routeIs('profile.edit') && auth()->user()->preferred_workspace === 'seller' && auth()->user()->sellerTenant() !== null)))
         @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
         @php($isCustomerWorkspace = in_array(auth()->user()?->account_type, ['buyer', 'seller'], true) && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'profile.edit'))
-        @php($isOnboarding = request()->routeIs('seller-application.create'))
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -35,9 +34,6 @@
         @if ($isSellerWorkspace)
             @vite(['resources/css/seller-center.css'])
         @endif
-        @if ($isOnboarding)
-            @vite(['resources/css/onboarding.css'])
-        @endif
     </head>
     <body class="bg-canvas font-sans antialiased text-ink">
         <x-request-feedback :summary="$errorSummary ?? true" />
@@ -45,7 +41,7 @@
         <div class="min-h-screen bg-canvas">
             @if ($isAdminWorkspace)
                 {{-- The admin header belongs to the workspace content column. --}}
-            @elseif (! $isSellerWorkspace && ! $isCustomerWorkspace && ! $isOnboarding)
+            @elseif (! $isSellerWorkspace && ! $isCustomerWorkspace)
                 @include('layouts.navigation')
             @endif
 
@@ -89,9 +85,6 @@
                         {{ $slot }}
                     </main>
                 </div>
-            @elseif ($isOnboarding)
-                {{-- The application owns its top bar and single main column. --}}
-                {{ $slot }}
             @else
                 @isset($header)
                     <header class="border-b border-line bg-white">
@@ -104,7 +97,7 @@
                     {{ $slot }}
                 </main>
             @endif
-            @unless ($isSellerWorkspace || $isCustomerWorkspace || $isOnboarding)
+            @unless ($isSellerWorkspace || $isCustomerWorkspace)
                 <x-marketplace.footer />
             @endunless
         </div>

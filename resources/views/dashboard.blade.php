@@ -1,9 +1,7 @@
 <x-app-layout>
     @php
         $queueTabs = [
-            'all' => ['label' => 'All', 'count' => $counts['attention'], 'description' => 'All open seller applications, store appeals and product review reports.'],
-            'application' => ['label' => 'Applications', 'count' => $counts['applications'], 'description' => 'Seller applications waiting for an approval or rejection decision.'],
-            'appeal' => ['label' => 'Store appeals', 'count' => $counts['appeals'], 'description' => 'Appeals from sellers whose stores are suspended.'],
+            'all' => ['label' => 'All', 'count' => $counts['attention'], 'description' => 'All open product review reports.'],
             'product_report' => ['label' => 'Reported reviews', 'count' => $counts['productReports'], 'description' => 'Published reviews flagged by customers; the count is reviews, not individual reports.'],
         ];
     @endphp
@@ -97,8 +95,6 @@
                     @elseif ($activeType !== 'all' && $queueTabs[$activeType]['count'] > $queueItems->count())
                         @php
                             [$fullQueueUrl, $fullQueueLabel] = match ($activeType) {
-                            'application' => [route('admin.seller-applications.index', ['status' => 'pending']), 'Open pending seller applications'],
-                                'appeal' => [route('admin.stores.index', ['queue' => 'pending_appeals']), 'Open pending store appeals'],
                                 'product_report' => [route('admin.reviews.index', ['reported' => 1]), 'Open reported reviews'],
                             };
                         @endphp
@@ -125,8 +121,6 @@
                         <?php foreach ($queueItems as $item): ?>
                             @php
                                 $type = match ($item['type']) {
-                                    'application' => ['label' => 'Seller application', 'style' => 'bg-brand/10 text-brand-hover'],
-                                    'appeal' => ['label' => 'Store appeal', 'style' => 'bg-warning/10 text-warning-text'],
                                     'product_report' => ['label' => 'Reported review', 'style' => 'bg-danger/10 text-danger-text'],
                                 };
                                 $receivedAt = $item['received_at'];
@@ -134,10 +128,8 @@
                             @endphp
                             <article role="listitem" class="grid gap-3 border-b border-line bg-surface px-4 py-4 md:grid-cols-[minmax(7.8rem,1.15fr)_minmax(8rem,1.4fr)_minmax(7rem,1.2fr)_minmax(6.5rem,1fr)_minmax(7rem,1.15fr)] md:items-center md:gap-3 md:px-3 md:py-4">
                                 <div class="flex items-center gap-2.5">
-                                    <svg class="size-5 shrink-0 {{ $item['type'] === 'appeal' ? 'text-warning-text' : ($item['type'] === 'product_report' ? 'text-danger' : 'text-brand') }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <svg class="size-5 shrink-0 {{ $item['type'] === 'product_report' ? 'text-danger' : 'text-brand' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         @switch($item['type'])
-                                            @case('application')<path d="M8 3h7l4 4v14H5V3z" /><path d="M15 3v5h5M8 12h8M8 16h6" />@break
-                                            @case('appeal')<path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />@break
                                             @case('product_report')<path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" />@break
                                         @endswitch
                                     </svg>
@@ -177,14 +169,6 @@
                                 <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
                             </span>
                             <span class="min-w-0 flex-1"><span class="block text-sm font-medium text-ink">Suspended stores</span><span class="mt-0.5 block text-xl font-semibold tabular-nums text-ink">{{ number_format($counts['suspendedStores']) }}</span></span>
-                            <svg class="size-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6" /></svg>
-                        </a>
-
-                        <a href="{{ route('admin.seller-applications.index', ['status' => 'pending']) }}" class="group flex min-h-[5.25rem] items-center gap-3 py-3 focus-visible:ring-2 focus-visible:ring-brand">
-                            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-brand/10 text-brand-hover">
-                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h7l4 4v14H5V3z" /><path d="M15 3v5h5M8 12h8M8 16h8" /></svg>
-                            </span>
-                            <span class="min-w-0 flex-1"><span class="block text-sm font-medium text-ink">Pending applications</span><span class="mt-0.5 block text-xl font-semibold tabular-nums text-ink">{{ number_format($counts['applications']) }}</span></span>
                             <svg class="size-4 shrink-0 text-muted transition group-hover:translate-x-0.5 group-hover:text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6" /></svg>
                         </a>
 

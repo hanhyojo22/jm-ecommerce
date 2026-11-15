@@ -12,7 +12,6 @@ use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -27,7 +26,6 @@ class AdminDashboardTest extends TestCase
 
         foreach ([
             'admin.moderation' => 'Moderation',
-            'admin.seller-applications.index' => 'Seller applications',
             'admin.products.index' => 'Products',
             'admin.audit-logs.index' => 'Audit log',
         ] as $route => $label) {
@@ -66,7 +64,7 @@ class AdminDashboardTest extends TestCase
             ->assertSee($context['product']->name)
             ->assertDontSee($storeWithoutSales->name)
             ->assertDontSee('Unsold Product')
-            ->assertSee(route('admin.moderation', ['type' => 'application']), false);
+            ->assertSee(route('admin.moderation', ['type' => 'product_report']), false);
     }
 
     public function test_marketplace_totals_use_one_order_aggregate(): void
@@ -100,24 +98,7 @@ class AdminDashboardTest extends TestCase
     public function test_administrator_sees_live_moderation_counts_and_each_queue_type(): void
     {
         $administrator = User::factory()->administrator()->create();
-        $seller = User::factory()->seller()->create();
-        $seller->sellerApplications()->create([
-            'store_name' => 'Pending Shop',
-            'seller_name' => 'Pia Pending',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'status' => 'pending',
-            'submitted_at' => now(),
-        ]);
-
-        $suspendedStore = $this->store('Harbor Market', 'suspended');
-        $appealOwner = $this->attachOwner($suspendedStore, 'Ben Seller', 'ben@example.com');
-        $appeal = $suspendedStore->appeals()->create([
-            'seller_id' => $appealOwner->id,
-            'statement' => 'The suspension was caused by an incorrect listing report.',
-            'status' => 'pending',
-        ]);
+        $this->store('Harbor Market', 'suspended');
 
         $context = $this->productContext();
         $review = ProductReview::create([
@@ -136,18 +117,13 @@ class AdminDashboardTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Moderation')
-            ->assertSee('3 items need attention')
-            ->assertSee('Pending Shop')
-            ->assertSee('Harbor Market')
+            ->assertSee('1 item need attention')
             ->assertSee($context['product']->name)
             ->assertSee('Subject / context')
             ->assertSee('Reported reviews')
             ->assertSee('Review author: '.$context['buyer']->name)
             ->assertSee('Governance shortcuts')
             ->assertSee('Suspended stores')
-            ->assertSee('Pending applications')
-            ->assertSee(route('admin.seller-applications.show', $seller->sellerApplications()->first()), false)
-            ->assertSee(route('admin.stores.show', $suspendedStore).'#suspension-appeals', false)
             ->assertSee(route('admin.reviews.index', ['review' => $review->id]).'#review-'.$review->id, false);
 
         $this->actingAs($administrator)
@@ -157,71 +133,33 @@ class AdminDashboardTest extends TestCase
             ->assertSee('A review that needs moderation.');
     }
 
-    public function test_dashboard_category_filter_only_shows_matching_moderation_items(): void
-    {
-        $administrator = User::factory()->administrator()->create();
-        $seller = User::factory()->seller()->create();
-        $seller->sellerApplications()->create([
-            'store_name' => 'Pending Shop',
-            'seller_name' => 'Pia Pending',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'status' => 'pending',
-            'submitted_at' => now(),
-        ]);
-        $suspendedStore = $this->store('Harbor Market', 'suspended');
-        $owner = $this->attachOwner($suspendedStore, 'Ben Seller', 'ben@example.com');
-        $suspendedStore->appeals()->create([
-            'seller_id' => $owner->id,
-            'statement' => 'Please review this suspension decision.',
-            'status' => 'pending',
-        ]);
-
-        $this->actingAs($administrator)
-            ->get(route('admin.moderation', ['type' => 'appeal']))
-            ->assertOk()
-            ->assertSee('Harbor Market')
-            ->assertSee('Store appeal')
-            ->assertDontSee('Pending Shop');
-    }
-
     public function test_category_queue_links_to_all_items_when_dashboard_limit_is_exceeded(): void
     {
         $administrator = User::factory()->administrator()->create();
 
         foreach (range(1, 13) as $index) {
-            $seller = User::factory()->seller()->create();
-            $seller->sellerApplications()->create([
-                'store_name' => "Pending Shop {$index}",
-                'seller_name' => "Seller {$index}",
-                'phone' => '+639171234567',
-                'address_line' => '10 Market Street',
-                'city' => 'Manila',
-                'status' => 'pending',
-                'submitted_at' => now(),
-            ]);
+            $this->createReportedReview("Reported product {$index}");
         }
 
         $this->actingAs($administrator)
-            ->get(route('admin.moderation', ['type' => 'application']))
+            ->get(route('admin.moderation', ['type' => 'product_report']))
             ->assertSee('Showing 12 oldest of 13 items.')
-            ->assertSee(route('admin.seller-applications.index', ['status' => 'pending']), false);
+            ->assertSee(route('admin.reviews.index', ['reported' => 1]), false);
     }
 
     public function test_dashboard_sorts_by_received_time_and_rejects_unknown_sort_orders(): void
     {
         $administrator = User::factory()->administrator()->create();
-        $this->createPendingApplication('Older Pending Shop', now()->subDays(2));
-        $this->createPendingApplication('Newer Pending Shop', now());
+        $this->travelTo(now()->subDays(2), fn () => $this->createReportedReview('Older reported lamp'));
+        $this->createReportedReview('Newer reported lamp');
 
         $this->actingAs($administrator)
-            ->get(route('admin.moderation', ['type' => 'application']))
-            ->assertSeeTextInOrder(['Older Pending Shop', 'Newer Pending Shop']);
+            ->get(route('admin.moderation', ['type' => 'product_report']))
+            ->assertSeeTextInOrder(['Older reported lamp', 'Newer reported lamp']);
 
         $this->actingAs($administrator)
-            ->get(route('admin.moderation', ['type' => 'application', 'sort' => 'newest']))
-            ->assertSeeTextInOrder(['Newer Pending Shop', 'Older Pending Shop']);
+            ->get(route('admin.moderation', ['type' => 'product_report', 'sort' => 'newest']))
+            ->assertSeeTextInOrder(['Newer reported lamp', 'Older reported lamp']);
 
         $this->followingRedirects()
             ->from(route('admin.moderation'))
@@ -231,25 +169,9 @@ class AdminDashboardTest extends TestCase
             ->assertSee('Reset to all items');
     }
 
-    public function test_governance_list_filters_match_pending_dashboard_queues(): void
+    public function test_reported_review_filter_matches_the_dashboard_queue(): void
     {
         $administrator = User::factory()->administrator()->create();
-        $pendingStore = $this->store('Pending Appeal Store', 'suspended');
-        $pendingOwner = $this->attachOwner($pendingStore, 'Appeal Owner', 'appeal-owner@example.com');
-        $pendingStore->appeals()->create([
-            'seller_id' => $pendingOwner->id,
-            'statement' => 'Please review this suspension.',
-            'status' => 'pending',
-        ]);
-        $activeAppealStore = $this->store('Active Appeal Store', 'active');
-        $activeAppealOwner = $this->attachOwner($activeAppealStore, 'Active Appeal Owner', 'active-appeal-owner@example.com');
-        $activeAppealStore->appeals()->create([
-            'seller_id' => $activeAppealOwner->id,
-            'statement' => 'This pending appeal should remain in the matching list.',
-            'status' => 'pending',
-        ]);
-        $otherStore = $this->store('No Appeal Store', 'suspended');
-
         $context = $this->productContext();
         $reportedReview = ProductReview::create([
             'product_id' => $context['product']->id,
@@ -272,14 +194,6 @@ class AdminDashboardTest extends TestCase
             'body' => 'This review has no report.',
             'status' => 'published',
         ]);
-
-        $this->actingAs($administrator)
-            ->get(route('admin.stores.index', ['queue' => 'pending_appeals']))
-            ->assertOk()
-            ->assertSee('Stores with pending appeals')
-            ->assertSee('Pending Appeal Store')
-            ->assertSee('Active Appeal Store')
-            ->assertDontSee('No Appeal Store');
 
         $this->actingAs($administrator)
             ->get(route('admin.reviews.index', ['reported' => 1]))
@@ -336,22 +250,22 @@ class AdminDashboardTest extends TestCase
         return $owner;
     }
 
-    private function createPendingApplication(string $storeName, Carbon $submittedAt): void
+    private function createReportedReview(string $productName): void
     {
-        $seller = User::factory()->seller()->create();
-        $seller->sellerApplications()->create([
-            'store_name' => $storeName,
-            'seller_name' => 'Pending Seller',
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'status' => 'pending',
-            'submitted_at' => $submittedAt,
+        $context = $this->productContext($productName);
+        $review = ProductReview::create([
+            'product_id' => $context['product']->id,
+            'order_item_id' => $context['item']->id,
+            'user_id' => $context['buyer']->id,
+            'rating' => 1,
+            'body' => 'Not as described.',
+            'status' => 'published',
         ]);
+        $review->reports()->create(['user_id' => User::factory()->create()->id, 'reason' => 'spam']);
     }
 
     /** @return array{store:Store,seller:User,buyer:User,product:Product,item:OrderItem} */
-    private function productContext(): array
+    private function productContext(string $productName = 'Reported table lamp'): array
     {
         $suffix = str()->lower(str()->random(8));
         $store = $this->store("Marketplace {$suffix}", 'active');
@@ -360,7 +274,7 @@ class AdminDashboardTest extends TestCase
         $product = Product::create([
             'tenant_id' => $store->tenant_id,
             'store_id' => $store->id,
-            'name' => 'Reported table lamp',
+            'name' => $productName,
             'slug' => "reported-lamp-{$suffix}",
             'sku' => "SKU-{$suffix}",
             'price' => 100,

@@ -14,12 +14,10 @@
                 <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
             </span>
             <h1 class="mt-5 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">Access restricted</h1>
-            <p class="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">Sellers need an approved store for Seller Center, and admins need a platform administrator account. Your cart and browsing are unaffected.</p>
+            <p class="mx-auto mt-3 max-w-md text-sm leading-6 text-muted">Branch staff need a branch assignment, and admins need a platform administrator account. Your cart and browsing are unaffected.</p>
             <a href="{{ route('home') }}" class="mt-6 inline-flex min-h-12 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Return to marketplace</a>
             <p class="mt-5 text-sm text-muted">
                 Need access?
-                <a href="{{ route('seller-application.create') }}" class="font-semibold text-brand hover:text-brand-hover">Apply to sell</a>
-                <span aria-hidden="true"> · </span>
                 <a href="{{ route('login') }}" class="font-semibold text-brand hover:text-brand-hover">Sign in</a>
             </p>
         </div>

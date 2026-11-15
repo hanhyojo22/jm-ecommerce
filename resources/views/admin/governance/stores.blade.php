@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="mt-1 marketplace-page-title">{{ ($filters['queue'] ?? null) === 'pending_appeals' ? 'Stores with pending appeals' : 'Stores overview' }}</h1>
+                <h1 class="mt-1 marketplace-page-title">Stores overview</h1>
             </div>
             <a href="#seller-stores" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Manage stores</a>
         </div>
@@ -18,13 +18,6 @@
             @endif
             @if ($errors->any())
                 <div class="mb-5 rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">We could not apply those filters. {{ $errors->first() }}</div>
-            @endif
-
-            @if ($pendingReviewCount > 0)
-                <div class="mb-5 flex flex-col gap-2 rounded-lg border border-brand/20 bg-surface px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between" role="status">
-                    <p class="font-medium text-ink">{{ number_format($pendingReviewCount) }} {{ Str::plural('seller application', $pendingReviewCount) }} awaiting review</p>
-                    <a href="{{ route('admin.seller-applications.index') }}" class="w-fit font-semibold text-brand underline decoration-brand/30 underline-offset-4 transition hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Review application</a>
-                </div>
             @endif
 
             <section class="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Store summaries">

@@ -30,9 +30,5 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
             <span class="min-w-0 truncate">Marketplace</span>
         </a>
-        <a href="{{ route('seller-application.create') }}" class="workspace-nav-link">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.83z" /><path d="M7 7h.01" /></svg>
-            <span class="min-w-0 truncate">Start selling</span>
-        </a>
     </div>
 </nav>

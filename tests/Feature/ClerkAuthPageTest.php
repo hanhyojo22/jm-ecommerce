@@ -15,11 +15,6 @@ class ClerkAuthPageTest extends TestCase
         $this->get(route('register'))->assertOk()->assertSee('data-clerk-component="sign-up"', false);
     }
 
-    public function test_seller_registration_starts_with_clerk_then_marketplace_onboarding(): void
-    {
-        $this->get(route('seller.register'))->assertRedirect('/sign-up?redirect=/start-selling');
-    }
-
     public function test_sign_up_rejects_protocol_relative_redirects(): void
     {
         $this->get(route('register', ['redirect' => '//evil.example']))

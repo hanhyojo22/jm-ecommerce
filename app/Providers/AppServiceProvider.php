@@ -119,9 +119,6 @@ class AppServiceProvider extends ServiceProvider
                 ->select('category_id');
 
             $sellerTenant = $user?->account_type === 'seller' ? $user->sellerTenant() : null;
-            $sellerApplication = $user?->account_type === 'seller'
-                ? $user->sellerApplications()->latest()->first()
-                : null;
 
             $view->with([
                 'cartItemCount' => $user?->cartItemCount() ?? 0,
@@ -131,7 +128,6 @@ class AppServiceProvider extends ServiceProvider
                     ->orderBy('name')
                     ->get(['id', 'name', 'slug']),
                 'sellerTenant' => $sellerTenant,
-                'sellerApplication' => $sellerApplication,
             ]);
         });
     }

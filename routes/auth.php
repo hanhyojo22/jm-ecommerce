@@ -44,7 +44,6 @@ Route::middleware('guest')->group(function (): void {
         ]);
     })->name('register');
 
-    Route::redirect('seller/register', '/sign-up?redirect=/start-selling')->name('seller.register');
 });
 
 Route::post('sign-out', fn () => response()->view('auth.sign-out')->withoutCookie('__session'))->middleware('auth')->name('logout');

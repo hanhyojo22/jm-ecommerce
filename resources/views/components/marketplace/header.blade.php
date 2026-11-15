@@ -4,11 +4,6 @@
     $user = auth()->user();
     $isBuyer = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $cartBadge = $cartItemCount > 99 ? '99+' : $cartItemCount;
-    $sellerEntry = $sellerTenant ? 'Seller Center' : match ($sellerApplication?->status) {
-        'pending' => 'Seller application',
-        'rejected' => 'Update seller application',
-        default => 'Start selling',
-    };
     $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*') || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
     $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'profile.edit');
     $customerPageTitle = match (true) {
@@ -225,9 +220,6 @@
                                     <svg class="size-[18px] shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></svg>
                                     My account
                                 </a>
-                                @if ($user->account_type === 'seller' && ! $sellerTenant)
-                                    <a href="{{ route('seller-application.create') }}" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">{{ $sellerEntry }}</a>
-                                @endif
                                 @if ($user->isPlatformAdministrator())
                                     <a href="{{ route('dashboard') }}" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Admin workspace</a>
                                 @endif
@@ -290,12 +282,6 @@
                         <a href="{{ route('catalog.stores') }}" @if ($isStoresNav) aria-current="page" @endif class="inline-flex min-h-12 shrink-0 items-center border-b-2 transition {{ $isStoresNav ? 'border-brand font-semibold text-ink' : 'border-transparent hover:text-brand' }}">Stores</a>
                     </div>
 
-                    @if (! $user?->isPlatformAdministrator() && ! $sellerTenant)
-                        <a href="{{ auth()->check() ? route('seller-application.create') : route('login', ['redirect' => '/start-selling']) }}" class="hidden min-h-12 shrink-0 items-center gap-1.5 border-b-2 border-transparent text-sm font-semibold text-brand transition hover:text-brand-hover sm:inline-flex">
-                            <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 9 5 4h14l2 5"/><path d="M3 9v1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0V9"/><path d="M5 13v7h14v-7"/></svg>
-                            Sell on JMMart
-                        </a>
-                    @endif
                 </div>
 
                 @if ($showCategoryMenu)
@@ -450,11 +436,7 @@
                             <a href="{{ route('reviews.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
                         </div>
                     @endif
-                    @if ($user?->account_type === 'seller' && ! $sellerTenant)
-                        <a href="{{ route('seller-application.create') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">{{ $sellerEntry }}</a>
-                    @elseif ($isBuyer && ! $sellerTenant)
-                        <a href="{{ route('seller-application.create') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">Start selling</a>
-                    @elseif ($user?->isPlatformAdministrator())
+                    @if ($user?->isPlatformAdministrator())
                         <a href="{{ route('dashboard') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">Admin workspace</a>
                     @endif
                 </nav>

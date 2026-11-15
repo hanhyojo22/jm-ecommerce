@@ -6,10 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\SellerApplication;
 use App\Models\SellerOrder;
 use App\Models\Store;
-use App\Models\StoreSuspensionAppeal;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Queries\AdminStoreQuery;
@@ -35,7 +33,6 @@ class GovernanceController extends Controller
             'joined' => ['nullable', 'in:last_30_days,last_90_days,this_year'],
             'category_id' => ['nullable', 'exists:categories,id'],
             'sort' => ['nullable', 'in:name,newest,recently_active'],
-            'queue' => ['nullable', 'in:pending_appeals'],
         ]);
 
         $stores = AdminStoreQuery::base()
@@ -50,8 +47,7 @@ class GovernanceController extends Controller
                     'this_year' => $query->whereBetween('created_at', [now()->startOfYear(), now()->endOfYear()]),
                 };
             })
-            ->when($filters['category_id'] ?? null, fn (Builder $query, string $categoryId): Builder => $query->whereHas('products', fn (Builder $productQuery): Builder => $productQuery->where('category_id', $categoryId)))
-            ->when(($filters['queue'] ?? null) === 'pending_appeals', fn (Builder $query): Builder => $query->whereHas('appeals', fn (Builder $appealQuery): Builder => $appealQuery->where('status', 'pending')));
+            ->when($filters['category_id'] ?? null, fn (Builder $query, string $categoryId): Builder => $query->whereHas('products', fn (Builder $productQuery): Builder => $productQuery->where('category_id', $categoryId)));
 
         match ($filters['sort'] ?? 'newest') {
             'name' => $stores->orderBy('name')->orderBy('id'),
@@ -66,7 +62,6 @@ class GovernanceController extends Controller
             'filters' => $filters,
             'totalStores' => AdminStoreQuery::total(),
             'statusCounts' => $statusCounts,
-            'pendingReviewCount' => AdminStoreQuery::pendingReviewCount(),
             'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -85,21 +80,6 @@ class GovernanceController extends Controller
         $owner = $store->tenant->members->firstWhere('role', 'owner')?->user
             ?? $store->tenant->members->first()?->user;
 
-        $application = SellerApplication::query()
-            ->with(['user', 'tenant'])
-            ->where('tenant_id', $store->tenant_id)
-            ->latest()
-            ->first();
-
-        if ($application === null && $owner !== null) {
-            $application = SellerApplication::query()
-                ->with(['user', 'tenant'])
-                ->where('user_id', $owner->id)
-                ->where('status', 'approved')
-                ->latest('reviewed_at')
-                ->first();
-        }
-
         $products = Product::query()
             ->with('category')
             ->where('store_id', $store->id)
@@ -116,43 +96,22 @@ class GovernanceController extends Controller
 
         $auditLogs = AuditLog::query()
             ->with('actor')
-            ->where(function (Builder $query) use ($store, $application): void {
+            ->where(function (Builder $query) use ($store): void {
                 $query->where(function (Builder $storeQuery) use ($store): void {
                     $storeQuery->where('entity_type', Store::class)->where('entity_id', $store->id);
                 })->orWhere(function (Builder $tenantQuery) use ($store): void {
                     $tenantQuery->where('entity_type', Tenant::class)->where('entity_id', $store->tenant_id);
-                });
-
-                if ($application !== null) {
-                    $query->orWhere(function (Builder $applicationQuery) use ($application): void {
-                        $applicationQuery->where('entity_type', SellerApplication::class)->where('entity_id', $application->id);
-                    });
-                }
-
-                $query->orWhere(function (Builder $appealQuery) use ($store): void {
-                    $appealQuery->where('entity_type', StoreSuspensionAppeal::class)
-                        ->whereIn('entity_id', $store->appeals()->select('id'));
                 });
             })
             ->latest('created_at')
             ->limit(20)
             ->get();
 
-        $appeals = $store->appeals()
-            ->with(['seller:id,name,email', 'reviewer:id,name'])
-            ->latest()
-            ->limit(10)
-            ->get();
-        $hasPendingAppeal = $store->appeals()->where('status', 'pending')->exists();
-
         return view('admin.governance.store-show', [
             'store' => $store,
             'owner' => $owner,
-            'application' => $application,
             'products' => $products,
             'sellerOrders' => $sellerOrders,
-            'appeals' => $appeals,
-            'hasPendingAppeal' => $hasPendingAppeal,
             'auditLogs' => $auditLogs,
         ]);
     }

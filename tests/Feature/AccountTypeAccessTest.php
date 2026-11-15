@@ -12,11 +12,10 @@ class AccountTypeAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_buyer_can_start_selling_but_cannot_access_seller_management_or_admin_routes(): void
+    public function test_buyer_cannot_access_seller_management_or_admin_routes(): void
     {
         $buyer = User::factory()->create();
 
-        $this->actingAs($buyer)->get(route('seller-application.create'))->assertOk();
         $this->actingAs($buyer)->get(route('seller.products.index'))->assertForbidden();
         $this->actingAs($buyer)->get(route('admin.orders.index'))->assertForbidden();
     }

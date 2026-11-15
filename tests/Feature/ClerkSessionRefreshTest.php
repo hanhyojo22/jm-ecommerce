@@ -34,7 +34,6 @@ class ClerkSessionRefreshTest extends TestCase
             'checkout' => ['/checkout'],
             'orders' => ['/orders'],
             'profile' => ['/profile'],
-            'start selling' => ['/start-selling'],
             'seller dashboard' => ['/seller'],
             'seller store settings' => ['/seller/store-settings'],
             'seller products' => ['/seller/products'],
@@ -44,7 +43,6 @@ class ClerkSessionRefreshTest extends TestCase
             'seller reviews' => ['/seller/reviews'],
             'admin dashboard' => ['/dashboard'],
             'admin moderation' => ['/admin/moderation'],
-            'admin seller applications' => ['/admin/seller-applications'],
             'admin orders' => ['/admin/orders'],
             'admin payouts' => ['/admin/payouts'],
             'admin products' => ['/admin/products'],
@@ -247,7 +245,7 @@ class ClerkSessionRefreshTest extends TestCase
 
         $this->actingAs($seller, 'clerk')
             ->get(route('login'))
-            ->assertRedirect(route('seller-application.create'));
+            ->assertRedirect(route('home'));
     }
 
     public function test_an_authenticated_administrator_still_reaches_the_dashboard(): void

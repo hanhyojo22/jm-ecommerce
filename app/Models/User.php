@@ -75,11 +75,6 @@ class User extends Authenticatable
         return $this->hasMany(DeviceToken::class);
     }
 
-    public function sellerApplications(): HasMany
-    {
-        return $this->hasMany(SellerApplication::class);
-    }
-
     public function cart(): HasOne
     {
         return $this->hasOne(Cart::class);
@@ -130,7 +125,7 @@ class User extends Authenticatable
                 return 'seller.dashboard';
             }
 
-            return $this->preferred_workspace === 'customer' ? 'home' : 'seller-application.create';
+            return 'home';
         }
 
         return 'catalog.index';
