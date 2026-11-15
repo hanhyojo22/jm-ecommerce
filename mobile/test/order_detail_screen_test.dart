@@ -14,6 +14,40 @@ import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
+  testWidgets(
+    'a ready pickup order shows the branch steps and its approved prescription',
+    (tester) async {
+      final api = _OrderApi()
+        ..status = 'shipped'
+        ..fulfillment = 'pickup'
+        ..prescription = {'status': 'approved', 'reason': null};
+      await _pump(tester, api);
+
+      expect(find.text('Prescription approved'), findsOneWidget);
+      expect(find.text('Ready for pickup'), findsWidgets);
+      expect(find.text('Picked up'), findsOneWidget);
+      expect(find.text('Pickup at the branch'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a rejected prescription explains why the order was cancelled', (
+    tester,
+  ) async {
+    final api = _OrderApi()
+      ..status = 'cancelled'
+      ..prescription = {
+        'status': 'rejected',
+        'reason': 'The prescription has expired.',
+      };
+    await _pump(tester, api);
+
+    expect(find.text('Prescription not accepted'), findsOneWidget);
+    expect(
+      find.text('Your order was cancelled: The prescription has expired.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('store links open the registered storefront route', (
     tester,
   ) async {
@@ -231,6 +265,8 @@ class _OrderApi extends ApiClient {
   int confirmations = 0;
   String? returnStatus;
   Completer<String?>? pendingPayment;
+  String fulfillment = 'delivery';
+  Map<String, dynamic>? prescription;
 
   @override
   Future<OrderDetail> order(String id) async {
@@ -247,6 +283,8 @@ class _OrderApi extends ApiClient {
       'shipping_amount': '0.00',
       'total': '1998.00',
       'can_pay': payable,
+      'fulfillment_method': fulfillment,
+      'prescription': prescription,
       'delivery': {
         'recipient_name': 'Test buyer',
         'phone': '09000000000',

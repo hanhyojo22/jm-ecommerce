@@ -28,7 +28,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   String _statusHeadline(OrderDetail order) => switch (order.status) {
     'delivered' => 'Completed',
     'cancelled' => 'Order Closed',
-    'shipped' => 'On the way',
+    'shipped' => order.isPickup ? 'Ready for pickup' : 'On the way',
     'confirmed' || 'processing' => 'Preparing order',
     'pending' when order.canPay => 'Awaiting Payment',
     _ => statusLabel(order.status),
@@ -37,6 +37,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   String _statusMessage(OrderDetail order) => switch (order.status) {
     'delivered' => 'You have confirmed that your order has been delivered and received. Thank you for shopping with us.',
     'cancelled' => 'You have closed your order. We hope to see you again soon!',
+    'shipped' when order.isPickup => 'Your order is ready at the branch. Bring your order number when you pick it up.',
     'shipped' =>
       'Confirm receipt when the parcel arrives so the store can be paid.',
     'confirmed' || 'processing' => 'The seller has confirmed your order and is preparing your parcel for dispatch.',
@@ -112,6 +113,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   children: [
                     _statusStepperCard(value),
                     const SizedBox(height: 10),
+                    if (value.prescriptionStatus != null) ...[
+                      _prescriptionCard(value),
+                      const SizedBox(height: 10),
+                    ],
                     _deliveryAndGuaranteeCard(value),
                     const SizedBox(height: 10),
                     for (final sellerOrder in value.sellerOrders) ...[
@@ -124,6 +129,54 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ),
             ),
             _bottomBar(value),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _prescriptionCard(OrderDetail order) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final rejected = order.prescriptionStatus == 'rejected';
+    final (title, message) = switch (order.prescriptionStatus) {
+      'approved' => (
+        'Prescription approved',
+        'A pharmacist approved your prescription.',
+      ),
+      'rejected' => (
+        'Prescription not accepted',
+        'Your order was cancelled: ${order.prescriptionReason ?? 'the pharmacist could not accept it.'}',
+      ),
+      _ => (
+        'Prescription in review',
+        'A pharmacist is checking your prescription. Your order is prepared once it is approved.',
+      ),
+    };
+
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: _cardShape(scheme),
+      color: rejected ? scheme.errorContainer : null,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: rejected ? scheme.onErrorContainer : null,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: rejected ? scheme.onErrorContainer : null,
+              ),
+            ),
           ],
         ),
       ),
@@ -238,7 +291,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   ),
                   if (!largeText && step >= 0) ...[
                     const SizedBox(height: 14),
-                    _OrderProgressStepper(activeStep: step),
+                    _OrderProgressStepper(
+                      activeStep: step,
+                      isPickup: order.isPickup,
+                    ),
                   ],
                   if (order.canPay) ...[
                     const SizedBox(height: 14),
@@ -326,7 +382,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Delivery Address',
+                        order.isPickup
+                            ? 'Pickup at the branch'
+                            : 'Delivery Address',
                         style: theme.textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: scheme.primary,
@@ -1058,15 +1116,24 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
 
 /// 4-step horizontal order progress tracker: Placed → Preparing → On the way → Delivered.
 class _OrderProgressStepper extends StatelessWidget {
-  const _OrderProgressStepper({required this.activeStep});
+  const _OrderProgressStepper({
+    required this.activeStep,
+    this.isPickup = false,
+  });
 
   final int activeStep;
+  final bool isPickup;
 
-  static const _steps = [
+  List<({String label, IconData icon})> get _steps => [
     (label: 'Placed', icon: Icons.receipt_long_rounded),
     (label: 'Preparing', icon: Icons.inventory_2_rounded),
-    (label: 'On the way', icon: Icons.local_shipping_rounded),
-    (label: 'Delivered', icon: Icons.check_circle_rounded),
+    isPickup
+        ? (label: 'Ready for pickup', icon: Icons.storefront_rounded)
+        : (label: 'On the way', icon: Icons.local_shipping_rounded),
+    (
+      label: isPickup ? 'Picked up' : 'Delivered',
+      icon: Icons.check_circle_rounded,
+    ),
   ];
 
   @override

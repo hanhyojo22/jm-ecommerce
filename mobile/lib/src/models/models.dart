@@ -615,6 +615,9 @@ class CheckoutQuote {
     required this.addresses,
     this.preferredAddress,
     required this.paymentOptions,
+    this.branchName,
+    this.branchAddress,
+    this.fulfillment = const {},
   });
 
   final List<CartLine> lines;
@@ -623,6 +626,15 @@ class CheckoutQuote {
   final List<Address> addresses;
   final Address? preferredAddress;
   final Map<String, PaymentOption> paymentOptions;
+
+  /// The branch that fills the order and where pickup orders are collected.
+  final String? branchName;
+  final String? branchAddress;
+
+  /// `delivery` and `pickup`, each with its fee and what it brings the total to.
+  final Map<String, FulfillmentOption> fulfillment;
+
+  bool get needsPrescription => lines.any((line) => line.requiresPrescription);
 
   factory CheckoutQuote.fromJson(Map<String, dynamic> json) => CheckoutQuote(
     lines: listOf(json['items']).map(CartLine.fromJson).toList(growable: false),
@@ -639,7 +651,37 @@ class CheckoutQuote {
     paymentOptions: mapOf(
       json['payment_methods'],
     ).map((key, value) => MapEntry(key, PaymentOption.fromJson(mapOf(value)))),
+    branchName: mapOf(json['branch'])['name'] as String?,
+    branchAddress: [
+      str(mapOf(json['branch'])['address_line']),
+      str(mapOf(json['branch'])['city']),
+    ].where((part) => part.isNotEmpty).join(', '),
+    fulfillment: mapOf(json['fulfillment_methods']).map(
+      (key, value) => MapEntry(key, FulfillmentOption.fromJson(mapOf(value))),
+    ),
   );
+}
+
+class FulfillmentOption {
+  const FulfillmentOption({
+    required this.fee,
+    required this.total,
+    this.paymentFees = const {},
+  });
+
+  final String fee;
+  final String total;
+
+  /// Online payment fee per method, worked out on this option's total.
+  final Map<String, String> paymentFees;
+
+  factory FulfillmentOption.fromJson(Map<String, dynamic> json) =>
+      FulfillmentOption(
+        fee: str(json['fee'], '0.00'),
+        total: str(json['total'], '0.00'),
+        paymentFees: mapOf(json['payment_fees'])
+            .map((key, value) => MapEntry(key, str(value))),
+      );
 }
 
 class DeliveryInfo {
@@ -818,6 +860,9 @@ class OrderDetail {
     required this.sellerOrders,
     required this.canPay,
     required this.canConfirmReceipt,
+    this.fulfillmentMethod = 'delivery',
+    this.prescriptionStatus,
+    this.prescriptionReason,
   });
 
   final String id;
@@ -833,6 +878,15 @@ class OrderDetail {
   final List<SellerOrder> sellerOrders;
   final bool canPay;
   final bool canConfirmReceipt;
+
+  /// `delivery` or `pickup` (collected at the branch).
+  final String fulfillmentMethod;
+
+  /// `pending`, `approved` or `rejected`; null when no medicine needed one.
+  final String? prescriptionStatus;
+  final String? prescriptionReason;
+
+  bool get isPickup => fulfillmentMethod == 'pickup';
 
   factory OrderDetail.fromJson(Map<String, dynamic> json) => OrderDetail(
     id: str(json['id']),
@@ -852,6 +906,9 @@ class OrderDetail {
         .toList(growable: false),
     canPay: boolean(json['can_pay']),
     canConfirmReceipt: boolean(json['can_confirm_receipt']),
+    fulfillmentMethod: str(json['fulfillment_method'], 'delivery'),
+    prescriptionStatus: mapOf(json['prescription'])['status'] as String?,
+    prescriptionReason: mapOf(json['prescription'])['reason'] as String?,
   );
 }
 

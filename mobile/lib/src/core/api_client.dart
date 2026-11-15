@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../models/models.dart';
 import '../models/store_branch.dart';
 import 'api_exception.dart';
+import 'attachment_picker.dart';
 
 typedef TokenProvider = Future<String?> Function();
 
@@ -347,26 +348,44 @@ class ApiClient {
   Future<CheckoutQuote> checkoutQuote() async =>
       CheckoutQuote.fromJson(mapOf(await _data('GET', '/checkout')));
 
+  /// A [prescription] goes up with the order as multipart form data; a
+  /// delivery needs the [deliveryLatitude]/[deliveryLongitude] pin.
   Future<PlacedOrder> placeOrder({
     required Address address,
     required String paymentMethod,
     required String clientRequestId,
+    String fulfillmentMethod = 'delivery',
+    double? deliveryLatitude,
+    double? deliveryLongitude,
+    PickedAttachment? prescription,
     String? note,
     String? successUrl,
     String? cancelUrl,
   }) async {
+    final fields = <String, dynamic>{
+      ...address.toJson(),
+      if (note != null && note.trim().isNotEmpty) 'delivery_note': note.trim(),
+      'fulfillment_method': fulfillmentMethod,
+      'delivery_latitude': ?deliveryLatitude,
+      'delivery_longitude': ?deliveryLongitude,
+      'payment_method': paymentMethod,
+      'client_request_id': clientRequestId,
+      'success_url': ?successUrl,
+      'cancel_url': ?cancelUrl,
+    };
     final data = await _data(
       'POST',
       '/checkout',
-      data: {
-        ...address.toJson(),
-        if (note != null && note.trim().isNotEmpty)
-          'delivery_note': note.trim(),
-        'payment_method': paymentMethod,
-        'client_request_id': clientRequestId,
-        'success_url': ?successUrl,
-        'cancel_url': ?cancelUrl,
-      },
+      data: prescription == null
+          ? fields
+          : FormData.fromMap({
+              ...fields,
+              'prescription': MultipartFile.fromBytes(
+                prescription.bytes,
+                filename: prescription.name,
+                contentType: DioMediaType.parse(prescription.mimeType),
+              ),
+            }),
     );
 
     return PlacedOrder.fromJson(mapOf(data));

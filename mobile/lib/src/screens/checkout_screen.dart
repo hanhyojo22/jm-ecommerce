@@ -5,11 +5,14 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/api_exception.dart';
+import '../core/attachment_picker.dart';
 import '../core/formatters.dart';
+import '../core/location_service.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/checkout_providers.dart';
+import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
@@ -34,7 +37,33 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _useNewAddress = false;
   bool _initialised = false;
   String _paymentMethod = 'cod';
+  String _fulfillment = 'delivery';
+  PickedAttachment? _prescription;
   bool _placing = false;
+
+  /// Why delivery can't be offered: the API needs the phone's location as the
+  /// pin and refuses addresses outside the branch's radius. Null when it can.
+  String? get _deliveryBlockedReason {
+    final locator = ref.read(nearestStoreProvider).value;
+    if (locator == null || locator.branches.isEmpty) {
+      return null;
+    }
+    if (locator.issue != null) {
+      return 'Turn on location to get delivery. Pickup is available.';
+    }
+    if (locator.activeBranch?.isOutOfDeliveryRange ?? false) {
+      return 'You are outside the delivery area of ${locator.activeBranch!.branch.name}. Pickup is available.';
+    }
+    return null;
+  }
+
+  String get _method =>
+      _deliveryBlockedReason == null ? _fulfillment : 'pickup';
+
+  /// The online payment fee on what the chosen fulfillment brings the total to.
+  String? _paymentFee(CheckoutQuote quote, String method) =>
+      quote.fulfillment[_method]?.paymentFees[method] ??
+      quote.paymentOptions[method]?.fee;
 
   @override
   void dispose() {
@@ -120,15 +149,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
+    if (quote.needsPrescription && _prescription == null) {
+      _snack('Add a photo of your prescription.');
+      return;
+    }
+
     setState(() => _placing = true);
 
     try {
+      final method = _method;
+      // shortcut: the delivery pin is where the phone is, not the typed address;
+      // add a map pin picker when customers order for someone elsewhere.
+      final pin = method == 'delivery'
+          ? await ref.read(locationServiceProvider).currentPosition()
+          : null;
       final placed = await ref
           .read(apiClientProvider)
           .placeOrder(
             address: address,
             paymentMethod: _paymentMethod,
             clientRequestId: _requestId,
+            fulfillmentMethod: method,
+            deliveryLatitude: pin?.latitude,
+            deliveryLongitude: pin?.longitude,
+            prescription: _prescription,
           );
 
       await ref.read(cartProvider.notifier).refresh();
@@ -153,6 +197,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       if (mounted) {
         context.pushReplacement('/orders/${placed.order.id}');
       }
+    } on LocationFailure {
+      if (mounted) {
+        _snack('Turn on location for delivery, or choose pickup.');
+      }
     } on ApiException catch (error) {
       if (mounted) {
         _snack(error.friendly);
@@ -164,9 +212,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
   }
 
+  Future<void> _pickPrescription({required bool photo}) async {
+    final picker = ref.read(attachmentPickerProvider);
+    try {
+      final picked = photo
+          ? await picker.pickImage()
+          : await picker.pickDocument();
+      if (picked != null && mounted) {
+        setState(() => _prescription = picked);
+      }
+    } on AttachmentTooLargeException {
+      _snack('Choose a file under 5 MB.');
+    }
+  }
+
   String _total(CheckoutQuote quote) => addMoney(
-    quote.subtotal,
-    quote.paymentOptions[_paymentMethod]?.fee ?? '0.00',
+    quote.fulfillment[_method]?.total ?? quote.subtotal,
+    _paymentFee(quote, _paymentMethod) ?? '0.00',
   );
 
   void _snack(String message) {
@@ -177,6 +239,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final quote = ref.watch(checkoutQuoteProvider);
+    // Delivery depends on where the phone is relative to the branch.
+    ref.watch(nearestStoreProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
@@ -198,6 +262,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     children: [
                       _itemsCard(value),
+                      const SizedBox(height: 14),
+                      _fulfillmentCard(value),
+                      if (value.needsPrescription) ...[
+                        const SizedBox(height: 14),
+                        _prescriptionCard(),
+                      ],
                       const SizedBox(height: 14),
                       _addressCard(value),
                       const SizedBox(height: 14),
@@ -323,7 +393,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${quote.lines.length} ${quote.lines.length == 1 ? 'item' : 'items'} from ${quote.storeTotals.length} ${quote.storeTotals.length == 1 ? 'store' : 'stores'}',
+              '${quote.lines.length} ${quote.lines.length == 1 ? 'item' : 'items'} from ${quote.branchName ?? 'your branch'}',
               style: Theme.of(context).textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
@@ -396,7 +466,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Delivery address',
+              _method == 'pickup' ? 'Contact details' : 'Delivery address',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
@@ -542,8 +612,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget _paymentCard(CheckoutQuote quote) {
     final theme = Theme.of(context);
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    const labels = {
-      'cod': 'Cash on delivery',
+    final labels = {
+      'cod': _method == 'pickup' ? 'Pay at the counter' : 'Cash on delivery',
       'gcash': 'GCash',
       'maya': 'Maya',
       'card': 'Card',
@@ -571,7 +641,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               },
               child: Column(
                 children: quote.paymentOptions.entries.map((entry) {
-                  final option = entry.value;
+                  // The cash-on-delivery limit is for deliveries; the counter stays open.
+                  final option = entry.key == 'cod' && _method == 'pickup'
+                      ? const PaymentOption(available: true, fee: '0.00')
+                      : PaymentOption(
+                          available: entry.value.available,
+                          fee: _paymentFee(quote, entry.key),
+                          reason: entry.value.reason,
+                        );
 
                   return RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
@@ -631,9 +708,121 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
+  Widget _fulfillmentCard(CheckoutQuote quote) {
+    final theme = Theme.of(context);
+    final blocked = _deliveryBlockedReason;
+    final deliveryFee = quote.fulfillment['delivery']?.fee ?? '0.00';
+    final branch = quote.branchName ?? 'your branch';
+    final branchAddress = quote.branchAddress ?? '';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'How to get it',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: [
+                ButtonSegment(
+                  value: 'delivery',
+                  enabled: blocked == null,
+                  label: Text(
+                    (double.tryParse(deliveryFee) ?? 0) > 0
+                        ? 'Delivery · ${money(deliveryFee)}'
+                        : 'Delivery · Free',
+                  ),
+                ),
+                const ButtonSegment(
+                  value: 'pickup',
+                  label: Text('Pickup · Free'),
+                ),
+              ],
+              selected: {_method},
+              onSelectionChanged: (choice) =>
+                  setState(() => _fulfillment = choice.single),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _method == 'pickup'
+                  ? [
+                      'Pick up at $branch',
+                      if (branchAddress.isNotEmpty) branchAddress,
+                    ].join(' · ')
+                  : 'Delivered from $branch to where you are now.',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (blocked != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                blocked,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _prescriptionCard() {
+    final theme = Theme.of(context);
+    final picked = _prescription;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Prescription',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              picked == null
+                  ? 'Some items need a doctor’s prescription. A pharmacist checks it before your order is prepared.'
+                  : 'Added: ${picked.name}',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => _pickPrescription(photo: true),
+                  icon: const Icon(Icons.photo_outlined, size: 18),
+                  label: Text(picked == null ? 'Add photo' : 'Replace photo'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _pickPrescription(photo: false),
+                  icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                  label: const Text('Add PDF'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _totalsCard(CheckoutQuote quote) {
     final theme = Theme.of(context);
-    final fee = quote.paymentOptions[_paymentMethod]?.fee ?? '0.00';
+    final fee = _paymentFee(quote, _paymentMethod) ?? '0.00';
+    final deliveryFee = quote.fulfillment[_method]?.fee ?? '0.00';
     final total = _total(quote);
 
     return Card(
@@ -655,6 +844,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               label: const Text('Subtotal'),
               amount: Text(money(quote.subtotal)),
             ),
+            if ((double.tryParse(deliveryFee) ?? 0) > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: _amountRow(
+                  label: const Text('Delivery fee'),
+                  amount: Text(money(deliveryFee)),
+                ),
+              ),
             if ((double.tryParse(fee) ?? 0) > 0)
               Padding(
                 padding: const EdgeInsets.only(top: 4),

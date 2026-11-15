@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 
-/// Server limit for chat attachments: 5 MB.
+/// Upload limit for picked files (prescriptions): 5 MB, under the server's 8 MB.
 const maxChatAttachmentBytes = 5 * 1024 * 1024;
 
 /// A file chosen on the phone, ready to be sent as multipart form data.
