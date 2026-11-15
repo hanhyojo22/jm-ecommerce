@@ -19,6 +19,11 @@ if [ ! -e public/storage ]; then
     php artisan storage:link
 fi
 
+# Free hosts wipe local storage on restart; put the seeded catalog photos back (no-op for files already there).
+# shortcut: seller-uploaded images are still lost on restart, set NEON_PRODUCT_IMAGES_BUCKET to keep them.
+mkdir -p storage/app/public/products/catalog
+cp -rn database/seeders/images/. storage/app/public/products/catalog/
+
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     php artisan migrate --force --no-interaction
 fi
