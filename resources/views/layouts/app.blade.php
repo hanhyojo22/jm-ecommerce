@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         {{-- The workspace a request belongs to decides the chrome below and the stylesheet in the head. --}}
-        @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*') || (request()->routeIs('profile.edit') && auth()->user()->preferred_workspace === 'seller' && auth()->user()->sellerTenant() !== null)))
+        @php($isSellerWorkspace = auth()->user()?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.earnings.*', 'seller.platform-fees.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*') || (request()->routeIs('profile.edit') && auth()->user()->preferred_workspace === 'seller' && auth()->user()->sellerTenant() !== null)))
         @php($isAdminWorkspace = auth()->user()?->isPlatformAdministrator() && request()->routeIs('dashboard', 'admin.*'))
         @php($isCustomerWorkspace = in_array(auth()->user()?->account_type, ['buyer', 'seller'], true) && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'profile.edit'))
         <meta charset="utf-8">

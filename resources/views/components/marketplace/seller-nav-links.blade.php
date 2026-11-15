@@ -16,6 +16,7 @@
                 ['label' => 'Orders', 'href' => route('seller.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('seller.orders.*')],
                 ['label' => 'Returns', 'href' => route('seller.returns.index'), 'icon' => 'returns', 'active' => request()->routeIs('seller.returns.*')],
                 ['label' => 'Products', 'href' => route('seller.products.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.products.*')],
+                ['label' => 'Branch stock', 'href' => route('seller.branch-stock.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.branch-stock.*')],
             ],
         ],
         [
@@ -38,6 +39,7 @@
         ];
 
         if ($canManageStore) {
+            $storeItems[] = ['label' => 'Branches', 'href' => route('seller.branches.index'), 'icon' => 'storefront', 'active' => request()->routeIs('seller.branches.*')];
             $storeItems[] = ['label' => 'Store settings', 'href' => route('seller.store-settings.edit'), 'icon' => 'settings', 'active' => request()->routeIs('seller.store-settings.*')];
         }
 

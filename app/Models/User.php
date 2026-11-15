@@ -191,10 +191,9 @@ class User extends Authenticatable
         return $this->tenantMemberships()
             ->whereIn('role', $roles)
             ->with(['tenant.store', 'store'])
-            ->whereHas('tenant', fn ($query) => $query
-                ->where('status', 'active')
-                ->whereHas('store', fn ($store) => $store->where('status', 'active')))
-            // A branch member whose branch is switched off has no workspace.
+            ->whereHas('tenant', fn ($query) => $query->where('status', 'active'))
+            // Head office keeps the workspace while branches open and close; a branch member whose
+            // branch is switched off has none.
             ->where(fn ($query) => $query->whereNull('store_id')->orWhereHas('store', fn ($store) => $store->where('status', 'active')))
             ->oldest('created_at')
             ->first();

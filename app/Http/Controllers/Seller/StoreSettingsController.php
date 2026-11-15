@@ -22,7 +22,7 @@ class StoreSettingsController extends Controller
      *
      * @var list<string>
      */
-    private const UNDO_FIELDS = ['description', 'phone', 'address_line', 'city', ...Store::LOCATION_DETAILS, 'logo_path'];
+    private const UNDO_FIELDS = ['description', 'phone', 'address_line', 'city', 'status', ...Store::LOCATION_DETAILS, 'logo_path'];
 
     public function edit(Request $request): View
     {
@@ -37,13 +37,19 @@ class StoreSettingsController extends Controller
             $request->session()->forget('seller_store_settings_undo');
         }
 
-        return view('seller.store-settings.edit', ['store' => $tenant->store, 'canUndo' => $canUndo]);
+        return view('seller.store-settings.edit', ['store' => $this->branch($request, $tenant), 'canUndo' => $canUndo]);
     }
 
     public function update(UpdateStoreSettingsRequest $request, StorePublicImage $storePublicImage): RedirectResponse
     {
-        $tenant = $request->user()->sellerTenant() ?? abort(403);
-        $data = [...$request->safe()->only(['description', 'phone', 'address_line', 'city']), ...$this->locationDetails($request)];
+        $tenant = $this->managedTenant($request);
+        $branch = $this->branch($request, $tenant);
+        $data = [
+            ...$request->safe()->only(['description', 'phone', 'address_line', 'city']),
+            // Head office switches a branch on or off; a branch the platform suspended stays suspended.
+            'status' => $branch->status === 'suspended' ? 'suspended' : ($request->validated('status') ?? $branch->status),
+            ...$this->locationDetails($request),
+        ];
         try {
             $newLogoPath = $request->hasFile('logo')
                 ? $storePublicImage->handle($request->file('logo'), 'store-logos', 'public')
@@ -59,9 +65,10 @@ class StoreSettingsController extends Controller
         }
 
         try {
-            $change = DB::transaction(function () use ($request, $tenant, $data, $newLogoPath): array {
+            $change = DB::transaction(function () use ($request, $tenant, $branch, $data, $newLogoPath): array {
                 $lockedStore = Store::query()
                     ->where('tenant_id', $tenant->id)
+                    ->whereKey($branch->id)
                     ->lockForUpdate()
                     ->firstOrFail();
                 $oldLogoPath = $lockedStore->logo_path;
@@ -110,7 +117,7 @@ class StoreSettingsController extends Controller
             ]);
         }
 
-        return to_route('seller.store-settings.edit')->with('status', 'Store details saved.');
+        return to_route('seller.store-settings.edit', ['branch' => $branch->id])->with('status', 'Branch details saved.');
     }
 
     public function undo(Request $request): RedirectResponse
@@ -174,7 +181,7 @@ class StoreSettingsController extends Controller
 
         $request->session()->forget('seller_store_settings_undo');
 
-        return to_route('seller.store-settings.edit')->with('status', 'Last store details save undone.');
+        return to_route('seller.store-settings.edit', ['branch' => $undo['store_id']])->with('status', 'Last branch details save undone.');
     }
 
     /**
@@ -195,6 +202,17 @@ class StoreSettingsController extends Controller
                 default => $value,
             }];
         })->all();
+    }
+
+    /**
+     * The branch being edited: the one named in the request, looked up inside the member's own
+     * company so another company's branch is a 404, or the first branch when none is named.
+     */
+    private function branch(Request $request, Tenant $tenant): Store
+    {
+        return $request->filled('branch')
+            ? $tenant->stores()->whereKey($request->string('branch')->toString())->firstOrFail()
+            : $tenant->store;
     }
 
     private function managedTenant(Request $request): Tenant

@@ -27,6 +27,7 @@ class UpdateStoreSettingsRequest extends FormRequest
             'phone' => ['required', 'string', 'max:30'],
             'address_line' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:100'],
+            'status' => ['sometimes', 'in:active,inactive'],
             'region' => ['nullable', 'string', 'max:100'],
             'province' => ['nullable', 'string', 'max:100'],
             'barangay' => ['nullable', 'string', 'max:100'],

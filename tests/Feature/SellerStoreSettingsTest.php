@@ -35,8 +35,8 @@ class SellerStoreSettingsTest extends TestCase
         ]);
 
         $store->refresh();
-        $response->assertRedirect(route('seller.store-settings.edit'))
-            ->assertSessionHas('status', 'Store details saved.');
+        $response->assertRedirect(route('seller.store-settings.edit', ['branch' => $store->id]))
+            ->assertSessionHas('status', 'Branch details saved.');
         $this->assertSame('Handmade home goods from Manila.', $store->description);
         $this->assertSame('+639171234568', $store->phone);
         $this->assertSame('25 New Market Street', $store->address_line);
@@ -80,7 +80,7 @@ class SellerStoreSettingsTest extends TestCase
             'phone' => '+639171234567',
             'address_line' => '10 Market Street',
             'city' => 'Manila',
-        ])->assertRedirect(route('seller.store-settings.edit'));
+        ])->assertRedirect(route('seller.store-settings.edit', ['branch' => $tenant->store->id]));
 
         $this->actingAs($staff)->patch(route('seller.store-settings.update'), [
             'description' => 'Unauthorized change.',
@@ -162,7 +162,7 @@ class SellerStoreSettingsTest extends TestCase
             'address_line' => $store->address_line,
             'city' => $store->city,
             'remove_logo' => '1',
-        ])->assertRedirect(route('seller.store-settings.edit'));
+        ])->assertRedirect(route('seller.store-settings.edit', ['branch' => $store->id]));
 
         $this->assertDatabaseHas('stores', ['id' => $store->id, 'logo_path' => null]);
         Storage::disk('public')->assertMissing('store-logos/current.png');
@@ -179,12 +179,12 @@ class SellerStoreSettingsTest extends TestCase
             'phone' => '+639171234568',
             'address_line' => '25 New Market Street',
             'city' => 'Quezon City',
-        ])->assertRedirect(route('seller.store-settings.edit'));
+        ])->assertRedirect(route('seller.store-settings.edit', ['branch' => $store->id]));
 
         $this->get(route('seller.store-settings.edit'))->assertSee('Undo last save');
         $this->post(route('seller.store-settings.undo'))
-            ->assertRedirect(route('seller.store-settings.edit'))
-            ->assertSessionHas('status', 'Last store details save undone.')
+            ->assertRedirect(route('seller.store-settings.edit', ['branch' => $store->id]))
+            ->assertSessionHas('status', 'Last branch details save undone.')
             ->assertSessionMissing('seller_store_settings_undo');
 
         $this->assertDatabaseHas('stores', [
@@ -210,7 +210,7 @@ class SellerStoreSettingsTest extends TestCase
             'phone' => '+639171234568',
             'address_line' => '25 New Market Street',
             'city' => 'Quezon City',
-        ])->assertRedirect(route('seller.store-settings.edit'));
+        ])->assertRedirect(route('seller.store-settings.edit', ['branch' => $store->id]));
 
         $store->update(['description' => 'Changed by another manager.']);
 
@@ -233,7 +233,7 @@ class SellerStoreSettingsTest extends TestCase
             'phone' => '+639171234568',
             'address_line' => '25 New Market Street',
             'city' => 'Quezon City',
-        ])->assertRedirect(route('seller.store-settings.edit'));
+        ])->assertRedirect(route('seller.store-settings.edit', ['branch' => $store->id]));
 
         $this->travel(6)->minutes();
 
@@ -261,8 +261,7 @@ class SellerStoreSettingsTest extends TestCase
             'city' => $store->city,
             'store_id' => $otherStore->id,
             'slug' => 'changed-slug',
-            'status' => 'suspended',
-        ])->assertRedirect(route('seller.store-settings.edit'));
+        ])->assertRedirect(route('seller.store-settings.edit', ['branch' => $store->id]));
 
         $this->assertDatabaseHas('stores', ['id' => $store->id, 'description' => 'My store description.', 'slug' => $store->slug, 'status' => 'active']);
         $this->assertDatabaseHas('stores', ['id' => $otherStore->id, 'description' => null, 'status' => 'active']);
@@ -322,7 +321,7 @@ class SellerStoreSettingsTest extends TestCase
         $this->patch(route('seller.store-settings.update'), [...$details, 'phone' => '+639179999999'])
             ->assertSessionHasNoErrors();
         $this->post(route('seller.store-settings.undo'))
-            ->assertSessionHas('status', 'Last store details save undone.');
+            ->assertSessionHas('status', 'Last branch details save undone.');
 
         $this->assertDatabaseHas('stores', ['id' => $store->id, 'phone' => '+639171234567', 'province' => 'Metro Manila']);
     }

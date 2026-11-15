@@ -2,7 +2,9 @@
     <x-slot name="header">
         <div class="sc-page-head">
             <div>
-                <h1 class="sc-title">Store settings</h1>            </div>
+                <h1 class="sc-title">{{ $store->name }}</h1>
+                <p class="mt-1 text-sm text-muted"><a href="{{ route('seller.branches.index') }}" class="font-semibold text-brand">All branches</a></p>
+            </div>
         </div>
     </x-slot>
 
@@ -12,7 +14,7 @@
                 <div class="sc-notice mb-5" data-tone="success" role="status">
                     <p class="font-medium">{{ session('status', 'A recent text-only save can still be undone.') }}</p>
                     @if ($canUndo)
-                        <form method="POST" action="{{ route('seller.store-settings.undo') }}">
+                        <form method="POST" action="{{ route('seller.store-settings.undo', ['branch' => $store->id]) }}">
                             @csrf
                             <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-success/30 bg-white px-4 text-sm font-semibold text-ink transition hover:bg-success/10 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Undo last save</button>
                         </form>
@@ -20,7 +22,7 @@
                 </div>
             @endif
 
-            <form method="POST" action="{{ route('seller.store-settings.update') }}" enctype="multipart/form-data" class="min-w-0"
+            <form method="POST" action="{{ route('seller.store-settings.update', ['branch' => $store->id]) }}" enctype="multipart/form-data" class="min-w-0"
                 x-data="{ dirty: {{ $errors->any() ? 'true' : 'false' }}, saving: false, logoPreview: null, logoName: '', removeLogo: {{ old('remove_logo') ? 'true' : 'false' }}, description: @js(old('description', $store->description) ?? ''), phone: @js(old('phone', $store->phone) ?? ''), city: @js(old('city', $store->city) ?? ''), addressLine: @js(old('address_line', $store->address_line) ?? ''), descriptionLength: {{ mb_strlen(old('description', $store->description) ?? '') }} }"
                 x-init="window.addEventListener('beforeunload', event => { if (dirty && !saving) { event.preventDefault(); event.returnValue = ''; } })"
                 @input="dirty = true" @change="dirty = true"
@@ -123,6 +125,16 @@
                             <input id="city" name="city" x-model="city" autocomplete="address-level2" maxlength="100" required @error('city') aria-describedby="city-error" aria-invalid="true" @enderror value="{{ old('city', $store->city) }}" class="field-control mt-2 text-base lg:text-sm @error('city') border-rose-500 @enderror">
                             <x-input-error id="city-error" :messages="$errors->get('city')" class="mt-2" />
                         </div>
+                        @if ($store->status !== 'suspended')
+                            <div class="min-w-0">
+                                <label for="status" class="block text-sm font-semibold text-ink">Branch status</label>
+                                <select id="status" name="status" class="field-control mt-2 text-base lg:text-sm">
+                                    <option value="active" @selected(old('status', $store->status) === 'active')>Open: shown to customers</option>
+                                    <option value="inactive" @selected(old('status', $store->status) === 'inactive')>Closed: hidden from customers</option>
+                                </select>
+                                <x-input-error :messages="$errors->get('status')" class="mt-2" />
+                            </div>
+                        @endif
                         <div class="min-w-0 max-w-3xl sm:col-span-2">
                             <label for="address_line" class="block text-sm font-semibold text-ink">Street address <span class="font-normal text-muted">(required)</span></label>
                             <input id="address_line" name="address_line" x-model="addressLine" autocomplete="street-address" maxlength="255" required @error('address_line') aria-describedby="address-line-error" aria-invalid="true" @enderror value="{{ old('address_line', $store->address_line) }}" class="field-control mt-2 text-base lg:text-sm @error('address_line') border-rose-500 @enderror">
