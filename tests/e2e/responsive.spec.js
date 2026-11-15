@@ -346,7 +346,7 @@ test('store settings preview edits at each viewport', async ({ browser }, testIn
             expect(identity.width / preview.width).toBeGreaterThan(1.8);
             expect(saveAction.x).toBeLessThan(identity.x + identity.width);
             const accessibility = await new AxeBuilder({ page })
-                .include('form[action$="/seller/store-settings"]')
+                .include('form[action*="/seller/store-settings?branch="]')
                 .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
                 .analyze();
             expect(accessibility.violations).toEqual([]);
@@ -416,7 +416,7 @@ test('store settings save, logo removal, and validation work in the browser', as
         await expect(preview.getByAltText('Selected storefront logo preview')).toBeVisible();
 
         let updates = 0;
-        await page.route('**/seller/store-settings', async route => {
+        await page.route('**/seller/store-settings?branch=*', async route => {
             if (route.request().method() === 'POST') {
                 updates++;
                 if (updates === 1) {
@@ -428,13 +428,13 @@ test('store settings save, logo removal, and validation work in the browser', as
         const saveButton = page.getByRole('button', { name: 'Save store settings' });
         await expect(saveButton).toBeEnabled();
         await page.evaluate(() => {
-            const form = document.querySelector('form[action$="/seller/store-settings"]');
+            const form = document.querySelector('form[action*="/seller/store-settings?branch="]');
             form.requestSubmit();
             form.requestSubmit();
         });
         await expect.poll(() => updates).toBe(1);
         releaseFirstUpdate();
-        await expect(page.getByText('Store details saved.')).toBeVisible();
+        await expect(page.getByText('Branch details saved.')).toBeVisible();
         expect(updates).toBe(1);
         await expect(page.getByLabel('Store description')).toHaveValue('A local shop with useful goods.');
         await expect(page.getByLabel('Phone')).toHaveValue('+639171234568');
@@ -460,7 +460,7 @@ test('store settings save, logo removal, and validation work in the browser', as
         await page.getByLabel('Remove current logo on save').check();
         await expect(page.getByText('Logo will be removed')).toBeVisible();
         await page.getByRole('button', { name: 'Save store settings' }).click();
-        await expect(page.getByText('Store details saved.')).toBeVisible();
+        await expect(page.getByText('Branch details saved.')).toBeVisible();
         await expect(page.getByLabel('Remove current logo on save')).toHaveCount(0);
         await expect(preview.locator('img:visible')).toHaveCount(0);
 

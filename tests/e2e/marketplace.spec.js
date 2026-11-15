@@ -555,7 +555,7 @@ test('seller reviews show real conversations and working replies at desktop and 
         await rejectOptionalCookies(seller.page);
         await seller.page.getByLabel('Change logo').setInputFiles('public/images/categories/electronics.png');
         await seller.page.getByRole('button', { name: 'Save store settings' }).click();
-        await expect(seller.page.getByText('Store details saved.')).toBeVisible();
+        await expect(seller.page.getByText('Branch details saved.')).toBeVisible();
 
         await customer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote#discussions');
         await rejectOptionalCookies(customer.page);
