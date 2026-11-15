@@ -7,7 +7,7 @@
     $activeStatus = $filters['status'] ?? null;
     $hasPanelFilters = filled($filters['payment_status'] ?? null) || filled($filters['from'] ?? null) || filled($filters['to'] ?? null);
     $nextStep = fn ($sellerOrder): string => match ($sellerOrder->status) {
-        'pending' => 'Confirm to start preparing',
+        'pending' => $sellerOrder->needs_prescription_review ? 'Prescription to review' : 'Confirm to start preparing',
         'confirmed' => 'Start preparing',
         'processing' => 'Ship when packed',
         'shipped' => 'Awaiting delivery',
@@ -117,7 +117,7 @@
 
             {{-- On the Pending tab, one button confirms the pending orders on this page, up to the 20 the bulk
                  action accepts. Orders the buyer asked to cancel are left for support to decide. --}}
-            @php($confirmableIds = $orders->filter(fn ($sellerOrder) => $sellerOrder->status === 'pending' && ! $sellerOrder->has_open_cancellation)->pluck('id')->take(20))
+            @php($confirmableIds = $orders->filter(fn ($sellerOrder) => $sellerOrder->status === 'pending' && ! $sellerOrder->has_open_cancellation && ! $sellerOrder->needs_prescription_review)->pluck('id')->take(20))
             @if ($canManageOrders && $activeStatus === 'pending' && $confirmableIds->isNotEmpty())
                 <form method="POST" action="{{ route('seller.orders.bulk-confirm') }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[#eef1f5] bg-[#f8fafc] px-5 py-2.5 max-sm:px-4" data-confirm-title="Confirm {{ $confirmableIds->count() }} pending {{ Str::plural('order', $confirmableIds->count()) }}?" data-confirm="They move to confirmed and the buyers are notified." data-confirm-reference="{{ $orders->whereIn('id', $confirmableIds)->take(3)->map(fn ($sellerOrder) => \App\Models\Order::shortNumber($sellerOrder->order->number))->join(', ') }}{{ $confirmableIds->count() > 3 ? ' and '.($confirmableIds->count() - 3).' more' : '' }}" data-confirm-from="Pending" data-confirm-to="Confirmed" data-confirm-action="Confirm {{ Str::plural('order', $confirmableIds->count()) }}">
                     @csrf

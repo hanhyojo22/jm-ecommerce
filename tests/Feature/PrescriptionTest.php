@@ -53,6 +53,9 @@ class PrescriptionTest extends TestCase
     {
         $buyer = $this->buyerWithCart();
 
+        $this->actingAs($buyer)->get(route('checkout.create'))->assertOk()
+            ->assertSee('enctype="multipart/form-data"', false)
+            ->assertSee('Amoxicillin 500mg needs a doctor’s prescription.');
         $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery())->assertSessionHasErrors('prescription');
         $this->actingAs($buyer)->postJson(route('api.v1.checkout.store'), [...$this->delivery(), 'delivery_latitude' => 14.55, 'delivery_longitude' => 121.02])
             ->assertUnprocessable()->assertJsonPath('error.fields.prescription.0', 'Upload a photo of your prescription for Amoxicillin 500mg.');
@@ -71,6 +74,7 @@ class PrescriptionTest extends TestCase
         $this->assertSame('rx.jpg', $prescription->original_name);
         Storage::disk('chat_attachments')->assertExists($prescription->path);
         $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Waiting for pharmacist review');
+        $this->actingAs($order->user)->get(route('orders.show', $order), ['X-Order-Modal' => '1'])->assertSee('Prescription in review');
     }
 
     public function test_the_order_cannot_be_confirmed_until_a_pharmacist_approves_the_prescription(): void
@@ -79,11 +83,13 @@ class PrescriptionTest extends TestCase
         $manager = $this->member('manager', $this->branch);
         $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
 
+        $this->actingAs($manager)->get(route('seller.orders.index', ['status' => 'pending']))->assertSee('Prescription to review')->assertDontSee('Confirm all pending');
         $this->actingAs($manager)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasErrors('status');
         $this->assertSame('pending', $sellerOrder->refresh()->status);
 
         $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approve prescription');
         $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertSessionHas('status');
+        $this->actingAs($manager)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approved by '.$pharmacist->name);
         $this->actingAs($manager)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasNoErrors();
 
         $this->assertSame('confirmed', $sellerOrder->refresh()->status);

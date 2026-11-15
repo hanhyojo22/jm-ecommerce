@@ -273,6 +273,15 @@
         @endif
     @endif
 
+    @if ($order->prescription && $order->prescription->status !== 'approved')
+        <section @class(['notice', 'notice-info' => $order->prescription->status === 'pending', 'notice-warn' => $order->prescription->status === 'rejected'])>
+            <div class="notice-body">
+                <p class="notice-title">{{ $order->prescription->status === 'pending' ? 'Prescription in review' : 'Prescription not accepted' }}</p>
+                <p class="notice-copy">{{ $order->prescription->status === 'pending' ? 'A pharmacist is checking your prescription. Your order is prepared once it is approved.' : 'Your order was cancelled: '.$order->prescription->reason }}</p>
+            </div>
+        </section>
+    @endif
+
     @if ($awaitingOnlinePayment)
         <section class="notice notice-warn">
             <span class="notice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>

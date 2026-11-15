@@ -68,7 +68,7 @@ class SellerOrderController extends Controller
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',
-            $canManageOrders ? ($sellerOrder->issues->contains(fn ($issue) => $issue->status === 'open' && $issue->type === 'cancellation') ? ['cancelled'] : UpdateSellerOrderStatus::transitionsFor($sellerOrder->status)) : [],
+            $canManageOrders ? ($sellerOrder->issues->contains(fn ($issue) => $issue->status === 'open' && $issue->type === 'cancellation') || ($sellerOrder->order->prescription !== null && $sellerOrder->order->prescription->status !== 'approved') ? ['cancelled'] : UpdateSellerOrderStatus::transitionsFor($sellerOrder->status)) : [],
         );
 
         // The orders list opens an order in a modal and asks for just its body; a direct visit
@@ -186,6 +186,8 @@ class SellerOrderController extends Controller
             ->with(['items.product.images', 'order.payment'])
             // Bulk confirm skips orders the buyer asked to cancel; confirming one would fail the batch.
             ->withExists(['issues as has_open_cancellation' => fn (Builder $query): Builder => $query->where('status', 'open')->where('type', 'cancellation')])
+            // Bulk confirm also skips orders whose prescription a pharmacist has not approved yet.
+            ->withExists(['order as needs_prescription_review' => fn (Builder $query): Builder => $query->whereHas('prescription', fn (Builder $prescription): Builder => $prescription->where('status', '!=', 'approved'))])
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 
