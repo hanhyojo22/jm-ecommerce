@@ -33,7 +33,7 @@
     ];
     if ($storefrontTenant) {
         $storeItems = [
-            ['label' => 'Storefront', 'href' => route('catalog.store', $storefrontTenant->slug), 'icon' => 'storefront', 'active' => false],
+            ['label' => 'View website', 'href' => route('home'), 'icon' => 'storefront', 'active' => false],
         ];
 
         if ($canManageStore) {

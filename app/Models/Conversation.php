@@ -27,6 +27,21 @@ class Conversation extends Model
         return parent::resolveRouteBinding($id, $field);
     }
 
+    /**
+     * The branch a product question goes to: the one the buyer is shopping from, else their cart's
+     * branch, else the product's first branch. Only an open branch of the product's company counts.
+     */
+    public static function branchForProduct(Product $product, User $buyer, ?string $preferredStoreId = null): string
+    {
+        foreach ([$preferredStoreId, $buyer->cart()->value('store_id')] as $storeId) {
+            if ($storeId !== null && Store::query()->whereKey($storeId)->where('tenant_id', $product->tenant_id)->where('status', 'active')->exists()) {
+                return $storeId;
+            }
+        }
+
+        return $product->store_id;
+    }
+
     public function buyer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'buyer_id');

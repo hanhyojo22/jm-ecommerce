@@ -174,6 +174,8 @@ class BranchCheckoutTest extends TestCase
         [$makati, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
         $buyer = $this->buyer();
         $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 2])->assertCreated();
+        // Lines are listed under the branch the cart buys from, not the product's first branch.
+        $this->getJson('/api/v1/cart')->assertOk()->assertJsonPath('data.items.0.product.store.name', $cebu->name);
 
         $this->patchJson('/api/v1/cart/branch', ['branch' => $makati->id])
             ->assertOk()

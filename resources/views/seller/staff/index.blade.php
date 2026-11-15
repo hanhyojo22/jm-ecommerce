@@ -25,14 +25,14 @@
                 </div>
                 <div>
                     <label for="role" class="block text-sm font-semibold text-ink">Role</label>
-                    <select id="role" name="role" class="field-control mt-2 text-base lg:text-sm">
+                    <select id="role" name="role" class="field-control mt-2 !w-32 text-base lg:text-sm">
                         <option value="staff" @selected(old('role') === 'staff')>Staff</option>
                         <option value="manager" @selected(old('role') === 'manager')>Manager</option>
                     </select>
                 </div>
                 <div>
                     <label for="store_id" class="block text-sm font-semibold text-ink">Works at</label>
-                    <select id="store_id" name="store_id" class="field-control mt-2 text-base lg:text-sm">
+                    <select id="store_id" name="store_id" class="field-control mt-2 !w-56 text-base lg:text-sm">
                         <option value="">Head office (every branch)</option>
                         @foreach ($branches as $branch)
                             <option value="{{ $branch->id }}" @selected(old('store_id') === $branch->id)>{{ $branch->name }}</option>
@@ -49,7 +49,7 @@
 
             <ul class="sc-card divide-y divide-line" aria-label="Employees">
                 @foreach ($members as $member)
-                    <li class="flex flex-wrap items-center justify-between gap-3 p-4">
+                    <li class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 p-4">
                         <div class="min-w-0">
                             <p class="font-semibold text-ink">{{ $member->user?->name }} <span class="font-normal text-muted">{{ $member->user?->email }}</span></p>
                             <p class="text-sm text-muted">
@@ -65,12 +65,12 @@
                                     @csrf
                                     @method('PATCH')
                                     <label class="sr-only" for="role-{{ $member->id }}">Role for {{ $member->user?->email }}</label>
-                                    <select id="role-{{ $member->id }}" name="role" class="field-control text-base lg:text-sm">
+                                    <select id="role-{{ $member->id }}" name="role" class="field-control !w-32 text-base lg:text-sm">
                                         <option value="staff" @selected($member->role === 'staff')>Staff</option>
                                         <option value="manager" @selected($member->role === 'manager')>Manager</option>
                                     </select>
                                     <label class="sr-only" for="branch-{{ $member->id }}">Branch for {{ $member->user?->email }}</label>
-                                    <select id="branch-{{ $member->id }}" name="store_id" class="field-control text-base lg:text-sm">
+                                    <select id="branch-{{ $member->id }}" name="store_id" class="field-control !w-56 text-base lg:text-sm">
                                         <option value="">Head office</option>
                                         @foreach ($branches as $branch)
                                             <option value="{{ $branch->id }}" @selected($member->store_id === $branch->id)>{{ $branch->name }}</option>

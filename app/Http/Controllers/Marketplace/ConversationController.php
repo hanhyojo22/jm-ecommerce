@@ -24,7 +24,7 @@ class ConversationController extends Controller
         abort_if($request->user()->isMemberOfTenant($product->tenant_id), 403);
 
         $conversation = $this->findOrCreate(
-            ['buyer_id' => $request->user()->id, 'store_id' => $product->store_id],
+            ['buyer_id' => $request->user()->id, 'store_id' => Conversation::branchForProduct($product, $request->user())],
             [],
         );
 

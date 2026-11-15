@@ -162,6 +162,8 @@
             </div>
 
             <div class="sc-stack">
+                {{-- Setting up the pharmacy is head office's job; branch staff don't need the checklist. --}}
+                @if (auth()->user()->headOfficeTenant())
                 <section class="sc-card sc-card-pad" data-dashboard-section="setup" aria-labelledby="setup-heading">
                     <div class="flex items-baseline justify-between gap-3"><h2 id="setup-heading" class="sc-card-title">Store setup</h2><span class="sc-meta">{{ $completedSetupCount }} of {{ $setupItems->count() }} complete</span></div>
                     <div class="sc-progress mt-3" role="progressbar" aria-valuenow="{{ $completedSetupCount }}" aria-valuemin="0" aria-valuemax="{{ $setupItems->count() }}" aria-label="Store setup progress"><span style="width: {{ $completedSetupCount * 100 / max(1, $setupItems->count()) }}%"></span></div>
@@ -175,6 +177,7 @@
                         @endforeach
                     </ul>
                 </section>
+                @endif
 
                 <section class="sc-card" aria-labelledby="quick-actions-heading">
                     <div class="sc-card-head"><h2 id="quick-actions-heading" class="sc-card-title">Quick actions</h2></div>

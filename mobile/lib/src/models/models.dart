@@ -253,7 +253,6 @@ class DiscussionPage {
   final int lastPage;
 }
 
-
 class ReviewPage {
   const ReviewPage({
     required this.reviews,

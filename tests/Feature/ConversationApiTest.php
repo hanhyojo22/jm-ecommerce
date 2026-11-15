@@ -653,6 +653,26 @@ class ConversationApiTest extends TestCase
     /**
      * @return array{0: User, 1: User, 2: Conversation, 3: Store, 4: Product}
      */
+    public function test_a_product_question_goes_to_the_branch_the_buyer_is_shopping_from(): void
+    {
+        [$buyer, , , $firstBranch, $product] = $this->conversation();
+        $branch = fn (string $tenantId, string $name): Store => Store::create([
+            'tenant_id' => $tenantId, 'name' => $name, 'slug' => str($name)->slug().'-'.str()->lower(str()->random(6)),
+            'phone' => '+639171234567', 'address_line' => '1 Osmena Boulevard', 'city' => 'Cebu City', 'status' => 'active',
+        ]);
+        $cebu = $branch($product->tenant_id, 'Cebu Branch');
+        $rival = $branch(Tenant::create(['name' => 'Rival', 'slug' => 'rival-'.str()->lower(str()->random(6)), 'status' => 'active'])->id, 'Rival Branch');
+
+        $this->actingAs($buyer)->postJson('/api/v1/conversations/start', ['product_id' => $product->id, 'branch' => $rival->id])
+            ->assertOk()->assertJsonPath('data.store.id', $firstBranch->id);
+
+        $conversationId = $this->postJson('/api/v1/conversations/start', ['product_id' => $product->id, 'branch' => $cebu->id])
+            ->assertCreated()->assertJsonPath('data.store.id', $cebu->id)->json('data.id');
+        $this->postJson("/api/v1/conversations/{$conversationId}/messages", [
+            'body' => 'Do you have this in Cebu?', 'client_message_id' => (string) Str::uuid(), 'product_id' => $product->id,
+        ])->assertCreated()->assertJsonPath('data.context_snapshot.title', 'Chat Tote');
+    }
+
     private function conversation(): array
     {
         $buyer = User::factory()->create();

@@ -37,9 +37,10 @@ class CartItemResource extends JsonResource
                 'stock_quantity' => $this->product_variant_id === null ? $this->availableQuantity() : (int) $this->product->stock_quantity,
                 'has_variants' => $this->product->variants->isNotEmpty(),
                 'requires_prescription' => (bool) $this->product->requires_prescription,
+                // The branch the cart buys from, not the first branch the product row still points at.
                 'store' => [
-                    'name' => $this->product->store->name,
-                    'slug' => $this->product->store->slug,
+                    'name' => ($this->cart?->store ?? $this->product->store)->name,
+                    'slug' => ($this->cart?->store ?? $this->product->store)->slug,
                 ],
             ],
             'variant' => $this->when(

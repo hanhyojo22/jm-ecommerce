@@ -42,6 +42,8 @@
                 @if ($hasMoreMessages)<div class="mb-5 text-center"><button x-on:click="loadOlder()" x-bind:disabled="loadingOlder" type="button" class="inline-flex min-h-11 items-center rounded-md bg-white px-4 text-sm font-semibold text-ink shadow-sm transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-60">Load earlier messages</button><span x-show="loadingOlder" class="ml-2 text-xs text-muted" role="status">Loading messages…</span><p x-cloak x-show="historyError" x-text="historyError" class="mt-2 text-sm text-red-700" role="alert"></p></div>@endif
                 @php($previousDate = null)
                 @php($previousSenderId = null)
+                {{-- Staff see every colleague's reply on their own side, not just their own messages. --}}
+                @php($fromOurSide = fn ($message): bool => ($message->sender_id === $conversation->buyer_id) === ($conversation->buyer_id === auth()->id()))
                 @forelse ($messages as $message)
                     <div wire:key="message-date-{{ $message->id }}" data-chat-date-separator data-chat-date="{{ $message->created_at->toIso8601String() }}" class="{{ $previousDate?->toDateString() === $message->created_at->toDateString() ? 'hidden ' : '' }}my-6 flex items-center gap-3"><span class="h-px flex-1 bg-line"></span><span data-chat-date-label class="shrink-0 rounded-full border border-line bg-white px-3 py-1 text-xs font-semibold text-muted shadow-sm">{{ $message->created_at->isToday() ? 'Today' : ($message->created_at->isYesterday() ? 'Yesterday' : $message->created_at->format('F j, Y')) }}</span><span class="h-px flex-1 bg-line"></span></div>
                     <article wire:key="message-{{ $message->id }}" id="message-{{ $message->id }}" data-client-message-id="{{ $message->client_message_id }}" x-data="{ menuOpen: false, menuUp: true, reporting: false }" class="group mb-1 scroll-mt-4">
@@ -50,7 +52,7 @@
                             || $nextMessage->sender_id !== $message->sender_id
                             || ! $nextMessage->created_at->isSameMinute($message->created_at))
                         @if ($message->context_snapshot)
-                            <div class="flex {{ $message->sender_id === auth()->id() ? 'justify-end' : 'justify-start' }} {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
+                            <div class="flex {{ $fromOurSide($message) ? 'justify-end' : 'justify-start' }} {{ $message->sender_id === $previousSenderId ? '' : 'mt-4' }}">
                                 <div class="min-w-0 w-[85%] sm:w-[72%] lg:w-[36rem]">
                                     @if ($message->context_snapshot['type'] === 'product')
                                         <a @if (filled($message->context_snapshot['slug'] ?? null)) href="{{ route('catalog.show', [$message->context_snapshot['store_slug'] ?? $conversation->store->slug, $message->context_snapshot['slug']]) }}" @endif class="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3 transition hover:bg-blue-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
@@ -67,7 +69,7 @@
                                         @php($firstItem = $orderItems[0] ?? null)
                                         @php($firstImage = $firstItem['image_path'] ?? $orderSnapshot['image_path'] ?? null)
                                         @php($orderStatusStyles = ['pending' => 'bg-warning/10 text-warning-text ring-warning/20', 'confirmed' => 'bg-brand/10 text-brand-hover ring-brand/20', 'processing' => 'bg-brand/10 text-brand-hover ring-brand/20', 'shipped' => 'bg-brand/10 text-brand-hover ring-brand/20', 'delivered' => 'bg-success/10 text-success ring-success/20', 'cancelled' => 'bg-danger/10 text-danger-text ring-danger/20'])
-                                        <a @if (filled($orderSnapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $orderSnapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif data-chat-order-card class="{{ $message->sender_id === auth()->id() ? 'ml-auto ' : '' }}flex max-w-sm gap-3 rounded-lg border border-line bg-white p-2 transition hover:border-brand/40 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+                                        <a @if (filled($orderSnapshot['order_id'] ?? null)) href="{{ $isBuyerMessages ? route('orders.show', $orderSnapshot['order_id']) : route('seller.orders.show', $message->seller_order_id) }}" @endif data-chat-order-card class="{{ $fromOurSide($message) ? 'ml-auto ' : '' }}flex max-w-sm gap-3 rounded-lg border border-line bg-white p-2 transition hover:border-brand/40 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
                                             <span class="relative size-24 shrink-0 overflow-hidden rounded-md bg-slate-100">
                                                 @if (filled($firstImage))
                                                     <img src="{{ Storage::disk('product_images')->url($firstImage) }}" alt="" loading="lazy" class="size-full object-cover">
@@ -101,8 +103,8 @@
                                 </div>
                             </div>
                         @endif
-                        <div class="{{ $message->sender_id === auth()->id() ? 'flex justify-end' : 'flex items-end gap-2' }} {{ $message->context_snapshot ? 'mt-2' : ($message->sender_id === $previousSenderId ? '' : 'mt-4') }}">
-                            @if ($message->sender_id !== auth()->id())
+                        <div class="{{ $fromOurSide($message) ? 'flex justify-end' : 'flex items-end gap-2' }} {{ $message->context_snapshot ? 'mt-2' : ($message->sender_id === $previousSenderId ? '' : 'mt-4') }}">
+                            @if (! $fromOurSide($message))
                                 <span class="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-white text-xs font-semibold leading-none text-brand-hover shadow-sm {{ $endsRun ? '' : 'invisible' }}" aria-hidden="true">
                                     @if ($isBuyerMessages && $conversation->store->logo_path)
                                         <img src="{{ Storage::disk('public')->url($conversation->store->logo_path) }}" alt="" class="block size-full object-cover object-center">
@@ -118,8 +120,8 @@
                                 @if ($message->replyTo)
                                     @php($quote = $message->replyTo->quote())
                                     @php($otherName = $isBuyerMessages ? $conversation->store->name : $conversation->buyer->name)
-                                    <div class="flex flex-col {{ $message->sender_id === auth()->id() ? 'items-end' : 'items-start' }}">
-                                        <p class="mb-1 flex items-center gap-1 px-1 text-xs text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>{{ $message->sender_id === auth()->id() ? 'You' : $otherName }} replied to {{ $quote['sender_id'] === auth()->id() ? ($message->sender_id === auth()->id() ? 'yourself' : 'you') : ($quote['sender_id'] === $message->sender_id ? 'themselves' : $otherName) }}</p>
+                                    <div class="flex flex-col {{ $fromOurSide($message) ? 'items-end' : 'items-start' }}">
+                                        <p class="mb-1 flex items-center gap-1 px-1 text-xs text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>{{ $fromOurSide($message) ? 'You' : $otherName }} replied to {{ $quote['sender_id'] === auth()->id() ? ($fromOurSide($message) ? 'yourself' : 'you') : ($quote['sender_id'] === $message->sender_id ? 'themselves' : $otherName) }}</p>
                                         <a href="#message-{{ $quote['id'] }}" data-reply-quote class="-mb-2 block max-w-full min-w-0 rounded-lg bg-slate-100 px-4 pb-4 pt-2 text-sm leading-5 text-muted transition hover:bg-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
                                             @if ($quote['context_label'])<span class="block truncate font-medium text-ink/70">{{ $quote['context_label'] }}</span>@endif
                                             @if ($quote['body'] !== '')<span class="line-clamp-2 break-words">{{ $quote['body'] }}</span>@endif
@@ -127,8 +129,8 @@
                                     </div>
                                 @endif
                                 {{-- Messenger-style: actions sit beside the bubble and reveal on hover. --}}
-                                <div class="relative flex min-w-0 items-center gap-1 {{ $message->sender_id === auth()->id() ? 'flex-row-reverse' : '' }}">
-                                <div class="chat-message-bubble min-w-0 w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $usesFlushAttachmentLayout ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $message->sender_id === auth()->id() ? 'rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
+                                <div class="relative flex min-w-0 items-center gap-1 {{ $fromOurSide($message) ? 'flex-row-reverse' : '' }}">
+                                <div class="chat-message-bubble min-w-0 w-fit max-w-full rounded-lg border text-sm leading-[1.6] {{ $usesFlushAttachmentLayout ? 'overflow-hidden p-0' : 'px-4 py-3' }} {{ $fromOurSide($message) ? 'rounded-br-[6px] border-brand bg-brand text-white' : 'rounded-bl-[6px] border-line bg-white text-ink' }}">
                                 @if ($message->type === 'file' && $message->attachments->isNotEmpty())
                                     @if ($isImageAttachment)
                                         <a href="{{ route('messages.attachments.show', $attachment) }}" target="_blank" rel="noopener" x-on:click="openChatImage($event, @js(route('messages.attachments.show', $attachment)), @js($attachment->original_name))" aria-label="Open {{ $attachment->original_name }} in a larger view" class="block cursor-zoom-in overflow-hidden">
@@ -137,7 +139,7 @@
                                     @else
                                         <div class="w-64 max-w-full min-w-0 bg-white p-3 text-ink {{ $usesFlushAttachmentLayout ? '' : 'rounded-lg border border-line' }}">
                                             <div class="flex min-w-0 items-center gap-3">
-                                            <span class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $message->sender_id === auth()->id() ? 'bg-brand text-white' : 'bg-slate-100 text-muted' }}" aria-hidden="true">
+                                            <span class="flex size-10 shrink-0 items-center justify-center rounded-lg {{ $fromOurSide($message) ? 'bg-brand text-white' : 'bg-slate-100 text-muted' }}" aria-hidden="true">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 3.75h6l5 5v11.5H7a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13 4v5h5M8.5 14h7M8.5 17h5"/></svg>
                                             </span>
                                             <span class="min-w-0 flex-1"><span class="block truncate text-sm font-semibold">{{ $attachment->original_name }}</span><span class="mt-0.5 block text-xs text-muted">PDF · {{ $attachment->byte_size < 1024 ? $attachment->byte_size.' B' : number_format($attachment->byte_size / 1024, 1).' KB' }}</span></span>
@@ -152,13 +154,13 @@
                                     <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{{ $message->body }}</p>
                                 @endif
                                 </div>
-                                @if ($canSend || $message->sender_id !== auth()->id() || $isImageAttachment)
+                                @if ($canSend || ! $fromOurSide($message) || $isImageAttachment)
                                     <div class="relative shrink-0" x-on:click.outside="menuOpen = false" x-on:keydown.escape="menuOpen = false">
                                         <button type="button" x-on:click="menuUp = $el.getBoundingClientRect().top > 200; menuOpen = ! menuOpen" x-bind:aria-expanded="menuOpen" aria-haspopup="menu" aria-label="Message actions" x-bind:class="menuOpen && 'bg-line text-ink sm:opacity-100'" class="grid size-8 place-items-center rounded-full text-muted transition hover:bg-line hover:text-ink focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand sm:opacity-0 sm:group-hover:opacity-100"><svg viewBox="0 0 24 24" fill="currentColor" class="size-4" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg></button>
-                                        <div x-cloak x-show="menuOpen" x-transition.opacity.duration.100ms role="menu" x-bind:class="menuUp ? 'bottom-full mb-1' : 'top-full mt-1'" class="absolute z-30 w-44 rounded-xl border border-line bg-white p-1.5 shadow-lg {{ $message->sender_id === auth()->id() ? 'right-0' : 'left-0' }}">
+                                        <div x-cloak x-show="menuOpen" x-transition.opacity.duration.100ms role="menu" x-bind:class="menuUp ? 'bottom-full mb-1' : 'top-full mt-1'" class="absolute z-30 w-44 rounded-xl border border-line bg-white p-1.5 shadow-lg {{ $fromOurSide($message) ? 'right-0' : 'left-0' }}">
                                             @if ($canSend)<button type="button" role="menuitem" wire:click="replyTo(@js($message->id))" x-on:click="menuOpen = false; $nextTick(() => document.getElementById('message-body')?.focus())" class="flex min-h-10 w-full items-center gap-2.5 rounded-md px-3 text-left text-sm font-medium text-ink transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-4 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Reply</button>@endif
                                             @if ($isImageAttachment)<a href="{{ route('messages.attachments.show', $attachment) }}" download="{{ $attachment->original_name }}" role="menuitem" x-on:click="menuOpen = false" class="flex min-h-10 w-full items-center gap-2.5 rounded-md px-3 text-left text-sm font-medium text-ink transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-4 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></svg>Save image</a>@endif
-                                            @if ($message->sender_id !== auth()->id())<button type="button" role="menuitem" x-on:click="menuOpen = false; reporting = true; $nextTick(() => $refs.reportForm.scrollIntoView({ block: 'nearest' }))" class="flex min-h-10 w-full items-center gap-2.5 rounded-md px-3 text-left text-sm font-medium text-rose-700 transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-4 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 21V4m0 1c4-3 7 3 14 0v11c-7 3-10-3-14 0"/></svg>Report</button>@endif
+                                            @if (! $fromOurSide($message))<button type="button" role="menuitem" x-on:click="menuOpen = false; reporting = true; $nextTick(() => $refs.reportForm.scrollIntoView({ block: 'nearest' }))" class="flex min-h-10 w-full items-center gap-2.5 rounded-md px-3 text-left text-sm font-medium text-rose-700 transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rose-700"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="size-4 shrink-0" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 21V4m0 1c4-3 7 3 14 0v11c-7 3-10-3-14 0"/></svg>Report</button>@endif
                                         </div>
                                     </div>
                                 @endif
@@ -166,14 +168,14 @@
                             </div>
                         </div>
                         @if ($endsRun)
-                            <div class="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted {{ $message->sender_id === auth()->id() ? 'justify-end px-1' : 'justify-start pl-11 pr-1' }}">
+                            <div class="mt-1 flex items-center gap-1.5 text-xs font-medium text-muted {{ $fromOurSide($message) ? 'justify-end px-1' : 'justify-start pl-11 pr-1' }}">
                                 <time datetime="{{ $message->created_at->toIso8601String() }}" data-chat-local-time>{{ $message->created_at->format('g:i A') }}</time>
                                 @if ($message->id === $lastOutgoing?->id)
                                     <span aria-hidden="true">·</span><span>{{ $receipt }}</span>
                                 @endif
                             </div>
                         @endif
-                        @if ($message->sender_id !== auth()->id())
+                        @if (! $fromOurSide($message))
                             <form x-cloak x-show="reporting" x-ref="reportForm" method="POST" action="{{ route('messages.report', [$conversation, $message]) }}" class="ml-11 mt-2 w-64 max-w-[calc(100%-2.75rem)] space-y-2 rounded-lg border border-line bg-white p-3 shadow-sm">@csrf<p class="text-sm font-semibold text-ink">Report message</p><select name="reason" required aria-label="Report reason" class="min-h-10 w-full rounded-lg border-line text-sm"><option value="Spam">Spam</option><option value="Abuse">Abusive content</option><option value="Other">Other</option></select><textarea name="details" maxlength="1000" rows="2" aria-label="Report details" class="block w-full rounded-lg border-line text-sm"></textarea><div class="flex gap-2"><button class="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand px-3 text-sm font-semibold text-white transition hover:bg-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Submit report</button><button type="button" x-on:click="reporting = false" class="inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cancel</button></div></form>
                         @endif
                     </article>

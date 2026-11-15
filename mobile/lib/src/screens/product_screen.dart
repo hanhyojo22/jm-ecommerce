@@ -348,9 +348,10 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     setState(() => _chatting = true);
 
     try {
+      final branch = await ref.read(activeBranchIdProvider.future);
       final conversation = await ref
           .read(apiClientProvider)
-          .startConversation(productId: product.id);
+          .startConversation(productId: product.id, branch: branch);
 
       if (mounted) {
         context.push(

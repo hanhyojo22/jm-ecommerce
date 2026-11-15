@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,14 +50,25 @@ class _AppShellState extends ConsumerState<AppShell>
     'Account',
   ];
 
+  /// Keeps the Messages badge current when no push arrives (push off, or not yet delivered).
+  static const _unreadRefreshInterval = Duration(seconds: 30);
+  Timer? _unreadRefresh;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _unreadRefresh = Timer.periodic(_unreadRefreshInterval, (_) {
+      // Only while the app is on screen; a backgrounded app catches up on resume.
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        ref.invalidate(conversationsProvider);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _unreadRefresh?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -158,8 +171,12 @@ class _AppShellState extends ConsumerState<AppShell>
             child: NavigationBar(
               selectedIndex: index,
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              onDestinationSelected: (value) =>
-                  ref.read(shellTabProvider.notifier).select(value),
+              onDestinationSelected: (value) {
+                if (value == 2) {
+                  ref.invalidate(conversationsProvider);
+                }
+                ref.read(shellTabProvider.notifier).select(value);
+              },
               destinations: [
                 NavigationDestination(
                   icon: const Icon(PhosphorIconsBold.storefront),

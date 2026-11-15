@@ -27,7 +27,8 @@ class ConversationContext
         }
         if ($productId !== null) {
             $product = Product::query()->with(['store.tenant', 'thumbnail'])->findOrFail($productId);
-            abort_unless($product->store_id === $conversation->store_id && $product->status === 'active' && $product->store->status === 'active' && $product->store->tenant->status === 'active', 404);
+            // Products belong to the company, so any of its branches may be asked about them.
+            abort_unless($product->tenant_id === $conversation->store()->value('tenant_id') && $product->status === 'active' && $product->store->status === 'active' && $product->store->tenant->status === 'active', 404);
 
             $imagePath = $product->thumbnail?->path;
             if ($preserveImage && $imagePath !== null && Storage::disk('product_images')->exists($imagePath)) {

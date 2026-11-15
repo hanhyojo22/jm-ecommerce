@@ -23,12 +23,12 @@ void main() {
     final api = _CatalogApi();
     await _pumpCatalog(tester, api);
     final requests = api.firstPageRequests;
-    expect(find.text('Search products'), findsOneWidget);
+    expect(find.text('Search medicines'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
 
-    expect(find.text('Search electronics'), findsOneWidget);
+    expect(find.text('Search generic or brand name'), findsOneWidget);
     expect(api.firstPageRequests, requests);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
@@ -43,8 +43,8 @@ void main() {
     await _pumpCatalog(tester, _CatalogApi());
     await tester.tap(find.byType(TextField));
     await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Search electronics'), findsNothing);
-    expect(find.text('Search products'), findsOneWidget);
+    expect(find.text('Search generic or brand name'), findsNothing);
+    expect(find.text('Search medicines'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), 'linen');
     await tester.pump(const Duration(seconds: 4));
@@ -57,7 +57,7 @@ void main() {
     tester.widget<TextField>(find.byType(TextField)).focusNode!.unfocus();
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Search electronics'), findsNothing);
+    expect(find.text('Search generic or brand name'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -66,8 +66,8 @@ void main() {
   ) async {
     await _pumpCatalog(tester, _CatalogApi(), disableAnimations: true);
     await tester.pump(const Duration(seconds: 10));
-    expect(find.text('Search products'), findsOneWidget);
-    expect(find.text('Search electronics'), findsNothing);
+    expect(find.text('Search medicines'), findsOneWidget);
+    expect(find.text('Search generic or brand name'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -121,10 +121,7 @@ void main() {
       find.byType(CustomScrollView),
     );
     expect(scroll.controller!.offset, 0);
-    expect(
-      find.text('Good finds.\nCloser to home.').hitTestable(),
-      findsOneWidget,
-    );
+    expect(find.text(_campaignTitle).hitTestable(), findsOneWidget);
   });
 
   testWidgets('a new filter does not display products from the previous feed', (
@@ -367,7 +364,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.lastQuery, isEmpty);
-    expect(find.text('Good finds.\nCloser to home.'), findsOneWidget);
+    expect(find.text(_campaignTitle), findsOneWidget);
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       isEmpty,
@@ -383,13 +380,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.lastCategory, 'home-living');
-    expect(find.text('Good finds.\nCloser to home.'), findsNothing);
+    expect(find.text(_campaignTitle), findsNothing);
     expect(find.text('Home & living'), findsNWidgets(2));
 
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
     expect(api.lastCategory, isNull);
-    expect(find.text('Good finds.\nCloser to home.'), findsOneWidget);
+    expect(find.text(_campaignTitle), findsOneWidget);
   });
 
   testWidgets('search stays visible while browsing the product feed', (
@@ -428,7 +425,7 @@ void main() {
   ) async {
     await _pumpCatalog(tester, _CatalogApi());
     final before = tester.getTopLeft(find.text('Popular products')).dy;
-    await tester.tap(find.text('Explore products'));
+    await tester.tap(find.text('Shop medicines'));
     await tester.pumpAndSettle();
 
     expect(
@@ -876,4 +873,4 @@ class _CatalogApi extends ApiClient {
   }
 }
 
-const _campaignTitle = 'Good finds.\nCloser to home.';
+const _campaignTitle = 'Your medicines,\nfrom your branch.';

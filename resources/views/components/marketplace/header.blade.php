@@ -403,7 +403,7 @@
                 <x-marketplace.seller-nav-links mode="mobile" />
                 <div class="space-y-1 border-t border-line p-4">
                     @if ($sellerTenant)
-                        <a href="{{ route('catalog.store', $sellerTenant->slug) }}" @click="closeDrawer" class="workspace-nav-link">View storefront</a>
+                        <a href="{{ route('home') }}" @click="closeDrawer" class="workspace-nav-link">View website</a>
                     @endif
                     <a href="{{ route('profile.edit') }}" @click="closeDrawer" class="workspace-nav-link">Account</a>
                     <button type="button" data-clerk-sign-out @click="closeDrawer" class="workspace-nav-link w-full text-left">Sign out</button>

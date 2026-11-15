@@ -271,7 +271,7 @@ class Thread extends Component
         $headerContextLabel = match ($headerContextType) {
             'product' => 'Product inquiry',
             'order' => 'Order conversation',
-            default => 'Marketplace chat',
+            default => 'Pharmacy chat',
         };
 
         return view('livewire.chat.thread', [

@@ -367,6 +367,7 @@ class _OrderApi extends ApiClient {
   Future<Conversation> startConversation({
     String? productId,
     String? sellerOrderId,
+    String? branch,
   }) {
     chats++;
     return pendingChat!.future;

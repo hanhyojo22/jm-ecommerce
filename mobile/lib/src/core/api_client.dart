@@ -226,7 +226,6 @@ class ApiClient {
     );
   }
 
-
   Future<DiscussionPage> productDiscussions({
     required String store,
     required String product,
@@ -485,14 +484,20 @@ class ApiClient {
   Future<Conversation> conversation(String id) async =>
       Conversation.fromJson(mapOf(await _data('GET', '/conversations/$id')));
 
+  /// [branch] sends a product question to the branch the customer is shopping from.
   Future<Conversation> startConversation({
     String? productId,
     String? sellerOrderId,
+    String? branch,
   }) async {
     final data = await _data(
       'POST',
       '/conversations/start',
-      data: {'product_id': ?productId, 'seller_order_id': ?sellerOrderId},
+      data: {
+        'product_id': ?productId,
+        'seller_order_id': ?sellerOrderId,
+        'branch': ?branch,
+      },
     );
 
     return Conversation.fromJson(mapOf(data));

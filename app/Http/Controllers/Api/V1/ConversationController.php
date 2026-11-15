@@ -90,6 +90,7 @@ class ConversationController extends Controller
         $data = $request->validate([
             'product_id' => ['nullable', 'ulid', 'required_without:seller_order_id', 'prohibits:seller_order_id'],
             'seller_order_id' => ['nullable', 'ulid', 'required_without:product_id'],
+            'branch' => ['nullable', 'ulid'],
         ]);
 
         $user = $request->user();
@@ -105,7 +106,7 @@ class ConversationController extends Controller
             abort_if($user->isMemberOfTenant($product->tenant_id), 403);
 
             $conversation = Conversation::query()->createOrFirst(
-                ['buyer_id' => $user->id, 'store_id' => $product->store_id],
+                ['buyer_id' => $user->id, 'store_id' => Conversation::branchForProduct($product, $user, $data['branch'] ?? null)],
                 [],
             );
         } else {

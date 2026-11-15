@@ -113,7 +113,7 @@
 
                                 @foreach ($itemsByStore as $storeId => $storeItems)
                                     @php
-                                        $store = $storeItems->first()->product->store;
+                                        $store = $cart->store ?? $storeItems->first()->product->store;
                                         $storeSelectable = $storeItems->filter(fn ($item) => $item->isAvailable());
                                         $storeAllSelected = $storeSelectable->isNotEmpty()
                                             && $storeSelectable->where('selected', true)->count() === $storeSelectable->count();

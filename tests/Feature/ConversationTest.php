@@ -851,6 +851,34 @@ class ConversationTest extends TestCase
         $this->assertTrue(Gate::forUser($branchStaff)->allows('send', $conversation));
     }
 
+    public function test_branch_staff_can_narrow_the_inbox_to_their_branch_and_see_colleagues_replies_on_their_side(): void
+    {
+        $product = $this->product();
+        $cebu = Store::create([
+            'tenant_id' => $product->tenant_id, 'name' => 'Cebu branch', 'slug' => 'cebu-'.str()->lower(str()->random(8)),
+            'phone' => '+639171234567', 'address_line' => '1 Osmena Boulevard', 'city' => 'Cebu City', 'status' => 'active',
+        ]);
+        $buyer = User::factory()->create();
+        $headOffice = User::factory()->seller()->create(['name' => 'Head Office Reply']);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $headOffice->id, 'role' => 'owner']);
+        $cebuStaff = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'store_id' => $cebu->id, 'user_id' => $cebuStaff->id, 'role' => 'manager']);
+
+        $cebuChat = Conversation::create(['buyer_id' => $buyer->id, 'store_id' => $cebu->id]);
+        $cebuChat->messages()->create(['sender_id' => $buyer->id, 'type' => 'text', 'body' => 'Question for Cebu']);
+        $cebuChat->messages()->create(['sender_id' => $headOffice->id, 'type' => 'text', 'body' => 'Answer from head office']);
+        $otherChat = Conversation::create(['buyer_id' => User::factory()->create()->id, 'store_id' => $product->store_id]);
+        $otherChat->messages()->create(['sender_id' => $otherChat->buyer_id, 'type' => 'text', 'body' => 'Question for the first branch']);
+
+        $this->actingAs($cebuStaff)->get(route('messages.index', ['filter' => 'branch']))
+            ->assertOk()->assertSee('My branch')
+            ->assertSee(route('messages.show', $cebuChat), false)
+            ->assertDontSee(route('messages.show', $otherChat), false);
+
+        $this->actingAs($cebuStaff)->get(route('messages.show', $cebuChat))->assertOk()
+            ->assertSeeInOrder(['border-brand bg-brand text-white', 'Answer from head office'], false);
+    }
+
     public function test_message_rejects_context_from_another_store(): void
     {
         $buyer = User::factory()->create();

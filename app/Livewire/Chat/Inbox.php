@@ -50,6 +50,8 @@ class Inbox extends Component
     {
         $user = auth()->user();
         abort_unless($user?->can('viewAny', Conversation::class), 403);
+        // Branch staff can narrow the company inbox to the chats addressed to their own branch.
+        $myBranchId = $user->account_type === 'seller' ? $user->sellerMembership()?->store_id : null;
 
         $conversations = Conversation::query()
             ->with([
@@ -68,6 +70,7 @@ class Inbox extends Component
             ->when($this->filter === 'product', fn ($query) => $query->whereHas('messages', fn ($messages) => $messages->where('context_snapshot->type', 'product')))
             ->when($this->filter === 'order', fn ($query) => $query->whereHas('messages', fn ($messages) => $messages->where('context_snapshot->type', 'order')))
             ->when($this->filter === 'unread', fn ($query) => $query->unreadFor($user))
+            ->when($this->filter === 'branch' && $myBranchId !== null, fn ($query) => $query->where('store_id', $myBranchId))
             ->when(filled($this->search), function ($query): void {
                 $term = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($this->search))).'%';
                 $needle = trim($this->search);
@@ -85,6 +88,6 @@ class Inbox extends Component
             ->orderByDesc('id')
             ->simplePaginate(20);
 
-        return view('livewire.chat.inbox', compact('conversations'));
+        return view('livewire.chat.inbox', compact('conversations', 'myBranchId'));
     }
 }

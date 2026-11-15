@@ -314,7 +314,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               ),
               Expanded(
                 child: Semantics(
-                  label: 'Search products',
+                  label: 'Search medicines',
                   child: TextField(
                     controller: _searchController,
                     focusNode: _searchFocus,
@@ -337,7 +337,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                         child: ExcludeSemantics(
                           child: !hasText && !hasFocus
                               ? const _ScrollingSearchPlaceholder()
-                              : const Text('Search products'),
+                              : const Text('Search medicines'),
                         ),
                       ),
                       filled: false,
@@ -900,10 +900,10 @@ class _ScrollingSearchPlaceholder extends StatefulWidget {
 class _ScrollingSearchPlaceholderState
     extends State<_ScrollingSearchPlaceholder> {
   static const _hints = [
-    'Search products',
-    'Search electronics',
-    'Search fashion',
-    'Search home essentials',
+    'Search medicines',
+    'Search generic or brand name',
+    'Search vitamins',
+    'Search first aid',
   ];
   Timer? _timer;
   int _index = 0;
@@ -1498,11 +1498,13 @@ class _CampaignCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/home/collection.jpg',
-            fit: BoxFit.cover,
-            alignment: Alignment.centerRight,
-            excludeFromSemantics: true,
+          Align(
+            alignment: const Alignment(1.15, 0),
+            child: Icon(
+              Icons.local_pharmacy_rounded,
+              size: 190,
+              color: scheme.onPrimary.withValues(alpha: 0.9),
+            ),
           ),
           DecoratedBox(
             decoration: BoxDecoration(
@@ -1528,7 +1530,7 @@ class _CampaignCard extends StatelessWidget {
                 Semantics(
                   header: true,
                   child: Text(
-                    'Good finds.\nCloser to home.',
+                    'Your medicines,\nfrom your branch.',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleLarge?.copyWith(
@@ -1546,7 +1548,7 @@ class _CampaignCard extends StatelessWidget {
                   iconAlignment: IconAlignment.end,
                   icon: const Icon(Icons.arrow_forward_rounded, size: 16),
                   label: const Text(
-                    'Explore products',
+                    'Shop medicines',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

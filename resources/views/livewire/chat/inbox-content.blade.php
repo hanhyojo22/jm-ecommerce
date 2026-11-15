@@ -8,7 +8,7 @@
             <input wire:model.live.debounce.300ms="search" id="conversation-search" type="search" placeholder="Search conversations" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
         </label>
         <div class="mt-3 flex gap-1 overflow-x-auto" role="group" aria-label="Conversation filters">
-            @foreach (['all' => 'All', 'unread' => 'Unread', 'product' => 'Products', 'order' => 'Orders'] as $value => $label)
+            @foreach (['all' => 'All', ...($myBranchId ?? null ? ['branch' => 'My branch'] : []), 'unread' => 'Unread', 'product' => 'Products', 'order' => 'Orders'] as $value => $label)
                 <button wire:key="filter-{{ $value }}" wire:click="$set('filter', '{{ $value }}')" type="button" class="min-h-11 shrink-0 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand {{ $filter === $value ? 'bg-blue-50 text-brand-hover' : 'text-muted hover:bg-canvas hover:text-ink' }}" aria-pressed="{{ $filter === $value ? 'true' : 'false' }}">{{ $label }}</button>
             @endforeach
         </div>
@@ -30,7 +30,7 @@
             @php($context = match ($latest?->context_snapshot['type'] ?? null) {
                 'product' => 'Product · '.($latest->context_snapshot['title'] ?? 'Product'),
                 'order' => 'Order · #'.($latest->context_snapshot['number'] ?? ''),
-                default => 'Marketplace chat',
+                default => 'Pharmacy chat',
             })
             <a wire:key="conversation-{{ $conversation->id }}" data-presence-conversation="{{ $conversation->id }}" href="{{ route('messages.show', $conversation) }}" @if ($activeConversationId === $conversation->id) aria-current="page" @endif class="group flex min-w-0 items-start gap-3 px-4 py-3.5 transition hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand sm:px-5 {{ $activeConversationId === $conversation->id ? 'bg-blue-50/70' : ($isUnread ? 'bg-blue-50/40' : '') }}">
                 <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-line bg-blue-50 text-sm font-semibold leading-none text-brand-hover" aria-hidden="true">

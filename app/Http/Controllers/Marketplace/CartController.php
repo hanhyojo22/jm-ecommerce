@@ -21,8 +21,8 @@ class CartController extends Controller
     public function index(Request $request): View
     {
         $cart = $request->user()->cart()->with([
-            'store:id,tenant_id,name,status',
-            'items.cart.store:id,tenant_id,name,status',
+            'store:id,tenant_id,name,slug,status',
+            'items.cart.store:id,tenant_id,name,slug,status',
             'items.product:id,tenant_id,store_id,name,slug,price,stock_quantity,status',
             'items.product.store:id,name,slug,status',
             'items.product.tenant:id,status',

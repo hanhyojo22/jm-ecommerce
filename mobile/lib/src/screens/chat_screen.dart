@@ -493,7 +493,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final headerContextLabel = switch (headerContextType) {
       'product' => 'Product inquiry',
       'order' => 'Order conversation',
-      _ => 'Marketplace chat',
+      _ => 'Pharmacy chat',
     };
 
     ref.listen<AsyncValue<List<ChatMessage>>>(
