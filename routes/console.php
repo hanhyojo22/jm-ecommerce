@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\MakeSuperAdministrator;
+use App\Actions\SetUpPharmacyCompany;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\Cart;
 use App\Models\Payment;
@@ -17,6 +19,34 @@ use Illuminate\Support\Facades\Storage;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Artisan::command('pharmacy:setup {company : The pharmacy company name} {owner : The owner\'s sign-in email}', function (SetUpPharmacyCompany $setUp): int {
+    try {
+        $tenant = $setUp->handle($this->argument('company'), $this->argument('owner'));
+    } catch (LogicException $exception) {
+        $this->error($exception->getMessage());
+
+        return 1;
+    }
+
+    $this->info("Created {$tenant->name}. Sign in with {$this->argument('owner')}, then add branches in Seller Center → Branches.");
+
+    return 0;
+})->purpose('Create the pharmacy company and its head-office owner (run once on a new server)');
+
+Artisan::command('admin:super {email : The super admin\'s sign-in email}', function (MakeSuperAdministrator $makeSuperAdministrator): int {
+    try {
+        $makeSuperAdministrator->handle($this->argument('email'));
+    } catch (LogicException $exception) {
+        $this->error($exception->getMessage());
+
+        return 1;
+    }
+
+    $this->info("{$this->argument('email')} is now a super admin. Sign in with that email to open the admin workspace.");
+
+    return 0;
+})->purpose('Create or promote a super admin who signs in with this email');
 
 Artisan::command('returns:remind', function (GmailOrderMailer $mailer): void {
     $cases = ReturnCase::query()->overdue()
