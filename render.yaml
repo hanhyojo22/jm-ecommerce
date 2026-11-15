@@ -493,3 +493,71 @@ services:
         value: stderr
       - key: LOG_LEVEL
         value: warning
+
+  # ----------------------------------------------------------------------
+  # Pharmacy test server — deploys from new-direction, its own database.
+  # Set RUN_SEEDERS to "false" after the first deploy: re-seeding resets branch stock.
+  # ----------------------------------------------------------------------
+  - type: web
+    name: jmmart-pharmacy-staging
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: new-direction
+    autoDeployTrigger: commit
+    healthCheckPath: /up
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: TRUSTED_PROXIES
+        value: "*"
+      - key: APP_NAME
+        value: JMMart Rx Staging
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        fromService:
+          name: jmmart-pharmacy-staging
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: APP_KEY
+        sync: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_URL
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: CACHE_STORE
+        value: database
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: RUN_MIGRATIONS
+        value: "true"
+      - key: RUN_SEEDERS
+        value: "true"
+      - key: QUEUE_CONNECTION
+        value: deferred
+      - key: BROADCAST_CONNECTION
+        value: log
+      - key: FILESYSTEM_DISK
+        value: public
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_AUTHORIZED_PARTIES
+        fromService:
+          name: jmmart-pharmacy-staging
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+      - key: MAIL_MAILER
+        value: log
