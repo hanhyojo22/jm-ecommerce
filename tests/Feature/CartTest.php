@@ -283,6 +283,20 @@ class CartTest extends TestCase
         ]), fn (Product $product) => $this->stock($product, (int) (5)));
     }
 
+    public function test_an_empty_cart_left_on_another_companys_branch_moves_to_the_products_branch(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->product();
+        $otherTenant = Tenant::create(['name' => 'Southwind', 'slug' => 'southwind', 'status' => 'active']);
+        $otherBranch = Store::create(['tenant_id' => $otherTenant->id, 'name' => 'Southwind', 'slug' => 'southwind', 'phone' => '+639171234567', 'address_line' => '1 Main Street', 'city' => 'Cebu', 'status' => 'active']);
+        $buyer->cart()->create(['store_id' => $otherBranch->id]);
+
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])->assertSessionHasNoErrors();
+
+        $this->assertSame($product->store_id, $buyer->cart->refresh()->store_id);
+        $this->assertSame(1, $buyer->cart->items()->count());
+    }
+
     public function test_adding_a_product_again_ticks_an_item_the_buyer_had_unticked(): void
     {
         $buyer = User::factory()->create();
