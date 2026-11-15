@@ -135,7 +135,7 @@ class ProductController extends Controller
                     'action' => 'product.created',
                     'entity_type' => Product::class,
                     'entity_id' => $product->id,
-                    'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
+                    'new_values' => $product->only(['name', 'generic_name', 'strength', 'requires_prescription', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
                     'ip_address' => $request->ip(),
                 ]);
 
@@ -206,7 +206,7 @@ class ProductController extends Controller
                     throw ValidationException::withMessages(['status' => 'A published listing needs a category, description, and product photo.']);
                 }
 
-                $oldValues = $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
+                $oldValues = $product->only(['name', 'generic_name', 'strength', 'requires_prescription', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']);
                 $sharedPhotoOrder = $product->images()->whereNull('color')->pluck('id')->all();
                 $data['status'] = in_array($product->status, ['active', 'unlisted', 'inactive'], true) ? $product->status : 'draft';
                 $product->fill($data);
@@ -256,7 +256,7 @@ class ProductController extends Controller
                     'entity_type' => Product::class,
                     'entity_id' => $product->id,
                     'old_values' => $oldValues,
-                    'new_values' => $product->only(['name', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
+                    'new_values' => $product->only(['name', 'generic_name', 'strength', 'requires_prescription', 'sku', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status']),
                     'ip_address' => $request->ip(),
                 ]);
             });

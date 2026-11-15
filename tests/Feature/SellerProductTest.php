@@ -34,6 +34,26 @@ class SellerProductTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $owner->id, 'action' => 'product.created']);
     }
 
+    public function test_head_office_saves_medicine_details_and_can_clear_the_prescription_flag(): void
+    {
+        [$owner, $tenant] = $this->seller();
+
+        $this->actingAs($owner)->post(route('seller.products.store'), [
+            'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0,
+            'generic_name' => 'Paracetamol', 'dosage_form' => 'Tablet', 'strength' => '500 mg', 'manufacturer' => 'Unilab',
+            'requires_prescription' => '1',
+        ])->assertRedirect(route('seller.products.index'));
+
+        $product = $tenant->products()->where('sku', 'BIO-500')->sole();
+        $this->assertSame(['Paracetamol', 'Tablet', '500 mg', 'Unilab', true], [$product->generic_name, $product->dosage_form, $product->strength, $product->manufacturer, $product->requires_prescription]);
+
+        $this->actingAs($owner)->patch(route('seller.products.update', $product), [
+            'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0, 'status' => 'draft', 'requires_prescription' => '0',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertFalse($product->fresh()->requires_prescription);
+    }
+
     public function test_seller_can_create_color_and_size_options_with_multiple_photos(): void
     {
         Storage::fake('product_images');

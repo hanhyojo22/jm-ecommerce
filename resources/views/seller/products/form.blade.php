@@ -388,6 +388,17 @@
                     <div class="mt-4 grid gap-4">
                         <div><label for="category_id" class="pe-label">Category</label><select id="category_id" name="category_id" x-model="categoryId" class="pe-input"><option value="">Uncategorized</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected($listing['categoryId'] === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
                         <div><label for="brand" class="pe-label">Brand</label><input id="brand" name="brand" maxlength="100" value="{{ old('brand', $product?->brand) }}" class="pe-input"><x-input-error :messages="$errors->get('brand')" class="mt-2" /></div>
+                        <div><label for="generic_name" class="pe-label">Generic name</label><input id="generic_name" name="generic_name" maxlength="160" value="{{ old('generic_name', $product?->generic_name) }}" class="pe-input" placeholder="e.g. Paracetamol"><x-input-error :messages="$errors->get('generic_name')" class="mt-2" /></div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div><label for="dosage_form" class="pe-label">Dosage form</label><input id="dosage_form" name="dosage_form" maxlength="60" list="dosage-forms" value="{{ old('dosage_form', $product?->dosage_form) }}" class="pe-input"><datalist id="dosage-forms">@foreach (['Tablet', 'Capsule', 'Syrup', 'Suspension', 'Drops', 'Cream', 'Ointment', 'Inhaler', 'Injection'] as $form)<option value="{{ $form }}"></option>@endforeach</datalist><x-input-error :messages="$errors->get('dosage_form')" class="mt-2" /></div>
+                            <div><label for="strength" class="pe-label">Strength</label><input id="strength" name="strength" maxlength="60" value="{{ old('strength', $product?->strength) }}" class="pe-input" placeholder="e.g. 500 mg"><x-input-error :messages="$errors->get('strength')" class="mt-2" /></div>
+                        </div>
+                        <div><label for="manufacturer" class="pe-label">Manufacturer</label><input id="manufacturer" name="manufacturer" maxlength="160" value="{{ old('manufacturer', $product?->manufacturer) }}" class="pe-input"><x-input-error :messages="$errors->get('manufacturer')" class="mt-2" /></div>
+                        <div>
+                            <input type="hidden" name="requires_prescription" value="0">
+                            <label class="flex items-start gap-3"><input type="checkbox" name="requires_prescription" value="1" @checked(old('requires_prescription', $product?->requires_prescription)) class="mt-1"><span><span class="pe-label">Prescription required</span><span class="block text-sm text-muted">Customers must upload a prescription for a pharmacist to approve before this is prepared.</span></span></label>
+                            <x-input-error :messages="$errors->get('requires_prescription')" class="mt-2" />
+                        </div>
                         <fieldset>
                             <legend class="pe-label">Condition</legend>
                             <div class="pe-segmented ps-segmented">
