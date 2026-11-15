@@ -63,7 +63,7 @@ class OnlinePaymentsController extends Controller
 
     private function ownedStore(Request $request): Store
     {
-        $tenant = $request->user()->sellerTenant(['owner']);
+        $tenant = $request->user()->headOfficeTenant(['owner']);
         abort_unless($tenant?->store !== null, 403);
 
         return $tenant->store;

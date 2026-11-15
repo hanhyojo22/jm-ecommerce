@@ -19,11 +19,11 @@ class PlatformFeeController extends Controller
 {
     public function index(Request $request, IssuePlatformFeeStatements $statements): View
     {
-        $tenant = $request->user()->sellerTenant() ?? abort(403);
+        $tenant = $request->user()->headOfficeTenant(['owner', 'manager', 'staff']) ?? abort(403);
 
         return view('seller.platform-fees.index', [
             'tenant' => $tenant,
-            'isOwner' => $request->user()->sellerTenant(['owner'])?->is($tenant) ?? false,
+            'isOwner' => $request->user()->headOfficeTenant(['owner'])?->is($tenant) ?? false,
             'statements' => PlatformFeeStatement::query()->where('tenant_id', $tenant->id)->with('earnings.sellerOrder.order')->latest('period_start')->paginate(12),
             'openStatements' => PlatformFeeStatement::query()->where('tenant_id', $tenant->id)->whereIn('status', ['unpaid', 'submitted'])->where('amount_due', '>', 0)->orderBy('due_at')->get(),
             'preview' => $statements->preview($tenant->id),
@@ -33,7 +33,7 @@ class PlatformFeeController extends Controller
 
     public function accept(Request $request, AcceptPlatformFeeTerms $action): RedirectResponse
     {
-        $tenant = $request->user()->sellerTenant(['owner']) ?? abort(403);
+        $tenant = $request->user()->headOfficeTenant(['owner']) ?? abort(403);
         $request->validate(['accept' => ['accepted']], ['accept.accepted' => 'Tick the box to accept the Marketplace Fee Policy.']);
 
         $wasCharged = $tenant->platform_fee_accepted_at !== null;
@@ -46,7 +46,7 @@ class PlatformFeeController extends Controller
 
     public function pay(Request $request, PlatformFeeStatement $statement, PlatformFeePayment $action, GmailOrderMailer $mailer): RedirectResponse
     {
-        $tenant = $request->user()->sellerTenant(['owner']) ?? abort(403);
+        $tenant = $request->user()->headOfficeTenant(['owner']) ?? abort(403);
         abort_unless($statement->tenant_id === $tenant->id, 404);
         $data = $request->validate([
             'reference' => ['required', 'string', 'max:120'],
@@ -73,7 +73,7 @@ class PlatformFeeController extends Controller
 
     public function proof(Request $request, PlatformFeeStatement $statement): StreamedResponse
     {
-        $tenant = $request->user()->sellerTenant() ?? abort(403);
+        $tenant = $request->user()->headOfficeTenant(['owner', 'manager', 'staff']) ?? abort(403);
         abort_unless($statement->tenant_id === $tenant->id && $statement->payment_proof_path !== null, 404);
         abort_unless(Storage::disk('chat_attachments')->exists($statement->payment_proof_path), 404);
 

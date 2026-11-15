@@ -89,23 +89,25 @@ class Tenant extends Model
     }
 
     /**
-     * Active owner/manager/staff to notify about this tenant's orders — the exact filter
-     * NotifySellersOfNewOrder and OpenOrderIssue share, so a deactivated staff member or a
-     * suspended store never gets paged.
+     * Active owner/manager/staff to notify about an order at one branch: head office and that
+     * branch's own staff, so a deactivated member, a suspended company, or another branch's
+     * staff never get paged. NotifySellersOfNewOrder and OpenOrderIssue share this filter.
      *
      * @return Collection<int, User>
      */
-    public function activeNotifiableStaff(): Collection
+    public function activeNotifiableStaff(string $storeId): Collection
     {
+        if ($this->status !== 'active') {
+            return new Collection;
+        }
+
         return User::query()
             ->where('account_type', 'seller')
             ->where('is_active', true)
             ->whereHas('tenantMemberships', fn ($query) => $query
                 ->where('tenant_id', $this->id)
                 ->whereIn('role', ['owner', 'manager', 'staff'])
-                ->whereHas('tenant', fn ($tenant) => $tenant
-                    ->where('status', 'active')
-                    ->whereHas('store', fn ($store) => $store->where('status', 'active'))))
+                ->where(fn ($branch) => $branch->whereNull('store_id')->orWhere('store_id', $storeId)))
             ->get();
     }
 }

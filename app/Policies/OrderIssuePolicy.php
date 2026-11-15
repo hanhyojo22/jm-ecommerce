@@ -24,9 +24,9 @@ class OrderIssuePolicy
             return true;
         }
 
-        $tenantId = $orderIssue->sellerOrder()->value('tenant_id');
+        $sellerOrder = $orderIssue->sellerOrder()->first(['tenant_id', 'store_id']);
 
-        return $this->isActiveTenantMember($user, $tenantId)
+        return $this->isActiveTenantMember($user, $sellerOrder?->tenant_id, $sellerOrder?->store_id)
             ? true
             : Response::denyAsNotFound();
     }

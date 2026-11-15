@@ -13,7 +13,7 @@ class EarningController extends Controller
 {
     public function index(Request $request): View
     {
-        $tenant = $request->user()->sellerTenant();
+        $tenant = $request->user()->headOfficeTenant(['owner', 'manager', 'staff']);
 
         abort_unless($tenant !== null, 403);
 

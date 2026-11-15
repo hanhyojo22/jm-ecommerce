@@ -23,7 +23,7 @@ class SellerOrderPolicy
             return true;
         }
 
-        if ($this->isBuyer($user, $sellerOrder) || $this->isActiveTenantMember($user, $sellerOrder->tenant_id)) {
+        if ($this->isBuyer($user, $sellerOrder) || $this->isActiveTenantMember($user, $sellerOrder->tenant_id, $sellerOrder->store_id)) {
             return true;
         }
 

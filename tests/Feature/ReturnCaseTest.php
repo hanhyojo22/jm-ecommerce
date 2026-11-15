@@ -110,7 +110,9 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($buyer)->patch(route('returns.update', $case), ['action' => 'confirm'])->assertSessionHasErrors('action');
         $this->assertDatabaseHas('return_cases', ['id' => $case->id, 'status' => 'completed']);
 
+        // A platform suspension switches off the store and its company together (SuspendStore).
         Store::query()->whereKey($sellerOrder->store_id)->update(['status' => 'suspended']);
+        Tenant::query()->whereKey($sellerOrder->tenant_id)->update(['status' => 'suspended']);
         $this->actingAs($seller)->get(route('returns.evidence', [$case, $evidence]))->assertNotFound();
     }
 

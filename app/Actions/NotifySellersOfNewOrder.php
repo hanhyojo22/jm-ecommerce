@@ -38,7 +38,7 @@ class NotifySellersOfNewOrder
 
     private function notifyStoreStaff(Order $order, SellerOrder $sellerOrder): void
     {
-        $recipients = $sellerOrder->tenant->activeNotifiableStaff();
+        $recipients = $sellerOrder->tenant->activeNotifiableStaff($sellerOrder->store_id);
 
         $title = "New order #{$order->number}";
         $body = "{$sellerOrder->store->name} received a new order worth PHP {$sellerOrder->total}.";

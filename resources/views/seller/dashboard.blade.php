@@ -186,7 +186,7 @@
                         <a href="{{ route('seller.reviews.index') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z"/></svg>Reply to customers</a>
                         @if ($canManageProducts)
                             <a href="{{ route('seller.store-settings.edit') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4.5-1 9.9-9.9a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="m13.5 6.5 3 3"/></svg>Update store info</a>
-                        @else
+                        @elseif ($isHeadOffice)
                             <a href="{{ route('seller.earnings.index') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>Review earnings</a>
                         @endif
                     </div>
@@ -226,7 +226,7 @@
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.orders.index', ['status' => 'pending']) }}">Review new orders</a></li>
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.reviews.index') }}">View reviews</a></li>
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.products.index', ['stock' => 'out_of_stock']) }}">Review out-of-stock products</a></li>
-                        <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.earnings.index') }}">Track earnings</a></li>
+                        @if ($isHeadOffice)<li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.earnings.index') }}">Track earnings</a></li>@endif
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('catalog.store', $store->slug) }}">Visit your storefront</a></li>
                         @if ($canManageProducts)<li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.store-settings.edit') }}">Update store details</a></li>@endif
                     </ul>

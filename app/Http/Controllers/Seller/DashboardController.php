@@ -77,6 +77,7 @@ class DashboardController extends Controller
                     ->get(),
                 'canManageProducts' => $canManageProducts,
                 'canManageOrders' => $canManageOrders,
+                'isHeadOffice' => $member->isHeadOffice(),
                 'setupItems' => [
                     ['label' => 'Store profile', 'complete' => filled($store->description), 'href' => $storeSettingsUrl, 'action' => 'Edit details'],
                     ['label' => 'Store logo', 'complete' => filled($store->logo_path), 'href' => $storeSettingsUrl, 'action' => 'Upload logo'],

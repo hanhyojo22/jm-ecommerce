@@ -67,7 +67,7 @@ class OpenOrderIssue
     {
         $sellerOrder->loadMissing('order', 'store', 'tenant');
 
-        $recipients = $sellerOrder->tenant->activeNotifiableStaff();
+        $recipients = $sellerOrder->tenant->activeNotifiableStaff($sellerOrder->store_id);
 
         $title = "Order #{$sellerOrder->order->number} needs attention";
         $body = 'A buyer asked to '.(self::LABELS[$type] ?? self::LABELS['other']).' for '.$sellerOrder->store->name.'.';

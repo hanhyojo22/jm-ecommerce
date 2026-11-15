@@ -130,6 +130,43 @@ class BranchAccessTest extends TestCase
         $this->assertSame(['suspended', '+639170000000'], [$makati->fresh()->status, $makati->fresh()->phone]);
     }
 
+    public function test_order_alerts_go_to_head_office_and_the_orders_branch_only(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $headOffice = $this->member($tenant, 'owner');
+        $makatiStaff = $this->member($tenant, 'staff', $makati);
+        $cebuStaff = $this->member($tenant, 'staff', $cebu);
+
+        $this->assertEqualsCanonicalizing([$headOffice->id, $makatiStaff->id], $tenant->activeNotifiableStaff($makati->id)->pluck('id')->all());
+
+        // Closing the first branch must not silence alerts for the others.
+        $makati->update(['status' => 'inactive']);
+        $this->assertEqualsCanonicalizing([$headOffice->id, $cebuStaff->id], $tenant->fresh()->activeNotifiableStaff($cebu->id)->pluck('id')->all());
+    }
+
+    public function test_branch_staff_cannot_authorize_another_branchs_order_records(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $makatiOrder = $this->sellerOrder($makati, 'MAKATI-2001');
+        $cebuStaff = $this->member($tenant, 'manager', $cebu);
+        $headOffice = $this->member($tenant, 'manager');
+
+        $this->assertFalse($cebuStaff->can('view', $makatiOrder));
+        $this->assertTrue($headOffice->can('view', $makatiOrder));
+        $this->assertTrue($this->member($tenant, 'staff', $makati)->can('view', $makatiOrder));
+    }
+
+    public function test_branch_staff_cannot_reach_company_money_pages(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $branchOwner = $this->member($tenant, 'owner', $makati);
+
+        $this->actingAs($branchOwner)->get(route('seller.earnings.index'))->assertForbidden();
+        $this->actingAs($branchOwner)->get(route('seller.platform-fees.index'))->assertForbidden();
+        $this->actingAs($branchOwner)->post(route('seller.online-payments.store'))->assertForbidden();
+        $this->actingAs($branchOwner)->get(route('seller.dashboard'))->assertOk()->assertDontSee(route('seller.earnings.index'), false);
+    }
+
     public function test_branch_staff_count_stock_only_at_their_own_branch(): void
     {
         [$tenant, $makati, $cebu] = $this->pharmacy();
