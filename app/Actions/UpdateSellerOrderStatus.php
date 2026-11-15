@@ -66,6 +66,11 @@ class UpdateSellerOrderStatus
                 throw ValidationException::withMessages(['status' => 'A cancellation request is awaiting review.']);
             }
 
+            // Checked under the order lock that ReviewPrescription also takes, so a review and a status change cannot interleave.
+            if ($status !== 'cancelled' && $order->prescription()->where('status', '!=', 'approved')->exists()) {
+                throw ValidationException::withMessages(['status' => 'A pharmacist must approve this order’s prescription first.']);
+            }
+
             $payment = $order->payment()->first();
             $isOnlinePayment = $payment?->isOnline() ?? false;
 

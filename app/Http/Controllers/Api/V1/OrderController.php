@@ -76,6 +76,7 @@ class OrderController extends Controller
             'sellerOrders.returnCases' => fn ($query) => $query->latest('id'),
             'sellerOrders.items.review',
             'payment',
+            'prescription',
         ]);
 
         return OrderResource::make($order)->response($request);

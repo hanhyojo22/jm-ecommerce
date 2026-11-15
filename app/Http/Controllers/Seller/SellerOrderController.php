@@ -64,7 +64,7 @@ class SellerOrderController extends Controller
 
         $sellerOrder = $member->sellerOrders()
             ->whereKey($sellerOrder)
-            ->with($isModal ? ['items.product.images', 'order.payment', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'issues', 'returnCases.items.orderItem'])
+            ->with($isModal ? ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'issues', 'returnCases.items.orderItem'])
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',

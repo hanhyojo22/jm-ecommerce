@@ -83,7 +83,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        $order = $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment');
+        $order = $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment', 'prescription');
 
         return view($request->header('X-Order-Modal') ? 'marketplace.orders._modal-ledger' : 'marketplace.orders.show', [
             'order' => $order,

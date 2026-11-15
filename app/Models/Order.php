@@ -62,4 +62,9 @@ class Order extends Model
     {
         return $this->hasOne(Payment::class);
     }
+
+    public function prescription(): HasOne
+    {
+        return $this->hasOne(Prescription::class);
+    }
 }

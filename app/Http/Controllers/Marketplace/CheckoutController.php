@@ -95,6 +95,7 @@ class CheckoutController extends Controller
             'delivery_note' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
             'client_request_id' => ['nullable', 'string', 'max:100'],
+            'prescription' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
         ]);
         $paymentMethod = $data['payment_method'] ?? 'cod';
         $fulfillmentMethod = $data['fulfillment_method'] ?? 'delivery';
@@ -105,6 +106,7 @@ class CheckoutController extends Controller
             $paymentMethod,
             $data['client_request_id'] ?? null,
             $fulfillmentMethod,
+            prescription: $request->file('prescription'),
         );
         $paymentNote = CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod);
         $buyer = $request->user();

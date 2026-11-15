@@ -57,7 +57,7 @@ class SampleStoreSeeder extends Seeder
 
         TenantMember::query()->firstOrCreate(
             ['tenant_id' => $tenant->id, 'user_id' => $seller->id],
-            ['role' => 'owner']
+            ['role' => 'owner', 'is_pharmacist' => true]
         );
 
         foreach ($this->samples() as $index => $sample) {

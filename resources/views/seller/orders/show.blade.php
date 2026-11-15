@@ -67,6 +67,8 @@
             </section>
         @endif
 
+        @include('seller.orders._prescription', ['sellerOrder' => $sellerOrder])
+
         <div class="sc-grid-detail grid gap-5">
             <div class="sc-stack min-w-0">
                 <section class="sc-card sc-card-pad" aria-labelledby="order-status-heading">

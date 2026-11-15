@@ -12,7 +12,12 @@ class TenantMember extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['tenant_id', 'store_id', 'user_id', 'role'];
+    protected $fillable = ['tenant_id', 'store_id', 'user_id', 'role', 'is_pharmacist'];
+
+    protected function casts(): array
+    {
+        return ['is_pharmacist' => 'boolean'];
+    }
 
     public function tenant(): BelongsTo
     {

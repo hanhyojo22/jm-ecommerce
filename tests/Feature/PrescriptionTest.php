@@ -1,0 +1,182 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Actions\BranchInventory;
+use App\Models\BranchStock;
+use App\Models\Cart;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Store;
+use App\Models\Tenant;
+use App\Models\TenantMember;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class PrescriptionTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Tenant $tenant;
+
+    private Store $branch;
+
+    private Product $medicine;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('chat_attachments');
+        config()->set('services.paymongo', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsk_test', 'base_url' => 'https://api.paymongo.com']);
+        Http::fake([
+            'api.paymongo.com/v1/checkout_sessions' => Http::response(['data' => ['id' => 'cs_1', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_1']]]),
+            'api.paymongo.com/v1/refunds' => Http::response(['data' => ['id' => 'ref_1']]),
+        ]);
+
+        $this->tenant = Tenant::create(['name' => 'Botika Plus', 'slug' => 'botika-plus', 'status' => 'active']);
+        $this->branch = $this->branch('Makati');
+        $this->medicine = Product::create([
+            'tenant_id' => $this->tenant->id, 'store_id' => $this->branch->id, 'name' => 'Amoxicillin 500mg', 'slug' => 'amoxicillin-500mg',
+            'sku' => 'AMOX-500', 'price' => '20.00', 'stock_quantity' => 0, 'status' => 'active', 'requires_prescription' => true,
+        ]);
+        BranchStock::query()->create(['store_id' => $this->branch->id, 'product_id' => $this->medicine->id, 'variant_key' => 'default', 'quantity' => 5]);
+        app(BranchInventory::class)->syncTotals($this->medicine);
+    }
+
+    public function test_a_prescription_medicine_cannot_be_checked_out_without_a_prescription(): void
+    {
+        $buyer = $this->buyerWithCart();
+
+        $this->actingAs($buyer)->post(route('checkout.store'), $this->delivery())->assertSessionHasErrors('prescription');
+        $this->actingAs($buyer)->postJson(route('api.v1.checkout.store'), [...$this->delivery(), 'delivery_latitude' => 14.55, 'delivery_longitude' => 121.02])
+            ->assertUnprocessable()->assertJsonPath('error.fields.prescription.0', 'Upload a photo of your prescription for Amoxicillin 500mg.');
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertSame(5, BranchInventory::available($this->branch->id, $this->medicine->id, null));
+    }
+
+    public function test_checkout_stores_the_prescription_privately_and_the_order_waits_for_a_pharmacist(): void
+    {
+        $order = $this->checkOut();
+        $prescription = $order->prescription;
+
+        $this->assertSame('pending', $order->sellerOrders()->sole()->status);
+        $this->assertSame('pending', $prescription->status);
+        $this->assertSame('rx.jpg', $prescription->original_name);
+        Storage::disk('chat_attachments')->assertExists($prescription->path);
+        $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Waiting for pharmacist review');
+    }
+
+    public function test_the_order_cannot_be_confirmed_until_a_pharmacist_approves_the_prescription(): void
+    {
+        $sellerOrder = $this->checkOut()->sellerOrders()->sole();
+        $manager = $this->member('manager', $this->branch);
+        $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
+
+        $this->actingAs($manager)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasErrors('status');
+        $this->assertSame('pending', $sellerOrder->refresh()->status);
+
+        $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approve prescription');
+        $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertSessionHas('status');
+        $this->actingAs($manager)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasNoErrors();
+
+        $this->assertSame('confirmed', $sellerOrder->refresh()->status);
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'approved', 'reviewed_by' => $pharmacist->id]);
+        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $pharmacist->id, 'action' => 'prescription.approved']);
+    }
+
+    public function test_rejecting_a_paid_prescription_order_cancels_it_restores_branch_stock_and_refunds(): void
+    {
+        $order = $this->checkOut(['payment_method' => 'gcash']);
+        $this->get(route('orders.pay', $order));
+        $this->paymentWebhook();
+        $sellerOrder = $order->sellerOrders()->sole();
+        $this->assertSame(3, BranchInventory::available($this->branch->id, $this->medicine->id, null));
+
+        $this->actingAs($this->member('owner', null, pharmacist: true))
+            ->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'reject', 'reason' => 'The prescription has expired.'])
+            ->assertSessionHas('status');
+
+        $this->assertSame('cancelled', $sellerOrder->refresh()->status);
+        $this->assertSame(5, BranchInventory::available($this->branch->id, $this->medicine->id, null));
+        $this->assertDatabaseHas('prescriptions', ['id' => $order->prescription->id, 'status' => 'rejected', 'reason' => 'The prescription has expired.']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'prescription.rejected']);
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/refunds') && $request['data']['attributes']['amount'] === 4000);
+    }
+
+    public function test_only_pharmacists_at_the_orders_branch_can_read_or_decide_its_prescription(): void
+    {
+        $sellerOrder = $this->checkOut()->sellerOrders()->sole();
+        $otherBranchPharmacist = $this->member('staff', $this->branch('Cebu'), pharmacist: true);
+        $staff = $this->member('manager', $this->branch);
+
+        $this->actingAs($otherBranchPharmacist)->get(route('seller.orders.prescription.show', $sellerOrder))->assertNotFound();
+        $this->actingAs($otherBranchPharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertNotFound();
+        $this->actingAs($staff)->get(route('seller.orders.prescription.show', $sellerOrder))->assertForbidden();
+        $this->actingAs($staff)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();
+
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending', 'reviewed_by' => null]);
+        $this->actingAs($this->member('staff', $this->branch, pharmacist: true))->get(route('seller.orders.prescription.show', $sellerOrder))->assertOk();
+    }
+
+    /**
+     * @param  array<string, string>  $extra
+     */
+    private function checkOut(array $extra = []): Order
+    {
+        $this->actingAs($this->buyerWithCart())
+            ->post(route('checkout.store'), [...$this->delivery(), ...$extra, 'prescription' => UploadedFile::fake()->image('rx.jpg')])
+            ->assertSessionHasNoErrors();
+
+        return Order::query()->with('prescription')->latest()->firstOrFail();
+    }
+
+    private function paymentWebhook(): void
+    {
+        $body = json_encode(['data' => ['id' => 'evt_paid', 'attributes' => ['type' => 'checkout_session.payment.paid', 'livemode' => false, 'data' => [
+            'id' => 'cs_1',
+            'attributes' => ['payments' => [['id' => 'pay_1', 'attributes' => ['status' => 'paid']]]],
+        ]]]]);
+        $signature = hash_hmac('sha256', '1700000000.'.$body, 'whsk_test');
+
+        $this->call('POST', route('paymongo.webhook'), [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_PAYMONGO_SIGNATURE' => "t=1700000000,te={$signature},li="], $body)->assertOk();
+    }
+
+    private function buyerWithCart(): User
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        Cart::create(['user_id' => $buyer->id])->items()->create(['product_id' => $this->medicine->id, 'quantity' => 2]);
+
+        return $buyer;
+    }
+
+    private function branch(string $city): Store
+    {
+        return Store::create([
+            'tenant_id' => $this->tenant->id, 'name' => "Botika Plus {$city}", 'slug' => 'botika-plus-'.str($city)->slug(),
+            'phone' => '+639171234567', 'address_line' => '10 Rizal Street', 'city' => $city, 'status' => 'active',
+        ]);
+    }
+
+    private function member(string $role, ?Store $branch, bool $pharmacist = false): User
+    {
+        $user = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $this->tenant->id, 'store_id' => $branch?->id, 'user_id' => $user->id, 'role' => $role, 'is_pharmacist' => $pharmacist]);
+
+        return $user;
+    }
+
+    /**
+     * @return array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string}
+     */
+    private function delivery(): array
+    {
+        return ['recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'province' => 'Metro Manila', 'postal_code' => '1000'];
+    }
+}

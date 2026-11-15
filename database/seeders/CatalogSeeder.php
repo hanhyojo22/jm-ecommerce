@@ -53,7 +53,7 @@ class CatalogSeeder extends Seeder
 
             TenantMember::query()->firstOrCreate(
                 ['tenant_id' => $tenant->id, 'user_id' => $seller->id],
-                ['role' => 'owner']
+                ['role' => 'owner', 'is_pharmacist' => true]
             );
 
             $category = Category::query()->where('slug', $sample['category'])->firstOrFail();

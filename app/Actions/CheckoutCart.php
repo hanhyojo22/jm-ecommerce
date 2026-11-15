@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Distance;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -25,8 +26,9 @@ class CheckoutCart
      * @param  ?string  $clientRequestId  a caller-generated key that makes a retried checkout return the original order
      * @param  'delivery'|'pickup'  $fulfillmentMethod  pickup is collected at the branch: no fee, and 'cod' means pay at the counter
      * @param  ?array{latitude: float, longitude: float}  $deliveryPin  where the customer dropped the delivery pin; checked against the branch's radius
+     * @param  ?UploadedFile  $prescription  required when a medicine needs one; a branch pharmacist reviews it before the order moves past pending
      */
-    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null): Order
+    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null, ?UploadedFile $prescription = null): Order
     {
         abort_unless($user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(), 403);
 
@@ -47,7 +49,7 @@ class CheckoutCart
         }
 
         try {
-            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin): Order {
+            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin, $prescription): Order {
                 $cart = Cart::query()
                     ->where('user_id', $user->id)
                     ->lockForUpdate()
@@ -101,6 +103,11 @@ class CheckoutCart
                     ->lockForUpdate()
                     ->get()
                     ->keyBy('id');
+
+                $prescriptionMedicines = $products->where('requires_prescription', true);
+                if ($prescriptionMedicines->isNotEmpty() && $prescription === null) {
+                    throw ValidationException::withMessages(['prescription' => 'Upload a photo of your prescription for '.$prescriptionMedicines->pluck('name')->join(', ', ' and ').'.']);
+                }
 
                 $managedTenantIds = $user->tenantMemberships()->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all();
 
@@ -208,6 +215,14 @@ class CheckoutCart
                     'amount' => $grandTotal,
                     'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($grandTotal, $paymentMethod),
                 ]);
+                if ($prescriptionMedicines->isNotEmpty()) {
+                    // shortcut: a checkout that fails after this line leaves the file behind, as return evidence does; sweep orphans if storage cost matters.
+                    $path = $prescription->store('prescriptions/'.$order->id, 'chat_attachments');
+                    if ($path === false) {
+                        throw ValidationException::withMessages(['prescription' => 'Your prescription could not be saved. Try again.']);
+                    }
+                    $order->prescription()->create(['user_id' => $user->id, 'path' => $path, 'original_name' => $prescription->getClientOriginalName()]);
+                }
                 $cart->items()->whereKey($items->modelKeys())->delete();
                 $cart->touch();
 

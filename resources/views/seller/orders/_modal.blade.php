@@ -229,6 +229,8 @@
         <div class="sc-notice mb-3" data-tone="info"><span>{{ $sellerOrder->returnCases->count() }} return {{ Str::plural('case', $sellerOrder->returnCases->count()) }} on this order. Respond before the deadline.</span><a href="{{ route('seller.returns.show', $sellerOrder->returnCases->first()) }}">View {{ $sellerOrder->returnCases->count() === 1 ? 'case' : 'cases' }}</a></div>
     @endif
 
+    @include('seller.orders._prescription', ['sellerOrder' => $sellerOrder, 'class' => 'mb-3'])
+
     <div class="sc-order-grid">
         <div class="sc-order-main">
             @if ($nextStep)

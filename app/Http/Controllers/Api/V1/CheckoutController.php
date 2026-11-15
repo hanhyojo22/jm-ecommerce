@@ -142,6 +142,7 @@ class CheckoutController extends Controller
             'client_request_id' => ['nullable', 'string', 'max:100'],
             'success_url' => ['nullable', 'url:http,https'],
             'cancel_url' => ['nullable', 'url:http,https'],
+            'prescription' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
         ]);
 
         $paymentMethod = $data['payment_method'] ?? 'cod';
@@ -153,6 +154,7 @@ class CheckoutController extends Controller
             $data['client_request_id'] ?? null,
             $fulfillmentMethod,
             $fulfillmentMethod === 'delivery' ? ['latitude' => (float) $data['delivery_latitude'], 'longitude' => (float) $data['delivery_longitude']] : null,
+            $request->file('prescription'),
         );
 
         $sendReceipt->handle($request->user(), $order, CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod));

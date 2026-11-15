@@ -29,6 +29,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Seller\BranchController;
 use App\Http\Controllers\Seller\BranchStockController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
+use App\Http\Controllers\Seller\PrescriptionController as SellerPrescriptionController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
 use App\Http\Controllers\Seller\ReturnCaseController as SellerReturnCaseController;
@@ -147,6 +148,8 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::patch('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.update');
     Route::post('/seller/orders/{sellerOrder}/failed-delivery', [SellerOrderController::class, 'reportFailedDelivery'])->middleware('throttle:10,1')->name('seller.orders.failed-delivery');
     Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
+    Route::get('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'show'])->name('seller.orders.prescription.show');
+    Route::patch('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.prescription.update');
     Route::get('/seller/reviews', [SellerProductReviewController::class, 'index'])->name('seller.reviews.index');
     Route::post('/seller/reviews/{review}/response', [SellerProductReviewController::class, 'respond'])->middleware('throttle:10,1')->name('seller.reviews.respond');
 

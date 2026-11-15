@@ -41,6 +41,7 @@ class OrderResource extends JsonResource
                 ? PaymentResource::make($this->payment)
                 : null,
             'seller_orders' => SellerOrderResource::collection($this->whenLoaded('sellerOrders')),
+            'prescription' => $this->whenLoaded('prescription', fn (): ?array => $this->prescription === null ? null : ['status' => $this->prescription->status, 'reason' => $this->prescription->reason]),
             'can_pay' => $this->canPay(),
             'can_confirm_receipt' => $this->relationLoaded('sellerOrders')
                 && $this->sellerOrders->contains(fn (SellerOrder $sellerOrder): bool => $sellerOrder->status === 'shipped'),

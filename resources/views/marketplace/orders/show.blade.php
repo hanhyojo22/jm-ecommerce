@@ -76,6 +76,12 @@
         </div>
         <div class="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
             <div class="space-y-6">
+                @if($order->prescription)
+                    <section class="rounded-md border p-4 text-sm {{ $order->prescription->status === 'rejected' ? 'border-red-200 bg-red-50 text-rose-800' : 'border-blue-200 bg-blue-50 text-brand-hover' }}" aria-labelledby="prescription-heading">
+                        <h2 id="prescription-heading" class="font-semibold">Prescription · {{ ['pending' => 'Waiting for pharmacist review', 'approved' => 'Approved', 'rejected' => 'Not accepted'][$order->prescription->status] ?? ucfirst($order->prescription->status) }}</h2>
+                        <p class="mt-1">{{ match ($order->prescription->status) { 'pending' => 'A pharmacist is checking your prescription. Your order is prepared once it is approved.', 'approved' => 'Your prescription was approved.', default => 'Your order was cancelled: '.$order->prescription->reason } }}</p>
+                    </section>
+                @endif
                 @if($awaitingOnlinePayment)
                     @php($payBy = $order->created_at->copy()->addHours((int) config('marketplace.online_payment.payment_hours')))
                     <section id="pay-now" class="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[var(--color-warning-line)] bg-[var(--color-warning-wash)] p-5 sm:p-6" aria-labelledby="pay-now-heading">

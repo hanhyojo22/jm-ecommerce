@@ -3,7 +3,8 @@
     @php($itemCount = $cart->items->sum('quantity'))
     @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City', 'province' => 'Province', 'postal_code' => 'Postal code'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
-    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->has('delivery_note') ? 3 : 1)))
+    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription']) ? 3 : 1)))
+    @php($prescriptionMedicines = $cart->items->filter(fn ($item) => $item->product->requires_prescription)->map(fn ($item) => $item->product->name)->unique())
     @php($fieldInput = 'min-h-[46px] w-full rounded-md border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
 
     {{-- Room at the foot so the fixed phone action bar never covers the last of the form. --}}
@@ -91,7 +92,7 @@
                 <p class="mt-1.5 text-sm text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} from {{ $itemsByStore->count() }} {{ Str::plural('store', $itemsByStore->count()) }} · Free shipping</p>
             </div>
 
-            <form id="checkout-form" x-ref="form" method="POST" action="{{ route('checkout.store') }}" @submit="placing = true" class="mt-[22px] grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-7">
+            <form id="checkout-form" x-ref="form" method="POST" action="{{ route('checkout.store') }}" enctype="multipart/form-data" @submit="placing = true" class="mt-[22px] grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-7">
                 @csrf
                 <input type="hidden" name="client_request_id" value="{{ is_string(old('client_request_id')) && filled(old('client_request_id')) ? old('client_request_id') : (string) \Illuminate\Support\Str::uuid() }}">
                 <div class="grid min-w-0 gap-3.5">
@@ -247,6 +248,15 @@
                                     <button type="button" @click="open(2)" class="inline-flex min-h-10 shrink-0 items-center text-[12.5px] font-semibold text-brand underline-offset-[3px] hover:text-brand-hover hover:underline">Change</button>
                                 </div>
                             </dl>
+
+                            @if ($prescriptionMedicines->isNotEmpty())
+                                <div class="mt-4 rounded-md border border-line bg-slate-50 px-3.5 py-3">
+                                    <label for="prescription" class="mb-1 block text-[13.5px] font-semibold text-ink">Prescription</label>
+                                    <p id="prescription-hint" class="mb-2 text-[13px] leading-normal text-muted">{{ $prescriptionMedicines->join(', ', ' and ') }} {{ $prescriptionMedicines->count() === 1 ? 'needs' : 'need' }} a doctor’s prescription. Upload a clear photo or PDF; a pharmacist checks it before your order is prepared.</p>
+                                    <input id="prescription" name="prescription" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-describedby="prescription-hint" @error('prescription') aria-invalid="true" @enderror class="block w-full text-[13px] text-ink">
+                                    @error('prescription')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                                </div>
+                            @endif
 
                             <div class="mt-4">
                                 <label for="delivery_note" class="mb-1.5 block text-[13.5px] font-semibold text-ink">Delivery note <span class="font-normal text-muted">(optional)</span></label>
