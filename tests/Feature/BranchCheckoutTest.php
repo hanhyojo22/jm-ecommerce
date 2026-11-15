@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\BranchStock;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\Store;
@@ -133,6 +134,70 @@ class BranchCheckoutTest extends TestCase
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/checkout_sessions')
             && collect($request['data']['attributes']['line_items'])->contains(fn (array $line): bool => $line['name'] === 'Delivery fee' && $line['amount'] === 4900)
             && collect($request['data']['attributes']['line_items'])->reject(fn (array $line): bool => $line['name'] === 'Payment fee')->sum(fn (array $line): int => $line['amount'] * $line['quantity']) === 6200);
+    }
+
+    public function test_the_quoted_online_fee_is_the_fee_charged_for_a_delivery(): void
+    {
+        config()->set('services.paymongo', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsk_test', 'base_url' => 'https://api.paymongo.com']);
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $cebu->tenant->update(['delivery_fee' => '49.00']);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 2])->assertCreated();
+
+        $quote = $this->getJson('/api/v1/checkout')->assertOk();
+        $this->assertSame($quote->json('data.payment_methods.gcash.fee'), $quote->json('data.fulfillment_methods.delivery.payment_fees.gcash'));
+        $this->assertNotSame($quote->json('data.fulfillment_methods.delivery.payment_fees.gcash'), $quote->json('data.fulfillment_methods.pickup.payment_fees.gcash'));
+
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'gcash'])->assertCreated();
+        $this->assertSame($quote->json('data.payment_methods.gcash.fee'), (string) Payment::query()->sole()->fee_amount);
+    }
+
+    public function test_the_web_checkout_shows_the_delivery_fee_it_charges(): void
+    {
+        [$makati, , $product] = $this->pharmacyWithStock(makati: 5, cebu: 0);
+        $makati->tenant->update(['delivery_fee' => '49.00']);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 2]);
+
+        $this->get(route('checkout.create'))
+            ->assertOk()
+            ->assertSee('Delivery fee')
+            ->assertSee('₱49.00')
+            ->assertSee('₱62.00');
+
+        $this->post(route('checkout.store'), collect($this->delivery())->except(['delivery_latitude', 'delivery_longitude'])->all())->assertRedirect();
+        $this->assertDatabaseHas('orders', ['shipping_amount' => '49.00', 'total' => '62.00']);
+    }
+
+    public function test_switching_branch_keeps_the_items_and_unticks_what_the_new_branch_lacks(): void
+    {
+        [$makati, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 2])->assertCreated();
+
+        $this->patchJson('/api/v1/cart/branch', ['branch' => $makati->id])
+            ->assertOk()
+            ->assertJsonPath('data.branch.id', $makati->id)
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.available', false)
+            ->assertJsonPath('data.items.0.selected', false);
+
+        $makati->update(['status' => 'inactive']);
+        $this->patchJson('/api/v1/cart/branch', ['branch' => $makati->id])->assertNotFound();
+    }
+
+    public function test_a_web_cart_left_on_a_closed_branch_moves_to_an_open_one(): void
+    {
+        [$makati, $cebu, $product] = $this->pharmacyWithStock(makati: 5, cebu: 5);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->post(route('cart.store', $product), ['quantity' => 1])->assertSessionHasNoErrors();
+        $this->assertSame($makati->id, $buyer->cart()->value('store_id'));
+
+        $makati->update(['status' => 'inactive']);
+        $this->post(route('cart.store', $product), ['quantity' => 1])->assertSessionHasNoErrors();
+        $this->post(route('checkout.store'), collect($this->delivery())->except(['delivery_latitude', 'delivery_longitude'])->all())->assertRedirect();
+
+        $this->assertSame($cebu->id, SellerOrder::query()->sole()->store_id);
     }
 
     public function test_pickup_is_free_needs_no_address_and_names_the_branch(): void

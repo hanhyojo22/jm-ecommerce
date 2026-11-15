@@ -186,7 +186,7 @@
                             <fieldset class="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
                                 <legend class="sr-only">Payment method</legend>
                                 @foreach ([
-                                    'cod' => ['label' => 'Cash on delivery', 'hint' => 'Pay ₱'.number_format($subtotal, 2).' when it arrives.', 'tile' => 'bg-[#EEF3FF] text-brand'],
+                                    'cod' => ['label' => 'Cash on delivery', 'hint' => 'Pay ₱'.number_format($total, 2).' when it arrives.', 'tile' => 'bg-[#EEF3FF] text-brand'],
                                     'gcash' => ['label' => 'GCash', 'tile' => 'bg-[#0070F0] text-white'],
                                     'maya' => ['label' => 'Maya', 'tile' => 'bg-[#101820] text-[#3DDC84]'],
                                     'card' => ['label' => 'Credit or debit card', 'tile' => 'bg-slate-100 text-slate-600'],
@@ -211,17 +211,17 @@
 
                             <div x-show="method === 'cod'" class="mt-3.5 flex items-start gap-[9px] rounded-md border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
                                 <svg class="mt-px size-4 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
-                                <p><strong class="font-semibold text-ink">No card needed.</strong> Hand <strong class="font-semibold text-ink">₱{{ number_format($subtotal, 2) }}</strong> to the courier when your order arrives.</p>
+                                <p><strong class="font-semibold text-ink">No card needed.</strong> Hand <strong class="font-semibold text-ink">₱{{ number_format($total, 2) }}</strong> to the courier when your order arrives.</p>
                             </div>
 
                             @if ($onlineFees !== [])
                                 <div x-cloak x-show="method !== 'cod'" class="mt-3.5 rounded-lg border border-[#D6E2FB] bg-[#F8FAFF] p-4" role="group" aria-labelledby="online-pay-heading">
-                                    <p id="online-pay-heading" class="text-[13.5px] font-semibold text-ink">One secure payment{{ $storeTotals->count() > 1 ? ' for all '.$storeTotals->count().' stores' : '' }}</p>
-                                    <p class="mt-1 text-[12.5px] leading-normal text-muted">After you place the order you’ll pay on PayMongo’s secure page. Each store receives its share automatically; there’s nothing to send or confirm yourself.</p>
+                                    <p id="online-pay-heading" class="text-[13.5px] font-semibold text-ink">One secure payment</p>
+                                    <p class="mt-1 text-[12.5px] leading-normal text-muted">After you place the order you’ll pay on PayMongo’s secure page. There’s nothing to send or confirm yourself.</p>
                                     <dl class="mt-3 grid gap-1.5 border-t border-[#D6E2FB] pt-3 text-[13px]">
-                                        <div class="flex justify-between gap-3"><dt class="text-muted">Items</dt><dd class="tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div>
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">Items and delivery</dt><dd class="tabular-nums text-ink">₱{{ number_format($total, 2) }}</dd></div>
                                         <div class="flex justify-between gap-3"><dt class="text-muted">Payment fee <span class="text-xs">(PayMongo)</span></dt><dd class="tabular-nums text-ink">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)">₱{{ number_format($fee, 2) }}</span>@endforeach</dd></div>
-                                        <div class="flex justify-between gap-3 font-semibold text-ink"><dt>You pay now</dt><dd class="tabular-nums">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)">₱{{ number_format(bcadd($subtotal, $fee, 2), 2) }}</span>@endforeach</dd></div>
+                                        <div class="flex justify-between gap-3 font-semibold text-ink"><dt>You pay now</dt><dd class="tabular-nums">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)">₱{{ number_format(bcadd($total, $fee, 2), 2) }}</span>@endforeach</dd></div>
                                     </dl>
                                     <p class="mt-2 text-xs leading-normal text-muted">Items are held for {{ (int) config('marketplace.online_payment.payment_hours') }} hours while you pay. A cancelled store order is refunded to you through PayMongo; the payment fee is not refunded.</p>
                                 </div>
@@ -275,7 +275,7 @@
                     <button type="button" @click="summaryOpen = ! summaryOpen" :aria-expanded="summaryOpen.toString()" aria-controls="checkout-summary-body" class="flex w-full items-center justify-between gap-2.5 rounded-lg px-4 py-[15px] text-left lg:hidden">
                         <span><span class="block text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</span><span class="mt-0.5 block text-[12.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} from {{ $itemsByStore->count() }} {{ Str::plural('store', $itemsByStore->count()) }}</span></span>
                         <span class="flex items-center gap-2">
-                            <span class="text-[15px] font-semibold tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</span>
+                            <span class="text-[15px] font-semibold tabular-nums text-ink">₱{{ number_format($total, 2) }}</span>
                             <svg class="size-[18px] text-muted transition-transform duration-200" :class="summaryOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
                         </span>
                     </button>
@@ -309,8 +309,8 @@
 
                         <dl class="mt-4 grid gap-2 border-t border-dashed border-[#DBE3EF] pt-3.5 text-[13px]">
                             <div class="flex justify-between gap-3 text-muted"><dt>Subtotal</dt><dd class="tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div>
-                            <div class="flex justify-between gap-3 text-muted"><dt>Shipping</dt><dd class="font-semibold text-success">Free</dd></div>
-                            <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-sm font-semibold text-ink"><dt>Total</dt><dd class="text-[20px] leading-none tracking-[-0.025em] tabular-nums">₱{{ number_format($subtotal, 2) }}</dd></div>
+                            <div class="flex justify-between gap-3 text-muted"><dt>Delivery fee</dt>@if (bccomp($deliveryFee, '0', 2) > 0)<dd class="tabular-nums text-ink">₱{{ number_format($deliveryFee, 2) }}</dd>@else<dd class="font-semibold text-success">Free</dd>@endif</div>
+                            <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-sm font-semibold text-ink"><dt>Total</dt><dd class="text-[20px] leading-none tracking-[-0.025em] tabular-nums">₱{{ number_format($total, 2) }}</dd></div>
                         </dl>
                         <p class="mt-3.5 flex items-center gap-1.5 text-[12.5px] leading-[1.4] text-muted">
                             <svg class="size-[13px] shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
@@ -327,7 +327,7 @@
                     <div class="flex items-center gap-3.5">
                         <div class="min-w-0">
                             <p class="text-[11.5px] text-muted">Total to pay</p>
-                            <p class="truncate text-lg/tight font-semibold tracking-[-0.025em] tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</p>
+                            <p class="truncate text-lg/tight font-semibold tracking-[-0.025em] tabular-nums text-ink">₱{{ number_format($total, 2) }}</p>
                         </div>
                         <button type="button" @click="step === 3 ? submit() : next()" :disabled="placing" class="ml-auto flex min-h-[46px] min-w-[140px] shrink-0 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-[380px]:min-w-[118px] max-[380px]:px-3.5" x-text="placing ? 'Placing order…' : ({ 1: 'Continue', 2: 'Review order' }[step] ?? 'Place order')">Continue</button>
                     </div>

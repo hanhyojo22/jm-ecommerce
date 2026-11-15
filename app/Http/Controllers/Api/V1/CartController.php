@@ -10,6 +10,7 @@ use App\Http\Resources\Api\V1\CartItemResource;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Queries\CatalogQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -41,6 +42,21 @@ class CartController extends Controller
         );
 
         return $this->payload($request)->setStatusCode(201);
+    }
+
+    /**
+     * Moves the cart to another branch. Items stay in the cart; any that branch cannot fill are
+     * unticked by the payload, so the app shows them as unavailable there.
+     */
+    public function updateBranch(Request $request): JsonResponse
+    {
+        $branchId = $request->validate(['branch' => ['required', 'ulid']])['branch'];
+        $branch = CatalogQuery::publicStores()->whereKey($branchId)->firstOrFail();
+
+        Cart::query()->updateOrCreate(['user_id' => $request->user()->id], ['store_id' => $branch->id]);
+        $request->user()->unsetRelation('cart');
+
+        return $this->payload($request);
     }
 
     public function update(Request $request, CartItem $cartItem, UpdateCartItemQuantity $updateQuantity): JsonResponse

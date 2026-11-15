@@ -59,6 +59,7 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('/items/{cartItem}', [CartController::class, 'update'])->name('api.v1.cart.items.update');
             Route::delete('/items/{cartItem}', [CartController::class, 'destroy'])->name('api.v1.cart.items.destroy');
             Route::patch('/selection', [CartController::class, 'updateSelection'])->name('api.v1.cart.selection.update');
+            Route::patch('/branch', [CartController::class, 'updateBranch'])->name('api.v1.cart.branch.update');
             Route::delete('/selected', [CartController::class, 'destroySelected'])->name('api.v1.cart.selected.destroy');
         });
 

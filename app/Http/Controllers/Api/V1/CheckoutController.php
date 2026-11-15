@@ -56,17 +56,16 @@ class CheckoutController extends Controller
             '0.00',
         );
 
-        $stores = $cart->items->pluck('product.store')->unique('id');
-        $storeTotals = $cart->items->groupBy(fn ($item) => $item->product->store_id)->map(fn ($storeItems): array => [
-            'name' => $storeItems->first()->product->store->name,
-            'total' => $storeItems->reduce(fn (string $sum, $item): string => bcadd($sum, bcmul($item->unitPrice(), (string) $item->quantity, 2), 2), '0.00'),
-        ])->values();
+        $branch = $cart->branchFor($cart->items->first()->product->tenant_id);
+        $deliveryFee = $branch === null ? '0.00' : CheckoutCart::deliveryFee($branch->tenant, $subtotal);
+        $deliveryTotal = bcadd($subtotal, $deliveryFee, 2);
+        $storeTotals = collect([['name' => $branch?->name, 'total' => $subtotal]]);
 
         $addresses = $request->user()->deliveryAddresses()->latest()->get();
         $preferredAddress = $addresses->first()
             ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
-        $onlineAvailable = $stores->every(fn ($store): bool => $store->acceptsOnlinePayments());
+        $onlineAvailable = (bool) $branch?->acceptsOnlinePayments();
         $codBlocked = $request->user()->hasReachedCodOrderLimit();
         $paymentMethods = [
             'cod' => [
@@ -82,13 +81,15 @@ class CheckoutController extends Controller
         foreach (Payment::ONLINE_METHODS as $method) {
             $paymentMethods[$method] = [
                 'available' => $onlineAvailable,
-                'fee' => $onlineAvailable ? StartOnlinePayment::buyerFee($subtotal, $method) : null,
-                'reason' => $onlineAvailable ? null : 'One of the stores in your cart does not take online payments yet.',
+                // The fee is on what delivery would charge; fulfillment_methods.pickup.payment_fees has pickup's.
+                'fee' => $onlineAvailable ? StartOnlinePayment::buyerFee($deliveryTotal, $method) : null,
+                'reason' => $onlineAvailable ? null : 'Online payments are not available yet.',
             ];
         }
 
-        $branch = $cart->branchFor($cart->items->first()->product->tenant_id);
-        $deliveryFee = $branch === null ? '0.00' : CheckoutCart::deliveryFee($branch->tenant, $subtotal);
+        $onlineFees = fn (string $total): array => $onlineAvailable
+            ? collect(Payment::ONLINE_METHODS)->mapWithKeys(fn (string $method): array => [$method => StartOnlinePayment::buyerFee($total, $method)])->all()
+            : [];
 
         return response()->json(['data' => [
             'items' => CartItemResource::collection($cart->items)->resolve($request),
@@ -102,8 +103,8 @@ class CheckoutController extends Controller
             ],
             // Pickup is free; delivery adds head office's flat fee unless the items reach the free-delivery amount.
             'fulfillment_methods' => [
-                'delivery' => ['fee' => $deliveryFee, 'total' => bcadd($subtotal, $deliveryFee, 2)],
-                'pickup' => ['fee' => '0.00', 'total' => $subtotal],
+                'delivery' => ['fee' => $deliveryFee, 'total' => $deliveryTotal, 'payment_fees' => $onlineFees($deliveryTotal)],
+                'pickup' => ['fee' => '0.00', 'total' => $subtotal, 'payment_fees' => $onlineFees($subtotal)],
             ],
             'store_totals' => $storeTotals,
             'addresses' => DeliveryAddressResource::collection($addresses)->resolve($request),

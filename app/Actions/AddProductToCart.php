@@ -80,7 +80,10 @@ class AddProductToCart
     {
         if ($branchId !== null) {
             $cart->update(['store_id' => CatalogQuery::publicStores()->whereKey($branchId)->firstOrFail()->id]);
-        } elseif ($cart->store_id === null) {
+        } elseif ($cart->store_id === null || $cart->store()->value('status') !== 'active') {
+            // A cart left on a branch that has since closed moves to the first open one, so the
+            // web (which cannot pick a branch yet) is never stuck.
+            $cart->update(['store_id' => null]);
             $cart->update(['store_id' => $cart->branchFor($product->tenant_id)?->id]);
         }
 

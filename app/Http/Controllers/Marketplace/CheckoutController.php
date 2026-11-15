@@ -61,22 +61,22 @@ class CheckoutController extends Controller
         $preferredAddress = $addresses->first()
             ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
-        $stores = $cart->items->pluck('product.store')->unique('id');
-        // One online payment is split between the stores, so checkout still shows what each one gets.
-        $storeTotals = $cart->items->groupBy(fn ($item) => $item->product->store_id)->map(fn ($storeItems) => [
-            'name' => $storeItems->first()->product->store->name,
-            'total' => $storeItems->reduce(fn (string $sum, $item): string => bcadd($sum, (string) $item->line_total, 2), '0.00'),
-        ])->values();
+        // The web checkout is delivery only until Phase 7, so the flat delivery fee always applies.
+        $branch = $cart->branchFor($cart->items->first()->product->tenant_id);
+        $deliveryFee = $branch === null ? '0.00' : CheckoutCart::deliveryFee($branch->tenant, $subtotal);
+        $total = bcadd($subtotal, $deliveryFee, 2);
+        $storeTotals = collect([['name' => $branch?->name, 'total' => $subtotal]]);
 
         return view('marketplace.checkout.create', [
             'orderLimitReached' => $request->user()->hasReachedCodOrderLimit(),
             'storeTotals' => $storeTotals,
-            // Online payment needs every store in the order to be connected to PayMongo.
-            'onlineFees' => $stores->every(fn ($store): bool => $store->acceptsOnlinePayments())
-                ? collect(Payment::ONLINE_METHODS)->mapWithKeys(fn (string $method): array => [$method => StartOnlinePayment::buyerFee($subtotal, $method)])->all()
+            'onlineFees' => $branch?->acceptsOnlinePayments()
+                ? collect(Payment::ONLINE_METHODS)->mapWithKeys(fn (string $method): array => [$method => StartOnlinePayment::buyerFee($total, $method)])->all()
                 : [],
             'cart' => $cart,
             'subtotal' => $subtotal,
+            'deliveryFee' => $deliveryFee,
+            'total' => $total,
             'addresses' => $addresses,
             'preferredAddress' => $preferredAddress,
         ]);
