@@ -95,7 +95,7 @@
                                                 </span>
                                                 <span class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
                                                     @if (filled($orderSnapshot['city'] ?? null))<svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg><span class="min-w-0 flex-1 truncate">{{ $orderSnapshot['city'] }}</span>@else<span class="flex-1"></span>@endif
-                                                    @if (filled($orderSnapshot['status'] ?? null))<span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset {{ $orderStatusStyles[$orderSnapshot['status']] ?? 'bg-canvas text-muted ring-line' }}">{{ Str::headline($orderSnapshot['status']) }}</span>@endif
+                                                    @if (filled($orderSnapshot['status'] ?? null))<span class="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset {{ $orderStatusStyles[$orderSnapshot['status']] ?? 'bg-canvas text-muted ring-line' }}">{{ \App\Models\SellerOrder::statusLabel($orderSnapshot['status']) }}</span>@endif
                                                 </span>
                                             </span>
                                         </a>

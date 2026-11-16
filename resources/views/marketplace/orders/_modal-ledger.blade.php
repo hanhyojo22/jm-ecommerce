@@ -18,7 +18,8 @@
         ->first(fn ($item): bool => $item->product_id !== null && $item->review === null);
     $firstReviewed = $sellerOrders->where('status', 'delivered')->flatMap(fn ($sellerOrder) => $sellerOrder->items)->first(fn ($item): bool => $item->review !== null);
 
-    $statusLabels = ['pending' => 'Awaiting store', 'confirmed' => 'Preparing', 'processing' => 'Preparing', 'shipped' => 'On the way', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'];
+    $statusLabels = collect(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'])
+        ->mapWithKeys(fn (string $status): array => [$status => \App\Models\SellerOrder::statusLabel($status, $order->fulfillment_method)])->all();
     $statusTones = ['pending' => 'neutral', 'confirmed' => 'neutral', 'processing' => 'neutral', 'shipped' => 'moving', 'delivered' => 'good', 'cancelled' => 'danger'];
 
     $isOnlinePayment = $order->payment?->isOnline() ?? false;
@@ -59,11 +60,11 @@
         $refundPending => 'Refund is being processed through PayMongo.',
         $isCancelled => 'No payment was taken for this order.',
         $order->payment->status === 'failed' => 'Payment failed. Try again from the full order page.',
-        $order->payment->status === 'paid' => $isOnlinePayment ? 'Paid online through PayMongo.' : 'Cash collected by the store.',
+        $order->payment->status === 'paid' => $isOnlinePayment ? 'Paid online through PayMongo.' : 'Cash collected by the pharmacy.',
         $partlyCollectedCash => 'Cash collected for some stores. See the full order page for each store’s collection status.',
         $isOnlinePayment && $payBy => 'Due by '.$payBy->format('M j, g:i A').'.',
-        $isDelivered => 'Cash due to the store.',
-        default => 'Pay the store in cash when your order arrives.',
+        $isDelivered => 'Cash due to the pharmacy.',
+        default => 'Pay in cash when your order arrives.',
     };
     $receiptNote = match (true) {
         $refundSent => ['refresh', 'Refund sent via '.$methodLabel.'.'],
@@ -73,7 +74,7 @@
         $order->payment?->status === 'paid' => ['check', $isOnlinePayment ? 'Paid in full via '.$methodLabel.'.' : 'Paid in cash.'],
         $partlyCollectedCash => ['card', 'Cash collected for some stores.'],
         $isOnlinePayment => ['clock', 'Payment due by '.($payBy?->format('M j, g:i A') ?? 'the deadline').'.'],
-        $isDelivered => ['card', 'Cash due to the store.'],
+        $isDelivered => ['card', 'Cash due to the pharmacy.'],
         default => ['card', 'Cash due on delivery.'],
     };
 
@@ -124,8 +125,7 @@
         $title = match ($order->status) {
             'pending' => 'Order received',
             'confirmed', 'processing' => 'Preparing your order',
-            'shipped' => 'On the way',
-            'delivered' => 'Delivered',
+            'shipped', 'delivered' => $statusLabels[$order->status],
             default => 'Order received',
         };
         $statusTone = match ($order->status) {
@@ -216,10 +216,10 @@
 
     @if (! $isCancelled && ! $isDelivered)
         <ol class="tracker" style="--steps: 4" aria-label="Order progress">
-            @foreach (['Placed', 'Confirmed', 'Shipped', 'Delivered'] as $index => $label)
+            @foreach (['Placed', 'Preparing', $statusLabels['shipped'], $statusLabels['delivered']] as $index => $label)
                 @php
                     $step = $index + 1;
-                    $isFinal = $label === 'Delivered';
+                    $isFinal = $step === 4;
                     $state = match (true) {
                         $step < $currentStep => 'done',
                         $step === $currentStep && $isDelivered => 'done',
@@ -303,15 +303,15 @@
                     $sellerOrder->status === 'shipped' => ['On the way', 'moving'],
                     $sellerOrder->status === 'processing', $sellerOrder->status === 'confirmed' => ['Preparing', 'neutral'],
                     $storeNeedsPayment => ['Waiting for payment', 'warn'],
-                    default => ['Awaiting store', 'neutral'],
+                    default => ['Order placed', 'neutral'],
                 };
                 $storeMeta = match (true) {
                     $sellerOrder->status === 'cancelled' => 'Stock restored',
                     $sellerOrder->status === 'delivered' => $sellerOrder->delivered_at ? 'Delivered '.$sellerOrder->delivered_at->format('M j') : 'Delivered',
-                    $sellerOrder->status === 'shipped' => $sellerOrder->shipped_at ? 'Shipped '.$sellerOrder->shipped_at->format('M j') : 'On the way',
+                    $sellerOrder->status === 'shipped' => $statusLabels['shipped'].($sellerOrder->shipped_at ? ' · '.$sellerOrder->shipped_at->format('M j') : ''),
                     $sellerOrder->status === 'processing', $sellerOrder->status === 'confirmed' => 'Preparing your order',
                     $storeNeedsPayment => 'Waiting for payment',
-                    default => 'Awaiting confirmation',
+                    default => 'Waiting for the pharmacy to accept',
                 };
                 $words = preg_split('/\s+/', trim($sellerOrder->store->name)) ?: [];
                 $initials = \Illuminate\Support\Str::upper(collect($words)->filter()->map(fn ($word): string => \Illuminate\Support\Str::substr($word, 0, 1))->take(2)->join(''));
@@ -407,7 +407,7 @@
     <section class="receipt" aria-label="Order receipt">
         <dl class="receipt-rows">
             <div class="row"><dt>Subtotal</dt><dd class="num">₱{{ number_format($order->subtotal, 2) }}</dd></div>
-            <div class="row"><dt>Shipping</dt><dd class="num">{{ bccomp((string) $order->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd></div>
+            <div class="row"><dt>Delivery fee</dt><dd class="num">{{ bccomp((string) $order->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd></div>
         </dl>
         <div class="receipt-total">
             <span class="label">Total</span>

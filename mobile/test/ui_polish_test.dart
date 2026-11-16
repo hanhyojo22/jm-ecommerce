@@ -75,7 +75,7 @@ void main() {
 
       expect(find.text('Placed'), findsOneWidget);
       expect(find.text('Preparing'), findsOneWidget);
-      expect(find.text('On the way'), findsOneWidget);
+      expect(find.text('Out for delivery'), findsOneWidget);
       expect(find.text('Delivered'), findsWidgets);
       expect(find.text('Delivery details'), findsOneWidget);
 
@@ -180,7 +180,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('On the way'), findsOneWidget);
+    expect(find.text('Out for delivery'), findsOneWidget);
     expect(find.text('Tap to confirm receipt'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -204,7 +204,7 @@ void main() {
 
       expect(find.text('My Orders'), findsOneWidget);
       expect(find.text('Filter'), findsOneWidget);
-      expect(find.text('To ship'), findsOneWidget);
+      expect(find.text('Preparing'), findsOneWidget);
       expect(find.text('To review'), findsOneWidget);
       // Up to 3 full Lazada item rows are shown with Qty and +1 more
       expect(find.text('Everyday linen shirt'), findsOneWidget);

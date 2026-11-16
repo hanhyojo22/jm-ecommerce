@@ -7,7 +7,7 @@ test('seller conversation fills the account layout at desktop and mobile widths'
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         // The seller inbox lists a conversation only once it has a message.
         await buyer.page.getByRole('textbox', { name: 'Write a message' }).fill('Layout check');
         await buyer.page.getByRole('button', { name: 'Send message' }).click();
@@ -52,7 +52,7 @@ test('buyer sees an optimistic message that reconciles after confirmation', asyn
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await buyer.page.getByRole('textbox', { name: 'Write a message' }).fill('Optimistic buyer message');
         await buyer.page.route(/\/livewire-[^/]+\/update$/, async (route) => {
@@ -76,7 +76,7 @@ test('failed optimistic message can be retried without creating a duplicate', as
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         await buyer.page.getByRole('textbox', { name: 'Write a message' }).fill('Retry this message');
         let dropped = false;
         await buyer.page.route(/\/livewire-[^/]+\/update$/, (route) => {
@@ -110,7 +110,7 @@ test('new conversation and replies arrive in two open accounts without a refresh
         await expect(newConversation).toHaveCount(0);
 
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         // Opening the chat alone stays out of the seller inbox; the first message brings it in live.
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await expect(newConversation).toHaveCount(0);
@@ -140,7 +140,7 @@ test('older history remains accessible beyond two hundred messages', async ({ br
 
     try {
         await buyer.page.goto('/stores/qa-southwind-store/products/qa-history-sample');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         const history = buyer.page.locator('#conversation-messages');
         await expect(history.getByText('History message 225')).toBeVisible();
         await expect(history.getByText('History message 1', { exact: true })).toHaveCount(0);
@@ -172,7 +172,7 @@ test('reconnect recovers a message sent while the buyer socket was disconnected'
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         // The seller inbox lists a conversation only once it has a message.
         await buyer.page.getByRole('textbox', { name: 'Write a message' }).fill('Before the disconnect');
         await buyer.page.getByRole('button', { name: 'Send message' }).click();
@@ -202,7 +202,7 @@ test('offline composer explains why sending is paused', async ({ browser }) => {
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await buyer.context.setOffline(true);
         await expect(buyer.page.getByText('Sending is paused until your connection returns.')).toBeVisible();
@@ -219,7 +219,7 @@ test('a file dropped on the message composer is the one that sends', async ({ br
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
         await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();
@@ -248,7 +248,7 @@ test('failed attachment upload retries with one confirmed bubble', async ({ brow
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
         await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();
@@ -284,7 +284,7 @@ test('a chat photo opens in a zoomable viewer', async ({ browser }) => {
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
-        await buyer.page.getByRole('button', { name: 'Message seller' }).click();
+        await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
         await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
         await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();

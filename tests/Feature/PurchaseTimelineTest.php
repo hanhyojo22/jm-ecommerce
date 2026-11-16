@@ -24,7 +24,7 @@ class PurchaseTimelineTest extends TestCase
 
         $response->assertOk()
             ->assertSee('aria-label="Order progress"', false)
-            ->assertSeeInOrder(['aria-label="Order progress"', 'Placed', 'Confirmed', 'Shipped', 'Delivered'], false);
+            ->assertSeeInOrder(['aria-label="Order progress"', 'Placed', 'Preparing', 'Out for delivery', 'Delivered'], false);
     }
 
     public function test_a_cancelled_store_order_shows_no_timeline(): void

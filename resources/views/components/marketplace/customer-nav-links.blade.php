@@ -30,7 +30,7 @@
     <div class="mt-5 space-y-1 border-t border-line pt-4">
         <a href="{{ route('home') }}" class="workspace-nav-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /></svg>
-            <span class="min-w-0 truncate">Marketplace</span>
+            <span class="min-w-0 truncate">Shop</span>
         </a>
     </div>
 </nav>

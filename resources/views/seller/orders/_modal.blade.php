@@ -5,7 +5,9 @@
     $itemCount = (int) $sellerOrder->items->sum('quantity');
     $isCancelled = $sellerOrder->status === 'cancelled';
     $awaitingOnlinePayment = $isOnline && $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null;
-    $transitionLabels = ['confirmed' => 'Confirm order', 'processing' => 'Start preparing', 'shipped' => 'Mark as shipped', 'delivered' => 'Mark as delivered'];
+    $isPickup = $order->fulfillment_method === 'pickup';
+    $label = fn (string $status): string => \App\Models\SellerOrder::statusLabel($status, $order->fulfillment_method);
+    $transitionLabels = ['confirmed' => 'Accept order', 'processing' => 'Start preparing', 'shipped' => $isPickup ? 'Ready for pickup' : 'Out for delivery', 'delivered' => $isPickup ? 'Mark picked up' : 'Mark delivered'];
     $nextTransition = $canManageOrders
         ? collect($sellerOrder->available_transitions)->first(fn (string $status): bool => $status !== 'cancelled')
         : null;
@@ -22,20 +24,18 @@
     $statusTitle = match (true) {
         $isCancelled => 'Order cancelled',
         $sellerOrder->status === 'pending' => 'New order',
-        $sellerOrder->status === 'confirmed' => 'Order confirmed',
-        $sellerOrder->status === 'processing' => 'Preparing your order',
-        $sellerOrder->status === 'shipped' => 'On the way',
-        $canRecordCash => 'Delivered',
-        default => 'Delivered',
+        $sellerOrder->status === 'confirmed' => 'Order accepted',
+        $sellerOrder->status === 'processing' => 'Preparing',
+        default => $label($sellerOrder->status),
     };
     $statusSub = match (true) {
-        $isCancelled => 'Your part of the order was cancelled and stock was restored.',
-        $awaitingOnlinePayment => 'The buyer has not paid online yet. Confirm once PayMongo reports the payment.',
-        $sellerOrder->status === 'pending' => 'Confirm to start preparing. Stock is already reserved for you.',
-        $sellerOrder->status === 'confirmed' => 'Start preparing, then move the order to processing.',
-        $sellerOrder->status === 'processing' => 'Mark shipped once the parcel has left your store.',
-        $sellerOrder->status === 'shipped' => 'Mark delivered once the buyer has the parcel.',
-        $canRecordCash => 'The buyer has the parcel. Record the cash once you have it.',
+        $isCancelled => 'This order was cancelled and stock was restored.',
+        $awaitingOnlinePayment => 'The customer has not paid online yet. Accept once PayMongo reports the payment.',
+        $sellerOrder->status === 'pending' => 'Accept to start preparing. Stock is already reserved for you.',
+        $sellerOrder->status === 'confirmed' => 'Start preparing the order.',
+        $sellerOrder->status === 'processing' => $isPickup ? 'Mark ready once it is waiting at the counter.' : 'Mark out for delivery once the rider leaves.',
+        $sellerOrder->status === 'shipped' => $isPickup ? 'Mark picked up once the customer has it.' : 'Mark delivered once the customer has it.',
+        $canRecordCash => 'The customer has the order. Record the cash once you have it.',
         default => 'This order is complete.',
     };
     $statusTone = match (true) {
@@ -55,8 +55,8 @@
         default => 'check-circle',
     };
     $journeyDate = match (true) {
-        $sellerOrder->status === 'delivered' && $sellerOrder->delivered_at => 'Delivered '.$sellerOrder->delivered_at->format('M j, Y'),
-        $sellerOrder->status === 'shipped' && $sellerOrder->shipped_at => 'Shipped '.$sellerOrder->shipped_at->format('M j, Y'),
+        $sellerOrder->status === 'delivered' && $sellerOrder->delivered_at => $label('delivered').' '.$sellerOrder->delivered_at->format('M j, Y'),
+        $sellerOrder->status === 'shipped' && $sellerOrder->shipped_at => $label('shipped').' · '.$sellerOrder->shipped_at->format('M j, Y'),
         default => 'Placed '.$sellerOrder->created_at->format('M j, Y · g:i A'),
     };
 
@@ -358,7 +358,7 @@
             <a href="{{ route('messages.show', $conversation) }}" class="seller-outline-button sc-order-secondary">Message buyer</a>
         @endif
         @if ($canManageOrders && $nextTransition)
-            <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" class="sc-order-primary-form" @if ($nextTransition === 'shipped') data-confirm-title="Mark this order as shipped?" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="{{ ucfirst($sellerOrder->status) }}" data-confirm-to="Shipped" data-confirm="Your customer is told the parcel has left your store. Do this only once it’s with your courier." data-confirm-action="Mark as shipped" @endif>
+            <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" class="sc-order-primary-form" @if ($nextTransition === 'shipped') data-confirm-title="{{ $isPickup ? 'Mark this order ready for pickup?' : 'Mark this order out for delivery?' }}" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="{{ $label($sellerOrder->status) }}" data-confirm-to="{{ $label('shipped') }}" data-confirm="{{ $isPickup ? 'Your customer is told the order is waiting at the counter.' : 'Your customer is told the rider is on the way. Do this only once the rider has the order.' }}" data-confirm-action="{{ $transitionLabels['shipped'] }}" @endif>
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="status" value="{{ $nextTransition }}">

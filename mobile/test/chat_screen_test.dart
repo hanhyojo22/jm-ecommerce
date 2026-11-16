@@ -121,7 +121,7 @@ void main() {
 
     expect(find.textContaining('JM-1042'), findsNothing);
     expect(find.text('Rice cooker'), findsOneWidget);
-    expect(find.text('On the way'), findsOneWidget);
+    expect(find.text('Out for delivery'), findsOneWidget);
     expect(find.text('COD'), findsOneWidget);
     expect(find.text('FREE SHIPPING'), findsOneWidget);
     expect(find.text('4.5 (12) | 19 Sold'), findsOneWidget);

@@ -282,7 +282,7 @@ class ConversationTest extends TestCase
 
         $this->actingAs($buyer)->get(route('messages.show', $conversation))
             ->assertOk()
-            ->assertSeeInOrder(['+3', 'COD', 'FREE SHIPPING', 'Rice cooker', '₱199.00', '4.5 (12)', '19 Sold', 'Cebu', 'Shipped'])
+            ->assertSeeInOrder(['+3', 'COD', 'FREE SHIPPING', 'Rice cooker', '₱199.00', '4.5 (12)', '19 Sold', 'Cebu', 'Out for delivery'])
             ->assertDontSee('Steamer tray');
     }
 

@@ -28,7 +28,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   String _statusHeadline(OrderDetail order) => switch (order.status) {
     'delivered' => 'Completed',
     'cancelled' => 'Order Closed',
-    'shipped' => order.isPickup ? 'Ready for pickup' : 'On the way',
+    'shipped' => order.isPickup ? 'Ready for pickup' : 'Out for delivery',
     'confirmed' || 'processing' => 'Preparing order',
     'pending' when order.canPay => 'Awaiting Payment',
     _ => statusLabel(order.status),
@@ -39,9 +39,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     'cancelled' => 'You have closed your order. We hope to see you again soon!',
     'shipped' when order.isPickup => 'Your order is ready at the branch. Bring your order number when you pick it up.',
     'shipped' =>
-      'Confirm receipt when the parcel arrives so the store can be paid.',
-    'confirmed' || 'processing' => 'The seller has confirmed your order and is preparing your parcel for dispatch.',
-    'pending' when order.canPay => 'Complete your online payment so the store can confirm and ship your order.',
+      'The rider is on the way. Confirm receipt once it arrives.',
+    'confirmed' || 'processing' => 'The pharmacy is preparing your order.',
+    'pending' when order.canPay => 'Complete your online payment so the pharmacy can prepare your order.',
     _ => 'Placed ${dateTime(order.createdAt)}. We will update you as it moves.',
   };
 
@@ -1197,7 +1197,7 @@ class _OrderProgressStepper extends StatelessWidget {
     (label: 'Preparing', icon: Icons.inventory_2_rounded),
     isPickup
         ? (label: 'Ready for pickup', icon: Icons.storefront_rounded)
-        : (label: 'On the way', icon: Icons.local_shipping_rounded),
+        : (label: 'Out for delivery', icon: Icons.delivery_dining_rounded),
     (
       label: isPickup ? 'Picked up' : 'Delivered',
       icon: Icons.check_circle_rounded,

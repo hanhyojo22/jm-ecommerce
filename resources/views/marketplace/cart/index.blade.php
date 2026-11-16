@@ -60,7 +60,7 @@
             <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
                 <div>
                     <h1 class="customer-page-title">Shopping cart</h1>
-                    <p class="mt-1 text-sm text-muted">{{ $items->sum('quantity') }} {{ Str::plural('item', $items->sum('quantity')) }} · Grouped by seller</p>
+                    <p class="mt-1 text-sm text-muted">{{ $items->sum('quantity') }} {{ Str::plural('item', $items->sum('quantity')) }}</p>
                 </div>
                 <a href="{{ route('catalog.index') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand transition hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Continue shopping</a>
             </div>
@@ -202,7 +202,7 @@
                                 <div class="mt-4 border-b border-line pb-3.5 text-sm">
                                     @php($selectedQuantity = $items->where('selected', true)->sum('quantity'))
                                     <div class="flex justify-between text-muted"><span>Subtotal (<span x-text="selectedQuantityLabel">{{ $selectedQuantity }} {{ Str::plural('item', $selectedQuantity) }}</span>)</span><span class="tabular-nums">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></span></div>
-                                    <div class="mt-2.5 flex justify-between text-muted"><span>Shipping</span><span class="font-semibold text-success">Free</span></div>
+                                    <div class="mt-2.5 flex justify-between text-muted"><span>Delivery fee</span><span>At checkout</span></div>
                                 </div>
                                 <div class="mt-3.5 flex items-end justify-between"><span class="font-semibold text-ink">Total</span><span class="text-2xl font-semibold tabular-nums tracking-[-0.04em] text-ink">₱<span x-text="subtotalLabel">{{ number_format($subtotal, 2) }}</span></span></div>
 
@@ -212,7 +212,7 @@
                                 @if ($unavailableCount > 0)
                                     <p class="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 text-sm leading-5 text-amber-950">{{ $unavailableCount }} {{ Str::plural('item', $unavailableCount) }} can’t be ordered right now and {{ $unavailableCount === 1 ? 'has' : 'have' }} been left out of your selection.</p>
                                 @endif
-                                <p class="mt-3 text-center text-xs leading-5 text-muted">Cash on delivery · Free shipping · No hidden fees</p>
+                                <p class="mt-3 text-center text-xs leading-5 text-muted">Cash on delivery · Delivery fee shown at checkout</p>
                             </div>
                         </aside>
                     </div>

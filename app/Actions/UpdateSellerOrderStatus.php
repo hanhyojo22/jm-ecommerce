@@ -170,9 +170,10 @@ class UpdateSellerOrderStatus
             }
 
             $number = $updatedSellerOrder->order->number;
+            $isPickup = $updatedSellerOrder->order->fulfillment_method === 'pickup';
             $message = $actor === null
-                ? "Your {$updatedSellerOrder->store->name} items from order #{$number} were marked delivered because they shipped ".config('marketplace.orders.auto_deliver_days').' days ago. If they never arrived, ask for order help.'
-                : "{$updatedSellerOrder->store->name} marked its part of order #{$number} as {$status}.";
+                ? "Your order #{$number} from {$updatedSellerOrder->store->name} was marked delivered because it went out for delivery ".config('marketplace.orders.auto_deliver_days').' days ago. If it never arrived, ask for order help.'
+                : "Order #{$number} from {$updatedSellerOrder->store->name}: ".SellerOrder::statusLabel($status, $updatedSellerOrder->order->fulfillment_method).'.';
 
             try {
                 app(GmailOrderMailer::class)->send(
@@ -187,10 +188,10 @@ class UpdateSellerOrderStatus
             try {
                 $lead = $updatedSellerOrder->items()->orderBy('id')->first();
                 $pushTitle = match ($status) {
-                    'confirmed' => 'Your order is confirmed',
+                    'confirmed' => 'Your order was accepted',
                     'processing' => 'Your order is being prepared',
-                    'shipped' => 'Your order is on its way',
-                    'delivered' => 'Your order was marked delivered',
+                    'shipped' => $isPickup ? 'Your order is ready for pickup' : 'Your order is out for delivery',
+                    'delivered' => $isPickup ? 'Your order was picked up' : 'Your order was delivered',
                     'cancelled' => 'Your order was cancelled',
                     default => 'Your order has an update',
                 };

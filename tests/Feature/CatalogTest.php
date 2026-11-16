@@ -102,7 +102,7 @@ class CatalogTest extends TestCase
         $paidShipping = $this->product(['free_shipping' => false]);
 
         $this->get(route('catalog.show', [$paidShipping->store->slug, $paidShipping->slug]))
-            ->assertSee('Shipping is added at checkout.')
+            ->assertSee('The delivery fee is shown at checkout.')
             ->assertSee('7-day returns')
             ->assertDontSee('Free shipping on this item.');
     }

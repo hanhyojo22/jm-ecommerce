@@ -36,6 +36,25 @@ class SellerOrder extends Model
         ];
     }
 
+    /**
+     * What a customer or branch calls a status. The stored values keep their marketplace names
+     * (shipped, processing); only the words shown change, and pickup orders read differently.
+     */
+    public static function statusLabel(string $status, ?string $fulfillment = 'delivery'): string
+    {
+        $isPickup = $fulfillment === 'pickup';
+
+        return match ($status) {
+            'pending' => 'Order placed',
+            'confirmed' => 'Accepted',
+            'processing' => 'Preparing',
+            'shipped' => $isPickup ? 'Ready for pickup' : 'Out for delivery',
+            'delivered' => $isPickup ? 'Picked up' : 'Delivered',
+            'cancelled' => 'Cancelled',
+            default => ucfirst(str_replace('_', ' ', $status)),
+        };
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);

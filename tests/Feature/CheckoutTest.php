@@ -194,7 +194,7 @@ class CheckoutTest extends TestCase
             ->assertSee('name="postal_code"', false)
             ->assertSee('name="delivery_note"', false)
             ->assertSee('name="client_request_id"', false)
-            ->assertSee('Free shipping');
+            ->assertDontSee('Free shipping');
     }
 
     public function test_database_failure_rolls_back_checkout_stock_and_preserves_the_cart(): void

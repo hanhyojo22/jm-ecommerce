@@ -17,7 +17,7 @@
         @if (! request()->isMethodSafe() || $status >= 500)
             <p>Check your orders before trying a purchase again.</p>
         @endif
-        <a href="{{ route('home') }}">Marketplace</a>
+        <a href="{{ route('home') }}">Shop</a>
         @if (request()->isMethodSafe())
             <button type="button" onclick="window.location.reload()">Try again</button>
         @endif

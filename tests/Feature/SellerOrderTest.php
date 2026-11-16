@@ -238,7 +238,7 @@ class SellerOrderTest extends TestCase
             ->get(route('seller.orders.show', $sellerOrder));
 
         $response->assertSee('SELLER-1001')
-            ->assertSee('Mark as shipped')
+            ->assertSee('Out for delivery')
             ->assertSee('100 Buyer Street')
             ->assertDontSee('<html', false);
     }

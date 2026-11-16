@@ -11,7 +11,7 @@
          */
         $storeStep = fn (string $status): int => ['pending'=>1,'confirmed'=>2,'processing'=>2,'shipped'=>3,'delivered'=>4][$status] ?? 1;
         // The badge sits beside the store it belongs to, so naming the seller again only makes it long.
-        $statusLabel = fn (string $status): string => $status === 'pending' ? 'Awaiting confirmation' : ucfirst($status);
+        $statusLabel = fn (string $status): string => \App\Models\SellerOrder::statusLabel($status, $order->fulfillment_method);
         $isOnlinePayment = $order->payment?->isOnline() ?? false;
         $awaitingOnlinePayment = $isOnlinePayment && $order->payment->status === 'pending'
             && $order->sellerOrders->contains(fn ($sellerOrder): bool => $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null);
@@ -26,8 +26,8 @@
             $order->payment->status === 'failed' => 'Your payment was unsuccessful. Contact support for help with this order.',
             $isOnlinePayment => 'Complete your payment online through PayMongo.',
             $collectedStores > 0 => 'Cash has been collected for part of this order. See each store’s collection status in the order summary.',
-            $order->status === 'delivered' => 'Cash collection has not been recorded. Contact the store if you have already paid.',
-            default => 'Pay each store in cash when its items arrive.',
+            $order->status === 'delivered' => 'Cash collection has not been recorded. Message the pharmacy if you have already paid.',
+            default => 'Pay in cash when your order arrives.',
         };
         $isMultiStore = $storeCount > 1;
         $deliveredStores = $order->sellerOrders->where('status', 'delivered')->count();
@@ -72,7 +72,7 @@
         <div class="mt-7 flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0"><h1 class="text-3xl font-semibold tracking-[-0.04em] text-ink sm:text-4xl">Order details</h1><div x-data="{ copied:false, copy() { navigator.clipboard?.writeText('{{ $order->number }}'); this.copied=true; setTimeout(() => this.copied=false, 1800) } }" class="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted"><p class="break-words">Order #{{ $order->number }} · Placed {{ $order->created_at->format('M j, Y · g:i A') }}</p><button type="button" @click="copy" class="inline-flex min-h-11 items-center text-xs font-semibold text-brand hover:text-brand-hover" :aria-label="copied ? 'Order number copied' : 'Copy order number'" x-text="copied ? 'Copied' : 'Copy number'"></button></div></div>
             {{-- With several stores the order has no single status, so the badge says how far it is as a whole. --}}
-            <span class="status-badge {{ $statusStyles[$order->status] }}">{{ $isMultiStore ? $multiStoreHeadline : ($order->status === 'pending' ? 'Awaiting seller confirmation' : ucfirst($order->status)) }}</span>
+            <span class="status-badge {{ $statusStyles[$order->status] }}">{{ $isMultiStore ? $multiStoreHeadline : $statusLabel($order->status) }}</span>
         </div>
         <div class="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
             <div class="space-y-6">
@@ -101,7 +101,7 @@
                             <p class="mt-4 text-sm font-semibold text-ink">{{ $storeSummary }}</p>
                         @else
                             <ol class="mt-7 grid grid-cols-4 gap-2" aria-label="Order progress">
-                                @foreach(['Placed', 'Confirmed', 'Shipped', 'Delivered'] as $step => $label)
+                                @foreach(['Placed', 'Preparing', $statusLabel('shipped'), $statusLabel('delivered')] as $step => $label)
                                     <li class="min-w-0"><div class="h-1.5 rounded-full {{ $step + 1 <= $currentStep ? 'bg-brand' : 'bg-slate-200' }}"></div><p class="mt-3 text-xs font-semibold {{ $step + 1 <= $currentStep ? 'text-brand-hover' : 'text-muted' }}">{{ $label }}</p>@if($step === 0)<p class="mt-1 text-xs leading-4 text-muted">{{ $order->created_at->format('M j, g:i A') }}</p>@endif</li>
                                 @endforeach
                             </ol>
@@ -122,7 +122,7 @@
                     <h2 id="order-summary-heading" class="text-lg font-semibold text-ink">Order summary</h2>
                     <dl class="mt-5 space-y-4 text-sm">
                         <div class="flex justify-between gap-4"><dt class="text-muted">Items</dt><dd class="tabular-nums text-ink">₱{{ number_format($order->subtotal, 2) }}</dd></div>
-                        <div class="flex justify-between gap-4"><dt class="text-muted">Shipping</dt><dd class="font-semibold tabular-nums text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd></div>
+                        <div class="flex justify-between gap-4"><dt class="text-muted">Delivery fee</dt><dd class="font-semibold tabular-nums text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd></div>
                         <div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 border-t border-line pt-5"><dt class="font-semibold text-ink">Total</dt><dd class="whitespace-nowrap text-xl font-semibold tracking-[-0.04em] tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</dd></div>
                     </dl>
                     <div class="mt-5 border-t border-line pt-5">
@@ -144,7 +144,7 @@
                             <p class="mt-2 text-sm text-muted">Payment details unavailable.</p>
                         @endif
                     </div>
-                    <div class="mt-5 border-t border-line pt-5 text-sm"><p class="font-semibold text-ink">Need help with this order?</p><a href="#order-help" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">Request help →</a><p class="text-xs leading-5 text-muted">Each seller handles their own items and delivery timing.</p></div>
+                    <div class="mt-5 border-t border-line pt-5 text-sm"><p class="font-semibold text-ink">Need help with this order?</p><a href="#order-help" class="inline-flex min-h-11 items-center font-semibold text-brand hover:text-brand-hover">Request help →</a><p class="text-xs leading-5 text-muted">Missing or wrong item? Tell us here.</p></div>
                 </section>
             </aside>
             <div class="min-w-0 space-y-6 lg:col-start-1">

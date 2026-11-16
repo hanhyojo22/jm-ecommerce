@@ -1,5 +1,5 @@
 <x-app-layout>
-    @section('title', 'Marketplace · JMMart')
+    @section('title', 'JMMart · Pharmacy delivery')
 
     <div class="page-container marketplace-home" data-homepage>
         <h1 class="sr-only">Marketplace</h1>

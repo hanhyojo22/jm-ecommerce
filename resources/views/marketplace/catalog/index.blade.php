@@ -19,7 +19,7 @@
     <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
     <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
     @include('partials.fonts')
-    <title>{{ $sellerStore ? $sellerStore->name.' storefront' : 'Marketplace' }} · JMMart</title>
+    <title>{{ $sellerStore ? $sellerStore->name.' storefront' : 'Shop' }} · JMMart</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>[x-cloak] { display: none !important; }</style>
 </head>

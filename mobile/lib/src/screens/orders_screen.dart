@@ -23,8 +23,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   static const _tabs = [
     (key: 'all', label: 'All'),
     (key: 'to_pay', label: 'To pay'),
-    (key: 'to_dispatch', label: 'To ship'),
-    (key: 'to_receive', label: 'To receive'),
+    (key: 'to_dispatch', label: 'Preparing'),
+    (key: 'to_receive', label: 'On the way'),
     (key: 'to_review', label: 'To review'),
     (key: 'delivered', label: 'Delivered'),
     (key: 'returns', label: 'Returns'),
@@ -341,7 +341,7 @@ class _OrdersTopBar extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: Semantics(
-            label: 'Search orders by seller or product',
+            label: 'Search orders by branch or product',
             child: TextField(
               controller: controller,
               focusNode: focusNode,
@@ -371,7 +371,7 @@ class _OrdersTopBar extends StatelessWidget {
                   minWidth: 34,
                   minHeight: 34,
                 ),
-                hintText: 'Search by seller name…',
+                hintText: 'Search by branch or product…',
                 hintStyle: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
                   fontSize: 13,

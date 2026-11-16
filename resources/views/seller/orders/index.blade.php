@@ -7,10 +7,10 @@
     $activeStatus = $filters['status'] ?? null;
     $hasPanelFilters = filled($filters['payment_status'] ?? null) || filled($filters['from'] ?? null) || filled($filters['to'] ?? null);
     $nextStep = fn ($sellerOrder): string => match ($sellerOrder->status) {
-        'pending' => $sellerOrder->needs_prescription_review ? 'Prescription to review' : 'Confirm to start preparing',
+        'pending' => $sellerOrder->needs_prescription_review ? 'Prescription to review' : 'Accept to start preparing',
         'confirmed' => 'Start preparing',
-        'processing' => 'Ship when packed',
-        'shipped' => 'Awaiting delivery',
+        'processing' => $sellerOrder->order?->fulfillment_method === 'pickup' ? 'Mark ready for pickup' : 'Hand to the rider',
+        'shipped' => $sellerOrder->order?->fulfillment_method === 'pickup' ? 'Waiting for the customer' : 'Out for delivery',
         'delivered' => $sellerOrder->cod_collected_at ? 'Complete' : 'Record cash collected',
         default => 'Stock restored',
     };
@@ -93,7 +93,7 @@
                 <nav class="sc-tabs sc-tabs-scroll min-w-0 flex-1 !border-0" aria-label="Order status">
                     <a href="{{ route('seller.orders.index', $queryWithoutStatus) }}" class="sc-tab" @if (! $activeStatus) aria-current="page" @endif>All <span class="sc-tab-count" aria-hidden="true">{{ number_format($statusCounts->sum()) }}</span></a>
                     @foreach ($statuses as $status)
-                        <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'status' => $status]) }}" class="sc-tab" @if ($activeStatus === $status) aria-current="page" @endif>{{ ucfirst($status) }} <span class="sc-tab-count" aria-hidden="true">{{ number_format($statusCounts[$status] ?? 0) }}</span></a>
+                        <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'status' => $status]) }}" class="sc-tab" @if ($activeStatus === $status) aria-current="page" @endif>{{ \App\Models\SellerOrder::statusLabel($status) }} <span class="sc-tab-count" aria-hidden="true">{{ number_format($statusCounts[$status] ?? 0) }}</span></a>
                     @endforeach
                 </nav>
                 {{-- Search shows in its box and status in the tabs; payment and dates are summarised on this button. --}}

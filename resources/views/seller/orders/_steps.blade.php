@@ -1,10 +1,10 @@
 @php
     $steps = [
         ['label' => 'Placed', 'date' => $sellerOrder->created_at],
-        ['label' => 'Confirmed', 'date' => null],
-        ['label' => 'Processing', 'date' => null],
-        ['label' => 'Shipped', 'date' => $sellerOrder->shipped_at],
-        ['label' => 'Delivered', 'date' => $sellerOrder->delivered_at],
+        ['label' => 'Accepted', 'date' => null],
+        ['label' => 'Preparing', 'date' => null],
+        ['label' => \App\Models\SellerOrder::statusLabel('shipped', $sellerOrder->order->fulfillment_method), 'date' => $sellerOrder->shipped_at],
+        ['label' => \App\Models\SellerOrder::statusLabel('delivered', $sellerOrder->order->fulfillment_method), 'date' => $sellerOrder->delivered_at],
     ];
     $currentStep = array_search($sellerOrder->status, ['pending', 'confirmed', 'processing', 'shipped', 'delivered'], true);
 @endphp

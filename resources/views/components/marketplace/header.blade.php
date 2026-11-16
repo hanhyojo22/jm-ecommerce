@@ -174,7 +174,7 @@
                 @if ($isSellerWorkspace || $isCustomerWorkspace)
                     <a href="{{ route('home') }}" class="hidden min-h-10 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-brand transition hover:bg-[#eef3ff] hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand xl:inline-flex">
                         <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg>
-                        <span>Marketplace</span>
+                        <span>Shop</span>
                     </a>
                 @endif
 
@@ -418,7 +418,7 @@
                 </div>
             @else
                 <nav class="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Mobile marketplace navigation">
-                    <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Marketplace</a>
+                    <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Shop</a>
                     <a href="{{ route('catalog.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">All products</a>
                     <a href="{{ route('catalog.index', ['sort' => 'newest']) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">New arrivals</a>
                     <a href="{{ route('catalog.top-products') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Best sellers</a>

@@ -1,11 +1,13 @@
 @php
+    $isPickup = $sellerOrder->order->fulfillment_method === 'pickup';
+    $actionLabels = ['confirmed' => 'Accept order', 'processing' => 'Start preparing', 'shipped' => $isPickup ? 'Ready for pickup' : 'Out for delivery', 'delivered' => $isPickup ? 'Mark picked up' : 'Mark delivered', 'cancelled' => 'Cancel order'];
     $guidance = match ($sellerOrder->status) {
-        'pending' => 'Confirm this order to begin preparing it.',
-        'confirmed' => 'Move the order to processing when preparation has started.',
-        'processing' => 'Mark it shipped only after it has left your store.',
-        'shipped' => 'Mark it delivered after the customer receives it.',
-        'delivered' => 'This seller order is complete.',
-        default => 'This seller order was cancelled and its stock was restored.',
+        'pending' => 'Accept this order to begin preparing it.',
+        'confirmed' => 'Start preparing the order.',
+        'processing' => $isPickup ? 'Mark it ready once it is waiting at the counter.' : 'Mark it out for delivery once the rider has it.',
+        'shipped' => $isPickup ? 'Mark it picked up once the customer has it.' : 'Mark it delivered once the customer has it.',
+        'delivered' => 'This order is complete.',
+        default => 'This order was cancelled and its stock was restored.',
     };
     $paymentStatus = $sellerOrder->cod_collected_at ? 'paid' : 'pending';
     $isOnline = $sellerOrder->order->payment?->isOnline() ?? false;
@@ -106,20 +108,20 @@
                             @foreach ($sellerOrder->available_transitions as $transition)
                                 @continue($transition === 'confirmed' && $isOnline && ! $sellerOrder->cod_collected_at)
                                 @if (in_array($transition, ['shipped', 'cancelled'], true))
-                                    <button type="button" @click="confirmation = '{{ $transition }}'; $nextTick(() => $refs.confirmation.showModal())" class="{{ $transition === 'cancelled' ? 'sc-btn sc-btn-danger' : 'seller-primary-button' }} w-full">{{ $transition === 'shipped' ? 'Mark as shipped' : 'Cancel order' }}</button>
+                                    <button type="button" @click="confirmation = '{{ $transition }}'; $nextTick(() => $refs.confirmation.showModal())" class="{{ $transition === 'cancelled' ? 'sc-btn sc-btn-danger' : 'seller-primary-button' }} w-full">{{ $actionLabels[$transition] }}</button>
                                 @else
-                                    <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $transition }}"><button type="submit" class="seller-primary-button w-full">Mark as {{ $transition }}</button></form>
+                                    <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}">@csrf @method('PATCH')<input type="hidden" name="status" value="{{ $transition }}"><button type="submit" class="seller-primary-button w-full">{{ $actionLabels[$transition] }}</button></form>
                                 @endif
                             @endforeach
                         </div>
                         <dialog x-ref="confirmation" @close="confirmation = null" class="w-[calc(100%-2rem)] max-w-md rounded-lg border-0 p-0 shadow-2xl backdrop:bg-slate-950/40">
                             <div class="bg-white p-6">
-                                <h3 class="text-lg font-semibold text-ink" x-text="confirmation === 'shipped' ? 'Mark order as shipped?' : 'Cancel this order?'"></h3>
-                                <p class="mt-2 text-sm leading-6 text-muted" x-text="confirmation === 'shipped' ? 'This tells your customer the order has left your store. You can only move it to delivered afterward.' : 'This cancels only your store’s part of the checkout and restores its item stock. This cannot be undone.'"></p>
+                                <h3 class="text-lg font-semibold text-ink" x-text="confirmation === 'shipped' ? @js($actionLabels['shipped'].'?') : 'Cancel this order?'"></h3>
+                                <p class="mt-2 text-sm leading-6 text-muted" x-text="confirmation === 'shipped' ? @js($isPickup ? 'This tells your customer the order is waiting at the counter.' : 'This tells your customer the rider is on the way.') : 'This cancels the order and restores its stock. This cannot be undone.'"></p>
                                 <div class="mt-6 flex justify-end gap-2">
                                     <button type="button" @click="$refs.confirmation.close()" class="seller-outline-button">Keep editing</button>
                                     <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}">@csrf @method('PATCH')<input type="hidden" name="status" :value="confirmation">
-                                        <button type="submit" class="sc-btn text-white" :class="confirmation === 'cancelled' ? 'bg-rose-700 hover:bg-rose-800' : 'bg-brand hover:bg-brand-hover'" x-text="confirmation === 'shipped' ? 'Mark shipped' : 'Cancel order'"></button></form>
+                                        <button type="submit" class="sc-btn text-white" :class="confirmation === 'cancelled' ? 'bg-rose-700 hover:bg-rose-800' : 'bg-brand hover:bg-brand-hover'" x-text="confirmation === 'shipped' ? @js($actionLabels['shipped']) : 'Cancel order'"></button></form>
                                 </div>
                             </div>
                         </dialog>

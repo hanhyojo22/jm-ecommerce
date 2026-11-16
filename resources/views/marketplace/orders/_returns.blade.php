@@ -5,9 +5,8 @@
                 <x-returns.icon name="return" class="size-5" />
             </span>
             <div class="min-w-0">
-                <p class="returns-eyebrow">Buyer protection</p>
-                <h2 class="mt-1">Returns and replacements</h2>
-                <p class="mt-1.5 max-w-2xl text-sm leading-6 text-muted">For damaged, defective, wrong, or materially misdescribed goods, ask the seller to help within seven days of delivery. Later warranty and statutory claims can still go to support.</p>
+                <h2>Wrong, missing, or damaged item?</h2>
+                <p class="mt-1.5 max-w-2xl text-sm leading-6 text-muted">Tell the pharmacy within seven days of delivery and they will replace or refund it.</p>
             </div>
         </div>
         <a href="{{ route('returns') }}" class="button-quiet shrink-0">

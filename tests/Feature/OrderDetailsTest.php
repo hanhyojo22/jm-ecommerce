@@ -121,7 +121,7 @@ class OrderDetailsTest extends TestCase
             ->assertSee('Open full page')
             ->assertSee('Done')
             // The compact ledger is read-only and carries no shipment action.
-            ->assertDontSee('Mark as shipped');
+            ->assertDontSee('seller-primary-button', false);
     }
 
     public function test_paid_cash_orders_do_not_ask_for_payment_again(): void

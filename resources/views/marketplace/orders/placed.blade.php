@@ -12,11 +12,14 @@
         $charged = '₱'.number_format(bcadd((string) $order->total, $fee, 2), 2);
         $firstName = Str::before(trim((string) $order->recipient_name), ' ');
         $deadline = $isCod ? null : $order->created_at->copy()->addHours((int) config('marketplace.online_payment.payment_hours'))->format('M j, g:i A');
-        $stores = $storeCount === 1 ? 'the store' : ($storeCount === 2 ? 'both stores' : 'all '.$storeCount.' stores');
+        $isPickup = $order->fulfillment_method === 'pickup';
+        $handedOver = \App\Models\SellerOrder::statusLabel('shipped', $order->fulfillment_method);
+        $finished = \App\Models\SellerOrder::statusLabel('delivered', $order->fulfillment_method);
+        $nextStep = $isPickup ? 'will get it ready for pickup' : 'will prepare and deliver it';
         [$steps, $current] = match (true) {
-            $isCod => [[['Placed', $order->created_at->format('M j, g:i A')], ['Store confirms', 'Sets its delivery timing'], ['Shipped', null], ['Delivered', 'Pay the courier']], 1],
-            $isPaid => [[['Placed', $order->created_at->format('M j, g:i A')], ['Paid', 'With '.$methodLabel], ['Store confirms', 'Sets its delivery timing'], ['Shipped & delivered', null]], 2],
-            default => [[['Placed', $order->created_at->format('M j, g:i A')], ['You pay online', 'By '.$deadline], ['Store confirms', 'Once your payment arrives'], ['Shipped & delivered', null]], 1],
+            $isCod => [[['Placed', $order->created_at->format('M j, g:i A')], ['Preparing', 'The pharmacy gets it ready'], [$handedOver, null], [$finished, $isPickup ? 'Pay at the counter' : 'Pay the rider']], 1],
+            $isPaid => [[['Placed', $order->created_at->format('M j, g:i A')], ['Paid', 'With '.$methodLabel], ['Preparing', 'The pharmacy gets it ready'], [$finished, null]], 2],
+            default => [[['Placed', $order->created_at->format('M j, g:i A')], ['You pay online', 'By '.$deadline], ['Preparing', 'Once your payment arrives'], [$finished, null]], 1],
         };
         $arrow = '<svg class="size-[13px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-5-5 5 5-5 5"/></svg>';
     @endphp
@@ -32,9 +35,9 @@
                 </h1>
                 <p class="mt-4 max-w-[52ch] text-[17px] leading-[1.55] text-ink max-sm:text-[15.5px]">
                     @if($isCod)
-                        Thanks, {{ $firstName }}. {{ ucfirst($stores) }} will confirm and ship, and you pay <strong class="font-semibold">{{ $total }}</strong> to the courier on delivery.
+                        Thanks, {{ $firstName }}. The pharmacy {{ $nextStep }}, and you pay <strong class="font-semibold">{{ $total }}</strong> {{ $isPickup ? 'when you pick it up' : 'to the rider' }}.
                     @elseif($isPaid)
-                        Thanks, {{ $firstName }}. We received <strong class="font-semibold">{{ $charged }}</strong> by {{ $methodLabel }}. {{ ucfirst($stores) }} will confirm and ship.
+                        Thanks, {{ $firstName }}. We received <strong class="font-semibold">{{ $charged }}</strong> by {{ $methodLabel }}. The pharmacy {{ $nextStep }}.
                     @else
                         Thanks, {{ $firstName }}. Your items are reserved until <strong class="font-semibold">{{ $deadline }}</strong>. If you’ve just paid, this page updates in a moment; otherwise pay <strong class="font-semibold">{{ $charged }}</strong> with {{ $methodLabel }} now.
                     @endif
@@ -79,7 +82,7 @@
 
                         <dl class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-y-2.5 [&>dd]:pl-3 px-6 pb-5 pt-6 text-[13px] leading-[1.5]">
                             <dt class="text-muted">Items ({{ $itemCount }})</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($order->subtotal, 2) }}</dd>
-                            <dt class="text-muted">Shipping</dt><dd class="text-right font-semibold text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd>
+                            <dt class="text-muted">Delivery fee</dt><dd class="text-right font-semibold text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd>
                             @unless($isCod)
                                 <dt class="text-muted">Payment fee</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($fee, 2) }}</dd>
                             @endunless
@@ -110,7 +113,7 @@
             <section class="min-w-0" aria-labelledby="order-heading">
                 <div class="flex items-baseline justify-between gap-3">
                     <h2 id="order-heading" class="text-[19px] font-semibold tracking-[-0.022em] text-ink">Your order</h2>
-                    <p class="text-[13px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} · {{ $storeCount }} {{ Str::plural('store', $storeCount) }}</p>
+                    <p class="text-[13px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</p>
                 </div>
 
                 <div class="mt-4 divide-y-[6px] divide-canvas overflow-hidden rounded-lg border border-line bg-surface">
@@ -119,8 +122,8 @@
                         <article aria-label="{{ $sellerOrder->store->name }}">
                             <header class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 pb-1 pt-4 max-sm:px-4">
                                 <h3 class="min-w-0 truncate text-sm font-semibold text-ink">{{ $sellerOrder->store->name }}</h3>
-                                <span @class(['inline-flex items-center gap-1.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current', 'text-brand-hover' => $isCod || $storePaid, 'text-warning-text' => ! $isCod && ! $storePaid])>{{ $isCod || $storePaid ? 'Awaiting confirmation' : 'To pay' }}</span>
-                                <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}" class="ml-auto print:hidden">@csrf<button class="inline-flex min-h-10 items-center gap-1 whitespace-nowrap text-xs font-semibold text-brand transition hover:text-brand-hover">Message store {!! $arrow !!}</button></form>
+                                <span @class(['inline-flex items-center gap-1.5 text-xs font-semibold before:size-1.5 before:rounded-full before:bg-current', 'text-brand-hover' => $isCod || $storePaid, 'text-warning-text' => ! $isCod && ! $storePaid])>{{ $isCod || $storePaid ? 'Order placed' : 'To pay' }}</span>
+                                <form method="POST" action="{{ route('messages.seller-orders.start', $sellerOrder) }}" class="ml-auto print:hidden">@csrf<button class="inline-flex min-h-10 items-center gap-1 whitespace-nowrap text-xs font-semibold text-brand transition hover:text-brand-hover">Message pharmacy {!! $arrow !!}</button></form>
                             </header>
                             <ul class="divide-y divide-line-soft px-5 max-sm:px-4">
                                 @foreach($sellerOrder->items as $item)
@@ -142,7 +145,7 @@
                     @endforeach
                 </div>
 
-                <p class="mt-6 text-[13px] leading-[1.55] text-muted print:hidden">Something not right? Message the store from <a href="{{ route('orders.show', $order) }}" class="font-semibold text-brand underline decoration-[#bcd0ff] underline-offset-4 hover:text-brand-hover hover:decoration-current">your order page</a>. They can help with items, delivery, or returns.</p>
+                <p class="mt-6 text-[13px] leading-[1.55] text-muted print:hidden">Something not right? Message the pharmacy from <a href="{{ route('orders.show', $order) }}" class="font-semibold text-brand underline decoration-[#bcd0ff] underline-offset-4 hover:text-brand-hover hover:decoration-current">your order page</a>. They can help with items, delivery, or returns.</p>
             </section>
         </div>
         @if ($recommendedProducts->isNotEmpty())

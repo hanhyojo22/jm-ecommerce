@@ -392,9 +392,9 @@
         $emptyCopy = [
             'all' => ['Your first purchase starts here', 'Your orders and delivery updates will appear here.'],
             'to_pay' => ['Nothing to pay', 'Orders awaiting online payment through PayMongo appear here. Cash on delivery is paid when your items arrive.'],
-            'awaiting_confirmation' => ['Nothing waiting on a store', 'Orders a store has not confirmed yet appear here.'],
-            'to_dispatch' => ['Nothing being prepared', 'Orders a store has confirmed and is getting ready to ship appear here.'],
-            'to_receive' => ['Nothing on the way', 'Shipped orders appear here until you confirm they arrived.'],
+            'awaiting_confirmation' => ['Nothing waiting', 'Orders the pharmacy has not accepted yet appear here.'],
+            'to_dispatch' => ['Nothing being prepared', 'Orders the pharmacy is getting ready appear here.'],
+            'to_receive' => ['Nothing on the way', 'Orders out for delivery appear here until they arrive.'],
             'delivered' => ['No delivered orders yet', 'Orders appear here once they arrive.'],
             'to_review' => ['You’re all caught up', 'Delivered items you haven’t reviewed appear here.'],
             'returns' => ['No returns or refund requests', 'Open a return from a delivered order within '.(int) config('marketplace.orders.return_window_days').' days of delivery. Requests you open appear here.'],
@@ -582,6 +582,7 @@
                                     $isDirect = $order->payment?->isOnline() ?? false;
                                     $needsPayment = $isDirect && $sellerOrder->status === 'pending' && $sellerOrder->cod_collected_at === null;
                                     [$statusLabel, $statusVariant] = $statusStyles[$sellerOrder->status];
+                                    $statusLabel = \App\Models\SellerOrder::statusLabel($sellerOrder->status, $order->fulfillment_method);
                                     if ($needsPayment) {
                                         [$statusLabel, $statusVariant] = ['To pay', 'warn'];
                                     } elseif ($cancelRequest) {
@@ -599,12 +600,12 @@
                                         'pending' => 1,
                                         default => 0,
                                     };
-                                    $journeySteps = ['Placed', 'Confirmed', 'Shipped', 'Delivered'];
+                                    $journeySteps = ['Placed', 'Preparing', \App\Models\SellerOrder::statusLabel('shipped', $order->fulfillment_method), \App\Models\SellerOrder::statusLabel('delivered', $order->fulfillment_method)];
                                     $journeyNote = match (true) {
-                                        $needsPayment => 'Pay before the store can prepare it',
-                                        $status === 'pending' => 'Waiting for the store to confirm',
-                                        in_array($status, ['confirmed', 'processing'], true) => 'The store is preparing your order',
-                                        $status === 'shipped' => 'On the way to you',
+                                        $needsPayment => 'Pay before the pharmacy can prepare it',
+                                        $status === 'pending' => 'Waiting for the pharmacy to accept',
+                                        in_array($status, ['confirmed', 'processing'], true) => 'The pharmacy is preparing your order',
+                                        $status === 'shipped' => $order->fulfillment_method === 'pickup' ? 'Ready at the pharmacy counter' : 'On the way to you',
                                         $status === 'delivered' && $reviewableCount > 0 => $reviewableCount.' '.Str::plural('product', $reviewableCount).' ready to review',
                                         $status === 'delivered' && $hasReviews => 'Your reviews are saved',
                                         $status === 'delivered' => 'Your items were delivered',

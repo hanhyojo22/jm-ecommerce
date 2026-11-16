@@ -89,7 +89,7 @@
             </a>
             <div class="mt-1">
                 <h1 class="text-[30px] font-semibold leading-[1.1] tracking-[-0.035em] text-ink max-sm:text-[26px]">Checkout</h1>
-                <p class="mt-1.5 text-sm text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} from {{ $itemsByStore->count() }} {{ Str::plural('store', $itemsByStore->count()) }} · Free shipping</p>
+                <p class="mt-1.5 text-sm text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} from {{ $storeTotals->first()['name'] ?? 'your branch' }}</p>
             </div>
 
             <form id="checkout-form" x-ref="form" method="POST" action="{{ route('checkout.store') }}" enctype="multipart/form-data" @submit="placing = true" class="mt-[22px] grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_368px] lg:gap-7">
@@ -237,7 +237,7 @@
                             </div>
                         </x-marketplace.checkout-step>
 
-                        <x-marketplace.checkout-step :number="3" title="Review & place order" sub="One last look before this goes to the stores." value="'Delivery and payment'" change="Review">
+                        <x-marketplace.checkout-step :number="3" title="Review & place order" sub="One last look before the pharmacy gets it." value="'Delivery and payment'" change="Review">
                             <dl class="border-t border-line">
                                 <div class="flex items-start justify-between gap-4 border-b border-line py-3">
                                     <div class="min-w-0"><dt class="text-xs font-medium text-muted">Deliver to</dt><dd class="mt-0.5 max-w-[56ch] whitespace-pre-line text-[13px] leading-normal text-ink" x-text="addressFull"></dd></div>
@@ -266,7 +266,7 @@
 
                             <div class="mt-4 flex gap-[9px] rounded-md border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
                                 <svg class="mt-px size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
-                                <p>Each store confirms delivery timing after receiving your order. Shipping is free.</p>
+                                <p>The pharmacy starts preparing your order as soon as you place it.</p>
                             </div>
 
                             <div class="mt-5 grid gap-3">
@@ -283,7 +283,7 @@
 
                 <aside class="min-w-0 rounded-lg border border-line bg-surface max-lg:order-first lg:sticky lg:top-24" aria-label="Order summary">
                     <button type="button" @click="summaryOpen = ! summaryOpen" :aria-expanded="summaryOpen.toString()" aria-controls="checkout-summary-body" class="flex w-full items-center justify-between gap-2.5 rounded-lg px-4 py-[15px] text-left lg:hidden">
-                        <span><span class="block text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</span><span class="mt-0.5 block text-[12.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} from {{ $itemsByStore->count() }} {{ Str::plural('store', $itemsByStore->count()) }}</span></span>
+                        <span><span class="block text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</span><span class="mt-0.5 block text-[12.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</span></span>
                         <span class="flex items-center gap-2">
                             <span class="text-[15px] font-semibold tabular-nums text-ink">₱{{ number_format($total, 2) }}</span>
                             <svg class="size-[18px] text-muted transition-transform duration-200" :class="summaryOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
@@ -291,7 +291,7 @@
                     </button>
                     <div class="px-5 py-[18px] max-lg:hidden">
                         <h2 id="checkout-summary-heading" class="text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</h2>
-                        <p class="mt-0.5 text-[12.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }} from {{ $itemsByStore->count() }} {{ Str::plural('store', $itemsByStore->count()) }}</p>
+                        <p class="mt-0.5 text-[12.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</p>
                     </div>
 
                     <div id="checkout-summary-body" class="border-t border-[#EEF1F5] px-5 pb-5 pt-4 max-lg:hidden max-lg:border-line max-sm:p-4" :class="{ 'max-lg:hidden': ! summaryOpen }">
@@ -324,7 +324,7 @@
                         </dl>
                         <p class="mt-3.5 flex items-center gap-1.5 text-[12.5px] leading-[1.4] text-muted">
                             <svg class="size-[13px] shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
-                            Free shipping · No hidden fees
+                            No hidden fees
                         </p>
                     </div>
                 </aside>

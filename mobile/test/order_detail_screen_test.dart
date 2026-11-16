@@ -127,10 +127,10 @@ void main() {
         ..returnStatus = 'awaiting_seller';
       await _pump(tester, api);
       await tester.scrollUntilVisible(
-        find.text('Return request: Waiting for store'),
+        find.text('Return request: Waiting for pharmacy'),
         180,
       );
-      expect(find.text('Return request: Waiting for store'), findsOneWidget);
+      expect(find.text('Return request: Waiting for pharmacy'), findsOneWidget);
       expect(find.text('Free Returns'), findsNothing);
       expect(find.text('7 Days Local Supplier Warranty'), findsNothing);
     },
@@ -141,6 +141,8 @@ void main() {
   ) async {
     final api = _OrderApi()..status = 'shipped';
     await _pump(tester, api);
+    await tester.ensureVisible(find.text('Confirm received'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Confirm received'));
     await tester.pumpAndSettle();
     expect(api.confirmations, 0);

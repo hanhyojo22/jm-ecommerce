@@ -1,10 +1,10 @@
 <footer class="border-t border-line bg-white text-[13px] leading-6 text-muted">
     <div class="marketplace-container flex flex-col gap-4 py-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <a href="{{ route('home') }}" class="inline-flex items-center text-xl font-bold tracking-[-0.05em] text-ink" aria-label="JMMart marketplace home">
+            <a href="{{ route('home') }}" class="inline-flex items-center text-xl font-bold tracking-[-0.05em] text-ink" aria-label="JMMart home">
                 <span class="mr-2 grid size-[27px] place-items-center rounded-lg bg-brand text-sm font-bold text-white" aria-hidden="true">jm</span>JM<span class="text-brand">Mart.</span>
             </a>
-            <span>Good finds. Great local stores.</span>
+            <span>Your neighborhood pharmacy, delivered.</span>
         </div>
         <nav aria-label="Footer" class="flex flex-wrap items-center gap-x-6 gap-y-0">
             <a href="{{ route('terms') }}" class="inline-flex min-h-11 items-center hover:text-brand">Terms</a>
