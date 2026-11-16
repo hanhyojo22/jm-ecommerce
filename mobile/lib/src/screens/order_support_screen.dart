@@ -223,6 +223,12 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
   Widget _caseView() {
     final value = _case!;
     final status = str(value['status']);
+    final deadline = DateTime.tryParse(str(value['deadline']));
+    final canAppeal =
+        ['offered', 'rejected', 'awaiting_confirmation'].contains(status) ||
+        (status == 'awaiting_seller' &&
+            deadline != null &&
+            deadline.isBefore(DateTime.now()));
     final title = switch (status) {
       'awaiting_seller' => 'Waiting for the pharmacy',
       'offered' => 'The pharmacy offered a solution',
@@ -276,7 +282,7 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
           Text('Respond by ${dateTime(str(value['deadline']))}'),
         ],
         if (boolean(value['can_respond'])) ...[
-          if (['offered', 'rejected'].contains(status)) ...[
+          if (canAppeal) ...[
             const SizedBox(height: 16),
             TextField(
               controller: _details,
@@ -330,7 +336,7 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
             contentPadding: EdgeInsets.zero,
             title: Text(
               str(event['note']).isEmpty
-                  ? statusLabel(str(event['type']))
+                  ? _eventLabel(str(event['type']))
                   : str(event['note']),
             ),
             subtitle: Text(
@@ -343,6 +349,31 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
       ],
     );
   }
+
+  String _eventLabel(String type) => switch (type) {
+    'submitted' => 'Request submitted',
+    'admin_opened' => 'Opened by support',
+    'offer' => 'Solution offered',
+    'reject' => 'Request declined',
+    'accept' => 'Offer accepted',
+    'appeal' => 'Sent to support for review',
+    'handoff' => 'Item handed back',
+    'receive' => 'Returned item received',
+    'refund' => 'Refund recorded',
+    'ship' => 'Replacement sent',
+    'decide' => 'Support decision recorded',
+    'takeover' => 'Support took over the request',
+    'reopen' => 'Request reopened',
+    'confirm' => 'Refund or replacement confirmed',
+    'verify' => 'Completion verified',
+    'close' => 'Request closed',
+    'evidence_added' => 'Supporting document added',
+    'reminder' => 'Response reminder sent',
+    'restock' => 'Returned items inspected',
+    'replacement_stock_reduced' => 'Replacement reserved',
+    'replacement_stock_restored' => 'Replacement reservation released',
+    _ => 'Request updated',
+  };
 
   @override
   Widget build(BuildContext context) {

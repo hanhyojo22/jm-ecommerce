@@ -17,6 +17,30 @@ import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
+  for (final status in ['awaiting_confirmation', 'awaiting_seller']) {
+    testWidgets('a customer can ask support to review $status', (tester) async {
+      final api = _OrderApi()
+        ..status = 'delivered'
+        ..caseStatus = status;
+      await _pump(tester, api);
+      await tester.scrollUntilVisible(find.text('Return/Refund'), 200);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Return/Refund'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField),
+        'The replacement has not arrived. Please review.',
+      );
+      await tester.ensureVisible(find.text('Ask support to review'));
+      await tester.tap(find.text('Ask support to review'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+      expect(api.caseStatus, 'appealed');
+      expect(find.text('Support is reviewing your request'), findsOneWidget);
+    });
+  }
+
   testWidgets('a customer can accept the pharmacy return offer', (
     tester,
   ) async {
@@ -450,6 +474,7 @@ class _OrderApi extends ApiClient {
     'status': caseStatus,
     'details': 'The item arrived damaged.',
     'can_respond': true,
+    'deadline': '2020-01-01T00:00:00Z',
     'events': [],
   };
 
@@ -460,7 +485,7 @@ class _OrderApi extends ApiClient {
     String? note,
     PickedAttachment? proof,
   }) async {
-    caseStatus = 'awaiting_fulfillment';
+    caseStatus = action == 'appeal' ? 'appealed' : 'awaiting_fulfillment';
     return returnRequest(id);
   }
 
