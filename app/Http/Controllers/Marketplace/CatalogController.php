@@ -274,6 +274,10 @@ class CatalogController extends Controller
 
         // The branch the buyer shops from, which is also where their questions and orders go.
         $branchId = $request->user() === null ? $product->store_id : Conversation::branchForProduct($product, $request->user());
+        // Show what that branch has on hand. These counts are for display only; the product is never saved here.
+        $counts = $product->branchStocks()->where('store_id', $branchId)->pluck('quantity', 'variant_key');
+        $product->variants->each(fn ($variant) => $variant->setAttribute('stock_quantity', (int) ($counts[$variant->id] ?? 0)));
+        $product->setAttribute('stock_quantity', $product->variants->isEmpty() ? (int) ($counts['default'] ?? 0) : $product->variants->sum('stock_quantity'));
 
         return view('marketplace.catalog.show', [
             'product' => $product,

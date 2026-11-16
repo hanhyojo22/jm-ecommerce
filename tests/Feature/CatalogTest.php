@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\Chat\Thread;
+use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Conversation;
 use App\Models\Order;
@@ -943,9 +944,12 @@ class CatalogTest extends TestCase
         $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => $tenantStatus]);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => "Store {$suffix}", 'slug' => "store-{$suffix}", 'phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'status' => $storeStatus]);
 
-        return Product::create([
+        $product = Product::create([
             'tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => "Product {$suffix}", 'slug' => "product-{$suffix}", 'sku' => "SKU-{$suffix}", 'price' => 199, 'stock_quantity' => 3, 'status' => 'active', ...$attributes,
         ]);
+        BranchStock::create(['store_id' => $store->id, 'product_id' => $product->id, 'variant_key' => 'default', 'quantity' => $product->stock_quantity]);
+
+        return $product;
     }
 
     private function attachReview(Product $product, bool $withPhoto, string $status = 'published'): void
