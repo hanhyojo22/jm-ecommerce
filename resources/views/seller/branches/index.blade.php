@@ -44,6 +44,7 @@
                         </div>
                         <div class="flex gap-2">
                             <a href="{{ route('seller.branch-stock.index', ['branch' => $branch->id]) }}" class="seller-outline-button min-h-11">Stock</a>
+                            <a href="{{ route('seller.opening-hours.edit', ['branch' => $branch->id]) }}" class="seller-outline-button min-h-11">Hours</a>
                             <a href="{{ route('seller.store-settings.edit', ['branch' => $branch->id]) }}" class="seller-outline-button min-h-11">Edit details</a>
                         </div>
                     </li>

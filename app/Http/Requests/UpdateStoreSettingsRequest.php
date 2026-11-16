@@ -39,11 +39,7 @@ class UpdateStoreSettingsRequest extends FormRequest
             'delivery_areas' => ['nullable', 'string', 'max:1000'],
             'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
-            'delivery_radius_km' => ['nullable', 'integer', 'between:1,500'],
-            'opening_time' => ['nullable', 'required_with:closing_time', 'date_format:H:i'],
-            'closing_time' => ['nullable', 'required_with:opening_time', 'date_format:H:i', 'different:opening_time'],
-            'prep_minutes' => ['nullable', 'integer', 'between:5,240'],
-            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'delivery_radius_km' => ['nullable', 'integer', 'between:1,500'],            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'remove_logo' => ['sometimes', 'boolean'],
         ];
     }

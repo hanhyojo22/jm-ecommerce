@@ -17,6 +17,9 @@
                 ['label' => 'Returns', 'href' => route('seller.returns.index'), 'icon' => 'returns', 'active' => request()->routeIs('seller.returns.*')],
                 ['label' => 'Products', 'href' => route('seller.products.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.products.*')],
                 ['label' => 'Branch stock', 'href' => route('seller.branch-stock.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.branch-stock.*')],
+                ...(auth()->user()?->sellerMembership(['owner', 'manager']) !== null
+                    ? [['label' => 'Opening hours', 'href' => route('seller.opening-hours.edit'), 'icon' => 'clock', 'active' => request()->routeIs('seller.opening-hours.*')]]
+                    : []),
             ],
         ],
         [
@@ -64,6 +67,7 @@
                             @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
                             @case('products')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />@break
                             @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break
+                            @case('clock')<circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />@break
                             @case('returns')<path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" />@break
                             @case('messages')<path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z" />@break
                             @case('reviews')<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />@break

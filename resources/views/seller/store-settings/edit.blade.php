@@ -208,29 +208,6 @@
                     </div>
                 </section>
 
-                <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="opening-hours-heading">
-                    <h2 id="opening-hours-heading" class="text-lg font-semibold text-ink">Opening hours</h2>
-                    <p class="mt-0.5 text-sm text-muted">Same hours every day, Philippine time. While closed, the app takes pickup orders only. Leave the times empty if this branch never closes. A closing time before the opening time runs past midnight.</p>
-                    <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">
-                        <div class="min-w-0">
-                            <label for="opening_time" class="block text-sm font-semibold text-ink">Opens at</label>
-                            <input id="opening_time" name="opening_time" type="time" value="{{ old('opening_time', $store->opening_time) }}" @error('opening_time') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('opening_time') border-rose-500 @enderror">
-                            <x-input-error :messages="$errors->get('opening_time')" class="mt-2" />
-                        </div>
-                        <div class="min-w-0">
-                            <label for="closing_time" class="block text-sm font-semibold text-ink">Closes at</label>
-                            <input id="closing_time" name="closing_time" type="time" value="{{ old('closing_time', $store->closing_time) }}" @error('closing_time') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('closing_time') border-rose-500 @enderror">
-                            <x-input-error :messages="$errors->get('closing_time')" class="mt-2" />
-                        </div>
-                        <div class="min-w-0">
-                            <label for="prep_minutes" class="block text-sm font-semibold text-ink">Preparation time (minutes)</label>
-                            <input id="prep_minutes" name="prep_minutes" type="number" min="5" max="240" inputmode="numeric" placeholder="20" aria-describedby="prep_minutes-help" value="{{ old('prep_minutes', $store->prep_minutes) }}" @error('prep_minutes') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('prep_minutes') border-rose-500 @enderror">
-                            <p id="prep_minutes-help" class="mt-1.5 text-xs text-muted">Packing time before the rider leaves. The app adds travel time.</p>
-                            <x-input-error :messages="$errors->get('prep_minutes')" class="mt-2" />
-                        </div>
-                    </div>
-                </section>
-
                 <div class="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-[#f5f7fa]/95 px-1 py-3 backdrop-blur">
                     <p class="mr-auto text-sm text-muted" x-show="dirty" x-cloak>You have unsaved changes.</p>
                     <a href="{{ route('seller.dashboard') }}" class="seller-outline-button min-h-11">Cancel</a>

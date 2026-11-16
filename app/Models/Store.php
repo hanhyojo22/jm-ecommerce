@@ -20,14 +20,21 @@ class Store extends Model
      *
      * @var list<string>
      */
-    public const LOCATION_DETAILS = ['region', 'province', 'barangay', 'postal_code', 'pickup_address', 'return_address', 'processing_days', 'fulfillment_methods', 'delivery_areas', 'latitude', 'longitude', 'delivery_radius_km', 'opening_time', 'closing_time', 'prep_minutes'];
+    public const LOCATION_DETAILS = ['region', 'province', 'barangay', 'postal_code', 'pickup_address', 'return_address', 'processing_days', 'fulfillment_methods', 'delivery_areas', 'latitude', 'longitude', 'delivery_radius_km'];
+
+    /**
+     * Daily hours and packing time; the branch's own manager may set these.
+     *
+     * @var list<string>
+     */
+    public const HOURS = ['opening_time', 'closing_time', 'prep_minutes'];
 
     /**
      * Branch hours are local Philippine time; the app itself runs in UTC.
      */
     public const TIMEZONE = 'Asia/Manila';
 
-    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', ...self::LOCATION_DETAILS];
+    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'logo_path', 'banner_path', 'phone', 'address_line', 'city', 'status', ...self::LOCATION_DETAILS, ...self::HOURS];
 
     /**
      * @return array<string, string>

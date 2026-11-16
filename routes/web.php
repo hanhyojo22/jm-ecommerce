@@ -30,6 +30,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushNotificationController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Seller\BranchController;
+use App\Http\Controllers\Seller\BranchHoursController;
 use App\Http\Controllers\Seller\BranchStockController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\PrescriptionController as SellerPrescriptionController;
@@ -150,6 +151,8 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::post('/seller/staff', [StaffController::class, 'store'])->middleware('throttle:10,1')->name('seller.staff.store');
     Route::patch('/seller/staff/{member}', [StaffController::class, 'update'])->middleware('throttle:10,1')->name('seller.staff.update');
     Route::delete('/seller/staff/{member}', [StaffController::class, 'destroy'])->middleware('throttle:10,1')->name('seller.staff.destroy');
+    Route::get('/seller/opening-hours', [BranchHoursController::class, 'edit'])->name('seller.opening-hours.edit');
+    Route::patch('/seller/opening-hours', [BranchHoursController::class, 'update'])->middleware('throttle:10,1')->name('seller.opening-hours.update');
     Route::get('/seller/branch-stock', [BranchStockController::class, 'index'])->name('seller.branch-stock.index');
     Route::patch('/seller/branch-stock', [BranchStockController::class, 'update'])->middleware('throttle:30,1')->name('seller.branch-stock.update');
     Route::get('/seller/products', [ProductController::class, 'index'])->name('seller.products.index');

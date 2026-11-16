@@ -326,35 +326,6 @@ class SellerStoreSettingsTest extends TestCase
         $this->assertDatabaseHas('stores', ['id' => $store->id, 'phone' => '+639171234567', 'province' => 'Metro Manila']);
     }
 
-    public function test_owner_can_set_opening_hours_and_undo_a_later_save(): void
-    {
-        [$owner, , $store] = $this->seller();
-        $details = ['phone' => '+639171234567', 'address_line' => '10 Market Street', 'city' => 'Manila', 'opening_time' => '08:00', 'closing_time' => '21:30', 'prep_minutes' => '25'];
-
-        $this->actingAs($owner)->patch(route('seller.store-settings.update'), $details)->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('stores', ['id' => $store->id, 'opening_time' => '08:00', 'closing_time' => '21:30', 'prep_minutes' => 25]);
-
-        $this->patch(route('seller.store-settings.update'), [...$details, 'closing_time' => '18:00'])->assertSessionHasNoErrors();
-        $this->post(route('seller.store-settings.undo'))->assertSessionHas('status', 'Last branch details save undone.');
-
-        $this->assertDatabaseHas('stores', ['id' => $store->id, 'closing_time' => '21:30']);
-    }
-
-    public function test_opening_hours_need_both_times_and_a_sensible_prep_time(): void
-    {
-        [$owner, , $store] = $this->seller();
-
-        $this->actingAs($owner)->patch(route('seller.store-settings.update'), [
-            'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
-            'city' => 'Manila',
-            'opening_time' => '8am',
-            'prep_minutes' => '0',
-        ])->assertSessionHasErrors(['opening_time', 'closing_time', 'prep_minutes']);
-
-        $this->assertDatabaseHas('stores', ['id' => $store->id, 'opening_time' => null]);
-    }
-
     public function test_coordinates_must_be_given_together_and_in_range(): void
     {
         [$owner, , $store] = $this->seller();
