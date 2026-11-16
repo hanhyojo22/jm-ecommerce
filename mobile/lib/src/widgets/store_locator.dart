@@ -2,11 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../core/formatters.dart';
 import '../core/location_service.dart';
 import '../models/store_branch.dart';
 import '../providers/store_locator_providers.dart';
 
 String _distanceLabel(double km) => '${km.toStringAsFixed(1)} km away';
+
+String _feeLabel(StoreBranch branch) {
+  final fee = double.tryParse(branch.deliveryFee ?? '') ?? 0;
+  final minimum = branch.freeDeliveryMinimum;
+  return [
+    fee > 0 ? '${money(branch.deliveryFee)} delivery' : 'Free delivery',
+    if (fee > 0 && minimum != null) 'free over ${money(minimum)}',
+  ].join(', ');
+}
 
 /// Recommended branch card, with loading and location-denied fallbacks.
 class StoreRecommendationCard extends ConsumerWidget {
@@ -86,6 +96,11 @@ class _Recommendation extends StatelessWidget {
                   if (distanceKm != null)
                     Text(
                       _distanceLabel(distanceKm),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  if (active.branch.deliveryFee != null)
+                    Text(
+                      _feeLabel(active.branch),
                       style: theme.textTheme.bodySmall,
                     ),
                   if (active.isOutOfDeliveryRange) _OutOfRangeBadge(),

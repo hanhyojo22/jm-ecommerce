@@ -9,6 +9,7 @@ use App\Http\Resources\Api\V1\ProductReviewResource;
 use App\Http\Resources\Api\V1\ProductSummaryResource;
 use App\Http\Resources\Api\V1\StoreResource;
 use App\Models\Category;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Store;
 use App\Queries\CatalogQuery;
@@ -99,6 +100,32 @@ class CatalogController extends Controller
         )->response();
     }
 
+    /**
+     * The buyer's own recent medicines that the branch has on hand now, newest purchase first.
+     */
+    public function boughtBefore(Request $request): JsonResponse
+    {
+        $branch = $this->branch($request->validate(['branch' => ['required', 'string', 'ulid']])['branch']);
+
+        $productIds = OrderItem::query()
+            ->whereNotNull('product_id')
+            ->whereHas('sellerOrder', fn (Builder $sellerOrder) => $sellerOrder
+                ->where('status', '!=', 'cancelled')
+                ->whereHas('order', fn (Builder $order) => $order->whereBelongsTo($request->user())))
+            ->groupBy('product_id')
+            ->orderByRaw('MAX(created_at) DESC')
+            ->limit(24)
+            ->pluck('product_id');
+
+        $products = CatalogQuery::inStockAt($this->summaryQuery()->whereIn('id', $productIds), $branch)
+            ->get()
+            ->sortBy(fn (Product $product): int => $productIds->search($product->id))
+            ->take(6)
+            ->values();
+
+        return response()->json(['data' => ProductSummaryResource::collection($products)->resolve($request)]);
+    }
+
     public function recommended(Request $request): JsonResponse
     {
         $search = $request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? null;
@@ -141,6 +168,7 @@ class CatalogController extends Controller
         $stores = CatalogQuery::publicStores()
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
+            ->with('tenant')
             ->orderBy('name')
             ->limit(200)
             ->get();

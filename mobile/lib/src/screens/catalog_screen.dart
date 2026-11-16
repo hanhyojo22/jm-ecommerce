@@ -241,6 +241,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final theme = Theme.of(context);
     final browsing = filter.isDefault;
     final deals = ref.watch(dealsProvider).value;
+    final boughtBefore = ref.watch(boughtBeforeProvider).value ?? const [];
     final locator = ref.watch(nearestStoreProvider).value;
     // Stock and prices are per branch, so the list waits until one is known.
     final needsBranch =
@@ -582,6 +583,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             ),
                           )
                         else ...[
+                          if (browsing && boughtBefore.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: _OrderAgain(products: boughtBefore),
+                            ),
                           if (browsing && deals != null)
                             SliverToBoxAdapter(
                               child: _TopDeals(
@@ -1430,6 +1435,64 @@ class _TopDeals extends StatelessWidget {
 }
 
 /// Discovery campaign with store previews that adapt to the available width.
+class _OrderAgain extends StatelessWidget {
+  const _OrderAgain({required this.products});
+
+  final List<Product> products;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Semantics(
+              header: true,
+              child: Text(
+                'Order again',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                ),
+              ),
+            ),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final product in products)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 10),
+                    child: SizedBox(
+                      width: 160,
+                      child: ProductCard(
+                        product: product,
+                        discovery: true,
+                        showAddToCart: true,
+                        onTap: () => context.push(
+                          '/product/${product.store?.slug ?? ''}/${product.slug}',
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CampaignCard extends StatelessWidget {
   const _CampaignCard({this.onExplore});
 

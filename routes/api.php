@@ -89,6 +89,10 @@ Route::prefix('v1')->group(function (): void {
             ->middleware('throttle:10,1')
             ->name('api.v1.delivery-addresses.destroy');
 
+        Route::get('/products/bought-before', [CatalogController::class, 'boughtBefore'])
+            ->middleware('throttle:api')
+            ->name('api.v1.products.bought-before');
+
         Route::get('/orders', [OrderController::class, 'index'])
             ->middleware('throttle:api')
             ->name('api.v1.orders.index');

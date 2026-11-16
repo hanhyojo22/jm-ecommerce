@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\BranchStock;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Store;
 use App\Models\Tenant;
+use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -135,6 +138,67 @@ class BranchCatalogApiTest extends TestCase
 
         $this->getJson(route('api.v1.products.availability', [$syrup, 'variant' => $small->id]))->assertOk()->assertJsonPath('data.0.id', $cebu->id);
         $this->getJson(route('api.v1.products.availability', [$syrup, 'variant' => $large->id]))->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_bought_before_lists_the_buyers_own_medicines_the_branch_has_newest_first(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $paracetamol = $this->product($tenant, $makati, 'Paracetamol 500mg');
+        $cetirizine = $this->product($tenant, $makati, 'Cetirizine 10mg');
+        $loratadine = $this->product($tenant, $makati, 'Loratadine 10mg');
+        $amoxicillin = $this->product($tenant, $makati, 'Amoxicillin 500mg');
+        $this->stock($cebu, $paracetamol, 5);
+        $this->stock($cebu, $cetirizine, 3);
+        $this->stock($cebu, $amoxicillin, 4);
+        $buyer = User::factory()->create();
+        $this->bought($buyer, $cebu, $paracetamol, 'pending', now()->subDays(2));
+        $this->bought($buyer, $cebu, $cetirizine, 'delivered', now()->subDay());
+        $this->bought($buyer, $cebu, $loratadine, 'delivered', now());
+        $this->bought($buyer, $cebu, $amoxicillin, 'cancelled', now());
+        $this->bought(User::factory()->create(), $cebu, $amoxicillin, 'delivered', now());
+
+        $this->actingAs($buyer)
+            ->getJson(route('api.v1.products.bought-before', ['branch' => $cebu->id]))
+            ->assertOk()
+            ->assertJsonPath('data.*.id', [$cetirizine->id, $paracetamol->id]);
+    }
+
+    public function test_bought_before_needs_a_signed_in_buyer(): void
+    {
+        [, , $cebu] = $this->pharmacy();
+
+        $this->getJson(route('api.v1.products.bought-before', ['branch' => $cebu->id]))->assertUnauthorized();
+    }
+
+    private function bought(User $buyer, Store $branch, Product $product, string $status, CarbonInterface $at): void
+    {
+        $order = Order::create([
+            'user_id' => $buyer->id,
+            'number' => 'JM-'.fake()->unique()->numerify('######'),
+            'status' => 'pending',
+            'recipient_name' => 'Ana Buyer',
+            'phone' => '+639171234567',
+            'address_line' => '1 Mabini Street',
+            'city' => $branch->city,
+            'subtotal' => '10.00',
+            'shipping_amount' => '0.00',
+            'total' => '10.00',
+        ]);
+        $order->sellerOrders()->create([
+            'tenant_id' => $branch->tenant_id,
+            'store_id' => $branch->id,
+            'status' => $status,
+            'subtotal' => '10.00',
+            'shipping_amount' => '0.00',
+            'total' => '10.00',
+        ])->items()->create([
+            'product_id' => $product->id,
+            'product_name' => $product->name,
+            'sku' => $product->sku,
+            'unit_price' => '10.00',
+            'quantity' => 1,
+            'line_total' => '10.00',
+        ])->forceFill(['created_at' => $at])->save();
     }
 
     /** @return array{0: Tenant, 1: Store, 2: Store} a pharmacy with branches in Makati and Cebu */

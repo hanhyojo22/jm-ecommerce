@@ -459,6 +459,11 @@ class ApiClient {
       str(branch['id']),
   };
 
+  /// The signed-in buyer's recent medicines that [branch] has on hand.
+  Future<List<Product>> boughtBefore(String branch) async => listOf(
+    await _data('GET', '/products/bought-before', query: {'branch': branch}),
+  ).map(Product.fromJson).toList(growable: false);
+
   Future<List<StoreBranch>> storeLocations() async =>
       listOf(await _data('GET', '/store-locations'))
           .map(StoreBranch.fromJson)

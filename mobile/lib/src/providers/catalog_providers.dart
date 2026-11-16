@@ -192,6 +192,21 @@ final productsProvider =
     );
 
 /// Discounted products for the home deals strip, independent of the feed's first page.
+/// Empty when signed out, before a branch is known, or if the request fails.
+final boughtBeforeProvider = FutureProvider.autoDispose<List<Product>>((
+  ref,
+) async {
+  final branch = await ref.watch(activeBranchIdProvider.future);
+  if (branch == null) {
+    return const [];
+  }
+  try {
+    return await ref.watch(apiClientProvider).boughtBefore(branch);
+  } catch (_) {
+    return const [];
+  }
+});
+
 final dealsProvider = FutureProvider.autoDispose<List<Product>>(
   (ref) async =>
       (await ref
@@ -214,15 +229,13 @@ final storeProvider = FutureProvider.autoDispose.family<StoreInfo, String>(
 );
 
 final storeProductsProvider = FutureProvider.autoDispose
-    .family<ProductPage, String>(
-      (ref, slug) async {
-        // A branch page lists what that branch has on hand, not what it first listed.
-        final store = await ref.watch(storeProvider(slug).future);
-        return ref
-            .watch(apiClientProvider)
-            .products(branch: store.id, perPage: 48);
-      },
-    );
+    .family<ProductPage, String>((ref, slug) async {
+      // A branch page lists what that branch has on hand, not what it first listed.
+      final store = await ref.watch(storeProvider(slug).future);
+      return ref
+          .watch(apiClientProvider)
+          .products(branch: store.id, perPage: 48);
+    });
 
 class ProductKey {
   const ProductKey({required this.store, required this.slug});

@@ -469,6 +469,43 @@ void main() {
     expect(find.text('Popular products'), findsNothing);
   });
 
+  testWidgets('the branch card shows the delivery fee', (tester) async {
+    await _pumpCatalog(
+      tester,
+      _CatalogApi(),
+      locator: const StoreLocatorState(
+        branches: [
+          BranchDistance(
+            StoreBranch(
+              id: 'cebu',
+              branchId: 'B-CEBU',
+              name: 'Cebu branch',
+              address: 'Cebu',
+              latitude: 10.3,
+              longitude: 123.9,
+              deliveryFee: '49.00',
+              freeDeliveryMinimum: '500.00',
+            ),
+            1.1,
+          ),
+        ],
+      ),
+    );
+
+    expect(find.text('₱49.00 delivery, free over ₱500.00'), findsOneWidget);
+  });
+
+  testWidgets('medicines bought before show in an Order again row', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..boughtBeforeProducts = [_product(90, name: 'Losartan 50 mg')];
+    await _pumpCatalog(tester, api);
+
+    expect(find.text('Order again'), findsOneWidget);
+    expect(find.text('Losartan 50 mg'), findsOneWidget);
+  });
+
   testWidgets('an empty marketplace offers refresh and recovers', (
     tester,
   ) async {
@@ -795,6 +832,12 @@ class _CatalogApi extends ApiClient {
   String? lastSort;
   String? lastSuggestionQuery;
   bool failCategories = false;
+  List<Product> boughtBeforeProducts = const [];
+
+  @override
+  Future<List<Product>> boughtBefore(String branch) async =>
+      boughtBeforeProducts;
+
   bool failFirstPage = false;
   bool empty = false;
   bool emptySearch = false;

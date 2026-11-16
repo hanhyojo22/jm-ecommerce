@@ -30,6 +30,8 @@ class StoreResource extends JsonResource
             'logo_url' => $this->logo_path === null ? null : Storage::disk('public')->url($this->logo_path),
             'banner_url' => $this->banner_path === null ? null : Storage::disk('public')->url($this->banner_path),
             'accepts_online_payments' => $this->acceptsOnlinePayments(),
+            'delivery_fee' => $this->whenLoaded('tenant', fn (): string => (string) $this->tenant->delivery_fee),
+            'free_delivery_minimum' => $this->whenLoaded('tenant', fn (): ?string => $this->tenant->free_delivery_minimum === null ? null : (string) $this->tenant->free_delivery_minimum),
             'products_count' => $this->when(isset($this->public_products_count), fn (): int => (int) $this->public_products_count),
         ];
     }

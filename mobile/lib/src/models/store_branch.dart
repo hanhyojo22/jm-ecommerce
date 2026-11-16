@@ -11,6 +11,8 @@ class StoreBranch {
     required this.latitude,
     required this.longitude,
     this.maxDeliveryRadiusKm,
+    this.deliveryFee,
+    this.freeDeliveryMinimum,
   });
 
   factory StoreBranch.fromJson(Map<String, dynamic> json) => StoreBranch(
@@ -26,6 +28,8 @@ class StoreBranch {
     maxDeliveryRadiusKm: json['delivery_radius_km'] is num
         ? (json['delivery_radius_km'] as num).toDouble()
         : null,
+    deliveryFee: json['delivery_fee'] as String?,
+    freeDeliveryMinimum: json['free_delivery_minimum'] as String?,
   );
 
   final String id;
@@ -37,6 +41,12 @@ class StoreBranch {
 
   /// Null when the seller has not set a delivery radius.
   final double? maxDeliveryRadiusKm;
+
+  /// Flat company delivery fee as a decimal string; null when not sent.
+  final String? deliveryFee;
+
+  /// Orders at or above this subtotal deliver free; null when there is no such offer.
+  final String? freeDeliveryMinimum;
 }
 
 /// A branch with its distance from the user; [distanceKm] is null when the

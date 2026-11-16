@@ -706,11 +706,78 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
     }
   }
 
+  Future<void> _change(Future<void> Function() request) async {
+    if (_adding) {
+      return;
+    }
+    setState(() => _adding = true);
+    try {
+      await request();
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.friendly)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _adding = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
     final chooseOptions =
         product.hasVariants || product.requiresVariantSelection;
+    final line = chooseOptions
+        ? null
+        : ref
+              .watch(cartProvider)
+              .value
+              ?.lines
+              .where((l) => l.productId == product.id && l.variantId == null)
+              .firstOrNull;
+    if (line != null) {
+      final cart = ref.read(cartProvider.notifier);
+      final atStock =
+          product.stockQuantity > 0 && line.quantity >= product.stockQuantity;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton.filledTonal(
+            tooltip: line.quantity > 1 ? 'Remove one' : 'Remove from cart',
+            onPressed: _adding
+                ? null
+                : () => _change(
+                    () => line.quantity > 1
+                        ? cart.updateQuantity(line.id, line.quantity - 1)
+                        : cart.remove(line.id),
+                  ),
+            icon: Icon(
+              line.quantity > 1
+                  ? Icons.remove_rounded
+                  : Icons.delete_outline_rounded,
+            ),
+          ),
+          Text(
+            '${line.quantity}',
+            semanticsLabel: '${line.quantity} in cart',
+            style: Theme.of(context).textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          IconButton.filled(
+            tooltip: 'Add one',
+            onPressed: _adding || atStock
+                ? null
+                : () => _change(
+                    () => cart.updateQuantity(line.id, line.quantity + 1),
+                  ),
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ],
+      );
+    }
     return SizedBox(
       width: double.infinity,
       child: FilledButton(

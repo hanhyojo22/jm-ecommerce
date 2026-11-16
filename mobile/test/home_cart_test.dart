@@ -84,6 +84,25 @@ void main() {
     },
   );
 
+  testWidgets('a product already in the cart shows a quantity stepper', (
+    tester,
+  ) async {
+    final api = _CartApi()..cartProduct = 'shirt';
+    await _pumpCard(tester, api);
+    expect(find.text('Add to cart'), findsNothing);
+    expect(find.text('2'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Add one'));
+    await tester.pumpAndSettle();
+    expect(api.updatedTo, 3);
+    expect(find.text('3'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Remove one'));
+    await tester.pumpAndSettle();
+    expect(api.updatedTo, 2);
+    expect(api.adds, 0);
+  });
+
   testWidgets('sold-out homepage products cannot be added', (tester) async {
     final api = _CartApi();
     await _pumpCard(tester, api, inStock: false);
@@ -143,11 +162,11 @@ Future<void> _pumpCard(
   await tester.pumpAndSettle();
 }
 
-Cart _cart(int quantity) => Cart.fromJson({
+Cart _cart(int quantity, {String productId = 'shirt'}) => Cart.fromJson({
   'items': [
     {
       'id': 'line',
-      'product_id': 'shirt',
+      'product_id': productId,
       'quantity': quantity,
       'product': {'name': 'Test shirt'},
     },
@@ -162,10 +181,20 @@ class _CartApi extends ApiClient {
   bool fail = false;
   Completer<Cart>? pending;
 
+  /// Which product the starting cart holds; 'other' keeps the card on its Add button.
+  String cartProduct = 'other';
+  int? updatedTo;
+
   @override
   Future<Cart> cart() async {
     cartReads++;
-    return _cart(2);
+    return _cart(2, productId: cartProduct);
+  }
+
+  @override
+  Future<Cart> updateCartItem(String id, int quantity) async {
+    updatedTo = quantity;
+    return _cart(quantity, productId: cartProduct);
   }
 
   @override
