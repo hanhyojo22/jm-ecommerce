@@ -306,6 +306,7 @@ class StockedElsewhereNotice extends ConsumerWidget {
               [
                 'Available at ${other.branch.name}',
                 if (other.distanceKm != null) _distanceLabel(other.distanceKm!),
+                if (other.isOutOfDeliveryRange) 'Pickup only',
               ].join(' · '),
               style: theme.textTheme.bodyMedium,
             ),

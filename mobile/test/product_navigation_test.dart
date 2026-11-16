@@ -325,6 +325,32 @@ void main() {
     },
   );
 
+  testWidgets('a branch too far to deliver is marked pickup only', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _ProductApi()..inStock = false,
+      stockedElsewhere: const BranchDistance(
+        StoreBranch(
+          id: 'makati',
+          branchId: 'B-MAKATI',
+          name: 'Makati branch',
+          address: 'Makati',
+          latitude: 14.55,
+          longitude: 121.02,
+          maxDeliveryRadiusKm: 10,
+        ),
+        566.3,
+      ),
+    );
+
+    expect(
+      find.text('Available at Makati branch · 566.3 km away · Pickup only'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('adding with no branch chosen opens the branch picker instead', (
     tester,
   ) async {
