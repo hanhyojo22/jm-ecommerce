@@ -173,48 +173,19 @@ class CatalogTest extends TestCase
             ->assertDontSee('aria-label="Messages,', false);
     }
 
-    public function test_public_product_cards_show_free_shipping_and_cod_badges(): void
+    public function test_product_cards_mark_prescription_medicines_without_marketplace_badges(): void
     {
-        $product = $this->product(['free_shipping' => true]);
+        $product = $this->product(['free_shipping' => true, 'requires_prescription' => true]);
+        $product->store->update(['city' => 'Cebu City']);
 
         foreach ([route('home'), route('catalog.index'), route('catalog.store', $product->store->slug)] as $url) {
             $this->get($url)
-                ->assertSee('FREE SHIPPING')
-                ->assertSee('COD');
+                ->assertSee('Prescription required')
+                ->assertDontSee('FREE SHIPPING')
+                ->assertDontSee('>COD<', false)
+                ->assertDontSee('No reviews yet')
+                ->assertDontSee('data-product-location', false);
         }
-    }
-
-    public function test_product_cards_show_the_store_city_including_ranked_products(): void
-    {
-        $product = $this->product();
-        $product->store->update(['city' => 'Cebu City']);
-        $this->attachReview($product, false);
-
-        foreach ([route('home'), route('catalog.index'), route('catalog.store', $product->store->slug), route('catalog.top-products')] as $url) {
-            $this->get($url)
-                ->assertSee('title="Cebu City"', false)
-                ->assertDontSee('Location unavailable')
-                ->assertDontSee($product->store->address_line);
-        }
-    }
-
-    public function test_product_cards_show_a_fallback_when_the_store_city_is_missing(): void
-    {
-        $product = $this->product();
-        $product->store->update(['city' => '']);
-
-        $this->get(route('catalog.index'))
-            ->assertSee('Location unavailable')
-            ->assertDontSee($product->store->address_line);
-    }
-
-    public function test_paid_shipping_product_card_shows_cod_without_free_shipping_badge(): void
-    {
-        $product = $this->product(['free_shipping' => false]);
-
-        $this->get(route('catalog.store', $product->store->slug))
-            ->assertSee('COD')
-            ->assertDontSee('FREE SHIPPING');
     }
 
     public function test_sold_out_product_shows_availability_notice_across_public_product_pages(): void
@@ -750,7 +721,6 @@ class CatalogTest extends TestCase
             ->assertSee($fractionalProduct->name)
             ->assertDontSee($otherProduct->name)
             ->assertSee('name="brands[]" value="Aurora" checked', false)
-            ->assertSee('name="conditions[]" value="refurbished" checked', false)
             ->assertSee('-20%')
             ->assertSee('₱200</p>', false)
             ->assertSee('₱250</del>', false)

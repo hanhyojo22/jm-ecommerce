@@ -32,23 +32,23 @@
         @endif
     </a>
     <div class="product-card-body flex flex-1 flex-col gap-1.5 p-3.5 sm:p-4">
-        <div class="flex flex-wrap items-center gap-1 text-[11px] font-bold leading-none text-white">
-            <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-warning-text px-1.5"><span aria-hidden="true">COD</span><span class="sr-only">Cash on delivery</span></span>
-            @if ($product->free_shipping)
-                <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-brand px-1.5">FREE SHIPPING</span>
-            @endif
-        </div>
+        @if ($product->requires_prescription)
+            <div class="flex flex-wrap items-center gap-1 text-[11px] font-bold leading-none text-white">
+                <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-slate-600 px-1.5"><span aria-hidden="true">Rx</span><span class="sr-only">Prescription required</span></span>
+            </div>
+        @endif
         <h3 class="product-card-title min-h-12 text-[16px] font-medium leading-6 text-ink"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="line-clamp-2 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->name }}</a></h3>
         <div class="flex flex-wrap items-center gap-2">
             <p class="product-card-price text-[20px] font-bold leading-6 tabular-nums {{ $isOnSale ? 'text-danger' : 'text-ink' }}">₱{{ number_format($displayPrice, $priceDecimals) }}</p>
             @if ($isOnSale)<span class="rounded bg-red-50 px-1.5 py-1 text-xs font-semibold leading-none text-danger">-{{ $discountPercent }}%</span>@endif
         </div>
         @if ($isOnSale)<del class="text-meta font-medium tabular-nums text-muted line-through decoration-[1.5px] decoration-muted/70" aria-label="Original price ₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}">₱{{ number_format($product->compare_at_price, $compareAtPriceDecimals) }}</del>@endif
+        @if ($product->published_reviews_count || $soldCount > 0)
         <div class="flex min-h-4 flex-wrap items-center gap-x-1 gap-y-0.5 text-xs leading-[1.55] text-muted">
-            @if ($product->published_reviews_count)<svg viewBox="0 0 20 20" class="size-3.5 shrink-0 fill-amber-400" aria-hidden="true"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z" /></svg><span class="shrink-0">{{ number_format((float) $product->published_reviews_avg_rating, 1) }}</span><span class="shrink-0 text-muted">({{ $formatCount((int) $product->published_reviews_count) }})</span>@else<span class="shrink-0">No reviews yet</span>@endif
-            @if ($soldCount > 0)<span class="h-3 w-px shrink-0 bg-line" aria-hidden="true"></span><span class="shrink-0">{{ $formatCount($soldCount) }} Sold</span>@endif
+            @if ($product->published_reviews_count)<svg viewBox="0 0 20 20" class="size-3.5 shrink-0 fill-amber-400" aria-hidden="true"><path d="m10 1.6 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.7-5 2.7.9-5.5-4-3.9 5.6-.8L10 1.6Z" /></svg><span class="shrink-0">{{ number_format((float) $product->published_reviews_avg_rating, 1) }}</span><span class="shrink-0 text-muted">({{ $formatCount((int) $product->published_reviews_count) }})</span>@endif
+            @if ($soldCount > 0)@if ($product->published_reviews_count)<span class="h-3 w-px shrink-0 bg-line" aria-hidden="true"></span>@endif<span class="shrink-0">{{ $formatCount($soldCount) }} Sold</span>@endif
         </div>
-        <a href="{{ route('catalog.store', $product->store->slug) }}" title="{{ $product->store->city ?: 'Location unavailable' }}" aria-label="Visit {{ $product->store->name }}, {{ $product->store->city ?: 'location unavailable' }}" data-product-location class="mb-0.5 flex min-h-6 min-w-0 items-center gap-1.5 text-xs font-medium text-muted hover:text-brand"><svg class="size-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg><span class="truncate">{{ $product->store->city ?: 'Location unavailable' }}</span></a>
+        @endif
         @if ($product->variants_exists && $product->stock_quantity > 0 && ! $isOwnStore)
             <a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}#purchase" class="mt-auto inline-flex min-h-11 items-center justify-center rounded-md border border-line px-3 text-sm font-semibold text-brand hover:border-brand hover:bg-blue-50">Choose options</a>
         @elseif ($isBuyer)

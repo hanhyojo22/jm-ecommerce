@@ -304,39 +304,6 @@
                                 </label>
                             </div>
 
-                            <div role="group" aria-labelledby="catalog-condition-heading" class="border-t border-line py-[14px]">
-                                <h3 id="catalog-condition-heading" class="mb-2.5 marketplace-filter-heading">Condition</h3>
-                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
-                                    <input type="checkbox" name="conditions[]" value="new" @checked(in_array('new', $activeFilters['conditions'] ?? [], true)) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
-                                    <span>New</span>
-                                </label>
-                                <label class="flex min-h-8 cursor-pointer items-center gap-[9px] rounded-lg py-[5px] pl-[5px] text-sm leading-[1.55] transition hover:bg-canvas">
-                                    <input type="checkbox" name="conditions[]" value="refurbished" @checked(in_array('refurbished', $activeFilters['conditions'] ?? [], true)) x-on:change="$el.form.requestSubmit()" class="size-4 appearance-auto accent-brand focus:ring-brand">
-                                    <span>Refurbished</span>
-                                </label>
-                            </div>
-
-                            @if (! $sellerStore && $filterStores->isNotEmpty())
-                                <div class="border-t border-line py-[14px]">
-                                    <h3 class="marketplace-filter-heading">Stores</h3>
-                                    <ul class="mt-2 space-y-0.5">
-                                        @foreach ($filterStores->take(5) as $filterStore)
-                                            <x-marketplace.filter-option :item="$filterStore" :href="route('catalog.index', [...request()->except(['seller', 'page']), 'seller' => $filterStore->slug])" :clear-href="route('catalog.index', request()->except(['seller', 'page']))" :selected="request('seller') === $filterStore->slug" />
-                                        @endforeach
-                                    </ul>
-                                    @if ($filterStores->count() > 5)
-                                        <details class="mt-1 text-sm" @if ($filterStores->skip(5)->contains('slug', request('seller'))) open @endif>
-                                            <summary class="cursor-pointer py-1.5 font-medium text-brand hover:text-brand-hover">More sellers</summary>
-                                            <ul class="space-y-0.5 pb-1">
-                                                @foreach ($filterStores->skip(5) as $filterStore)
-                                                    <x-marketplace.filter-option :item="$filterStore" :href="route('catalog.index', [...request()->except(['seller', 'page']), 'seller' => $filterStore->slug])" :clear-href="route('catalog.index', request()->except(['seller', 'page']))" :selected="request('seller') === $filterStore->slug" />
-                                                @endforeach
-                                            </ul>
-                                        </details>
-                                    @endif
-                                </div>
-                            @endif
-
                         </form>
 
                     </aside>
@@ -347,8 +314,8 @@
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             @if ($isListing && ! $sellerStore)
                                 <div>
-                                    <h1 id="product-results-heading" class="marketplace-page-title">{{ filled($search) ? 'Results for “'.Str::limit($search, 40).'”' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'Marketplace') : 'Marketplace') }}</h1>
-                                    <p class="marketplace-page-subtitle">Discover products from trusted sellers · {{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
+                                    <h1 id="product-results-heading" class="marketplace-page-title">{{ filled($search) ? 'Results for “'.Str::limit($search, 40).'”' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'All medicines') : 'All medicines') }}</h1>
+                                    <p class="marketplace-page-subtitle">In stock at your branch · {{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
                                 </div>
                             @else
                                 <p class="self-center text-sm text-muted" role="status">{{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>

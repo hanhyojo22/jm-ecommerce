@@ -122,7 +122,7 @@ class CatalogController extends Controller
     private function homeProducts(): Builder
     {
         return $this->publishedProducts()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
             ->with(['thumbnail', 'category:id,name,slug'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
@@ -248,7 +248,7 @@ class CatalogController extends Controller
         $distribution = $product->reviews()->published()->selectRaw('rating, count(*) as aggregate')->groupBy('rating')->pluck('aggregate', 'rating');
 
         $relatedProducts = $this->publishedProducts()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
             ->with(['thumbnail', 'store:id,name,slug,status'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
@@ -260,7 +260,7 @@ class CatalogController extends Controller
             ->limit(4)
             ->get();
         $sellerProducts = $this->publishedProducts()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
             ->with(['thumbnail', 'store:id,name,slug,status'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
