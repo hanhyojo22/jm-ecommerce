@@ -37,9 +37,14 @@ class ProductController extends Controller
             'stock' => ['nullable', 'in:in_stock,out_of_stock'],
             'sort' => ['nullable', 'in:newest,name,price,stock'],
         ]);
+        // Branch staff count what their own branch has; head office sees the company-wide total.
+        $member = $request->user()->sellerMembership();
+        $branch = $member !== null && ! $member->isHeadOffice() ? $member->store : null;
+        $atBranch = fn ($stock) => $stock->where('store_id', $branch?->id)->where('quantity', '>', 0);
         $products = $tenant->products()
             ->with(['images', 'category:id,name'])
             ->withCount('variants')
+            ->when($branch, fn ($query) => $query->withSum(['branchStocks as branch_quantity' => fn ($stock) => $stock->where('store_id', $branch->id)], 'quantity'))
             ->when($filters['search'] ?? null, function ($query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 
@@ -50,20 +55,25 @@ class ProductController extends Controller
             })
             ->when($filters['category_id'] ?? null, fn ($query, string $categoryId) => $query->where('category_id', $categoryId))
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
-            ->when($filters['stock'] ?? null, function ($query, string $stock): void {
-                $query->where('stock_quantity', $stock === 'out_of_stock' ? '=' : '>', 0);
+            ->when($filters['stock'] ?? null, function ($query, string $stock) use ($branch, $atBranch): void {
+                match (true) {
+                    $branch === null => $query->where('stock_quantity', $stock === 'out_of_stock' ? '=' : '>', 0),
+                    $stock === 'out_of_stock' => $query->whereDoesntHave('branchStocks', $atBranch),
+                    default => $query->whereHas('branchStocks', $atBranch),
+                };
             });
 
         match ($filters['sort'] ?? 'newest') {
             'name' => $products->orderBy('name'),
             'price' => $products->orderBy('price'),
-            'stock' => $products->orderBy('stock_quantity'),
+            'stock' => $products->orderBy($branch ? 'branch_quantity' : 'stock_quantity'),
             default => $products->latest(),
         };
 
         return view('seller.products.index', [
             'products' => $products->paginate(20)->withQueryString(),
             'store' => $tenant->store,
+            'branch' => $branch,
             'filters' => $filters,
             'productCounts' => $tenant->products()->selectRaw('status, count(*) as aggregate')->groupBy('status')->pluck('aggregate', 'status'),
             'canManageProducts' => $this->canManageProducts($request, $tenant),

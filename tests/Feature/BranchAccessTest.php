@@ -159,6 +159,25 @@ class BranchAccessTest extends TestCase
         $this->assertTrue($this->member($tenant, 'staff', $makati)->can('view', $makatiOrder));
     }
 
+    public function test_the_products_list_shows_branch_staff_their_own_branchs_stock(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $product = $this->product($tenant, $makati, 'Paracetamol 500mg');
+        $product->update(['stock_quantity' => 43]);
+        $product->branchStocks()->createMany([
+            ['store_id' => $makati->id, 'variant_key' => 'default', 'quantity' => 40],
+            ['store_id' => $cebu->id, 'variant_key' => 'default', 'quantity' => 3],
+        ]);
+
+        $this->actingAs($this->member($tenant, 'manager', $cebu))->get(route('seller.products.index'))
+            ->assertOk()
+            ->assertSee('Stock at Botika Plus Cebu')
+            ->assertSee('<span class="sc-num">3</span>', false)
+            ->assertDontSee('<span class="sc-num">43</span>', false);
+        $this->actingAs($this->member($tenant, 'owner'))->get(route('seller.products.index'))
+            ->assertSee('<span class="sc-num">43</span>', false);
+    }
+
     public function test_branch_staff_count_stock_only_at_their_own_branch(): void
     {
         [$tenant, $makati, $cebu] = $this->pharmacy();
