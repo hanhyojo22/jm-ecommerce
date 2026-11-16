@@ -12,32 +12,22 @@ import 'package:jmmart/src/screens/cart_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
+const _productName = 'Everyday linen shirt with a long product name';
+
 void main() {
-  testWidgets('selection waits for confirmation before enabling checkout', (
+  testWidgets('everything in the cart is bought without tick boxes', (
     tester,
   ) async {
-    final api = _CartApi()
-      ..selectionPending = Completer<({int selectedCount, String subtotal})>();
+    final api = _CartApi()..startSelected = false;
     await _pump(tester, api);
-    await tester.tap(find.byType(Checkbox).first);
-    await tester.pump();
-    expect(
-      tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Checkout (1)'),
-          )
-          .onPressed,
-      isNull,
-    );
-    api.selectionPending!.complete((selectedCount: 0, subtotal: '0.00'));
-    await tester.pumpAndSettle();
-    expect(find.text('0 items selected'), findsOneWidget);
-    expect(tester.widget<Checkbox>(find.byType(Checkbox).first).value, isFalse);
+    expect(find.byType(Checkbox), findsNothing);
+    expect(api.lastSelection, ['line']);
+    expect(find.text('From Cebu Capitol'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(find.widgetWithText(FilledButton, 'Checkout'))
           .onPressed,
-      isNull,
+      isNotNull,
     );
   });
 
@@ -46,28 +36,20 @@ void main() {
   ) async {
     final api = _CartApi()..removePending = Completer<Cart>();
     await _pump(tester, api);
-    await tester.tap(find.text('Edit'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Remove'));
-    await tester.pump();
-    expect(
-      tester
-          .widget<TextButton>(find.widgetWithText(TextButton, 'Remove'))
-          .onPressed,
-      isNull,
+    final remove = find.widgetWithIcon(
+      IconButton,
+      Icons.delete_outline_rounded,
     );
+    await tester.tap(remove);
+    await tester.pump();
+    expect(tester.widget<IconButton>(remove).onPressed, isNull);
     api.removePending!.completeError(
       const ApiException(code: 'network', message: 'Please retry removal.'),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Cart (1)'), findsOneWidget);
+    expect(find.text(_productName), findsOneWidget);
     expect(find.text('Please retry removal.'), findsOneWidget);
-    expect(
-      tester
-          .widget<TextButton>(find.widgetWithText(TextButton, 'Remove'))
-          .onPressed,
-      isNotNull,
-    );
+    expect(tester.widget<IconButton>(remove).onPressed, isNotNull);
   });
 
   test('quantity response after provider disposal completes safely', () async {
@@ -128,14 +110,8 @@ void main() {
     );
     expect(
       tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Checkout (1)'),
-          )
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Checkout'))
           .onPressed,
-      isNull,
-    );
-    expect(
-      tester.widget<Checkbox>(find.byType(Checkbox).first).onChanged,
       isNull,
     );
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
@@ -156,7 +132,7 @@ void main() {
         .onRefresh();
     await tester.pumpAndSettle();
     expect(find.text('Cannot refresh cart. Try again.'), findsOneWidget);
-    expect(find.text('Cart (1)'), findsOneWidget);
+    expect(find.text(_productName), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -183,25 +159,19 @@ void main() {
     );
   });
 
-  testWidgets(
-    'edit reveals removal and deleting the item shows the empty cart',
-    (tester) async {
-      final api = _CartApi();
-      var browsed = false;
-      await _pump(tester, api, onBrowseProducts: () => browsed = true);
-      expect(find.text('Remove'), findsNothing);
-      await tester.tap(find.text('Edit'));
-      await tester.pumpAndSettle();
-      expect(api.removals, 0);
-      expect(find.text('Done'), findsOneWidget);
-      await tester.tap(find.text('Remove'));
-      await tester.pumpAndSettle();
-      expect(api.removals, 1);
-      expect(find.text('Your cart is empty'), findsOneWidget);
-      await tester.tap(find.text('Browse products'));
-      expect(browsed, isTrue);
-    },
-  );
+  testWidgets('removing the only item shows the empty cart', (tester) async {
+    final api = _CartApi();
+    var browsed = false;
+    await _pump(tester, api, onBrowseProducts: () => browsed = true);
+    await tester.tap(
+      find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
+    );
+    await tester.pumpAndSettle();
+    expect(api.removals, 1);
+    expect(find.text('Your cart is empty'), findsOneWidget);
+    await tester.tap(find.text('Shop medicines'));
+    expect(browsed, isTrue);
+  });
 
   testWidgets('quantity controls retain the server response and minimum', (
     tester,
@@ -227,7 +197,14 @@ void main() {
     'unavailable items expose remove without enabling quantity changes',
     (tester) async {
       await _pump(tester, _CartApi()..available = false);
-      expect(find.text('Remove'), findsOneWidget);
+      expect(
+        find.text('Not available at this branch — remove it to check out'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithIcon(IconButton, Icons.delete_outline_rounded),
+        findsOneWidget,
+      );
       expect(
         tester
             .widget<IconButton>(
@@ -258,9 +235,6 @@ void main() {
             scale: scale,
             dark: dark,
           );
-          expect(tester.takeException(), isNull);
-          await tester.tap(find.text('Edit'));
-          await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         });
       }
@@ -306,6 +280,8 @@ class _CartApi extends ApiClient {
   _CartApi()
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
   bool available = true;
+  bool startSelected = true;
+  List<String>? lastSelection;
   int quantity = 1;
   int removals = 0;
   int updates = 0;
@@ -318,6 +294,7 @@ class _CartApi extends ApiClient {
   Future<({int selectedCount, String subtotal})> updateCartSelection(
     List<String> ids,
   ) async {
+    lastSelection = ids;
     return selectionPending?.future ??
         (selectedCount: ids.length, subtotal: ids.isEmpty ? '0.00' : '250.00');
   }
@@ -336,19 +313,21 @@ class _CartApi extends ApiClient {
               id: 'line',
               productId: 'product',
               quantity: quantity,
-              selected: available,
+              selected: available && (startSelected || lastSelection != null),
               available: available,
               unitPrice: '250.00',
               lineTotal: '${quantity * 250}.00',
-              productName: 'Everyday linen shirt with a long product name',
+              productName: _productName,
               productSlug: 'shirt',
-              storeName: 'Independent store',
+              storeName: 'Cebu Capitol',
               storeSlug: 'store',
               hasVariants: true,
               variantLabel: 'Navy blue / Large',
             ),
           ],
-          selectedCount: available ? 1 : 0,
+          selectedCount: available && (startSelected || lastSelection != null)
+              ? 1
+              : 0,
           subtotal: '${quantity * 250}.00',
         );
 

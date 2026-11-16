@@ -117,12 +117,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Checkout (2)'), findsOneWidget);
+    expect(find.text('Checkout'), findsOneWidget);
     expect(find.text('Everyday linen shirt'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('select all picks only lines that can be bought', (tester) async {
+  testWidgets('the cart buys every line the branch can sell', (tester) async {
     final api = _SelectAllApi();
 
     await tester.pumpWidget(
@@ -136,32 +136,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
-
     expect(api.selected, ['in-stock']);
-  });
-
-  testWidgets('the store checkbox selects only that store\'s buyable lines', (
-    tester,
-  ) async {
-    final api = _SelectAllApi();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          apiClientProvider.overrideWithValue(api),
-          activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
-        ],
-        child: _app(const CartScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.bySemanticsLabel('Select Store'));
-    await tester.pumpAndSettle();
-
-    expect(api.selected, ['in-stock']);
+    expect(find.byType(Checkbox), findsNothing);
   });
 
   testWidgets('order tabs and image strip fit a phone with large text', (

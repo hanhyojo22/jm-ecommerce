@@ -23,8 +23,8 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
-  bool _editing = false;
   bool _busy = false;
+  String? _selectAttempt;
 
   Future<void> _runCartAction(Future<void> Function() action) async {
     if (_busy) return;
@@ -50,6 +50,26 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
+  /// Like a food order, everything in the cart is bought. Lines left
+  /// unselected by an older app version are selected again here so the
+  /// total and checkout always cover the whole cart.
+  void _selectEverythingAvailable(Cart cart) {
+    final available = cart.lines.where((line) => line.available).toList();
+    if (_busy || available.every((line) => line.selected)) return;
+    // Once per set of lines, so a refused request cannot retry in a loop.
+    final attempt = available.map((line) => line.id).join(',');
+    if (attempt == _selectAttempt) return;
+    _selectAttempt = attempt;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _runCartAction(
+        () => ref
+            .read(cartProvider.notifier)
+            .selectOnly(available.map((line) => line.id).toList()),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
@@ -61,25 +81,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           return EmptyState(
             icon: Icons.shopping_bag_outlined,
             title: 'Your cart is empty',
-            message: 'Products you add from the catalog will appear here.',
+            message: 'Medicines you add will appear here.',
             action: FilledButton(
               onPressed: _browseProducts,
-              child: const Text('Browse products'),
+              child: const Text('Shop medicines'),
             ),
           );
         }
 
+        _selectEverythingAvailable(value);
         final theme = Theme.of(context);
         final scheme = theme.colorScheme;
-        final available = value.lines.where((line) => line.available);
-        final allSelected =
-            available.isNotEmpty && available.every((line) => line.selected);
-        final stores = <String, List<CartLine>>{};
-        for (final line in value.lines) {
-          stores.putIfAbsent(line.storeSlug, () => []).add(line);
-        }
-
-        final groups = stores.values.toList(growable: false);
+        final itemCount = value.lines
+            .where((line) => line.available)
+            .fold<int>(0, (sum, line) => sum + line.quantity);
 
         return Column(
           children: [
@@ -88,34 +103,19 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 onRefresh: () => _runCartAction(
                   () => ref.read(cartProvider.notifier).refresh(),
                 ),
-                child: ListView.separated(
+                child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.only(bottom: 16),
-                  itemCount: stores.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 6),
-                  itemBuilder: (context, index) {
-                    final group = groups[index];
-
-                    return ColoredBox(
+                  children: [
+                    ColoredBox(
                       color: scheme.surfaceContainerLowest,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _StoreHeader(
-                            group: group,
-                            onToggle: _busy
-                                ? null
-                                : (selected) =>
-                                      _selectStore(ref, value, group, selected),
-                          ),
-                          for (final line in group)
+                          _BranchLine(name: value.lines.first.storeName),
+                          for (final line in value.lines)
                             _CartLineRow(
                               line: line,
-                              editing: _editing,
-                              onToggle: _busy
-                                  ? null
-                                  : (selected) =>
-                                        _toggle(ref, value, line, selected),
                               onQuantity: _busy
                                   ? null
                                   : (quantity) =>
@@ -124,19 +124,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                             ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
             ),
-            // One-row marketplace footer: text scaling is capped like the
-            // home search header so the checkout button never gets squeezed out.
             MediaQuery.withClampedTextScaling(
               maxScaleFactor: 1.3,
               child: SafeArea(
                 top: false,
                 child: Container(
-                  padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 12, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerLowest,
                     border: Border(
@@ -145,94 +143,38 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
                   child: Row(
                     children: [
-                      InkWell(
-                        borderRadius: BorderRadius.circular(appSurfaceRadius),
-                        onTap: (available.isEmpty || _busy)
-                            ? null
-                            : () => _selectAll(ref, value, !allSelected),
-                        child: Padding(
-                          padding: const EdgeInsetsDirectional.only(end: 8),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Checkbox(
-                                value: allSelected,
-                                onChanged: (available.isEmpty || _busy)
-                                    ? null
-                                    : (checked) => _selectAll(
-                                        ref,
-                                        value,
-                                        checked ?? false,
-                                      ),
-                              ),
-                              Text(
-                                'All',
-                                semanticsLabel:
-                                    'Select all (${available.length})',
-                                style: theme.textTheme.bodyLarge,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                       Expanded(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text.rich(
-                                TextSpan(
-                                  text: 'Subtotal: ',
-                                  children: [
-                                    TextSpan(
-                                      text: money(
-                                        value.selectedCount == 0
-                                            ? '0'
-                                            : value.subtotal,
-                                      ),
-                                      style: TextStyle(
-                                        color: scheme.primary,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                style: theme.textTheme.titleMedium,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              money(value.subtotal),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w800,
                               ),
-                              Text(
-                                '${value.selectedCount} ${value.selectedCount == 1 ? 'item' : 'items'} selected',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
+                            ),
+                            Text(
+                              '$itemCount ${itemCount == 1 ? 'item' : 'items'} · delivery fee at checkout',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 10),
-                      // Sized to its label (no flex) so it sits flush right;
-                      // the cap keeps room for the subtotal on narrow phones.
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 160),
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(96, 48),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                          ),
-                          onPressed: _busy || value.selectedCount == 0
-                              ? null
-                              : () => context.push('/checkout'),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              value.selectedCount == 0
-                                  ? 'Checkout'
-                                  : 'Checkout (${value.selectedCount})',
-                            ),
-                          ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(132, 48),
                         ),
+                        onPressed: _busy || value.selectedCount == 0
+                            ? null
+                            : () => context.push('/checkout'),
+                        child: const Text('Checkout'),
                       ),
                     ],
                   ),
@@ -247,7 +189,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _header(cart.value),
+        _header(),
         SizedBox(
           height: 2,
           child: _busy
@@ -260,7 +202,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return widget.embedded ? content : Scaffold(body: content);
   }
 
-  Widget _header(Cart? cart) {
+  Widget _header() {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -275,107 +217,30 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           bottom: false,
           child: Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(8, 4, 12, 4),
-            child: Row(
-              children: [
-                if (!widget.embedded && Navigator.canPop(context))
-                  const BackButton(),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Cart${cart == null || cart.lines.isEmpty ? '' : ' (${cart.lines.length})'}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+            child: SizedBox(
+              height: 48,
+              child: Row(
+                children: [
+                  if (!widget.embedded && Navigator.canPop(context))
+                    const BackButton(),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Cart',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                ),
-                TextButton.icon(
-                  onPressed: !_busy && cart?.lines.isNotEmpty == true
-                      ? () => setState(() => _editing = !_editing)
-                      : null,
-                  icon: Icon(
-                    _editing
-                        ? Icons.check_rounded
-                        : Icons.delete_outline_rounded,
-                    size: 22,
-                  ),
-                  label: Text(_editing ? 'Done' : 'Edit'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: scheme.onSurface,
-                    minimumSize: const Size(48, 48),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _toggle(
-    WidgetRef ref,
-    Cart cart,
-    CartLine line,
-    bool selected,
-  ) async {
-    final ids = cart.lines
-        .where((item) => item.selected)
-        .map((item) => item.id)
-        .toSet();
-
-    if (selected) {
-      ids.add(line.id);
-    } else {
-      ids.remove(line.id);
-    }
-
-    await _runCartAction(() async {
-      await ref.read(cartProvider.notifier).selectOnly(ids.toList());
-    });
-  }
-
-  /// Selects or clears every buyable line of one store, keeping the rest of
-  /// the cart's selection as it was.
-  Future<void> _selectStore(
-    WidgetRef ref,
-    Cart cart,
-    List<CartLine> group,
-    bool selected,
-  ) async {
-    final ids = cart.lines
-        .where((item) => item.selected)
-        .map((item) => item.id)
-        .toSet();
-    final storeIds = group
-        .where((line) => line.available)
-        .map((line) => line.id);
-
-    if (selected) {
-      ids.addAll(storeIds);
-    } else {
-      ids.removeAll(storeIds);
-    }
-
-    await _runCartAction(() async {
-      await ref.read(cartProvider.notifier).selectOnly(ids.toList());
-    });
-  }
-
-  Future<void> _selectAll(WidgetRef ref, Cart cart, bool selected) async {
-    await _runCartAction(() async {
-      await ref
-          .read(cartProvider.notifier)
-          .selectOnly(
-            selected
-                ? cart.lines
-                      .where((line) => line.available)
-                      .map((line) => line.id)
-                      .toList()
-                : const [],
-          );
-    });
   }
 
   Future<void> _updateQuantity(
@@ -402,68 +267,32 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 }
 
-class _StoreHeader extends StatelessWidget {
-  const _StoreHeader({required this.group, required this.onToggle});
+/// The one branch every item in the cart comes from.
+class _BranchLine extends StatelessWidget {
+  const _BranchLine({required this.name});
 
-  final List<CartLine> group;
-  final ValueChanged<bool>? onToggle;
+  final String name;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final store = group.first;
-    final buyable = group.where((line) => line.available);
-    final selectedCount = buyable.where((line) => line.selected).length;
-    final bool? state = selectedCount == 0
-        ? false
-        : selectedCount == buyable.length
-        ? true
-        : null;
-
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 4, 0),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
         children: [
-          Semantics(
-            label: 'Select ${store.storeName}',
-            child: Checkbox(
-              tristate: true,
-              value: state,
-              onChanged: buyable.isEmpty || onToggle == null
-                  ? null
-                  : (_) => onToggle!(state != true),
-            ),
+          Icon(
+            Icons.storefront_outlined,
+            size: 18,
+            color: theme.colorScheme.primary,
           ),
+          const SizedBox(width: 8),
           Expanded(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(appSurfaceRadius),
-              onTap: () => context.push('/store/${store.storeSlug}'),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 48),
-                child: Row(
-                  children: [
-                    StoreAvatar(
-                      name: store.storeName,
-                      storeSlug: store.storeSlug,
-                      radius: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        store.storeName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ],
-                ),
+            child: Text(
+              'From $name',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -476,15 +305,11 @@ class _StoreHeader extends StatelessWidget {
 class _CartLineRow extends StatelessWidget {
   const _CartLineRow({
     required this.line,
-    required this.editing,
-    required this.onToggle,
     required this.onQuantity,
     required this.onRemove,
   });
 
   final CartLine line;
-  final bool editing;
-  final ValueChanged<bool>? onToggle;
   final ValueChanged<int>? onQuantity;
   final VoidCallback? onRemove;
 
@@ -499,22 +324,10 @@ class _CartLineRow extends StatelessWidget {
         : 100.0;
 
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 12, 16),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 4, 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: imageSize,
-            child: Center(
-              child: Checkbox(
-                semanticLabel: 'Select ${line.productName}',
-                value: line.selected,
-                onChanged: line.available && onToggle != null
-                    ? (value) => onToggle!(value ?? false)
-                    : null,
-              ),
-            ),
-          ),
           Opacity(
             opacity: line.available ? 1 : 0.45,
             child: NetworkThumb(
@@ -528,14 +341,28 @@ class _CartLineRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  line.productName,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    height: 1.25,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        line.productName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          height: 1.25,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Remove ${line.productName}',
+                      onPressed: onRemove,
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      color: scheme.onSurfaceVariant,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                 ),
                 if (line.variantLabel?.trim().isNotEmpty == true) ...[
                   const SizedBox(height: 4),
@@ -555,7 +382,7 @@ class _CartLineRow extends StatelessWidget {
                 if (!line.available) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Unavailable — not included in checkout',
+                    'Not available at this branch — remove it to check out',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.error,
                     ),
@@ -582,19 +409,6 @@ class _CartLineRow extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (editing || !line.available)
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: TextButton.icon(
-                      onPressed: onRemove,
-                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                      label: const Text('Remove'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: scheme.error,
-                        minimumSize: const Size(48, 48),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
