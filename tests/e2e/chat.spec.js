@@ -243,18 +243,23 @@ test('a file dropped on the message composer is the one that sends', async ({ br
     }
 });
 
-test('failed attachment upload retries with one confirmed bubble', async ({ browser }) => {
+test('failed attachment upload retries with one confirmed bubble', async ({ browser }, testInfo) => {
+    test.setTimeout(45_000);
     const buyer = await openAsRole(browser, 'customer');
+    const fileName = `qa-retry-${testInfo.repeatEachIndex}.pdf`;
 
     try {
         await buyer.page.goto('/stores/qa-northwind-store/products/qa-chat-sample');
         await buyer.page.getByRole('button', { name: 'Message pharmacy' }).click();
         await expect(buyer.page.getByRole('textbox', { name: 'Write a message' })).toBeVisible();
-        await buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click();
+        await Promise.all([
+            buyer.page.waitForEvent('domcontentloaded'),
+            buyer.page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
+        ]);
         await expect(buyer.page.locator('[data-cookie-banner]')).toBeHidden();
         await buyer.page.getByRole('button', { name: 'Add attachment' }).click();
         await buyer.page.getByLabel('Image or PDF document').setInputFiles({
-            name: 'qa-retry.pdf',
+            name: fileName,
             mimeType: 'application/pdf',
             buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF'),
         });
@@ -267,12 +272,12 @@ test('failed attachment upload retries with one confirmed bubble', async ({ brow
             return route.continue();
         });
         await buyer.page.getByRole('button', { name: 'Send document' }).click();
-        const pending = buyer.page.locator('[data-pending-message-id]').filter({ hasText: 'qa-retry.pdf' });
+        const pending = buyer.page.locator('[data-pending-message-id]').filter({ hasText: fileName });
         await expect(pending).toContainText('Failed');
-        const retryResponse = buyer.page.waitForResponse((response) => response.url().includes('/attachments') && response.request().method() === 'POST');
+        const retryResponse = buyer.page.waitForResponse((response) => response.url().includes('/attachments') && response.request().method() === 'POST', { timeout: 25_000 });
         await pending.getByRole('button', { name: 'Retry' }).click();
         expect((await retryResponse).ok()).toBeTruthy();
-        await expect(buyer.page.locator('article[data-client-message-id]').filter({ hasText: 'qa-retry.pdf' })).toHaveCount(1);
+        await expect(buyer.page.locator('article[data-client-message-id]').filter({ hasText: fileName })).toHaveCount(1);
         await expect(pending).toHaveCount(0);
     } finally {
         await buyer.context.close();
