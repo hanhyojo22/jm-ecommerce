@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/catalog_providers.dart';
-import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
@@ -76,40 +75,13 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   Widget build(BuildContext context) {
     final store = ref.watch(storeProvider(widget.slug));
     final products = ref.watch(storeProductsProvider(widget.slug));
-    final locator = ref.watch(nearestStoreProvider).value;
-    final activeBranch = locator?.activeBranch?.branch;
-    final viewed = store.value;
-    // The cart buys from one branch, so say so when browsing a different one.
-    final otherBranch =
-        viewed != null &&
-        activeBranch != null &&
-        activeBranch.branchId != viewed.id;
 
     return Scaffold(
-      appBar: _storeAppBar(context, viewed?.name),
-      body: Column(
-        children: [
-          if (otherBranch)
-            MaterialBanner(
-              leading: const Icon(Icons.storefront_outlined),
-              content: Text('Your cart orders from ${activeBranch.name}.'),
-              actions: [
-                TextButton(
-                  onPressed: () => ref
-                      .read(nearestStoreProvider.notifier)
-                      .selectBranch(viewed.slug),
-                  child: const Text('Shop from this branch'),
-                ),
-              ],
-            ),
-          Expanded(
-            child: AsyncView(
-              value: store,
-              onRetry: _retry,
-              builder: (value) => _storeBody(context, value, products),
-            ),
-          ),
-        ],
+      appBar: _storeAppBar(context, store.value?.name),
+      body: AsyncView(
+        value: store,
+        onRetry: _retry,
+        builder: (value) => _storeBody(context, value, products),
       ),
     );
   }

@@ -654,6 +654,60 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           .where((category) => category.productCount > 0)
           .take(4)
           .toList(growable: false);
+      final query = feed.filter.query;
+      final elsewhere = query.isEmpty
+          ? const <Product>[]
+          : ref.watch(elsewhereSearchProvider(query)).value ?? const [];
+
+      if (elsewhere.isNotEmpty) {
+        return [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 28, 16, 4),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'Not at your branch',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Other branches have these. Open one to see the nearest branch that has it.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverList.list(
+            children: [
+              for (final product in elsewhere)
+                ListTile(
+                  leading: NetworkThumb(
+                    url: product.thumbnailUrl,
+                    width: 48,
+                    height: 48,
+                  ),
+                  title: Text(product.name),
+                  subtitle: Text(money(product.effectivePrice)),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => context.push(
+                    '/product/${product.store?.slug ?? ''}/${product.slug}',
+                  ),
+                ),
+            ],
+          ),
+        ];
+      }
 
       return [
         SliverFillRemaining(

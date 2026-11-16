@@ -192,6 +192,16 @@ final productsProvider =
     );
 
 /// Discounted products for the home deals strip, independent of the feed's first page.
+/// Company-wide matches for a search the shopper's branch has nothing for.
+final elsewhereSearchProvider = FutureProvider.autoDispose
+    .family<List<Product>, String>(
+      (ref, query) async =>
+          (await ref
+                  .watch(apiClientProvider)
+                  .products(query: query, perPage: 6))
+              .products,
+    );
+
 /// Empty when signed out, before a branch is known, or if the request fails.
 final boughtBeforeProvider = FutureProvider.autoDispose<List<Product>>((
   ref,

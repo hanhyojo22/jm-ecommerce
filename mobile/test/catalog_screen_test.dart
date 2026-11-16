@@ -685,6 +685,22 @@ void main() {
     expect(find.text('Nothing matches that search'), findsNothing);
   });
 
+  testWidgets('a search the branch lacks lists what other branches have', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..emptySearch = true
+      ..elsewhereProducts = [_product(77, name: 'Losartan 50 mg')];
+    await _pumpCatalog(tester, api);
+    await tester.enterText(find.byType(TextField), 'losartan');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not at your branch'), findsOneWidget);
+    expect(find.text('Losartan 50 mg'), findsOneWidget);
+    expect(find.text('Nothing matches that search'), findsNothing);
+  });
+
   testWidgets('top deals list only marked-down products, deepest first', (
     tester,
   ) async {
@@ -833,6 +849,7 @@ class _CatalogApi extends ApiClient {
   String? lastSuggestionQuery;
   bool failCategories = false;
   List<Product> boughtBeforeProducts = const [];
+  List<Product> elsewhereProducts = const [];
 
   @override
   Future<List<Product>> boughtBefore(String branch) async =>
@@ -892,6 +909,14 @@ class _CatalogApi extends ApiClient {
         page: 1,
         lastPage: 1,
         total: deals.length,
+      );
+    }
+    if (branch == null && (query?.isNotEmpty ?? false)) {
+      return ProductPage(
+        products: elsewhereProducts,
+        page: 1,
+        lastPage: 1,
+        total: elsewhereProducts.length,
       );
     }
     lastQuery = query;
