@@ -36,7 +36,7 @@ class CartController extends Controller
             $item->setAttribute('line_total', bcmul($item->unitPrice(), (string) $item->quantity, 2));
         });
 
-        $this->deselectUnavailableItems($cart);
+        $this->selectWhatCanBeBought($cart);
 
         return view('marketplace.cart.index', [
             'cart' => $cart,
@@ -162,21 +162,22 @@ class CartController extends Controller
     }
 
     /**
-     * An item that went out of stock while ticked is unticked, so the summary
-     * and the checkout button always agree with what the buyer can see.
+     * Everything in the cart that can be ordered is bought, as in the app; an item that went
+     * out of stock is left out so the summary and the checkout agree with the page.
      */
-    private function deselectUnavailableItems(?Cart $cart): void
+    private function selectWhatCanBeBought(?Cart $cart): void
     {
-        $unavailableIds = $cart?->items
-            ->filter(fn (CartItem $item): bool => $item->selected && ! $item->isAvailable())
-            ->pluck('id');
+        $changed = $cart?->items->filter(fn (CartItem $item): bool => (bool) $item->selected !== $item->isAvailable());
 
-        if ($unavailableIds === null || $unavailableIds->isEmpty()) {
+        if ($changed === null || $changed->isEmpty()) {
             return;
         }
 
-        $cart->items()->whereKey($unavailableIds)->update(['selected' => false]);
-        $cart->items->whereIn('id', $unavailableIds)->each->setAttribute('selected', false);
+        // A plain update: the items carry a display-only line_total that is not a column.
+        foreach ($changed as $item) {
+            CartItem::query()->whereKey($item->id)->update(['selected' => $item->isAvailable()]);
+            $item->setAttribute('selected', $item->isAvailable());
+        }
     }
 
     private function subtotal(?Cart $cart): string

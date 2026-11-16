@@ -231,7 +231,7 @@ class CartTest extends TestCase
         $this->assertSame($second->id, $buyer->cart->items()->first()->product_id);
     }
 
-    public function test_the_summary_totals_only_the_selected_items(): void
+    public function test_every_item_in_the_cart_is_bought_without_tick_boxes(): void
     {
         $buyer = User::factory()->create();
         $first = $this->product();
@@ -241,9 +241,10 @@ class CartTest extends TestCase
         $buyer->cart->items()->where('product_id', $second->id)->update(['selected' => false]);
 
         $this->actingAs($buyer)->get(route('cart.index'))
-            ->assertSee('of 2 selected')
-            ->assertSee('299.00')
-            ->assertDontSee('598.00');
+            ->assertDontSee('Select all')
+            ->assertDontSee('Remove selected')
+            ->assertSee('598.00');
+        $this->assertSame(2, $buyer->cart->items()->where('selected', true)->count());
     }
 
     public function test_an_item_that_sold_out_while_selected_is_unselected_when_the_cart_is_viewed(): void
