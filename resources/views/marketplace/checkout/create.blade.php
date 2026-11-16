@@ -15,6 +15,11 @@
             placing: false,
             summaryOpen: false,
             method: @js(old('payment_method', 'cod')),
+            {{-- A closed branch takes pickup only; delivery opens again at its next opening. --}}
+            fulfillment: @js(old('fulfillment_method', $closedUntil ? 'pickup' : 'delivery')),
+            totals: @js(['delivery' => '₱'.number_format($total, 2), 'pickup' => '₱'.number_format($subtotal, 2)]),
+            get totalText() { return this.totals[this.fulfillment] },
+            get activeFields() { return this.fulfillment === 'pickup' ? ['recipient_name', 'phone'] : this.fields },
             methodLabels: @js(\App\Models\Payment::METHOD_LABELS),
             get placeLabel() { return this.method === 'cod' ? 'Place order' : 'Place order & pay with ' + this.methodLabels[this.method] },
             fields: @js(array_keys($addressFields)),
@@ -33,7 +38,7 @@
             addressFull: '',
             init() { this.syncAddress() },
             collapsed(number) { return this.step !== number && this.done.includes(number) },
-            incomplete(id) { const address = this.addresses.find((item) => item.id === id); return ! address || this.fields.some((field) => ! address[field]) },
+            incomplete(id) { const address = this.addresses.find((item) => item.id === id); return ! address || this.activeFields.some((field) => ! address[field]) },
             get showFields() { return this.choice === 'new' || this.incomplete(this.choice) },
             choose(id) {
                 this.choice = id;
@@ -69,7 +74,7 @@
             },
             validAddress() {
                 if (this.$refs.form.noValidate) return true;
-                const invalid = this.fields.filter((field) => ! document.getElementById(field).checkValidity());
+                const invalid = this.activeFields.filter((field) => ! document.getElementById(field).checkValidity());
                 invalid.forEach((field) => this.issues[field] = this.messages[field]);
                 if (invalid.length === 0) return true;
                 this.reveal(1, document.getElementById(invalid[0]));
@@ -122,7 +127,21 @@
 
                     {{-- One sheet keeps the flow legible as a single form rather than a stack of cards. --}}
                     <div class="divide-y divide-line overflow-hidden rounded-lg border border-line bg-surface">
-                        <x-marketplace.checkout-step :number="1" title="Delivery address" sub="Where should we send your order?" value="addressShort">
+                        <x-marketplace.checkout-step :number="1" title="Delivery or pickup" sub="Where should we send your order?" value="addressShort">
+                            <div class="mb-4 grid grid-cols-2 gap-2" role="radiogroup" aria-label="How to get it">
+                                <label @class(['flex min-h-11 items-center justify-center gap-2 rounded-lg border border-line px-3 text-sm font-semibold has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:checked]:text-brand', 'cursor-not-allowed opacity-50' => $closedUntil, 'cursor-pointer' => ! $closedUntil])>
+                                    <input type="radio" name="fulfillment_method" value="delivery" x-model="fulfillment" @disabled($closedUntil) class="sr-only">
+                                    Delivery
+                                </label>
+                                <label class="flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-line px-3 text-sm font-semibold has-[:checked]:border-brand has-[:checked]:bg-[#EEF3FF] has-[:checked]:text-brand">
+                                    <input type="radio" name="fulfillment_method" value="pickup" x-model="fulfillment" class="sr-only">
+                                    Pickup · Free
+                                </label>
+                            </div>
+                            @if ($closedUntil)
+                                <p class="mb-4 text-sm font-semibold text-danger" role="status">{{ $branchName }} is closed. Delivery opens {{ $closedUntil->isToday() ? $closedUntil->format('g:i A') : $closedUntil->format('g:i A').' '.($closedUntil->isTomorrow() ? 'tomorrow' : $closedUntil->format('D')) }}; you can still order for pickup.</p>
+                            @endif
+                            <p x-show="fulfillment === 'pickup'" x-cloak class="mb-4 text-sm text-muted">Pick up at {{ $branchName }}{{ $branchAddress ? ' · '.$branchAddress : '' }}. Your name and mobile number go on the order.</p>
                             @if ($addresses->isNotEmpty())
                                 <div class="overflow-hidden rounded-lg border border-line" role="radiogroup" aria-label="Delivery address">
                                     @foreach ($addresses as $address)
@@ -150,13 +169,13 @@
                                 {{-- Name and number share a row, then street, then city. --}}
                                 <div class="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-6">
                                     @foreach ($addressFields as $field => $label)
-                                        <div @class([
+                                        <div @if (in_array($field, ['address_line', 'city'], true)) x-show="fulfillment === 'delivery'" @endif @class([
                                             'col-span-2 sm:col-span-3' => in_array($field, ['recipient_name', 'phone'], true),
                                             'col-span-2 sm:col-span-6' => $field === 'address_line',
                                             'col-span-2 sm:col-span-6' => $field === 'city',
                                         ])>
                                             <label for="{{ $field }}" class="mb-1.5 block text-[13.5px] font-semibold text-ink">{{ $label }}</label>
-                                            <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" required
+                                            <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" @if (in_array($field, ['address_line', 'city'], true)) :required="fulfillment === 'delivery'" @else required @endif
                                                 @switch($field)
                                                     @case('recipient_name') autocomplete="name" maxlength="150" placeholder="Full name" @break
                                                     @case('phone') type="tel" autocomplete="tel" pattern="(\+63|0)9[0-9]{9}" maxlength="13" placeholder="09171234567" @break
@@ -211,7 +230,7 @@
 
                             <div x-show="method === 'cod'" class="mt-3.5 flex items-start gap-[9px] rounded-md border border-line bg-slate-50 px-3.5 py-3 text-[13px] leading-normal text-muted">
                                 <svg class="mt-px size-4 shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
-                                <p><strong class="font-semibold text-ink">No card needed.</strong> Hand <strong class="font-semibold text-ink">₱{{ number_format($total, 2) }}</strong> to the courier when your order arrives.</p>
+                                <p><strong class="font-semibold text-ink">No card needed.</strong> Hand <strong class="font-semibold text-ink" x-text="totalText">₱{{ number_format($total, 2) }}</strong> <span x-text="fulfillment === 'pickup' ? 'at the counter when you collect it.' : 'to the courier when your order arrives.'">to the courier when your order arrives.</span></p>
                             </div>
 
                             @if ($onlineFees !== [])
@@ -269,7 +288,7 @@
                             </div>
 
                             <div class="mt-5 grid gap-3">
-                                <button type="submit" @click="place($event)" :disabled="placing" class="flex min-h-[46px] w-full items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-sm:hidden" x-text="placing ? 'Placing order…' : (method === 'cod' ? 'Place order · ₱{{ number_format($subtotal, 2) }}' : placeLabel)">Place order · ₱{{ number_format($subtotal, 2) }}</button>
+                                <button type="submit" @click="place($event)" :disabled="placing" class="flex min-h-[46px] w-full items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-sm:hidden" x-text="placing ? 'Placing order…' : (method === 'cod' ? 'Place order · ' + totalText : placeLabel)">Place order · ₱{{ number_format($subtotal, 2) }}</button>
                                 <p class="text-center text-xs leading-normal text-muted max-sm:hidden" x-text="method === 'cod' ? 'You will pay on delivery.' : 'You’ll pay on PayMongo’s secure page next.'">You will pay on delivery.</p>
                                 <button type="button" @click="open(2)" class="inline-flex min-h-11 items-center justify-center gap-1.5 justify-self-center text-[13px] font-semibold text-muted transition-colors hover:text-ink">
                                     <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0 6-6m-6 6 6 6"/></svg>
@@ -284,7 +303,7 @@
                     <button type="button" @click="summaryOpen = ! summaryOpen" :aria-expanded="summaryOpen.toString()" aria-controls="checkout-summary-body" class="flex w-full items-center justify-between gap-2.5 rounded-lg px-4 py-[15px] text-left lg:hidden">
                         <span><span class="block text-[15.5px] font-semibold tracking-[-0.012em] text-ink">Order summary</span><span class="mt-0.5 block text-[12.5px] text-muted">{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</span></span>
                         <span class="flex items-center gap-2">
-                            <span class="text-[15px] font-semibold tabular-nums text-ink">₱{{ number_format($total, 2) }}</span>
+                            <span class="text-[15px] font-semibold tabular-nums text-ink" x-text="totalText">₱{{ number_format($total, 2) }}</span>
                             <svg class="size-[18px] text-muted transition-transform duration-200" :class="summaryOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
                         </span>
                     </button>
@@ -318,8 +337,8 @@
 
                         <dl class="mt-4 grid gap-2 border-t border-dashed border-[#DBE3EF] pt-3.5 text-[13px]">
                             <div class="flex justify-between gap-3 text-muted"><dt>Subtotal</dt><dd class="tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div>
-                            <div class="flex justify-between gap-3 text-muted"><dt>Delivery fee</dt>@if (bccomp($deliveryFee, '0', 2) > 0)<dd class="tabular-nums text-ink">₱{{ number_format($deliveryFee, 2) }}</dd>@else<dd class="font-semibold text-success">Free</dd>@endif</div>
-                            <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-sm font-semibold text-ink"><dt>Total</dt><dd class="text-[20px] leading-none tracking-[-0.025em] tabular-nums">₱{{ number_format($total, 2) }}</dd></div>
+                            <div class="flex justify-between gap-3 text-muted" x-show="fulfillment === 'delivery'"><dt>Delivery fee</dt>@if (bccomp($deliveryFee, '0', 2) > 0)<dd class="tabular-nums text-ink">₱{{ number_format($deliveryFee, 2) }}</dd>@else<dd class="font-semibold text-success">Free</dd>@endif</div>
+                            <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-sm font-semibold text-ink"><dt>Total</dt><dd class="text-[20px] leading-none tracking-[-0.025em] tabular-nums" x-text="totalText">₱{{ number_format($total, 2) }}</dd></div>
                         </dl>
                         <p class="mt-3.5 flex items-center gap-1.5 text-[12.5px] leading-[1.4] text-muted">
                             <svg class="size-[13px] shrink-0 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
@@ -336,7 +355,7 @@
                     <div class="flex items-center gap-3.5">
                         <div class="min-w-0">
                             <p class="text-[11.5px] text-muted">Total to pay</p>
-                            <p class="truncate text-lg/tight font-semibold tracking-[-0.025em] tabular-nums text-ink">₱{{ number_format($total, 2) }}</p>
+                            <p class="truncate text-lg/tight font-semibold tracking-[-0.025em] tabular-nums text-ink" x-text="totalText">₱{{ number_format($total, 2) }}</p>
                         </div>
                         <button type="button" @click="step === 3 ? submit() : next()" :disabled="placing" class="ml-auto flex min-h-[46px] min-w-[140px] shrink-0 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover active:translate-y-px disabled:cursor-wait disabled:bg-[#DBE3EE] disabled:text-[#7A8AA1] max-[380px]:min-w-[118px] max-[380px]:px-3.5" x-text="placing ? 'Placing order…' : ({ 1: 'Continue', 2: 'Review order' }[step] ?? 'Place order')">Continue</button>
                     </div>

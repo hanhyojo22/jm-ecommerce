@@ -188,7 +188,7 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($customer)->get(route('checkout.create'))
             ->assertOk()
-            ->assertSeeInOrder(['Delivery address', 'Payment method', 'Review &amp; place order', 'Order summary'], false)
+            ->assertSeeInOrder(['Delivery or pickup', 'Payment method', 'Review &amp; place order', 'Order summary'], false)
             ->assertSee('Cash on delivery')
             ->assertSee('Place order')
             ->assertDontSee('name="province"', false)

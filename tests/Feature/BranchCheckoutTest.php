@@ -361,6 +361,24 @@ class BranchCheckoutTest extends TestCase
         $this->get(route('catalog.store', $makati->slug))->assertSee('Cetirizine 10mg')->assertDontSee('Paracetamol 500mg');
     }
 
+    public function test_the_web_checkout_offers_pickup_and_a_closed_branch_takes_pickup_only(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $cebu->update(['opening_time' => '08:00', 'closing_time' => '20:00']);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+
+        $this->travelTo(Carbon::parse('2026-11-16 10:00', 'Asia/Manila'));
+        $this->get(route('checkout.create'))->assertOk()->assertSee('Pickup · Free')->assertDontSee('is closed. Delivery opens');
+
+        $this->travelTo(Carbon::parse('2026-11-16 21:00', 'Asia/Manila'));
+        $this->get(route('checkout.create'))->assertSee('Botika Plus Cebu is closed. Delivery opens 8:00 AM tomorrow');
+        $this->post(route('checkout.store'), ['fulfillment_method' => 'pickup', 'recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'payment_method' => 'cod'])
+            ->assertRedirectContains('/placed');
+
+        $this->assertDatabaseHas('orders', ['user_id' => $buyer->id, 'fulfillment_method' => 'pickup', 'address_line' => '10 Rizal Street']);
+    }
+
     public function test_only_head_office_sets_the_delivery_fee(): void
     {
         [$makati] = $this->pharmacyWithStock(makati: 1, cebu: 1);

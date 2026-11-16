@@ -61,7 +61,7 @@ class CheckoutController extends Controller
         $preferredAddress = $addresses->first()
             ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
 
-        // The web checkout is delivery only until Phase 7, so the flat delivery fee always applies.
+        // Totals are worked out for delivery; the page drops the fee when the shopper picks pickup.
         $branch = $cart->branchFor($cart->items->first()->product->tenant_id);
         $deliveryFee = $branch === null ? '0.00' : CheckoutCart::deliveryFee($branch->tenant, $subtotal);
         $total = bcadd($subtotal, $deliveryFee, 2);
@@ -79,6 +79,9 @@ class CheckoutController extends Controller
             'total' => $total,
             'addresses' => $addresses,
             'preferredAddress' => $preferredAddress,
+            'branchName' => $branch?->name ?? 'your branch',
+            'branchAddress' => collect([$branch?->address_line, $branch?->city])->filter()->join(', '),
+            'closedUntil' => $branch?->nextOpeningAt(now()),
         ]);
     }
 
