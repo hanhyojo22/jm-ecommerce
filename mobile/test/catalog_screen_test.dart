@@ -495,6 +495,38 @@ void main() {
     expect(find.text('₱49.00 delivery, free over ₱500.00'), findsOneWidget);
   });
 
+  testWidgets('the branch card shows open with a delivery time, or closed', (
+    tester,
+  ) async {
+    StoreLocatorState locator({bool open = true}) => StoreLocatorState(
+      branches: [
+        BranchDistance(
+          StoreBranch(
+            id: 'cebu',
+            branchId: 'B-CEBU',
+            name: 'Cebu branch',
+            address: 'Cebu',
+            latitude: 10.3,
+            longitude: 123.9,
+            maxDeliveryRadiusKm: 8,
+            prepMinutes: 20,
+            isOpen: open,
+            nextOpeningAt: open ? null : DateTime(2030, 1, 7, 8),
+          ),
+          2.5,
+        ),
+      ],
+    );
+
+    await _pumpCatalog(tester, _CatalogApi(), locator: locator());
+    expect(find.text('Open · 30–45 min'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await _pumpCatalog(tester, _CatalogApi(), locator: locator(open: false));
+    // intl puts a narrow no-break space before AM.
+    expect(find.textContaining('Closed · opens Mon 8:00'), findsOneWidget);
+  });
+
   testWidgets('medicines bought before show in an Order again row', (
     tester,
   ) async {

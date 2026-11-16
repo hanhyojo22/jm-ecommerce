@@ -675,6 +675,7 @@ class FulfillmentOption {
     required this.fee,
     required this.total,
     this.paymentFees = const {},
+    this.closedUntil,
   });
 
   final String fee;
@@ -683,12 +684,16 @@ class FulfillmentOption {
   /// Online payment fee per method, worked out on this option's total.
   final Map<String, String> paymentFees;
 
+  /// When the branch opens again; delivery is refused until then.
+  final DateTime? closedUntil;
+
   factory FulfillmentOption.fromJson(Map<String, dynamic> json) =>
       FulfillmentOption(
         fee: str(json['fee'], '0.00'),
         total: str(json['total'], '0.00'),
         paymentFees: mapOf(json['payment_fees'])
             .map((key, value) => MapEntry(key, str(value))),
+        closedUntil: DateTime.tryParse(str(json['closed_until']))?.toLocal(),
       );
 }
 

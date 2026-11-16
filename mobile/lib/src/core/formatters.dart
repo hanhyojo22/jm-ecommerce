@@ -8,6 +8,30 @@ final _peso = NumberFormat.currency(
 
 String money(String? value) => _peso.format(double.tryParse(value ?? '') ?? 0);
 
+/// "8:00 AM", plus the weekday when it is not today.
+String opensLabel(DateTime at, {DateTime? now}) {
+  final today = now ?? DateTime.now();
+  final sameDay =
+      at.year == today.year && at.month == today.month && at.day == today.day;
+  final tomorrow = DateTime(today.year, today.month, today.day + 1);
+  final isTomorrow =
+      at.year == tomorrow.year &&
+      at.month == tomorrow.month &&
+      at.day == tomorrow.day;
+  final time = DateFormat.jm().format(at);
+  return sameDay
+      ? time
+      : isTomorrow
+      ? '$time tomorrow'
+      : '${DateFormat.E().format(at)} $time';
+}
+
+/// Delivery estimate: packing time plus about 4 minutes a km, as a 15-minute range.
+String etaLabel({required int prepMinutes, required double distanceKm}) {
+  final low = (prepMinutes + distanceKm * 4).round();
+  return '$low–${low + 15} min';
+}
+
 /// Adds two decimal money strings without floating-point rounding.
 String addMoney(String a, String b) {
   final cents = _minorUnits(a) + _minorUnits(b);

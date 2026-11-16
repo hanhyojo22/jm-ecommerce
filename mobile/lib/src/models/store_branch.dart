@@ -13,6 +13,9 @@ class StoreBranch {
     this.maxDeliveryRadiusKm,
     this.deliveryFee,
     this.freeDeliveryMinimum,
+    this.isOpen = true,
+    this.nextOpeningAt,
+    this.prepMinutes,
   });
 
   factory StoreBranch.fromJson(Map<String, dynamic> json) => StoreBranch(
@@ -30,6 +33,11 @@ class StoreBranch {
         : null,
     deliveryFee: json['delivery_fee'] as String?,
     freeDeliveryMinimum: json['free_delivery_minimum'] as String?,
+    isOpen: json['is_open'] != false,
+    nextOpeningAt: DateTime.tryParse(str(json['next_opening_at']))?.toLocal(),
+    prepMinutes: json['prep_minutes'] is num
+        ? (json['prep_minutes'] as num).toInt()
+        : null,
   );
 
   final String id;
@@ -47,6 +55,13 @@ class StoreBranch {
 
   /// Orders at or above this subtotal deliver free; null when there is no such offer.
   final String? freeDeliveryMinimum;
+
+  /// As of when the branch list loaded; checkout asks the server again.
+  final bool isOpen;
+  final DateTime? nextOpeningAt;
+
+  /// Packing time before the rider leaves; null when head office has not set it.
+  final int? prepMinutes;
 }
 
 /// A branch with its distance from the user; [distanceKm] is null when the

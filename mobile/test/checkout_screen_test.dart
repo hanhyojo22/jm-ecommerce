@@ -98,6 +98,34 @@ void main() {
     },
   );
 
+  testWidgets('a closed branch starts on pickup and greys out delivery', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(
+      rx: false,
+      closedUntil: DateTime.now()
+          .add(const Duration(hours: 2))
+          .toUtc()
+          .toIso8601String(),
+    );
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, 1.2)],
+      ),
+    );
+
+    expect(find.textContaining('Makati branch is closed.'), findsOneWidget);
+    expect(find.text('Pay at the counter'), findsOneWidget);
+
+    await tester.tap(find.text('Delivery · ₱49.00'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed!.fulfillment, 'pickup');
+  });
+
   testWidgets('a pin outside the delivery radius cannot be ordered', (
     tester,
   ) async {
@@ -213,10 +241,11 @@ typedef _Placed = ({
 });
 
 class _CheckoutApi extends ApiClient {
-  _CheckoutApi({required this.rx})
+  _CheckoutApi({required this.rx, this.closedUntil})
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   final bool rx;
+  final String? closedUntil;
   _Placed? placed;
 
   @override
@@ -246,7 +275,12 @@ class _CheckoutApi extends ApiClient {
       'city': 'Makati',
     },
     'fulfillment_methods': {
-      'delivery': {'fee': '49.00', 'total': '149.00', 'payment_fees': {}},
+      'delivery': {
+        'fee': '49.00',
+        'total': '149.00',
+        'payment_fees': {},
+        'closed_until': closedUntil,
+      },
       'pickup': {'fee': '0.00', 'total': '100.00', 'payment_fees': {}},
     },
     'store_totals': [

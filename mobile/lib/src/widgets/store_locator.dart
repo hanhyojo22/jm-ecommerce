@@ -9,6 +9,20 @@ import '../providers/store_locator_providers.dart';
 
 String _distanceLabel(double km) => '${km.toStringAsFixed(1)} km away';
 
+/// "Open · 25–40 min" when delivery can go now, "Closed · opens 8:00 AM" when not.
+String? _hoursLabel(BranchDistance item) {
+  final branch = item.branch;
+  if (!branch.isOpen) {
+    final opens = branch.nextOpeningAt;
+    return opens == null ? 'Closed' : 'Closed · opens ${opensLabel(opens)}';
+  }
+  final km = item.distanceKm;
+  if (km == null || item.isOutOfDeliveryRange) {
+    return null;
+  }
+  return 'Open · ${etaLabel(prepMinutes: branch.prepMinutes ?? 20, distanceKm: km)}';
+}
+
 String _feeLabel(StoreBranch branch) {
   final fee = double.tryParse(branch.deliveryFee ?? '') ?? 0;
   final minimum = branch.freeDeliveryMinimum;
@@ -87,6 +101,16 @@ class _Recommendation extends StatelessWidget {
                 ),
               ),
               Text(active.branch.name, style: theme.textTheme.titleMedium),
+              if (_hoursLabel(active) case final hours?)
+                Text(
+                  hours,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: active.branch.isOpen
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.error,
+                  ),
+                ),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8,
@@ -265,6 +289,7 @@ class _BranchSelectorSheet extends ConsumerWidget {
               [
                 item.branch.address,
                 if (item.distanceKm != null) _distanceLabel(item.distanceKm!),
+                ?_hoursLabel(item),
               ].join(' · '),
             ),
             trailing: item.branch.id == activeId

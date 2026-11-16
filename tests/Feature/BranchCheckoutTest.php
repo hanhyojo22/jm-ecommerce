@@ -11,6 +11,7 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -289,6 +290,37 @@ class BranchCheckoutTest extends TestCase
         $this->artisan('orders:auto-deliver')->assertSuccessful();
 
         $this->assertSame('shipped', SellerOrder::query()->sole()->status);
+    }
+
+    public function test_a_closed_branch_refuses_delivery_but_takes_pickup(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $cebu->update(['opening_time' => '08:00', 'closing_time' => '20:00', 'latitude' => 10.3157, 'longitude' => 123.8854]);
+        $cebu->tenant->stores()->whereKeyNot($cebu->id)->update(['status' => 'inactive']);
+        $this->travelTo(Carbon::parse('2026-11-16 21:30', 'Asia/Manila'));
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+
+        $this->getJson('/api/v1/checkout')->assertOk()->assertJsonPath('data.fulfillment_methods.delivery.closed_until', '2026-11-17T08:00:00+08:00');
+        $this->getJson(route('api.v1.store-locations.index'))
+            ->assertJsonPath('data.0.is_open', false)
+            ->assertJsonPath('data.0.next_opening_at', '2026-11-17T08:00:00+08:00');
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.cart.0', fn (string $message): bool => str_contains($message, 'opens at 8:00 AM'));
+        $this->assertDatabaseCount('orders', 0);
+
+        $this->postJson('/api/v1/checkout', ['fulfillment_method' => 'pickup', 'recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'payment_method' => 'cod'])
+            ->assertCreated();
+    }
+
+    public function test_a_branch_without_hours_always_takes_delivery(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
+        $this->travelTo(Carbon::parse('2026-11-16 03:00', 'Asia/Manila'));
+        $this->actingAs($this->buyer())->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated();
     }
 
     public function test_only_head_office_sets_the_delivery_fee(): void

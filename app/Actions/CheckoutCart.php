@@ -84,6 +84,11 @@ class CheckoutCart
                     throw ValidationException::withMessages(['cart' => 'Your branch is closed. Choose another branch before checking out.']);
                 }
 
+                $opensAt = $branch->nextOpeningAt(now());
+                if ($fulfillmentMethod === 'delivery' && $opensAt !== null) {
+                    throw ValidationException::withMessages(['cart' => "{$branch->name} is closed now and opens at {$opensAt->format('g:i A')}. Choose pickup, or order for delivery then."]);
+                }
+
                 if ($fulfillmentMethod === 'delivery' && $deliveryPin !== null && $branch->delivery_radius_km !== null && $branch->latitude !== null) {
                     $distance = Distance::km($deliveryPin['latitude'], $deliveryPin['longitude'], $branch->latitude, $branch->longitude);
                     if ($distance > $branch->delivery_radius_km) {

@@ -199,7 +199,7 @@ class StoreSettingsController extends Controller
             return [$field => match (true) {
                 $value === null => null,
                 in_array($field, ['latitude', 'longitude'], true) => round((float) $value, 7),
-                in_array($field, ['processing_days', 'delivery_radius_km'], true) => (int) $value,
+                in_array($field, ['processing_days', 'delivery_radius_km', 'prep_minutes'], true) => (int) $value,
                 default => $value,
             }];
         })->all();

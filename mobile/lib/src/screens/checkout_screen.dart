@@ -138,6 +138,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     _initialised = true;
 
+    if (quote.fulfillment['delivery']?.closedUntil != null) {
+      _fulfillment = 'pickup';
+    }
+
     if (quote.addresses.isNotEmpty) {
       _selectedAddressId = quote.addresses.first.id;
     } else if (quote.preferredAddress != null) {
@@ -781,6 +785,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final deliveryFee = quote.fulfillment['delivery']?.fee ?? '0.00';
     final branch = quote.branchName ?? 'your branch';
     final branchAddress = quote.branchAddress ?? '';
+    final closedUntil = quote.fulfillment['delivery']?.closedUntil;
 
     return Card(
       child: Padding(
@@ -799,6 +804,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               segments: [
                 ButtonSegment(
                   value: 'delivery',
+                  enabled: closedUntil == null,
                   label: Text(
                     (double.tryParse(deliveryFee) ?? 0) > 0
                         ? 'Delivery · ${money(deliveryFee)}'
@@ -814,6 +820,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               onSelectionChanged: (choice) =>
                   setState(() => _fulfillment = choice.single),
             ),
+            if (closedUntil != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                '$branch is closed. Delivery opens ${opensLabel(closedUntil)}; you can still order for pickup.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             Text(
               _method == 'pickup'

@@ -103,7 +103,8 @@ class CheckoutController extends Controller
             ],
             // Pickup is free; delivery adds head office's flat fee unless the items reach the free-delivery amount.
             'fulfillment_methods' => [
-                'delivery' => ['fee' => $deliveryFee, 'total' => $deliveryTotal, 'payment_fees' => $onlineFees($deliveryTotal)],
+                // Set while the branch is closed: delivery is refused until then, pickup is not.
+                'delivery' => ['fee' => $deliveryFee, 'total' => $deliveryTotal, 'payment_fees' => $onlineFees($deliveryTotal), 'closed_until' => $branch?->nextOpeningAt(now())?->toIso8601String()],
                 'pickup' => ['fee' => '0.00', 'total' => $subtotal, 'payment_fees' => $onlineFees($subtotal)],
             ],
             'store_totals' => $storeTotals,
