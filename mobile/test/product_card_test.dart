@@ -5,7 +5,7 @@ import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
   testWidgets(
-    'discovery details stay closely grouped and show unrated status',
+    'discovery details stay closely grouped and hide an empty review line',
     (tester) async {
       await tester.pumpWidget(_card(discovery: true));
       final name = find.text('Cargo Pants');
@@ -14,7 +14,7 @@ void main() {
       final nameBottom = tester.getBottomLeft(name).dy;
       final priceTop = tester.getTopLeft(find.text('₱255.00')).dy;
       expect(priceTop - nameBottom, lessThanOrEqualTo(6));
-      expect(find.text('No reviews yet'), findsOneWidget);
+      expect(find.text('No reviews yet'), findsNothing);
     },
   );
 
@@ -23,7 +23,7 @@ void main() {
   ) async {
     await tester.pumpWidget(_card(discovery: true));
     final plainHeight = tester.getSize(find.byType(ProductCard)).height;
-    final lastLineBottom = tester.getBottomLeft(find.text('No reviews yet')).dy;
+    final lastLineBottom = tester.getBottomLeft(find.text('₱255.00')).dy;
     final cardBottom = tester.getBottomLeft(find.byType(Card)).dy;
     // No blank band under the last line.
     expect(cardBottom - lastLineBottom, lessThanOrEqualTo(16));
@@ -64,6 +64,17 @@ void main() {
     }
   });
 
+  testWidgets('discovery cards badge prescription medicines, never COD', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_card(discovery: true));
+    expect(find.text('Rx'), findsNothing);
+    expect(find.text('COD'), findsNothing);
+
+    await tester.pumpWidget(_card(discovery: true, requiresPrescription: true));
+    expect(find.text('Rx'), findsOneWidget);
+  });
+
   testWidgets('discovery cards label sold out stock', (tester) async {
     await tester.pumpWidget(_card(discovery: true, inStock: false));
     expect(find.text('Sold out'), findsOneWidget);
@@ -101,6 +112,7 @@ Widget _card({
   bool inStock = true,
   int ratingCount = 0,
   String? compareAtPrice,
+  bool requiresPrescription = false,
 }) {
   return MaterialApp(
     home: Scaffold(
@@ -121,6 +133,7 @@ Widget _card({
               inStock: inStock,
               hasVariants: false,
               requiresVariantSelection: false,
+              requiresPrescription: requiresPrescription,
               freeShipping: false,
               stockQuantity: inStock ? 3 : 0,
               soldQuantity: 0,

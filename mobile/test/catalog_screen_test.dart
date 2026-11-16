@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
+import 'package:jmmart/src/core/location_service.dart';
 import 'package:jmmart/src/models/models.dart';
+import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
@@ -439,6 +441,34 @@ void main() {
     expect(find.byType(TextField).hitTestable(), findsOneWidget);
   });
 
+  testWidgets('without a known branch the shop asks for one first', (
+    tester,
+  ) async {
+    await _pumpCatalog(
+      tester,
+      _CatalogApi(),
+      locator: const StoreLocatorState(
+        branches: [
+          BranchDistance(
+            StoreBranch(
+              id: 'cebu',
+              branchId: 'B-CEBU',
+              name: 'Cebu branch',
+              address: 'Cebu',
+              latitude: 10.3,
+              longitude: 123.9,
+            ),
+            null,
+          ),
+        ],
+        issue: LocationIssue.denied,
+      ),
+    );
+
+    expect(find.text('Choose your branch'), findsOneWidget);
+    expect(find.text('Popular products'), findsNothing);
+  });
+
   testWidgets('an empty marketplace offers refresh and recovers', (
     tester,
   ) async {
@@ -697,6 +727,7 @@ Future<void> _pumpCatalog(
   double textScale = 1,
   bool settle = true,
   bool disableAnimations = false,
+  StoreLocatorState? locator,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -709,6 +740,8 @@ Future<void> _pumpCatalog(
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         cartCountProvider.overrideWithValue(0),
         storeBranchesProvider.overrideWith((ref) async => const []),
+        if (locator != null)
+          nearestStoreProvider.overrideWith(() => _FixedLocator(locator)),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),
@@ -874,3 +907,12 @@ class _CatalogApi extends ApiClient {
 }
 
 const _campaignTitle = 'Your medicines,\nfrom your branch.';
+
+class _FixedLocator extends NearestStoreNotifier {
+  _FixedLocator(this.fixed);
+
+  final StoreLocatorState fixed;
+
+  @override
+  Future<StoreLocatorState> build() async => fixed;
+}

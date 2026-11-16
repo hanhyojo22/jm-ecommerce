@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/models/models.dart';
+import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/screens/cart_screen.dart';
 import 'package:jmmart/src/screens/order_detail_screen.dart';
@@ -12,6 +13,19 @@ import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
+  testWidgets('a different branch page says where the cart orders from', (
+    tester,
+  ) async {
+    await _pumpStore(tester, activeBranchId: 'B-CEBU');
+    expect(find.text('Your cart orders from Cebu branch.'), findsOneWidget);
+    expect(find.text('Shop from this branch'), findsOneWidget);
+  });
+
+  testWidgets('your own branch page shows no switch banner', (tester) async {
+    await _pumpStore(tester, activeBranchId: 'store');
+    expect(find.text('Shop from this branch'), findsNothing);
+  });
+
   test('light and dark themes expose distinct readable surfaces', () {
     final light = buildAppTheme();
     final dark = buildAppTheme(brightness: Brightness.dark);
@@ -263,12 +277,32 @@ void main() {
   });
 }
 
-Future<void> _pumpStore(WidgetTester tester) async {
+Future<void> _pumpStore(WidgetTester tester, {String? activeBranchId}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         apiClientProvider.overrideWithValue(_StoreApi()),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
+        if (activeBranchId != null)
+          nearestStoreProvider.overrideWith(
+            () => _FixedLocator(
+              StoreLocatorState(
+                branches: [
+                  BranchDistance(
+                    StoreBranch(
+                      id: 'active',
+                      branchId: activeBranchId,
+                      name: 'Cebu branch',
+                      address: 'Cebu',
+                      latitude: 10.3,
+                      longitude: 123.9,
+                    ),
+                    1.1,
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
       child: _app(const StoreScreen(slug: 'store')),
     ),
@@ -591,4 +625,13 @@ class _SelectAllApi extends ApiClient {
     selected = itemIds;
     return (selectedCount: itemIds.length, subtotal: '10.00');
   }
+}
+
+class _FixedLocator extends NearestStoreNotifier {
+  _FixedLocator(this.fixed);
+
+  final StoreLocatorState fixed;
+
+  @override
+  Future<StoreLocatorState> build() async => fixed;
 }

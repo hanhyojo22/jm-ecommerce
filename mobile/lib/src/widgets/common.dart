@@ -446,12 +446,8 @@ class ProductCard extends StatelessWidget {
               top: 8,
               child: _FeedDiscountBadge(percent: discount),
             ),
-          if (discovery)
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: _FeedBadges(product: product),
-            ),
+          if (discovery && product.requiresPrescription)
+            const Positioned(left: 0, bottom: 0, child: _RxBadge()),
           if (discovery && !product.inStock)
             Positioned(
               left: 8,
@@ -509,43 +505,45 @@ class ProductCard extends StatelessWidget {
                   if (discovery) ...[
                     const SizedBox(height: 4),
                     price,
-                    const SizedBox(height: 4),
-                    Semantics(
-                      label: product.ratingCount > 0
-                          ? 'Rated ${product.ratingAverage.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
-                          : 'No reviews yet',
-                      excludeSemantics: true,
-                      child: Row(
-                        children: [
-                          Icon(
-                            product.ratingCount > 0
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded,
-                            size: 16,
-                            color: product.ratingCount > 0
-                                ? theme.colorScheme.secondary
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              [
-                                product.ratingCount > 0
-                                    ? '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})'
-                                    : 'No reviews yet',
-                                if (product.soldQuantity > 0)
-                                  '${_compactCount(product.soldQuantity)} sold',
-                              ].join(' · '),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                    if (product.ratingCount > 0 ||
+                        product.soldQuantity > 0) ...[
+                      const SizedBox(height: 4),
+                      Semantics(
+                        label: product.ratingCount > 0
+                            ? 'Rated ${product.ratingAverage.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
+                            : '${product.soldQuantity} sold',
+                        excludeSemantics: true,
+                        child: Row(
+                          children: [
+                            Icon(
+                              product.ratingCount > 0
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              size: 16,
+                              color: product.ratingCount > 0
+                                  ? theme.colorScheme.secondary
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                [
+                                  if (product.ratingCount > 0)
+                                    '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})',
+                                  if (product.soldQuantity > 0)
+                                    '${_compactCount(product.soldQuantity)} sold',
+                                ].join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ] else
                     const SizedBox(height: 4),
                   if (!discovery) ...[const SizedBox(height: 8), price],
@@ -609,11 +607,9 @@ class _FeedDiscountBadge extends StatelessWidget {
   }
 }
 
-/// The tri-colour benefit band marketplace feeds use at the foot of a photo.
-class _FeedBadges extends StatelessWidget {
-  const _FeedBadges({required this.product});
-
-  final Product product;
+/// Marks a medicine that needs a prescription at the foot of its photo.
+class _RxBadge extends StatelessWidget {
+  const _RxBadge();
 
   @override
   Widget build(BuildContext context) {
@@ -621,21 +617,10 @@ class _FeedBadges extends StatelessWidget {
 
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.2,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (product.freeShipping)
-            _FeedBadge(
-              label: 'FREE SHIPPING',
-              background: scheme.primary,
-              foreground: scheme.onPrimary,
-            ),
-          _FeedBadge(
-            label: 'COD',
-            background: const Color(0xFFB45309),
-            foreground: Colors.white,
-          ),
-        ],
+      child: _FeedBadge(
+        label: 'Rx',
+        background: scheme.tertiary,
+        foreground: scheme.onTertiary,
       ),
     );
   }

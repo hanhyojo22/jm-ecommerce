@@ -9,6 +9,7 @@ import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
@@ -240,6 +241,12 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final theme = Theme.of(context);
     final browsing = filter.isDefault;
     final deals = ref.watch(dealsProvider).value;
+    final locator = ref.watch(nearestStoreProvider).value;
+    // Stock and prices are per branch, so the list waits until one is known.
+    final needsBranch =
+        locator != null &&
+        locator.branches.isNotEmpty &&
+        locator.activeBranch == null;
     // Back on the Shop tab clears a search, category or deals list before leaving the app.
     final shopTabActive = ref.watch(shellTabProvider).index == 0;
     final previousFeed = products.value;
@@ -560,42 +567,62 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                               child: StoreRecommendationCard(),
                             ),
                           ),
-                        if (browsing && deals != null)
-                          SliverToBoxAdapter(
-                            child: _TopDeals(
-                              products: deals,
-                              onSeeAll: _showDeals,
-                            ),
-                          ),
-                        if (browsing)
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                            sliver: SliverToBoxAdapter(
-                              child: _DiscoveryBanner(
-                                products: feed?.products ?? const [],
-                                onExplore: feed?.products.isNotEmpty == true
-                                    ? _exploreProducts
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        if (products.hasError && feed == null)
+                        if (needsBranch)
                           SliverFillRemaining(
                             hasScrollBody: false,
-                            child: ErrorView(
-                              error: products.error!,
-                              onRetry: () => ref.invalidate(productsProvider),
+                            child: EmptyState(
+                              icon: Icons.storefront_outlined,
+                              title: 'Choose your branch',
+                              message: 'We show the medicines your branch has in stock.',
+                              action: FilledButton(
+                                onPressed: () =>
+                                    showBranchSelectorSheet(context),
+                                child: const Text('Pick a branch'),
+                              ),
                             ),
                           )
-                        else if (feed != null)
-                          ..._productSlivers(
-                            feed,
-                            theme,
-                            categories.value ?? const [],
-                            gridDelegate,
-                          )
-                        else
-                          ..._productSkeletonSlivers(gridDelegate, cardWidth),
+                        else ...[
+                          if (browsing && deals != null)
+                            SliverToBoxAdapter(
+                              child: _TopDeals(
+                                products: deals,
+                                onSeeAll: _showDeals,
+                              ),
+                            ),
+                          if (browsing)
+                            SliverPadding(
+                              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                              sliver: SliverToBoxAdapter(
+                                child: SizedBox(
+                                  height: MediaQuery.textScalerOf(context)
+                                      .scale(200)
+                                      .clamp(200.0, 320.0),
+                                  child: _CampaignCard(
+                                    onExplore: feed?.products.isNotEmpty == true
+                                        ? _exploreProducts
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (products.hasError && feed == null)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: ErrorView(
+                                error: products.error!,
+                                onRetry: () => ref.invalidate(productsProvider),
+                              ),
+                            )
+                          else if (feed != null)
+                            ..._productSlivers(
+                              feed,
+                              theme,
+                              categories.value ?? const [],
+                              gridDelegate,
+                            )
+                          else
+                            ..._productSkeletonSlivers(gridDelegate, cardWidth),
+                        ],
                       ],
                     ),
                   ),
@@ -758,6 +785,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                       child: ProductCard(
                         product: product,
                         discovery: true,
+                        showAddToCart: true,
                         onTap: () => context.push(
                           '/product/${product.store?.slug ?? ''}/${product.slug}',
                         ),
@@ -1402,85 +1430,6 @@ class _TopDeals extends StatelessWidget {
 }
 
 /// Discovery campaign with store previews that adapt to the available width.
-class _DiscoveryBanner extends StatelessWidget {
-  const _DiscoveryBanner({required this.products, this.onExplore});
-
-  final List<Product> products;
-  final VoidCallback? onExplore;
-
-  @override
-  Widget build(BuildContext context) {
-    final scaler = MediaQuery.textScalerOf(context);
-    // Keep store previews tied to the live feed.
-    final stores = <({StoreInfo store, Product product})>[];
-    final seen = <String>{};
-    for (final product in products) {
-      final store = product.store;
-      if (store != null && seen.add(store.id)) {
-        stores.add((store: store, product: product));
-      }
-      if (stores.length == 2) {
-        break;
-      }
-    }
-    final showPromos = stores.isNotEmpty && scaler.scale(14) <= 18;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final height = scaler.scale(200).clamp(200.0, 320.0);
-        final campaign = _CampaignCard(onExplore: onExplore);
-
-        if (!showPromos) {
-          return SizedBox(height: height, child: campaign);
-        }
-
-        if (constraints.maxWidth < 600) {
-          return Column(
-            children: [
-              SizedBox(height: height, child: campaign),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 96,
-                child: Row(
-                  children: [
-                    Expanded(child: _StorePromo(featured: stores[0])),
-                    if (stores.length > 1) ...[
-                      const SizedBox(width: 10),
-                      Expanded(child: _StorePromo(featured: stores[1])),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          );
-        }
-
-        return SizedBox(
-          height: height,
-          child: Row(
-            children: [
-              Expanded(flex: 3, child: campaign),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    Expanded(child: _StorePromo(featured: stores[0])),
-                    if (stores.length > 1) ...[
-                      const SizedBox(height: 10),
-                      Expanded(child: _StorePromo(featured: stores[1])),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
 class _CampaignCard extends StatelessWidget {
   const _CampaignCard({this.onExplore});
 
@@ -1576,85 +1525,6 @@ class _CampaignCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StorePromo extends StatelessWidget {
-  const _StorePromo({required this.featured});
-
-  final ({StoreInfo store, Product product}) featured;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final store = featured.store;
-
-    return Semantics(
-      button: true,
-      label: 'Visit ${store.name}',
-      excludeSemantics: true,
-      child: Material(
-        color: scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => context.push('/store/${store.slug}'),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              NetworkThumb(
-                url: featured.product.thumbnailUrl ?? store.logoUrl,
-                width: double.infinity,
-                height: double.infinity,
-                radius: 0,
-              ),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Color(0xB3000000)],
-                    stops: [0.35, 1],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: MediaQuery.withClampedTextScaling(
-                    maxScaleFactor: 1.3,
-                    child: Row(
-                      children: [
-                        StoreAvatar(
-                          name: store.name,
-                          logoUrl: store.logoUrl,
-                          radius: 14,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            store.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              height: 1.1,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
