@@ -9,4 +9,4 @@
     in_array($status, ['delivered', 'paid'], true) => 'success',
     in_array($status, ['cancelled', 'failed'], true) => 'danger',
     default => 'neutral',
-} }}">{{ $payment && $status === 'pending' ? 'Unpaid' : ucfirst($status) }}</span>
+} }}">{{ $payment ? ($status === 'pending' ? 'Unpaid' : ucfirst($status)) : \App\Models\SellerOrder::statusLabel($status) }}</span>
