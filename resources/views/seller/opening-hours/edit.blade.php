@@ -34,7 +34,7 @@
                     Open 24 hours
                 </label>
                 <p class="mt-1 text-sm text-muted">Otherwise set when the branch opens and closes. A closing time before the opening time runs past midnight.</p>
-                <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">
+                <div class="mt-5 grid min-w-0 max-w-2xl gap-4 sm:grid-cols-2">
                     <div class="min-w-0">
                         <label for="opening_time" class="block text-sm font-semibold text-ink">Opens at</label>
                         <input id="opening_time" name="opening_time" type="time" :disabled="allDay" value="{{ old('opening_time', $branch->opening_time) }}" @error('opening_time') aria-invalid="true" @enderror class="field-control mt-2 text-base disabled:opacity-50 lg:text-sm @error('opening_time') border-rose-500 @enderror">
@@ -44,12 +44,6 @@
                         <label for="closing_time" class="block text-sm font-semibold text-ink">Closes at</label>
                         <input id="closing_time" name="closing_time" type="time" :disabled="allDay" value="{{ old('closing_time', $branch->closing_time) }}" @error('closing_time') aria-invalid="true" @enderror class="field-control mt-2 text-base disabled:opacity-50 lg:text-sm @error('closing_time') border-rose-500 @enderror">
                         <x-input-error :messages="$errors->get('closing_time')" class="mt-2" />
-                    </div>
-                    <div class="min-w-0">
-                        <label for="prep_minutes" class="block text-sm font-semibold text-ink">Preparation time (minutes)</label>
-                        <input id="prep_minutes" name="prep_minutes" type="number" min="5" max="240" inputmode="numeric" placeholder="20" aria-describedby="prep_minutes-help" value="{{ old('prep_minutes', $branch->prep_minutes) }}" @error('prep_minutes') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('prep_minutes') border-rose-500 @enderror">
-                        <p id="prep_minutes-help" class="mt-1.5 text-xs text-muted">Packing time before the rider leaves. The app adds travel time.</p>
-                        <x-input-error :messages="$errors->get('prep_minutes')" class="mt-2" />
                     </div>
                 </div>
                 <div class="mt-5 flex justify-end">

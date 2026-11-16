@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 class SetBranchHours
 {
     /**
-     * @param  array{opening_time: ?string, closing_time: ?string, prep_minutes: ?int}  $hours  null times mean the branch never closes
+     * @param  array{opening_time: ?string, closing_time: ?string}  $hours  null times mean the branch never closes
      */
     public function handle(User $actor, Store $branch, array $hours, ?string $ipAddress = null): Store
     {

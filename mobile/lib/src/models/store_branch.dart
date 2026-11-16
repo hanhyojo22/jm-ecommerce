@@ -16,7 +16,6 @@ class StoreBranch {
     this.isOpen = true,
     this.open24Hours = false,
     this.nextOpeningAt,
-    this.prepMinutes,
   });
 
   factory StoreBranch.fromJson(Map<String, dynamic> json) => StoreBranch(
@@ -37,9 +36,6 @@ class StoreBranch {
     isOpen: json['is_open'] != false,
     open24Hours: json['open_24_hours'] == true,
     nextOpeningAt: DateTime.tryParse(str(json['next_opening_at']))?.toLocal(),
-    prepMinutes: json['prep_minutes'] is num
-        ? (json['prep_minutes'] as num).toInt()
-        : null,
   );
 
   final String id;
@@ -62,9 +58,6 @@ class StoreBranch {
   final bool isOpen;
   final bool open24Hours;
   final DateTime? nextOpeningAt;
-
-  /// Packing time before the rider leaves; null when head office has not set it.
-  final int? prepMinutes;
 }
 
 /// A branch with its distance from the user; [distanceKm] is null when the

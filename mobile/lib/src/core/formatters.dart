@@ -26,12 +26,6 @@ String opensLabel(DateTime at, {DateTime? now}) {
       : '${DateFormat.E().format(at)} $time';
 }
 
-/// Delivery estimate: packing time plus about 4 minutes a km, as a 15-minute range.
-String etaLabel({required int prepMinutes, required double distanceKm}) {
-  final low = (prepMinutes + distanceKm * 4).round();
-  return '$low–${low + 15} min';
-}
-
 /// Adds two decimal money strings without floating-point rounding.
 String addMoney(String a, String b) {
   final cents = _minorUnits(a) + _minorUnits(b);

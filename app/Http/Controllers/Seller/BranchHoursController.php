@@ -26,14 +26,12 @@ class BranchHoursController extends Controller
             'open_24_hours' => ['boolean'],
             'opening_time' => ['exclude_if:open_24_hours,1', 'required', 'date_format:H:i'],
             'closing_time' => ['exclude_if:open_24_hours,1', 'required', 'date_format:H:i', 'different:opening_time'],
-            'prep_minutes' => ['nullable', 'integer', 'between:5,240'],
         ]);
 
         // No hours stored means the branch never closes.
         $setBranchHours->handle($request->user(), $branch, [
             'opening_time' => $data['opening_time'] ?? null,
             'closing_time' => $data['closing_time'] ?? null,
-            'prep_minutes' => isset($data['prep_minutes']) ? (int) $data['prep_minutes'] : null,
         ], $request->ip());
 
         return to_route('seller.opening-hours.edit', ['branch' => $branch->id])->with('status', "Opening hours saved for {$branch->name}.");

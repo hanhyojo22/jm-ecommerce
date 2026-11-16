@@ -22,10 +22,10 @@ class BranchHoursTest extends TestCase
             ->assertOk()
             ->assertSee('Opening hours · Botika Plus Cebu')
             ->assertSee('Seller Center sidebar');
-        $this->patch(route('seller.opening-hours.update', ['branch' => $makati->id]), ['opening_time' => '08:00', 'closing_time' => '21:30', 'prep_minutes' => '25'])
+        $this->patch(route('seller.opening-hours.update', ['branch' => $makati->id]), ['opening_time' => '08:00', 'closing_time' => '21:30'])
             ->assertSessionHas('status');
 
-        $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => '08:00', 'closing_time' => '21:30', 'prep_minutes' => 25]);
+        $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => '08:00', 'closing_time' => '21:30']);
         $this->assertDatabaseHas('stores', ['id' => $makati->id, 'opening_time' => null]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'store.hours_updated', 'entity_id' => $cebu->id, 'actor_user_id' => $manager->id]);
     }
@@ -56,14 +56,14 @@ class BranchHoursTest extends TestCase
         $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => null]);
     }
 
-    public function test_set_hours_need_both_times_and_a_sensible_prep_time(): void
+    public function test_set_hours_need_both_valid_times(): void
     {
         [$tenant, , $cebu] = $this->pharmacy();
         $cebu->update(['opening_time' => '08:00', 'closing_time' => '20:00']);
         $this->actingAs($this->member($tenant, $cebu, 'manager'));
 
-        $this->patch(route('seller.opening-hours.update'), ['open_24_hours' => '0', 'opening_time' => '8am', 'prep_minutes' => '0'])
-            ->assertSessionHasErrors(['opening_time', 'closing_time', 'prep_minutes']);
+        $this->patch(route('seller.opening-hours.update'), ['open_24_hours' => '0', 'opening_time' => '8am'])
+            ->assertSessionHasErrors(['opening_time', 'closing_time']);
 
         $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => '08:00']);
     }

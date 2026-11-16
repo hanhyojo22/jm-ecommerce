@@ -495,7 +495,7 @@ void main() {
     expect(find.text('₱49.00 delivery, free over ₱500.00'), findsOneWidget);
   });
 
-  testWidgets('the branch card shows open with a delivery time, or closed', (
+  testWidgets('the branch card shows open, open 24 hours, or closed', (
     tester,
   ) async {
     StoreLocatorState locator({bool open = true}) => StoreLocatorState(
@@ -509,7 +509,6 @@ void main() {
             latitude: 10.3,
             longitude: 123.9,
             maxDeliveryRadiusKm: 8,
-            prepMinutes: 20,
             isOpen: open,
             nextOpeningAt: open ? null : DateTime(2030, 1, 7, 8),
           ),
@@ -519,7 +518,7 @@ void main() {
     );
 
     await _pumpCatalog(tester, _CatalogApi(), locator: locator());
-    expect(find.text('Open · 30–45 min'), findsOneWidget);
+    expect(find.text('Open'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await _pumpCatalog(
@@ -542,7 +541,8 @@ void main() {
         ],
       ),
     );
-    expect(find.text('Open 24 hours · 30–45 min'), findsOneWidget);
+    expect(find.text('Open 24 hours'), findsOneWidget);
+    expect(find.textContaining('min'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
     await _pumpCatalog(tester, _CatalogApi(), locator: locator(open: false));

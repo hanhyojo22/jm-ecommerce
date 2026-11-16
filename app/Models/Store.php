@@ -23,11 +23,11 @@ class Store extends Model
     public const LOCATION_DETAILS = ['region', 'province', 'barangay', 'postal_code', 'pickup_address', 'return_address', 'processing_days', 'fulfillment_methods', 'delivery_areas', 'latitude', 'longitude', 'delivery_radius_km'];
 
     /**
-     * Daily hours and packing time; the branch's own manager may set these.
+     * Daily hours; the branch's own manager may set these.
      *
      * @var list<string>
      */
-    public const HOURS = ['opening_time', 'closing_time', 'prep_minutes'];
+    public const HOURS = ['opening_time', 'closing_time'];
 
     /**
      * Branch hours are local Philippine time; the app itself runs in UTC.
@@ -41,7 +41,7 @@ class Store extends Model
      */
     protected function casts(): array
     {
-        return ['latitude' => 'float', 'longitude' => 'float', 'processing_days' => 'integer', 'delivery_radius_km' => 'integer', 'prep_minutes' => 'integer'];
+        return ['latitude' => 'float', 'longitude' => 'float', 'processing_days' => 'integer', 'delivery_radius_km' => 'integer'];
     }
 
     /**
