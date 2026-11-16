@@ -207,7 +207,7 @@ class CatalogController extends Controller
                         ->mapWithKeys(fn (int $rating): array => [$rating => (int) $distribution->get($rating, 0)])
                         ->all(),
                 ],
-                'branch' => $branch === null ? null : ['id' => $branch->id, 'name' => $branch->name],
+                'branch' => $branch === null ? null : ['id' => $branch->id, 'name' => $branch->name, 'slug' => $branch->slug],
                 'related_products' => ProductSummaryResource::collection($relatedProducts)->resolve($request),
                 'more_from_store' => ProductSummaryResource::collection($moreFromStore)->resolve($request),
             ],

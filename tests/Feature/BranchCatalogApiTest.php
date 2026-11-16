@@ -73,6 +73,7 @@ class BranchCatalogApiTest extends TestCase
 
         $this->assertSame([$cetirizine->id], array_column($response->json('data.related_products'), 'id'));
         $this->assertSame([$cetirizine->id], array_column($response->json('data.more_from_store'), 'id'));
+        $this->assertSame((string) $cebu->slug, $response->json('data.branch.slug'));
     }
 
     public function test_product_detail_reports_the_branchs_own_counts_per_variant(): void

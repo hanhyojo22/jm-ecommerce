@@ -302,6 +302,7 @@ class Product {
     required this.requiresVariantSelection,
     this.requiresPrescription = false,
     this.branchName,
+    this.branchSlug,
     required this.freeShipping,
     required this.stockQuantity,
     required this.soldQuantity,
@@ -334,6 +335,7 @@ class Product {
 
   /// The branch whose stock [inStock] and [stockQuantity] describe; null when company-wide.
   final String? branchName;
+  final String? branchSlug;
   final bool freeShipping;
   final int stockQuantity;
   final int soldQuantity;
@@ -370,6 +372,7 @@ class Product {
       requiresVariantSelection: boolean(json['requires_variant_selection']),
       requiresPrescription: boolean(json['requires_prescription']),
       branchName: mapOf(json['branch'])['name'] as String?,
+      branchSlug: mapOf(json['branch'])['slug'] as String?,
       freeShipping: boolean(json['free_shipping']),
       stockQuantity: integer(json['stock_quantity']),
       soldQuantity: integer(json['sold_quantity']),

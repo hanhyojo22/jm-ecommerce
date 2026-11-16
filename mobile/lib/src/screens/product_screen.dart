@@ -459,7 +459,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                   radius: 11,
                 ),
           () => context.push(
-            '/store/${product.store?.slug ?? widget.productKey.store}',
+            '/store/${product.branchSlug ?? product.store?.slug ?? widget.productKey.store}',
           ),
         ),
         shortcut(
@@ -1089,7 +1089,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                                 // Stock on this page is the chosen branch's, so the card names it.
                                 Text(
                                   product.branchName ?? product.store!.name,
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
@@ -1120,8 +1120,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                                 ),
                               ),
                             ),
-                            onPressed: () =>
-                                context.push('/store/${product.store!.slug}'),
+                            onPressed: () => context.push(
+                              '/store/${product.branchSlug ?? product.store!.slug}',
+                            ),
                             child: const Text('Visit pharmacy'),
                           ),
                         ],
