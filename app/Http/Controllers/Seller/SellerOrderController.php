@@ -200,6 +200,7 @@ class SellerOrderController extends Controller
             ->withExists(['issues as has_open_cancellation' => fn (Builder $query): Builder => $query->where('status', 'open')->where('type', 'cancellation')])
             // Bulk confirm also skips orders whose prescription a pharmacist has not approved yet.
             ->withExists(['order as needs_prescription_review' => fn (Builder $query): Builder => $query->whereHas('prescription', fn (Builder $prescription): Builder => $prescription->where('status', '!=', 'approved'))])
+            ->withExists(['order as awaiting_prescription_photo' => fn (Builder $query): Builder => $query->whereHas('prescription', fn (Builder $prescription): Builder => $prescription->where('status', 'needs_photo'))])
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 

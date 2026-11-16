@@ -6,6 +6,8 @@ use App\Models\AuditLog;
 use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\User;
+use App\Notifications\NewSellerOrderPlaced;
+use App\Services\PushNotifier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -63,7 +65,33 @@ class ResubmitPrescription
         }
 
         Storage::disk('chat_attachments')->delete($oldPath);
+        $this->notifyBranch($order);
 
         return $prescription;
+    }
+
+    /**
+     * Tells the branch's staff the new photo is in, so a pharmacist reviews it without waiting
+     * to notice. Best-effort: the photo is saved either way.
+     */
+    private function notifyBranch(Order $order): void
+    {
+        $order->loadMissing('sellerOrders.store', 'sellerOrders.tenant');
+
+        defer(function () use ($order): void {
+            foreach ($order->sellerOrders as $sellerOrder) {
+                $title = "New prescription photo for order #{$order->number}";
+                $body = "The customer sent a clearer photo. Review it on {$sellerOrder->store->name}'s order.";
+
+                foreach ($sellerOrder->tenant->activeNotifiableStaff($sellerOrder->store_id) as $recipient) {
+                    try {
+                        app(PushNotifier::class)->sendToUser($recipient, $title, $body, ['type' => 'seller_order', 'seller_order_id' => $sellerOrder->id]);
+                        $recipient->notify(new NewSellerOrderPlaced($sellerOrder->id, $title, $body));
+                    } catch (Throwable $exception) {
+                        report($exception);
+                    }
+                }
+            }
+        });
     }
 }

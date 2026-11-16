@@ -7,7 +7,11 @@
     $activeStatus = $filters['status'] ?? null;
     $hasPanelFilters = filled($filters['payment_status'] ?? null) || filled($filters['from'] ?? null) || filled($filters['to'] ?? null);
     $nextStep = fn ($sellerOrder): string => match ($sellerOrder->status) {
-        'pending' => $sellerOrder->needs_prescription_review ? 'Prescription to review' : 'Accept to start preparing',
+        'pending' => match (true) {
+            (bool) $sellerOrder->awaiting_prescription_photo => 'Waiting for a clearer photo',
+            (bool) $sellerOrder->needs_prescription_review => 'Prescription to review',
+            default => 'Accept to start preparing',
+        },
         'confirmed' => 'Start preparing',
         'processing' => $sellerOrder->order?->fulfillment_method === 'pickup' ? 'Mark ready for pickup' : 'Hand to the rider',
         'shipped' => $sellerOrder->order?->fulfillment_method === 'pickup' ? 'Waiting for the customer' : 'Out for delivery',

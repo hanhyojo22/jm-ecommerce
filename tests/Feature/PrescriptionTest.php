@@ -139,6 +139,7 @@ class PrescriptionTest extends TestCase
         $this->assertSame('pending', $sellerOrder->refresh()->status);
         $this->assertPushed('Send a clearer prescription photo', 'The photo is blurry.');
         $this->actingAs($this->member('manager', $this->branch))->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasErrors('status');
+        $this->get(route('seller.orders.index'))->assertSee('Waiting for a clearer photo')->assertDontSee('Prescription to review');
         $this->actingAs($order->user)->getJson(route('api.v1.orders.show', $order))
             ->assertJsonPath('data.prescription', ['status' => 'needs_photo', 'reason' => 'The photo is blurry.']);
 
@@ -152,6 +153,10 @@ class PrescriptionTest extends TestCase
         Storage::disk('chat_attachments')->assertExists($prescription->path);
         Storage::disk('chat_attachments')->assertMissing($firstPath);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $order->user_id, 'action' => 'prescription.resubmitted']);
+        $this->push->shouldHaveReceived('sendToUser')
+            ->withArgs(fn ($user, string $title): bool => $user->is($pharmacist) && $title === "New prescription photo for order #{$order->number}")
+            ->once();
+        $this->assertTrue($pharmacist->notifications()->exists());
 
         $this->actingAs($order->user)
             ->post(route('api.v1.orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('again.jpg')], ['Accept' => 'application/json'])
