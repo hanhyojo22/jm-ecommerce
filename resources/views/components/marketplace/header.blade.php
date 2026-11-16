@@ -137,7 +137,7 @@
                         <input
                             id="marketplace-search"
                             name="{{ $isSellerWorkspace ? 'search' : 'q' }}"
-                            aria-label="{{ $isSellerWorkspace ? 'Search your products by name or SKU' : 'Search products, brands, and stores' }}"
+                            aria-label="{{ $isSellerWorkspace ? 'Search your products by name or SKU' : 'Search medicines' }}"
                             @if ($isSellerWorkspace)
                                 data-seller-shortcut="search"
                                 aria-keyshortcuts="S"
@@ -157,7 +157,7 @@
                             x-model="query"
                             value="{{ $isSellerWorkspace ? request('search', $search) : $search }}"
                             autocomplete="off"
-                            placeholder="{{ $isSellerWorkspace ? 'Search your products' : 'Search products, brands, and stores' }}"
+                            placeholder="{{ $isSellerWorkspace ? 'Search your products' : 'Search medicines' }}"
                             class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink placeholder:text-muted focus:ring-0"
                         >
                         <button x-cloak x-show="query.length" type="button" @click="{{ $isSellerWorkspace ? "query = ''" : 'clear()' }}; $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 shrink-0 place-items-center rounded-md text-muted transition hover:bg-slate-200/70 hover:text-ink" aria-label="Clear search">
@@ -296,7 +296,7 @@
                             <span class="size-1.5 rounded-full bg-danger" aria-hidden="true"></span>
                             Deals
                         </a>
-                        <a href="{{ route('catalog.stores') }}" @if ($isStoresNav) aria-current="page" @endif class="inline-flex min-h-12 shrink-0 items-center border-b-2 transition {{ $isStoresNav ? 'border-brand font-semibold text-ink' : 'border-transparent hover:text-brand' }}">Stores</a>
+                        <a href="{{ route('catalog.stores') }}" @if ($isStoresNav) aria-current="page" @endif class="inline-flex min-h-12 shrink-0 items-center border-b-2 transition {{ $isStoresNav ? 'border-brand font-semibold text-ink' : 'border-transparent hover:text-brand' }}">Branches</a>
                     </div>
 
                 </div>
@@ -350,7 +350,7 @@
                                         <ul class="mt-4 space-y-1.5 text-sm text-[#c5d1e0]">
                                             <li><a href="{{ route('catalog.index', ['on_sale' => 1]) }}" @click="categoriesOpen = false" class="inline-flex min-h-9 items-center gap-2 transition hover:text-white"><span>&rarr;</span> Biggest price drops</a></li>
                                             <li><a href="{{ route('catalog.top-products') }}" @click="categoriesOpen = false" class="inline-flex min-h-9 items-center gap-2 transition hover:text-white"><span>&rarr;</span> Trending best sellers</a></li>
-                                            <li><a href="{{ route('catalog.stores') }}" @click="categoriesOpen = false" class="inline-flex min-h-9 items-center gap-2 transition hover:text-white"><span>&rarr;</span> Discover local stores</a></li>
+                                            <li><a href="{{ route('catalog.stores') }}" @click="categoriesOpen = false" class="inline-flex min-h-9 items-center gap-2 transition hover:text-white"><span>&rarr;</span> See our branches</a></li>
                                         </ul>
                                     </div>
                                     <a href="{{ route('catalog.index') }}" @click="categoriesOpen = false" class="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-md bg-white px-4 text-sm font-semibold text-ink transition hover:bg-[#eef3ff] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
@@ -380,7 +380,7 @@
                 <form method="GET" action="{{ route('catalog.index') }}" x-data="marketplaceSuggestions(@js($search), @js(route('catalog.suggestions')), @js(route('catalog.index')))" @submit="loading = true" @click.outside="open = false" class="relative border-b border-line px-4 py-4">
                     <label for="marketplace-search-drawer" class="flex h-11 items-center gap-3 rounded-md border border-[#cbd4e0] bg-canvas px-3.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
-                        <input id="marketplace-search-drawer" name="q" aria-label="Search products, brands, and stores" role="combobox" aria-autocomplete="list" aria-controls="marketplace-search-results-drawer" :aria-expanded="open.toString()" :aria-activedescendant="active >= 0 ? 'marketplace-drawer-result-' + active : null" @input.debounce.275ms="load()" @focus="load()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter="select($event)" @keydown.escape="open = false" x-model="query" value="{{ $search }}" autocomplete="off" placeholder="Search products, brands, and stores" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
+                        <input id="marketplace-search-drawer" name="q" aria-label="Search medicines" role="combobox" aria-autocomplete="list" aria-controls="marketplace-search-results-drawer" :aria-expanded="open.toString()" :aria-activedescendant="active >= 0 ? 'marketplace-drawer-result-' + active : null" @input.debounce.275ms="load()" @focus="load()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter="select($event)" @keydown.escape="open = false" x-model="query" value="{{ $search }}" autocomplete="off" placeholder="Search medicines" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">
                         <button x-cloak x-show="query.length" type="button" @click="clear(); $nextTick(() => $el.previousElementSibling.focus())" class="grid size-7 place-items-center rounded-md transition hover:bg-canvas" aria-label="Clear search"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
                     </label>
                     @include('components.marketplace.search-suggestions', ['listId' => 'marketplace-search-results-drawer', 'optionPrefix' => 'marketplace-drawer-result-'])
@@ -427,7 +427,7 @@
                         <span class="size-1.5 rounded-full bg-danger" aria-hidden="true"></span>
                         Deals
                     </a>
-                    <a href="{{ route('catalog.stores') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Stores</a>
+                    <a href="{{ route('catalog.stores') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Branches</a>
                     @if ($showCategoryMenu)
                         <div x-data="{ drawerCatsOpen: false }" class="pt-1">
                             <button type="button" @click="drawerCatsOpen = !drawerCatsOpen" :aria-expanded="drawerCatsOpen.toString()" class="flex min-h-11 w-full items-center justify-between rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">

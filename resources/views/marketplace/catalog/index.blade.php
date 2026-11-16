@@ -120,7 +120,7 @@
                 <nav aria-label="Breadcrumb" class="marketplace-breadcrumb">
                     <a href="{{ route('home') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Home</a>
                     <span aria-hidden="true">/</span>
-                    <a href="{{ route('catalog.stores') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Stores</a>
+                    <a href="{{ route('catalog.stores') }}" class="shrink-0 font-medium transition hover:text-brand-hover">Branches</a>
                 </nav>
 
                 <section class="marketplace-surface overflow-hidden" aria-labelledby="store-heading" data-od-id="store-header">
