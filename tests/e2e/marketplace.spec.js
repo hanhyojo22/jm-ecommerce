@@ -95,7 +95,7 @@ test('guest can browse a product and is prompted to sign in before adding it to 
 });
 
 test('customer can add a newly loaded arrival to the cart', async ({ browser }) => {
-    const { context, page } = await openAsRole(browser, 'customer');
+    const { context, page } = await openAsRole(browser, 'arrivalsCustomer');
 
     try {
         await page.goto('/');

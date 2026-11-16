@@ -25,6 +25,7 @@ class PlaywrightQaSeeder extends Seeder
 
         User::factory()->create(['name' => 'QA Pharmacy Customer', 'email' => 'qa-pharmacy-customer@example.test', 'clerk_user_id' => 'qa-pharmacy-customer-identity']);
         User::factory()->create(['name' => 'QA Integration Customer', 'email' => 'qa-integration@example.test', 'clerk_user_id' => 'qa-integration-identity']);
+        User::factory()->create(['name' => 'QA Arrivals Customer', 'email' => 'qa-arrivals@example.test', 'clerk_user_id' => 'qa-arrivals-identity']);
 
         $customer = User::factory()->create([
             'name' => 'QA Customer',

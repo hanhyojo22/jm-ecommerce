@@ -103,6 +103,12 @@ class RecommendationQuery
         $popular = $currentSearch === '' ? TopProductQuery::featured(8) : collect();
         $fresh = $currentSearch === '' ? self::candidates()->latest('products.created_at')->limit(12)->get() : collect();
         $candidates = $searchMatches->merge($related)->merge($popular)->merge($fresh)->unique('id');
+        $branch = $request->user()?->cart?->store;
+        if ($branch?->status === 'active') {
+            $availableIds = CatalogQuery::inStockAt(self::availableProducts(), $branch)
+                ->whereKey($candidates->pluck('id'))->pluck('products.id');
+            $candidates = $candidates->whereIn('id', $availableIds);
+        }
         $excludedIds = $purchased->pluck('id')->merge($viewedIds)->all();
         $managedTenantIds = $request->user()?->tenantMemberships
             ->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all() ?? [];

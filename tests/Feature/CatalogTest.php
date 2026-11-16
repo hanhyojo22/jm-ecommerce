@@ -304,6 +304,25 @@ class CatalogTest extends TestCase
             ->assertSessionMissing('marketplace.recent_searches');
     }
 
+    public function test_search_recommendations_only_offer_items_in_stock_at_the_selected_branch(): void
+    {
+        $buyer = User::factory()->create();
+        $category = Category::create(['name' => 'Outdoor gear', 'slug' => 'outdoor-gear', 'is_active' => true]);
+        $match = $this->product(['name' => 'Trail shoes', 'category_id' => $category->id]);
+        $available = $this->product(['name' => 'Hiking socks', 'category_id' => $category->id]);
+        $elsewhere = $this->product(['name' => 'Walking socks', 'category_id' => $category->id]);
+        $soldOut = $this->product(['name' => 'Climbing socks', 'category_id' => $category->id]);
+        $buyer->cart()->create(['store_id' => $match->store_id]);
+        BranchStock::create(['store_id' => $match->store_id, 'product_id' => $available->id, 'variant_key' => 'default', 'quantity' => 2]);
+        BranchStock::create(['store_id' => $match->store_id, 'product_id' => $soldOut->id, 'variant_key' => 'default', 'quantity' => 0]);
+
+        $this->actingAs($buyer)->get(route('catalog.index', ['q' => 'trail']))
+            ->assertOk()
+            ->assertViewHas('recommendedProducts', fn ($products): bool => $products->pluck('id')->all() === [$available->id])
+            ->assertDontSee($elsewhere->name)
+            ->assertDontSee($soldOut->name);
+    }
+
     public function test_homepage_loads_new_arrivals_in_public_batches_of_twelve(): void
     {
         $newest = $this->product(['name' => 'Arrival 25']);
