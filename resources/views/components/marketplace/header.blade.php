@@ -7,7 +7,7 @@
     $cartBadge = $cartItemCount > 99 ? '99+' : $cartItemCount;
     $buyerMessagesUrl = $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index');
     $isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== $user?->id);
-    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*', 'seller.staff.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
+    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*', 'seller.opening-hours.*', 'seller.staff.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
     $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit');
     $customerPageTitle = match (true) {
         request()->routeIs('orders.show') => 'Order details',
@@ -29,6 +29,7 @@
         request()->routeIs('seller.store-settings.*') => 'Branch details',
         request()->routeIs('seller.branches.*') => 'Branches',
         request()->routeIs('seller.branch-stock.*') => 'Branch stock',
+        request()->routeIs('seller.opening-hours.*') => 'Opening hours',
         request()->routeIs('seller.staff.*') => 'Staff',
         request()->routeIs('profile.edit') => 'Account settings',
         default => 'Seller Center',
