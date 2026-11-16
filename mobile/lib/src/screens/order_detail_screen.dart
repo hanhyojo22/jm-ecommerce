@@ -346,7 +346,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
-  /// Card 2: Delivery Address right below status + integrated Money Back Guarantee.
+  /// Card 2: Delivery Address right below status, with the wrong-item help row.
   Widget _deliveryAndGuaranteeCard(OrderDetail order) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -414,7 +414,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        '${order.delivery.addressLine}, ${order.delivery.city}, ${order.delivery.province} ${order.delivery.postalCode}',
+                        [
+                          order.delivery.addressLine,
+                          order.delivery.city,
+                          '${order.delivery.province} ${order.delivery.postalCode}'
+                              .trim(),
+                        ].where((part) => part.isNotEmpty).join(', '),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                           fontSize: 13,
@@ -455,14 +460,14 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'JMMart Money Back Guarantee',
+                          'Wrong or missing item?',
                           style: theme.textTheme.labelLarge?.copyWith(
                             fontWeight: FontWeight.w800,
                             fontSize: 13,
                           ),
                         ),
                         Text(
-                          'Get the item you ordered or your money back.',
+                          'Tell the pharmacy within 7 days of delivery.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                             fontSize: 11.5,
@@ -958,7 +963,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'JMMart Money Back Guarantee',
+                'Wrong or missing item?',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -1010,7 +1015,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${order.delivery.addressLine}, ${order.delivery.city}, ${order.delivery.province} ${order.delivery.postalCode}',
+                [
+                  order.delivery.addressLine,
+                  order.delivery.city,
+                  '${order.delivery.province} ${order.delivery.postalCode}'
+                      .trim(),
+                ].where((part) => part.isNotEmpty).join(', '),
               ),
               const SizedBox(height: 6),
               Text(

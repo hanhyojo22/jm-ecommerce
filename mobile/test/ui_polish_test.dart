@@ -81,7 +81,7 @@ void main() {
 
       await tester.scrollUntilVisible(find.text('Delivery Address'), 200);
       expect(find.text('Delivery Address'), findsOneWidget);
-      expect(find.text('JMMart Money Back Guarantee'), findsOneWidget);
+      expect(find.text('Wrong or missing item?'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('Order help'), 200);
       expect(find.text('Order help'), findsOneWidget);
