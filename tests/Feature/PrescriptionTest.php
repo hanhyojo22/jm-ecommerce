@@ -11,11 +11,14 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Services\PushNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class PrescriptionTest extends TestCase
@@ -28,11 +31,15 @@ class PrescriptionTest extends TestCase
 
     private Product $medicine;
 
+    private MockInterface $push;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         Storage::fake('chat_attachments');
+        $this->push = Mockery::spy(PushNotifier::class);
+        $this->app->instance(PushNotifier::class, $this->push);
         config()->set('services.paymongo', ['secret_key' => 'sk_test_x', 'webhook_secret' => 'whsk_test', 'base_url' => 'https://api.paymongo.com']);
         Http::fake([
             'api.paymongo.com/v1/checkout_sessions' => Http::response(['data' => ['id' => 'cs_1', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_1']]]),
@@ -78,7 +85,7 @@ class PrescriptionTest extends TestCase
         $this->actingAs($order->user)->get(route('orders.show', $order), ['X-Order-Modal' => '1'])->assertSee('Prescription in review');
     }
 
-    public function test_the_order_cannot_be_confirmed_until_a_pharmacist_approves_the_prescription(): void
+    public function test_the_order_waits_for_a_pharmacist_and_approving_accepts_it(): void
     {
         $sellerOrder = $this->checkOut()->sellerOrders()->sole();
         $manager = $this->member('manager', $this->branch);
@@ -91,11 +98,11 @@ class PrescriptionTest extends TestCase
         $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approve prescription');
         $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertSessionHas('status');
         $this->actingAs($manager)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approved by '.$pharmacist->name);
-        $this->actingAs($manager)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasNoErrors();
 
         $this->assertSame('confirmed', $sellerOrder->refresh()->status);
         $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'approved', 'reviewed_by' => $pharmacist->id]);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $pharmacist->id, 'action' => 'prescription.approved']);
+        $this->assertPushed('Prescription approved · your order is being prepared');
     }
 
     public function test_rejecting_a_paid_prescription_order_cancels_it_restores_branch_stock_and_refunds(): void
@@ -114,7 +121,58 @@ class PrescriptionTest extends TestCase
         $this->assertSame(5, BranchInventory::available($this->branch->id, $this->medicine->id, null));
         $this->assertDatabaseHas('prescriptions', ['id' => $order->prescription->id, 'status' => 'rejected', 'reason' => 'The prescription has expired.']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'prescription.rejected']);
+        $this->assertPushed('Prescription not accepted · order cancelled', 'The prescription has expired.');
         Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/refunds') && $request['data']['attributes']['amount'] === 4000);
+    }
+
+    public function test_a_pharmacist_can_ask_for_a_clearer_photo_and_the_customer_resends_it_from_the_app(): void
+    {
+        $order = $this->checkOut();
+        $sellerOrder = $order->sellerOrders()->sole();
+        $firstPath = $order->prescription->path;
+        $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
+
+        $this->actingAs($pharmacist)
+            ->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'needs_photo', 'reason' => 'The photo is blurry.'])
+            ->assertSessionHas('status', 'The customer was asked for a clearer photo.');
+
+        $this->assertSame('pending', $sellerOrder->refresh()->status);
+        $this->assertPushed('Send a clearer prescription photo', 'The photo is blurry.');
+        $this->actingAs($this->member('manager', $this->branch))->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasErrors('status');
+        $this->actingAs($order->user)->getJson(route('api.v1.orders.show', $order))
+            ->assertJsonPath('data.prescription', ['status' => 'needs_photo', 'reason' => 'The photo is blurry.']);
+
+        $this->actingAs($order->user)
+            ->post(route('api.v1.orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('clear.jpg')], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.prescription', ['status' => 'pending', 'reason' => null]);
+
+        $prescription = $order->prescription()->first();
+        $this->assertSame('clear.jpg', $prescription->original_name);
+        Storage::disk('chat_attachments')->assertExists($prescription->path);
+        Storage::disk('chat_attachments')->assertMissing($firstPath);
+        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $order->user_id, 'action' => 'prescription.resubmitted']);
+
+        $this->actingAs($order->user)
+            ->post(route('api.v1.orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('again.jpg')], ['Accept' => 'application/json'])
+            ->assertUnprocessable();
+    }
+
+    public function test_only_the_customer_can_resend_a_prescription_photo(): void
+    {
+        $order = $this->checkOut();
+        $this->actingAs($this->member('staff', $this->branch, pharmacist: true))
+            ->patch(route('seller.orders.prescription.update', $order->sellerOrders()->sole()), ['decision' => 'needs_photo', 'reason' => 'Blurry.']);
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('x.jpg')])
+            ->assertNotFound();
+
+        $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Clearer photo needed')->assertSee('Send new photo');
+        $this->actingAs($order->user)
+            ->post(route('orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('clear.jpg')])
+            ->assertRedirect(route('orders.show', $order));
+        $this->assertSame('pending', $order->prescription()->first()->status);
     }
 
     public function test_only_pharmacists_at_the_orders_branch_can_read_or_decide_its_prescription(): void
@@ -130,6 +188,13 @@ class PrescriptionTest extends TestCase
 
         $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending', 'reviewed_by' => null]);
         $this->actingAs($this->member('staff', $this->branch, pharmacist: true))->get(route('seller.orders.prescription.show', $sellerOrder))->assertOk();
+    }
+
+    private function assertPushed(string $title, ?string $body = null): void
+    {
+        $this->push->shouldHaveReceived('sendToUser')
+            ->withArgs(fn ($user, string $sentTitle, string $sentBody): bool => $sentTitle === $title && ($body === null || $sentBody === $body))
+            ->once();
     }
 
     /**

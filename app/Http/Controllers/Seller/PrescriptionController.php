@@ -9,6 +9,7 @@ use App\Models\SellerOrder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -27,13 +28,17 @@ class PrescriptionController extends Controller
     {
         $prescription = $this->prescription($request, $sellerOrder);
         $data = $request->validate([
-            'decision' => ['required', 'in:approve,reject'],
-            'reason' => ['required_if:decision,reject', 'nullable', 'string', 'max:500'],
+            'decision' => ['required', Rule::in(ReviewPrescription::DECISIONS)],
+            'reason' => ['required_unless:decision,approve', 'nullable', 'string', 'max:500'],
         ]);
 
-        $review->handle($request->user(), $prescription, $data['decision'] === 'approve', $data['reason'] ?? null, $request->ip());
+        $review->handle($request->user(), $prescription, $data['decision'], $data['reason'] ?? null, $request->ip());
 
-        return back()->with('status', $data['decision'] === 'approve' ? 'Prescription approved. The order can now be confirmed.' : 'Prescription rejected and the order cancelled.');
+        return back()->with('status', match ($data['decision']) {
+            'approve' => 'Prescription approved. The order is accepted and ready to prepare.',
+            'needs_photo' => 'The customer was asked for a clearer photo.',
+            default => 'Prescription rejected and the order cancelled.',
+        });
     }
 
     /**

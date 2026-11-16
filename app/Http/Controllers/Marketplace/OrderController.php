@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Actions\ResubmitPrescription;
 use App\Actions\StartOnlinePayment;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
@@ -89,6 +90,21 @@ class OrderController extends Controller
             'order' => $order,
             'ownedTenantIds' => BuyerOrderQuery::ownedTenantIds($request->user()),
         ]);
+    }
+
+    /**
+     * A clearer prescription photo, sent after a pharmacist asked for one.
+     */
+    public function resubmitPrescription(Request $request, Order $order, ResubmitPrescription $resubmit): RedirectResponse
+    {
+        abort_unless($order->user_id === $request->user()->id, 404);
+        $data = $request->validate([
+            'prescription' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+        ]);
+
+        $resubmit->handle($request->user(), $order, $data['prescription']);
+
+        return to_route('orders.show', $order)->with('status', 'Thanks. A pharmacist will check your new photo.');
     }
 
     /**

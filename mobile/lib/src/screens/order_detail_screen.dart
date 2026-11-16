@@ -5,9 +5,11 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/api_exception.dart';
+import '../core/attachment_picker.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
+import '../providers/checkout_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -139,7 +141,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final rejected = order.prescriptionStatus == 'rejected';
+    final needsPhoto = order.prescriptionStatus == 'needs_photo';
     final (title, message) = switch (order.prescriptionStatus) {
+      'needs_photo' => (
+        'Send a clearer prescription photo',
+        'The pharmacist says: ${order.prescriptionReason ?? 'the photo could not be read.'}',
+      ),
       'approved' => (
         'Prescription approved',
         'A pharmacist approved your prescription.',
@@ -177,10 +184,59 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 color: rejected ? scheme.onErrorContainer : null,
               ),
             ),
+            if (needsPhoto) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _resendPrescription(order, photo: true),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                    label: const Text('Send new photo'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _resendPrescription(order, photo: false),
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                    label: const Text('Send PDF'),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _resendPrescription(
+    OrderDetail order, {
+    required bool photo,
+  }) async {
+    final picker = ref.read(attachmentPickerProvider);
+    final PickedAttachment? picked;
+    try {
+      picked = photo ? await picker.pickImage() : await picker.pickDocument();
+    } on AttachmentTooLargeException {
+      _snack('Choose a file under 5 MB.');
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiClientProvider).resubmitPrescription(order.id, picked);
+      ref.invalidate(orderProvider(widget.orderId));
+      _snack('Thanks. A pharmacist will check your new photo.');
+    } on ApiException catch (error) {
+      _snack(error.friendly);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   /// Card 1: Status hero header + 4-step visual progress tracker + Pay now CTA.

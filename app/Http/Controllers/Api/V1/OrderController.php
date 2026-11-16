@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\ResubmitPrescription;
 use App\Actions\StartOnlinePayment;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
@@ -80,6 +81,21 @@ class OrderController extends Controller
         ]);
 
         return OrderResource::make($order)->response($request);
+    }
+
+    /**
+     * A clearer prescription photo, sent after a pharmacist asked for one.
+     */
+    public function resubmitPrescription(Request $request, Order $order, ResubmitPrescription $resubmit): JsonResponse
+    {
+        abort_unless($order->user_id === $request->user()->id, 404);
+        $data = $request->validate([
+            'prescription' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+        ]);
+
+        $resubmit->handle($request->user(), $order, $data['prescription']);
+
+        return $this->show($request, $order->refresh());
     }
 
     public function pay(Request $request, Order $order, StartOnlinePayment $startOnlinePayment): JsonResponse

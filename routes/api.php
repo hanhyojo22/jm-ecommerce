@@ -98,6 +98,9 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/orders/{order}/pay', [OrderController::class, 'pay'])
             ->middleware('throttle:10,1')
             ->name('api.v1.orders.pay');
+        Route::post('/orders/{order}/prescription', [OrderController::class, 'resubmitPrescription'])
+            ->middleware('throttle:10,1')
+            ->name('api.v1.orders.prescription.store');
         Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])
             ->middleware('throttle:10,1')
             ->name('api.v1.orders.received');

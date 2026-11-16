@@ -79,6 +79,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/placed', [OrderController::class, 'placed'])->name('orders.placed');
     Route::get('/orders/{order}/pay', [OrderController::class, 'pay'])->middleware('throttle:10,1')->name('orders.pay');
+    Route::post('/orders/{order}/prescription', [OrderController::class, 'resubmitPrescription'])->middleware('throttle:10,1')->name('orders.prescription.store');
     Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])->middleware('throttle:10,1')->name('orders.received');
     Route::post('/orders/store-orders/{sellerOrder}/issues', [OrderIssueController::class, 'store'])->middleware('throttle:10,1')->name('order-issues.store');
     Route::post('/orders/store-orders/{sellerOrder}/returns', [BuyerReturnCaseController::class, 'store'])->middleware('throttle:10,1')->name('returns.store');

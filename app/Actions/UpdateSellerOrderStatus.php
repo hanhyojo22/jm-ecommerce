@@ -187,7 +187,12 @@ class UpdateSellerOrderStatus
 
             try {
                 $lead = $updatedSellerOrder->items()->orderBy('id')->first();
-                $pushTitle = match ($status) {
+                $prescription = $updatedSellerOrder->order->prescription;
+                $pushTitle = match (true) {
+                    $status === 'confirmed' && $prescription?->status === 'approved' => 'Prescription approved · your order is being prepared',
+                    $status === 'cancelled' && $prescription?->status === 'rejected' => 'Prescription not accepted · order cancelled',
+                    default => null,
+                } ?? match ($status) {
                     'confirmed' => 'Your order was accepted',
                     'processing' => 'Your order is being prepared',
                     'shipped' => $isPickup ? 'Your order is ready for pickup' : 'Your order is out for delivery',
@@ -198,7 +203,9 @@ class UpdateSellerOrderStatus
                 app(PushNotifier::class)->sendToUser(
                     $updatedSellerOrder->order->user,
                     $pushTitle,
-                    implode(' · ', array_filter([$lead?->product_name, $lead?->variant_label, $updatedSellerOrder->store->name])),
+                    $status === 'cancelled' && $prescription?->status === 'rejected' && filled($prescription->reason)
+                        ? (string) $prescription->reason
+                        : implode(' · ', array_filter([$lead?->product_name, $lead?->variant_label, $updatedSellerOrder->store->name])),
                     array_filter([
                         'type' => 'order', 'order_id' => $updatedSellerOrder->order_id, 'status' => $status,
                         'subtitle' => $updatedSellerOrder->store->name,

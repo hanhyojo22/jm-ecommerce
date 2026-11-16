@@ -408,6 +408,26 @@ class ApiClient {
   Future<OrderDetail> order(String id) async =>
       OrderDetail.fromJson(mapOf(await _data('GET', '/orders/$id')));
 
+  /// Sends a clearer prescription photo after a pharmacist asked for one.
+  Future<OrderDetail> resubmitPrescription(
+    String orderId,
+    PickedAttachment prescription,
+  ) async => OrderDetail.fromJson(
+    mapOf(
+      await _data(
+        'POST',
+        '/orders/$orderId/prescription',
+        data: FormData.fromMap({
+          'prescription': MultipartFile.fromBytes(
+            prescription.bytes,
+            filename: prescription.name,
+            contentType: DioMediaType.parse(prescription.mimeType),
+          ),
+        }),
+      ),
+    ),
+  );
+
   Future<String?> payOrder(
     String id, {
     String? successUrl,

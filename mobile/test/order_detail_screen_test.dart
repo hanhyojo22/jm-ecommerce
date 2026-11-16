@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,8 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
+import 'package:jmmart/src/core/attachment_picker.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
+import 'package:jmmart/src/providers/checkout_providers.dart';
 import 'package:jmmart/src/screens/order_detail_screen.dart';
 import 'package:jmmart/src/screens/orders_screen.dart';
 import 'package:jmmart/src/theme.dart';
@@ -27,6 +30,30 @@ void main() {
       expect(find.text('Ready for pickup'), findsWidgets);
       expect(find.text('Picked up'), findsOneWidget);
       expect(find.text('Pickup at the branch'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'a pharmacist asking for a clearer photo lets the customer send one',
+    (tester) async {
+      final api = _OrderApi()
+        ..prescription = {
+          'status': 'needs_photo',
+          'reason': 'The photo is blurry.',
+        };
+      await _pump(tester, api);
+
+      expect(find.text('Send a clearer prescription photo'), findsOneWidget);
+      expect(
+        find.text('The pharmacist says: The photo is blurry.'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Send new photo'));
+      await tester.pumpAndSettle();
+
+      expect(api.resubmitted, 'clear.jpg');
+      expect(find.text('Prescription in review'), findsOneWidget);
     },
   );
 
@@ -260,6 +287,7 @@ Future<void> _pump(
       overrides: [
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
+        attachmentPickerProvider.overrideWithValue(const _ClearPhoto()),
       ],
       child: router == null
           ? MaterialApp(
@@ -289,6 +317,18 @@ class _OrderApi extends ApiClient {
   Completer<String?>? pendingPayment;
   String fulfillment = 'delivery';
   Map<String, dynamic>? prescription;
+  String? resubmitted;
+
+  @override
+  Future<OrderDetail> resubmitPrescription(
+    String orderId,
+    PickedAttachment prescription,
+  ) async {
+    resubmitted = prescription.name;
+    this.prescription = {'status': 'pending', 'reason': null};
+    return order(orderId);
+  }
+
   Completer<Conversation>? pendingChat;
 
   @override
@@ -374,4 +414,15 @@ class _OrderApi extends ApiClient {
     chats++;
     return pendingChat!.future;
   }
+}
+
+class _ClearPhoto implements AttachmentPicker {
+  const _ClearPhoto();
+
+  @override
+  Future<PickedAttachment?> pickImage() async =>
+      PickedAttachment(name: 'clear.jpg', bytes: Uint8List.fromList([1, 2, 3]));
+
+  @override
+  Future<PickedAttachment?> pickDocument() async => null;
 }

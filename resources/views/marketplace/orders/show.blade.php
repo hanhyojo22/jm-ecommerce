@@ -78,8 +78,17 @@
             <div class="space-y-6">
                 @if($order->prescription)
                     <section class="rounded-md border p-4 text-sm {{ $order->prescription->status === 'rejected' ? 'border-red-200 bg-red-50 text-rose-800' : 'border-blue-200 bg-blue-50 text-brand-hover' }}" aria-labelledby="prescription-heading">
-                        <h2 id="prescription-heading" class="font-semibold">Prescription · {{ ['pending' => 'Waiting for pharmacist review', 'approved' => 'Approved', 'rejected' => 'Not accepted'][$order->prescription->status] ?? ucfirst($order->prescription->status) }}</h2>
-                        <p class="mt-1">{{ match ($order->prescription->status) { 'pending' => 'A pharmacist is checking your prescription. Your order is prepared once it is approved.', 'approved' => 'Your prescription was approved.', default => 'Your order was cancelled: '.$order->prescription->reason } }}</p>
+                        <h2 id="prescription-heading" class="font-semibold">Prescription · {{ ['pending' => 'Waiting for pharmacist review', 'approved' => 'Approved', 'rejected' => 'Not accepted', 'needs_photo' => 'Clearer photo needed'][$order->prescription->status] ?? ucfirst($order->prescription->status) }}</h2>
+                        <p class="mt-1">{{ match ($order->prescription->status) { 'pending' => 'A pharmacist is checking your prescription. Your order is prepared once it is approved.', 'approved' => 'Your prescription was approved.', 'needs_photo' => 'The pharmacist asked for a clearer photo: '.$order->prescription->reason, default => 'Your order was cancelled: '.$order->prescription->reason } }}</p>
+                        @if ($order->prescription->status === 'needs_photo')
+                            <form method="POST" action="{{ route('orders.prescription.store', $order) }}" enctype="multipart/form-data" class="mt-3 flex flex-wrap items-center gap-3">
+                                @csrf
+                                <label for="prescription-photo" class="sr-only">New prescription photo</label>
+                                <input id="prescription-photo" name="prescription" type="file" required accept="image/jpeg,image/png,image/webp,application/pdf" class="block min-w-0 text-[13px] text-ink">
+                                <button type="submit" class="inline-flex min-h-10 items-center rounded-md bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">Send new photo</button>
+                            </form>
+                            @error('prescription')<p class="mt-2 text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                        @endif
                     </section>
                 @endif
                 @if($awaitingOnlinePayment)
