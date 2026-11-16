@@ -90,8 +90,9 @@ class CheckoutController extends Controller
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
             'address_line' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:255'],
             'city' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
-            'province' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
-            'postal_code' => ['required_unless:fulfillment_method,pickup', 'nullable', 'regex:/^\d{4}$/'],
+            // Same-town delivery needs the street and city only, as in the app.
+            'province' => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'regex:/^\d{4}$/'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],
             'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
             'client_request_id' => ['nullable', 'string', 'max:100'],

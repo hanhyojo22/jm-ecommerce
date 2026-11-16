@@ -1,7 +1,7 @@
 <x-app-layout>
     @php($itemsByStore = $cart->items->groupBy(fn ($item) => $item->product->store_id))
     @php($itemCount = $cart->items->sum('quantity'))
-    @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City', 'province' => 'Province', 'postal_code' => 'Postal code'])
+    @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
     @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription']) ? 3 : 1)))
     @php($prescriptionMedicines = $cart->items->filter(fn ($item) => $item->product->requires_prescription)->map(fn ($item) => $item->product->name)->unique())
@@ -147,14 +147,13 @@
 
                             <div x-show="showFields" @input="syncAddress(); delete issues[$event.target.id]" @class(['mt-4 border-t border-line pt-[18px]' => $addresses->isNotEmpty()])>
                                 <p x-show="choice !== 'new'" class="mb-3.5 text-[13px] text-muted">Fill in any missing details from this older saved address.</p>
-                                {{-- Six columns: name and number share a row, then street, then city, province and postal code. --}}
+                                {{-- Name and number share a row, then street, then city. --}}
                                 <div class="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-6">
                                     @foreach ($addressFields as $field => $label)
                                         <div @class([
                                             'col-span-2 sm:col-span-3' => in_array($field, ['recipient_name', 'phone'], true),
                                             'col-span-2 sm:col-span-6' => $field === 'address_line',
-                                            'col-span-2' => $field === 'city',
-                                            'sm:col-span-2' => in_array($field, ['province', 'postal_code'], true),
+                                            'col-span-2 sm:col-span-6' => $field === 'city',
                                         ])>
                                             <label for="{{ $field }}" class="mb-1.5 block text-[13.5px] font-semibold text-ink">{{ $label }}</label>
                                             <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" required

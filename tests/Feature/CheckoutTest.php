@@ -190,8 +190,8 @@ class CheckoutTest extends TestCase
             ->assertSeeInOrder(['Delivery address', 'Payment method', 'Review &amp; place order', 'Order summary'], false)
             ->assertSee('Cash on delivery')
             ->assertSee('Place order')
-            ->assertSee('name="province"', false)
-            ->assertSee('name="postal_code"', false)
+            ->assertDontSee('name="province"', false)
+            ->assertDontSee('name="postal_code"', false)
             ->assertSee('name="delivery_note"', false)
             ->assertSee('name="client_request_id"', false)
             ->assertDontSee('Free shipping');
@@ -231,8 +231,7 @@ class CheckoutTest extends TestCase
             ->assertOk()
             ->assertSee('value="Ava Buyer"', false)
             ->assertSee('value="10 Market Street"', false)
-            ->assertSee('value="Metro Manila"', false)
-            ->assertSee('value="1000"', false);
+            ->assertDontSee('name="postal_code"', false);
 
         $this->post(route('checkout.store'), $this->delivery())->assertRedirectContains('/placed');
         $this->assertSame(1, $customer->deliveryAddresses()->count());
@@ -243,8 +242,7 @@ class CheckoutTest extends TestCase
             ->assertOk()
             ->assertSee('value="Ava Buyer"', false)
             ->assertSee('value="10 Market Street"', false)
-            ->assertSee('value="Metro Manila"', false)
-            ->assertSee('value="1000"', false);
+            ->assertDontSee('name="postal_code"', false);
     }
 
     public function test_checkout_uses_exact_totals_and_creates_order_snapshots(): void
@@ -302,9 +300,15 @@ class CheckoutTest extends TestCase
         $cart->items()->create(['product_id' => $product->id, 'quantity' => 1]);
 
         $this->actingAs($customer)->post(route('checkout.store'), [...$this->delivery(), 'province' => '', 'postal_code' => '123'])
-            ->assertSessionHasErrors(['province', 'postal_code']);
+            ->assertSessionHasErrors(['postal_code'])
+            ->assertSessionDoesntHaveErrors(['province']);
         $this->assertDatabaseCount('orders', 0);
         $this->assertDatabaseCount('delivery_addresses', 0);
+
+        // Same-town delivery needs no province or postal code.
+        $this->post(route('checkout.store'), collect($this->delivery())->except(['province', 'postal_code'])->all())
+            ->assertRedirectContains('/placed');
+        $this->assertDatabaseHas('orders', ['user_id' => $customer->id, 'province' => null, 'postal_code' => null]);
     }
 
     public function test_older_saved_address_can_be_completed_at_checkout(): void
