@@ -17,6 +17,87 @@ import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
+  testWidgets('a customer can accept the pharmacy return offer', (
+    tester,
+  ) async {
+    final api = _OrderApi()
+      ..status = 'delivered'
+      ..caseStatus = 'offered';
+    await _pump(tester, api);
+    await tester.scrollUntilVisible(find.text('Return/Refund'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Return/Refund'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Accept solution'));
+    await tester.tap(find.text('Accept solution'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm'));
+    await tester.pumpAndSettle();
+    expect(api.caseStatus, 'awaiting_fulfillment');
+    expect(
+      find.text('The pharmacy is arranging your solution'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('an active order updates without a manual refresh', (
+    tester,
+  ) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final api = _OrderApi();
+    await _pump(tester, api);
+    api.status = 'shipped';
+    await tester.pump(const Duration(seconds: 16));
+    await tester.pumpAndSettle();
+    expect(find.text('Out for delivery'), findsWidgets);
+  });
+
+  testWidgets('a customer can submit a return from the order screen', (
+    tester,
+  ) async {
+    final api = _OrderApi()..status = 'delivered';
+    await _pump(tester, api);
+    await tester.scrollUntilVisible(find.text('Return/Refund'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Return/Refund'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Tell us what happened'),
+      'The item arrived damaged in its sealed package.',
+    );
+    await tester.ensureVisible(find.text('Send request'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send request'));
+    await tester.pumpAndSettle();
+    expect(api.returnQuantities, {'line': 2});
+    expect(find.text('Waiting for the pharmacy'), findsOneWidget);
+  });
+
+  testWidgets('order help submits a cancellation request before preparation', (
+    tester,
+  ) async {
+    final api = _OrderApi();
+    await _pump(tester, api);
+    await tester.scrollUntilVisible(find.text('Order help'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Order help'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Other order help'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Request cancellation').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField),
+      'I selected the wrong medicine and need to cancel.',
+    );
+    await tester.ensureVisible(find.text('Send request'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send request'));
+    await tester.pumpAndSettle();
+    expect(api.issueType, 'cancellation');
+    expect(find.text('Your request is waiting for review.'), findsOneWidget);
+  });
+
   testWidgets(
     'a ready pickup order shows the branch steps and its approved prescription',
     (tester) async {
@@ -267,9 +348,8 @@ void main() {
         await tester.pump();
         await tester.tap(find.text('Order help'));
         await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Got it'));
-        await tester.pump();
-        await tester.tap(find.text('Got it'));
+        expect(find.text('Send request'), findsOneWidget);
+        await tester.tap(find.byTooltip('Back'));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
       },
@@ -360,6 +440,56 @@ class _OrderApi extends ApiClient {
   Map<String, dynamic>? prescription;
   Map<String, dynamic>? rider;
   String? reordered;
+  String? issueType;
+  String? caseStatus;
+  Map<String, int>? returnQuantities;
+
+  @override
+  Future<Map<String, dynamic>> returnRequest(String id) async => {
+    'id': id,
+    'status': caseStatus,
+    'details': 'The item arrived damaged.',
+    'can_respond': true,
+    'events': [],
+  };
+
+  @override
+  Future<Map<String, dynamic>> updateReturnRequest(
+    String id,
+    String action, {
+    String? note,
+    PickedAttachment? proof,
+  }) async {
+    caseStatus = 'awaiting_fulfillment';
+    return returnRequest(id);
+  }
+
+  @override
+  Future<void> openOrderIssue(
+    String sellerOrderId,
+    String type,
+    String details,
+  ) async {
+    issueType = type;
+  }
+
+  @override
+  Future<Map<String, dynamic>> openReturnRequest(
+    String sellerOrderId, {
+    required String reason,
+    required String remedy,
+    required String details,
+    required Map<String, int> quantities,
+  }) async {
+    returnQuantities = Map.of(quantities);
+    return {
+      'id': 'request',
+      'status': 'awaiting_seller',
+      'details': details,
+      'can_respond': true,
+      'events': [],
+    };
+  }
 
   @override
   Future<({Cart cart, List<String> skipped})> reorder(
@@ -415,7 +545,10 @@ class _OrderApi extends ApiClient {
           'status': status,
           'can_confirm_receipt': status == 'shipped',
           'rider': rider,
-          if (returnStatus != null) 'latest_return': {'status': returnStatus},
+          if (caseStatus != null)
+            'latest_return': {'id': 'request', 'status': caseStatus}
+          else if (returnStatus != null)
+            'latest_return': {'status': returnStatus},
           'subtotal': '1998.00',
           'shipping_amount': '0.00',
           'total': '1998.00',

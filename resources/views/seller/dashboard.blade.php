@@ -196,9 +196,10 @@
                     @if ($recentProducts->isNotEmpty())
                         <div class="sc-list">
                             @foreach ($recentProducts as $product)
+                                @php($stockQuantity = $isHeadOffice ? $product->stock_quantity : (int) $product->branch_quantity)
                                 <div class="sc-list-item sc-row !py-3">
                                     <span class="sc-thumb">@if ($product->images->first())<img src="{{ Storage::disk('product_images')->url($product->images->first()->path) }}" alt="" loading="lazy">@endif</span>
-                                    <span class="sc-grow"><a href="{{ $canManageProducts ? route('seller.products.edit', $product) : route('seller.products.show', $product) }}" class="block truncate text-sm font-semibold text-ink hover:text-brand" title="{{ $product->name }}">{{ $product->name }}</a><span class="block sc-meta">{{ \App\Models\Product::STATUSES[$product->status] }} · {{ $product->stock_quantity < 1 ? 'Sold out' : number_format($product->stock_quantity).' in stock' }}</span></span>
+                                    <span class="sc-grow"><a href="{{ $canManageProducts ? route('seller.products.edit', $product) : route('seller.products.show', $product) }}" class="block truncate text-sm font-semibold text-ink hover:text-brand" title="{{ $product->name }}">{{ $product->name }}</a><span class="block sc-meta">{{ \App\Models\Product::STATUSES[$product->status] }} · {{ $stockQuantity < 1 ? 'Sold out' : number_format($stockQuantity).' in stock' }}</span></span>
                                     <span class="sc-num text-sm font-semibold">₱{{ number_format($product->price, 2) }}</span>
                                 </div>
                             @endforeach

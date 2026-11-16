@@ -55,7 +55,7 @@
                     <div class="pd-summary">
                         <p class="pd-price">₱{{ number_format($product->price, 2) }}@if ($isOnSale)<s>₱{{ number_format($product->compare_at_price, 2) }}</s>@endif</p>
                         <dl class="pd-facts">
-                            <div><dt>Inventory</dt><dd>{{ number_format($product->stock_quantity) }} in stock</dd></div>
+                            <div><dt>{{ $branch ? 'Stock at '.$branch->name : 'Company inventory' }}</dt><dd>{{ number_format($branch ? $product->branchStocks->sum('quantity') : $product->stock_quantity) }} in stock</dd></div>
                             <div><dt>SKU</dt><dd class="break-all">{{ $product->sku }}</dd></div>
                             <div><dt>Category</dt><dd>{{ $product->category?->name ?? 'Uncategorized' }}</dd></div>
                             <div><dt>Condition</dt><dd>{{ ucfirst($product->condition ?? 'new') }}</dd></div>
@@ -85,7 +85,8 @@
                                             <th scope="row"><span class="sc-items"><span class="sc-thumb-stack"><span class="sc-thumb">@if ($colorPhoto = $product->colorPhotos($variant->color)->first())<img src="{{ Storage::disk('product_images')->url($colorPhoto->path) }}" alt="" loading="lazy">@endif</span></span><span class="font-semibold text-ink">{{ $variant->label() }}</span></span></th>
                                             <td class="break-all sc-meta">{{ $variant->sku }}</td>
                                             <td class="is-num">@if ($variant->price)₱{{ number_format($variant->price, 2) }}@else<span class="sc-meta">Base price</span>@endif</td>
-                                            <td class="is-num">@if ($variant->stock_quantity > 0){{ number_format($variant->stock_quantity) }}@else<span class="font-semibold text-danger-text">Out of stock</span>@endif</td>
+                                            @php($quantity = $branch ? $product->branchStocks->where('product_variant_id', $variant->id)->sum('quantity') : $variant->stock_quantity)
+                                            <td class="is-num">@if ($quantity > 0){{ number_format($quantity) }}@else<span class="font-semibold text-danger-text">Out of stock</span>@endif</td>
                                         </tr>
                                     @endforeach
                                 </tbody>

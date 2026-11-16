@@ -50,8 +50,8 @@
                 <div class="returns-fact">
                     <span class="returns-fact-icon"><x-returns.icon name="calendar" class="size-[18px]" /></span>
                     <div>
-                        <p class="returns-fact-value">7 days</p>
-                        <p class="mt-1 text-xs leading-5 text-muted">To open an online request after delivery.</p>
+                        <p class="returns-fact-value">24 hours</p>
+                        <p class="mt-1 text-xs leading-5 text-muted">For new orders. Older orders keep their original deadline.</p>
                     </div>
                 </div>
                 <div class="returns-fact">
@@ -114,8 +114,8 @@
                             </div>
                         </div>
                         <div class="returns-policy-body">
-                            <p>For damaged, defective, wrong, or materially misdescribed goods, open your order page within seven days after that store marks delivery. Select the affected items and quantities, explain the problem, choose a preferred refund or replacement, and optionally add photos. Keep the item and packaging while the case is reviewed.</p>
-                            <p>If the seven-day online window has passed or the delivery date is uncertain, contact support with your order number. This interface window does not limit later warranty or statutory rights.</p>
+                            <p>For damaged, defective, wrong, or materially misdescribed goods, open your order page within 24 hours after delivery for new orders (older orders retain the deadline shown on their order page). Select the affected items and quantities, explain the problem, choose a preferred refund or replacement, and optionally add photos. Keep the item and packaging while the case is reviewed.</p>
+                            <p>If the online request window has passed or the delivery date is uncertain, contact support with your order number. This interface window does not limit later warranty or statutory rights.</p>
                         </div>
                         <div class="returns-policy-callout">
                             <x-returns.icon name="camera" class="mt-0.5 size-4 shrink-0 text-brand" />

@@ -225,6 +225,36 @@ class BranchAccessTest extends TestCase
         $this->assertSame(12, $cebu->branchStocks()->sole()->quantity);
     }
 
+    public function test_branch_stock_is_consistent_on_dashboard_and_product_details(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $product = $this->product($tenant, $makati, 'Paracetamol');
+        $product->update(['stock_quantity' => 686]);
+        $cebu->branchStocks()->create(['product_id' => $product->id, 'variant_key' => 'default', 'quantity' => 156]);
+        $manager = $this->member($tenant, 'manager', $cebu);
+
+        $this->actingAs($manager)->get(route('seller.dashboard'))
+            ->assertOk()->assertSee('156 in stock')->assertDontSee('686 in stock');
+        $this->get(route('seller.products.show', $product))
+            ->assertOk()->assertSee('Stock at Botika Plus Cebu')->assertSee('156 in stock')->assertDontSee('686 in stock');
+        $this->actingAs($this->member($tenant, 'manager'))->get(route('seller.products.show', $product))
+            ->assertOk()->assertSee('Company inventory')->assertSee('686 in stock');
+    }
+
+    public function test_only_the_fulfilling_branch_can_see_the_delivery_pin(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $order = $this->sellerOrder($cebu, 'CEBU-PIN');
+        $order->order->update(['delivery_latitude' => 10.316, 'delivery_longitude' => 123.8912]);
+
+        $this->actingAs($this->member($tenant, 'manager', $cebu))->get(route('seller.orders.show', $order))
+            ->assertOk()->assertSee('Open delivery pin in Maps')->assertSee('destination=10.316%2C123.8912', false);
+        $this->get(route('seller.orders.show', $order), ['X-Order-Modal' => '1'])
+            ->assertOk()->assertSee('Open delivery pin in Maps');
+        $this->actingAs($this->member($tenant, 'manager', $makati))->get(route('seller.orders.show', $order))
+            ->assertNotFound()->assertDontSee('destination=');
+    }
+
     private function otherCompanyBranch(): Store
     {
         $tenant = Tenant::firstOrCreate(['slug' => 'rival-drug'], ['name' => 'Rival Drug', 'status' => 'active']);

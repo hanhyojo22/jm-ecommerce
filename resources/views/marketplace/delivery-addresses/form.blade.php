@@ -25,13 +25,13 @@
     </div>
     <div class="grid grid-cols-[minmax(0,1fr)_7rem] gap-4">
         <div>
-            <label for="province" class="block text-meta font-semibold text-ink">Province</label>
-            <input id="province" name="province" value="{{ old('province', $address?->province) }}" required maxlength="100" autocomplete="address-level1" class="field-control mt-1.5" @error('province') aria-invalid="true" aria-describedby="province-error" @enderror>
+            <label for="province" class="block text-meta font-semibold text-ink">Province (optional)</label>
+            <input id="province" name="province" value="{{ old('province', $address?->province) }}" maxlength="100" autocomplete="address-level1" class="field-control mt-1.5" @error('province') aria-invalid="true" aria-describedby="province-error" @enderror>
             @error('province')<p id="province-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
         </div>
         <div>
-            <label for="postal_code" class="block text-meta font-semibold text-ink">Postal code</label>
-            <input id="postal_code" name="postal_code" value="{{ old('postal_code', $address?->postal_code) }}" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="postal-code" class="field-control mt-1.5 tabular-nums" @error('postal_code') aria-invalid="true" aria-describedby="postal_code-error" @enderror>
+            <label for="postal_code" class="block text-meta font-semibold text-ink">Postal code (optional)</label>
+            <input id="postal_code" name="postal_code" value="{{ old('postal_code', $address?->postal_code) }}" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="postal-code" class="field-control mt-1.5 tabular-nums" @error('postal_code') aria-invalid="true" aria-describedby="postal_code-error" @enderror>
             @error('postal_code')<p id="postal_code-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
         </div>
     </div>

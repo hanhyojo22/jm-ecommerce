@@ -16,7 +16,7 @@ return [
     'orders' => [
         'auto_deliver_days' => 14,
         // Days after delivery a buyer can still open a return.
-        'return_window_days' => 7,
+        'return_window_days' => 1,
     ],
 
     /*

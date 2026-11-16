@@ -75,7 +75,7 @@ class ReturnCaseController extends Controller
     {
         abort_unless($request->user()->isPlatformAdministrator(), 403);
         $data = $request->validate([
-            'reason' => ['required', 'in:damaged,defective,wrong_item,misdescribed'],
+            'reason' => ['required', 'in:damaged,defective,wrong_item,missing_item,misdescribed'],
             'requested_remedy' => ['required', 'in:refund,replacement'],
             'details' => ['required', 'string', 'min:10', 'max:2000'],
             'items' => ['required', 'array', 'min:1'],

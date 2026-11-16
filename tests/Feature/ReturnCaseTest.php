@@ -29,6 +29,7 @@ class ReturnCaseTest extends TestCase
     {
         $this->travelTo(now()->startOfSecond());
         [$buyer, $seller, $order, $item] = $this->deliveredOrder(2, now()->subDays(7));
+        $order->forceFill(['return_window_hours' => null])->save();
         $otherBuyer = User::factory()->create(['email_verified_at' => now()]);
         $data = $this->requestData($item->id, 1);
 
@@ -47,6 +48,7 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($buyer)->post(route('returns.store', $order), $data)->assertSessionHasErrors('items');
 
         [$lateBuyer, , $lateOrder, $lateItem] = $this->deliveredOrder(1, now()->subDays(7)->subSecond());
+        $lateOrder->forceFill(['return_window_hours' => null])->save();
         $this->actingAs($lateBuyer)->post(route('returns.store', $lateOrder), $this->requestData($lateItem->id, 1))->assertSessionHasErrors('items');
         $admin = User::factory()->administrator()->create(['email_verified_at' => now()]);
         $this->actingAs($admin)->post(route('admin.returns.store', $lateOrder), $this->requestData($lateItem->id, 1))->assertRedirect();
@@ -54,11 +56,25 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($seller)->get(route('seller.returns.show', ReturnCase::query()->where('seller_order_id', $lateOrder->id)->sole()))->assertNotFound();
     }
 
+    public function test_new_orders_have_a_24_hour_window_and_legacy_orders_keep_seven_days(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        [$buyer, , $order, $item] = $this->deliveredOrder(1, now()->subHours(24));
+        $this->assertSame(24, $order->returnWindowHours());
+        $this->actingAs($buyer)->postJson('/api/v1/orders/seller-orders/'.$order->id.'/returns', $this->requestData($item->id, 1))->assertCreated();
+        [$lateBuyer, , $late, $lateItem] = $this->deliveredOrder(1, now()->subHours(24)->subSecond());
+        $this->actingAs($lateBuyer)->postJson('/api/v1/orders/seller-orders/'.$late->id.'/returns', $this->requestData($lateItem->id, 1))->assertUnprocessable()->assertJsonPath('error.code', 'validation.failed')->assertJsonStructure(['error' => ['fields' => ['items']]]);
+        [$legacyBuyer, , $legacy, $legacyItem] = $this->deliveredOrder(1, now()->subDays(3));
+        $legacy->forceFill(['return_window_hours' => null])->save();
+        $this->assertSame(168, $legacy->returnWindowHours());
+        $this->actingAs($legacyBuyer)->postJson('/api/v1/orders/seller-orders/'.$legacy->id.'/returns', $this->requestData($legacyItem->id, 1))->assertCreated();
+    }
+
     public function test_opening_a_return_notifies_both_the_buyer_and_the_seller_in_app(): void
     {
         Notification::fake();
 
-        [$buyer, $seller, $order, $item] = $this->deliveredOrder(1, now()->subDays(1));
+        [$buyer, $seller, $order, $item] = $this->deliveredOrder(1, now()->subHours(12));
 
         $this->actingAs($buyer)->post(route('returns.store', $order), $this->requestData($item->id, 1))->assertRedirect();
         $case = ReturnCase::query()->sole();
@@ -322,6 +338,7 @@ class ReturnCaseTest extends TestCase
         $this->actingAs($buyer)->post(route('returns.store', $sellerOrder), $this->requestData($item->id, 1));
         $overdue = ReturnCase::query()->sole();
         $this->travel(49)->hours();
+        $otherSellerOrder->update(['delivered_at' => now()]);
         $this->actingAs($otherBuyer)->post(route('returns.store', $otherSellerOrder), $this->requestData($otherItem->id, 1));
         $onTime = ReturnCase::query()->whereKeyNot($overdue->id)->sole();
 

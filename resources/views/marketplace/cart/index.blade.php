@@ -70,7 +70,7 @@
                                     </div>
 
                                     @foreach ($storeItems as $item)
-                                        @php($availableStock = $item->variant?->stock_quantity ?? $item->product->stock_quantity)
+                                        @php($availableStock = $item->availableQuantity())
                                         @php($isUnavailable = ! $item->isAvailable())
                                         <article class="grid grid-cols-[48px_minmax(0,1fr)] gap-x-3.5 gap-y-2 border-b border-line-soft px-4 py-3.5 last:border-b-0 sm:grid-cols-[48px_minmax(0,1fr)_84px_84px_28px] sm:items-start">
 

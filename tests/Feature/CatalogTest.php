@@ -103,7 +103,7 @@ class CatalogTest extends TestCase
 
         $this->get(route('catalog.show', [$paidShipping->store->slug, $paidShipping->slug]))
             ->assertSee('The delivery fee is shown at checkout.')
-            ->assertSee('7-day returns')
+            ->assertSee('Report issues within 24 hours')
             ->assertDontSee('Free shipping on this item.');
     }
 

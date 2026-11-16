@@ -2,7 +2,7 @@
     @section('title', 'JMMart · Pharmacy delivery')
 
     <div class="page-container marketplace-home" data-homepage>
-        <h1 class="sr-only">Marketplace</h1>
+        <h1 class="sr-only">JMMart pharmacy</h1>
 
         <x-marketplace.hero-carousel />
 
@@ -19,7 +19,7 @@
 
         @if ($newProducts->isNotEmpty())
             <section id="new-arrivals" class="marketplace-section scroll-mt-24" aria-labelledby="home-new-heading">
-                <div class="marketplace-section-head"><div><h2 id="home-new-heading" class="marketplace-section-title">New arrivals</h2><p class="marketplace-section-subtitle">The latest listings from every store.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="marketplace-section-link inline-flex items-center gap-1">All new arrivals <x-returns.icon name="chevron-right" class="size-4" /></a></div>
+                <div class="marketplace-section-head"><div><h2 id="home-new-heading" class="marketplace-section-title">New arrivals</h2><p class="marketplace-section-subtitle">Medicines and health essentials from our pharmacy.</p></div><a href="{{ route('catalog.index', ['sort' => 'newest']) }}" class="marketplace-section-link inline-flex items-center gap-1">All new arrivals <x-returns.icon name="chevron-right" class="size-4" /></a></div>
                 <div class="marketplace-product-grid">
                     @include('marketplace.catalog._new-arrival-cards', ['products' => $newProducts])
                 </div>

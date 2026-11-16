@@ -21,7 +21,7 @@ test('variant gallery, prices, and sold-out states work on phone, tablet, and de
         try {
             await page.goto('/');
             await dismissCookies(page);
-            await expect(page.getByRole('heading', { name: /Good finds\.\s*Closer to home\./ })).toBeVisible();
+            await expect(page.getByRole('heading', { name: /Your pharmacy\.\s*Closer to home\./ })).toBeVisible();
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
             await page.goto(speakerPath);
             await expect(page.locator('[data-selected-price]:visible')).toHaveText('₱12.35');
@@ -97,8 +97,6 @@ test('COD checkout preserves the selected variant and its price', async ({ brows
         await page.getByLabel('Mobile number').fill('09171234567');
         await page.getByLabel('Street address').fill('25 Market Street');
         await page.getByLabel('City', { exact: true }).fill('Cebu');
-        await page.getByLabel('Province').fill('Cebu');
-        await page.getByLabel('Postal code').fill('6000');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
@@ -144,44 +142,27 @@ test('customer comments and store-name replies remain in the same thread', async
     }
 });
 
-test('seller submits, sees requested changes, resubmits, and admin approves the real listing', async ({ browser }) => {
-    test.setTimeout(90_000);
+test('head office publishes medicines and only admin restores suspended listings', async ({ browser }) => {
     const seller = await openAsRole(browser, 'seller');
     const admin = await openAsRole(browser, 'admin');
     try {
         await seller.page.goto('/seller/products?search=QA%20Approval%20Draft');
         await dismissCookies(seller.page);
-        await seller.page.getByRole('button', { name: 'Submit for review', exact: true }).first().click();
-        await expect(seller.page.getByText('Listing submitted for administrator review.')).toBeVisible();
-        await admin.page.goto('/admin/products?search=QA%20Approval%20Draft&status=pending');
+        await seller.page.getByRole('button', { name: 'Publish QA Approval Draft', exact: true }).first().click();
+        await expect(seller.page.getByText('QA Approval Draft is now on sale.')).toBeVisible();
+        await admin.page.goto('/admin/products?search=QA%20Approval%20Draft&status=active');
         await dismissCookies(admin.page);
         await admin.page.getByRole('link', { name: 'View QA Approval Draft', exact: true }).click();
-        await admin.page.setViewportSize({ width: 375, height: 844 });
-        expect(await admin.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-        await admin.page.getByLabel('Decision', { exact: true }).selectOption('changes_required');
-        await admin.page.getByLabel('Reason', { exact: true }).fill('Please add the included accessories to the description.');
-        await admin.page.getByRole('button', { name: 'Save decision', exact: true }).click();
+        await admin.page.getByLabel('Decision', { exact: true }).selectOption('inactive');
+        await admin.page.getByLabel('Reason', { exact: true }).fill('Temporarily suspended for a listing safety review.');
+        await Promise.all([admin.page.waitForEvent('domcontentloaded'), admin.page.getByRole('button', { name: 'Save decision', exact: true }).click()]);
         await expect(admin.page.getByText('Listing moderation decision recorded.')).toBeVisible();
-        await seller.page.goto('/seller/products?search=QA%20Approval%20Draft');
-        await seller.page.getByRole('link', { name: 'Edit listing', exact: true }).first().click();
-        await seller.page.setViewportSize({ width: 375, height: 844 });
-        expect(await seller.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-        await expect(seller.page.getByText('Please add the included accessories to the description.')).toBeVisible();
-        await seller.page.getByLabel('Description', { exact: true }).fill('A complete listing including the carrying case and cable.');
-        await seller.page.getByRole('button', { name: 'Save changes', exact: true }).click();
-        await expect(seller.page).toHaveURL(/\/seller\/products$/);
-        await seller.page.goto('/seller/products?search=QA%20Approval%20Draft');
-        await seller.page.getByRole('button', { name: 'Submit for review', exact: true }).first().click();
-        await expect(seller.page.getByText('Listing submitted for administrator review.')).toBeVisible();
-        await admin.page.reload();
+        await seller.page.reload();
+        await expect(seller.page.getByRole('button', { name: 'Publish QA Approval Draft', exact: true })).toHaveCount(0);
         await admin.page.getByLabel('Decision', { exact: true }).selectOption('active');
-        await admin.page.getByLabel('Reason', { exact: true }).fill('The updated listing passed the product review.');
-        await admin.page.getByRole('button', { name: 'Save decision', exact: true }).click();
-        await expect(admin.page.getByText('Listing moderation decision recorded.')).toBeVisible();
+        await admin.page.getByLabel('Reason', { exact: true }).fill('The pharmacy listing review is complete.');
+        await Promise.all([admin.page.waitForEvent('domcontentloaded'), admin.page.getByRole('button', { name: 'Save decision', exact: true }).click()]);
         await seller.page.goto('/stores/qa-northwind-store/products/qa-approval-draft');
         await expect(seller.page.getByRole('heading', { name: 'QA Approval Draft', exact: true })).toBeVisible();
-    } finally {
-        await seller.context.close();
-        await admin.context.close();
-    }
+    } finally { await seller.context.close(); await admin.context.close(); }
 });

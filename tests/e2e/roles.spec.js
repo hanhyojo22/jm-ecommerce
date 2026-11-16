@@ -34,7 +34,8 @@ test('seller catalog shows real products and opens working details at desktop an
         await page.screenshot({ path: testInfo.outputPath('seller-products-desktop.png'), fullPage: true });
         await page.getByRole('navigation', { name: 'Product status' }).getByRole('link', { name: 'Draft', exact: true }).click();
         await expect(page.getByRole('table')).toContainText('QA Approval Draft');
-        await expect(page.getByRole('table')).not.toContainText('QA Canvas Tote');
+        await expect(page).toHaveURL(/status=draft/);
+        await expect(page.getByRole('table').getByText('QA Canvas Tote')).toHaveCount(0);
         await page.goto('/seller/products');
         await page.locator('#product-search').fill('QA Canvas Tote');
         await page.getByRole('search').getByRole('button', { name: 'Search products' }).click();
@@ -45,7 +46,7 @@ test('seller catalog shows real products and opens working details at desktop an
         await page.goto('/seller/products');
         await page.getByRole('row').filter({ hasText: 'QA Canvas Tote' }).getByRole('link', { name: 'Details' }).click();
         await expect(page.getByRole('heading', { name: 'QA Canvas Tote' })).toBeVisible();
-        const currentStock = (await page.getByText('Inventory', { exact: true }).locator('..').locator('dd').innerText()).split(' ')[0].replaceAll(',', '');
+        const currentStock = (await page.getByText('Company inventory', { exact: true }).locator('..').locator('dd').innerText()).split(' ')[0].replaceAll(',', '');
         await page.getByRole('link', { name: 'Edit listing' }).click();
         await expect(page.getByLabel('Stock quantity')).toHaveValue(currentStock);
         await page.goto('/seller/products');
@@ -191,7 +192,7 @@ test('seller can persist overview visibility preferences and restore defaults', 
 
     try {
         await page.goto('/seller');
-        await page.getByRole('button', { name: 'Accept All' }).click();
+        await Promise.all([page.waitForEvent('domcontentloaded'), page.getByRole('button', { name: 'Accept All' }).click()]);
         await page.evaluate(() => {
             const dashboard = document.querySelector('[data-seller-dashboard]');
             window.localStorage.setItem(`seller-dashboard:${dashboard.dataset.dashboardKey}`, 'null');

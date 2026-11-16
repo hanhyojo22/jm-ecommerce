@@ -562,25 +562,25 @@ test('homepage hero supports slide controls, keyboard navigation, and touch gest
         page.locator('[data-cookie-banner] [data-cookie-action="reject"]').click(),
     ]);
 
-    const hero = page.getByRole('region', { name: 'Marketplace highlights' });
-    const first = hero.getByRole('button', { name: 'Show slide 1: New arrivals' });
-    const second = hero.getByRole('button', { name: 'Show slide 2: Everyday living' });
-    const third = hero.getByRole('button', { name: 'Show slide 3: Local finds' });
+    const hero = page.getByRole('region', { name: 'Pharmacy highlights' });
+    const first = hero.getByRole('button', { name: 'Show slide 1: Medicines' });
+    const second = hero.getByRole('button', { name: 'Show slide 2: Prescription orders' });
+    const third = hero.getByRole('button', { name: 'Show slide 3: Branches' });
     const next = hero.getByRole('button', { name: 'Next slide', exact: true });
     const previous = hero.getByRole('button', { name: 'Previous slide', exact: true });
 
     await expect(first).toHaveAttribute('aria-pressed', 'true');
-    await expect(hero.getByRole('heading', { name: /Everyday finds/ })).toBeVisible();
+    await expect(hero.getByRole('heading', { name: /Your pharmacy/ })).toBeVisible();
     await previous.click();
     await expect(third).toHaveAttribute('aria-pressed', 'true');
-    await expect(hero.getByRole('heading', { name: /Small shops/ })).toBeVisible();
+    await expect(hero.getByRole('heading', { name: /Find your branch/ })).toBeVisible();
     await next.click();
     await expect(first).toHaveAttribute('aria-pressed', 'true');
     await next.click();
     await expect(second).toHaveAttribute('aria-pressed', 'true');
-    await expect(hero.getByRole('heading', { name: /Make room/ })).toBeVisible();
-    await expect(hero.getByRole('link', { name: 'Explore new arrivals' })).toHaveCount(0);
-    await expect.poll(() => hero.locator('.home-hero-slide:visible img').evaluate((image) => image.complete && image.naturalWidth > 0)).toBe(true);
+    await expect(hero.getByRole('heading', { name: /Prescription care/ })).toBeVisible();
+    await expect(hero.getByRole('link', { name: 'Browse medicines' })).toHaveCount(0);
+    await expect(hero.locator('.home-hero-slide:visible img')).toHaveCount(0);
     await expect(hero.locator('.home-hero-slide:visible')).toHaveCSS('transition-duration', '0s');
 
     await third.click();
@@ -611,8 +611,8 @@ test('homepage hero supports slide controls, keyboard navigation, and touch gest
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).include('[data-home-hero]').analyze()).violations).toEqual([]);
     await hero.screenshot({ path: testInfo.outputPath('hero-local-finds.png') });
-    const destination = await hero.getByRole('link', { name: 'Discover stores', exact: true }).getAttribute('href');
-    await hero.getByRole('link', { name: 'Discover stores', exact: true }).click();
+    const destination = await hero.getByRole('link', { name: 'Find a branch', exact: true }).getAttribute('href');
+    await hero.getByRole('link', { name: 'Find a branch', exact: true }).click();
     await expect(page).toHaveURL(destination);
 });
 
@@ -643,7 +643,7 @@ test('customer header uses the intended shopping and account layouts', async ({ 
             const header = page.locator('header[data-header-design]');
             const isAccountPage = ['/profile', '/orders'].includes(path);
 
-            await expect(header.getByRole('combobox', { name: 'Search products, brands, and stores' })).toBeVisible();
+            await expect(header.getByRole('combobox', { name: 'Search medicines' })).toBeVisible();
             if (isAccountPage) {
                 await expect(header).toHaveAttribute('data-header-role', 'customer-workspace');
                 await expect(header.getByRole('navigation', { name: 'Marketplace sections' })).toHaveCount(0);

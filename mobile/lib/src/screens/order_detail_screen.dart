@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,7 @@ import '../providers/checkout_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'order_support_screen.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -27,6 +30,32 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   bool _busy = false;
   bool _summaryExpanded = false;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!mounted ||
+          _busy ||
+          WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      final order = ref.read(orderProvider(widget.orderId));
+      if (!order.isLoading &&
+          order.value != null &&
+          !['delivered', 'cancelled'].contains(order.value!.status)) {
+        ref.invalidate(orderProvider(widget.orderId));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
 
   String _statusHeadline(OrderDetail order) => switch (order.status) {
     'delivered' => 'Completed',
@@ -524,7 +553,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           ),
                         ),
                         Text(
-                          'Tell the pharmacy within 7 days of delivery.',
+                          'Report an issue within ${order.sellerOrders.isEmpty ? 24 : order.sellerOrders.first.returnWindowHours} hours of delivery.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                             fontSize: 11.5,
@@ -636,7 +665,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     largeText: largeText,
                     busy: _busy,
                     onReview: () => _review(sellerOrder.lines[i]),
-                    onReturnInfo: () => _showGuaranteeSheet(order),
+                    onReturnInfo: () =>
+                        _openSupport(order, sellerOrder, requestReturn: true),
                   ),
                 ],
                 if (sellerOrder.latestReturnStatus
@@ -673,7 +703,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               children: [
                 Expanded(
                   child: InkWell(
-                    onTap: () => _showGuaranteeSheet(order),
+                    onTap: () => _openSupport(order, sellerOrder),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -1022,39 +1052,50 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Future<void> _showGuaranteeSheet(OrderDetail order) async {
-    await showModalBottomSheet<void>(
+    if (order.sellerOrders.isEmpty) {
+      return;
+    }
+    if (order.sellerOrders.length == 1) {
+      await _openSupport(order, order.sellerOrders.single);
+      return;
+    }
+    final selected = await showModalBottomSheet<SellerOrder>(
       context: context,
       showDragHandle: true,
-      useSafeArea: true,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Wrong or missing item?',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Something wrong with an item? Message the pharmacy using "Chat with pharmacy" and they will sort it out.',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Got it'),
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => ListView(
+        shrinkWrap: true,
+        children: [
+          for (final branchOrder in order.sellerOrders)
+            ListTile(
+              title: Text(branchOrder.store?.name ?? 'Pharmacy'),
+              onTap: () => Navigator.pop(context, branchOrder),
+            ),
+        ],
+      ),
     );
+    if (selected != null && mounted) {
+      await _openSupport(order, selected);
+    }
+  }
+
+  Future<void> _openSupport(
+    OrderDetail order,
+    SellerOrder branchOrder, {
+    bool requestReturn = false,
+  }) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => OrderSupportScreen(
+          order: order,
+          sellerOrder: branchOrder,
+          requestReturn: requestReturn,
+        ),
+      ),
+    );
+    if (mounted) {
+      ref.invalidate(orderProvider(widget.orderId));
+      ref.invalidate(ordersProvider);
+    }
   }
 
   Future<void> _showLogisticSheet(OrderDetail order) async {

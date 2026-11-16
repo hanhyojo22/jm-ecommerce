@@ -69,16 +69,13 @@ test('variant photos are shared by every size of their color, from the seller fo
 
         // No shared photo, but every color has one, so the listing can be submitted.
         await seller.page.goto(`/seller/products?search=${encodeURIComponent(productName)}`);
-        await seller.page.getByRole('button', { name: 'Submit for review', exact: true }).first().click();
-        await expect(seller.page.getByText('Listing submitted for administrator review.')).toBeVisible();
+        await seller.page.getByRole('button', { name: `Publish ${productName}`, exact: true }).first().click();
+        await expect(seller.page.getByText(`${productName} is now on sale.`)).toBeVisible();
 
-        await admin.page.goto(`/admin/products?search=${encodeURIComponent(productName)}&status=pending`);
+        await admin.page.goto(`/admin/products?search=${encodeURIComponent(productName)}&status=active`);
         await dismissCookies(admin.page);
         await admin.page.getByRole('link', { name: `View ${productName}`, exact: true }).click();
-        await admin.page.getByLabel('Decision', { exact: true }).selectOption('active');
-        await admin.page.getByLabel('Reason', { exact: true }).fill('Photos cover every color.');
-        await admin.page.getByRole('button', { name: 'Save decision', exact: true }).click();
-        await expect(admin.page.getByText('Listing moderation decision recorded.')).toBeVisible();
+        await expect(admin.page.getByRole('heading', {name: productName, exact: true})).toBeVisible();
 
         await buyer.page.goto('/stores/qa-northwind-store');
         await dismissCookies(buyer.page);

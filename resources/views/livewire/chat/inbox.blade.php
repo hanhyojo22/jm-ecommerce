@@ -1,4 +1,4 @@
-<div data-conversation-inbox x-data="chatInbox(@js(auth()->id()))">
+<div wire:poll.15s.visible data-conversation-inbox x-data="chatInbox(@js(auth()->id()))">
     @php($isBuyerMessages = auth()->user()->account_type === 'buyer' || $context === 'buying')
     @if ($embedded)
         @include('livewire.chat.inbox-content')

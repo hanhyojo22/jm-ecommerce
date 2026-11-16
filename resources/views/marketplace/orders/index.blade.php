@@ -397,7 +397,7 @@
             'to_receive' => ['Nothing on the way', 'Orders out for delivery appear here until they arrive.'],
             'delivered' => ['No delivered orders yet', 'Orders appear here once they arrive.'],
             'to_review' => ['You’re all caught up', 'Delivered items you haven’t reviewed appear here.'],
-            'returns' => ['No returns or refund requests', 'Open a return from a delivered order within '.(int) config('marketplace.orders.return_window_days').' days of delivery. Requests you open appear here.'],
+            'returns' => ['No returns or refund requests', 'Open a request from your delivered order within its return window. New orders have 24 hours; older orders keep their original deadline.'],
         ];
         $search = trim($filters['search'] ?? '');
         $hasFilters = $search !== '' || filled($filters['status'] ?? null);

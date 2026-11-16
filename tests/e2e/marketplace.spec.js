@@ -101,8 +101,10 @@ test('customer can add a newly loaded arrival to the cart', async ({ browser }) 
         await page.goto('/');
         await rejectOptionalCookies(page);
         const arrivals = page.locator('#new-arrivals');
-        await arrivals.getByRole('link', { name: 'Load More' }).click();
-        const arrival = arrivals.locator('article').filter({ hasText: 'QA Arrival 21' });
+        await arrivals.getByRole('link', { name: 'All new arrivals' }).click();
+        await expect(page).toHaveURL(/sort=newest/);
+        await page.goto('/search?sort=newest&q=QA%20Arrival%2021');
+        const arrival = page.locator('article').filter({ hasText: 'QA Arrival 21' });
         await arrival.getByRole('button', { name: 'Add to cart' }).click();
         await expect(arrival.getByRole('status')).toHaveText('Added to cart.');
 
@@ -248,8 +250,6 @@ test('seller shops another store and returns to Seller Center with the same acco
         await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
         await page.getByRole('radio', { name: /^QA Seller 20 QA Street, Manila/ }).check();
         await expect(page.getByLabel('Street address')).toHaveValue('20 QA Street');
-        await expect(page.getByLabel('Province')).toHaveValue('Metro Manila');
-        await expect(page.getByLabel('Postal code')).toHaveValue('1000');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
@@ -284,7 +284,6 @@ test('customer can place a COD order from the product page through checkout', as
         await expect(cartLink).toHaveAttribute('aria-label', new RegExp(`^Cart: ${startingCartCount + 2} items?$`));
         await cartLink.click();
         await expect(page).toHaveURL(/\/cart$/);
-        await page.getByRole('checkbox', { name: 'Select QA Canvas Tote' }).check();
         const checkoutLink = page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ });
         await expect(checkoutLink).toHaveAttribute('aria-disabled', 'false');
         await checkoutLink.click();
@@ -292,12 +291,10 @@ test('customer can place a COD order from the product page through checkout', as
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('10 QA Street');
         await page.getByLabel('City').fill('Manila');
-        await page.getByLabel('Province').fill('Metro Manila');
-        await page.getByLabel('Postal code').fill('1000');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await expect(page.locator('#step-1-title')).toContainText('Ava QA Customer · 10 QA Street · Manila');
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
-        await expect(page.locator('#step-3-body')).toContainText('10 QA Street, Manila, Metro Manila, 1000');
+        await expect(page.locator('#step-3-body')).toContainText('10 QA Street, Manila');
         await page.getByLabel('Delivery note').fill('Blue gate');
         const deliveryBox = await page.locator('#step-1-title').boundingBox();
         const summaryBox = await page.locator('#checkout-summary-heading').boundingBox();
@@ -358,8 +355,6 @@ test('mobile checkout stacks the summary and shows server field errors', async (
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('10 QA Street');
         await page.getByLabel('City').fill('Manila');
-        await page.getByLabel('Province').fill('Metro Manila');
-        await page.getByLabel('Postal code').fill('1000');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
     } finally {
         await context.close();

@@ -40,7 +40,7 @@ class DeliveryAddressTest extends TestCase
         $this->assertDatabaseCount('delivery_addresses', 0);
     }
 
-    public function test_delivery_address_requires_province_and_four_digit_postal_code(): void
+    public function test_a_supplied_postal_code_must_have_four_digits(): void
     {
         $buyer = User::factory()->create(['email_verified_at' => now()]);
 
@@ -51,9 +51,21 @@ class DeliveryAddressTest extends TestCase
             'city' => 'Manila',
             'province' => '',
             'postal_code' => '123',
-        ])->assertSessionHasErrors(['province', 'postal_code']);
+        ])->assertSessionHasErrors(['postal_code']);
 
         $this->assertDatabaseCount('delivery_addresses', 0);
+    }
+
+    public function test_a_checkout_address_without_province_or_postal_code_can_be_edited(): void
+    {
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $address = DeliveryAddress::factory()->for($buyer, 'user')->create(['province' => null, 'postal_code' => null]);
+
+        $this->actingAs($buyer)->patchJson('/api/v1/delivery-addresses/'.$address->id, [
+            'recipient_name' => 'Ava Buyer', 'phone' => '09171234567', 'address_line' => 'Blue gate, 12 Rizal Street',
+            'city' => 'Cebu City', 'province' => '', 'postal_code' => '',
+        ])->assertOk()->assertJsonPath('data.address_line', 'Blue gate, 12 Rizal Street');
+        $this->assertDatabaseHas('delivery_addresses', ['id' => $address->id, 'province' => null, 'postal_code' => null]);
     }
 
     public function test_a_shopper_cannot_read_or_change_another_accounts_address(): void

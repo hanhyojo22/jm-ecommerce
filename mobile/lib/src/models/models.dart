@@ -804,6 +804,11 @@ class SellerOrder {
     this.riderPhone,
     required this.canConfirmReceipt,
     this.latestReturnStatus,
+    this.latestReturnId,
+    this.latestIssueStatus,
+    this.latestIssueDetails,
+    this.returnWindowHours = 168,
+    this.returnWindowEndsAt,
     this.store,
     required this.lines,
     this.orderId,
@@ -827,6 +832,11 @@ class SellerOrder {
   final String? riderPhone;
   final bool canConfirmReceipt;
   final String? latestReturnStatus;
+  final String? latestReturnId;
+  final String? latestIssueStatus;
+  final String? latestIssueDetails;
+  final int returnWindowHours;
+  final String? returnWindowEndsAt;
   final StoreInfo? store;
   final List<OrderLine> lines;
   final String? orderId;
@@ -851,6 +861,11 @@ class SellerOrder {
       riderPhone: mapOf(json['rider'])['phone'] as String?,
       canConfirmReceipt: boolean(json['can_confirm_receipt']),
       latestReturnStatus: mapOf(json['latest_return'])['status'] as String?,
+      latestReturnId: mapOf(json['latest_return'])['id'] as String?,
+      latestIssueStatus: mapOf(json['latest_issue'])['status'] as String?,
+      latestIssueDetails: mapOf(json['latest_issue'])['details'] as String?,
+      returnWindowHours: integer(json['return_window_hours'], 168),
+      returnWindowEndsAt: json['return_window_ends_at'] as String?,
       store: json['store'] == null
           ? null
           : StoreInfo.fromJson(mapOf(json['store'])),

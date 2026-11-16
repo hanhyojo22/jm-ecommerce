@@ -189,7 +189,7 @@
                             <svg class="size-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
                             {{-- The link's own label already names the count, so the badge repeats it for the eye only. --}}
                             {{-- Anchored outside the icon's corner: a wide count grows leftward over empty padding, so the cart stays legible at any number. --}}
-                            <span data-cart-badge aria-hidden="true" class="absolute -right-2 -top-1.5 grid h-[19px] min-w-[19px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[5px] text-xs font-semibold leading-none tabular-nums text-white" @if ($cartItemCount === 0) style="display: none" @endif>{{ $cartBadge }}</span>
+                            <span data-cart-badge aria-hidden="true" class="absolute -right-3 -top-4 grid h-[19px] min-w-[19px] place-items-center whitespace-nowrap rounded-full border-2 border-white bg-brand px-[5px] text-xs font-semibold leading-none tabular-nums text-white" @if ($cartItemCount === 0) style="display: none" @endif>{{ $cartBadge }}</span>
                         </span>
                         @unless ($isCustomerWorkspace)
                             <span class="hidden text-sm font-medium text-ink lg:inline">Cart</span>

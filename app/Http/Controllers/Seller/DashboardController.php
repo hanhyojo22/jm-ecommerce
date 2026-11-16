@@ -22,6 +22,7 @@ class DashboardController extends Controller
             $tenant = $member->tenant;
             // Head office sees the whole company; branch staff see their own branch.
             $store = $member->store ?? $tenant->store;
+            $branch = $member->isHeadOffice() ? null : $member->store;
             $productMetrics = $tenant->products()
                 ->toBase()
                 ->selectRaw("count(*) as total_products, sum(case when stock_quantity = 0 then 1 else 0 end) as out_of_stock_products, sum(case when status = 'active' then 1 else 0 end) as active_products")
@@ -60,7 +61,8 @@ class DashboardController extends Controller
                 'salesTotal' => $orderMetrics->sales_total ?? 0,
                 'salesHistory' => $salesHistory,
                 'customerCount' => $customerCount,
-                'outOfStockCount' => (int) $productMetrics->out_of_stock_products,
+                'outOfStockCount' => $branch === null ? (int) $productMetrics->out_of_stock_products : $tenant->products()
+                    ->whereDoesntHave('branchStocks', fn ($query) => $query->where('store_id', $branch->id)->where('quantity', '>', 0))->count(),
                 'recentOrders' => $member->sellerOrders()
                     ->with('order')
                     ->withCount('items')
@@ -69,6 +71,7 @@ class DashboardController extends Controller
                     ->get(),
                 'recentProducts' => $tenant->products()
                     ->with('images')
+                    ->when($branch, fn ($query) => $query->withSum(['branchStocks as branch_quantity' => fn ($stock) => $stock->where('store_id', $branch->id)], 'quantity'))
                     ->latest('updated_at')
                     ->limit(4)
                     ->get(),

@@ -226,6 +226,9 @@ class Thread extends Component
             ->reverse()
             ->values()
             ->all();
+        if (array_diff($latestMessageIds, $this->messageIds) !== []) {
+            $this->markRead();
+        }
         $this->messageIds = array_slice(array_values(array_unique([...$this->messageIds, ...$latestMessageIds])), -self::WINDOW_MESSAGE_LIMIT);
     }
 

@@ -422,6 +422,69 @@ class ApiClient {
   Future<OrderDetail> order(String id) async =>
       OrderDetail.fromJson(mapOf(await _data('GET', '/orders/$id')));
 
+  Future<void> openOrderIssue(
+    String sellerOrderId,
+    String type,
+    String details,
+  ) async {
+    await _data(
+      'POST',
+      '/orders/seller-orders/$sellerOrderId/issues',
+      data: {'type': type, 'details': details},
+    );
+  }
+
+  Future<Map<String, dynamic>> returnRequest(String id) async =>
+      mapOf(await _data('GET', '/returns/$id'));
+
+  Future<Map<String, dynamic>> openReturnRequest(
+    String sellerOrderId, {
+    required String reason,
+    required String remedy,
+    required String details,
+    required Map<String, int> quantities,
+  }) async => mapOf(
+    await _data(
+      'POST',
+      '/orders/seller-orders/$sellerOrderId/returns',
+      data: {
+        'reason': reason,
+        'requested_remedy': remedy,
+        'details': details,
+        'items': [
+          for (final item in quantities.entries)
+            {'order_item_id': item.key, 'quantity': item.value},
+        ],
+      },
+    ),
+  );
+
+  Future<Map<String, dynamic>> updateReturnRequest(
+    String id,
+    String action, {
+    String? note,
+    PickedAttachment? proof,
+  }) async {
+    final fields = <String, dynamic>{'action': action, 'note': ?note};
+    return mapOf(
+      await _data(
+        proof == null ? 'PATCH' : 'POST',
+        '/returns/$id',
+        data: proof == null
+            ? fields
+            : FormData.fromMap({
+                ...fields,
+                '_method': 'PATCH',
+                'proof': MultipartFile.fromBytes(
+                  proof.bytes,
+                  filename: proof.name,
+                  contentType: DioMediaType.parse(proof.mimeType),
+                ),
+              }),
+      ),
+    );
+  }
+
   /// Sends a clearer prescription photo after a pharmacist asked for one.
   Future<OrderDetail> resubmitPrescription(
     String orderId,

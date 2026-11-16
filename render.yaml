@@ -487,7 +487,7 @@ services:
       - key: REVERB_SERVER_PORT
         value: "10000"
       - key: REVERB_ALLOWED_ORIGINS
-        value: jmmart-marketplace-staging.onrender.com
+        value: jmmart-marketplace-staging.onrender.com,jmmart-pharmacy-staging.onrender.com
       - fromGroup: jmmart-reverb-credentials-staging
       - key: LOG_CHANNEL
         value: stderr
@@ -539,11 +539,18 @@ services:
       - key: RUN_MIGRATIONS
         value: "true"
       - key: RUN_SEEDERS
-        value: "true"
+        value: "false"
       - key: QUEUE_CONNECTION
         value: deferred
       - key: BROADCAST_CONNECTION
-        value: log
+        value: reverb
+      - fromGroup: jmmart-reverb-credentials-staging
+      - key: REVERB_HOST
+        value: jmmart-chat-reverb-staging.onrender.com
+      - key: REVERB_PORT
+        value: "443"
+      - key: REVERB_SCHEME
+        value: https
       - key: FILESYSTEM_DISK
         value: public
       - key: CLERK_PUBLISHABLE_KEY

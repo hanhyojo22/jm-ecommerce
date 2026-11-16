@@ -33,8 +33,8 @@ class DeliveryAddressRequest extends FormRequest
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
             'address_line' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:100'],
-            'province' => ['required', 'string', 'max:100'],
-            'postal_code' => ['required', 'regex:/^\d{4}$/'],
+            'province' => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'regex:/^\d{4}$/'],
         ];
     }
 }

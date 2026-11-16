@@ -314,6 +314,7 @@
                 </p>
                 <p class="sc-order-rail-line">{{ $order->address_line }}, {{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>
                 @if ($order->delivery_note)<p class="sc-order-rail-note">“{{ $order->delivery_note }}”</p>@endif
+                <x-marketplace.delivery-pin :order="$order" />
             </section>
         </aside>
     </div>

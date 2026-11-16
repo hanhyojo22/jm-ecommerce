@@ -22,67 +22,33 @@ const addFirstProductToCart = async (page) => {
     await expect(page.getByRole('heading', { name: 'Shopping cart' })).toBeVisible();
 };
 
-test('unticking a cart item persists across a reload', async ({ browser }) => {
+test('removing a cart item persists across a reload', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'customer');
-
     try {
         await addFirstProductToCart(page);
-
-        const checkbox = page.locator('input[type="checkbox"][id^="select-"]').first();
-        await expect(checkbox).toBeChecked();
-
-        await checkbox.uncheck();
-        await expect(page.getByText('0 of 1 selected')).toBeVisible();
-        await page.waitForResponse((response) => response.url().includes('/cart/selection'));
-
+        const remove = page.getByRole('button', { name: /^Remove .+ from your cart$/ }).first();
+        const label = await remove.getAttribute('aria-label');
+        await remove.click();
+        await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(0);
         await page.reload();
-        await expect(page.locator('input[type="checkbox"][id^="select-"]').first()).not.toBeChecked();
-    } finally {
-        await context.close();
-    }
+        await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(0);
+    } finally { await context.close(); }
 });
 
-/**
- * The Clerk-backed session lives about a minute, so a buyer who leaves the
- * cart open and then ticks a box must not lose the change to one stale
- * response. The request is retried once after a session refresh.
- */
-test('a lapsed session is retried instead of shown as an error', async ({ browser }) => {
+test('a lapsed session is refreshed before removing a cart item', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'customer');
-
     try {
         await addFirstProductToCart(page);
-
-        // Start from a known ticked state. Adding ticks the item already, so only tick it here
-        // when it somehow arrived unticked — check() on a ticked box sends no request to wait for.
-        const checkbox = page.locator('input[type="checkbox"][id^="select-"]').first();
-        if (!(await checkbox.isChecked())) {
-            await checkbox.check();
-            await page.waitForResponse((response) => response.url().includes('/cart/selection'));
-        }
-
-        let attempts = 0;
-        await page.route('**/cart/selection', async (route) => {
-            attempts += 1;
-
-            if (attempts === 1) {
-                await route.fulfill({ status: 401, contentType: 'application/json', body: '{}' });
-
-                return;
-            }
-
-            await route.continue();
-        });
-
-        await checkbox.uncheck();
-        await expect.poll(() => attempts).toBe(2);
-        await expect(page.getByText('Your sign-in expired')).toBeHidden();
-
-        await page.reload();
-        await expect(page.locator('input[type="checkbox"][id^="select-"]').first()).not.toBeChecked();
-    } finally {
-        await context.close();
-    }
+        await context.clearCookies({ name: '__session' });
+        let renewals = 0;
+        await page.route('**/auth/session', async route => { renewals++; await route.continue(); });
+        const remove = page.getByRole('button', {name: /^Remove .+ from your cart$/}).first();
+        const label = await remove.getAttribute('aria-label');
+        await remove.click();
+        await expect(page.getByRole('button', {name: label, exact: true})).toHaveCount(0);
+        expect(renewals).toBeGreaterThan(0);
+        await expect(page.getByText('Your sign-in expired')).toHaveCount(0);
+    } finally { await context.close(); }
 });
 
 test('a quantity change shows it is busy while the session renews and still submits its own value', async ({ browser }) => {
@@ -165,40 +131,13 @@ test('the cart icon stays legible behind the widest count', async ({ browser }) 
     }
 });
 
-test('the checkout link stays usable while a tick is still saving', async ({ browser }) => {
+test('the cart proceeds to checkout without item selection controls', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'customer');
-    let releaseSave;
-    const heldSave = new Promise((resolve) => { releaseSave = resolve; });
-
     try {
         await addFirstProductToCart(page);
-
-        const checkbox = page.locator('input[type="checkbox"][id^="select-"]').first();
-        const checkout = page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ });
-
-        // Start unticked so the tick below is what sends the save being held open.
-        if (await checkbox.isChecked()) {
-            await checkbox.uncheck();
-            await page.waitForResponse((response) => response.url().includes('/cart/selection'));
-        }
-
-        await page.route('**/cart/selection', async (route) => {
-            await heldSave;
-            await route.continue();
-        });
-
-        await checkbox.check();
-
-        // The save is still in flight: the control the buyer is reaching for must stay live.
-        await expect(checkout).toHaveAttribute('aria-disabled', 'false');
-
-        // Checkout reads the ticked items from the server, so the click waits for that save.
-        const navigated = page.waitForURL(/\/checkout$/);
-        await checkout.click();
-        releaseSave();
-        await navigated;
-    } finally {
-        releaseSave();
-        await context.close();
-    }
+        await expect(page.locator('input[id^="select-"]')).toHaveCount(0);
+        await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
+        await expect(page).toHaveURL(/\/checkout$/);
+        await expect(page.getByRole('heading', { name: 'Checkout', exact: true })).toBeVisible();
+    } finally { await context.close(); }
 });

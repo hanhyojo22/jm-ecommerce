@@ -27,14 +27,11 @@ test('a customer buys an Rx medicine with a prescription and the pharmacist appr
         await expect(page.locator('[data-cart-link]')).toHaveAttribute('aria-label', /^Cart: 1 item$/);
 
         await page.locator('[data-cart-link]').click();
-        await page.getByRole('checkbox', { name: 'Select QA Amoxicillin 500 mg' }).check();
         await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
         await page.getByLabel('Recipient name').fill('Rosa QA Patient');
         await page.getByLabel('Mobile number').fill('+639171234567');
         await page.getByLabel('Street address').fill('12 QA Street');
         await page.getByLabel('City').fill('Manila');
-        await page.getByLabel('Province').fill('Metro Manila');
-        await page.getByLabel('Postal code').fill('1000');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
 

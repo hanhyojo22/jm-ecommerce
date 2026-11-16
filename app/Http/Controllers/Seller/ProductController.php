@@ -92,8 +92,14 @@ class ProductController extends Controller
         $tenant = $this->activeTenant($request);
         $product = $tenant->products()->whereKey($product)->firstOrFail();
         $this->authorize('view', $product);
+        $member = $request->user()->sellerMembership();
+        $branch = $member !== null && ! $member->isHeadOffice() ? $member->store : null;
+        if ($branch !== null) {
+            $product->load(['branchStocks' => fn ($query) => $query->where('store_id', $branch->id)]);
+        }
 
         return view('seller.products.show', [
+            'branch' => $branch,
             'product' => $product->load(['images', 'variants', 'category:id,name']),
             'canManageProducts' => $this->canManageProducts($request, $tenant),
         ]);

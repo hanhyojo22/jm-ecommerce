@@ -147,7 +147,7 @@
                 @if ($canManageOrders && $sellerOrder->status === 'shipped' && ! $sellerOrder->issues->contains('status', 'open'))
                     <section class="sc-card sc-card-pad" aria-labelledby="failed-delivery-heading">
                         <h2 id="failed-delivery-heading" class="sc-card-title">Parcel didn't arrive?</h2>
-                        <p class="mt-1 sc-card-note">If the buyer refused it or the courier returned it, tell JMMart. Otherwise this order is marked delivered on {{ ($sellerOrder->shipped_at ?? now())->copy()->addDays((int) config('marketplace.orders.auto_deliver_days'))->format('M j') }} and charged its platform fee.</p>
+                        <p class="mt-1 sc-card-note">If delivery failed or the customer refused it, report it here so the pharmacy can resolve the order. Otherwise it is automatically marked delivered on {{ ($sellerOrder->shipped_at ?? now())->copy()->addDays((int) config('marketplace.orders.auto_deliver_days'))->format('M j') }}.</p>
                         <details class="group mt-3">
                             <summary class="sc-btn w-full cursor-pointer list-none justify-center">Report failed delivery</summary>
                             <form method="POST" action="{{ route('seller.orders.failed-delivery', $sellerOrder) }}" class="mt-3 grid gap-3">@csrf
@@ -167,6 +167,7 @@
                         @if ($sellerOrder->order->delivery_note)<div><dt>Delivery note</dt><dd class="whitespace-pre-line">{{ $sellerOrder->order->delivery_note }}</dd></div>@endif
                         @if ($sellerOrder->rider_name)<div><dt>Rider</dt><dd class="font-medium">{{ $sellerOrder->rider_name }} · {{ $sellerOrder->rider_phone }}</dd></div>@endif
                     </dl>
+                    <x-marketplace.delivery-pin :order="$sellerOrder->order" />
                 </section>
 
                 <section class="sc-card sc-card-pad" aria-labelledby="payment-heading">

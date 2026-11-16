@@ -232,9 +232,7 @@ class _AddressFormState extends State<AddressForm> {
     final province = TextFormField(
       controller: _province,
       textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(labelText: 'Province'),
-      validator: (value) =>
-          (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
+      decoration: const InputDecoration(labelText: 'Province (optional)'),
     );
 
     return LayoutBuilder(
@@ -316,9 +314,12 @@ class _AddressFormState extends State<AddressForm> {
               TextFormField(
                 controller: _postal,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Postal code'),
+                decoration: const InputDecoration(
+                  labelText: 'Postal code (optional)',
+                ),
                 validator: (value) =>
-                    RegExp(r'^\d{4}$').hasMatch((value ?? '').trim())
+                    (value ?? '').trim().isEmpty ||
+                        RegExp(r'^\d{4}$').hasMatch((value ?? '').trim())
                     ? null
                     : 'Use a 4-digit postal code.',
               ),

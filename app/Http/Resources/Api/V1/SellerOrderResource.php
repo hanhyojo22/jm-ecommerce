@@ -34,6 +34,8 @@ class SellerOrderResource extends JsonResource
             'delivered_at' => $this->delivered_at?->toIso8601String(),
             'cod_collected_at' => $this->cod_collected_at?->toIso8601String(),
             'can_confirm_receipt' => $this->status === 'shipped',
+            'return_window_hours' => $this->returnWindowHours(),
+            'return_window_ends_at' => $this->returnWindowEndsAt()?->toIso8601String(),
             'store' => $this->whenLoaded('store', fn (): array => [
                 'id' => $this->store->id,
                 'name' => $this->store->name,

@@ -1,4 +1,4 @@
-            <section x-data="chatThread(@js($conversation->id), @js(auth()->id()))" x-on:chat-upload-progress="attachmentProgress($event.detail.progress)" x-on:chat-upload-error="attachmentFailed($event.detail.message)" x-on:chat-upload-sent="attachmentSent($event.detail)" class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface">
+            <section wire:poll.15s.visible="syncLatestMessages" x-data="chatThread(@js($conversation->id), @js(auth()->id()))" x-on:chat-upload-progress="attachmentProgress($event.detail.progress)" x-on:chat-upload-error="attachmentFailed($event.detail.message)" x-on:chat-upload-sent="attachmentSent($event.detail)" class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-surface">
                 <header class="flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-line bg-white px-3 py-3 sm:gap-4 sm:px-5">
                 <div class="flex min-w-0 items-center gap-2 sm:gap-3">
                     <a href="{{ auth()->user()->account_type === 'seller' ? route('messages.index', ['context' => $isBuyerMessages ? 'buying' : 'selling']) : route('messages.index') }}" class="grid size-11 shrink-0 place-items-center rounded-full text-muted transition hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand lg:hidden" aria-label="Back to messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="size-5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6M9 12h11"/></svg></a>
@@ -32,7 +32,7 @@
                 </div>
             </header>
             <div x-cloak x-show="!online" class="mx-3 mt-2 shrink-0 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 sm:mx-5" role="status">You’re offline. Sending is paused until your connection returns.</div>
-            <div x-cloak x-show="online && !liveConnected" class="mx-3 mt-2 shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-brand-hover sm:mx-5" role="status">Reconnecting live updates. You can still send messages.</div>
+            <div x-cloak x-show="online && !liveConnected" class="mx-3 mt-2 shrink-0 rounded-lg bg-blue-50 px-3 py-2 text-sm text-brand-hover sm:mx-5" role="status">Checking for new messages every 15 seconds. You can still send messages.</div>
             <div wire:loading.flex wire:target="jumpToLatest" class="min-h-0 flex-1 flex-col justify-end gap-4 overflow-hidden px-3 py-5 sm:px-6 sm:py-6" role="status" aria-label="Loading latest messages">
                 @foreach (['w-2/3', 'ml-auto w-1/2', 'w-3/5', 'ml-auto w-2/5'] as $bubble)
                     <div class="h-12 animate-pulse motion-reduce:animate-none rounded-lg bg-slate-100 {{ $bubble }}" aria-hidden="true"></div>

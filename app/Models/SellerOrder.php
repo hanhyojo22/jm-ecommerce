@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class SellerOrder extends Model
 {
     use HasUlids;
+
+    protected static function booted(): void
+    {
+        static::creating(function (SellerOrder $order): void {
+            $order->return_window_hours ??= (int) config('marketplace.orders.return_window_days') * 24;
+        });
+    }
+
+    public function returnWindowHours(): int
+    {
+        return $this->return_window_hours ?? 168;
+    }
+
+    public function returnWindowEndsAt(): ?CarbonInterface
+    {
+        return $this->delivered_at?->copy()->addHours($this->returnWindowHours());
+    }
 
     protected $fillable = [
         'tenant_id',
@@ -35,6 +53,7 @@ class SellerOrder extends Model
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
             'cod_collected_at' => 'datetime',
+            'return_window_hours' => 'integer',
         ];
     }
 

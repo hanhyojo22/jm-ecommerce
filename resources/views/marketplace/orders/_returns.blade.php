@@ -6,7 +6,7 @@
             </span>
             <div class="min-w-0">
                 <h2>Wrong, missing, or damaged item?</h2>
-                <p class="mt-1.5 max-w-2xl text-sm leading-6 text-muted">Tell the pharmacy within seven days of delivery and they will replace or refund it.</p>
+                <p class="mt-1.5 max-w-2xl text-sm leading-6 text-muted">Report new-order issues within 24 hours of delivery. The pharmacy reviews your request for a replacement or refund. Older orders keep the deadline shown below.</p>
             </div>
         </div>
         <a href="{{ route('returns') }}" class="button-quiet shrink-0">
@@ -19,7 +19,7 @@
         @foreach ($order->sellerOrders as $sellerOrder)
             @if ($sellerOrder->status === 'delivered')
                 @php
-                    $windowEndsAt = $sellerOrder->delivered_at?->copy()->addDays((int) config('marketplace.orders.return_window_days'));
+                    $windowEndsAt = $sellerOrder->returnWindowEndsAt();
                     $windowOpen = $windowEndsAt && now()->lessThanOrEqualTo($windowEndsAt);
                     $windowClosingSoon = $windowOpen && $windowEndsAt->lessThan(now()->addHours(48));
                     $resubmitted = old('store_order') === $sellerOrder->id;
@@ -137,6 +137,7 @@
                                                 'damaged' => ['Damaged', 'It arrived broken, spoiled, or unusable.', 'alert'],
                                                 'defective' => ['Defective', 'It does not work the way it should.', 'wrench'],
                                                 'wrong_item' => ['Wrong item', 'A different item or variant arrived.', 'swap'],
+                                                'missing_item' => ['Missing item', 'An item in your order did not arrive.', 'swap'],
                                                 'misdescribed' => ['Materially misdescribed', 'It differs from the listing in an important way.', 'file'],
                                             ] as $value => [$label, $hint, $icon])
                                                 <label class="returns-choice">
@@ -234,7 +235,7 @@
                         </details>
                     @else
                         <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-canvas px-4 py-3.5">
-                            <p class="text-sm leading-6 text-muted">The seven-day online request window {{ $windowEndsAt ? 'closed on '.$windowEndsAt->format('M j, Y · g:i A').'.' : 'cannot be applied because the delivery date is uncertain.' }} Your legal rights may continue.</p>
+                            <p class="text-sm leading-6 text-muted">The online request window {{ $windowEndsAt ? 'closed on '.$windowEndsAt->format('M j, Y · g:i A').'.' : 'cannot be applied because the delivery date is uncertain.' }} Your legal rights may continue.</p>
                             <a href="mailto:itservices@jmsolutionitservices.com?subject=Later%20return%20claim%20{{ urlencode($order->number) }}" class="button-secondary shrink-0">Contact support</a>
                         </div>
                     @endif

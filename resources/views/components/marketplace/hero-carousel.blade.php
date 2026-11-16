@@ -1,36 +1,36 @@
 @php
     $slides = [
         [
-            'name' => 'New arrivals',
+            'name' => 'Medicines',
             'theme' => 'dark',
-            'headline' => ['Everyday finds.', 'Better living.'],
-            'description' => 'Discover new arrivals for work, home, and everything in between.',
-            'image' => 'hero-new-arrivals.jpg',
-            'action' => 'Explore new arrivals',
+            'headline' => ['Your pharmacy.', 'Closer to home.'],
+            'description' => 'Find medicines and daily health essentials from your JMMart pharmacy.',
+            'image' => null,
+            'action' => 'Browse medicines',
             'href' => route('catalog.index', ['sort' => 'newest']),
         ],
         [
-            'name' => 'Everyday living',
+            'name' => 'Prescription orders',
             'theme' => 'warm',
-            'headline' => ['Make room', 'for the good things.'],
-            'description' => 'Explore popular picks from independent sellers, all in one place.',
-            'image' => 'hero-everyday-living.jpg',
-            'action' => 'Shop popular picks',
+            'headline' => ['Prescription care.', 'Reviewed by a pharmacist.'],
+            'description' => 'Upload your prescription at checkout. The pharmacy reviews it before preparing your order.',
+            'image' => null,
+            'action' => 'Browse pharmacy essentials',
             'href' => route('catalog.top-products'),
         ],
         [
-            'name' => 'Local finds',
+            'name' => 'Branches',
             'theme' => 'cool',
-            'headline' => ['Small shops.', 'Great discoveries.'],
-            'description' => 'Get to know the independent stores behind your next great find.',
-            'image' => 'hero-local-finds.jpg',
-            'action' => 'Discover stores',
+            'headline' => ['Find your branch.', 'Delivery or pickup.'],
+            'description' => 'Check branch availability and opening hours before choosing delivery or pickup.',
+            'image' => null,
+            'action' => 'Find a branch',
             'href' => route('catalog.stores'),
         ],
     ];
 @endphp
 
-<section class="home-hero" aria-label="Marketplace highlights" aria-roledescription="carousel" data-home-hero
+<section class="home-hero" aria-label="Pharmacy highlights" aria-roledescription="carousel" data-home-hero
     x-data="{
         active: 0,
         count: {{ count($slides) }},
@@ -48,14 +48,14 @@
         @touchstart.passive="touchStart = { x: $event.changedTouches[0].clientX, y: $event.changedTouches[0].clientY }"
         @touchend.passive="swipe($event)" @touchcancel.passive="touchStart = null">
         @foreach ($slides as $index => $slide)
-            <div id="home-hero-slide-{{ $index + 1 }}" class="home-hero-slide home-hero-slide-{{ $slide['theme'] }}"
+            <div id="home-hero-slide-{{ $index + 1 }}" class="home-hero-slide home-hero-slide-text home-hero-slide-{{ $slide['theme'] }}"
                 role="group" aria-roledescription="slide" aria-label="{{ $index + 1 }} of {{ count($slides) }}: {{ $slide['name'] }}"
                 x-show="active === {{ $index }}" x-transition.opacity.duration.400ms
                 :inert="active !== {{ $index }}" :aria-hidden="(active !== {{ $index }}).toString()"
                 aria-hidden="{{ $index === 0 ? 'false' : 'true' }}" @if ($index > 0) x-cloak inert @endif>
-                <img src="{{ asset('images/banners/'.$slide['image']) }}" alt="" width="1536" height="1024"
+                @if ($slide['image'])<img src="{{ asset('images/banners/'.$slide['image']) }}" alt="" width="1536" height="1024"
                     loading="{{ $index === 0 ? 'eager' : 'lazy' }}" @if ($index === 0) fetchpriority="high" @endif
-                    decoding="async" draggable="false" class="home-hero-image">
+                    decoding="async" draggable="false" class="home-hero-image">@endif
                 <div class="home-hero-copy">
                     <h2>@foreach ($slide['headline'] as $line)<span>{{ $line }}</span>@endforeach</h2>
                     <p>{{ $slide['description'] }}</p>
