@@ -346,6 +346,21 @@ class BranchCheckoutTest extends TestCase
         $this->actingAs($this->buyer())->postJson(route('api.v1.cart.reorder', $order))->assertNotFound();
     }
 
+    public function test_the_web_shop_and_a_branch_page_list_only_what_that_branch_has(): void
+    {
+        [$makati, $cebu, $paracetamol] = $this->pharmacyWithStock(makati: 0, cebu: 4);
+        $cetirizine = Product::create([
+            'tenant_id' => $cebu->tenant_id, 'store_id' => $cebu->id, 'name' => 'Cetirizine 10mg', 'slug' => 'cetirizine-10mg',
+            'sku' => 'CET-10', 'price' => '12.00', 'stock_quantity' => 5, 'status' => 'active',
+        ]);
+        BranchStock::create(['store_id' => $makati->id, 'product_id' => $cetirizine->id, 'variant_key' => 'default', 'quantity' => 5]);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $paracetamol->id, 'quantity' => 1])->assertCreated();
+
+        $this->get(route('catalog.index'))->assertSee('Paracetamol 500mg')->assertDontSee('Cetirizine 10mg');
+        $this->get(route('catalog.store', $makati->slug))->assertSee('Cetirizine 10mg')->assertDontSee('Paracetamol 500mg');
+    }
+
     public function test_only_head_office_sets_the_delivery_fee(): void
     {
         [$makati] = $this->pharmacyWithStock(makati: 1, cebu: 1);

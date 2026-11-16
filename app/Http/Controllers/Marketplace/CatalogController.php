@@ -313,7 +313,10 @@ class CatalogController extends Controller
             'min_rating' => ['nullable', 'integer', 'between:1,5'],
             'with_photos' => ['nullable', 'boolean'],
         ]);
-        $catalog = CatalogQuery::search($filters, $seller);
+        // A branch page lists what that branch has on hand; the shop lists what the shopper's cart branch has.
+        $cartBranch = $seller === null ? $request->user()?->cart?->store : null;
+        $branch = $seller ?? ($cartBranch?->status === 'active' ? $cartBranch : null);
+        $catalog = CatalogQuery::search($filters, null, 12, $branch);
         $search = trim($filters['q'] ?? '');
         RecommendationQuery::rememberSearch($request, $search);
         $recommendedProducts = $seller === null && $search !== ''

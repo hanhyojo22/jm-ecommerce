@@ -99,7 +99,9 @@ class CatalogQuery
         $searchTerm = '%'.$escapedSearch.'%';
 
         $categoryProducts = self::publishedProducts()
-            ->when($seller, fn (Builder $query) => $query->whereBelongsTo($seller));
+            ->when($seller, fn (Builder $query) => $query->whereBelongsTo($seller))
+            // Categories follow the same branch stock as the products below.
+            ->when($branch, fn (Builder $query) => $query->whereHas('branchStocks', fn (Builder $stock) => $stock->where('store_id', $branch->id)->where('quantity', '>', 0)));
 
         $catalogProducts = (clone $categoryProducts)
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
@@ -151,7 +153,7 @@ class CatalogQuery
             'newest' => $products->latest(),
         };
 
-        if ($seller === null) {
+        if ($seller === null && $branch === null) {
             $facets = self::cachedPublicFacets();
             $categoryCounts = collect($facets['category_counts']);
             $brands = collect($facets['brands']);
@@ -166,7 +168,7 @@ class CatalogQuery
         }
         $categories = Category::query()
             ->where('is_active', true)
-            ->when($seller, fn (Builder $query) => $query->whereKey($categoryCounts->keys()))
+            ->when($seller !== null || $branch !== null, fn (Builder $query) => $query->whereKey($categoryCounts->keys()))
             ->orderBy('name')
             ->get();
         $categories->each(fn (Category $category) => $category->setAttribute('product_count', $categoryCounts->get($category->id, 0)));

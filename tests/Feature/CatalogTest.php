@@ -224,13 +224,14 @@ class CatalogTest extends TestCase
         foreach ([
             route('home'),
             route('catalog.index'),
-            route('catalog.store', $product->store->slug),
             route('catalog.show', [$product->store->slug, $product->slug]),
         ] as $url) {
             $this->get($url)
                 ->assertSee($product->name)
                 ->assertSee('This product is currently unavailable');
         }
+        // A branch page lists only what that branch has on hand.
+        $this->get(route('catalog.store', $product->store->slug))->assertDontSee($product->name);
     }
 
     public function test_available_product_does_not_show_sold_out_image_notice(): void
@@ -947,7 +948,7 @@ class CatalogTest extends TestCase
         $product = Product::create([
             'tenant_id' => $tenant->id, 'store_id' => $store->id, 'name' => "Product {$suffix}", 'slug' => "product-{$suffix}", 'sku' => "SKU-{$suffix}", 'price' => 199, 'stock_quantity' => 3, 'status' => 'active', ...$attributes,
         ]);
-        BranchStock::create(['store_id' => $store->id, 'product_id' => $product->id, 'variant_key' => 'default', 'quantity' => $product->stock_quantity]);
+        BranchStock::create(['store_id' => $product->store_id, 'product_id' => $product->id, 'variant_key' => 'default', 'quantity' => $product->stock_quantity]);
 
         return $product;
     }
