@@ -616,6 +616,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     ),
                   ],
                 ),
+                if (sellerOrder.riderName case final rider?) ...[
+                  const SizedBox(height: 12),
+                  _RiderCard(name: rider, phone: sellerOrder.riderPhone),
+                ],
                 for (var i = 0; i < sellerOrder.lines.length; i++) ...[
                   if (i > 0) ...[
                     const SizedBox(height: 10),
@@ -1613,6 +1617,61 @@ class _ReviewSheetState extends State<_ReviewSheet> {
                   .pop(ReviewInput(rating: _rating, body: _body.text.trim())),
               child: Text(widget.submitLabel),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The rider who has the order, with a one-tap call.
+class _RiderCard extends StatelessWidget {
+  const _RiderCard({required this.name, this.phone});
+
+  final String name;
+  final String? phone;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final number = phone;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: Row(
+          children: [
+            Icon(Icons.two_wheeler_rounded, color: scheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Your rider', style: theme.textTheme.labelMedium),
+                  Text(
+                    name,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (number != null)
+                    Text(number, style: theme.textTheme.bodySmall),
+                ],
+              ),
+            ),
+            if (number != null)
+              FilledButton.icon(
+                // The theme's full-width minimum breaks inside a Row.
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                onPressed: () => launchUrl(Uri(scheme: 'tel', path: number)),
+                icon: const Icon(Icons.call_rounded, size: 18),
+                label: const Text('Call'),
+              ),
           ],
         ),
       ),

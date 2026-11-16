@@ -33,6 +33,20 @@ void main() {
     },
   );
 
+  testWidgets('an order out for delivery shows the rider with a call button', (
+    tester,
+  ) async {
+    final api = _OrderApi()
+      ..status = 'shipped'
+      ..rider = {'name': 'Juan Dela Cruz', 'phone': '09171234567'};
+    await _pump(tester, api);
+
+    expect(find.text('Your rider'), findsOneWidget);
+    expect(find.text('Juan Dela Cruz'), findsOneWidget);
+    expect(find.text('09171234567'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Call'), findsOneWidget);
+  });
+
   testWidgets(
     'a pharmacist asking for a clearer photo lets the customer send one',
     (tester) async {
@@ -317,6 +331,7 @@ class _OrderApi extends ApiClient {
   Completer<String?>? pendingPayment;
   String fulfillment = 'delivery';
   Map<String, dynamic>? prescription;
+  Map<String, dynamic>? rider;
   String? resubmitted;
 
   @override
@@ -361,6 +376,7 @@ class _OrderApi extends ApiClient {
           'id': 'seller-order',
           'status': status,
           'can_confirm_receipt': status == 'shipped',
+          'rider': rider,
           if (returnStatus != null) 'latest_return': {'status': returnStatus},
           'subtotal': '1998.00',
           'shipping_amount': '0.00',

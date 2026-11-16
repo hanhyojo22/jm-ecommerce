@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -127,12 +128,21 @@ class SellerOrderController extends Controller
         $member = $this->membership($request, ['owner', 'manager']);
         $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
 
+        $sellerOrder->load('order');
+        // A delivery leaves with a named rider the buyer can call; a pickup has none.
+        $needsRider = $request->input('status') === 'shipped'
+            && $sellerOrder->order->fulfillment_method === 'delivery'
+            && in_array('shipped', UpdateSellerOrderStatus::transitionsFor($sellerOrder->status), true);
         $data = $request->validate([
             'status' => ['required', 'in:confirmed,processing,shipped,delivered,cancelled'],
-        ]);
+            'rider_name' => [Rule::requiredIf($needsRider), 'nullable', 'string', 'max:100'],
+            'rider_phone' => [Rule::requiredIf($needsRider), 'nullable', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
+        ], ['rider_phone.regex' => 'Enter the rider’s mobile number, like 09171234567.']);
 
-        $sellerOrder->load('order');
-        $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip());
+        $updateStatus->handle($sellerOrder, $data['status'], $request->user(), $request->ip(), $needsRider ? [
+            'name' => trim($data['rider_name']),
+            'phone' => $data['rider_phone'],
+        ] : null);
 
         return back()->with('status', "Order {$sellerOrder->order->number} was marked as {$data['status']}.");
     }

@@ -19,6 +19,8 @@ class SellerOrder extends Model
         'total',
         'status',
         'shipped_at',
+        'rider_name',
+        'rider_phone',
         'delivered_at',
         'cod_collected_at',
         'gateway_refund_id',

@@ -20,7 +20,7 @@ class OrderReceivedTest extends TestCase
     {
         [$store, $owner] = $this->storeWithOwner();
         $sellerOrder = $this->sellerOrder($store, 'processing', '200.00');
-        $this->actingAs($owner)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'shipped'])->assertSessionHasNoErrors();
+        $this->actingAs($owner)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'shipped', 'rider_name' => 'Juan Dela Cruz', 'rider_phone' => '09171234567'])->assertSessionHasNoErrors();
         $this->assertNotNull($sellerOrder->fresh()->shipped_at);
         $buyer = $sellerOrder->order->user;
 

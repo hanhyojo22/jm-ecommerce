@@ -34,10 +34,12 @@ class UpdateSellerOrderStatus
      *
      * Cancelling a store order the buyer already paid online refunds its share through PayMongo
      * once this commits; a refund that fails stays visible as due until it is retried.
+     *
+     * @param  ?array{name: string, phone: string}  $rider  who took a delivery out, saved when it is marked shipped
      */
-    public function handle(SellerOrder $sellerOrder, string $status, ?User $actor, ?string $ipAddress = null): SellerOrder
+    public function handle(SellerOrder $sellerOrder, string $status, ?User $actor, ?string $ipAddress = null, ?array $rider = null): SellerOrder
     {
-        $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress): SellerOrder {
+        $updatedSellerOrder = DB::transaction(function () use ($sellerOrder, $status, $actor, $ipAddress, $rider): SellerOrder {
             $order = Order::query()
                 ->lockForUpdate()
                 ->findOrFail($sellerOrder->order_id);
@@ -93,6 +95,7 @@ class UpdateSellerOrderStatus
                 'status' => $status,
                 'shipped_at' => $status === 'shipped' ? now() : $sellerOrder->shipped_at,
                 'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at,
+                ...($status === 'shipped' && $rider !== null ? ['rider_name' => $rider['name'], 'rider_phone' => $rider['phone']] : []),
             ]);
 
             if ($status === 'delivered') {
@@ -195,7 +198,11 @@ class UpdateSellerOrderStatus
                 } ?? match ($status) {
                     'confirmed' => 'Your order was accepted',
                     'processing' => 'Your order is being prepared',
-                    'shipped' => $isPickup ? 'Your order is ready for pickup' : 'Your order is out for delivery',
+                    'shipped' => match (true) {
+                        $isPickup => 'Your order is ready for pickup',
+                        filled($updatedSellerOrder->rider_name) => "Your order is out for delivery with {$updatedSellerOrder->rider_name}",
+                        default => 'Your order is out for delivery',
+                    },
                     'delivered' => $isPickup ? 'Your order was picked up' : 'Your order was delivered',
                     'cancelled' => 'Your order was cancelled',
                     default => 'Your order has an update',

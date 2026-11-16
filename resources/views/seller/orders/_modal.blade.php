@@ -357,7 +357,10 @@
         @if ($conversation)
             <a href="{{ route('messages.show', $conversation) }}" class="seller-outline-button sc-order-secondary">Message buyer</a>
         @endif
-        @if ($canManageOrders && $nextTransition)
+        @if ($canManageOrders && $nextTransition === 'shipped' && ! $isPickup)
+            {{-- The full page asks for the rider before the order goes out. --}}
+            <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="seller-primary-button sc-order-primary">{{ $transitionLabels['shipped'] }}…</a>
+        @elseif ($canManageOrders && $nextTransition)
             <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}" class="sc-order-primary-form" @if ($nextTransition === 'shipped') data-confirm-title="{{ $isPickup ? 'Mark this order ready for pickup?' : 'Mark this order out for delivery?' }}" data-confirm-reference="Order {{ \App\Models\Order::shortNumber($order->number) }}" data-confirm-amount="₱{{ number_format($sellerOrder->total, 2) }}" data-confirm-from="{{ $label($sellerOrder->status) }}" data-confirm-to="{{ $label('shipped') }}" data-confirm="{{ $isPickup ? 'Your customer is told the order is waiting at the counter.' : 'Your customer is told the rider is on the way. Do this only once the rider has the order.' }}" data-confirm-action="{{ $transitionLabels['shipped'] }}" @endif>
                 @csrf
                 @method('PATCH')

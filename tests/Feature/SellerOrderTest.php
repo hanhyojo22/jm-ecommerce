@@ -90,6 +90,37 @@ class SellerOrderTest extends TestCase
         $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'confirmed']);
     }
 
+    public function test_a_delivery_goes_out_only_with_a_named_rider_the_buyer_can_call(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $sellerOrder = $this->sellerOrder($tenant, $store, 'SELLER-2001', 'processing');
+
+        $this->actingAs($seller)
+            ->patch(route('seller.orders.update', $sellerOrder), ['status' => 'shipped', 'rider_phone' => '12345'])
+            ->assertSessionHasErrors(['rider_name', 'rider_phone']);
+        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'processing']);
+
+        $this->patch(route('seller.orders.update', $sellerOrder), ['status' => 'shipped', 'rider_name' => ' Juan Dela Cruz ', 'rider_phone' => '09171234567'])
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'shipped', 'rider_name' => 'Juan Dela Cruz', 'rider_phone' => '09171234567']);
+
+        $this->actingAs($sellerOrder->order->user)->getJson(route('api.v1.orders.show', $sellerOrder->order_id))
+            ->assertOk()
+            ->assertJsonPath('data.seller_orders.0.rider', ['name' => 'Juan Dela Cruz', 'phone' => '09171234567']);
+        $this->get(route('orders.show', $sellerOrder->order_id))->assertSee('Call rider')->assertSee('tel:09171234567', false);
+    }
+
+    public function test_a_pickup_order_is_ready_without_a_rider(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $sellerOrder = $this->sellerOrder($tenant, $store, 'SELLER-2002', 'processing');
+        $sellerOrder->order->update(['fulfillment_method' => 'pickup']);
+
+        $this->actingAs($seller)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'shipped'])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'shipped', 'rider_name' => null]);
+    }
+
     public function test_owner_can_confirm_selected_pending_orders_from_their_store(): void
     {
         [$seller, $tenant, $store] = $this->seller();

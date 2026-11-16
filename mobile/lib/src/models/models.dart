@@ -800,6 +800,8 @@ class SellerOrder {
     this.shippedAt,
     this.deliveredAt,
     this.codCollectedAt,
+    this.riderName,
+    this.riderPhone,
     required this.canConfirmReceipt,
     this.latestReturnStatus,
     this.store,
@@ -819,6 +821,10 @@ class SellerOrder {
   final String? shippedAt;
   final String? deliveredAt;
   final String? codCollectedAt;
+
+  /// Who took the delivery out; sent only while it is on the way.
+  final String? riderName;
+  final String? riderPhone;
   final bool canConfirmReceipt;
   final String? latestReturnStatus;
   final StoreInfo? store;
@@ -841,6 +847,8 @@ class SellerOrder {
       shippedAt: json['shipped_at'] as String?,
       deliveredAt: json['delivered_at'] as String?,
       codCollectedAt: json['cod_collected_at'] as String?,
+      riderName: mapOf(json['rider'])['name'] as String?,
+      riderPhone: mapOf(json['rider'])['phone'] as String?,
       canConfirmReceipt: boolean(json['can_confirm_receipt']),
       latestReturnStatus: mapOf(json['latest_return'])['status'] as String?,
       store: json['store'] == null

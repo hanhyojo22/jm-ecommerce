@@ -29,6 +29,8 @@ class SellerOrderResource extends JsonResource
             'shipping_amount' => (string) $this->shipping_amount,
             'total' => (string) $this->total,
             'shipped_at' => $this->shipped_at?->toIso8601String(),
+            // Shown only while it is on the way, so a rider's number does not linger on old orders.
+            'rider' => $this->rider_name === null || $this->status !== 'shipped' ? null : ['name' => $this->rider_name, 'phone' => $this->rider_phone],
             'delivered_at' => $this->delivered_at?->toIso8601String(),
             'cod_collected_at' => $this->cod_collected_at?->toIso8601String(),
             'can_confirm_receipt' => $this->status === 'shipped',

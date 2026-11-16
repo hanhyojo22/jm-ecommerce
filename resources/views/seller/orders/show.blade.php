@@ -101,7 +101,7 @@
 
             <aside class="sc-stack min-w-0">
                 @if ($canManageOrders && count($sellerOrder->available_transitions))
-                    <section x-data="{ confirmation: null }" class="sc-card sc-card-pad" aria-labelledby="next-action-heading">
+                    <section x-data="{ confirmation: @js($errors->hasAny(['rider_name', 'rider_phone']) ? 'shipped' : null) }" x-init="confirmation && $nextTick(() => $refs.confirmation.showModal())" class="sc-card sc-card-pad" aria-labelledby="next-action-heading">
                         <h2 id="next-action-heading" class="sc-card-title">Next action</h2>
                         <p class="mt-1 sc-card-note">Only valid transitions for this order are available.</p>
                         <div class="mt-4 grid gap-2">
@@ -118,11 +118,27 @@
                             <div class="bg-white p-6">
                                 <h3 class="text-lg font-semibold text-ink" x-text="confirmation === 'shipped' ? @js($actionLabels['shipped'].'?') : 'Cancel this order?'"></h3>
                                 <p class="mt-2 text-sm leading-6 text-muted" x-text="confirmation === 'shipped' ? @js($isPickup ? 'This tells your customer the order is waiting at the counter.' : 'This tells your customer the rider is on the way.') : 'This cancels the order and restores its stock. This cannot be undone.'"></p>
-                                <div class="mt-6 flex justify-end gap-2">
-                                    <button type="button" @click="$refs.confirmation.close()" class="seller-outline-button">Keep editing</button>
-                                    <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}">@csrf @method('PATCH')<input type="hidden" name="status" :value="confirmation">
-                                        <button type="submit" class="sc-btn text-white" :class="confirmation === 'cancelled' ? 'bg-rose-700 hover:bg-rose-800' : 'bg-brand hover:bg-brand-hover'" x-text="confirmation === 'shipped' ? @js($actionLabels['shipped']) : 'Cancel order'"></button></form>
-                                </div>
+                                <form method="POST" action="{{ route('seller.orders.update', $sellerOrder) }}">@csrf @method('PATCH')<input type="hidden" name="status" :value="confirmation">
+                                    @unless ($isPickup)
+                                        <div x-show="confirmation === 'shipped'" class="mt-4 grid gap-3">
+                                            <div>
+                                                <label for="rider_name" class="block text-sm font-semibold text-ink">Rider name</label>
+                                                <input id="rider_name" name="rider_name" maxlength="100" autocomplete="off" value="{{ old('rider_name') }}" :required="confirmation === 'shipped'" :disabled="confirmation !== 'shipped'" class="field-control mt-1 text-base lg:text-sm">
+                                                <x-input-error :messages="$errors->get('rider_name')" class="mt-1" />
+                                            </div>
+                                            <div>
+                                                <label for="rider_phone" class="block text-sm font-semibold text-ink">Rider mobile number</label>
+                                                <input id="rider_phone" name="rider_phone" type="tel" inputmode="tel" placeholder="09171234567" value="{{ old('rider_phone') }}" :required="confirmation === 'shipped'" :disabled="confirmation !== 'shipped'" class="field-control mt-1 text-base lg:text-sm">
+                                                <p class="mt-1 text-xs text-muted">Your customer sees this so they can call the rider.</p>
+                                                <x-input-error :messages="$errors->get('rider_phone')" class="mt-1" />
+                                            </div>
+                                        </div>
+                                    @endunless
+                                    <div class="mt-6 flex justify-end gap-2">
+                                        <button type="button" @click="$refs.confirmation.close()" class="seller-outline-button">Keep editing</button>
+                                        <button type="submit" class="sc-btn text-white" :class="confirmation === 'cancelled' ? 'bg-rose-700 hover:bg-rose-800' : 'bg-brand hover:bg-brand-hover'" x-text="confirmation === 'shipped' ? @js($actionLabels['shipped']) : 'Cancel order'"></button>
+                                    </div>
+                                </form>
                             </div>
                         </dialog>
                     </section>
@@ -149,6 +165,7 @@
                         <div><dt>Phone</dt><dd class="font-medium">{{ $sellerOrder->order->phone }}</dd></div>
                         <div><dt>Address</dt><dd>{{ $sellerOrder->order->address_line }}<br>{{ collect([$sellerOrder->order->city, $sellerOrder->order->province])->filter()->join(', ') }} {{ $sellerOrder->order->postal_code }}</dd></div>
                         @if ($sellerOrder->order->delivery_note)<div><dt>Delivery note</dt><dd class="whitespace-pre-line">{{ $sellerOrder->order->delivery_note }}</dd></div>@endif
+                        @if ($sellerOrder->rider_name)<div><dt>Rider</dt><dd class="font-medium">{{ $sellerOrder->rider_name }} · {{ $sellerOrder->rider_phone }}</dd></div>@endif
                     </dl>
                 </section>
 
