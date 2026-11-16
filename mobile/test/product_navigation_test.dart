@@ -345,14 +345,12 @@ void main() {
     expect(find.text('Out of stock at nearby branches.'), findsOneWidget);
   });
 
-  for (final action in ['Store']) {
-    testWidgets('$action shortcut opens its destination', (tester) async {
-      await _pump(tester, _ProductApi());
-      await tester.tap(find.text(action));
-      await tester.pumpAndSettle();
-      expect(find.text('$action route'), findsOneWidget);
-    });
-  }
+  testWidgets('Pharmacy shortcut opens the store page', (tester) async {
+    await _pump(tester, _ProductApi());
+    await tester.tap(find.text('Pharmacy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Store route'), findsOneWidget);
+  });
 
   testWidgets('the seller block renders with store and related products', (
     tester,
@@ -361,7 +359,7 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.drag(find.byType(ListView).first, const Offset(0, -300));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Visit store'));
+    await tester.tap(find.text('Visit pharmacy'));
     await tester.pumpAndSettle();
     expect(find.text('Store route'), findsOneWidget);
   });

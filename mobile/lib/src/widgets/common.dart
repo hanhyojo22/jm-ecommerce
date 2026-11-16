@@ -339,14 +339,12 @@ class ProductCard extends StatelessWidget {
     super.key,
     required this.product,
     required this.onTap,
-    this.showStore = true,
     this.discovery = false,
     this.showAddToCart = false,
   });
 
   final Product product;
   final VoidCallback onTap;
-  final bool showStore;
   final bool discovery;
   final bool showAddToCart;
 
@@ -550,35 +548,6 @@ class ProductCard extends StatelessWidget {
                     ),
                   ] else
                     const SizedBox(height: 4),
-                  // Like marketplace feeds, the card names where the store is, not the store itself.
-                  if (showStore && (product.store?.city ?? '').isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Semantics(
-                        label: 'Store location: ${product.store!.city}',
-                        excludeSemantics: true,
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 15,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 3),
-                            Expanded(
-                              child: Text(
-                                product.store!.city!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   if (!discovery) ...[const SizedBox(height: 8), price],
                   if (showAddToCart) ...[
                     const SizedBox(height: 10),

@@ -14,13 +14,7 @@ void main() {
       final nameBottom = tester.getBottomLeft(name).dy;
       final priceTop = tester.getTopLeft(find.text('₱255.00')).dy;
       expect(priceTop - nameBottom, lessThanOrEqualTo(6));
-      final rating = find.text('No reviews yet');
-      expect(rating, findsOneWidget);
-      final locationTop = tester.getTopLeft(find.text('Laguna')).dy;
-      expect(
-        locationTop - tester.getBottomLeft(rating).dy,
-        lessThanOrEqualTo(8),
-      );
+      expect(find.text('No reviews yet'), findsOneWidget);
     },
   );
 
@@ -29,10 +23,10 @@ void main() {
   ) async {
     await tester.pumpWidget(_card(discovery: true));
     final plainHeight = tester.getSize(find.byType(ProductCard)).height;
-    final locationBottom = tester.getBottomLeft(find.text('Laguna')).dy;
+    final lastLineBottom = tester.getBottomLeft(find.text('No reviews yet')).dy;
     final cardBottom = tester.getBottomLeft(find.byType(Card)).dy;
     // No blank band under the last line.
-    expect(cardBottom - locationBottom, lessThanOrEqualTo(16));
+    expect(cardBottom - lastLineBottom, lessThanOrEqualTo(16));
 
     await tester.pumpWidget(_card(discovery: true, compareAtPrice: '300.00'));
     // The struck price adds height to its own card instead of being reserved on every card.
@@ -42,28 +36,16 @@ void main() {
     );
   });
 
-  testWidgets('cards show the store location instead of the store name', (
-    tester,
-  ) async {
-    final semantics = tester.ensureSemantics();
-    try {
-      var productTaps = 0;
-      await tester.pumpWidget(
-        _card(discovery: true, onTap: () => productTaps++),
-      );
+  testWidgets('cards show neither the store name nor its city', (tester) async {
+    var productTaps = 0;
+    await tester.pumpWidget(_card(discovery: true, onTap: () => productTaps++));
 
-      expect(find.text('JM Store'), findsNothing);
-      expect(
-        find.bySemanticsLabel(RegExp('Store location: Laguna')),
-        findsOneWidget,
-      );
+    expect(find.text('JM Store'), findsNothing);
+    expect(find.text('Laguna'), findsNothing);
 
-      await tester.tap(find.text('Laguna'));
-      await tester.pump();
-      expect(productTaps, 1);
-    } finally {
-      semantics.dispose();
-    }
+    await tester.tap(find.text('Cargo Pants'));
+    await tester.pump();
+    expect(productTaps, 1);
   });
 
   testWidgets('discovery ratings include the review count for TalkBack', (
@@ -80,14 +62,6 @@ void main() {
     } finally {
       semantics.dispose();
     }
-  });
-
-  testWidgets('the store location can be hidden on a store page', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_card(discovery: true, showStore: false));
-
-    expect(find.text('Laguna'), findsNothing);
   });
 
   testWidgets('discovery cards label sold out stock', (tester) async {
@@ -123,7 +97,6 @@ void main() {
 
 Widget _card({
   VoidCallback? onTap,
-  bool showStore = true,
   bool discovery = false,
   bool inStock = true,
   int ratingCount = 0,
@@ -161,7 +134,6 @@ Widget _card({
               ),
             ),
             onTap: onTap ?? () {},
-            showStore: showStore,
           ),
         ),
       ),

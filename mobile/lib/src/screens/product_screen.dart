@@ -446,7 +446,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       mainAxisSize: MainAxisSize.min,
       children: [
         shortcut(
-          'Store',
+          'Pharmacy',
           product.store == null
               ? const Icon(Icons.storefront_outlined, size: 22)
               : StoreAvatar(
@@ -766,10 +766,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     BuildContext context,
     List<Product> products, {
     EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 16),
-    bool showStore = true,
   }) => SizedBox(
     // Same sizing rule as the home grid: square photo plus scaled copy.
-    height: 150 + MediaQuery.textScalerOf(context).scale(showStore ? 157 : 119),
+    height: 150 + MediaQuery.textScalerOf(context).scale(119),
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: padding,
@@ -782,7 +781,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           child: ProductCard(
             product: item,
             discovery: true,
-            showStore: showStore,
             onTap: () =>
                 context.push('/product/${item.store?.slug ?? ''}/${item.slug}'),
           ),
@@ -1124,14 +1122,14 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                             ),
                             onPressed: () =>
                                 context.push('/store/${product.store!.slug}'),
-                            child: const Text('Visit store'),
+                            child: const Text('Visit pharmacy'),
                           ),
                         ],
                       ),
                       if (product.moreFromStore.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Text(
-                          'More from this store',
+                          'More from this pharmacy',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -1141,7 +1139,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                           context,
                           product.moreFromStore,
                           padding: EdgeInsets.zero,
-                          showStore: false,
                         ),
                       ],
                     ],
@@ -1225,7 +1222,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                       ),
                     ),
                     subtitle: Text(
-                      'Questions and answers with the seller',
+                      'Questions and answers with the pharmacy',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
