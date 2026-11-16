@@ -323,6 +323,29 @@ class BranchCheckoutTest extends TestCase
         $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated();
     }
 
+    public function test_order_again_refills_the_cart_and_names_what_the_branch_lacks(): void
+    {
+        [, $cebu, $paracetamol] = $this->pharmacyWithStock(makati: 0, cebu: 10);
+        $cetirizine = Product::create([
+            'tenant_id' => $cebu->tenant_id, 'store_id' => $cebu->id, 'name' => 'Cetirizine 10mg', 'slug' => 'cetirizine-10mg',
+            'sku' => 'CET-10', 'price' => '12.00', 'stock_quantity' => 5, 'status' => 'active',
+        ]);
+        BranchStock::create(['store_id' => $cebu->id, 'product_id' => $cetirizine->id, 'variant_key' => 'default', 'quantity' => 5]);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $paracetamol->id, 'quantity' => 2])->assertCreated();
+        $this->postJson('/api/v1/cart/items', ['product_id' => $cetirizine->id, 'quantity' => 1])->assertCreated();
+        $order = $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated()->json('data.id');
+        BranchStock::query()->where('product_id', $cetirizine->id)->update(['quantity' => 0]);
+
+        $this->postJson(route('api.v1.cart.reorder', $order))
+            ->assertOk()
+            ->assertJsonPath('skipped', ['Cetirizine 10mg'])
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.quantity', 2);
+
+        $this->actingAs($this->buyer())->postJson(route('api.v1.cart.reorder', $order))->assertNotFound();
+    }
+
     public function test_only_head_office_sets_the_delivery_fee(): void
     {
         [$makati] = $this->pharmacyWithStock(makati: 1, cebu: 1);

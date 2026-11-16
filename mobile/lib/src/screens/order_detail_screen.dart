@@ -9,6 +9,7 @@ import '../core/attachment_picker.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
+import '../providers/cart_providers.dart';
 import '../providers/checkout_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
@@ -974,6 +975,17 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
             spacing: 10,
             runSpacing: 8,
             children: [
+              if (order.status == 'delivered')
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    shape: shape,
+                  ),
+                  onPressed: _busy ? null : () => _orderAgain(order),
+                  icon: const Icon(Icons.replay_rounded, size: 18),
+                  label: const Text('Order again'),
+                ),
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(0, 40),
@@ -1174,6 +1186,34 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
           'Thanks for confirming your ${sellerOrder.store?.name ?? 'store'} order.',
         );
       }
+    } on ApiException catch (error) {
+      if (mounted) {
+        _snack(error.friendly);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _orderAgain(OrderDetail order) async {
+    if (_busy) {
+      return;
+    }
+    setState(() => _busy = true);
+
+    try {
+      final skipped = await ref.read(cartProvider.notifier).reorder(order.id);
+      if (!mounted) {
+        return;
+      }
+      _snack(
+        skipped.isEmpty
+            ? 'Added to your cart.'
+            : 'Added to your cart. Your branch doesn’t have ${skipped.join(', ')} right now.',
+      );
+      context.push('/cart');
     } on ApiException catch (error) {
       if (mounted) {
         _snack(error.friendly);

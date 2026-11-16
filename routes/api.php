@@ -58,6 +58,7 @@ Route::prefix('v1')->group(function (): void {
         ->group(function (): void {
             Route::get('/', [CartController::class, 'show'])->name('api.v1.cart.show');
             Route::post('/items', [CartController::class, 'store'])->name('api.v1.cart.items.store');
+            Route::post('/reorder/{order}', [CartController::class, 'reorder'])->name('api.v1.cart.reorder');
             Route::patch('/items/{cartItem}', [CartController::class, 'update'])->name('api.v1.cart.items.update');
             Route::delete('/items/{cartItem}', [CartController::class, 'destroy'])->name('api.v1.cart.items.destroy');
             Route::patch('/selection', [CartController::class, 'updateSelection'])->name('api.v1.cart.selection.update');

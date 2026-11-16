@@ -46,6 +46,20 @@ class CartNotifier extends AsyncNotifier<Cart> {
     }
   }
 
+  /// Refills the cart from a past order and returns the names the branch could not add.
+  Future<List<String>> reorder(String orderId) async {
+    final result = await ref
+        .read(apiClientProvider)
+        .reorder(
+          orderId,
+          branch: await ref.read(activeBranchIdProvider.future),
+        );
+    if (ref.mounted) {
+      state = AsyncData(result.cart);
+    }
+    return result.skipped;
+  }
+
   Future<void> updateQuantity(String itemId, int quantity) async {
     final cart = await ref
         .read(apiClientProvider)

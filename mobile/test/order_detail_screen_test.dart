@@ -33,6 +33,28 @@ void main() {
     },
   );
 
+  testWidgets('a delivered order can be ordered again into the cart', (
+    tester,
+  ) async {
+    final api = _OrderApi()..status = 'delivered';
+    await _pump(tester, api, routed: true);
+    expect(find.text('Order again'), findsOneWidget);
+
+    await tester.tap(find.text('Order again'));
+    await tester.pumpAndSettle();
+
+    expect(api.reordered, 'order');
+    expect(find.textContaining('doesn’t have Cetirizine 10mg'), findsOneWidget);
+    expect(find.text('Cart destination'), findsOneWidget);
+  });
+
+  testWidgets('an order not yet delivered has no order again button', (
+    tester,
+  ) async {
+    await _pump(tester, _OrderApi()..status = 'shipped');
+    expect(find.text('Order again'), findsNothing);
+  });
+
   testWidgets('an order out for delivery shows the rider with a call button', (
     tester,
   ) async {
@@ -290,6 +312,11 @@ Future<void> _pump(
               builder: (context, state) =>
                   const Scaffold(body: Text('Store destination')),
             ),
+            GoRoute(
+              path: '/cart',
+              builder: (context, state) =>
+                  const Scaffold(body: Text('Cart destination')),
+            ),
           ],
         )
       : null;
@@ -332,6 +359,17 @@ class _OrderApi extends ApiClient {
   String fulfillment = 'delivery';
   Map<String, dynamic>? prescription;
   Map<String, dynamic>? rider;
+  String? reordered;
+
+  @override
+  Future<({Cart cart, List<String> skipped})> reorder(
+    String orderId, {
+    String? branch,
+  }) async {
+    reordered = orderId;
+    return (cart: Cart.empty, skipped: ['Cetirizine 10mg']);
+  }
+
   String? resubmitted;
 
   @override

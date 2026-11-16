@@ -313,6 +313,20 @@ class ApiClient {
     ),
   );
 
+  /// Puts a past order's medicines back in the cart; [skipped] names what the branch lacks.
+  Future<({Cart cart, List<String> skipped})> reorder(
+    String orderId, {
+    String? branch,
+  }) async {
+    final body = mapOf(
+      await _raw('POST', '/cart/reorder/$orderId', data: {'branch': ?branch}),
+    );
+    return (
+      cart: Cart.fromJson(mapOf(body['data'])),
+      skipped: listOf(body['skipped']).map((name) => '$name').toList(),
+    );
+  }
+
   /// Moves the cart to [branchId]; lines that branch cannot fill come back unavailable.
   Future<Cart> setCartBranch(String branchId) async => Cart.fromJson(
     mapOf(await _data('PATCH', '/cart/branch', data: {'branch': branchId})),
