@@ -55,18 +55,31 @@ class BranchHoursTest extends TestCase
         $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => null]);
     }
 
-    public function test_hours_need_both_times_and_a_sensible_prep_time_and_can_be_cleared(): void
+    public function test_set_hours_need_both_times_and_a_sensible_prep_time(): void
     {
         [$tenant, , $cebu] = $this->pharmacy();
         $cebu->update(['opening_time' => '08:00', 'closing_time' => '20:00']);
         $this->actingAs($this->member($tenant, $cebu, 'manager'));
 
-        $this->patch(route('seller.opening-hours.update'), ['opening_time' => '8am', 'prep_minutes' => '0'])
+        $this->patch(route('seller.opening-hours.update'), ['open_24_hours' => '0', 'opening_time' => '8am', 'prep_minutes' => '0'])
             ->assertSessionHasErrors(['opening_time', 'closing_time', 'prep_minutes']);
-        $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => '08:00']);
 
-        $this->patch(route('seller.opening-hours.update'), ['opening_time' => '', 'closing_time' => ''])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => '08:00']);
+    }
+
+    public function test_open_24_hours_clears_the_times_and_the_app_is_told(): void
+    {
+        [$tenant, , $cebu] = $this->pharmacy();
+        $cebu->update(['opening_time' => '08:00', 'closing_time' => '20:00', 'latitude' => 10.3, 'longitude' => 123.9]);
+        $this->actingAs($this->member($tenant, $cebu, 'manager'));
+
+        $this->patch(route('seller.opening-hours.update'), ['open_24_hours' => '1', 'opening_time' => '08:00', 'closing_time' => '20:00'])
+            ->assertSessionHasNoErrors();
+
         $this->assertDatabaseHas('stores', ['id' => $cebu->id, 'opening_time' => null, 'closing_time' => null]);
+        $this->getJson(route('api.v1.store-locations.index'))
+            ->assertJsonPath('data.0.open_24_hours', true)
+            ->assertJsonPath('data.0.is_open', true);
     }
 
     /** @return array{0: Tenant, 1: Store, 2: Store} */

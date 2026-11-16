@@ -24,19 +24,25 @@
                 </form>
             @endif
 
-            <form method="POST" action="{{ route('seller.opening-hours.update', ['branch' => $branch->id]) }}" class="seller-form-card min-w-0 p-5 sm:p-6">
+            <form method="POST" action="{{ route('seller.opening-hours.update', ['branch' => $branch->id]) }}" class="seller-form-card min-w-0 p-5 sm:p-6"
+                x-data="{ allDay: @js((bool) old('open_24_hours', $branch->opening_time === null)) }">
                 @csrf
                 @method('PATCH')
-                <p class="text-sm text-muted">Leave both times empty if this branch never closes. A closing time before the opening time runs past midnight.</p>
+                <input type="hidden" name="open_24_hours" value="0">
+                <label class="flex min-h-11 items-center gap-3 text-sm font-semibold text-ink">
+                    <input type="checkbox" name="open_24_hours" value="1" x-model="allDay" class="h-5 w-5 rounded border-line text-brand">
+                    Open 24 hours
+                </label>
+                <p class="mt-1 text-sm text-muted">Otherwise set when the branch opens and closes. A closing time before the opening time runs past midnight.</p>
                 <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">
                     <div class="min-w-0">
                         <label for="opening_time" class="block text-sm font-semibold text-ink">Opens at</label>
-                        <input id="opening_time" name="opening_time" type="time" value="{{ old('opening_time', $branch->opening_time) }}" @error('opening_time') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('opening_time') border-rose-500 @enderror">
+                        <input id="opening_time" name="opening_time" type="time" :disabled="allDay" value="{{ old('opening_time', $branch->opening_time) }}" @error('opening_time') aria-invalid="true" @enderror class="field-control mt-2 text-base disabled:opacity-50 lg:text-sm @error('opening_time') border-rose-500 @enderror">
                         <x-input-error :messages="$errors->get('opening_time')" class="mt-2" />
                     </div>
                     <div class="min-w-0">
                         <label for="closing_time" class="block text-sm font-semibold text-ink">Closes at</label>
-                        <input id="closing_time" name="closing_time" type="time" value="{{ old('closing_time', $branch->closing_time) }}" @error('closing_time') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('closing_time') border-rose-500 @enderror">
+                        <input id="closing_time" name="closing_time" type="time" :disabled="allDay" value="{{ old('closing_time', $branch->closing_time) }}" @error('closing_time') aria-invalid="true" @enderror class="field-control mt-2 text-base disabled:opacity-50 lg:text-sm @error('closing_time') border-rose-500 @enderror">
                         <x-input-error :messages="$errors->get('closing_time')" class="mt-2" />
                     </div>
                     <div class="min-w-0">

@@ -23,11 +23,13 @@ class BranchHoursController extends Controller
     {
         $branch = $this->branch($request);
         $data = $request->validate([
-            'opening_time' => ['nullable', 'required_with:closing_time', 'date_format:H:i'],
-            'closing_time' => ['nullable', 'required_with:opening_time', 'date_format:H:i', 'different:opening_time'],
+            'open_24_hours' => ['boolean'],
+            'opening_time' => ['exclude_if:open_24_hours,1', 'required', 'date_format:H:i'],
+            'closing_time' => ['exclude_if:open_24_hours,1', 'required', 'date_format:H:i', 'different:opening_time'],
             'prep_minutes' => ['nullable', 'integer', 'between:5,240'],
         ]);
 
+        // No hours stored means the branch never closes.
         $setBranchHours->handle($request->user(), $branch, [
             'opening_time' => $data['opening_time'] ?? null,
             'closing_time' => $data['closing_time'] ?? null,

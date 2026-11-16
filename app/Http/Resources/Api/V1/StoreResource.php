@@ -33,6 +33,7 @@ class StoreResource extends JsonResource
             'opening_time' => $this->opening_time,
             'closing_time' => $this->closing_time,
             'prep_minutes' => $this->prep_minutes,
+            'open_24_hours' => $this->opening_time === null || $this->closing_time === null,
             'is_open' => $this->isOpenAt(now()),
             'next_opening_at' => $this->nextOpeningAt(now())?->toIso8601String(),
             'delivery_fee' => $this->whenLoaded('tenant', fn (): string => (string) $this->tenant->delivery_fee),

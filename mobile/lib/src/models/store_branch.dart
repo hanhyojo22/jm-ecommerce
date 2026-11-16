@@ -14,6 +14,7 @@ class StoreBranch {
     this.deliveryFee,
     this.freeDeliveryMinimum,
     this.isOpen = true,
+    this.open24Hours = false,
     this.nextOpeningAt,
     this.prepMinutes,
   });
@@ -34,6 +35,7 @@ class StoreBranch {
     deliveryFee: json['delivery_fee'] as String?,
     freeDeliveryMinimum: json['free_delivery_minimum'] as String?,
     isOpen: json['is_open'] != false,
+    open24Hours: json['open_24_hours'] == true,
     nextOpeningAt: DateTime.tryParse(str(json['next_opening_at']))?.toLocal(),
     prepMinutes: json['prep_minutes'] is num
         ? (json['prep_minutes'] as num).toInt()
@@ -58,6 +60,7 @@ class StoreBranch {
 
   /// As of when the branch list loaded; checkout asks the server again.
   final bool isOpen;
+  final bool open24Hours;
   final DateTime? nextOpeningAt;
 
   /// Packing time before the rider leaves; null when head office has not set it.

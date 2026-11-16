@@ -16,11 +16,12 @@ String? _hoursLabel(BranchDistance item) {
     final opens = branch.nextOpeningAt;
     return opens == null ? 'Closed' : 'Closed · opens ${opensLabel(opens)}';
   }
+  final open = branch.open24Hours ? 'Open 24 hours' : 'Open';
   final km = item.distanceKm;
   if (km == null || item.isOutOfDeliveryRange) {
-    return null;
+    return branch.open24Hours ? open : null;
   }
-  return 'Open · ${etaLabel(prepMinutes: branch.prepMinutes ?? 20, distanceKm: km)}';
+  return '$open · ${etaLabel(prepMinutes: branch.prepMinutes ?? 20, distanceKm: km)}';
 }
 
 String _feeLabel(StoreBranch branch) {

@@ -522,6 +522,29 @@ void main() {
     expect(find.text('Open · 30–45 min'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
+    await _pumpCatalog(
+      tester,
+      _CatalogApi(),
+      locator: StoreLocatorState(
+        branches: [
+          BranchDistance(
+            const StoreBranch(
+              id: 'cebu',
+              branchId: 'B-CEBU',
+              name: 'Cebu branch',
+              address: 'Cebu',
+              latitude: 10.3,
+              longitude: 123.9,
+              open24Hours: true,
+            ),
+            2.5,
+          ),
+        ],
+      ),
+    );
+    expect(find.text('Open 24 hours · 30–45 min'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
     await _pumpCatalog(tester, _CatalogApi(), locator: locator(open: false));
     // intl puts a narrow no-break space before AM.
     expect(find.textContaining('Closed · opens Mon 8:00'), findsOneWidget);
