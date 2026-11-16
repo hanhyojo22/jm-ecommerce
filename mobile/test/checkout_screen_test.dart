@@ -27,52 +27,53 @@ const _branch = StoreBranch(
 );
 
 void main() {
+  testWidgets('an Rx pickup order needs a prescription and sends no pin', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: true);
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+    );
+
+    expect(
+      find.text('We could not find your location. Drag the map to your door.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pay at the counter'), findsOneWidget);
+
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(find.text('Add a photo of your prescription.'), findsOneWidget);
+    expect(api.placed, isNull);
+
+    await tester.ensureVisible(find.text('Add photo'));
+    await tester.tap(find.text('Add photo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Added: rx.jpg'), findsOneWidget);
+    tester
+        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
+        .removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+
+    expect(api.placed!.fulfillment, 'pickup');
+    expect(api.placed!.prescription!.name, 'rx.jpg');
+    expect(api.placed!.latitude, isNull);
+    expect(find.text('Order route'), findsOneWidget);
+  });
+
   testWidgets(
-    'an Rx order needs a prescription, and without location it is picked up',
-    (tester) async {
-      final api = _CheckoutApi(rx: true);
-      await _pump(
-        tester,
-        api,
-        locator: const StoreLocatorState(
-          branches: [BranchDistance(_branch, null)],
-          issue: LocationIssue.denied,
-        ),
-      );
-
-      expect(find.text('Pickup · Free'), findsOneWidget);
-      expect(
-        find.text('Turn on location to get delivery. Pickup is available.'),
-        findsOneWidget,
-      );
-      expect(find.text('Pay at the counter'), findsOneWidget);
-
-      await tester.tap(find.text('Place order'));
-      await tester.pump();
-      expect(find.text('Add a photo of your prescription.'), findsOneWidget);
-      expect(api.placed, isNull);
-
-      await tester.ensureVisible(find.text('Add photo'));
-      await tester.tap(find.text('Add photo'));
-      await tester.pumpAndSettle();
-      expect(find.text('Added: rx.jpg'), findsOneWidget);
-      tester
-          .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
-          .removeCurrentSnackBar();
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Place order'));
-      await tester.pumpAndSettle();
-
-      expect(api.placed!.fulfillment, 'pickup');
-      expect(api.placed!.prescription!.name, 'rx.jpg');
-      expect(api.placed!.latitude, isNull);
-      expect(find.text('Order route'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'a delivery inside the radius sends the phone location and adds the fee',
+    'a delivery inside the radius sends the map pin and adds the fee',
     (tester) async {
       final api = _CheckoutApi(rx: false);
       await _pump(
@@ -96,12 +97,35 @@ void main() {
       expect(api.placed!.prescription, isNull);
     },
   );
+
+  testWidgets('a pin outside the delivery radius cannot be ordered', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false);
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, 1.2)],
+      ),
+      location: const _HereLocation(latitude: 14.65, longitude: 121.02),
+    );
+
+    final problem = find.textContaining('Makati branch delivers within 5 km');
+    expect(problem, findsOneWidget);
+
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(problem, findsWidgets);
+    expect(api.placed, isNull);
+  });
 }
 
 Future<void> _pump(
   WidgetTester tester,
   _CheckoutApi api, {
   required StoreLocatorState locator,
+  LocationService location = const _HereLocation(),
 }) async {
   tester.view.physicalSize = const Size(390, 1600);
   tester.view.devicePixelRatio = 1;
@@ -123,7 +147,7 @@ Future<void> _pump(
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-MAKATI'),
         nearestStoreProvider.overrideWith(() => _FixedLocator(locator)),
-        locationServiceProvider.overrideWithValue(const _HereLocation()),
+        locationServiceProvider.overrideWithValue(location),
         attachmentPickerProvider.overrideWithValue(const _PickedRx()),
       ],
       child: MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
@@ -142,12 +166,15 @@ class _FixedLocator extends NearestStoreNotifier {
 }
 
 class _HereLocation extends LocationService {
-  const _HereLocation();
+  const _HereLocation({this.latitude = 14.55, this.longitude = 121.02});
+
+  final double latitude;
+  final double longitude;
 
   @override
   Future<Position> currentPosition() async => Position(
-    latitude: 14.55,
-    longitude: 121.02,
+    latitude: latitude,
+    longitude: longitude,
     timestamp: DateTime(2026),
     accuracy: 0,
     altitude: 0,
@@ -157,6 +184,14 @@ class _HereLocation extends LocationService {
     speed: 0,
     speedAccuracy: 0,
   );
+}
+
+class _NoLocation extends LocationService {
+  const _NoLocation();
+
+  @override
+  Future<Position> currentPosition() async =>
+      throw const LocationFailure(LocationIssue.denied);
 }
 
 class _PickedRx implements AttachmentPicker {

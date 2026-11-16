@@ -133,8 +133,9 @@ class CheckoutController extends Controller
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
             'address_line' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:255'],
             'city' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
-            'province' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
-            'postal_code' => ['required_unless:fulfillment_method,pickup', 'nullable', 'regex:/^\d{4}$/'],
+            // The map pin locates a same-town delivery, so province and postal code are optional.
+            'province' => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'regex:/^\d{4}$/'],
             'delivery_latitude' => ['required_unless:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-90,90'],
             'delivery_longitude' => ['required_unless:fulfillment_method,pickup', 'nullable', 'numeric', 'between:-180,180'],
             'delivery_note' => ['nullable', 'string', 'max:1000'],

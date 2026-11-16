@@ -617,6 +617,7 @@ class CheckoutQuote {
     required this.paymentOptions,
     this.branchName,
     this.branchAddress,
+    this.branchCity,
     this.fulfillment = const {},
   });
 
@@ -630,6 +631,9 @@ class CheckoutQuote {
   /// The branch that fills the order and where pickup orders are collected.
   final String? branchName;
   final String? branchAddress;
+
+  /// Where a same-town delivery goes; fills the order's city.
+  final String? branchCity;
 
   /// `delivery` and `pickup`, each with its fee and what it brings the total to.
   final Map<String, FulfillmentOption> fulfillment;
@@ -656,6 +660,7 @@ class CheckoutQuote {
       str(mapOf(json['branch'])['address_line']),
       str(mapOf(json['branch'])['city']),
     ].where((part) => part.isNotEmpty).join(', '),
+    branchCity: mapOf(json['branch'])['city'] as String?,
     fulfillment: mapOf(json['fulfillment_methods']).map(
       (key, value) => MapEntry(key, FulfillmentOption.fromJson(mapOf(value))),
     ),

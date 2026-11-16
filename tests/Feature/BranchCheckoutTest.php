@@ -71,6 +71,18 @@ class BranchCheckoutTest extends TestCase
         $this->assertSame($cebu->id, SellerOrder::query()->sole()->store_id);
     }
 
+    public function test_a_pinned_delivery_needs_no_province_or_postal_code(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 3);
+        $buyer = $this->buyer();
+
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+        $this->postJson('/api/v1/checkout', [...collect($this->delivery())->except(['province', 'postal_code'])->all(), 'payment_method' => 'cod'])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('orders', ['user_id' => $buyer->id, 'province' => null, 'postal_code' => null]);
+    }
+
     public function test_the_app_must_choose_a_branch_before_its_first_item(): void
     {
         [, , $product] = $this->pharmacyWithStock(makati: 5, cebu: 5);

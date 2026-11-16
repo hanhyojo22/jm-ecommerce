@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
@@ -9,12 +11,14 @@ import '../core/attachment_picker.dart';
 import '../core/formatters.dart';
 import '../core/location_service.dart';
 import '../models/models.dart';
+import '../models/store_branch.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/checkout_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/delivery_pin_map.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -28,9 +32,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _recipient = TextEditingController();
   final _phone = TextEditingController();
   final _addressLine = TextEditingController();
-  final _city = TextEditingController();
-  final _province = TextEditingController();
-  final _postalCode = TextEditingController();
+
+  /// The city of a reused address; a new address takes the branch's city.
+  String _savedCity = '';
 
   final _requestId = const Uuid().v4();
   String? _selectedAddressId;
@@ -39,27 +43,80 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String _paymentMethod = 'cod';
   String _fulfillment = 'delivery';
   PickedAttachment? _prescription;
-  ({double latitude, double longitude})? _pin;
   bool _placing = false;
 
-  /// Why delivery can't be offered: the API needs the phone's location as the
-  /// pin and refuses addresses outside the branch's radius. Null when it can.
-  String? get _deliveryBlockedReason {
-    final locator = ref.read(nearestStoreProvider).value;
-    if (locator == null || locator.branches.isEmpty) {
-      return null;
-    }
-    if (locator.issue != null) {
-      return 'Turn on location to get delivery. Pickup is available.';
-    }
-    if (locator.activeBranch?.isOutOfDeliveryRange ?? false) {
-      return 'You are outside the delivery area of ${locator.activeBranch!.branch.name}. Pickup is available.';
-    }
-    return null;
+  /// Where the rider goes. Starts at the phone's location, or at the branch
+  /// when location is off, and follows the map as the customer moves it.
+  LatLng? _pin;
+  bool _locatedPhone = false;
+
+  /// The branch the cart buys from, which the delivery radius is measured from.
+  StoreBranch? _deliveryBranch;
+
+  /// True once locating is over; with no pin by then, only pickup works.
+  bool _located = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _locate();
   }
 
-  String get _method =>
-      _deliveryBlockedReason == null ? _fulfillment : 'pickup';
+  Future<void> _locate() async {
+    _deliveryBranch = await _cartBranch();
+    LatLng? start;
+    try {
+      final here = await ref.read(locationServiceProvider).currentPosition();
+      start = LatLng(here.latitude, here.longitude);
+      _locatedPhone = true;
+    } on LocationFailure {
+      final branch = _deliveryBranch;
+      start = branch == null ? null : LatLng(branch.latitude, branch.longitude);
+    }
+    if (mounted) {
+      setState(() {
+        _pin ??= start;
+        _located = true;
+      });
+    }
+  }
+
+  Future<StoreBranch?> _cartBranch() async {
+    try {
+      final locator = await ref.read(nearestStoreProvider.future);
+      final cartBranchId = await ref.read(activeBranchIdProvider.future);
+      return locator.branches
+              .where((item) => item.branch.branchId == cartBranchId)
+              .firstOrNull
+              ?.branch ??
+          locator.activeBranch?.branch;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Why the pin cannot be delivered to, checked like the API does.
+  String? get _pinProblem {
+    final branch = _deliveryBranch;
+    final pin = _pin;
+    final radius = branch?.maxDeliveryRadiusKm;
+    if (branch == null || pin == null || radius == null) {
+      return null;
+    }
+    final km =
+        Geolocator.distanceBetween(
+          branch.latitude,
+          branch.longitude,
+          pin.latitude,
+          pin.longitude,
+        ) /
+        1000;
+    return km > radius
+        ? 'This pin is ${km.toStringAsFixed(1)} km away. ${branch.name} delivers within ${radius.toStringAsFixed(0)} km. Move the pin or choose pickup.'
+        : null;
+  }
+
+  String get _method => _fulfillment;
 
   /// The online payment fee on what the chosen fulfillment brings the total to.
   String? _paymentFee(CheckoutQuote quote, String method) =>
@@ -71,9 +128,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _recipient.dispose();
     _phone.dispose();
     _addressLine.dispose();
-    _city.dispose();
-    _province.dispose();
-    _postalCode.dispose();
     super.dispose();
   }
 
@@ -112,9 +166,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _recipient.text = address.recipientName;
     _phone.text = address.phone;
     _addressLine.text = address.addressLine;
-    _city.text = address.city;
-    _province.text = address.province;
-    _postalCode.text = address.postalCode;
+    _savedCity = address.city;
   }
 
   Address? _address(CheckoutQuote quote) {
@@ -132,9 +184,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       recipientName: _recipient.text.trim(),
       phone: _phone.text.trim(),
       addressLine: _addressLine.text.trim(),
-      city: _city.text.trim(),
-      province: _province.text.trim(),
-      postalCode: _postalCode.text.trim(),
+      city: _savedCity.isNotEmpty ? _savedCity : (quote.branchCity ?? ''),
+      province: '',
+      postalCode: '',
     );
   }
 
@@ -155,17 +207,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
+    if (_method == 'delivery') {
+      if (_pin == null) {
+        _snack('Move the map to set the delivery pin.');
+        return;
+      }
+      final problem = _pinProblem;
+      if (problem != null) {
+        _snack(problem);
+        return;
+      }
+    }
+
     setState(() => _placing = true);
 
     try {
       final method = _method;
-      // shortcut: the delivery pin is where the phone is, not the typed address;
-      // add a map pin picker when customers order for someone elsewhere.
-      // Kept for retries: the request id's replay check compares the pin too.
-      if (method == 'delivery' && _pin == null) {
-        final here = await ref.read(locationServiceProvider).currentPosition();
-        _pin = (latitude: here.latitude, longitude: here.longitude);
-      }
       final pin = method == 'delivery' ? _pin : null;
       final placed = await ref
           .read(apiClientProvider)
@@ -200,10 +257,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       if (mounted) {
         context.pushReplacement('/orders/${placed.order.id}');
-      }
-    } on LocationFailure {
-      if (mounted) {
-        _snack('Turn on location for delivery, or choose pickup.');
       }
     } on ApiException catch (error) {
       if (mounted) {
@@ -265,17 +318,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                     children: [
-                      _itemsCard(value),
-                      const SizedBox(height: 14),
                       _fulfillmentCard(value),
+                      const SizedBox(height: 14),
+                      _addressCard(value),
                       if (value.needsPrescription) ...[
                         const SizedBox(height: 14),
                         _prescriptionCard(),
                       ],
                       const SizedBox(height: 14),
-                      _addressCard(value),
-                      const SizedBox(height: 14),
                       _paymentCard(value),
+                      const SizedBox(height: 14),
+                      _itemsCard(value),
                       const SizedBox(height: 14),
                       _totalsCard(value),
                     ],
@@ -470,12 +523,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _method == 'pickup' ? 'Contact details' : 'Delivery address',
+              _method == 'pickup' ? 'Contact details' : 'Deliver to',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 8),
+            if (_method == 'delivery') ...[
+              _pinSection(theme),
+              const SizedBox(height: 8),
+            ],
             RadioGroup<String>(
               groupValue: _useNewAddress ? '__new__' : _selectedAddressId,
               onChanged: (value) {
@@ -511,7 +568,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       subtitle: Text(
-                        '${address.addressLine}, ${address.city}, ${address.province} ${address.postalCode}\n${address.phone}',
+                        '${[address.addressLine, address.city].where((part) => part.isNotEmpty).join(', ')}\n${address.phone}',
                       ),
                       isThreeLine: true,
                     ),
@@ -547,27 +604,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ? null
                     : 'Use a valid PH mobile number.',
               ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _addressLine,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Street address'),
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? 'Enter the street address.'
-                    : null,
-              ),
-              const SizedBox(height: 10),
-              _cityProvinceFields(context),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: _postalCode,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Postal code'),
-                validator: (value) =>
-                    RegExp(r'^\d{4}$').hasMatch((value ?? '').trim())
-                    ? null
-                    : 'Use a 4-digit postal code.',
-              ),
+              if (_method == 'delivery') ...[
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _addressLine,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'House no., street, landmark',
+                    hintText: 'Blue gate beside the sari-sari store',
+                  ),
+                  validator: (value) => (value ?? '').trim().isEmpty
+                      ? 'Tell the rider how to find you.'
+                      : null,
+                ),
+              ],
             ],
           ],
         ),
@@ -575,41 +625,55 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _cityProvinceFields(BuildContext context) {
-    final city = TextFormField(
-      controller: _city,
-      textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(labelText: 'City'),
-      validator: (value) =>
-          (value ?? '').trim().isEmpty ? 'Enter the city.' : null,
-    );
-    final province = TextFormField(
-      controller: _province,
-      textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(labelText: 'Province'),
-      validator: (value) =>
-          (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
-    );
+  Widget _pinSection(ThemeData theme) {
+    final pin = _pin;
+    final problem = _pinProblem;
+    final branch = _deliveryBranch;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Side-by-side labels clip on narrow screens with large text.
-        final stack =
-            constraints.maxWidth < 300 ||
-            MediaQuery.textScalerOf(context).scale(14) > 21;
+    if (pin == null && _located) {
+      return Text(
+        'We could not find your location or the branch on the map. Turn on location, or choose pickup.',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.error,
+        ),
+      );
+    }
 
-        if (stack) {
-          return Column(children: [city, const SizedBox(height: 10), province]);
-        }
-
-        return Row(
-          children: [
-            Expanded(child: city),
-            const SizedBox(width: 10),
-            Expanded(child: province),
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (pin == null)
+          const SizedBox(
+            height: 220,
+            child: Center(
+              child: CircularProgressIndicator(semanticsLabel: 'Finding you'),
+            ),
+          )
+        else
+          DeliveryPinMap(
+            initial: pin,
+            branch: branch == null
+                ? null
+                : LatLng(branch.latitude, branch.longitude),
+            onMoved: (center) => setState(() => _pin = center),
+          ),
+        const SizedBox(height: 6),
+        Text(
+          _locatedPhone
+              ? 'Drag the map so the pin sits on your door.'
+              : 'We could not find your location. Drag the map to your door.',
+          style: theme.textTheme.bodySmall,
+        ),
+        if (problem != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            problem,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -714,7 +778,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _fulfillmentCard(CheckoutQuote quote) {
     final theme = Theme.of(context);
-    final blocked = _deliveryBlockedReason;
     final deliveryFee = quote.fulfillment['delivery']?.fee ?? '0.00';
     final branch = quote.branchName ?? 'your branch';
     final branchAddress = quote.branchAddress ?? '';
@@ -736,7 +799,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               segments: [
                 ButtonSegment(
                   value: 'delivery',
-                  enabled: blocked == null,
                   label: Text(
                     (double.tryParse(deliveryFee) ?? 0) > 0
                         ? 'Delivery · ${money(deliveryFee)}'
@@ -759,18 +821,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       'Pick up at $branch',
                       if (branchAddress.isNotEmpty) branchAddress,
                     ].join(' · ')
-                  : 'Delivered from $branch to where you are now.',
+                  : 'Delivered from $branch to your pin.',
               style: theme.textTheme.bodySmall,
             ),
-            if (blocked != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                blocked,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
           ],
         ),
       ),
