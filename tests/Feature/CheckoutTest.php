@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Notifications\NewSellerOrderPlaced;
 use App\Services\GmailOrderMailer;
 use App\Support\CookiePreferences;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -309,6 +310,18 @@ class CheckoutTest extends TestCase
         $this->post(route('checkout.store'), collect($this->delivery())->except(['province', 'postal_code'])->all())
             ->assertRedirectContains('/placed');
         $this->assertDatabaseHas('orders', ['user_id' => $customer->id, 'province' => null, 'postal_code' => null]);
+    }
+
+    public function test_order_times_show_in_philippine_time(): void
+    {
+        [, $product] = $this->sellerProduct('19.99', 5);
+        $customer = User::factory()->create(['email_verified_at' => now()]);
+        Cart::create(['user_id' => $customer->id])->items()->create(['product_id' => $product->id, 'quantity' => 1]);
+        $this->travelTo(CarbonImmutable::parse('2026-11-16 10:05', 'UTC'));
+
+        $this->actingAs($customer)->post(route('checkout.store'), $this->delivery())->assertRedirectContains('/placed');
+
+        $this->get(route('orders.index'))->assertSee('6:05 PM')->assertDontSee('10:05 AM');
     }
 
     public function test_older_saved_address_can_be_completed_at_checkout(): void
