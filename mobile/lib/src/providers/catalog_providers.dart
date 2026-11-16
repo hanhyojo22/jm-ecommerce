@@ -215,8 +215,13 @@ final storeProvider = FutureProvider.autoDispose.family<StoreInfo, String>(
 
 final storeProductsProvider = FutureProvider.autoDispose
     .family<ProductPage, String>(
-      (ref, slug) =>
-          ref.watch(apiClientProvider).products(seller: slug, perPage: 48),
+      (ref, slug) async {
+        // A branch page lists what that branch has on hand, not what it first listed.
+        final store = await ref.watch(storeProvider(slug).future);
+        return ref
+            .watch(apiClientProvider)
+            .products(branch: store.id, perPage: 48);
+      },
     );
 
 class ProductKey {
