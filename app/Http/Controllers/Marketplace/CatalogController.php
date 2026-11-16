@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Conversation;
 use App\Models\Product;
 use App\Models\Store;
 use App\Queries\CatalogQuery;
@@ -271,8 +272,12 @@ class CatalogController extends Controller
             ->limit(4)
             ->get();
 
+        // The branch the buyer shops from, which is also where their questions and orders go.
+        $branchId = $request->user() === null ? $product->store_id : Conversation::branchForProduct($product, $request->user());
+
         return view('marketplace.catalog.show', [
             'product' => $product,
+            'branch' => $branchId === $product->store_id ? $product->store : Store::query()->find($branchId, ['id', 'name', 'slug', 'status', 'city', 'logo_path']),
             'reviews' => $reviews->paginate(10)->withQueryString(),
             'discussions' => $product->discussions()->where('status', 'published')->whereNull('parent_id')
                 ->with(['user:id,name', 'parent.user:id,name', 'replies.user:id,name', 'replies.parent.user:id,name'])

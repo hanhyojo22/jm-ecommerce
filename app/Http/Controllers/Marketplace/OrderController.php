@@ -98,7 +98,7 @@ class OrderController extends Controller
     public function placed(Request $request, Order $order): RedirectResponse|View
     {
         $this->authorize('view', $order);
-        $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'payment');
+        $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'payment', 'prescription');
 
         if ($order->sellerOrders->contains(fn (SellerOrder $sellerOrder): bool => $sellerOrder->status !== 'pending')) {
             return to_route('orders.show', $order);

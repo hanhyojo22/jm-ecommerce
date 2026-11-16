@@ -296,7 +296,7 @@
 
                     <div id="checkout-summary-body" class="border-t border-[#EEF1F5] px-5 pb-5 pt-4 max-lg:hidden max-lg:border-line max-sm:p-4" :class="{ 'max-lg:hidden': ! summaryOpen }">
                         @foreach ($itemsByStore as $storeItems)
-                            @php($store = $storeItems->first()->product->store)
+                            @php($store = $cart->branchFor($storeItems->first()->product->tenant_id) ?? $storeItems->first()->product->store)
                             <section @class(['mt-4 border-t border-line pt-4' => ! $loop->first]) aria-labelledby="checkout-store-{{ $store->id }}">
                                 <h3 id="checkout-store-{{ $store->id }}" class="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted">
                                     <svg class="size-[13px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 9h16v11H4zM3 9l1.5-5h15L21 9M9 20v-6h6v6"/></svg>

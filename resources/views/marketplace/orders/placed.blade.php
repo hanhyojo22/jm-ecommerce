@@ -39,6 +39,9 @@
                         Thanks, {{ $firstName }}. Your items are reserved until <strong class="font-semibold">{{ $deadline }}</strong>. If you’ve just paid, this page updates in a moment; otherwise pay <strong class="font-semibold">{{ $charged }}</strong> with {{ $methodLabel }} now.
                     @endif
                 </p>
+                @if ($order->prescription)
+                    <p class="mt-3 max-w-[52ch] rounded-md border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-[14px] leading-normal text-blue-900">A pharmacist checks your prescription first. Your order is prepared once it is approved.</p>
+                @endif
 
                 <div class="mt-7 flex flex-wrap items-center gap-3 print:hidden max-sm:grid max-sm:grid-cols-1">
                     @if($isCod || $isPaid)
@@ -143,7 +146,7 @@
             </section>
         </div>
         @if ($recommendedProducts->isNotEmpty())
-            <section class="marketplace-section mt-12 print:hidden" aria-labelledby="placed-recommended-heading">
+            <section class="page-container marketplace-section mt-12 print:hidden" aria-labelledby="placed-recommended-heading">
                 <div class="marketplace-section-head"><div><h2 id="placed-recommended-heading" class="marketplace-section-title">More you might like</h2><p class="marketplace-section-subtitle">Explore products related to your shopping interests.</p></div></div>
                 <div class="marketplace-product-grid">
                     @foreach ($recommendedProducts as $product)

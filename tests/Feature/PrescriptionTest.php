@@ -73,6 +73,7 @@ class PrescriptionTest extends TestCase
         $this->assertSame('pending', $prescription->status);
         $this->assertSame('rx.jpg', $prescription->original_name);
         Storage::disk('chat_attachments')->assertExists($prescription->path);
+        $this->actingAs($order->user)->get(route('orders.placed', $order))->assertSee('A pharmacist checks your prescription first.');
         $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Waiting for pharmacist review');
         $this->actingAs($order->user)->get(route('orders.show', $order), ['X-Order-Modal' => '1'])->assertSee('Prescription in review');
     }

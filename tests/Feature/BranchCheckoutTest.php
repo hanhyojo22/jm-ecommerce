@@ -169,6 +169,21 @@ class BranchCheckoutTest extends TestCase
         $this->assertDatabaseHas('orders', ['shipping_amount' => '49.00', 'total' => '62.00']);
     }
 
+    public function test_the_web_product_page_and_checkout_name_the_carts_branch_not_the_products_home_branch(): void
+    {
+        [, $cebu, $product] = $this->pharmacyWithStock(makati: 5, cebu: 3);
+        $this->actingAs($this->buyer())->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $product->id, 'quantity' => 1])->assertCreated();
+
+        $this->get(route('catalog.show', ['botika-plus-makati', $product->slug]))
+            ->assertOk()
+            ->assertSeeInOrder(['Sold by', 'Botika Plus Cebu'])
+            ->assertDontSee('<b>Botika Plus Makati</b>', false);
+        $this->get(route('checkout.create'))
+            ->assertOk()
+            ->assertSee('Botika Plus Cebu')
+            ->assertDontSee('Botika Plus Makati');
+    }
+
     public function test_switching_branch_keeps_the_items_and_unticks_what_the_new_branch_lacks(): void
     {
         [$makati, $cebu, $product] = $this->pharmacyWithStock(makati: 0, cebu: 5);
