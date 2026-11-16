@@ -11,6 +11,7 @@ import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/shell.dart';
+import '../widgets/store_locator.dart';
 
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
@@ -76,13 +77,7 @@ class AccountScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 28),
             children: [
-              _LazadaAccountHeader(
-                account: account,
-                onHelpTap: () => _showHelpSheet(context),
-                onSettingsTap: () => context.push('/addresses'),
-                onMemberTap: () =>
-                    ref.read(shellTabProvider.notifier).select(0),
-              ),
+              _LazadaAccountHeader(account: account),
               const SizedBox(height: 8),
               _AccountOrdersSection(
                 onOpenTab: (tab) => _openOrdersTab(ref, tab),
@@ -122,20 +117,12 @@ class AccountScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              _LazadaHighlightsSection(
-                onOrdersTap: () => _openOrdersTab(ref, 'all'),
-                onAddressesTap: () => context.push('/addresses'),
-              ),
-              const SizedBox(height: 8),
               _LazadaToolsGridSection(
                 onAddressesTap: () => context.push('/addresses'),
                 onReviewsTap: () => _openOrdersTab(ref, 'to_review'),
                 onMessagesTap: () =>
                     ref.read(shellTabProvider.notifier).select(2),
-                onCartTap: () => ref.read(shellTabProvider.notifier).select(3),
-                onShopTap: () => ref.read(shellTabProvider.notifier).select(0),
-                onFastDeliveryTap: () => _openOrdersTab(ref, 'to_receive'),
-                onProtectionTap: () => _showHelpSheet(context),
+                onBranchesTap: () => showBranchSelectorSheet(context),
                 onHelpTap: () => _showHelpSheet(context),
               ),
               const SizedBox(height: 16),
@@ -161,28 +148,16 @@ class AccountScreen extends ConsumerWidget {
   }
 }
 
-/// Top Lazada-style profile banner: soft tinted gradient, top-right help/gear
-/// icons, avatar + name + membership badge on the left, and the "Member Center"
-/// gradient card on the right.
+/// Profile banner: avatar, name, email and whether the email is verified.
 class _LazadaAccountHeader extends StatelessWidget {
-  const _LazadaAccountHeader({
-    required this.account,
-    required this.onHelpTap,
-    required this.onSettingsTap,
-    required this.onMemberTap,
-  });
+  const _LazadaAccountHeader({required this.account});
 
   final Account account;
-  final VoidCallback onHelpTap;
-  final VoidCallback onSettingsTap;
-  final VoidCallback onMemberTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -197,35 +172,10 @@ class _LazadaAccountHeader extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 12, 14),
+          padding: const EdgeInsets.fromLTRB(16, 20, 12, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  IconButton(
-                    tooltip: 'Help',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: onHelpTap,
-                    icon: Icon(
-                      Icons.help_outline_rounded,
-                      size: 22,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Settings',
-                    visualDensity: VisualDensity.compact,
-                    onPressed: onSettingsTap,
-                    icon: Icon(
-                      Icons.settings_outlined,
-                      size: 22,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ],
-              ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -270,35 +220,6 @@ class _LazadaAccountHeader extends StatelessWidget {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: scheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.diamond_rounded,
-                                    size: 12,
-                                    color: scheme.primary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    account.accountType.toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: scheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                             if (account.emailVerified)
                               Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -322,66 +243,6 @@ class _LazadaAccountHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (!largeText) ...[
-                    const SizedBox(width: 8),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(appSurfaceRadius),
-                      onTap: onMemberTap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              scheme.primary,
-                              Color.lerp(
-                                scheme.primary,
-                                scheme.secondary,
-                                0.45,
-                              )!,
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(appSurfaceRadius),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Member Center',
-                                  style: TextStyle(
-                                    color: scheme.onPrimary,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                const SizedBox(width: 3),
-                                Icon(
-                                  Icons.chevron_right_rounded,
-                                  size: 15,
-                                  color: scheme.onPrimary,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Your account',
-                              style: TextStyle(
-                                color: scheme.onPrimary.withValues(alpha: 0.9),
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ],
@@ -514,182 +375,20 @@ class _AccountOrdersSection extends StatelessWidget {
   }
 }
 
-/// Shortcut cards: orders and saved addresses.
-class _LazadaHighlightsSection extends StatelessWidget {
-  const _LazadaHighlightsSection({
-    required this.onOrdersTap,
-    required this.onAddressesTap,
-  });
-
-  final VoidCallback onOrdersTap;
-  final VoidCallback onAddressesTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    if (largeText) {
-      return const SizedBox.shrink();
-    }
-
-    return Material(
-      color: scheme.surfaceContainerLowest,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              child: _HighlightMiniCard(
-                badge: 'Orders',
-                headline: 'Track orders',
-                subtitle: 'Delivery status',
-                ctaLabel: 'View >',
-                filledCta: true,
-                tint: const Color(0xFFFFF8E5),
-                onTap: onOrdersTap,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _HighlightMiniCard(
-                badge: 'Addresses',
-                headline: 'Fast Checkout',
-                subtitle: 'Saved places',
-                ctaLabel: 'Manage >',
-                filledCta: false,
-                tint: const Color(0xFFEEF7FF),
-                onTap: onAddressesTap,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HighlightMiniCard extends StatelessWidget {
-  const _HighlightMiniCard({
-    required this.badge,
-    required this.headline,
-    required this.subtitle,
-    required this.ctaLabel,
-    required this.filledCta,
-    required this.tint,
-    required this.onTap,
-  });
-
-  final String badge;
-  final String headline;
-  final String subtitle;
-  final String ctaLabel;
-  final bool filledCta;
-  final Color tint;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final dark = scheme.brightness == Brightness.dark;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(appSurfaceRadius),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
-        decoration: BoxDecoration(
-          color: dark ? scheme.surfaceContainerHigh : tint,
-          borderRadius: BorderRadius.circular(appSurfaceRadius),
-        ),
-        child: Column(
-          children: [
-            Text(
-              badge,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              headline,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                fontSize: 13.5,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (filledCta)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.primary,
-                  borderRadius: BorderRadius.circular(appSurfaceRadius),
-                ),
-                child: Text(
-                  ctaLabel,
-                  style: TextStyle(
-                    color: scheme.onPrimary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              )
-            else
-              Text(
-                ctaLabel,
-                style: TextStyle(
-                  color: scheme.onSurface,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Lazada 2x4 bottom utility icon grid (Delivery addresses, My Reviews,
-/// Messages, Cart, Branches, Help & returns, Deliveries, Help).
+/// Account shortcuts: addresses, reviews, messages, branches and help.
 class _LazadaToolsGridSection extends StatelessWidget {
   const _LazadaToolsGridSection({
     required this.onAddressesTap,
     required this.onReviewsTap,
     required this.onMessagesTap,
-    required this.onCartTap,
-    required this.onShopTap,
-    required this.onFastDeliveryTap,
-    required this.onProtectionTap,
+    required this.onBranchesTap,
     required this.onHelpTap,
   });
 
   final VoidCallback onAddressesTap;
   final VoidCallback onReviewsTap;
   final VoidCallback onMessagesTap;
-  final VoidCallback onCartTap;
-  final VoidCallback onShopTap;
-  final VoidCallback onFastDeliveryTap;
-  final VoidCallback onProtectionTap;
+  final VoidCallback onBranchesTap;
   final VoidCallback onHelpTap;
 
   @override
@@ -713,20 +412,10 @@ class _LazadaToolsGridSection extends StatelessWidget {
         label: 'Messages',
         onTap: onMessagesTap,
       ),
-      (icon: Icons.shopping_bag_outlined, label: 'Your Cart', onTap: onCartTap),
-    ];
-
-    final row2 = [
-      (icon: Icons.storefront_outlined, label: 'Branches', onTap: onShopTap),
       (
-        icon: Icons.verified_user_outlined,
-        label: 'Help & returns',
-        onTap: onProtectionTap,
-      ),
-      (
-        icon: Icons.local_shipping_outlined,
-        label: 'Deliveries',
-        onTap: onFastDeliveryTap,
+        icon: Icons.storefront_outlined,
+        label: 'Branches',
+        onTap: onBranchesTap,
       ),
       (icon: Icons.help_outline_rounded, label: 'Help', onTap: onHelpTap),
     ];
@@ -776,13 +465,7 @@ class _LazadaToolsGridSection extends StatelessWidget {
       color: scheme.surfaceContainerLowest,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 14, 12, 16),
-        child: Column(
-          children: [
-            buildRow(row1),
-            const SizedBox(height: 12),
-            buildRow(row2),
-          ],
-        ),
+        child: buildRow(row1),
       ),
     );
   }

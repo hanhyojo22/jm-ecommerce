@@ -75,7 +75,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('QA Buyer'), findsOneWidget);
-      expect(find.text('Member Center'), findsOneWidget);
+      // No marketplace extras: membership badge, Member Center or repeated shortcuts.
+      expect(find.text('Member Center'), findsNothing);
+      expect(find.text('BUYER'), findsNothing);
+      expect(find.text('Your Cart'), findsNothing);
+      expect(find.text('Delivery addresses'), findsOneWidget);
+      expect(find.text('Help'), findsOneWidget);
       expect(find.text('My Orders'), findsOneWidget);
       expect(find.text('View All Orders'), findsOneWidget);
       expect(find.text('To Pay'), findsOneWidget);
