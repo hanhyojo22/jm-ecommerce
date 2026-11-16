@@ -23,7 +23,7 @@ class MessagesScreen extends ConsumerWidget {
           return EmptyState(
             icon: Icons.chat_bubble_outline_rounded,
             title: 'No conversations yet',
-            message: 'Ask a store about a product or an order and the chat will appear here.',
+            message: 'Ask the pharmacy about a medicine or an order and the chat will appear here.',
             action: FilledButton(
               onPressed: () => ref.read(shellTabProvider.notifier).select(0),
               child: const Text('Browse products'),
@@ -60,7 +60,7 @@ class MessagesScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         StoreAvatar(
-                          name: conversation.store?.name ?? 'Store',
+                          name: conversation.store?.name ?? 'Pharmacy',
                           logoUrl: conversation.store?.logoUrl,
                           radius: 24,
                         ),
@@ -73,7 +73,7 @@ class MessagesScreen extends ConsumerWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      conversation.store?.name ?? 'Store',
+                                      conversation.store?.name ?? 'Pharmacy',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
                                       ),

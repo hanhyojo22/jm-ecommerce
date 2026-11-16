@@ -38,10 +38,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     'delivered' => 'You have confirmed that your order has been delivered and received. Thank you for shopping with us.',
     'cancelled' => 'You have closed your order. We hope to see you again soon!',
     'shipped' when order.isPickup => 'Your order is ready at the branch. Bring your order number when you pick it up.',
-    'shipped' =>
-      'The rider is on the way. Confirm receipt once it arrives.',
+    'shipped' => 'The rider is on the way. Confirm receipt once it arrives.',
     'confirmed' || 'processing' => 'The pharmacy is preparing your order.',
-    'pending' when order.canPay => 'Complete your online payment so the pharmacy can prepare your order.',
+    'pending' when order.canPay =>
+      'Complete your online payment so the pharmacy can prepare your order.',
     _ => 'Placed ${dateTime(order.createdAt)}. We will update you as it moves.',
   };
 
@@ -490,7 +490,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    final storeName = sellerOrder.store?.name ?? 'Store';
+    final storeName = sellerOrder.store?.name ?? 'Pharmacy';
     final storeSlug = sellerOrder.store?.slug;
 
     return Material(
@@ -664,7 +664,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           const SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              'Chat with Seller',
+                              'Chat with pharmacy',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodyMedium?.copyWith(
@@ -799,7 +799,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               const SizedBox(height: 12),
               _summaryRow('Subtotal', money(order.subtotal)),
               const SizedBox(height: 8),
-              _summaryRow('Shipping Fee', money(order.shippingAmount)),
+              _summaryRow('Delivery fee', money(order.shippingAmount)),
               const SizedBox(height: 8),
               _summaryRow(
                 'Payment Method',
@@ -935,7 +935,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                   onPressed: () => context.push(
                     '/store/${order.sellerOrders.first.store!.slug}',
                   ),
-                  child: const Text('Visit Store'),
+                  child: const Text('Visit branch'),
                 ),
             ],
           ),
@@ -965,7 +965,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Your payment is protected until you confirm that your order has arrived in good condition. Need help with an item? Message the store directly using "Chat with Seller".',
+                'Something wrong with an item? Message the pharmacy using "Chat with pharmacy" and they will sort it out.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -1072,8 +1072,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         title: const Text('Confirm you received this order?'),
         content: Text(
           'Only confirm once every item from '
-          '${sellerOrder.store?.name ?? 'the store'} has arrived in good '
-          'condition. The store is paid after you confirm.',
+          '${sellerOrder.store?.name ?? 'the pharmacy'} has arrived in good '
+          'condition.',
         ),
         actions: [
           TextButton(

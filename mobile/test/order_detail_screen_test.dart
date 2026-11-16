@@ -80,7 +80,7 @@ void main() {
 
   testWidgets('footer store shortcut opens the storefront', (tester) async {
     await _pump(tester, _OrderApi(), routed: true);
-    await tester.tap(find.text('Visit Store'));
+    await tester.tap(find.text('Visit branch'));
     await tester.pumpAndSettle();
     expect(find.text('Store destination'), findsOneWidget);
   });
@@ -105,10 +105,10 @@ void main() {
   ) async {
     final api = _OrderApi()..pendingChat = Completer<Conversation>();
     await _pump(tester, api);
-    await tester.ensureVisible(find.text('Chat with Seller'));
-    await tester.tap(find.text('Chat with Seller'));
+    await tester.ensureVisible(find.text('Chat with pharmacy'));
+    await tester.tap(find.text('Chat with pharmacy'));
     await tester.pump();
-    await tester.tap(find.text('Chat with Seller'));
+    await tester.tap(find.text('Chat with pharmacy'));
     await tester.pump();
     expect(api.chats, 1);
     api.pendingChat!.completeError(

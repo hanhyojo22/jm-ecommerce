@@ -34,14 +34,14 @@ class AccountScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Help & Buyer Protection',
+                'Help',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
-                'Orders are protected from checkout until delivery confirmation. You can message any seller directly from your order details or the Messages tab.',
+                'Questions about an order or a medicine? Message your branch from the order details or the Messages tab.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -124,12 +124,7 @@ class AccountScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               _LazadaHighlightsSection(
                 onOrdersTap: () => _openOrdersTab(ref, 'all'),
-                onDealsTap: () => ref.read(shellTabProvider.notifier).select(0),
                 onAddressesTap: () => context.push('/addresses'),
-              ),
-              const SizedBox(height: 8),
-              _LazadaChannelsSection(
-                onShopTap: () => ref.read(shellTabProvider.notifier).select(0),
               ),
               const SizedBox(height: 8),
               _LazadaToolsGridSection(
@@ -375,7 +370,7 @@ class _LazadaAccountHeader extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Free Shipping Perks',
+                              'Your account',
                               style: TextStyle(
                                 color: scheme.onPrimary.withValues(alpha: 0.9),
                                 fontSize: 10.5,
@@ -410,10 +405,10 @@ class _AccountOrdersSection extends StatelessWidget {
       label: 'To Pay',
       icon: Icons.account_balance_wallet_outlined,
     ),
-    (key: 'to_dispatch', label: 'To Ship', icon: Icons.inventory_2_outlined),
+    (key: 'to_dispatch', label: 'Preparing', icon: Icons.inventory_2_outlined),
     (
       key: 'to_receive',
-      label: 'To Receive',
+      label: 'On the way',
       icon: Icons.local_shipping_outlined,
     ),
     (key: 'to_review', label: 'To Review', icon: Icons.rate_review_outlined),
@@ -519,16 +514,14 @@ class _AccountOrdersSection extends StatelessWidget {
   }
 }
 
-/// 3-card Lazada perk strip (Rewards / Vouchers / Addresses).
+/// Shortcut cards: orders and saved addresses.
 class _LazadaHighlightsSection extends StatelessWidget {
   const _LazadaHighlightsSection({
     required this.onOrdersTap,
-    required this.onDealsTap,
     required this.onAddressesTap,
   });
 
   final VoidCallback onOrdersTap;
-  final VoidCallback onDealsTap;
   final VoidCallback onAddressesTap;
 
   @override
@@ -547,25 +540,13 @@ class _LazadaHighlightsSection extends StatelessWidget {
           children: [
             Expanded(
               child: _HighlightMiniCard(
-                badge: 'Rewards',
-                headline: 'Free Shipping',
-                subtitle: 'Daily perks',
-                ctaLabel: 'Collect',
+                badge: 'Orders',
+                headline: 'Track orders',
+                subtitle: 'Delivery status',
+                ctaLabel: 'View >',
                 filledCta: true,
                 tint: const Color(0xFFFFF8E5),
-                onTap: onDealsTap,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _HighlightMiniCard(
-                badge: 'Vouchers',
-                headline: 'Up to 70%',
-                subtitle: 'Store deals',
-                ctaLabel: 'Browse >',
-                filledCta: false,
-                tint: const Color(0xFFFFF2F4),
-                onTap: onDealsTap,
+                onTap: onOrdersTap,
               ),
             ),
             const SizedBox(width: 8),
@@ -688,190 +669,8 @@ class _HighlightMiniCard extends StatelessWidget {
   }
 }
 
-/// Lazada-style "My Channels" 3-card showcase section.
-class _LazadaChannelsSection extends StatelessWidget {
-  const _LazadaChannelsSection({required this.onShopTap});
-
-  final VoidCallback onShopTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    if (largeText) {
-      return const SizedBox.shrink();
-    }
-
-    return Material(
-      color: scheme.surfaceContainerLowest,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 12, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'My Channels',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                InkWell(
-                  borderRadius: BorderRadius.circular(appSurfaceRadius),
-                  onTap: onShopTap,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 2,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'All Channels',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 18,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _ChannelTile(
-                    title: 'SHOP NOW!',
-                    caption: 'UP TO 70% OFF',
-                    icon: Icons.local_fire_department_rounded,
-                    accent: const Color(0xFFE53935),
-                    onTap: onShopTap,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ChannelTile(
-                    title: 'Top Stores',
-                    caption: '100% Authentic',
-                    icon: Icons.verified_rounded,
-                    accent: scheme.primary,
-                    onTap: onShopTap,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ChannelTile(
-                    title: 'Flash Deals',
-                    caption: 'Fast Dispatch',
-                    icon: Icons.bolt_rounded,
-                    accent: const Color(0xFFD97706),
-                    onTap: onShopTap,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ChannelTile extends StatelessWidget {
-  const _ChannelTile({
-    required this.title,
-    required this.caption,
-    required this.icon,
-    required this.accent,
-    required this.onTap,
-  });
-
-  final String title;
-  final String caption;
-  final IconData icon;
-  final Color accent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(appSurfaceRadius),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerHighest.withValues(alpha: 0.38),
-          borderRadius: BorderRadius.circular(appSurfaceRadius),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_circle_right_rounded,
-                  size: 15,
-                  color: scheme.onSurface,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Container(
-              height: 62,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(appDetailRadius),
-              ),
-              child: Icon(icon, size: 32, color: accent),
-            ),
-            const SizedBox(height: 6),
-            Center(
-              child: Text(
-                caption,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Lazada 2x4 bottom utility icon grid (Delivery addresses, My Reviews,
-/// Messages, Cart, Followed Stores, Buyer Protection, Fast Deliveries, Help).
+/// Messages, Cart, Branches, Help & returns, Deliveries, Help).
 class _LazadaToolsGridSection extends StatelessWidget {
   const _LazadaToolsGridSection({
     required this.onAddressesTap,
@@ -918,15 +717,15 @@ class _LazadaToolsGridSection extends StatelessWidget {
     ];
 
     final row2 = [
-      (icon: Icons.storefront_outlined, label: 'Stores', onTap: onShopTap),
+      (icon: Icons.storefront_outlined, label: 'Branches', onTap: onShopTap),
       (
         icon: Icons.verified_user_outlined,
-        label: 'Buyer Protection',
+        label: 'Help & returns',
         onTap: onProtectionTap,
       ),
       (
         icon: Icons.local_shipping_outlined,
-        label: 'Fast Deliveries',
+        label: 'Deliveries',
         onTap: onFastDeliveryTap,
       ),
       (icon: Icons.help_outline_rounded, label: 'Help', onTap: onHelpTap),

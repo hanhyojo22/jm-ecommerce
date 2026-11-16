@@ -79,12 +79,11 @@ void main() {
       expect(find.text('My Orders'), findsOneWidget);
       expect(find.text('View All Orders'), findsOneWidget);
       expect(find.text('To Pay'), findsOneWidget);
-      expect(find.text('To Ship'), findsOneWidget);
-      expect(find.text('To Receive'), findsOneWidget);
+      expect(find.text('Preparing'), findsOneWidget);
+      expect(find.text('On the way'), findsOneWidget);
       expect(find.text('To Review'), findsOneWidget);
-      expect(find.text('My Channels'), findsOneWidget);
 
-      await tester.tap(find.text('To Receive'));
+      await tester.tap(find.text('On the way'));
       await tester.pumpAndSettle();
 
       expect(container.read(ordersTabProvider), 'to_receive');

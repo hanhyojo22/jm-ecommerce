@@ -182,7 +182,7 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
           children: [
             Text(
               item.authorType == 'seller'
-                  ? '${item.author} · Seller'
+                  ? '${item.author} · Pharmacy'
                   : item.author,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,

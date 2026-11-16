@@ -636,7 +636,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '${conversation?.store?.name ?? 'Store'} is typing…',
+                  '${conversation?.store?.name ?? 'Pharmacy'} is typing…',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontStyle: FontStyle.italic,
                   ),
@@ -1284,7 +1284,7 @@ class _Bubble extends StatelessWidget {
                     // Buyers talk to the store, never to an individual staff member.
                     child: StoreAvatar(
                       key: ValueKey('sender-avatar-${message.id}'),
-                      name: store?.name ?? 'Store',
+                      name: store?.name ?? 'Pharmacy',
                       logoUrl: store?.logoUrl,
                       radius: 14,
                     ),
@@ -1447,8 +1447,8 @@ class _Bubble extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${mine ? 'You' : 'Store'} replied to '
-                              '${reply.isMine ? (mine ? 'yourself' : 'you') : (mine ? 'Store' : 'themselves')}',
+                              '${mine ? 'You' : 'Pharmacy'} replied to '
+                              '${reply.isMine ? (mine ? 'yourself' : 'you') : (mine ? 'Pharmacy' : 'themselves')}',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),

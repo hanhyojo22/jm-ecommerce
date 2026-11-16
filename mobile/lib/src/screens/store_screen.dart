@@ -639,11 +639,6 @@ class _StoreHero extends StatelessWidget {
                       icon: Icons.payments_outlined,
                       label: 'Cash on delivery',
                     ),
-                    if (stats?.hasFreeShipping == true)
-                      const _TrustPill(
-                        icon: Icons.local_shipping_outlined,
-                        label: 'Free shipping',
-                      ),
                     if (store.acceptsOnlinePayments)
                       const _TrustPill(
                         icon: Icons.credit_card_rounded,
@@ -1009,7 +1004,6 @@ class StoreProductCard extends StatelessWidget {
       money(product.effectivePrice),
       if (discount != null) 'was ${money(product.compareAtPrice)}',
       if (discount != null) '$discount percent off',
-      if (product.freeShipping) 'Free shipping',
       if (!product.inStock) 'Sold out',
       if (product.ratingCount > 0)
         'Rated ${product.ratingAverage.toStringAsFixed(1)} out of 5 from ${product.ratingCount} reviews',
@@ -1051,16 +1045,6 @@ class StoreProductCard extends StatelessWidget {
                       if (!product.inStock)
                         const Positioned.fill(
                           child: Center(child: _SoldOutBadge()),
-                        ),
-                      if (product.freeShipping && product.inStock)
-                        const Positioned(
-                          left: 8,
-                          right: 8,
-                          bottom: 8,
-                          child: Align(
-                            alignment: Alignment.bottomLeft,
-                            child: _FreeShippingBadge(),
-                          ),
                         ),
                     ],
                   ),
@@ -1242,60 +1226,19 @@ class _SoldOutBadge extends StatelessWidget {
   }
 }
 
-class _FreeShippingBadge extends StatelessWidget {
-  const _FreeShippingBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(appDetailRadius),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.local_shipping_outlined, size: 13, color: scheme.primary),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              'Free shipping',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w700,
-                height: 1.1,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StoreStats {
-  const _StoreStats({required this.sold, required this.hasFreeShipping});
+  const _StoreStats({required this.sold});
 
   final int sold;
-  final bool hasFreeShipping;
 
   factory _StoreStats.fromProducts(List<Product> products) {
     var sold = 0;
-    var hasFreeShipping = false;
 
     for (final product in products) {
       sold += product.soldQuantity;
-      hasFreeShipping = hasFreeShipping || product.freeShipping;
     }
 
-    return _StoreStats(sold: sold, hasFreeShipping: hasFreeShipping);
+    return _StoreStats(sold: sold);
   }
 }
 

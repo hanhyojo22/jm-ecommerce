@@ -238,7 +238,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
                       ? 'No matching orders'
                       : 'No orders here',
                   message: searchQuery.isNotEmpty
-                      ? 'No orders matched "$searchQuery". Try another store or product name.'
+                      ? 'No orders matched "$searchQuery". Try another branch or product name.'
                       : 'Orders you place will appear in this tab.',
                   action: searchQuery.isNotEmpty
                       ? OutlinedButton(
@@ -536,7 +536,7 @@ class _OrderCard extends StatelessWidget {
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                order.store?.name ?? 'Store',
+                                order.store?.name ?? 'Pharmacy',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.titleSmall?.copyWith(

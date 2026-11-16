@@ -1040,13 +1040,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                           child: _infoRow(
                             context,
                             icon: Icons.local_shipping_outlined,
-                            title: product.freeShipping
-                                ? 'Free shipping'
-                                : 'Standard delivery',
-                            subtitle: product.freeShipping
-                                ? null
-                                : 'Fee shown at checkout',
-                            highlight: product.freeShipping,
+                            title: 'Delivery from your branch',
+                            subtitle: 'Fee shown at checkout',
+                            highlight: false,
                           ),
                         ),
                         Expanded(
@@ -1163,7 +1159,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                     Text(
                       (product.description == null ||
                               product.description!.trim().isEmpty)
-                          ? 'The seller has not added a description yet.'
+                          ? 'No description yet.'
                           : product.description!,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         height: 1.55,

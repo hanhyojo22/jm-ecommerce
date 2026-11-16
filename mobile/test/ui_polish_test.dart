@@ -85,8 +85,8 @@ void main() {
 
       await tester.scrollUntilVisible(find.text('Order help'), 200);
       expect(find.text('Order help'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Chat with Seller'), 200);
-      expect(find.text('Chat with Seller'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Chat with pharmacy'), 200);
+      expect(find.text('Chat with pharmacy'), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('View Order Summary'), 250);
       await tester.ensureVisible(find.text('View Order Summary'));
@@ -98,7 +98,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Hide Order Summary'), findsOneWidget);
-      expect(find.text('Shipping Fee'), findsOneWidget);
+      expect(find.text('Delivery fee'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
