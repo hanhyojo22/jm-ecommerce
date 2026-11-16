@@ -431,10 +431,14 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                   )
                 : SizedBox.square(dimension: 22, child: Center(child: icon)),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
