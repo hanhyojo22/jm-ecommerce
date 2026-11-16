@@ -3,13 +3,10 @@
     $canSubmit = in_array($product->status, ['draft', 'changes_required', 'rejected', 'inactive'], true);
     $stage = match ($product->status) { 'pending' => 1, 'active' => 2, default => 0 };
     $stageNote = match ($product->status) {
-        'draft' => 'Only you can see this listing. Submit it when the checklist is complete.',
-        'changes_required' => 'The administrator asked for changes. Edit the listing, then submit it again.',
-        'rejected' => 'This listing was rejected. Edit it to address the feedback, then submit it again.',
-        'pending' => 'An administrator is reviewing this listing. Editing is paused until they decide, or until you withdraw the submission.',
-        'active' => 'Buyers can find and order this listing. Changes go live right away; edits to the title, description, category or photos are re-checked by an administrator.',
+        'draft', 'changes_required', 'rejected', 'pending' => 'Only your team can see this medicine. Publish it when the checklist is complete.',
+        'active' => 'Customers can find and order this medicine. Changes go live as soon as you save.',
         'unlisted' => 'You unlisted this listing, so buyers cannot see it. Relist it from Products whenever you are ready.',
-        'inactive' => 'An administrator suspended this listing. Fix what the feedback asks for, then submit it for review again.',
+        'inactive' => 'JMMart suspended this medicine. Contact JMMart support to put it back on sale.',
         default => null,
     };
     $checks = [
@@ -114,7 +111,7 @@
                                 <li @class(['is-done' => $done])><span class="pe-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>{{ $label }}<span class="sr-only">, {{ $done ? 'done' : 'missing' }}</span></li>
                             @endforeach
                         </ul>
-                        @if ($canManageProducts)<form method="POST" action="{{ route('seller.products.submit', $product) }}" class="pe-actions">@csrf<button type="submit" class="seller-primary-button w-full">Submit for review</button></form>@endif
+                        @if ($canManageProducts)<form method="POST" action="{{ route('seller.products.submit', $product) }}" class="pe-actions">@csrf<button type="submit" class="seller-primary-button w-full">Publish</button></form>@endif
                     @endif
                     <x-input-error :messages="$errors->get('status')" class="mt-3" />
                 </section>

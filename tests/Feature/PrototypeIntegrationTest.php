@@ -22,7 +22,7 @@ class PrototypeIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_seller_uploads_variant_prices_and_photos_then_submits_for_review(): void
+    public function test_seller_uploads_variant_prices_and_photos_then_publishes(): void
     {
         Storage::fake('product_images');
         [$seller, $product] = $this->listing();
@@ -40,13 +40,11 @@ class PrototypeIntegrationTest extends TestCase
         $this->assertCount(1, $listing->colorPhotos('Black'));
         Storage::disk('product_images')->assertExists($listing->colorPhotos('Black')[0]->path);
 
-        $this->post(route('seller.products.submit', $listing))->assertRedirect(route('seller.products.index'));
-        $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'pending']);
-        $this->get(route('catalog.show', [$listing->store->slug, $listing->slug]))->assertNotFound();
-        $this->get(route('seller.products.edit', $listing))->assertSee('Editing is paused');
-        $this->patch(route('seller.products.update', $listing), ['name' => 'Bypassed review', 'sku' => $listing->sku, 'price' => '1.00', 'stock_quantity' => 4, 'status' => 'draft'])->assertSessionHasErrors('status');
-        $this->assertDatabaseHas('products', ['id' => $listing->id, 'name' => 'Variant camera', 'status' => 'pending']);
-        $this->assertDatabaseHas('audit_logs', ['entity_id' => $listing->id, 'action' => 'product.submitted']);
+        // One pharmacy company publishes its own medicines; there is no administrator review.
+        $this->post(route('seller.products.submit', $listing))->assertRedirect(route('seller.products.index'))->assertSessionHas('status', 'Variant camera is now on sale.');
+        $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'active']);
+        $this->get(route('catalog.show', [$listing->store->slug, $listing->slug]))->assertOk();
+        $this->assertDatabaseHas('audit_logs', ['entity_id' => $listing->id, 'action' => 'product.published']);
     }
 
     public function test_variant_price_precision_and_image_uploads_are_validated_before_saving(): void
@@ -79,7 +77,7 @@ class PrototypeIntegrationTest extends TestCase
         $this->assertCount(1, $listing->colorPhotos('White'));
         $this->assertCount(1, $listing->colorPhotos('Black'));
         $this->assertDatabaseMissing('product_images', ['product_id' => $listing->id, 'color' => null]);
-        $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'active']);
     }
 
     public function test_listing_without_shared_photos_needs_photos_for_every_color(): void
@@ -96,7 +94,7 @@ class PrototypeIntegrationTest extends TestCase
         $listing = Product::query()->where('sku', 'HALF')->sole();
 
         $this->post(route('seller.products.submit', $listing))
-            ->assertSessionHasErrors(['status' => 'Add photos for every color or upload a shared product photo before submitting.']);
+            ->assertSessionHasErrors(['status' => 'Add photos for every color or upload a shared product photo before publishing.']);
 
         $this->assertDatabaseHas('products', ['id' => $listing->id, 'status' => 'draft']);
     }
@@ -132,10 +130,9 @@ class PrototypeIntegrationTest extends TestCase
         $this->actingAs($seller)->get(route('seller.products.edit', $product))->assertSee('Please describe the included accessories.');
         $this->patch(route('seller.products.update', $product), ['name' => $product->name, 'sku' => $product->sku, 'price' => '10.00', 'stock_quantity' => 4, 'status' => 'draft', 'description' => 'Includes the carrying case.', 'category_id' => $product->category_id])->assertRedirect();
         $this->post(route('seller.products.submit', $product))->assertRedirect();
-        $this->actingAs($admin)->patch(route('admin.products.moderate', $product), ['status' => 'active', 'reason' => 'Listing passed the product review.'])->assertRedirect();
 
         $this->get(route('catalog.show', [$product->store->slug, $product->slug]))->assertSee('Includes the carrying case.');
-        $this->get(route('admin.products.show', $product))->assertSee('Please describe the included accessories.')->assertSee('Listing passed the product review.')->assertDontSee('Sample data');
+        $this->actingAs($admin)->get(route('admin.products.show', $product))->assertSee('Please describe the included accessories.')->assertDontSee('Sample data');
         $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'active']);
         $this->assertDatabaseHas('audit_logs', ['entity_id' => $product->id, 'action' => 'product.moderated', 'new_values->status' => $decision]);
     }

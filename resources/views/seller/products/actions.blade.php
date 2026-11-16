@@ -1,8 +1,6 @@
 <div class="flex items-center justify-end gap-2 max-xl:justify-start">
-    @if ($canManageProducts && in_array($product->status, ['draft', 'changes_required', 'rejected', 'inactive'], true))
-        <form method="POST" action="{{ route('seller.products.submit', $product) }}">@csrf<button type="submit" aria-label="Submit for review" class="sc-link min-h-10 px-1">Submit</button></form>
-    @elseif ($canManageProducts && $product->status === 'pending')
-        <form method="POST" action="{{ route('seller.products.withdraw', $product) }}">@csrf<button type="submit" aria-label="Withdraw submission" class="sc-link min-h-10 px-1">Withdraw</button></form>
+    @if ($canManageProducts && in_array($product->status, ['draft', 'changes_required', 'rejected', 'pending'], true))
+        <form method="POST" action="{{ route('seller.products.submit', $product) }}">@csrf<button type="submit" aria-label="Publish {{ $product->name }}" class="sc-link min-h-10 px-1">Publish</button></form>
     @elseif ($canManageProducts && $product->status === 'unlisted')
         <form method="POST" action="{{ route('seller.products.relist', $product) }}">@csrf<button type="submit" aria-label="Relist {{ $product->name }}" class="sc-link min-h-10 px-1">Relist</button></form>
     @endif

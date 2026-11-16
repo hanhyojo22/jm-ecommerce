@@ -301,21 +301,22 @@ class ProductController extends Controller
         $product = $this->editableProduct($request, $product);
         DB::transaction(function () use ($request, $product): void {
             $product = Product::query()->lockForUpdate()->findOrFail($product->id);
-            if (! in_array($product->status, ['draft', 'changes_required', 'rejected', 'inactive'], true)) {
-                throw ValidationException::withMessages(['status' => 'Only a draft, returned or suspended listing can be submitted for review.']);
+            // One pharmacy company publishes its own medicines; only a suspension needs JMMart to lift it.
+            if (! in_array($product->status, ['draft', 'changes_required', 'rejected', 'pending'], true)) {
+                throw ValidationException::withMessages(['status' => 'Only a draft can be published.']);
             }
             if (! filled($product->description) || $product->category_id === null || ! $product->images()->exists()) {
-                throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before submitting for review.']);
+                throw ValidationException::withMessages(['status' => 'Add a category, description, and product photo before publishing.']);
             }
             if ($product->hasVariantsWithoutPhotos()) {
-                throw ValidationException::withMessages(['status' => 'Add photos for every color or upload a shared product photo before submitting.']);
+                throw ValidationException::withMessages(['status' => 'Add photos for every color or upload a shared product photo before publishing.']);
             }
             $oldStatus = $product->status;
-            $product->update(['status' => 'pending', 'moderation_reason' => null]);
-            AuditLog::query()->create(['actor_user_id' => $request->user()->id, 'action' => 'product.submitted', 'entity_type' => Product::class, 'entity_id' => $product->id, 'old_values' => ['status' => $oldStatus], 'new_values' => ['status' => 'pending'], 'ip_address' => $request->ip()]);
+            $product->update(['status' => 'active', 'moderation_reason' => null]);
+            AuditLog::query()->create(['actor_user_id' => $request->user()->id, 'action' => 'product.published', 'entity_type' => Product::class, 'entity_id' => $product->id, 'old_values' => ['status' => $oldStatus], 'new_values' => ['status' => 'active'], 'ip_address' => $request->ip()]);
         });
 
-        return to_route('seller.products.index')->with('status', 'Listing submitted for administrator review.');
+        return to_route('seller.products.index')->with('status', "{$product->name} is now on sale.");
     }
 
     /**

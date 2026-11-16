@@ -617,7 +617,7 @@ class SellerProductTest extends TestCase
         $this->assertDatabaseHas('products', ['id' => $draft->id, 'status' => 'draft']);
     }
 
-    public function test_seller_fixes_a_suspended_listing_and_submits_it_again(): void
+    public function test_a_suspended_listing_can_be_edited_but_stays_off_sale_until_jmmart_lifts_it(): void
     {
         [$owner, $tenant, $store] = $this->seller();
         $product = $this->completeListing($tenant, $store, 'inactive');
@@ -628,9 +628,9 @@ class SellerProductTest extends TestCase
         ])->assertRedirect(route('seller.products.index'));
         $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'Canvas Tote, cotton', 'status' => 'inactive']);
 
-        $this->post(route('seller.products.submit', $product))->assertRedirect(route('seller.products.index'));
+        $this->post(route('seller.products.submit', $product))->assertSessionHasErrors(['status' => 'Only a draft can be published.']);
 
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'inactive']);
     }
 
     public function test_seller_cannot_remove_required_details_from_a_complete_active_listing(): void

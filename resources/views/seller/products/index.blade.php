@@ -11,7 +11,7 @@
         $onHand = fn ($product): int => $branch ? (int) $product->branch_quantity : (int) $product->stock_quantity;
         $hasFilters = collect($filters)->filter()->isNotEmpty();
         $hasAdvancedFilters = filled($filters['category_id'] ?? null) || filled($filters['stock'] ?? null) || ($filters['sort'] ?? 'newest') !== 'newest';
-        $tabs = ['' => 'All', 'active' => 'Published', 'pending' => 'Pending review', 'draft' => 'Draft', 'changes_required' => 'Changes required', 'rejected' => 'Rejected', 'unlisted' => 'Unlisted', 'inactive' => 'Suspended'];
+        $tabs = ['' => 'All', 'active' => 'Published', 'draft' => 'Draft', 'unlisted' => 'Unlisted', 'inactive' => 'Suspended'];
     @endphp
     <div class="page-shell"><div class="page-container seller-products-page seller-workspace-page seller-measure-wide sc-stack">
         @if ($errors->has('status'))<div role="alert" class="sc-notice" data-tone="danger">{{ $errors->first('status') }}</div>@endif
@@ -41,7 +41,7 @@
             @if ($products->isNotEmpty())
                 <div class="sc-table-wrap hidden xl:block">
                     <table class="sc-table">
-                        <thead><tr>@if ($canManageProducts)<th scope="col" class="is-tight"><span class="sr-only">Select</span></th>@endif<th scope="col">Product</th><th scope="col" class="is-num">Price</th><th scope="col">{{ $branch ? 'Stock at '.$branch->name : 'Inventory' }}</th><th scope="col">Approval</th><th scope="col" class="is-tight"><span class="sr-only">Actions</span></th></tr></thead>
+                        <thead><tr>@if ($canManageProducts)<th scope="col" class="is-tight"><span class="sr-only">Select</span></th>@endif<th scope="col">Product</th><th scope="col" class="is-num">Price</th><th scope="col">{{ $branch ? 'Stock at '.$branch->name : 'Inventory' }}</th><th scope="col">Status</th><th scope="col" class="is-tight"><span class="sr-only">Actions</span></th></tr></thead>
                         <tbody>
                             @foreach ($products as $product)
                                 <tr class="seller-products-row">
@@ -75,7 +75,7 @@
                 <div class="sc-empty"><h3>{{ $hasFilters ? 'No products match this view' : 'Your catalog is ready' }}</h3><p>{{ $hasFilters ? 'Try a different search or status.' : 'Add your first product to start building your store catalog.' }}</p>@if ($hasFilters)<a href="{{ route('seller.products.index') }}" class="seller-outline-button">Show all products</a>@elseif ($canManageProducts)<a href="{{ route('seller.products.create') }}" class="seller-primary-button">Add your first product</a>@endif</div>
             @endif
 
-            <div class="sc-card-foot"><span>Showing {{ $products->firstItem() ?? 0 }}–{{ $products->lastItem() ?? 0 }} of {{ number_format($products->total()) }} {{ Str::plural('listing', $products->total()) }} · Inventory and approval are separate states</span></div>
+            <div class="sc-card-foot"><span>Showing {{ $products->firstItem() ?? 0 }}–{{ $products->lastItem() ?? 0 }} of {{ number_format($products->total()) }} {{ Str::plural('listing', $products->total()) }}</span></div>
             @if ($products->hasPages())<div class="sc-card-foot">{{ $products->links() }}</div>@endif
         </section>
     </div></div>

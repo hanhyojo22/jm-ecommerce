@@ -22,7 +22,7 @@
 <div class="page-shell">
     <div class="page-container seller-workspace-page">
         @if ($editing && $product->moderation_reason)<div class="sc-notice mx-auto mb-5 max-w-[1120px] !block" data-tone="warning"><strong>Administrator feedback</strong><p class="mt-1 whitespace-pre-line">{{ $product->moderation_reason }}</p></div>@endif
-        @if ($editing && in_array($product->status, ['active', 'unlisted'], true))<div class="sc-notice mx-auto mb-5 max-w-[1120px] !block" data-tone="info"><strong>{{ $product->status === 'active' ? 'This listing stays on sale while you edit' : 'This listing stays unlisted while you edit' }}</strong><p class="mt-1">Changes apply as soon as you save. Edits to the title, description, category or photos are re-checked by an administrator.</p></div>@endif
+        @if ($editing && in_array($product->status, ['active', 'unlisted'], true))<div class="sc-notice mx-auto mb-5 max-w-[1120px] !block" data-tone="info"><strong>{{ $product->status === 'active' ? 'This listing stays on sale while you edit' : 'This listing stays unlisted while you edit' }}</strong><p class="mt-1">Changes apply as soon as you save.</p></div>@endif
         @if ($editing && ! $product->isEditableBySeller())
             <div class="sc-card sc-card-pad mb-5"><x-marketplace.product-status :status="$product->status" /><p class="mt-3 text-sm text-muted">Your submission is under review. Editing is paused until the administrator records a decision.</p><form method="POST" action="{{ route('seller.products.withdraw', $product) }}" class="mt-3 inline">@csrf<button type="submit" class="seller-outline-button">Withdraw submission to edit</button></form> <a href="{{ route('seller.products.index') }}" class="ml-3 inline-flex min-h-11 items-center font-semibold text-brand">Back to products</a></div>
         @else
@@ -368,11 +368,11 @@
             <aside class="ps-side" aria-label="Status and organization">
                 <section class="ps-card" aria-labelledby="status-heading">
                     <div class="ps-card-head"><h2 id="status-heading">Status</h2><x-marketplace.product-status :status="$editing ? $product->status : 'draft'" /></div>
-                    <p class="pe-hint">{{ $editing && $product->status === 'active' ? 'Saving changes moves this listing back to draft until it is reviewed again.' : 'Saved as a draft. Submit it for review from Products when it’s ready.' }}</p>
+                    <p class="pe-hint">{{ $editing && $product->status === 'active' ? 'Changes go live as soon as you save.' : 'Saved as a draft. Publish it from Products when it’s ready.' }}</p>
                     {{-- Fills one segment per review requirement met. --}}
                     <div class="ps-meter">
                         <p x-show="! checks.every(check => check.done)"><span x-text="checks.filter(check => check.done).length + ' of ' + checks.length"></span> requirements met</p>
-                        <p x-show="checks.every(check => check.done)" x-cloak><span>Ready for review</span></p>
+                        <p x-show="checks.every(check => check.done)" x-cloak><span>Ready to publish</span></p>
                         <div class="ps-meter-track" aria-hidden="true"><template x-for="(check, index) in checks" :key="check.label"><span :class="index < checks.filter(check => check.done).length && 'is-done'"></span></template></div>
                     </div>
                     <ul class="ps-checks">
