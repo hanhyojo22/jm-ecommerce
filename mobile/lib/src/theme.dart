@@ -249,6 +249,17 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
         color: scheme.onPrimary,
       ),
     ),
+    // Without this, selected radio tiles fall back to colorScheme.secondary,
+    // which is the amber kept for review stars.
+    radioTheme: RadioThemeData(
+      fillColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.disabled)
+            ? scheme.onSurface.withValues(alpha: 0.38)
+            : states.contains(WidgetState.selected)
+            ? scheme.primary
+            : scheme.onSurfaceVariant,
+      ),
+    ),
     progressIndicatorTheme: ProgressIndicatorThemeData(
       color: scheme.primary,
       linearTrackColor: scheme.surfaceContainerHighest,

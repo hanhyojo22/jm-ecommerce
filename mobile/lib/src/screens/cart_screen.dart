@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/cart_providers.dart';
-import '../theme.dart';
 import '../widgets/common.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -105,26 +105,46 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
                   children: [
-                    ColoredBox(
+                    Material(
                       color: scheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _BranchLine(name: value.lines.first.storeName),
-                          for (final line in value.lines)
+                          for (var i = 0; i < value.lines.length; i++) ...[
+                            if (i > 0)
+                              Divider(
+                                height: 1,
+                                indent: 16,
+                                endIndent: 16,
+                                color: scheme.outlineVariant,
+                              ),
                             _CartLineRow(
-                              line: line,
+                              line: value.lines[i],
                               onQuantity: _busy
                                   ? null
-                                  : (quantity) =>
-                                        _updateQuantity(ref, line, quantity),
-                              onRemove: _busy ? null : () => _remove(ref, line),
+                                  : (quantity) => _updateQuantity(
+                                      ref,
+                                      value.lines[i],
+                                      quantity,
+                                    ),
+                              onRemove: _busy
+                                  ? null
+                                  : () => _remove(ref, value.lines[i]),
                             ),
+                          ],
                         ],
                       ),
                     ),
+                    if (value.lines.any((line) => line.requiresPrescription))
+                      const Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: _PrescriptionNote(),
+                      ),
                   ],
                 ),
               ),
@@ -134,7 +154,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: SafeArea(
                 top: false,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   decoration: BoxDecoration(
                     color: scheme.surfaceContainerLowest,
                     border: Border(
@@ -149,10 +169,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
+                              'Subtotal',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            Text(
                               money(value.subtotal),
                               style: theme.textTheme.titleLarge?.copyWith(
-                                color: scheme.primary,
                                 fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
                               ),
                             ),
                             Text(
@@ -169,12 +195,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       const SizedBox(width: 10),
                       FilledButton(
                         style: FilledButton.styleFrom(
-                          minimumSize: const Size(132, 48),
+                          minimumSize: const Size(140, 52),
+                          padding: const EdgeInsets.symmetric(horizontal: 22),
+                          shape: const StadiumBorder(),
                         ),
                         onPressed: _busy || value.selectedCount == 0
                             ? null
                             : () => context.push('/checkout'),
-                        child: const Text('Checkout'),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Checkout'),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward_rounded, size: 18),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -276,27 +311,76 @@ class _BranchLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: Row(
         children: [
-          Icon(
-            Icons.storefront_outlined,
-            size: 18,
-            color: theme.colorScheme.primary,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.storefront_rounded,
+              size: 19,
+              color: scheme.primary,
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               'From $name',
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tells the shopper early that checkout will ask for a prescription.
+class _PrescriptionNote extends StatelessWidget {
+  const _PrescriptionNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 20,
+              color: scheme.onTertiaryContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Some medicines need a prescription. You’ll add a photo of it at checkout.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onTertiaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -320,11 +404,11 @@ class _CartLineRow extends StatelessWidget {
     final imageSize =
         MediaQuery.sizeOf(context).width < 360 ||
             MediaQuery.textScalerOf(context).scale(14) > 18
-        ? 64.0
-        : 100.0;
+        ? 60.0
+        : 76.0;
 
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 4, 16),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 6, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -334,9 +418,11 @@ class _CartLineRow extends StatelessWidget {
               url: line.imageUrl,
               width: imageSize,
               height: imageSize,
+              radius: 12,
+              placeholderIcon: PhosphorIconsRegular.pill,
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -350,8 +436,8 @@ class _CartLineRow extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          height: 1.25,
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
                         ),
                       ),
                     ),
@@ -388,19 +474,32 @@ class _CartLineRow extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   spacing: 8,
-                  runSpacing: 4,
+                  runSpacing: 6,
                   children: [
-                    Text(
-                      money(line.unitPrice),
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: scheme.primary,
-                      ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          money(line.lineTotal),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        if (line.quantity > 1)
+                          Text(
+                            '${money(line.unitPrice)} each',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ),
                     _CartQuantityControl(
                       quantity: line.quantity,
@@ -432,16 +531,28 @@ class _CartQuantityControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    // The same pill as the product card's in-cart stepper.
     final style = IconButton.styleFrom(
-      backgroundColor: scheme.surfaceContainerLow,
-      disabledBackgroundColor: scheme.surfaceContainerLow,
-      foregroundColor: scheme.onSurfaceVariant,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      foregroundColor: scheme.onSecondaryContainer,
+      disabledForegroundColor: scheme.onSecondaryContainer.withValues(
+        alpha: 0.35,
       ),
-      minimumSize: const Size(48, 48),
+      minimumSize: const Size(44, 44),
       padding: EdgeInsets.zero,
     );
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: onChanged == null
+            ? scheme.surfaceContainerHigh
+            : scheme.secondaryContainer,
+        shape: const StadiumBorder(),
+      ),
+      child: _stepper(context, style),
+    );
+  }
+
+  Widget _stepper(BuildContext context, ButtonStyle style) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -464,7 +575,11 @@ class _CartQuantityControl extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     '$quantity',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      color: scheme.onSecondaryContainer,
+                    ),
                   ),
                 ),
               ),

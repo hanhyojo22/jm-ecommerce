@@ -126,6 +126,28 @@ void main() {
     expect(api.placed!.fulfillment, 'pickup');
   });
 
+  for (final width in [320.0, 390.0]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('checkout fits $width at ${scale}x text', (tester) async {
+        await _pump(
+          tester,
+          _CheckoutApi(rx: true),
+          locator: const StoreLocatorState(
+            branches: [BranchDistance(_branch, 1.2)],
+          ),
+          width: width,
+          scale: scale,
+        );
+        // Lay out every section, down to the order summary.
+        await tester.drag(find.byType(ListView), const Offset(0, -4000));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Order summary'), findsOneWidget);
+      });
+    }
+  }
+
   testWidgets('a pin outside the delivery radius cannot be ordered', (
     tester,
   ) async {
@@ -154,8 +176,10 @@ Future<void> _pump(
   _CheckoutApi api, {
   required StoreLocatorState locator,
   LocationService location = const _HereLocation(),
+  double width = 390,
+  double scale = 1,
 }) async {
-  tester.view.physicalSize = const Size(390, 1600);
+  tester.view.physicalSize = Size(width, 1600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -178,7 +202,15 @@ Future<void> _pump(
         locationServiceProvider.overrideWithValue(location),
         attachmentPickerProvider.overrideWithValue(const _PickedRx()),
       ],
-      child: MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
+      child: MaterialApp.router(
+        theme: buildAppTheme(),
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();
