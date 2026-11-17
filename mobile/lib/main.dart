@@ -15,18 +15,12 @@ import 'src/theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    debugPrint('[Push] Firebase.initializeApp() succeeded');
-  } catch (error) {
-    // No google-services.json in this build, or no Google Play Services on
-    // the device: the app still works, just without push notifications.
-    debugPrint('[Push] Firebase.initializeApp() failed: $error');
-  }
+  // Started now and awaited before runApp: it runs alongside Clerk's startup
+  // instead of in front of it, and push registration still finds it ready.
+  final firebaseReady = _initFirebase();
 
   if (!AppConfig.hasClerk) {
+    await firebaseReady;
     runApp(const ProviderScope(child: JmMartApp()));
     return;
   }
@@ -45,6 +39,7 @@ Future<void> main() async {
         deepLinkStream: AppLinks().uriLinkStream,
       ),
     );
+    await firebaseReady;
 
     runApp(
       ProviderScope(
@@ -53,7 +48,20 @@ Future<void> main() async {
       ),
     );
   } catch (error) {
+    await firebaseReady;
     runApp(_StartupErrorApp(error: error));
+  }
+}
+
+/// Never throws: without google-services.json or Play Services the app still
+/// works, just without push notifications.
+Future<void> _initFirebase() async {
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    debugPrint('[Push] Firebase.initializeApp() succeeded');
+  } catch (error) {
+    debugPrint('[Push] Firebase.initializeApp() failed: $error');
   }
 }
 

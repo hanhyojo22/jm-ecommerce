@@ -78,6 +78,9 @@ class ReverbClient {
       '$scheme://$host:$port/app/$key?protocol=7&client=flutter&version=1.0',
     );
     final connected = Completer<void>();
+    // A failed connect is reported to the caller through _connect's rethrow; without
+    // this, the unawaited completer also surfaces as an unhandled exception.
+    connected.future.ignore();
     _connected = connected;
 
     _states.add(ReverbState.connecting);

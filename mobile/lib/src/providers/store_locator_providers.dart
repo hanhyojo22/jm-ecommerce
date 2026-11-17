@@ -50,12 +50,14 @@ class StoreLocatorState {
 class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
   @override
   Future<StoreLocatorState> build() async {
+    // Started together: each is a slow round trip, and the catalog waits on both.
+    final savedBranch = _savedBranchId();
     final branches = await ref.watch(storeBranchesProvider.future);
     // No store has a pin yet: don't ask for location just to show nothing.
     if (branches.isEmpty) {
       return const StoreLocatorState(branches: []);
     }
-    final savedBranchId = await _savedBranchId();
+    final savedBranchId = await savedBranch;
     final saved = branches
         .where((b) => b.branchId == savedBranchId)
         .firstOrNull
