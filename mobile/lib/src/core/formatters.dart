@@ -73,6 +73,10 @@ String shortDate(String? iso) {
   return date == null ? '' : DateFormat('MMM d, yyyy').format(date);
 }
 
+/// "24 hours", or "7 days" once the window is whole days of two or more.
+String returnWindowLabel(int hours) =>
+    hours >= 48 && hours % 24 == 0 ? '${hours ~/ 24} days' : '$hours hours';
+
 String dateTime(String? iso) {
   final date = DateTime.tryParse(iso ?? '')?.toLocal();
 

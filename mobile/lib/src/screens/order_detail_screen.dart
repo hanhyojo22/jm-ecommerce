@@ -553,7 +553,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           ),
                         ),
                         Text(
-                          'Report an issue within ${order.sellerOrders.isEmpty ? 24 : order.sellerOrders.first.returnWindowHours} hours of delivery.',
+                          'Report an issue within ${returnWindowLabel(order.sellerOrders.isEmpty ? 24 : order.sellerOrders.first.returnWindowHours)} of delivery.',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                             fontSize: 11.5,

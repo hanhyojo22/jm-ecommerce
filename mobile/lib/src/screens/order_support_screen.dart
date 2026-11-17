@@ -35,6 +35,7 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
   String _remedy = 'replacement';
   Map<String, dynamic>? _case;
   PickedAttachment? _proof;
+  final _photos = <PickedAttachment>[];
   bool _busy = false;
   bool _loading = false;
   bool _issueSent = false;
@@ -47,7 +48,8 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
     super.initState();
     _type = widget.requestReturn ? 'return' : 'other';
     for (final line in widget.sellerOrder.lines) {
-      _quantities[line.id] = line.quantity;
+      // Start at zero so an untouched form never claims the whole order.
+      _quantities[line.id] = 0;
     }
     if (widget.sellerOrder.latestReturnId != null) {
       _load();
@@ -128,9 +130,13 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
           remedy: _remedy,
           details: _details.text.trim(),
           quantities: _quantities,
+          photos: _photos,
         );
         if (mounted) {
-          setState(() => _case = value);
+          setState(() {
+            _case = value;
+            _photos.clear();
+          });
           _details.clear();
         }
       } else {
@@ -224,11 +230,20 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
     final value = _case!;
     final status = str(value['status']);
     final deadline = DateTime.tryParse(str(value['deadline']));
+    final deadlinePassed =
+        deadline != null && deadline.isBefore(DateTime.now());
+    final pharmacyDeadline = [
+      'awaiting_seller',
+      'awaiting_receipt',
+      'awaiting_fulfillment',
+    ].contains(status);
+    // Mirrors ReturnCaseWorkflow: offers expire, an overdue pharmacy can be escalated.
+    final answerExpired =
+        ['offered', 'rejected'].contains(status) && deadlinePassed;
     final canAppeal =
-        ['offered', 'rejected', 'awaiting_confirmation'].contains(status) ||
-        (status == 'awaiting_seller' &&
-            deadline != null &&
-            deadline.isBefore(DateTime.now()));
+        status == 'awaiting_confirmation' ||
+        (['offered', 'rejected'].contains(status) && !deadlinePassed) ||
+        (status == 'awaiting_seller' && deadlinePassed);
     final title = switch (status) {
       'awaiting_seller' => 'Waiting for the pharmacy',
       'offered' => 'The pharmacy offered a solution',
@@ -279,7 +294,17 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
         ],
         if (value['deadline'] != null) ...[
           const SizedBox(height: 12),
-          Text('Respond by ${dateTime(str(value['deadline']))}'),
+          Text(
+            pharmacyDeadline
+                ? 'The pharmacy should act by ${dateTime(str(value['deadline']))}'
+                : 'Respond by ${dateTime(str(value['deadline']))}',
+          ),
+        ],
+        if (answerExpired) ...[
+          const SizedBox(height: 12),
+          const Text(
+            'The time to respond has passed. Use Chat with pharmacy if you still need help.',
+          ),
         ],
         if (boolean(value['can_respond'])) ...[
           if (canAppeal) ...[
@@ -311,12 +336,12 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
                   : () async {
                       final proof = await ref
                           .read(attachmentPickerProvider)
-                          .pickDocument();
+                          .pickImage();
                       if (mounted && proof != null) {
                         setState(() => _proof = proof);
                       }
                     },
-              child: Text(_proof?.name ?? 'Attach return handoff proof'),
+              child: Text(_proof?.name ?? 'Attach a photo of the handoff'),
             ),
             FilledButton(
               onPressed: _busy ? null : () => _act('handoff'),
@@ -456,7 +481,7 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
                         if (_type == 'return') ...[
                           const SizedBox(height: 16),
                           Text(
-                            'Report affected items within ${order.returnWindowHours} hours of delivery. The pharmacy reviews every request.',
+                            'Report affected items within ${returnWindowLabel(order.returnWindowHours)} of delivery. The pharmacy reviews every request.',
                           ),
                           if (!canReturn)
                             const Text(
@@ -521,7 +546,7 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 16),
                               child: DropdownButtonFormField<int>(
-                                initialValue: line.quantity,
+                                initialValue: _quantities[line.id],
                                 isExpanded: true,
                                 decoration: InputDecoration(
                                   labelText:
@@ -559,6 +584,38 @@ class _OrderSupportScreenState extends ConsumerState<OrderSupportScreen> {
                               ? 'Please describe the problem in at least 10 characters.'
                               : null,
                         ),
+                        if (_type == 'return') ...[
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              for (final photo in _photos)
+                                InputChip(
+                                  label: Text(photo.name),
+                                  onDeleted: _busy
+                                      ? null
+                                      : () => setState(
+                                          () => _photos.remove(photo),
+                                        ),
+                                ),
+                            ],
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: _busy || _photos.length >= 3
+                                ? null
+                                : () async {
+                                    final photo = await ref
+                                        .read(attachmentPickerProvider)
+                                        .pickImage();
+                                    if (mounted && photo != null) {
+                                      setState(() => _photos.add(photo));
+                                    }
+                                  },
+                            icon: const Icon(Icons.add_a_photo_outlined),
+                            label: Text(
+                              'Add photo (${_photos.length} of 3, optional)',
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         FilledButton(
                           onPressed: _busy || (_type == 'return' && !canReturn)

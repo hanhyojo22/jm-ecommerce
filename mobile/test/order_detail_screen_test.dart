@@ -46,7 +46,10 @@ void main() {
   ) async {
     final api = _OrderApi()
       ..status = 'delivered'
-      ..caseStatus = 'offered';
+      ..caseStatus = 'offered'
+      ..deadline = DateTime.now()
+          .add(const Duration(days: 1))
+          .toIso8601String();
     await _pump(tester, api);
     await tester.scrollUntilVisible(find.text('Return/Refund'), 200);
     await tester.pumpAndSettle();
@@ -93,8 +96,42 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send request'));
     await tester.pumpAndSettle();
-    expect(api.returnQuantities, {'line': 2});
+    expect(api.returnQuantities, isNull);
+    expect(find.text('Choose at least one affected item.'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('0 of 2'));
+    await tester.tap(find.text('0 of 2'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1 of 2').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.textContaining('Add photo'));
+    await tester.tap(find.textContaining('Add photo'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Send request'));
+    await tester.tap(find.text('Send request'));
+    await tester.pumpAndSettle();
+    expect(api.returnQuantities, {'line': 1});
+    expect(api.returnPhotos, 1);
     expect(find.text('Waiting for the pharmacy'), findsOneWidget);
+  });
+
+  testWidgets('an expired pharmacy offer can no longer be answered', (
+    tester,
+  ) async {
+    final api = _OrderApi()
+      ..status = 'delivered'
+      ..caseStatus = 'offered';
+    await _pump(tester, api);
+    await tester.scrollUntilVisible(find.text('Return/Refund'), 200);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Return/Refund'));
+    await tester.pumpAndSettle();
+    expect(find.text('Accept solution'), findsNothing);
+    expect(find.text('Ask support to review'), findsNothing);
+    expect(
+      find.textContaining('The time to respond has passed'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('order help submits a cancellation request before preparation', (
@@ -467,6 +504,8 @@ class _OrderApi extends ApiClient {
   String? issueType;
   String? caseStatus;
   Map<String, int>? returnQuantities;
+  int returnPhotos = 0;
+  String deadline = '2020-01-01T00:00:00Z';
 
   @override
   Future<Map<String, dynamic>> returnRequest(String id) async => {
@@ -474,7 +513,7 @@ class _OrderApi extends ApiClient {
     'status': caseStatus,
     'details': 'The item arrived damaged.',
     'can_respond': true,
-    'deadline': '2020-01-01T00:00:00Z',
+    'deadline': deadline,
     'events': [],
   };
 
@@ -505,8 +544,10 @@ class _OrderApi extends ApiClient {
     required String remedy,
     required String details,
     required Map<String, int> quantities,
+    List<PickedAttachment> photos = const [],
   }) async {
     returnQuantities = Map.of(quantities);
+    returnPhotos = photos.length;
     return {
       'id': 'request',
       'status': 'awaiting_seller',

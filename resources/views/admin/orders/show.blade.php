@@ -68,7 +68,7 @@
                 </span>
                 <div class="min-w-0">
                     <h2 id="late-claims-heading" class="font-semibold text-ink">Later return or warranty claims</h2>
-                    <p class="mt-1 max-w-3xl text-sm leading-6 text-muted">Support may open a case when the seven-day interface window has ended or delivery timing is uncertain.</p>
+                    <p class="mt-1 max-w-3xl text-sm leading-6 text-muted">Support may open a case when the customer's request window has ended or delivery timing is uncertain.</p>
                 </div>
             </div>
 
@@ -132,7 +132,7 @@
                                     <x-returns.icon name="chevron-down" class="size-4 transition group-open:rotate-180" />
                                 </summary>
                                 <form method="POST" action="{{ route('admin.returns.store', $sellerOrder) }}" class="grid gap-4 border-t border-line bg-canvas/40 px-4 py-4 sm:px-5">@csrf
-                                    <p class="text-sm leading-6 text-muted">Support can open a case on this store order at any time, including after the buyer's seven-day window.</p>
+                                    <p class="text-sm leading-6 text-muted">Support can open a case on this store order at any time, including after the customer's request window ends.</p>
 
                                     @if ($sellerOrder->issues->contains('status', 'open'))
                                         <div>

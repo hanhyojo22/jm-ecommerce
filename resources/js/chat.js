@@ -4,6 +4,7 @@ window.chatInbox = (userId) => ({
     onConnected: null,
     onReady: null,
     onOnline: null,
+    fallbackPoll: null,
 
     init() {
         this.onReady = () => this.connect();
@@ -11,6 +12,12 @@ window.chatInbox = (userId) => ({
         window.addEventListener('reverb:ready', this.onReady);
         window.addEventListener('online', this.onOnline);
         this.connect();
+        // Poll only while the live socket is down, so a dropped connection still shows new chats.
+        this.fallbackPoll = setInterval(() => {
+            if (navigator.onLine && document.visibilityState === 'visible' && this.connection?.state !== 'connected') {
+                this.$wire.$refresh();
+            }
+        }, 15000);
     },
 
     connect() {
@@ -25,6 +32,7 @@ window.chatInbox = (userId) => ({
     },
 
     destroy() {
+        clearInterval(this.fallbackPoll);
         window.removeEventListener('reverb:ready', this.onReady);
         window.removeEventListener('online', this.onOnline);
         this.connection?.unbind('connected', this.onConnected);
@@ -64,8 +72,15 @@ window.chatThread = (conversationId, userId) => ({
     unhook: null,
     typingTimer: null,
     receiptTimer: null,
+    fallbackPoll: null,
 
     init() {
+        // Poll only while the live socket is down; the banner tells the user it is happening.
+        this.fallbackPoll = setInterval(() => {
+            if (this.online && !this.liveConnected && document.visibilityState === 'visible') {
+                this.$wire.syncLatestMessages();
+            }
+        }, 15000);
         this.onOnline = () => {
             this.online = true;
             this.$wire.syncLatestMessages();
@@ -119,6 +134,7 @@ window.chatThread = (conversationId, userId) => ({
         this.connection?.unbind('connected', this.onConnected);
         this.connection?.unbind('state_change', this.onStateChange);
         if (this.channel) window.Echo?.leave(`conversation.${conversationId}`);
+        clearInterval(this.fallbackPoll);
         clearTimeout(this.typingTimer);
         clearTimeout(this.receiptTimer);
         this.observer?.disconnect();

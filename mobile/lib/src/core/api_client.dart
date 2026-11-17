@@ -443,21 +443,38 @@ class ApiClient {
     required String remedy,
     required String details,
     required Map<String, int> quantities,
-  }) async => mapOf(
-    await _data(
-      'POST',
-      '/orders/seller-orders/$sellerOrderId/returns',
-      data: {
-        'reason': reason,
-        'requested_remedy': remedy,
-        'details': details,
-        'items': [
-          for (final item in quantities.entries)
-            {'order_item_id': item.key, 'quantity': item.value},
+    List<PickedAttachment> photos = const [],
+  }) async {
+    final items = quantities.entries.toList();
+    final form = FormData()
+      ..fields.addAll([
+        MapEntry('reason', reason),
+        MapEntry('requested_remedy', remedy),
+        MapEntry('details', details),
+        for (final (index, item) in items.indexed) ...[
+          MapEntry('items[$index][order_item_id]', item.key),
+          MapEntry('items[$index][quantity]', '${item.value}'),
         ],
-      },
-    ),
-  );
+      ])
+      ..files.addAll([
+        for (final photo in photos)
+          MapEntry(
+            'photos[]',
+            MultipartFile.fromBytes(
+              photo.bytes,
+              filename: photo.name,
+              contentType: DioMediaType.parse(photo.mimeType),
+            ),
+          ),
+      ]);
+    return mapOf(
+      await _data(
+        'POST',
+        '/orders/seller-orders/$sellerOrderId/returns',
+        data: form,
+      ),
+    );
+  }
 
   Future<Map<String, dynamic>> updateReturnRequest(
     String id,
