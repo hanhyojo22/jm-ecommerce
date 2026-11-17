@@ -27,6 +27,10 @@ class Order extends Model
         'delivery_note',
         'subtotal',
         'shipping_amount',
+        'discount_amount',
+        'discount_card_type',
+        'discount_card_number',
+        'discount_card_name',
         'total',
         'status',
         'fulfillment_method',
@@ -34,9 +38,16 @@ class Order extends Model
         'delivery_longitude',
     ];
 
+    /**
+     * The SC/PWD card number never rides along when an order is serialized; screens read it on purpose.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['discount_card_number'];
+
     protected function casts(): array
     {
-        return ['subtotal' => 'decimal:2', 'shipping_amount' => 'decimal:2', 'total' => 'decimal:2', 'delivery_latitude' => 'float', 'delivery_longitude' => 'float'];
+        return ['subtotal' => 'decimal:2', 'shipping_amount' => 'decimal:2', 'discount_amount' => 'decimal:2', 'discount_card_number' => 'encrypted', 'total' => 'decimal:2', 'delivery_latitude' => 'float', 'delivery_longitude' => 'float'];
     }
 
     /**

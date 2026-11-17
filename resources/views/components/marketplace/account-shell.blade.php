@@ -4,7 +4,7 @@
     'orders' => 'account-measure-orders',
     'messages' => 'account-measure-messages',
     'reviews' => 'account-measure-reviews',
-    'addresses' => 'account-measure-addresses',
+    'addresses', 'saved' => 'account-measure-addresses',
     'settings' => 'account-measure-settings',
     default => '',
 })

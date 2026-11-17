@@ -4,6 +4,7 @@
     $user = auth()->user();
     $items = [
         ['label' => 'My Purchases', 'href' => route('orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('orders.*', 'returns.show')],
+        ['label' => 'Saved Items', 'href' => route('saved-products.index'), 'icon' => 'saved', 'active' => request()->routeIs('saved-products.*')],
         ['label' => 'My Reviews', 'href' => route('reviews.index'), 'icon' => 'reviews', 'active' => request()->routeIs('reviews.index')],
         ['label' => 'Delivery Addresses', 'href' => route('delivery-addresses.index'), 'icon' => 'addresses', 'active' => request()->routeIs('delivery-addresses.*')],
         ['label' => 'Messages', 'href' => $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index'), 'icon' => 'messages', 'active' => request()->routeIs('messages.*')],
@@ -18,6 +19,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 @switch($item['icon'])
                     @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break
+                    @case('saved')<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z" />@break
                     @case('reviews')<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />@break
                     @case('addresses')<path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12Z" /><circle cx="12" cy="9" r="2" />@break
                     @case('messages')<path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z" />@break

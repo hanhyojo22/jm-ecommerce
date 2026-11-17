@@ -1,4 +1,4 @@
-{{-- Shown on an order with a prescription medicine. Only pharmacists can open the file or decide. --}}
+{{-- Shown on an order with a prescription medicine. Only pharmacists can open the pages or decide. --}}
 @php($prescription = $sellerOrder->order->prescription)
 @php($canReviewPrescription = $prescription !== null && (auth()->user()->sellerMembership()?->is_pharmacist ?? false))
 @if ($prescription)
@@ -12,7 +12,12 @@
             <p class="mt-1">{{ $prescription->status === 'needs_photo' ? 'Clearer photo asked for' : ucfirst($prescription->status) }} by {{ $prescription->reviewer->name }} on {{ $prescription->reviewed_at->format('M j, Y · g:i A') }}.@if ($prescription->reason) Reason: {{ $prescription->reason }}@endif</p>
         @endif
         @if ($canReviewPrescription)
-            <p class="mt-2"><a href="{{ route('seller.orders.prescription.show', $sellerOrder) }}" class="font-semibold underline">View prescription ({{ $prescription->original_name }})</a></p>
+            <p class="mt-2 font-semibold">Prescription pages ({{ $prescription->images->count() }})</p>
+            <ul class="mt-1 list-disc space-y-1 pl-5">
+                @foreach ($prescription->images as $image)
+                    <li><a href="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image]) }}" class="font-semibold underline">{{ $image->original_name }}</a></li>
+                @endforeach
+            </ul>
             @if ($prescription->status === 'pending')
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
                     <form method="POST" action="{{ route('seller.orders.prescription.update', $sellerOrder) }}">@csrf @method('PATCH')
@@ -27,6 +32,23 @@
                     </form>
                 </div>
             @endif
+        @endif
+        @php($timeline = $prescription->timeline())
+        @if ($timeline->isNotEmpty())
+            <details class="mt-3">
+                <summary class="cursor-pointer text-sm font-semibold">Review history</summary>
+                <ol class="mt-2 space-y-2 text-sm">
+                    @foreach ($timeline as $event)
+                        <li>
+                            <span class="font-medium">{{ ['prescription.submitted' => 'Customer sent the prescription', 'prescription.resubmitted' => 'Customer sent a new copy', 'prescription.approved' => 'Prescription approved', 'prescription.rejected' => 'Prescription rejected', 'prescription.needs_photo' => 'Clearer photo requested'][$event->action] ?? $event->action }}</span>
+                            <span class="text-muted">· {{ $event->created_at->format('M j, Y · g:i A') }}@if ($event->actor) · {{ $event->actor->name }}@endif</span>
+                            @if ($event->new_values['reason'] ?? null)
+                                <span class="block text-muted">{{ $event->new_values['reason'] }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ol>
+            </details>
         @endif
         <x-input-error :messages="$errors->get('prescription')" class="mt-2" />
         <x-input-error :messages="$errors->get('reason')" class="mt-2" />

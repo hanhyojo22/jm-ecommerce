@@ -171,7 +171,7 @@ void main() {
       expect(find.text('Prescription approved'), findsOneWidget);
       expect(find.text('Ready for pickup'), findsWidgets);
       expect(find.text('Picked up'), findsOneWidget);
-      expect(find.text('Pickup at the branch'), findsOneWidget);
+      expect(find.text('Pickup at Independent store'), findsOneWidget);
     },
   );
 
@@ -259,7 +259,7 @@ void main() {
         findsOneWidget,
       );
 
-      await tester.tap(find.text('Send new photo'));
+      await tester.tap(find.text('Send new pages'));
       await tester.pumpAndSettle();
 
       expect(api.resubmitted, 'clear.jpg');
@@ -611,9 +611,9 @@ class _OrderApi extends ApiClient {
   @override
   Future<OrderDetail> resubmitPrescription(
     String orderId,
-    PickedAttachment prescription,
+    List<PickedAttachment> prescriptions,
   ) async {
-    resubmitted = prescription.name;
+    resubmitted = prescriptions.single.name;
     this.prescription = {'status': 'pending', 'reason': null};
     return order(orderId);
   }
@@ -719,4 +719,12 @@ class _ClearPhoto implements AttachmentPicker {
 
   @override
   Future<PickedAttachment?> pickDocument() async => null;
+
+  @override
+  Future<List<PickedAttachment>> pickImages() async => [
+    PickedAttachment(name: 'clear.jpg', bytes: Uint8List.fromList([1, 2, 3])),
+  ];
+
+  @override
+  Future<List<PickedAttachment>> pickDocuments() async => const [];
 }

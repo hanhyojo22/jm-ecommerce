@@ -1357,6 +1357,16 @@ class _FakeAttachmentPicker implements AttachmentPicker {
 
     return document;
   }
+
+  @override
+  Future<List<PickedAttachment>> pickImages() async => [
+    if (image != null) image!,
+  ];
+
+  @override
+  Future<List<PickedAttachment>> pickDocuments() async => [
+    if (document != null) document!,
+  ];
 }
 
 class _FakeReverbClient extends ReverbClient {

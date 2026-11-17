@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Marketplace;
 
+use App\Actions\ReorderToCart;
 use App\Actions\ResubmitPrescription;
 use App\Actions\StartOnlinePayment;
 use App\Actions\UpdateSellerOrderStatus;
@@ -12,6 +13,7 @@ use App\Queries\BuyerOrderQuery;
 use App\Queries\RecommendationQuery;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\RedirectResponse as SymfonyRedirect;
@@ -84,7 +86,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        $order = $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment', 'prescription');
+        $order = $order->load('sellerOrders.store', 'sellerOrders.issues', 'sellerOrders.returnCases', 'sellerOrders.items.product.images', 'sellerOrders.items.product.store', 'sellerOrders.items.review', 'payment', 'prescription.images');
 
         return view($request->header('X-Order-Modal') ? 'marketplace.orders._modal-ledger' : 'marketplace.orders.show', [
             'order' => $order,
@@ -98,13 +100,18 @@ class OrderController extends Controller
     public function resubmitPrescription(Request $request, Order $order, ResubmitPrescription $resubmit): RedirectResponse
     {
         abort_unless($order->user_id === $request->user()->id, 404);
-        $data = $request->validate([
-            'prescription' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+        $request->validate([
+            'prescription' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            'prescriptions' => ['required_without:prescription', 'array', 'max:10'],
+            'prescriptions.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
         ]);
 
-        $resubmit->handle($request->user(), $order, $data['prescription']);
+        $resubmit->handle($request->user(), $order, array_values(array_filter([
+            ...Arr::wrap($request->file('prescriptions')),
+            ...Arr::wrap($request->file('prescription')),
+        ])));
 
-        return to_route('orders.show', $order)->with('status', 'Thanks. A pharmacist will check your new photo.');
+        return to_route('orders.show', $order)->with('status', 'Thanks. A pharmacist will check your new prescription.');
     }
 
     /**
@@ -114,7 +121,7 @@ class OrderController extends Controller
     public function placed(Request $request, Order $order): RedirectResponse|View
     {
         $this->authorize('view', $order);
-        $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'payment', 'prescription');
+        $order->load('sellerOrders.store', 'sellerOrders.items.product.images', 'payment', 'prescription.images');
 
         if ($order->sellerOrders->contains(fn (SellerOrder $sellerOrder): bool => $sellerOrder->status !== 'pending')) {
             return to_route('orders.show', $order);
@@ -148,6 +155,16 @@ class OrderController extends Controller
     /**
      * The buyer confirms the parcel arrived, so the store order is delivered.
      */
+    public function reorder(Request $request, Order $order, ReorderToCart $reorderToCart): RedirectResponse
+    {
+        abort_unless($order->user_id === $request->user()->id, 404);
+        $skipped = $reorderToCart->handle($request->user(), $order);
+
+        return to_route('cart.index')->with('status', $skipped === []
+            ? 'Added your past order to the cart.'
+            : 'Added what is in stock. Not available now: '.implode(', ', $skipped).'.');
+    }
+
     public function received(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
         $this->authorize('receive', $sellerOrder);

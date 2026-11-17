@@ -901,6 +901,8 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
       appBar: AppBar(
         title: Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
+          if (ref.watch(isSignedInProvider))
+            SaveProductButton(productId: product.id),
           IconButton(
             tooltip: 'Open cart',
             onPressed: () => context.push('/cart'),
@@ -1156,6 +1158,34 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                     ],
                   ),
                 ),
+              if (product.cheaperAlternatives.isNotEmpty)
+                _block(
+                  context,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Same medicine, lower price',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Same generic name, strength and form. Ask the pharmacist if you are unsure.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _productStrip(
+                        context,
+                        product.cheaperAlternatives,
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
               _block(
                 context,
                 Column(
@@ -1272,6 +1302,56 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Heart in the product app bar: saves the product to the wishlist or removes it.
+class SaveProductButton extends ConsumerStatefulWidget {
+  const SaveProductButton({super.key, required this.productId});
+
+  final String productId;
+
+  @override
+  ConsumerState<SaveProductButton> createState() => _SaveProductButtonState();
+}
+
+class _SaveProductButtonState extends ConsumerState<SaveProductButton> {
+  bool _busy = false;
+
+  Future<void> _toggle(bool saved) async {
+    setState(() => _busy = true);
+    final api = ref.read(apiClientProvider);
+    try {
+      saved
+          ? await api.unsaveProduct(widget.productId)
+          : await api.saveProduct(widget.productId);
+      ref.invalidate(savedProductsProvider);
+      await ref.read(savedProductsProvider.future);
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final savedList = ref.watch(savedProductsProvider).value;
+    final saved = savedList?.any((p) => p.id == widget.productId) ?? false;
+
+    return IconButton(
+      tooltip: saved ? 'Remove from saved items' : 'Save for later',
+      onPressed: savedList == null || _busy ? null : () => _toggle(saved),
+      icon: Icon(
+        saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+        color: saved ? Theme.of(context).colorScheme.error : null,
       ),
     );
   }

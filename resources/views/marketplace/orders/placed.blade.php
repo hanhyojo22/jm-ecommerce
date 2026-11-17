@@ -82,6 +82,9 @@
 
                         <dl class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-y-2.5 [&>dd]:pl-3 px-6 pb-5 pt-6 text-[13px] leading-[1.5]">
                             <dt class="text-muted">Items ({{ $itemCount }})</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($order->subtotal, 2) }}</dd>
+                            @if($order->discount_amount > 0)
+                                <dt class="text-muted">{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd class="text-right tabular-nums text-success">−₱{{ number_format($order->discount_amount, 2) }}</dd>
+                            @endif
                             <dt class="text-muted">Delivery fee</dt><dd class="text-right font-semibold text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd>
                             @unless($isCod)
                                 <dt class="text-muted">Payment fee</dt><dd class="text-right tabular-nums text-ink">₱{{ number_format($fee, 2) }}</dd>

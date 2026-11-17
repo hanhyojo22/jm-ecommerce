@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\AddProductToCart;
+use App\Actions\ReorderToCart;
 use App\Actions\UpdateCartItemQuantity;
 use App\Actions\UpdateCartSelection;
 use App\Http\Controllers\Controller;
@@ -15,7 +16,6 @@ use App\Queries\CatalogQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
 {
@@ -51,31 +51,14 @@ class CartController extends Controller
      * cannot fill now is left out and named, so the app can say so; prescriptions are still
      * checked at checkout.
      */
-    public function reorder(Request $request, Order $order, AddProductToCart $addProductToCart): JsonResponse
+    public function reorder(Request $request, Order $order, ReorderToCart $reorderToCart): JsonResponse
     {
         abort_unless($order->user_id === $request->user()->id, 404);
         $branch = $request->validate(['branch' => ['nullable', 'ulid']])['branch'] ?? null;
-        $skipped = [];
-
-        foreach ($order->sellerOrders()->with('items')->get()->flatMap->items as $item) {
-            $product = $item->product_id === null ? null : Product::query()->find($item->product_id);
-
-            try {
-                if ($product === null) {
-                    $skipped[] = $item->product_name;
-
-                    continue;
-                }
-                $addProductToCart->handle($request->user(), $product, (int) $item->quantity, $item->product_variant_id, false, $branch);
-            } catch (ValidationException) {
-                $skipped[] = $item->product_name;
-            }
-        }
-
-        $request->user()->unsetRelation('cart');
+        $skipped = $reorderToCart->handle($request->user(), $order, $branch);
         $response = $this->payload($request);
 
-        return $response->setData([...$response->getData(true), 'skipped' => array_values(array_unique($skipped))]);
+        return $response->setData([...$response->getData(true), 'skipped' => $skipped]);
     }
 
     /**

@@ -3,7 +3,7 @@
     @php($itemCount = $cart->items->sum('quantity'))
     @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
-    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription']) ? 3 : 1)))
+    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription', 'prescriptions', 'discount_card', 'discount_card.type', 'discount_card.id_number', 'discount_card.name']) ? 3 : 1)))
     @php($prescriptionMedicines = $cart->items->filter(fn ($item) => $item->product->requires_prescription)->map(fn ($item) => $item->product->name)->unique())
     @php($fieldInput = 'min-h-[46px] w-full rounded-md border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
 
@@ -17,8 +17,14 @@
             method: @js(old('payment_method', 'cod')),
             {{-- A closed branch takes pickup only; delivery opens again at its next opening. --}}
             fulfillment: @js(old('fulfillment_method', $closedUntil ? 'pickup' : 'delivery')),
-            totals: @js(['delivery' => '₱'.number_format($total, 2), 'pickup' => '₱'.number_format($subtotal, 2)]),
-            get totalText() { return this.totals[this.fulfillment] },
+            card: @js(filled(old('discount_card.type'))),
+            totals: @js([
+                'delivery' => '₱'.number_format($total, 2),
+                'pickup' => '₱'.number_format($subtotal, 2),
+                'deliveryCard' => '₱'.number_format(bcsub($total, $seniorPwdDiscount, 2), 2),
+                'pickupCard' => '₱'.number_format(bcsub($subtotal, $seniorPwdDiscount, 2), 2),
+            ]),
+            get totalText() { return this.totals[this.fulfillment + (this.card ? 'Card' : '')] },
             get activeFields() { return this.fulfillment === 'pickup' ? ['recipient_name', 'phone'] : this.fields },
             methodLabels: @js(\App\Models\Payment::METHOD_LABELS),
             get placeLabel() { return this.method === 'cod' ? 'Place order' : 'Place order & pay with ' + this.methodLabels[this.method] },
@@ -270,10 +276,42 @@
                             @if ($prescriptionMedicines->isNotEmpty())
                                 <div class="mt-4 rounded-md border border-line bg-slate-50 px-3.5 py-3">
                                     <label for="prescription" class="mb-1 block text-[13.5px] font-semibold text-ink">Prescription</label>
-                                    <p id="prescription-hint" class="mb-2 text-[13px] leading-normal text-muted">{{ $prescriptionMedicines->join(', ', ' and ') }} {{ $prescriptionMedicines->count() === 1 ? 'needs' : 'need' }} a doctor’s prescription. Upload a clear photo or PDF; a pharmacist checks it before your order is prepared.</p>
-                                    <input id="prescription" name="prescription" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-describedby="prescription-hint" @error('prescription') aria-invalid="true" @enderror class="block w-full text-[13px] text-ink">
+                                    <p id="prescription-hint" class="mb-2 text-[13px] leading-normal text-muted">{{ $prescriptionMedicines->join(', ', ' and ') }} {{ $prescriptionMedicines->count() === 1 ? 'needs' : 'need' }} a doctor’s prescription. Upload every page as a photo or PDF (up to 10); a pharmacist checks it before your order is prepared.</p>
+                                    <input id="prescription" name="prescriptions[]" type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" aria-describedby="prescription-hint" @error('prescription') aria-invalid="true" @enderror class="block w-full text-[13px] text-ink">
                                     @error('prescription')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                                    @error('prescriptions.*')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
                                 </div>
+                            @endif
+
+                            @if (bccomp($seniorPwdDiscount, '0', 2) > 0)
+                                <fieldset class="mt-4 rounded-md border border-line bg-slate-50 px-3.5 py-3">
+                                    <legend class="sr-only">Senior citizen or PWD discount</legend>
+                                    <label class="flex min-h-11 items-center gap-2.5 text-[13.5px] font-semibold text-ink">
+                                        <input type="checkbox" x-model="card" class="size-4 rounded border-line text-brand">
+                                        Senior citizen / PWD discount <span class="font-normal text-success">−₱{{ number_format($seniorPwdDiscount, 2) }}</span>
+                                    </label>
+                                    <div x-show="card" x-cloak class="mt-2 grid gap-3 sm:grid-cols-3">
+                                        <div>
+                                            <label for="discount_card_type" class="mb-1 block text-[12.5px] font-semibold text-ink">Card</label>
+                                            <select id="discount_card_type" name="discount_card[type]" :disabled="!card" class="{{ $fieldInput }}">
+                                                @foreach (\App\Support\SeniorPwdDiscount::CARD_TYPES as $cardType => $cardLabel)
+                                                    <option value="{{ $cardType }}" @selected(old('discount_card.type') === $cardType)>{{ $cardLabel }} ID</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="discount_card_id_number" class="mb-1 block text-[12.5px] font-semibold text-ink">ID number</label>
+                                            <input id="discount_card_id_number" name="discount_card[id_number]" maxlength="40" autocomplete="off" :disabled="!card" :required="card" value="{{ old('discount_card.id_number') }}" class="{{ $fieldInput }}">
+                                        </div>
+                                        <div>
+                                            <label for="discount_card_name" class="mb-1 block text-[12.5px] font-semibold text-ink">Name on the ID</label>
+                                            <input id="discount_card_name" name="discount_card[name]" maxlength="120" :disabled="!card" :required="card" value="{{ old('discount_card.name') }}" class="{{ $fieldInput }}">
+                                        </div>
+                                    </div>
+                                    <p x-show="card" x-cloak class="mt-2 text-[12.5px] leading-normal text-muted">For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.</p>
+                                    @error('discount_card')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                                    @error('discount_card.*')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                                </fieldset>
                             @endif
 
                             <div class="mt-4">
@@ -338,6 +376,9 @@
                         <dl class="mt-4 grid gap-2 border-t border-dashed border-[#DBE3EF] pt-3.5 text-[13px]">
                             <div class="flex justify-between gap-3 text-muted"><dt>Subtotal</dt><dd class="tabular-nums text-ink">₱{{ number_format($subtotal, 2) }}</dd></div>
                             <div class="flex justify-between gap-3 text-muted" x-show="fulfillment === 'delivery'"><dt>Delivery fee</dt>@if (bccomp($deliveryFee, '0', 2) > 0)<dd class="tabular-nums text-ink">₱{{ number_format($deliveryFee, 2) }}</dd>@else<dd class="font-semibold text-success">Free</dd>@endif</div>
+                            @if (bccomp($seniorPwdDiscount, '0', 2) > 0)
+                                <div class="flex justify-between gap-3 text-muted" x-show="card" x-cloak><dt>SC/PWD discount</dt><dd class="tabular-nums text-success">−₱{{ number_format($seniorPwdDiscount, 2) }}</dd></div>
+                            @endif
                             <div class="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-sm font-semibold text-ink"><dt>Total</dt><dd class="text-[20px] leading-none tracking-[-0.025em] tabular-nums" x-text="totalText">₱{{ number_format($total, 2) }}</dd></div>
                         </dl>
                         <p class="mt-3.5 flex items-center gap-1.5 text-[12.5px] leading-[1.4] text-muted">

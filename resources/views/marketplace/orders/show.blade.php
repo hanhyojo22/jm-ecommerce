@@ -27,6 +27,7 @@
             $isOnlinePayment => 'Complete your payment online through PayMongo.',
             $collectedStores > 0 => 'Cash has been collected for part of this order. See each store’s collection status in the order summary.',
             $order->status === 'delivered' => 'Cash collection has not been recorded. Message the pharmacy if you have already paid.',
+            $order->fulfillment_method === 'pickup' => 'Pay in cash when you collect your order.',
             default => 'Pay in cash when your order arrives.',
         };
         $isMultiStore = $storeCount > 1;
@@ -57,6 +58,10 @@
             $progressNote = $allSettled && $deliveredStores > 0
                 ? 'Every store has finished with your order.'.($hasUnreviewedItems ? ' Share your experience by reviewing your items.' : '')
                 : 'Each store delivers its own items, so they arrive on their own timing.';
+        } elseif ($order->fulfillment_method === 'pickup') {
+            $progressNote = $order->status === 'delivered'
+                ? 'Your order was collected.'.($hasUnreviewedItems ? ' Share your experience by reviewing your items.' : '')
+                : 'We will update this page when your order is ready to collect at the counter.';
         } else {
             $progressNote = $order->status === 'delivered'
                 ? 'Your order has arrived.'.($hasUnreviewedItems ? ' Share your experience by reviewing your items.' : '')
@@ -80,14 +85,37 @@
                     <section class="rounded-md border p-4 text-sm {{ $order->prescription->status === 'rejected' ? 'border-red-200 bg-red-50 text-rose-800' : 'border-blue-200 bg-blue-50 text-brand-hover' }}" aria-labelledby="prescription-heading">
                         <h2 id="prescription-heading" class="font-semibold">Prescription · {{ ['pending' => 'Waiting for pharmacist review', 'approved' => 'Approved', 'rejected' => 'Not accepted', 'needs_photo' => 'Clearer photo needed'][$order->prescription->status] ?? ucfirst($order->prescription->status) }}</h2>
                         <p class="mt-1">{{ match ($order->prescription->status) { 'pending' => 'A pharmacist is checking your prescription. Your order is prepared once it is approved.', 'approved' => 'Your prescription was approved.', 'needs_photo' => 'The pharmacist asked for a clearer photo: '.$order->prescription->reason, default => 'Your order was cancelled: '.$order->prescription->reason } }}</p>
+                        @if ($order->prescription->images->isNotEmpty())
+                            @php($pageCount = $order->prescription->images->count())
+                            <p class="mt-2 text-[13px] text-muted">You sent {{ $pageCount }} {{ $pageCount === 1 ? 'page' : 'pages' }}: {{ $order->prescription->images->pluck('original_name')->join(', ') }}</p>
+                        @endif
                         @if ($order->prescription->status === 'needs_photo')
                             <form method="POST" action="{{ route('orders.prescription.store', $order) }}" enctype="multipart/form-data" class="mt-3 flex flex-wrap items-center gap-3">
                                 @csrf
-                                <label for="prescription-photo" class="sr-only">New prescription photo</label>
-                                <input id="prescription-photo" name="prescription" type="file" required accept="image/jpeg,image/png,image/webp,application/pdf" class="block min-w-0 text-[13px] text-ink">
-                                <button type="submit" class="inline-flex min-h-10 items-center rounded-md bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">Send new photo</button>
+                                <label for="prescription-photo" class="sr-only">New prescription photos</label>
+                                <input id="prescription-photo" name="prescriptions[]" type="file" required multiple accept="image/jpeg,image/png,image/webp,application/pdf" class="block min-w-0 text-[13px] text-ink">
+                                <button type="submit" class="inline-flex min-h-10 items-center rounded-md bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">Send new photos</button>
                             </form>
+                            <p class="mt-1 text-[12.5px] text-muted">Up to 10 photos or PDFs. Include every page of the prescription.</p>
                             @error('prescription')<p class="mt-2 text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                            @error('prescriptions.*')<p class="mt-2 text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
+                        @endif
+                        @php($timeline = $order->prescription->timeline())
+                        @if ($timeline->isNotEmpty())
+                            <details class="mt-3">
+                                <summary class="cursor-pointer text-[13px] font-semibold">Review history</summary>
+                                <ol class="mt-2 space-y-2 text-[13px]">
+                                    @foreach ($timeline as $event)
+                                        <li>
+                                            <span class="font-medium">{{ ['prescription.submitted' => 'You sent the prescription', 'prescription.resubmitted' => 'You sent a new copy', 'prescription.approved' => 'Prescription approved', 'prescription.rejected' => 'Prescription rejected', 'prescription.needs_photo' => 'Clearer copy requested'][$event->action] ?? $event->action }}</span>
+                                            <span class="text-muted">· {{ $event->created_at->format('M j, Y · g:i A') }}</span>
+                                            @if ($event->new_values['reason'] ?? null)
+                                                <span class="block text-muted">{{ $event->new_values['reason'] }}</span>
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </details>
                         @endif
                     </section>
                 @endif
@@ -100,6 +128,13 @@
                         </div>
                         <a href="{{ route('orders.pay', $order) }}" class="inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Pay now</a>
                     </section>
+                @endif
+                @if($order->status === 'delivered')
+                    <form method="POST" action="{{ route('orders.reorder', $order) }}" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface p-5 shadow-sm sm:p-6">
+                        @csrf
+                        <p class="text-sm leading-6 text-muted">Need these again? We add them to your cart at today's prices.</p>
+                        <button type="submit" class="inline-flex min-h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-hover">Order again</button>
+                    </form>
                 @endif
                 <section class="rounded-lg border border-line bg-surface p-5 shadow-sm sm:p-6">
                     @if($order->status === 'cancelled')
@@ -118,10 +153,41 @@
                     @endif
                 </section>
                 @include("marketplace.orders._store-section")
+                @if($order->fulfillment_method === 'pickup')
+                    @php($pickupSellerOrder = $order->sellerOrders->first())
+                    @php($pickupStore = $pickupSellerOrder?->store)
+                    @if($pickupStore)
+                        <section class="rounded-lg border border-line bg-surface p-5 shadow-sm sm:p-6" aria-labelledby="pickup-heading">
+                            <h2 id="pickup-heading" class="text-lg font-semibold text-ink">Collect from {{ $pickupStore->name }}</h2>
+                            <address class="mt-3 not-italic text-sm leading-6 text-muted">
+                                <p>{{ $pickupStore->pickup_address ?: collect([$pickupStore->address_line, $pickupStore->city])->filter()->join(', ') }}</p>
+                                @if($pickupStore->phone)<p class="mt-1">Call the branch: {{ $pickupStore->phone }}</p>@endif
+                                @if($pickupStore->opening_time && $pickupStore->closing_time)<p class="mt-1">Open {{ $pickupStore->opening_time }}–{{ $pickupStore->closing_time }} daily.</p>@endif
+                            </address>
+                            @if($pickupSellerOrder->pickup_ready_at && in_array($pickupSellerOrder->status, ['shipped', 'delivered'], true))
+                                <p class="mt-3 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-success">
+                                    {{ $pickupSellerOrder->status === 'delivered' ? 'Picked up' : 'Ready for pickup' }} since {{ $pickupSellerOrder->pickup_ready_at->format('M j, Y · g:i A') }}.
+                                </p>
+                            @endif
+                            <p class="mt-3 text-sm leading-6 text-muted">Bring your order number and the mobile number on this order. Someone else may collect it if they show both.</p>
+                        </section>
+                    @endif
+                @endif
                 <section class="rounded-lg border border-line bg-surface p-5 shadow-sm sm:p-6" aria-labelledby="delivery-payment-heading">
-                    <h2 id="delivery-payment-heading" class="text-lg font-semibold text-ink">Delivery &amp; payment</h2>
+                    <h2 id="delivery-payment-heading" class="text-lg font-semibold text-ink">{{ $order->fulfillment_method === 'pickup' ? 'Pickup & payment' : 'Delivery & payment' }}</h2>
                     <div class="mt-5 grid gap-6 sm:grid-cols-2">
-                        <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Delivery address</h3><address class="mt-3 not-italic text-sm leading-6 text-muted">@if($order->recipient_name)<p class="font-semibold text-ink">{{ $order->recipient_name }}</p>@endif @if($order->address_line)<p>{{ $order->address_line }}</p>@endif @if($order->city || $order->province || $order->postal_code)<p>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endif @if($order->phone)<p class="mt-2">{{ $order->phone }}</p>@endif @if($order->delivery_note)<p class="mt-2 whitespace-pre-line"><span class="font-semibold text-ink">Delivery note:</span> {{ $order->delivery_note }}</p>@endif</address></div>
+                        <div>
+                            <h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">{{ $order->fulfillment_method === 'pickup' ? 'Who is collecting' : 'Delivery address' }}</h3>
+                            <address class="mt-3 not-italic text-sm leading-6 text-muted">
+                                @if($order->recipient_name)<p class="font-semibold text-ink">{{ $order->recipient_name }}</p>@endif
+                                @if($order->fulfillment_method !== 'pickup')
+                                    @if($order->address_line)<p>{{ $order->address_line }}</p>@endif
+                                    @if($order->city || $order->province || $order->postal_code)<p>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endif
+                                @endif
+                                @if($order->phone)<p class="mt-2">{{ $order->phone }}</p>@endif
+                                @if($order->delivery_note)<p class="mt-2 whitespace-pre-line"><span class="font-semibold text-ink">Note:</span> {{ $order->delivery_note }}</p>@endif
+                            </address>
+                        </div>
                         <div><h3 class="text-xs font-semibold uppercase tracking-[0.1em] text-muted">Payment method</h3><p class="mt-3 text-sm font-semibold text-ink">{{ $methodLabel }}</p><p class="mt-1 text-sm leading-6 text-muted">{{ $paymentDescription }}</p></div>
                     </div>
                 </section>
@@ -131,6 +197,10 @@
                     <h2 id="order-summary-heading" class="text-lg font-semibold text-ink">Order summary</h2>
                     <dl class="mt-5 space-y-4 text-sm">
                         <div class="flex justify-between gap-4"><dt class="text-muted">Items</dt><dd class="tabular-nums text-ink">₱{{ number_format($order->subtotal, 2) }}</dd></div>
+                        @if($order->discount_amount > 0)
+                            <div class="flex justify-between gap-4"><dt class="text-muted">{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd class="tabular-nums text-success">−₱{{ number_format($order->discount_amount, 2) }}</dd></div>
+                            <p class="text-xs text-muted">Show your {{ $order->discount_card_type === 'pwd' ? 'PWD' : 'senior citizen' }} ID ending {{ \App\Support\SeniorPwdDiscount::mask($order->discount_card_number) }} when you receive the order.</p>
+                        @endif
                         <div class="flex justify-between gap-4"><dt class="text-muted">Delivery fee</dt><dd class="font-semibold tabular-nums text-success">{{ $order->shipping_amount == 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd></div>
                         <div class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 border-t border-line pt-5"><dt class="font-semibold text-ink">Total</dt><dd class="whitespace-nowrap text-xl font-semibold tracking-[-0.04em] tabular-nums text-ink">₱{{ number_format($order->total, 2) }}</dd></div>
                     </dl>

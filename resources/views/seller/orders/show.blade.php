@@ -93,6 +93,10 @@
                     </div>
                     <dl class="sc-sum border-t border-line px-5 py-4">
                         <div><dt>Items</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div>
+                        @if($sellerOrder->discount_amount > 0)
+                            <div><dt>{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$sellerOrder->order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div>
+                            <div><dt>Check ID at handover</dt><dd>{{ $sellerOrder->order->discount_card_name }} · {{ $sellerOrder->order->discount_card_number }}</dd></div>
+                        @endif
                         <div><dt>Shipping</dt><dd>₱{{ number_format($sellerOrder->shipping_amount, 2) }}</dd></div>
                         <div class="is-total"><dt>Your order total</dt><dd>₱{{ number_format($sellerOrder->total, 2) }}</dd></div>
                     </dl>

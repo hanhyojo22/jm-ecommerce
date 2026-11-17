@@ -80,8 +80,9 @@ class PrescriptionTest extends TestCase
 
         $this->assertSame('pending', $order->sellerOrders()->sole()->status);
         $this->assertSame('pending', $prescription->status);
-        $this->assertSame('rx.jpg', $prescription->original_name);
-        Storage::disk('chat_attachments')->assertExists($prescription->path);
+        $image = $prescription->images()->sole();
+        $this->assertSame('rx.jpg', $image->original_name);
+        Storage::disk('chat_attachments')->assertExists($image->path);
         $this->actingAs($order->user)->get(route('orders.placed', $order))->assertSee('A pharmacist checks your prescription first.');
         $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Waiting for pharmacist review');
         $this->actingAs($order->user)->get(route('orders.show', $order), ['X-Order-Modal' => '1'])->assertSee('Prescription in review');
@@ -143,7 +144,7 @@ class PrescriptionTest extends TestCase
     {
         $order = $this->checkOut();
         $sellerOrder = $order->sellerOrders()->sole();
-        $firstPath = $order->prescription->path;
+        $firstPath = $order->prescription->images()->sole()->path;
         $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
 
         $this->actingAs($pharmacist)
@@ -155,16 +156,19 @@ class PrescriptionTest extends TestCase
         $this->actingAs($this->member('manager', $this->branch))->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasErrors('status');
         $this->get(route('seller.orders.index'))->assertSee('Waiting for a clearer photo')->assertDontSee('Prescription to review');
         $this->actingAs($order->user)->getJson(route('api.v1.orders.show', $order))
-            ->assertJsonPath('data.prescription', ['status' => 'needs_photo', 'reason' => 'The photo is blurry.']);
+            ->assertJsonPath('data.prescription.status', 'needs_photo')
+            ->assertJsonPath('data.prescription.reason', 'The photo is blurry.');
 
         $this->actingAs($order->user)
             ->post(route('api.v1.orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('clear.jpg')], ['Accept' => 'application/json'])
             ->assertOk()
-            ->assertJsonPath('data.prescription', ['status' => 'pending', 'reason' => null]);
+            ->assertJsonPath('data.prescription.status', 'pending')
+            ->assertJsonPath('data.prescription.reason', null);
 
         $prescription = $order->prescription()->first();
-        $this->assertSame('clear.jpg', $prescription->original_name);
-        Storage::disk('chat_attachments')->assertExists($prescription->path);
+        $image = $prescription->images()->sole();
+        $this->assertSame('clear.jpg', $image->original_name);
+        Storage::disk('chat_attachments')->assertExists($image->path);
         Storage::disk('chat_attachments')->assertMissing($firstPath);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $order->user_id, 'action' => 'prescription.resubmitted']);
         $this->push->shouldHaveReceived('sendToUser')
@@ -187,7 +191,7 @@ class PrescriptionTest extends TestCase
             ->post(route('orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('x.jpg')])
             ->assertNotFound();
 
-        $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Clearer photo needed')->assertSee('Send new photo');
+        $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Clearer photo needed')->assertSee('Send new photos');
         $this->actingAs($order->user)
             ->post(route('orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('clear.jpg')])
             ->assertRedirect(route('orders.show', $order));
@@ -199,14 +203,65 @@ class PrescriptionTest extends TestCase
         $sellerOrder = $this->checkOut()->sellerOrders()->sole();
         $otherBranchPharmacist = $this->member('staff', $this->branch('Cebu'), pharmacist: true);
         $staff = $this->member('manager', $this->branch);
+        $image = Prescription::query()->sole()->images()->sole();
 
-        $this->actingAs($otherBranchPharmacist)->get(route('seller.orders.prescription.show', $sellerOrder))->assertNotFound();
+        $this->actingAs($otherBranchPharmacist)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertNotFound();
         $this->actingAs($otherBranchPharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertNotFound();
-        $this->actingAs($staff)->get(route('seller.orders.prescription.show', $sellerOrder))->assertForbidden();
+        $this->actingAs($staff)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertForbidden();
         $this->actingAs($staff)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();
 
         $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending', 'reviewed_by' => null]);
-        $this->actingAs($this->member('staff', $this->branch, pharmacist: true))->get(route('seller.orders.prescription.show', $sellerOrder))->assertOk();
+        $this->actingAs($this->member('staff', $this->branch, pharmacist: true))->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertOk();
+    }
+
+    public function test_checkout_stores_every_prescription_page_in_order(): void
+    {
+        $this->actingAs($this->buyerWithCart())
+            ->post(route('checkout.store'), [
+                ...$this->delivery(),
+                'prescriptions' => [
+                    UploadedFile::fake()->image('page-1.jpg'),
+                    UploadedFile::fake()->image('page-2.jpg'),
+                    UploadedFile::fake()->image('page-3.jpg'),
+                ],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $prescription = Order::query()->latest()->firstOrFail()->prescription;
+        $images = $prescription->images()->get();
+
+        $this->assertSame(['page-1.jpg', 'page-2.jpg', 'page-3.jpg'], $images->pluck('original_name')->all());
+        $this->assertSame([0, 1, 2], $images->pluck('position')->all());
+
+        foreach ($images as $image) {
+            Storage::disk('chat_attachments')->assertExists($image->path);
+        }
+    }
+
+    public function test_the_prescription_timeline_records_every_review_event(): void
+    {
+        $order = $this->checkOut();
+        $sellerOrder = $order->sellerOrders()->sole();
+        $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
+
+        $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'needs_photo', 'reason' => 'Blurry.']);
+        $this->actingAs($order->user)->post(route('orders.prescription.store', $order), [
+            'prescriptions' => [
+                UploadedFile::fake()->image('page-1.jpg'),
+                UploadedFile::fake()->image('page-2.jpg'),
+            ],
+        ])->assertRedirect(route('orders.show', $order));
+        $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve']);
+
+        $prescription = $order->prescription()->firstOrFail();
+
+        $this->assertSame([
+            'prescription.submitted',
+            'prescription.needs_photo',
+            'prescription.resubmitted',
+            'prescription.approved',
+        ], $prescription->timeline()->pluck('action')->all());
+        $this->assertCount(2, $prescription->images);
     }
 
     private function assertPushed(string $title, ?string $body = null): void

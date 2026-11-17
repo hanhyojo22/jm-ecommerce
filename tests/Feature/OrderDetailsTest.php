@@ -50,6 +50,23 @@ class OrderDetailsTest extends TestCase
             ->assertDontSee('aria-label="Progress by store"', false);
     }
 
+    public function test_a_ready_pickup_order_names_the_branch_and_when_it_was_ready(): void
+    {
+        $buyer = User::factory()->create();
+        $order = $this->order($buyer);
+        $order->update(['fulfillment_method' => 'pickup']);
+        $this->storeOrder($order, 'Franil Store', 'Tp Link - 300Mbps', 'shipped')
+            ->update(['pickup_ready_at' => '2026-11-17 09:30:00']);
+
+        $this->actingAs($buyer)->get(route('orders.show', $order))
+            ->assertOk()
+            ->assertSee('Collect from Franil Store')
+            ->assertSee('10 Market Street, Manila')
+            ->assertSee('Ready for pickup since Nov 17, 2026 · 9:30 AM')
+            ->assertSee('Pickup &amp; payment', false)
+            ->assertDontSee('Delivery address');
+    }
+
     private function order(User $buyer): Order
     {
         $order = Order::create([

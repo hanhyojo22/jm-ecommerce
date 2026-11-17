@@ -37,6 +37,11 @@ abstract class AttachmentPicker {
   Future<PickedAttachment?> pickImage();
 
   Future<PickedAttachment?> pickDocument();
+
+  /// Every page the customer picked in one go, for a multi-page prescription.
+  Future<List<PickedAttachment>> pickImages();
+
+  Future<List<PickedAttachment>> pickDocuments();
 }
 
 class FilePickerAttachmentPicker implements AttachmentPicker {
@@ -53,6 +58,19 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
     dialogTitle: 'Choose a document',
   );
 
+  @override
+  Future<List<PickedAttachment>> pickImages() => _pickMany(
+    type: FileType.image,
+    dialogTitle: 'Choose prescription photos',
+  );
+
+  @override
+  Future<List<PickedAttachment>> pickDocuments() => _pickMany(
+    type: FileType.custom,
+    allowedExtensions: const ['pdf'],
+    dialogTitle: 'Choose prescription documents',
+  );
+
   Future<PickedAttachment?> _pick({
     required FileType type,
     required String dialogTitle,
@@ -64,10 +82,24 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
       dialogTitle: dialogTitle,
     );
 
-    if (file == null) {
-      return null;
-    }
+    return file == null ? null : _read(file);
+  }
 
+  Future<List<PickedAttachment>> _pickMany({
+    required FileType type,
+    required String dialogTitle,
+    List<String>? allowedExtensions,
+  }) async {
+    final files = await FilePicker.pickFiles(
+      type: type,
+      allowedExtensions: allowedExtensions,
+      dialogTitle: dialogTitle,
+    );
+
+    return [for (final file in files) await _read(file)];
+  }
+
+  Future<PickedAttachment> _read(PlatformFile file) async {
     // Check the reported size before reading, so a huge file cannot exhaust
     // memory just to be rejected by the server a moment later.
     final length = file.lengthSync() ?? await file.length();

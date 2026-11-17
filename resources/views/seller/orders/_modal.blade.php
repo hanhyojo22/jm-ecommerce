@@ -293,6 +293,10 @@
                 <h3 id="order-modal-summary" class="sc-order-rail-label">Order summary</h3>
                 <dl class="sc-order-summary">
                     <div><dt>Subtotal</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div>
+                    @if($sellerOrder->discount_amount > 0)
+                        <div><dt>{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$sellerOrder->order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div>
+                        <div><dt>Check ID at handover</dt><dd>{{ $sellerOrder->order->discount_card_name }} · {{ $sellerOrder->order->discount_card_number }}</dd></div>
+                    @endif
                     <div><dt>Shipping</dt><dd>{{ bccomp((string) $sellerOrder->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($sellerOrder->shipping_amount, 2) }}</dd></div>
                 </dl>
                 <div class="sc-order-total">

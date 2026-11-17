@@ -225,9 +225,15 @@ class CatalogController extends Controller
             ->limit(4)
             ->get();
 
+        $cheaperAlternatives = CatalogQuery::cheaperAlternatives(
+            $this->summaryQuery()->when($branch, fn (Builder $query) => CatalogQuery::inStockAt($query, $branch)),
+            $product,
+        )->get();
+
         return response()->json([
             'data' => [
                 ...ProductResource::make($product)->resolve($request),
+                'cheaper_alternatives' => ProductSummaryResource::collection($cheaperAlternatives)->resolve($request),
                 'review_summary' => [
                     'count' => (int) ($product->published_reviews_count ?? 0),
                     'average' => round((float) ($product->published_reviews_avg_rating ?? 0), 2),

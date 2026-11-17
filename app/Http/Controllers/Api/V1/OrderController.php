@@ -13,6 +13,7 @@ use App\Models\SellerOrder;
 use App\Queries\BuyerOrderQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -77,7 +78,7 @@ class OrderController extends Controller
             'sellerOrders.returnCases' => fn ($query) => $query->latest('id'),
             'sellerOrders.items.review',
             'payment',
-            'prescription',
+            'prescription.images',
         ]);
 
         return OrderResource::make($order)->response($request);
@@ -89,11 +90,16 @@ class OrderController extends Controller
     public function resubmitPrescription(Request $request, Order $order, ResubmitPrescription $resubmit): JsonResponse
     {
         abort_unless($order->user_id === $request->user()->id, 404);
-        $data = $request->validate([
-            'prescription' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+        $request->validate([
+            'prescription' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            'prescriptions' => ['required_without:prescription', 'array', 'max:10'],
+            'prescriptions.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
         ]);
 
-        $resubmit->handle($request->user(), $order, $data['prescription']);
+        $resubmit->handle($request->user(), $order, array_values(array_filter([
+            ...Arr::wrap($request->file('prescriptions')),
+            ...Arr::wrap($request->file('prescription')),
+        ])));
 
         return $this->show($request, $order->refresh());
     }

@@ -33,6 +33,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _recipient = TextEditingController();
   final _phone = TextEditingController();
   final _addressLine = TextEditingController();
+  final _cardNumber = TextEditingController();
+  final _cardName = TextEditingController();
+
+  /// Senior citizen / PWD discount: on when the customer ticks it, with the card they will show.
+  bool _useCard = false;
+  String _cardType = 'senior';
 
   /// The city of a reused address; a new address takes the branch's city.
   String _savedCity = '';
@@ -43,7 +49,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _initialised = false;
   String _paymentMethod = 'cod';
   String _fulfillment = 'delivery';
-  PickedAttachment? _prescription;
+  List<PickedAttachment> _prescriptions = const [];
   bool _placing = false;
 
   /// Where the rider goes. Starts at the phone's location, or at the branch
@@ -133,6 +139,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _recipient.dispose();
     _phone.dispose();
     _addressLine.dispose();
+    _cardNumber.dispose();
+    _cardName.dispose();
     super.dispose();
   }
 
@@ -211,8 +219,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
 
-    if (quote.needsPrescription && _prescription == null) {
+    if (quote.needsPrescription && _prescriptions.isEmpty) {
       _snack('Add a photo of your prescription.');
+      return;
+    }
+
+    final useCard = _useCard && quote.offersSeniorPwdDiscount;
+    if (useCard &&
+        (_cardNumber.text.trim().isEmpty || _cardName.text.trim().isEmpty)) {
+      _snack('Enter the ID number and the name on the ID for the discount.');
       return;
     }
 
@@ -242,7 +257,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             fulfillmentMethod: method,
             deliveryLatitude: pin?.latitude,
             deliveryLongitude: pin?.longitude,
-            prescription: _prescription,
+            prescriptions: _prescriptions,
+            discountCard: useCard
+                ? (
+                    type: _cardType,
+                    idNumber: _cardNumber.text.trim(),
+                    name: _cardName.text.trim(),
+                  )
+                : null,
           );
 
       await ref.read(cartProvider.notifier).refresh();
@@ -282,10 +304,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final picker = ref.read(attachmentPickerProvider);
     try {
       final picked = photo
-          ? await picker.pickImage()
-          : await picker.pickDocument();
-      if (picked != null && mounted) {
-        setState(() => _prescription = picked);
+          ? await picker.pickImages()
+          : await picker.pickDocuments();
+      if (picked.isEmpty || !mounted) {
+        return;
+      }
+
+      final room = 10 - _prescriptions.length;
+      if (room <= 0) {
+        _snack('A prescription can have up to 10 pages.');
+        return;
+      }
+
+      setState(
+        () => _prescriptions = [..._prescriptions, ...picked.take(room)],
+      );
+      if (picked.length > room) {
+        _snack('Only the first $room pages were added.');
       }
     } on AttachmentTooLargeException {
       _snack('Choose a file under 5 MB.');
@@ -293,9 +328,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   String _total(CheckoutQuote quote) => addMoney(
-    quote.fulfillment[_method]?.total ?? quote.subtotal,
-    _paymentFee(quote, _paymentMethod) ?? '0.00',
+    addMoney(
+      quote.fulfillment[_method]?.total ?? quote.subtotal,
+      _paymentFee(quote, _paymentMethod) ?? '0.00',
+    ),
+    _cardDiscount(quote) == null ? '0.00' : '-${_cardDiscount(quote)}',
   );
+
+  /// The discount when the customer is using a card and something is a medicine.
+  String? _cardDiscount(CheckoutQuote quote) =>
+      _useCard && quote.offersSeniorPwdDiscount
+      ? quote.seniorPwdDiscount
+      : null;
 
   void _snack(String message) {
     ScaffoldMessenger.of(context)
@@ -333,6 +377,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       if (value.needsPrescription) ...[
                         const SizedBox(height: 12),
                         _prescriptionCard(),
+                      ],
+                      if (value.offersSeniorPwdDiscount) ...[
+                        const SizedBox(height: 12),
+                        _discountCardSection(value),
                       ],
                       const SizedBox(height: 12),
                       _paymentCard(value),
@@ -602,6 +650,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               amount: Text(money(deliveryFee)),
             ),
           ),
+        if (_cardDiscount(quote) case final discount?)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: _amountRow(
+              label: const Text('SC/PWD discount'),
+              amount: Text(
+                '−${money(discount)}',
+                style: TextStyle(color: Colors.green.shade700),
+              ),
+            ),
+          ),
         if ((double.tryParse(fee) ?? 0) > 0)
           Padding(
             padding: const EdgeInsets.only(top: 6),
@@ -627,6 +686,65 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _discountCardSection(CheckoutQuote quote) {
+    final theme = Theme.of(context);
+
+    return _section(
+      icon: Icons.badge_outlined,
+      title: 'Senior citizen / PWD',
+      children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _useCard,
+          onChanged: (value) => setState(() => _useCard = value),
+          title: const Text('Use my discount'),
+          subtitle: Text(
+            '−${money(quote.seniorPwdDiscount)} on medicines',
+            style: TextStyle(color: Colors.green.shade700),
+          ),
+        ),
+        if (_useCard) ...[
+          const SizedBox(height: 4),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'senior', label: Text('Senior citizen')),
+              ButtonSegment(value: 'pwd', label: Text('PWD')),
+            ],
+            selected: {_cardType},
+            onSelectionChanged: (value) =>
+                setState(() => _cardType = value.first),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _cardNumber,
+            maxLength: 40,
+            decoration: const InputDecoration(
+              labelText: 'ID number',
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _cardName,
+            maxLength: 120,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Name on the ID',
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1121,7 +1239,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget _prescriptionCard() {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final picked = _prescription;
+    final pages = _prescriptions;
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
     final pill = const StadiumBorder();
     final photoButton = FilledButton.tonalIcon(
@@ -1132,7 +1250,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       onPressed: () => _pickPrescription(photo: true),
       icon: const Icon(Icons.photo_camera_outlined, size: 18),
       label: Text(
-        picked == null ? 'Add photo' : 'Replace photo',
+        pages.isEmpty ? 'Add photos' : 'Add more photos',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -1157,7 +1275,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            color: picked == null
+            color: pages.isEmpty
                 ? scheme.tertiaryContainer
                 : scheme.primaryContainer.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(14),
@@ -1168,22 +1286,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  picked == null
+                  pages.isEmpty
                       ? Icons.receipt_long_outlined
                       : Icons.check_circle_rounded,
                   size: 20,
-                  color: picked == null
+                  color: pages.isEmpty
                       ? scheme.onTertiaryContainer
                       : scheme.primary,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    picked == null
-                        ? 'Some items need a doctor’s prescription. A pharmacist checks it before your order is prepared.'
-                        : 'Added: ${picked.name}',
+                    pages.isEmpty
+                        ? 'Some items need a doctor’s prescription. Add every page as a photo or PDF (up to 10). A pharmacist checks it before your order is prepared.'
+                        : '${pages.length} ${pages.length == 1 ? 'page' : 'pages'} added. Include every page of the prescription.',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: picked == null
+                      color: pages.isEmpty
                           ? scheme.onTertiaryContainer
                           : scheme.onSurface,
                       fontWeight: FontWeight.w600,
@@ -1194,6 +1312,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ),
+        if (pages.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final (index, page) in pages.indexed)
+                InputChip(
+                  label: Text(
+                    page.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onDeleted: () => setState(
+                    () => _prescriptions = [..._prescriptions]..removeAt(index),
+                  ),
+                  deleteButtonTooltipMessage: 'Remove ${page.name}',
+                ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         if (largeText) ...[
           photoButton,

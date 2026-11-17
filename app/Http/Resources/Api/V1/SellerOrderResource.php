@@ -27,8 +27,10 @@ class SellerOrderResource extends JsonResource
             'status' => $this->status,
             'subtotal' => (string) $this->subtotal,
             'shipping_amount' => (string) $this->shipping_amount,
+            'discount_amount' => (string) $this->discount_amount,
             'total' => (string) $this->total,
             'shipped_at' => $this->shipped_at?->toIso8601String(),
+            'pickup_ready_at' => $this->pickup_ready_at?->toIso8601String(),
             // Shown only while it is on the way, so a rider's number does not linger on old orders.
             'rider' => $this->rider_name === null || $this->status !== 'shipped' ? null : ['name' => $this->rider_name, 'phone' => $this->rider_phone],
             'delivered_at' => $this->delivered_at?->toIso8601String(),
@@ -43,6 +45,12 @@ class SellerOrderResource extends JsonResource
                 'logo_url' => $this->store->logo_path === null
                     ? null
                     : Storage::disk('public')->url($this->store->logo_path),
+                // A pickup buyer needs to know where the counter is and when it is open.
+                'phone' => $this->store->phone,
+                'address_line' => $this->store->address_line,
+                'city' => $this->store->city,
+                'opening_time' => $this->store->opening_time,
+                'closing_time' => $this->store->closing_time,
             ]),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'latest_issue' => $this->whenLoaded('issues', fn (): ?array => $this->latestIssue()),

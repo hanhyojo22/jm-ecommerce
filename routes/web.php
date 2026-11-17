@@ -24,6 +24,7 @@ use App\Http\Controllers\Marketplace\OrderIssueController;
 use App\Http\Controllers\Marketplace\ProductDiscussionController;
 use App\Http\Controllers\Marketplace\ProductReviewController as MarketplaceProductReviewController;
 use App\Http\Controllers\Marketplace\ReturnCaseController as BuyerReturnCaseController;
+use App\Http\Controllers\Marketplace\SavedProductController;
 use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\PayMongoWebhookController;
 use App\Http\Controllers\ProfileController;
@@ -80,6 +81,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/placed', [OrderController::class, 'placed'])->name('orders.placed');
     Route::get('/orders/{order}/pay', [OrderController::class, 'pay'])->middleware('throttle:10,1')->name('orders.pay');
+    Route::post('/orders/{order}/reorder', [OrderController::class, 'reorder'])->middleware('throttle:cart')->name('orders.reorder');
     Route::post('/orders/{order}/prescription', [OrderController::class, 'resubmitPrescription'])->middleware('throttle:10,1')->name('orders.prescription.store');
     Route::post('/orders/seller-orders/{sellerOrder}/received', [OrderController::class, 'received'])->middleware('throttle:10,1')->name('orders.received');
     Route::post('/orders/store-orders/{sellerOrder}/issues', [OrderIssueController::class, 'store'])->middleware('throttle:10,1')->name('order-issues.store');
@@ -87,6 +89,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::get('/orders/returns/{returnCase}', [BuyerReturnCaseController::class, 'show'])->name('returns.show');
     Route::patch('/orders/returns/{returnCase}', [BuyerReturnCaseController::class, 'update'])->middleware('throttle:10,1')->name('returns.update');
     Route::get('/my-reviews', [MarketplaceProductReviewController::class, 'index'])->name('reviews.index');
+    Route::get('/saved', [SavedProductController::class, 'index'])->name('saved-products.index');
+    Route::put('/saved/{product}', [SavedProductController::class, 'store'])->middleware('throttle:cart')->name('saved-products.store');
+    Route::delete('/saved/{product}', [SavedProductController::class, 'destroy'])->middleware('throttle:cart')->name('saved-products.destroy');
     Route::get('/delivery-addresses', [DeliveryAddressController::class, 'index'])->name('delivery-addresses.index');
     Route::post('/delivery-addresses', [DeliveryAddressController::class, 'store'])->middleware('throttle:10,1')->name('delivery-addresses.store');
     Route::get('/delivery-addresses/{deliveryAddress}/edit', [DeliveryAddressController::class, 'edit'])->name('delivery-addresses.edit');
@@ -174,7 +179,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::patch('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.update');
     Route::post('/seller/orders/{sellerOrder}/failed-delivery', [SellerOrderController::class, 'reportFailedDelivery'])->middleware('throttle:10,1')->name('seller.orders.failed-delivery');
     Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
-    Route::get('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'show'])->name('seller.orders.prescription.show');
+    Route::get('/seller/orders/{sellerOrder}/prescription/images/{image}', [SellerPrescriptionController::class, 'show'])->name('seller.orders.prescription.images.show');
     Route::patch('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.prescription.update');
     Route::get('/seller/reviews', [SellerProductReviewController::class, 'index'])->name('seller.reviews.index');
     Route::post('/seller/reviews/{review}/response', [SellerProductReviewController::class, 'respond'])->middleware('throttle:10,1')->name('seller.reviews.respond');

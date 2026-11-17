@@ -92,12 +92,14 @@ class StartOnlinePayment
      */
     private function lineItems(Collection $sellerOrders): array
     {
-        $items = $sellerOrders->flatMap(fn (SellerOrder $sellerOrder) => $sellerOrder->items->map(fn ($item): array => [
-            'name' => $item->product_name.($item->variant_label ? " ({$item->variant_label})" : ''),
-            'amount' => PayMongo::centavos((string) $item->unit_price),
-            'currency' => 'PHP',
-            'quantity' => $item->quantity,
-        ]))->values()->all();
+        $items = $sellerOrders->flatMap(fn (SellerOrder $sellerOrder) => $sellerOrder->items->map(function ($item): array {
+            $name = $item->product_name.($item->variant_label ? " ({$item->variant_label})" : '');
+
+            // A discounted line may not split into whole centavos per unit, so it is charged as one line.
+            return bccomp((string) $item->discount_amount, '0', 2) > 0
+                ? ['name' => "{$name} × {$item->quantity} (SC/PWD discount)", 'amount' => PayMongo::centavos(bcsub((string) $item->line_total, (string) $item->discount_amount, 2)), 'currency' => 'PHP', 'quantity' => 1]
+                : ['name' => $name, 'amount' => PayMongo::centavos((string) $item->unit_price), 'currency' => 'PHP', 'quantity' => $item->quantity];
+        }))->values()->all();
         $deliveryFee = $sellerOrders->reduce(fn (string $sum, SellerOrder $sellerOrder): string => bcadd($sum, (string) $sellerOrder->shipping_amount, 2), '0.00');
 
         return bccomp($deliveryFee, '0', 2) > 0

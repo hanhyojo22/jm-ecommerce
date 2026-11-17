@@ -239,6 +239,43 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 color: rejected ? scheme.onErrorContainer : null,
               ),
             ),
+            if (order.prescriptionPages.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(
+                '${order.prescriptionPages.length} ${order.prescriptionPages.length == 1 ? 'page' : 'pages'} sent',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: rejected ? scheme.onErrorContainer : null,
+                ),
+              ),
+              const SizedBox(height: 4),
+              for (final page in order.prescriptionPages)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.description_outlined,
+                        size: 15,
+                        color: rejected
+                            ? scheme.onErrorContainer
+                            : scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          page.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: rejected ? scheme.onErrorContainer : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
             if (needsPhoto) ...[
               const SizedBox(height: 10),
               Wrap(
@@ -250,7 +287,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         ? null
                         : () => _resendPrescription(order, photo: true),
                     icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                    label: const Text('Send new photo'),
+                    label: const Text('Send new pages'),
                   ),
                   OutlinedButton.icon(
                     onPressed: _busy
@@ -260,6 +297,69 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     label: const Text('Send PDF'),
                   ),
                 ],
+              ),
+            ],
+            if (order.prescriptionTimeline.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Theme(
+                data: theme.copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(
+                    'Review history',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  children: [
+                    for (final event in order.prescriptionTimeline)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                switch (event.action) {
+                                  'prescription.submitted' =>
+                                    'You sent the prescription',
+                                  'prescription.resubmitted' =>
+                                    'You sent a new copy',
+                                  'prescription.approved' =>
+                                    'Prescription approved',
+                                  'prescription.rejected' =>
+                                    'Prescription rejected',
+                                  'prescription.needs_photo' =>
+                                    'Clearer copy requested',
+                                  _ => event.action,
+                                },
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (event.at != null)
+                                Text(
+                                  dateTime(event.at!),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              if (event.reason != null)
+                                Text(
+                                  event.reason!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -273,20 +373,24 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     required bool photo,
   }) async {
     final picker = ref.read(attachmentPickerProvider);
-    final PickedAttachment? picked;
+    final List<PickedAttachment> picked;
     try {
-      picked = photo ? await picker.pickImage() : await picker.pickDocument();
+      picked = photo ? await picker.pickImages() : await picker.pickDocuments();
     } on AttachmentTooLargeException {
       _snack('Choose a file under 5 MB.');
       return;
     }
-    if (picked == null || !mounted) return;
+    if (picked.isEmpty || !mounted) return;
+    if (picked.length > 10) {
+      _snack('A prescription can have up to 10 pages.');
+      return;
+    }
 
     setState(() => _busy = true);
     try {
       await ref.read(apiClientProvider).resubmitPrescription(order.id, picked);
       ref.invalidate(orderProvider(widget.orderId));
-      _snack('Thanks. A pharmacist will check your new photo.');
+      _snack('Thanks. A pharmacist will check your new pages.');
     } on ApiException catch (error) {
       _snack(error.friendly);
     } finally {
@@ -461,6 +565,10 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   Widget _deliveryAndGuaranteeCard(OrderDetail order) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final pickupSellerOrder = order.isPickup && order.sellerOrders.isNotEmpty
+        ? order.sellerOrders.first
+        : null;
+    final pickupStore = pickupSellerOrder?.store;
 
     return Material(
       color: scheme.surfaceContainerLowest,
@@ -494,7 +602,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                     children: [
                       Text(
                         order.isPickup
-                            ? 'Pickup at the branch'
+                            ? pickupStore?.name == null
+                                  ? 'Pickup at the branch'
+                                  : 'Pickup at ${pickupStore!.name}'
                             : 'Delivery Address',
                         style: theme.textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w800,
@@ -524,19 +634,65 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        [
-                          order.delivery.addressLine,
-                          order.delivery.city,
-                          '${order.delivery.province} ${order.delivery.postalCode}'
-                              .trim(),
-                        ].where((part) => part.isNotEmpty).join(', '),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontSize: 13,
-                          height: 1.3,
+                      if (order.isPickup && pickupStore != null) ...[
+                        Text(
+                          [pickupStore.addressLine, pickupStore.city]
+                              .where((part) => part != null && part.isNotEmpty)
+                              .join(', '),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 13,
+                            height: 1.3,
+                          ),
                         ),
-                      ),
+                        if (pickupStore.phone != null)
+                          Text(
+                            'Call the branch: ${pickupStore.phone}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 13,
+                              height: 1.3,
+                            ),
+                          ),
+                        if (pickupStore.openingTime != null &&
+                            pickupStore.closingTime != null)
+                          Text(
+                            'Open ${pickupStore.openingTime}–${pickupStore.closingTime} daily',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 13,
+                              height: 1.3,
+                            ),
+                          ),
+                        // pickupStore came from this seller order, so it is set here.
+                        if (pickupSellerOrder!.pickupReadyAt != null &&
+                            (pickupSellerOrder.status == 'shipped' ||
+                                pickupSellerOrder.status == 'delivered'))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              '${pickupSellerOrder.status == 'delivered' ? 'Picked up' : 'Ready for pickup'} since ${dateTime(pickupSellerOrder.pickupReadyAt!)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                      ] else
+                        Text(
+                          [
+                            order.delivery.addressLine,
+                            order.delivery.city,
+                            '${order.delivery.province} ${order.delivery.postalCode}'
+                                .trim(),
+                          ].where((part) => part.isNotEmpty).join(', '),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 13,
+                            height: 1.3,
+                          ),
+                        ),
                       if (order.delivery.note != null &&
                           order.delivery.note!.trim().isNotEmpty) ...[
                         const SizedBox(height: 6),
@@ -924,6 +1080,19 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               const SizedBox(height: 8),
               _summaryRow('Delivery fee', money(order.shippingAmount)),
               const SizedBox(height: 8),
+              if ((double.tryParse(order.discountAmount) ?? 0) > 0) ...[
+                _summaryRow(
+                  '${order.discountCardType == 'pwd' ? 'PWD' : 'Senior citizen'} discount',
+                  '−${money(order.discountAmount)}',
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Show the ID ending ${order.discountCardNumber ?? ''} when you receive the order.',
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 8),
+              ],
               _summaryRow(
                 'Payment Method',
                 payment?.label ?? 'Cash on delivery',

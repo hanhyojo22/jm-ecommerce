@@ -118,6 +118,7 @@ class AccountScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               _LazadaToolsGridSection(
+                onSavedTap: () => context.push('/saved'),
                 onAddressesTap: () => context.push('/addresses'),
                 onReviewsTap: () => _openOrdersTab(ref, 'to_review'),
                 onMessagesTap: () =>
@@ -377,9 +378,10 @@ class _AccountOrdersSection extends StatelessWidget {
   }
 }
 
-/// Account shortcuts: addresses, reviews, messages, branches and help.
+/// Account shortcuts: saved items, addresses, reviews, messages, branches and help.
 class _LazadaToolsGridSection extends StatelessWidget {
   const _LazadaToolsGridSection({
+    required this.onSavedTap,
     required this.onAddressesTap,
     required this.onReviewsTap,
     required this.onMessagesTap,
@@ -387,6 +389,7 @@ class _LazadaToolsGridSection extends StatelessWidget {
     required this.onHelpTap,
   });
 
+  final VoidCallback onSavedTap;
   final VoidCallback onAddressesTap;
   final VoidCallback onReviewsTap;
   final VoidCallback onMessagesTap;
@@ -400,6 +403,11 @@ class _LazadaToolsGridSection extends StatelessWidget {
 
     final row1 = [
       (
+        icon: Icons.favorite_border_rounded,
+        label: 'Saved items',
+        onTap: onSavedTap,
+      ),
+      (
         icon: Icons.location_on_outlined,
         label: 'Delivery addresses',
         onTap: onAddressesTap,
@@ -409,6 +417,8 @@ class _LazadaToolsGridSection extends StatelessWidget {
         label: 'My Reviews',
         onTap: onReviewsTap,
       ),
+    ];
+    final row2 = [
       (
         icon: Icons.chat_bubble_outline_rounded,
         label: 'Messages',
@@ -467,7 +477,9 @@ class _LazadaToolsGridSection extends StatelessWidget {
       color: scheme.surfaceContainerLowest,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 14, 12, 16),
-        child: buildRow(row1),
+        child: Column(
+          children: [buildRow(row1), const SizedBox(height: 8), buildRow(row2)],
+        ),
       ),
     );
   }

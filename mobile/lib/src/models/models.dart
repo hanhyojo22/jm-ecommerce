@@ -90,6 +90,10 @@ class StoreInfo {
     this.acceptsOnlinePayments = false,
     this.ratingAverage = 0,
     this.ratingCount,
+    this.phone,
+    this.addressLine,
+    this.openingTime,
+    this.closingTime,
   });
 
   final String id;
@@ -105,6 +109,12 @@ class StoreInfo {
   /// Buyers' average rating of the store; [ratingCount] is null when the API omits it.
   final double ratingAverage;
   final int? ratingCount;
+
+  /// Where and when to collect a pickup order.
+  final String? phone;
+  final String? addressLine;
+  final String? openingTime;
+  final String? closingTime;
 
   factory StoreInfo.fromJson(Map<String, dynamic> json) => StoreInfo(
     id: str(json['id']),
@@ -122,6 +132,10 @@ class StoreInfo {
     ratingCount: json['rating'] == null
         ? null
         : integer(mapOf(json['rating'])['count']),
+    phone: json['phone'] as String?,
+    addressLine: json['address_line'] as String?,
+    openingTime: json['opening_time'] as String?,
+    closingTime: json['closing_time'] as String?,
   );
 }
 
@@ -315,6 +329,7 @@ class Product {
     this.reviewSummary,
     this.related = const [],
     this.moreFromStore = const [],
+    this.cheaperAlternatives = const [],
   });
 
   final String id;
@@ -348,6 +363,9 @@ class Product {
   final ReviewSummary? reviewSummary;
   final List<Product> related;
   final List<Product> moreFromStore;
+
+  /// Cheaper products with the same generic name, strength and form, cheapest first.
+  final List<Product> cheaperAlternatives;
 
   factory Product.fromJson(Map<String, dynamic> json) {
     final rating = mapOf(json['rating']);
@@ -395,6 +413,9 @@ class Product {
           .map(Product.fromJson)
           .toList(growable: false),
       moreFromStore: listOf(json['more_from_store'])
+          .map(Product.fromJson)
+          .toList(growable: false),
+      cheaperAlternatives: listOf(json['cheaper_alternatives'])
           .map(Product.fromJson)
           .toList(growable: false),
     );
@@ -622,10 +643,17 @@ class CheckoutQuote {
     this.branchAddress,
     this.branchCity,
     this.fulfillment = const {},
+    this.seniorPwdDiscount = '0.00',
   });
 
   final List<CartLine> lines;
   final String subtotal;
+
+  /// What a senior citizen / PWD card takes off the medicines; '0.00' when none are medicines.
+  final String seniorPwdDiscount;
+
+  bool get offersSeniorPwdDiscount =>
+      (double.tryParse(seniorPwdDiscount) ?? 0) > 0;
   final List<StoreTotal> storeTotals;
   final List<Address> addresses;
   final Address? preferredAddress;
@@ -646,6 +674,7 @@ class CheckoutQuote {
   factory CheckoutQuote.fromJson(Map<String, dynamic> json) => CheckoutQuote(
     lines: listOf(json['items']).map(CartLine.fromJson).toList(growable: false),
     subtotal: str(json['subtotal'], '0.00'),
+    seniorPwdDiscount: str(json['senior_pwd_discount'], '0.00'),
     storeTotals: listOf(json['store_totals'])
         .map(StoreTotal.fromJson)
         .toList(growable: false),
@@ -798,6 +827,7 @@ class SellerOrder {
     required this.shippingAmount,
     required this.total,
     this.shippedAt,
+    this.pickupReadyAt,
     this.deliveredAt,
     this.codCollectedAt,
     this.riderName,
@@ -824,6 +854,9 @@ class SellerOrder {
   final String shippingAmount;
   final String total;
   final String? shippedAt;
+
+  /// When the branch first marked a pickup order ready at the counter.
+  final String? pickupReadyAt;
   final String? deliveredAt;
   final String? codCollectedAt;
 
@@ -855,6 +888,7 @@ class SellerOrder {
       shippingAmount: str(json['shipping_amount']),
       total: str(json['total']),
       shippedAt: json['shipped_at'] as String?,
+      pickupReadyAt: json['pickup_ready_at'] as String?,
       deliveredAt: json['delivered_at'] as String?,
       codCollectedAt: json['cod_collected_at'] as String?,
       riderName: mapOf(json['rider'])['name'] as String?,
@@ -881,6 +915,33 @@ class SellerOrder {
   }
 }
 
+/// One uploaded page of a prescription, named as the customer sent it.
+class PrescriptionPage {
+  const PrescriptionPage({required this.id, required this.name});
+
+  final String id;
+  final String name;
+
+  factory PrescriptionPage.fromJson(Map<String, dynamic> json) =>
+      PrescriptionPage(id: str(json['id']), name: str(json['name']));
+}
+
+/// One review event in a prescription's history, newest last.
+class PrescriptionEvent {
+  const PrescriptionEvent({required this.action, this.at, this.reason});
+
+  final String action;
+  final String? at;
+  final String? reason;
+
+  factory PrescriptionEvent.fromJson(Map<String, dynamic> json) =>
+      PrescriptionEvent(
+        action: str(json['action']),
+        at: json['at'] as String?,
+        reason: json['reason'] as String?,
+      );
+}
+
 class OrderDetail {
   const OrderDetail({
     required this.id,
@@ -890,6 +951,9 @@ class OrderDetail {
     required this.createdAt,
     required this.subtotal,
     required this.shippingAmount,
+    this.discountAmount = '0.00',
+    this.discountCardType,
+    this.discountCardNumber,
     required this.total,
     required this.delivery,
     this.payment,
@@ -899,6 +963,8 @@ class OrderDetail {
     this.fulfillmentMethod = 'delivery',
     this.prescriptionStatus,
     this.prescriptionReason,
+    this.prescriptionPages = const [],
+    this.prescriptionTimeline = const [],
   });
 
   final String id;
@@ -908,6 +974,11 @@ class OrderDetail {
   final String createdAt;
   final String subtotal;
   final String shippingAmount;
+
+  /// The senior citizen / PWD discount; [discountCardNumber] shows only its last four.
+  final String discountAmount;
+  final String? discountCardType;
+  final String? discountCardNumber;
   final String total;
   final DeliveryInfo delivery;
   final PaymentInfo? payment;
@@ -918,9 +989,16 @@ class OrderDetail {
   /// `delivery` or `pickup` (collected at the branch).
   final String fulfillmentMethod;
 
-  /// `pending`, `approved` or `rejected`; null when no medicine needed one.
+  /// `pending`, `approved`, `needs_photo` or `rejected`; null when no medicine
+  /// needed one.
   final String? prescriptionStatus;
   final String? prescriptionReason;
+
+  /// Every page the customer sent, in the order they picked them.
+  final List<PrescriptionPage> prescriptionPages;
+
+  /// The review history, oldest first.
+  final List<PrescriptionEvent> prescriptionTimeline;
 
   bool get isPickup => fulfillmentMethod == 'pickup';
 
@@ -932,6 +1010,9 @@ class OrderDetail {
     createdAt: str(json['created_at']),
     subtotal: str(json['subtotal']),
     shippingAmount: str(json['shipping_amount']),
+    discountAmount: str(json['discount_amount'], '0.00'),
+    discountCardType: mapOf(json['discount_card'])['type'] as String?,
+    discountCardNumber: mapOf(json['discount_card'])['id_number'] as String?,
     total: str(json['total']),
     delivery: DeliveryInfo.fromJson(mapOf(json['delivery'])),
     payment: json['payment'] == null
@@ -945,6 +1026,12 @@ class OrderDetail {
     fulfillmentMethod: str(json['fulfillment_method'], 'delivery'),
     prescriptionStatus: mapOf(json['prescription'])['status'] as String?,
     prescriptionReason: mapOf(json['prescription'])['reason'] as String?,
+    prescriptionPages: listOf(mapOf(json['prescription'])['images'])
+        .map(PrescriptionPage.fromJson)
+        .toList(growable: false),
+    prescriptionTimeline: listOf(mapOf(json['prescription'])['timeline'])
+        .map(PrescriptionEvent.fromJson)
+        .toList(growable: false),
   );
 }
 

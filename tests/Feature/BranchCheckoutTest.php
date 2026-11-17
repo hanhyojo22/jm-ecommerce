@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\BranchStock;
+use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\SellerOrder;
@@ -344,6 +345,26 @@ class BranchCheckoutTest extends TestCase
             ->assertJsonPath('data.items.0.quantity', 2);
 
         $this->actingAs($this->buyer())->postJson(route('api.v1.cart.reorder', $order))->assertNotFound();
+    }
+
+    public function test_order_again_on_the_website_refills_the_cart_and_names_what_is_missing(): void
+    {
+        [, $cebu, $paracetamol] = $this->pharmacyWithStock(makati: 0, cebu: 10);
+        $buyer = $this->buyer();
+        $this->actingAs($buyer)->postJson('/api/v1/cart/items', ['branch' => $cebu->id, 'product_id' => $paracetamol->id, 'quantity' => 2])->assertCreated();
+        $order = Order::findOrFail($this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod'])->assertCreated()->json('data.id'));
+        $order->update(['status' => 'delivered']);
+
+        $this->get(route('orders.show', $order))->assertSee('Order again');
+        $this->post(route('orders.reorder', $order))
+            ->assertRedirect(route('cart.index'))
+            ->assertSessionHas('status', 'Added your past order to the cart.');
+        $this->assertSame(2, $buyer->cart()->sole()->items()->sole()->quantity);
+
+        BranchStock::query()->where('product_id', $paracetamol->id)->update(['quantity' => 0]);
+        $this->post(route('orders.reorder', $order))->assertSessionHas('status', 'Added what is in stock. Not available now: Paracetamol 500mg.');
+
+        $this->actingAs($this->buyer())->post(route('orders.reorder', $order))->assertNotFound();
     }
 
     public function test_the_web_shop_and_a_branch_page_list_only_what_that_branch_has(): void

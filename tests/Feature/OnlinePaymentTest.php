@@ -209,6 +209,36 @@ class OnlinePaymentTest extends TestCase
         app(ReturnCaseWorkflow::class)->act($case, User::factory()->administrator()->create(), 'reopen');
     }
 
+    public function test_a_senior_discount_order_is_charged_and_refunded_the_discounted_amount(): void
+    {
+        config()->set('marketplace.senior_pwd.vat_registered', true);
+        $product = $this->product();
+        $product->update(['generic_name' => 'Cotton']);
+        $buyer = $this->buyerWithCart($product, 2);
+
+        // 2 × ₱20.00 = ₱40.00 → ₱35.71 without VAT → less ₱7.14 → pays ₱28.57.
+        $this->actingAs($buyer)->post(route('checkout.store'), [...$this->delivery(), 'payment_method' => 'gcash', 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-9', 'name' => 'Lola Ava']])->assertRedirectContains('/pay');
+        $order = Order::query()->latest()->firstOrFail();
+        $this->assertSame('28.57', (string) $order->total);
+
+        $this->get(route('orders.pay', $order));
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/checkout_sessions')
+            && collect($request['data']['attributes']['line_items'])->reject(fn (array $line): bool => $line['name'] === 'Payment fee')->sum(fn (array $line): int => $line['amount'] * $line['quantity']) === 2857);
+        $this->webhook('evt_paid', 'cs_1')->assertOk();
+
+        $sellerOrder = $order->sellerOrders()->sole();
+        foreach (['confirmed', 'processing', 'shipped', 'delivered'] as $status) {
+            app(UpdateSellerOrderStatus::class)->handle($sellerOrder->refresh(), $status, null);
+        }
+        $case = ReturnCase::create(['seller_order_id' => $sellerOrder->id, 'buyer_id' => $order->user_id, 'opened_by' => $order->user_id, 'status' => 'awaiting_fulfillment', 'reason' => 'damaged', 'requested_remedy' => 'refund', 'remedy' => 'refund', 'details' => 'One arrived torn.']);
+        $item = $sellerOrder->items()->first();
+        $case->items()->create(['order_item_id' => $item->id, 'quantity' => 1, 'unit_price' => $item->unit_price]);
+
+        app(ReturnCaseWorkflow::class)->act($case, $sellerOrder->store->tenant->members()->first()->user, 'refund');
+        // One of two units: ₱20.00 less half the ₱11.43 discount (₱5.71).
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/v1/refunds') && $request['data']['attributes']['amount'] === 1429);
+    }
+
     private function paidOrder(): Order
     {
         $order = $this->checkOut($this->buyerWithCart($this->product(), 2));

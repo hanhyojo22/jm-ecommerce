@@ -27,6 +27,56 @@ const _branch = StoreBranch(
 );
 
 void main() {
+  testWidgets('a senior citizen card takes the discount off the total', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+    );
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+    expect(find.text('₱100.00'), findsWidgets);
+
+    await tester.ensureVisible(find.text('Use my discount'));
+    await tester.tap(find.text('Use my discount'));
+    await tester.pumpAndSettle();
+    expect(find.text('₱71.43'), findsWidgets);
+
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(
+      find.text('Enter the ID number and the name on the ID for the discount.'),
+      findsOneWidget,
+    );
+    expect(api.placed, isNull);
+
+    await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name on the ID'),
+      'Lola Ana',
+    );
+    tester
+        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
+        .removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+
+    expect(api.placed!.discountCard, (
+      type: 'senior',
+      idNumber: 'SC-9',
+      name: 'Lola Ana',
+    ));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('an Rx pickup order needs a prescription and sends no pin', (
     tester,
   ) async {
@@ -54,10 +104,14 @@ void main() {
     expect(find.text('Add a photo of your prescription.'), findsOneWidget);
     expect(api.placed, isNull);
 
-    await tester.ensureVisible(find.text('Add photo'));
-    await tester.tap(find.text('Add photo'));
+    await tester.ensureVisible(find.text('Add photos'));
+    await tester.tap(find.text('Add photos'));
     await tester.pumpAndSettle();
-    expect(find.text('Added: rx.jpg'), findsOneWidget);
+    expect(
+      find.text('1 page added. Include every page of the prescription.'),
+      findsOneWidget,
+    );
+    expect(find.text('rx.jpg'), findsOneWidget);
     tester
         .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
         .removeCurrentSnackBar();
@@ -67,7 +121,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.placed!.fulfillment, 'pickup');
-    expect(api.placed!.prescription!.name, 'rx.jpg');
+    expect(api.placed!.prescriptions.single.name, 'rx.jpg');
     expect(api.placed!.latitude, isNull);
     expect(find.text('Order route'), findsOneWidget);
   });
@@ -94,7 +148,7 @@ void main() {
       expect(api.placed!.fulfillment, 'delivery');
       expect(api.placed!.latitude, 14.55);
       expect(api.placed!.longitude, 121.02);
-      expect(api.placed!.prescription, isNull);
+      expect(api.placed!.prescriptions, isEmpty);
     },
   );
 
@@ -272,21 +326,31 @@ class _PickedRx implements AttachmentPicker {
 
   @override
   Future<PickedAttachment?> pickDocument() async => null;
+
+  @override
+  Future<List<PickedAttachment>> pickImages() async => [
+    PickedAttachment(name: 'rx.jpg', bytes: Uint8List.fromList([1, 2, 3])),
+  ];
+
+  @override
+  Future<List<PickedAttachment>> pickDocuments() async => const [];
 }
 
 typedef _Placed = ({
   String fulfillment,
   double? latitude,
   double? longitude,
-  PickedAttachment? prescription,
+  List<PickedAttachment> prescriptions,
+  ({String type, String idNumber, String name})? discountCard,
 });
 
 class _CheckoutApi extends ApiClient {
-  _CheckoutApi({required this.rx, this.closedUntil})
+  _CheckoutApi({required this.rx, this.closedUntil, this.seniorPwd = '0.00'})
     : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   final bool rx;
   final String? closedUntil;
+  final String seniorPwd;
   _Placed? placed;
 
   @override
@@ -309,6 +373,7 @@ class _CheckoutApi extends ApiClient {
       },
     ],
     'subtotal': '100.00',
+    'senior_pwd_discount': seniorPwd,
     'branch': {
       'id': 'B-MAKATI',
       'name': 'Makati branch',
@@ -351,7 +416,8 @@ class _CheckoutApi extends ApiClient {
     String fulfillmentMethod = 'delivery',
     double? deliveryLatitude,
     double? deliveryLongitude,
-    PickedAttachment? prescription,
+    List<PickedAttachment> prescriptions = const [],
+    ({String type, String idNumber, String name})? discountCard,
     String? note,
     String? successUrl,
     String? cancelUrl,
@@ -360,7 +426,8 @@ class _CheckoutApi extends ApiClient {
       fulfillment: fulfillmentMethod,
       latitude: deliveryLatitude,
       longitude: deliveryLongitude,
-      prescription: prescription,
+      prescriptions: prescriptions,
+      discountCard: discountCard,
     );
     return PlacedOrder.fromJson({'id': 'order-1', 'number': 'JM-1'});
   }

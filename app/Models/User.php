@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -78,6 +79,16 @@ class User extends Authenticatable
     public function cart(): HasOne
     {
         return $this->hasOne(Cart::class);
+    }
+
+    /**
+     * The customer's wishlist, newest save first.
+     *
+     * @return BelongsToMany<Product, $this>
+     */
+    public function savedProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'saved_products')->withTimestamps()->orderByPivot('created_at', 'desc');
     }
 
     public function orders(): HasMany

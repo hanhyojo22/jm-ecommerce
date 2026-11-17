@@ -11,6 +11,7 @@ use App\Http\Resources\Api\V1\CartItemResource;
 use App\Http\Resources\Api\V1\DeliveryAddressResource;
 use App\Http\Resources\Api\V1\OrderResource;
 use App\Models\Payment;
+use App\Support\SeniorPwdDiscount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -94,6 +95,9 @@ class CheckoutController extends Controller
         return response()->json(['data' => [
             'items' => CartItemResource::collection($cart->items)->resolve($request),
             'subtotal' => $subtotal,
+            // What a senior citizen / PWD card would take off; '0.00' when nothing is a medicine.
+            // shortcut: payment_fees above are on the undiscounted total, so an online fee preview can be a few centavos high with a card; the order charges the right fee.
+            'senior_pwd_discount' => SeniorPwdDiscount::preview($cart->items->map(fn ($item): array => ['product' => $item->product, 'total' => bcmul($item->unitPrice(), (string) $item->quantity, 2)])),
             'branch' => $branch === null ? null : [
                 'id' => $branch->id,
                 'name' => $branch->name,
@@ -145,10 +149,17 @@ class CheckoutController extends Controller
             'success_url' => ['nullable', 'url:http,https'],
             'cancel_url' => ['nullable', 'url:http,https'],
             'prescription' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            'prescriptions' => ['nullable', 'array', 'max:10'],
+            'prescriptions.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            ...SeniorPwdDiscount::rules(),
         ]);
 
         $paymentMethod = $data['payment_method'] ?? 'cod';
         $fulfillmentMethod = $data['fulfillment_method'] ?? 'delivery';
+        $prescriptions = array_values(array_filter([
+            ...Arr::wrap($request->file('prescriptions')),
+            ...Arr::wrap($request->file('prescription')),
+        ]));
         $order = $checkout->handle(
             $request->user(),
             Arr::only($data, ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code', 'delivery_note']),
@@ -156,7 +167,8 @@ class CheckoutController extends Controller
             $data['client_request_id'] ?? null,
             $fulfillmentMethod,
             $fulfillmentMethod === 'delivery' ? ['latitude' => (float) $data['delivery_latitude'], 'longitude' => (float) $data['delivery_longitude']] : null,
-            $request->file('prescription'),
+            $prescriptions,
+            SeniorPwdDiscount::cardFrom($data),
         );
 
         $sendReceipt->handle($request->user(), $order, CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod));

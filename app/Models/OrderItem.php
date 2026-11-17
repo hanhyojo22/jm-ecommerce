@@ -20,12 +20,13 @@ class OrderItem extends Model
         'unit_price',
         'quantity',
         'line_total',
+        'discount_amount',
         'image_path',
     ];
 
     protected function casts(): array
     {
-        return ['unit_price' => 'decimal:2', 'line_total' => 'decimal:2'];
+        return ['unit_price' => 'decimal:2', 'line_total' => 'decimal:2', 'discount_amount' => 'decimal:2'];
     }
 
     public function product(): BelongsTo

@@ -2,14 +2,17 @@
 
 namespace App\Actions;
 
+use App\Models\AuditLog;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Prescription;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Distance;
+use App\Support\SeniorPwdDiscount;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -28,9 +31,10 @@ class CheckoutCart
      * @param  ?string  $clientRequestId  a caller-generated key that makes a retried checkout return the original order
      * @param  'delivery'|'pickup'  $fulfillmentMethod  pickup is collected at the branch: no fee, and 'cod' means pay at the counter
      * @param  ?array{latitude: float, longitude: float}  $deliveryPin  where the customer dropped the delivery pin; checked against the branch's radius
-     * @param  ?UploadedFile  $prescription  required when a medicine needs one; a branch pharmacist reviews it before the order moves past pending
+     * @param  list<UploadedFile>  $prescriptions  required when a medicine needs one; a branch pharmacist reviews every page before the order moves past pending
+     * @param  ?array{type: 'senior'|'pwd', id_number: string, name: string}  $discountCard  takes the SC/PWD discount off medicines; the branch checks the card at handover
      */
-    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null, ?UploadedFile $prescription = null): Order
+    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null, array $prescriptions = [], ?array $discountCard = null): Order
     {
         abort_unless($user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(), 403);
 
@@ -40,7 +44,7 @@ class CheckoutCart
             $clientRequestId = null;
         }
 
-        $fingerprint = $clientRequestId === null ? null : $this->fingerprint($delivery, $paymentMethod, $fulfillmentMethod, $deliveryPin, Cart::query()->where('user_id', $user->id)->value('store_id'));
+        $fingerprint = $clientRequestId === null ? null : $this->fingerprint($delivery, $paymentMethod, $fulfillmentMethod, $deliveryPin, Cart::query()->where('user_id', $user->id)->value('store_id'), $discountCard);
 
         if ($clientRequestId !== null) {
             $existing = $this->existingOrder($user, $clientRequestId);
@@ -50,10 +54,10 @@ class CheckoutCart
             }
         }
 
-        $prescriptionPath = null;
+        $prescriptionPaths = [];
 
         try {
-            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin, $prescription, &$prescriptionPath): Order {
+            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin, $prescriptions, $discountCard, &$prescriptionPaths): Order {
                 $cart = Cart::query()
                     ->where('user_id', $user->id)
                     ->lockForUpdate()
@@ -114,13 +118,13 @@ class CheckoutCart
                     ->keyBy('id');
 
                 $prescriptionMedicines = $products->where('requires_prescription', true);
-                if ($prescriptionMedicines->isNotEmpty() && $prescription === null) {
+                if ($prescriptionMedicines->isNotEmpty() && $prescriptions === []) {
                     throw ValidationException::withMessages(['prescription' => 'Upload a photo of your prescription for '.$prescriptionMedicines->pluck('name')->join(', ', ' and ').'.']);
                 }
 
                 $managedTenantIds = $user->tenantMemberships()->whereIn('role', ['owner', 'manager', 'staff'])->pluck('tenant_id')->all();
 
-                $lines = $items->map(function ($item) use ($products, $managedTenantIds, $paymentMethod, $branch): array {
+                $lines = $items->map(function ($item) use ($products, $managedTenantIds, $paymentMethod, $branch, $discountCard): array {
                     $product = $products->get($item->product_id);
 
                     $variant = $product !== null && $item->product_variant_id !== null
@@ -149,6 +153,7 @@ class CheckoutCart
                     $this->inventory->take($branch->id, $product, $variant, $item->quantity);
 
                     $unitPrice = (string) ($variant?->price ?? $product->price);
+                    $lineTotal = bcmul($unitPrice, (string) $item->quantity, 2);
 
                     return [
                         'product' => $product,
@@ -156,7 +161,8 @@ class CheckoutCart
                         'quantity' => $item->quantity,
                         'unit_price' => $unitPrice,
                         'image_path' => (filled($variant?->color) ? $product->images()->where('color', $variant->color)->value('path') : null) ?? $product->images()->value('path'),
-                        'total' => bcmul($unitPrice, (string) $item->quantity, 2),
+                        'total' => $lineTotal,
+                        'discount' => $discountCard !== null && SeniorPwdDiscount::appliesTo($product) ? SeniorPwdDiscount::on($lineTotal) : '0.00',
                     ];
                 });
 
@@ -168,8 +174,13 @@ class CheckoutCart
                     ]);
                 }
 
+                if ($discountCard !== null && $lines->every(fn (array $line): bool => bccomp($line['discount'], '0.00', 2) === 0)) {
+                    throw ValidationException::withMessages(['discount_card' => 'The senior citizen / PWD discount is for medicines, and none of these items are medicines.']);
+                }
+
+                $discount = $this->sumTotals($lines->pluck('discount')->all());
                 $shipping = $fulfillmentMethod === 'pickup' ? '0.00' : self::deliveryFee($branch->tenant, $total);
-                $grandTotal = bcadd($total, $shipping, 2);
+                $grandTotal = bcadd(bcsub($total, $discount, 2), $shipping, 2);
 
                 $order = Order::query()->create([
                     ...$delivery,
@@ -183,6 +194,10 @@ class CheckoutCart
                     'delivery_longitude' => $fulfillmentMethod === 'delivery' ? $deliveryPin['longitude'] ?? null : null,
                     'subtotal' => $total,
                     'shipping_amount' => $shipping,
+                    'discount_amount' => $discount,
+                    'discount_card_type' => $discountCard['type'] ?? null,
+                    'discount_card_number' => $discountCard['id_number'] ?? null,
+                    'discount_card_name' => $discountCard['name'] ?? null,
                     'total' => $grandTotal,
                 ]);
                 if ($fulfillmentMethod === 'delivery') {
@@ -193,6 +208,7 @@ class CheckoutCart
                 $lines->groupBy(fn (array $line): string => $branch->id)
                     ->each(function ($storeLines) use ($order, $branch, $shipping): void {
                         $subtotal = $this->sumTotals($storeLines->pluck('total')->all());
+                        $storeDiscount = $this->sumTotals($storeLines->pluck('discount')->all());
 
                         $sellerOrder = $order->sellerOrders()->create([
                             'tenant_id' => $branch->tenant_id,
@@ -200,7 +216,8 @@ class CheckoutCart
                             'status' => 'pending',
                             'subtotal' => $subtotal,
                             'shipping_amount' => $shipping,
-                            'total' => bcadd($subtotal, $shipping, 2),
+                            'discount_amount' => $storeDiscount,
+                            'total' => bcadd(bcsub($subtotal, $storeDiscount, 2), $shipping, 2),
                         ]);
 
                         foreach ($storeLines as $line) {
@@ -214,6 +231,7 @@ class CheckoutCart
                                 'image_path' => $line['image_path'],
                                 'quantity' => $line['quantity'],
                                 'line_total' => $line['total'],
+                                'discount_amount' => $line['discount'],
                             ]);
                         }
                     });
@@ -225,12 +243,28 @@ class CheckoutCart
                     'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($grandTotal, $paymentMethod),
                 ]);
                 if ($prescriptionMedicines->isNotEmpty()) {
-                    $path = $prescription->store('prescriptions/'.$order->id, 'chat_attachments');
-                    if ($path === false) {
-                        throw ValidationException::withMessages(['prescription' => 'Your prescription could not be saved. Try again.']);
+                    $images = [];
+
+                    foreach ($prescriptions as $position => $file) {
+                        $path = $file->store('prescriptions/'.$order->id, 'chat_attachments');
+                        if ($path === false) {
+                            throw ValidationException::withMessages(['prescription' => 'Your prescription could not be saved. Try again.']);
+                        }
+
+                        $prescriptionPaths[] = $path;
+                        $images[] = ['path' => $path, 'original_name' => $file->getClientOriginalName(), 'position' => $position];
                     }
-                    $prescriptionPath = $path;
-                    $order->prescription()->create(['user_id' => $user->id, 'path' => $path, 'original_name' => $prescription->getClientOriginalName()]);
+
+                    $prescription = $order->prescription()->create(['user_id' => $user->id]);
+                    $prescription->images()->createMany($images);
+
+                    AuditLog::query()->create([
+                        'actor_user_id' => $user->id,
+                        'action' => 'prescription.submitted',
+                        'entity_type' => Prescription::class,
+                        'entity_id' => $prescription->id,
+                        'new_values' => ['order_id' => $order->id, 'images' => count($images)],
+                    ]);
                 }
                 $cart->items()->whereKey($items->modelKeys())->delete();
                 $cart->touch();
@@ -255,9 +289,9 @@ class CheckoutCart
 
             return $this->replay($existing, $fingerprint);
         } catch (Throwable $exception) {
-            // The order rolled back, so its prescription photo must not stay in storage without one.
-            if ($prescriptionPath !== null) {
-                Storage::disk('chat_attachments')->delete($prescriptionPath);
+            // The order rolled back, so its prescription pages must not stay in storage without one.
+            if ($prescriptionPaths !== []) {
+                Storage::disk('chat_attachments')->delete($prescriptionPaths);
             }
 
             throw $exception;
@@ -310,7 +344,7 @@ class CheckoutCart
      *
      * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      */
-    private function fingerprint(array $delivery, string $paymentMethod, string $fulfillmentMethod, ?array $deliveryPin, ?string $branchId): string
+    private function fingerprint(array $delivery, string $paymentMethod, string $fulfillmentMethod, ?array $deliveryPin, ?string $branchId, ?array $discountCard = null): string
     {
         $normalized = [
             'recipient_name' => trim((string) ($delivery['recipient_name'] ?? '')),
@@ -324,6 +358,7 @@ class CheckoutCart
             'fulfillment_method' => $fulfillmentMethod,
             'delivery_pin' => $deliveryPin === null ? null : [round((float) $deliveryPin['latitude'], 7), round((float) $deliveryPin['longitude'], 7)],
             'branch_id' => $branchId,
+            'discount_card' => $discountCard === null ? null : [$discountCard['type'], trim($discountCard['id_number']), trim($discountCard['name'])],
         ];
 
         return hash('sha256', json_encode($normalized, JSON_THROW_ON_ERROR));

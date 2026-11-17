@@ -21,6 +21,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Senior Citizen and PWD Discount
+    |--------------------------------------------------------------------------
+    |
+    | RA 9994 and RA 10754: 20% off medicines. A VAT-registered pharmacy first
+    | takes the 12% VAT out of the shelf price, then gives 20% off that. Set
+    | PHARMACY_VAT_REGISTERED=false for a non-VAT pharmacy (plain 20% off).
+    | Only products with a generic name count as medicines.
+    |
+    */
+
+    'senior_pwd' => [
+        'vat_registered' => (bool) env('PHARMACY_VAT_REGISTERED', true),
+        'rate' => '0.20',
+        'vat_rate' => '0.12',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Online Payments (PayMongo)
     |--------------------------------------------------------------------------
     |

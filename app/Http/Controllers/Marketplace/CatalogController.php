@@ -278,10 +278,12 @@ class CatalogController extends Controller
         $counts = $product->branchStocks()->where('store_id', $branchId)->pluck('quantity', 'variant_key');
         $product->variants->each(fn ($variant) => $variant->setAttribute('stock_quantity', (int) ($counts[$variant->id] ?? 0)));
         $product->setAttribute('stock_quantity', $product->variants->isEmpty() ? (int) ($counts['default'] ?? 0) : $product->variants->sum('stock_quantity'));
+        $branch = $branchId === $product->store_id ? $product->store : Store::query()->find($branchId, ['id', 'name', 'slug', 'status', 'city', 'logo_path']);
 
         return view('marketplace.catalog.show', [
             'product' => $product,
-            'branch' => $branchId === $product->store_id ? $product->store : Store::query()->find($branchId, ['id', 'name', 'slug', 'status', 'city', 'logo_path']),
+            'isSaved' => (bool) $request->user()?->savedProducts()->whereKey($product->id)->exists(),
+            'branch' => $branch,
             'reviews' => $reviews->paginate(10)->withQueryString(),
             'discussions' => $product->discussions()->where('status', 'published')->whereNull('parent_id')
                 ->with(['user:id,name', 'parent.user:id,name', 'replies.user:id,name', 'replies.parent.user:id,name'])
@@ -292,6 +294,10 @@ class CatalogController extends Controller
             'cartItemCount' => $request->user()?->cartItemCount() ?? 0,
             'relatedProducts' => $relatedProducts,
             'sellerProducts' => $sellerProducts,
+            'cheaperAlternatives' => $branch === null ? collect() : CatalogQuery::cheaperAlternatives(
+                CatalogQuery::inStockAt($this->publishedProducts()->with('thumbnail'), $branch),
+                $product,
+            )->get(),
         ]);
     }
 

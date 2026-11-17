@@ -86,6 +86,7 @@ class UpdateSellerOrderStatus
             }
 
             $previousStatus = $sellerOrder->status;
+            $isPickup = $order->fulfillment_method === 'pickup';
 
             if ($status === 'cancelled') {
                 $this->restoreStock($sellerOrder);
@@ -94,6 +95,8 @@ class UpdateSellerOrderStatus
             $sellerOrder->update([
                 'status' => $status,
                 'shipped_at' => $status === 'shipped' ? now() : $sellerOrder->shipped_at,
+                // The first time it is ready stays the time the buyer was told to collect it.
+                'pickup_ready_at' => $status === 'shipped' && $isPickup ? ($sellerOrder->pickup_ready_at ?? now()) : $sellerOrder->pickup_ready_at,
                 'delivered_at' => $status === 'delivered' ? now() : $sellerOrder->delivered_at,
                 ...($status === 'shipped' && $rider !== null ? ['rider_name' => $rider['name'], 'rider_phone' => $rider['phone']] : []),
             ]);
@@ -112,12 +115,14 @@ class UpdateSellerOrderStatus
             if ($status === 'cancelled') {
                 $remainingSubtotal = $this->sumTotals($activeSellerOrders->pluck('subtotal')->all());
                 $remainingShipping = $this->sumTotals($activeSellerOrders->pluck('shipping_amount')->all());
-                $remainingTotal = bcadd($remainingSubtotal, $remainingShipping, 2);
+                $remainingDiscount = $this->sumTotals($activeSellerOrders->pluck('discount_amount')->all());
+                $remainingTotal = bcadd(bcsub($remainingSubtotal, $remainingDiscount, 2), $remainingShipping, 2);
 
                 $order->update([
                     'status' => $this->aggregateStatus($sellerOrders->pluck('status')->all()),
                     'subtotal' => $remainingSubtotal,
                     'shipping_amount' => $remainingShipping,
+                    'discount_amount' => $remainingDiscount,
                     'total' => $remainingTotal,
                 ]);
 

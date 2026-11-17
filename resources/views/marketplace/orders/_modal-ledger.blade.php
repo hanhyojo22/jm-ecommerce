@@ -407,6 +407,9 @@
     <section class="receipt" aria-label="Order receipt">
         <dl class="receipt-rows">
             <div class="row"><dt>Subtotal</dt><dd class="num">₱{{ number_format($order->subtotal, 2) }}</dd></div>
+            @if($order->discount_amount > 0)
+                <div class="row"><dt>{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd class="num">−₱{{ number_format($order->discount_amount, 2) }}</dd></div>
+            @endif
             <div class="row"><dt>Delivery fee</dt><dd class="num">{{ bccomp((string) $order->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($order->shipping_amount, 2) }}</dd></div>
         </dl>
         <div class="receipt-total">

@@ -119,6 +119,7 @@ class SellerOrderTest extends TestCase
         $this->actingAs($seller)->patch(route('seller.orders.update', $sellerOrder), ['status' => 'shipped'])->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'shipped', 'rider_name' => null]);
+        $this->assertNotNull($sellerOrder->refresh()->pickup_ready_at);
     }
 
     public function test_owner_can_confirm_selected_pending_orders_from_their_store(): void

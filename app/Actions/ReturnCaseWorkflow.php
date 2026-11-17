@@ -153,7 +153,12 @@ class ReturnCaseWorkflow
                     if ($case->sellerOrder->cod_collected_at === null) {
                         throw ValidationException::withMessages(['action' => 'No cash has been collected for this store order, so there is nothing to refund. Record the collection first, or ask support to change the remedy.']);
                     }
-                    $amount = $case->items->reduce(fn (string $sum, ReturnCaseItem $item): string => bcadd($sum, bcmul((string) $item->unit_price, (string) $item->quantity, 2), 2), '0.00');
+                    // What the buyer paid for the returned units: the price less their share of any SC/PWD discount.
+                    $amount = $case->items->loadMissing('orderItem')->reduce(fn (string $sum, ReturnCaseItem $item): string => bcadd($sum, bcsub(
+                        bcmul((string) $item->unit_price, (string) $item->quantity, 2),
+                        $item->orderItem === null ? '0.00' : bcdiv(bcmul((string) $item->orderItem->discount_amount, (string) $item->quantity, 4), (string) $item->orderItem->quantity, 2),
+                        2,
+                    ), 2), '0.00');
                     // An online payment is refunded through PayMongo, so there is no transfer receipt to upload.
                     if ($case->sellerOrder->order->payment?->gateway_payment_id !== null) {
                         // Refunds from different cases on one store order wait for each other, so the cap below holds.

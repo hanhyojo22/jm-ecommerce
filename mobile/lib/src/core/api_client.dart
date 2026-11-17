@@ -362,7 +362,7 @@ class ApiClient {
   Future<CheckoutQuote> checkoutQuote() async =>
       CheckoutQuote.fromJson(mapOf(await _data('GET', '/checkout')));
 
-  /// A [prescription] goes up with the order as multipart form data; a
+  /// Every prescription page goes up with the order as multipart form data; a
   /// delivery needs the [deliveryLatitude]/[deliveryLongitude] pin.
   Future<PlacedOrder> placeOrder({
     required Address address,
@@ -371,13 +371,20 @@ class ApiClient {
     String fulfillmentMethod = 'delivery',
     double? deliveryLatitude,
     double? deliveryLongitude,
-    PickedAttachment? prescription,
+    List<PickedAttachment> prescriptions = const [],
+    ({String type, String idNumber, String name})? discountCard,
     String? note,
     String? successUrl,
     String? cancelUrl,
   }) async {
     final fields = <String, dynamic>{
       ...address.toJson(),
+      if (discountCard != null)
+        'discount_card': {
+          'type': discountCard.type,
+          'id_number': discountCard.idNumber,
+          'name': discountCard.name,
+        },
       if (note != null && note.trim().isNotEmpty) 'delivery_note': note.trim(),
       'fulfillment_method': fulfillmentMethod,
       'delivery_latitude': ?deliveryLatitude,
@@ -390,15 +397,16 @@ class ApiClient {
     final data = await _data(
       'POST',
       '/checkout',
-      data: prescription == null
+      data: prescriptions.isEmpty
           ? fields
           : FormData.fromMap({
               ...fields,
-              'prescription': MultipartFile.fromBytes(
-                prescription.bytes,
-                filename: prescription.name,
-                contentType: DioMediaType.parse(prescription.mimeType),
-              ),
+              for (final (index, page) in prescriptions.indexed)
+                'prescriptions[$index]': MultipartFile.fromBytes(
+                  page.bytes,
+                  filename: page.name,
+                  contentType: DioMediaType.parse(page.mimeType),
+                ),
             }),
     );
 
@@ -502,21 +510,22 @@ class ApiClient {
     );
   }
 
-  /// Sends a clearer prescription photo after a pharmacist asked for one.
+  /// Sends clearer prescription pages after a pharmacist asked for them.
   Future<OrderDetail> resubmitPrescription(
     String orderId,
-    PickedAttachment prescription,
+    List<PickedAttachment> prescriptions,
   ) async => OrderDetail.fromJson(
     mapOf(
       await _data(
         'POST',
         '/orders/$orderId/prescription',
         data: FormData.fromMap({
-          'prescription': MultipartFile.fromBytes(
-            prescription.bytes,
-            filename: prescription.name,
-            contentType: DioMediaType.parse(prescription.mimeType),
-          ),
+          for (final (index, page) in prescriptions.indexed)
+            'prescriptions[$index]': MultipartFile.fromBytes(
+              page.bytes,
+              filename: page.name,
+              contentType: DioMediaType.parse(page.mimeType),
+            ),
         }),
       ),
     ),
@@ -557,6 +566,21 @@ class ApiClient {
   Future<List<Product>> boughtBefore(String branch) async => listOf(
     await _data('GET', '/products/bought-before', query: {'branch': branch}),
   ).map(Product.fromJson).toList(growable: false);
+
+  /// The signed-in buyer's wishlist; with a [branch], stock is that branch's.
+  Future<List<Product>> savedProducts({String? branch}) async => listOf(
+    await _data(
+      'GET',
+      '/saved-products',
+      query: {if (branch != null) 'branch': branch},
+    ),
+  ).map(Product.fromJson).toList(growable: false);
+
+  Future<void> saveProduct(String productId) =>
+      _raw('POST', '/saved-products/$productId');
+
+  Future<void> unsaveProduct(String productId) =>
+      _raw('DELETE', '/saved-products/$productId');
 
   Future<List<StoreBranch>> storeLocations() async =>
       listOf(await _data('GET', '/store-locations'))

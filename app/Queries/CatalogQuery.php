@@ -270,6 +270,32 @@ class CatalogQuery
     }
 
     /**
+     * Up to three cheaper products with the same generic name, strength and dosage form,
+     * cheapest first. Nothing when the product has no generic name. Products with options are
+     * left out because their price depends on the option chosen.
+     */
+    public static function cheaperAlternatives(Builder $products, Product $product): Builder
+    {
+        $sameText = fn (Builder $query, string $column, ?string $value): Builder => blank($value)
+            ? $query
+            : $query->whereRaw("lower({$column}) = ?", [mb_strtolower(trim($value))]);
+
+        if (blank($product->generic_name)) {
+            return $products->whereRaw('1 = 0');
+        }
+
+        $products = $sameText($products, 'generic_name', $product->generic_name);
+        $products = $sameText($products, 'strength', $product->strength);
+
+        return $sameText($products, 'dosage_form', $product->dosage_form)
+            ->where('products.id', '!=', $product->id)
+            ->where('price', '<', (string) $product->price)
+            ->whereDoesntHave('variants')
+            ->reorder('price')
+            ->limit(3);
+    }
+
+    /**
      * Stores a shopper may see. A suspended store or tenant disappears from the catalog.
      */
     public static function publicStores(): Builder

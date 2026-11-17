@@ -8,6 +8,7 @@ use App\Actions\SendOrderReceipt;
 use App\Actions\StartOnlinePayment;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Support\SeniorPwdDiscount;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -75,6 +76,7 @@ class CheckoutController extends Controller
                 : [],
             'cart' => $cart,
             'subtotal' => $subtotal,
+            'seniorPwdDiscount' => SeniorPwdDiscount::preview($cart->items->map(fn ($item): array => ['product' => $item->product, 'total' => (string) $item->line_total])),
             'deliveryFee' => $deliveryFee,
             'total' => $total,
             'addresses' => $addresses,
@@ -100,9 +102,16 @@ class CheckoutController extends Controller
             'payment_method' => ['sometimes', Rule::in(['cod', ...Payment::ONLINE_METHODS])],
             'client_request_id' => ['nullable', 'string', 'max:100'],
             'prescription' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            'prescriptions' => ['nullable', 'array', 'max:10'],
+            'prescriptions.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            ...SeniorPwdDiscount::rules(),
         ]);
         $paymentMethod = $data['payment_method'] ?? 'cod';
         $fulfillmentMethod = $data['fulfillment_method'] ?? 'delivery';
+        $prescriptions = array_values(array_filter([
+            ...Arr::wrap($request->file('prescriptions')),
+            ...Arr::wrap($request->file('prescription')),
+        ]));
         // shortcut: the web checkout has no map pin until Phase 7, so its deliveries skip the radius check.
         $order = $checkout->handle(
             $request->user(),
@@ -110,7 +119,8 @@ class CheckoutController extends Controller
             $paymentMethod,
             $data['client_request_id'] ?? null,
             $fulfillmentMethod,
-            prescription: $request->file('prescription'),
+            prescriptions: $prescriptions,
+            discountCard: SeniorPwdDiscount::cardFrom($data),
         );
         $paymentNote = CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod);
         $buyer = $request->user();

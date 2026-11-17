@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\ProductDiscussionController;
 use App\Http\Controllers\Api\V1\ProductReviewController;
 use App\Http\Controllers\Api\V1\ReturnCaseController;
 use App\Http\Controllers\Api\V1\ReturnCaseEvidenceController;
+use App\Http\Controllers\Api\V1\SavedProductController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -90,6 +91,15 @@ Route::prefix('v1')->group(function (): void {
             ->middleware('throttle:10,1')
             ->name('api.v1.delivery-addresses.destroy');
 
+        Route::get('/saved-products', [SavedProductController::class, 'index'])
+            ->middleware('throttle:api')
+            ->name('api.v1.saved-products.index');
+        Route::post('/saved-products/{product}', [SavedProductController::class, 'store'])
+            ->middleware('throttle:cart')
+            ->name('api.v1.saved-products.store');
+        Route::delete('/saved-products/{product}', [SavedProductController::class, 'destroy'])
+            ->middleware('throttle:cart')
+            ->name('api.v1.saved-products.destroy');
         Route::get('/products/bought-before', [CatalogController::class, 'boughtBefore'])
             ->middleware('throttle:api')
             ->name('api.v1.products.bought-before');

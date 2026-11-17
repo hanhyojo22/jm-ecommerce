@@ -8,6 +8,7 @@ import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
+import 'screens/saved_screen.dart';
 import 'screens/store_screen.dart';
 import 'widgets/shell.dart';
 
@@ -55,5 +56,6 @@ final appRouter = GoRouter(
       path: '/addresses',
       builder: (context, state) => const AddressesScreen(),
     ),
+    GoRoute(path: '/saved', builder: (context, state) => const SavedScreen()),
   ],
 );

@@ -220,6 +220,18 @@ final boughtBeforeProvider = FutureProvider.autoDispose<List<Product>>((
   }
 });
 
+/// The buyer's wishlist; empty when signed out. Stock is the active branch's when one is known.
+final savedProductsProvider = FutureProvider.autoDispose<List<Product>>((
+  ref,
+) async {
+  if (!ref.watch(isSignedInProvider)) {
+    return const [];
+  }
+  final branch = await ref.watch(activeBranchIdProvider.future);
+
+  return ref.watch(apiClientProvider).savedProducts(branch: branch);
+});
+
 final dealsProvider = FutureProvider.autoDispose<List<Product>>(
   (ref) async =>
       (await ref
