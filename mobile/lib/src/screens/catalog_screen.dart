@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/formatters.dart';
 import '../models/models.dart';
@@ -408,29 +409,60 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       },
     );
 
+    final slab = brandSlab(scheme);
     // The shell drops its app bar on this tab, so this band sits behind the status bar.
     final search = AnnotatedRegion<SystemUiOverlayStyle>(
       value:
-          (ThemeData.estimateBrightnessForColor(scheme.primary) ==
-                      Brightness.dark
+          (ThemeData.estimateBrightnessForColor(slab.fill) == Brightness.dark
                   ? SystemUiOverlayStyle.light
                   : SystemUiOverlayStyle.dark)
               .copyWith(statusBarColor: Colors.transparent),
       child: Material(
-        color: scheme.primary,
+        color: slab.fill,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         child: MediaQuery.withClampedTextScaling(
           maxScaleFactor: 1.6,
           child: Padding(
             padding: EdgeInsetsDirectional.fromSTEB(
               16,
-              MediaQuery.paddingOf(context).top + 8,
+              MediaQuery.paddingOf(context).top + 10,
               16,
-              12,
+              16,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: [searchBar],
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(
+                    start: 4,
+                    bottom: 12,
+                  ),
+                  child: Semantics(
+                    header: true,
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          const TextSpan(text: 'JMMart'),
+                          TextSpan(
+                            text: '  Pharmacy',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: slab.ink.withValues(alpha: 0.72),
+                            ),
+                          ),
+                        ],
+                      ),
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: slab.ink,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ),
+                searchBar,
+              ],
             ),
           ),
         ),
@@ -517,17 +549,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             ),
                           ),
                         SliverToBoxAdapter(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  scheme.primary.withValues(alpha: 0.16),
-                                  scheme.surface,
-                                ],
-                              ),
-                            ),
+                          child: Material(
+                            type: MaterialType.transparency,
                             child: categories.when(
                               data: (items) => items.isEmpty
                                   ? const SizedBox.shrink()
@@ -788,8 +811,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleLarge?.copyWith(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.4,
                     ),
                   ),
@@ -1284,7 +1307,7 @@ class _TopDeals extends StatelessWidget {
     final priceHeight = scaler.scale(54);
 
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 28),
       child: LayoutBuilder(
         builder: (context, constraints) {
           // Three tiles and a peek of the fourth, so the row reads as scrollable.
@@ -1499,18 +1522,18 @@ class _OrderAgain extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.only(top: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Semantics(
               header: true,
               child: Text(
                 'Order again',
                 style: theme.textTheme.titleLarge?.copyWith(
-                  fontSize: 20,
+                  fontSize: 19,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.4,
                 ),
@@ -1555,39 +1578,33 @@ class _CampaignCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final slab = brandSlab(theme.colorScheme);
 
     return Material(
-      color: scheme.primary,
-      borderRadius: BorderRadius.circular(appSurfaceRadius),
+      color: slab.fill,
+      borderRadius: BorderRadius.circular(20),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Align(
-            alignment: const Alignment(1.15, 0),
-            child: Icon(
-              Icons.local_pharmacy_rounded,
-              size: 190,
-              color: scheme.onPrimary.withValues(alpha: 0.9),
-            ),
-          ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  scheme.primary.withValues(alpha: 0.98),
-                  scheme.primary.withValues(alpha: 0.82),
-                  scheme.primary.withValues(alpha: 0.16),
-                ],
-                stops: const [0, 0.56, 1],
+          // One large capsule bleeding off the right edge: the pharmacy's mark, not a stock icon.
+          Positioned(
+            right: -46,
+            top: -18,
+            bottom: -18,
+            child: ExcludeSemantics(
+              child: Transform.rotate(
+                angle: -0.62,
+                child: Icon(
+                  PhosphorIconsFill.pill,
+                  size: 236,
+                  color: slab.ink.withValues(alpha: 0.11),
+                ),
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(22),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -1599,16 +1616,15 @@ class _CampaignCard extends StatelessWidget {
                     'Your medicines,\nfrom your branch.',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: scheme.onPrimary,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      height: 1.05,
-                      letterSpacing: -0.6,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: slab.ink,
+                      fontSize: 25,
+                      height: 1.08,
+                      letterSpacing: -0.7,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 FilledButton.icon(
                   onPressed: onExplore,
                   iconAlignment: IconAlignment.end,
@@ -1619,20 +1635,14 @@ class _CampaignCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: scheme.onPrimary,
-                    foregroundColor: scheme.primary,
-                    disabledBackgroundColor: scheme.onPrimary.withValues(
-                      alpha: 0.75,
-                    ),
-                    disabledForegroundColor: scheme.primary.withValues(
-                      alpha: 0.85,
-                    ),
+                    backgroundColor: slab.ink,
+                    foregroundColor: slab.fill,
+                    disabledBackgroundColor: slab.ink.withValues(alpha: 0.75),
+                    disabledForegroundColor: slab.fill.withValues(alpha: 0.85),
                     minimumSize: const Size(48, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     tapTargetSize: MaterialTapTargetSize.padded,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(appSurfaceRadius),
-                    ),
+                    shape: const StadiumBorder(),
                     textStyle: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -1647,27 +1657,53 @@ class _CampaignCard extends StatelessWidget {
   }
 }
 
-String? _categoryImage(String? slug) => switch (slug) {
-  'electronics' ||
-  'fashion' ||
-  'health-beauty' ||
-  'home-living' ||
-  'food-grocery' ||
-  'babies-kids' ||
-  'sports-outdoors' ||
-  'pet-supplies' ||
-  'automotive' ||
-  'toys-collectibles' ||
-  'office-school' ||
-  'appliances' ||
-  'bags-accessories' ||
-  'hobbies-crafts' ||
-  'books-media' ||
-  'jewelry-watches' ||
-  'garden-diy' ||
-  'travel-luggage' => 'assets/categories/$slug.webp',
-  _ => null,
-};
+/// Head office names categories freely, so the icon follows words in the name.
+/// Keys match whole words (plural allowed); a trailing `*` matches a word prefix,
+/// so "Kidney Care" never gets the baby icon nor "IV Fluids" the cold icon.
+@visibleForTesting
+IconData categoryIcon(String name) {
+  final lower = name.toLowerCase();
+  bool has(List<String> keys) => keys.any((key) {
+    final prefix = key.endsWith('*');
+    final word = RegExp.escape(prefix ? key.substring(0, key.length - 1) : key);
+    return RegExp(prefix ? '\\b$word' : '\\b${word}s?\\b').hasMatch(lower);
+  });
+
+  if (has(['prescription*', 'rx'])) {
+    return PhosphorIconsRegular.prescription;
+  }
+  if (has(['pain', 'fever'])) {
+    return PhosphorIconsRegular.thermometerSimple;
+  }
+  if (has(['cough', 'cold', 'flu', 'allerg*'])) {
+    return PhosphorIconsRegular.wind;
+  }
+  if (has(['first aid', 'wound'])) {
+    return PhosphorIconsRegular.firstAidKit;
+  }
+  if (has(['vitamin', 'supplement'])) {
+    return PhosphorIconsRegular.sparkle;
+  }
+  if (has(['baby', 'babies', 'kid', 'child*', 'mother*'])) {
+    return PhosphorIconsRegular.baby;
+  }
+  if (has(['skin*', 'beauty', 'personal care'])) {
+    return PhosphorIconsRegular.drop;
+  }
+  if (has(['heart', 'blood', 'diabet*'])) {
+    return PhosphorIconsRegular.heartbeat;
+  }
+  if (has(['eye'])) {
+    return PhosphorIconsRegular.eye;
+  }
+  if (has(['oral', 'dental', 'tooth', 'teeth'])) {
+    return PhosphorIconsRegular.tooth;
+  }
+  if (has(['device', 'equipment', 'mask'])) {
+    return PhosphorIconsRegular.faceMask;
+  }
+  return PhosphorIconsRegular.pill;
+}
 
 class _CategoryStrip extends StatelessWidget {
   const _CategoryStrip({
@@ -1732,12 +1768,7 @@ class _CategoryStrip extends StatelessWidget {
             final active =
                 option.slug == selected &&
                 !(option.slug == null && dealsActive);
-            final image = _categoryImage(option.slug);
-            final fallback = Center(
-              child: Text(
-                option.name.isEmpty ? '?' : option.name.characters.first,
-              ),
-            );
+            final scheme = theme.colorScheme;
 
             return SizedBox(
               // Wide enough at 2× text that one-word names like "Electronics" never split mid-word.
@@ -1755,68 +1786,32 @@ class _CategoryStrip extends StatelessWidget {
                     onTap: () => onSelected(active ? null : option.slug),
                     child: Column(
                       children: [
-                        Container(
+                        AnimatedContainer(
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : const Duration(milliseconds: 200),
+                          curve: Curves.easeOutCubic,
                           width: 58,
                           height: 58,
                           decoration: BoxDecoration(
-                            color: active && option.slug == null
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(29),
+                            color: active
+                                ? scheme.primary
+                                : scheme.surfaceContainerLowest,
+                            borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color: active
-                                  ? theme.colorScheme.primary
-                                  : Colors.transparent,
-                              width: 2,
+                                  ? scheme.primary
+                                  : scheme.outlineVariant,
                             ),
                           ),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Positioned.fill(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(2),
-                                  child: option.slug == null
-                                      ? Icon(
-                                          active
-                                              ? Icons.check_rounded
-                                              : Icons.grid_view_rounded,
-                                          color: active
-                                              ? theme.colorScheme.onPrimary
-                                              : theme
-                                                    .colorScheme
-                                                    .onSurfaceVariant,
-                                        )
-                                      : image == null
-                                      ? fallback
-                                      : Image.asset(
-                                          image,
-                                          fit: BoxFit.contain,
-                                          cacheWidth: 192,
-                                          excludeFromSemantics: true,
-                                          errorBuilder: (
-                                            context,
-                                            error,
-                                            stack,
-                                          ) => fallback,
-                                        ),
-                                ),
-                              ),
-                              if (active && option.slug != null)
-                                Positioned(
-                                  right: -2,
-                                  top: -2,
-                                  child: CircleAvatar(
-                                    radius: 9,
-                                    backgroundColor: theme.colorScheme.primary,
-                                    child: Icon(
-                                      Icons.check_rounded,
-                                      size: 12,
-                                      color: theme.colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ),
-                            ],
+                          child: Icon(
+                            option.slug == null
+                                ? (active
+                                      ? PhosphorIconsBold.check
+                                      : PhosphorIconsRegular.squaresFour)
+                                : categoryIcon(option.name),
+                            size: 26,
+                            color: active ? scheme.onPrimary : scheme.primary,
                           ),
                         ),
                         const SizedBox(height: 8),

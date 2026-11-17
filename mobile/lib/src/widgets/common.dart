@@ -3,6 +3,7 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
@@ -62,12 +63,12 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.cloud_off_outlined,
-              size: 44,
-              color: Theme.of(context).colorScheme.error,
+            _IconMedallion(
+              icon: PhosphorIconsRegular.cloudSlash,
+              background: Theme.of(context).colorScheme.errorContainer,
+              foreground: Theme.of(context).colorScheme.error,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 18),
             Text(
               message,
               textAlign: TextAlign.center,
@@ -129,16 +130,15 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 52,
-              color: Theme.of(context).colorScheme.primary
-                  .withValues(alpha: 0.7),
+            _IconMedallion(
+              icon: icon,
+              background: Theme.of(context).colorScheme.primaryContainer,
+              foreground: Theme.of(context).colorScheme.primary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             if (message != null) ...[
@@ -155,6 +155,29 @@ class EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A soft round field holding the icon of an empty or error state.
+class _IconMedallion extends StatelessWidget {
+  const _IconMedallion({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+      child: Icon(icon, size: 38, color: foreground),
     );
   }
 }
@@ -197,7 +220,11 @@ class NetworkThumb extends StatelessWidget {
     this.cacheWidth,
     this.cacheKey,
     this.placeholderSize,
+    this.placeholderIcon = PhosphorIconsRegular.image,
   });
+
+  /// Drawn on the soft stage while the photo loads or when there is none.
+  final IconData placeholderIcon;
 
   final String? url;
   final double? width;
@@ -215,13 +242,24 @@ class NetworkThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final boxWidth = width ?? placeholderSize?.width;
+    final boxHeight = height ?? placeholderSize?.height;
+    final knownSides = [
+      boxWidth,
+      boxHeight,
+    ].whereType<double>().where((side) => side.isFinite);
+    final iconSize = knownSides.isEmpty
+        ? 36.0
+        : (knownSides.reduce((a, b) => a < b ? a : b) * 0.3).clamp(16.0, 44.0);
     final placeholder = Container(
-      width: width ?? placeholderSize?.width,
-      height: height ?? placeholderSize?.height,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      width: boxWidth,
+      height: boxHeight,
+      color: scheme.surfaceContainer,
       child: Icon(
-        Icons.image_outlined,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        placeholderIcon,
+        size: iconSize,
+        color: scheme.primary.withValues(alpha: 0.34),
       ),
     );
 
@@ -361,8 +399,8 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final titleStyle = theme.textTheme.bodyMedium?.copyWith(
-      fontSize: discovery ? 13 : null,
-      fontWeight: discovery ? FontWeight.w500 : FontWeight.w700,
+      fontSize: discovery ? 13.5 : null,
+      fontWeight: FontWeight.w600,
       height: 1.3,
     );
     final discount = discountPercent(
@@ -370,17 +408,21 @@ class ProductCard extends StatelessWidget {
       product.compareAtPrice,
     );
     final onSale = discount > 0;
+    // Regular prices sit in ink like a printed label; only a sale earns colour.
+    final priceColour = onSale
+        ? theme.colorScheme.error
+        : theme.colorScheme.onSurface;
     final salePriceStyle = discovery
         ? theme.textTheme.titleMedium?.copyWith(
             fontSize: 17,
             fontWeight: FontWeight.w800,
-            color: onSale ? theme.colorScheme.error : theme.colorScheme.primary,
+            color: priceColour,
             letterSpacing: -0.4,
             height: 1.15,
           )
         : theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w800,
-            color: onSale ? theme.colorScheme.error : theme.colorScheme.primary,
+            color: priceColour,
             letterSpacing: -0.3,
           );
     // Lazada-style stack: the sale price leads, the old price sits struck below.
@@ -448,6 +490,7 @@ class ProductCard extends StatelessWidget {
             width: double.infinity,
             radius: 0,
             cacheWidth: 600,
+            placeholderIcon: PhosphorIconsRegular.pill,
           ),
           if (onSale)
             Positioned(
@@ -456,28 +499,15 @@ class ProductCard extends StatelessWidget {
               child: _FeedDiscountBadge(percent: discount),
             ),
           if (discovery && product.requiresPrescription)
-            const Positioned(left: 0, bottom: 0, child: _RxBadge()),
+            const Positioned(left: 8, bottom: 8, child: _RxBadge()),
           if (discovery && !product.inStock)
             Positioned(
               left: 8,
               top: 8,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(appDetailRadius),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  child: Text(
-                    'Sold out',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
+              child: _FeedBadge(
+                label: 'Sold out',
+                background: theme.colorScheme.inverseSurface,
+                foreground: theme.colorScheme.onInverseSurface,
               ),
             ),
         ],
@@ -500,7 +530,7 @@ class ProductCard extends StatelessWidget {
               Expanded(child: photo),
             Padding(
               padding: discovery
-                  ? const EdgeInsets.fromLTRB(8, 8, 8, 10)
+                  ? const EdgeInsets.fromLTRB(10, 10, 10, 10)
                   : const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,22 +626,10 @@ class _FeedDiscountBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(appDetailRadius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        child: Text(
-          '-$percent%',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onErrorContainer,
-            fontWeight: FontWeight.w800,
-            height: 1.1,
-          ),
-        ),
-      ),
+    return _FeedBadge(
+      label: '-$percent%',
+      background: theme.colorScheme.error,
+      foreground: theme.colorScheme.onError,
     );
   }
 }
@@ -624,13 +642,10 @@ class _RxBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: 1.2,
-      child: _FeedBadge(
-        label: 'Rx',
-        background: scheme.tertiary,
-        foreground: scheme.onTertiary,
-      ),
+    return _FeedBadge(
+      label: 'Rx',
+      background: scheme.tertiary,
+      foreground: scheme.onTertiary,
     );
   }
 }
@@ -648,19 +663,23 @@ class _FeedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(color: background),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-        child: Text(
-          label,
-          maxLines: 1,
-          style: TextStyle(
-            color: foreground,
-            fontSize: 8.5,
-            height: 1.1,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.1,
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.3,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(appDetailRadius),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          child: Text(
+            label,
+            maxLines: 1,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+            ),
           ),
         ),
       ),
@@ -751,52 +770,62 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
       final cart = ref.read(cartProvider.notifier);
       final atStock =
           product.stockQuantity > 0 && line.quantity >= product.stockQuantity;
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton.filledTonal(
-            tooltip: line.quantity > 1 ? 'Remove one' : 'Remove from cart',
-            onPressed: _adding
-                ? null
-                : () => _change(
-                    () => line.quantity > 1
-                        ? cart.updateQuantity(line.id, line.quantity - 1)
-                        : cart.remove(line.id),
-                  ),
-            icon: Icon(
-              line.quantity > 1
-                  ? Icons.remove_rounded
-                  : Icons.delete_outline_rounded,
+      final scheme = Theme.of(context).colorScheme;
+      // The in-cart state reads as one pill in the same footprint as the Add button.
+      return DecoratedBox(
+        decoration: ShapeDecoration(
+          color: scheme.secondaryContainer,
+          shape: const StadiumBorder(),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              tooltip: line.quantity > 1 ? 'Remove one' : 'Remove from cart',
+              color: scheme.onSecondaryContainer,
+              onPressed: _adding
+                  ? null
+                  : () => _change(
+                      () => line.quantity > 1
+                          ? cart.updateQuantity(line.id, line.quantity - 1)
+                          : cart.remove(line.id),
+                    ),
+              icon: Icon(
+                line.quantity > 1
+                    ? PhosphorIconsBold.minus
+                    : PhosphorIconsRegular.trash,
+                size: 18,
+              ),
             ),
-          ),
-          Text(
-            '${line.quantity}',
-            semanticsLabel: '${line.quantity} in cart',
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          IconButton.filled(
-            tooltip: 'Add one',
-            onPressed: _adding || atStock
-                ? null
-                : () => _change(
-                    () => cart.updateQuantity(line.id, line.quantity + 1),
-                  ),
-            icon: const Icon(Icons.add_rounded),
-          ),
-        ],
+            Text(
+              '${line.quantity}',
+              semanticsLabel: '${line.quantity} in cart',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+            IconButton.filled(
+              tooltip: 'Add one',
+              onPressed: _adding || atStock
+                  ? null
+                  : () => _change(
+                      () => cart.updateQuantity(line.id, line.quantity + 1),
+                    ),
+              icon: const Icon(PhosphorIconsBold.plus, size: 18),
+            ),
+          ],
+        ),
       );
     }
     return SizedBox(
       width: double.infinity,
-      child: FilledButton(
+      child: FilledButton.tonal(
         style: FilledButton.styleFrom(
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           textStyle: Theme.of(context).textTheme.labelLarge,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(appSurfaceRadius),
-          ),
+          shape: const StadiumBorder(),
         ),
         onPressed: !product.inStock || _adding
             ? null
@@ -808,7 +837,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
                 dimension: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.onPrimary,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
                   semanticsLabel: 'Adding ${product.name} to cart',
                 ),
               )
@@ -835,20 +864,32 @@ class StatusPill extends StatelessWidget {
     final color = statusColour(context, status);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(8, 4, 10, 4),
+      decoration: ShapeDecoration(
         color: color.withValues(
-          alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.12,
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.2 : 0.1,
         ),
-        borderRadius: BorderRadius.circular(appDetailRadius),
+        shape: const StadiumBorder(),
       ),
-      child: Text(
-        statusLabel(status),
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              statusLabel(status),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(color: color, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -863,17 +904,23 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 10),
       child: Wrap(
         alignment: WrapAlignment.spaceBetween,
         crossAxisAlignment: WrapCrossAlignment.center,
         spacing: 8,
         runSpacing: 4,
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
+          Semantics(
+            header: true,
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4,
+              ),
+            ),
           ),
           ?trailing,
         ],
@@ -897,9 +944,10 @@ class QuantityStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
+      decoration: ShapeDecoration(
+        shape: StadiumBorder(
+          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

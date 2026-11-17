@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
@@ -464,19 +465,20 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
         ),
         shortcut(
           'Chat',
-          const Icon(Icons.chat_bubble_outline_rounded, size: 22),
+          const Icon(PhosphorIconsRegular.chatCircleDots, size: 22),
           _openChat,
           busy: _chatting,
         ),
       ],
     );
     Widget purchaseButton({required bool buyNow}) {
+      // Buy now is the one solid action; Add to cart sits beside it as its tonal partner.
       final background = buyNow
-          ? theme.colorScheme.inverseSurface
-          : theme.colorScheme.primary;
+          ? theme.colorScheme.primary
+          : theme.colorScheme.secondaryContainer;
       final foreground = buyNow
-          ? theme.colorScheme.onInverseSurface
-          : theme.colorScheme.onPrimary;
+          ? theme.colorScheme.onPrimary
+          : theme.colorScheme.onSecondaryContainer;
       // Only checkout shows a spinner; adding is confirmed by the flight.
       final busy = buyNow && inFlight == true;
       return FilledButton(
@@ -492,9 +494,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           // Keep colour while a request runs so the bar doesn't flash grey.
           disabledBackgroundColor: inFlight != null ? background : null,
           disabledForegroundColor: inFlight != null ? foreground : null,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(appSurfaceRadius),
-          ),
+          shape: const StadiumBorder(),
         ),
         // Add stays live (taps are ignored while busy) so it never greys out.
         onPressed: enabled || (!buyNow && available && inFlight == false)
@@ -520,24 +520,22 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
 
     final actions = Row(
       children: [
-        Expanded(child: purchaseButton(buyNow: true)),
-        const SizedBox(width: 8),
         Expanded(child: purchaseButton(buyNow: false)),
+        const SizedBox(width: 8),
+        Expanded(child: purchaseButton(buyNow: true)),
       ],
     );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLowest,
         border: Border(
-          top: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-          ),
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
         ),
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           child: LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth < 336 || largeText) {
@@ -578,11 +576,11 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
           SizedBox(
             height: galleryHeight,
             child: ColoredBox(
-              color: theme.colorScheme.surfaceContainerHighest,
+              color: theme.colorScheme.surfaceContainer,
               child: Icon(
-                Icons.image_outlined,
-                size: 64,
-                color: theme.colorScheme.onSurfaceVariant,
+                PhosphorIconsRegular.pill,
+                size: 72,
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
               ),
             ),
           )
@@ -714,9 +712,11 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     Widget child, {
     EdgeInsets padding = const EdgeInsets.all(16),
   }) => Padding(
-    padding: const EdgeInsets.only(top: 8),
+    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
     child: Material(
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
       child: Padding(padding: padding, child: child),
     ),
   );
@@ -915,6 +915,29 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Medicine first, then strength/brand, then price: what you
+                    // are buying matters more than what it costs.
+                    Text(
+                      product.name,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        height: 1.2,
+                      ),
+                    ),
+                    if (product.brand != null && product.brand!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        product.brand!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (product.requiresPrescription) ...[
+                      const SizedBox(height: 10),
+                      const PrescriptionBadge(),
+                    ],
+                    const SizedBox(height: 14),
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
@@ -923,7 +946,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         Text(
                           priceLabel,
                           style: theme.textTheme.headlineMedium?.copyWith(
-                            color: theme.colorScheme.primary,
+                            color: onSale
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.onSurface,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.8,
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -962,28 +987,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      product.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
-                      ),
-                    ),
-                    if (product.brand != null && product.brand!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        product.brand!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    if (product.requiresPrescription) ...[
-                      const SizedBox(height: 8),
-                      const PrescriptionBadge(),
-                    ],
                     if (!product.inStock) ...[
                       const SizedBox(height: 10),
                       StockedElsewhereNotice(productId: product.id),
@@ -1039,7 +1042,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         Expanded(
                           child: _infoRow(
                             context,
-                            icon: Icons.local_shipping_outlined,
+                            icon: PhosphorIconsRegular.motorcycle,
                             title: 'Delivery from your branch',
                             subtitle: 'Fee shown at checkout',
                             highlight: false,
@@ -1048,7 +1051,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                         Expanded(
                           child: _infoRow(
                             context,
-                            icon: Icons.payments_outlined,
+                            icon: PhosphorIconsRegular.money,
                             title: 'Cash on delivery',
                           ),
                         ),
@@ -1110,15 +1113,16 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          OutlinedButton(
-                            style: OutlinedButton.styleFrom(
+                          FilledButton.tonal(
+                            style: FilledButton.styleFrom(
                               // The theme's full-width minimum breaks inside a Row.
                               minimumSize: const Size(0, 40),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  appSurfaceRadius,
-                                ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
                               ),
+                              tapTargetSize: MaterialTapTargetSize.padded,
+                              shape: const StadiumBorder(),
+                              textStyle: theme.textTheme.labelLarge,
                             ),
                             onPressed: () => context.push(
                               '/store/${product.branchSlug ?? product.store!.slug}',

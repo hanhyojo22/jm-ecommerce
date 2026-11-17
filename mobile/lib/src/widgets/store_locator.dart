@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/formatters.dart';
 import '../core/location_service.dart';
 import '../models/store_branch.dart';
 import '../providers/store_locator_providers.dart';
+import '../theme.dart';
 
 String _distanceLabel(double km) => '${km.toStringAsFixed(1)} km away';
 
@@ -39,10 +41,10 @@ class StoreRecommendationCard extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return Card.outlined(
+    return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         child: switch (locator) {
           AsyncData(:final value) => switch (value.activeBranch) {
             final BranchDistance active => _Recommendation(
@@ -80,58 +82,137 @@ class _Recommendation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final distanceKm = active.distanceKm;
+    final open = active.branch.isOpen;
+    final hoursColour = open
+        ? statusColour(context, 'completed')
+        : scheme.error;
+    final metaStyle = theme.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+      fontWeight: FontWeight.w500,
+    );
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.storefront_outlined, color: theme.colorScheme.primary),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isManualPick ? 'Your branch' : 'Nearest branch',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
               ),
-              Text(active.branch.name, style: theme.textTheme.titleMedium),
-              Text(
-                _hoursLabel(active),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: active.branch.isOpen
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.error,
-                ),
+              child: Icon(
+                PhosphorIconsFill.storefront,
+                color: scheme.primary,
+                size: 22,
               ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (distanceKm != null)
-                    Text(
-                      _distanceLabel(distanceKm),
-                      style: theme.textTheme.bodySmall,
+                  Text(
+                    isManualPick ? 'Your branch' : 'Nearest branch',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
                     ),
-                  if (active.branch.deliveryFee != null)
-                    Text(
-                      _feeLabel(active.branch),
-                      style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    active.branch.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
-                  if (active.isOutOfDeliveryRange) _OutOfRangeBadge(),
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton.tonal(
+              onPressed: () => showBranchSelectorSheet(context),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(48, 40),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                tapTargetSize: MaterialTapTargetSize.padded,
+                shape: const StadiumBorder(),
+              ),
+              child: const Text('Change'),
+            ),
+          ],
         ),
-        TextButton(
-          onPressed: () => showBranchSelectorSheet(context),
-          child: const Text('Change'),
+        const SizedBox(height: 12),
+        Divider(color: scheme.outlineVariant),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 14,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: hoursColour,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    _hoursLabel(active),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: hoursColour,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (distanceKm != null)
+              _BranchFact(
+                icon: PhosphorIconsRegular.mapPin,
+                label: _distanceLabel(distanceKm),
+                style: metaStyle,
+              ),
+            if (active.branch.deliveryFee != null)
+              _BranchFact(
+                icon: PhosphorIconsRegular.motorcycle,
+                label: _feeLabel(active.branch),
+                style: metaStyle,
+              ),
+            if (active.isOutOfDeliveryRange) _OutOfRangeBadge(),
+          ],
         ),
+      ],
+    );
+  }
+}
+
+class _BranchFact extends StatelessWidget {
+  const _BranchFact({required this.icon, required this.label, this.style});
+
+  final IconData icon;
+  final String label;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: style?.color),
+        const SizedBox(width: 4),
+        Flexible(child: Text(label, style: style)),
       ],
     );
   }

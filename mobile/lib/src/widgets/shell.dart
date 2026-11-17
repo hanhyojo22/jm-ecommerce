@@ -14,6 +14,7 @@ import '../screens/cart_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
+import '../theme.dart';
 
 class ShellTabState {
   const ShellTabState({required this.index, required this.loaded});
@@ -173,89 +174,57 @@ class _AppShellState extends ConsumerState<AppShell>
   ) => DecoratedBox(
     decoration: BoxDecoration(
       color: scheme.surfaceContainerLowest,
-      border: Border(
-        top: BorderSide(
-          color: scheme.primary.withValues(alpha: 0.14),
-          width: 1,
+      border: Border(top: BorderSide(color: scheme.outlineVariant)),
+    ),
+    // Outline glyphs at rest, the filled glyph when selected: one icon family.
+    child: NavigationBar(
+      selectedIndex: index,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      onDestinationSelected: (value) {
+        if (value == 2) {
+          ref.invalidate(conversationsProvider);
+        }
+        ref.read(shellTabProvider.notifier).select(value);
+      },
+      destinations: [
+        const NavigationDestination(
+          icon: Icon(PhosphorIconsRegular.house),
+          selectedIcon: Icon(PhosphorIconsFill.house),
+          label: 'Shop',
         ),
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: scheme.shadow.withValues(alpha: 0.05),
-          blurRadius: 12,
-          offset: const Offset(0, -2),
+        const NavigationDestination(
+          icon: Icon(PhosphorIconsRegular.receipt),
+          selectedIcon: Icon(PhosphorIconsFill.receipt),
+          label: 'Orders',
+        ),
+        NavigationDestination(
+          icon: _NavBadge(
+            count: unread,
+            child: const Icon(PhosphorIconsRegular.chatCircleDots),
+          ),
+          selectedIcon: _NavBadge(
+            count: unread,
+            child: const Icon(PhosphorIconsFill.chatCircleDots),
+          ),
+          label: 'Messages',
+        ),
+        NavigationDestination(
+          icon: _NavBadge(
+            count: cartCount,
+            child: const Icon(PhosphorIconsRegular.tote),
+          ),
+          selectedIcon: _NavBadge(
+            count: cartCount,
+            child: const Icon(PhosphorIconsFill.tote),
+          ),
+          label: 'Cart',
+        ),
+        const NavigationDestination(
+          icon: Icon(PhosphorIconsRegular.user),
+          selectedIcon: Icon(PhosphorIconsFill.user),
+          label: 'Account',
         ),
       ],
-    ),
-    child: PhosphorDuotoneTheme(
-      data: PhosphorDuotoneThemeData(
-        secondaryColor: scheme.primary,
-        secondaryOpacity: 0.22,
-      ),
-      child: NavigationBar(
-        selectedIndex: index,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (value) {
-          if (value == 2) {
-            ref.invalidate(conversationsProvider);
-          }
-          ref.read(shellTabProvider.notifier).select(value);
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(PhosphorIconsBold.storefront),
-            selectedIcon: PhosphorIcon(
-              PhosphorIconsDuotone.storefront,
-              color: scheme.primary,
-            ),
-            label: 'Shop',
-          ),
-          NavigationDestination(
-            icon: const Icon(PhosphorIconsBold.receipt),
-            selectedIcon: PhosphorIcon(
-              PhosphorIconsDuotone.receipt,
-              color: scheme.primary,
-            ),
-            label: 'Orders',
-          ),
-          NavigationDestination(
-            icon: _NavBadge(
-              count: unread,
-              child: const Icon(PhosphorIconsBold.chatCircleDots),
-            ),
-            selectedIcon: _NavBadge(
-              count: unread,
-              child: PhosphorIcon(
-                PhosphorIconsDuotone.chatCircleDots,
-                color: scheme.primary,
-              ),
-            ),
-            label: 'Messages',
-          ),
-          NavigationDestination(
-            icon: _NavBadge(
-              count: cartCount,
-              child: const Icon(PhosphorIconsBold.shoppingCart),
-            ),
-            selectedIcon: _NavBadge(
-              count: cartCount,
-              child: PhosphorIcon(
-                PhosphorIconsDuotone.shoppingCart,
-                color: scheme.primary,
-              ),
-            ),
-            label: 'Cart',
-          ),
-          NavigationDestination(
-            icon: const Icon(PhosphorIconsBold.user),
-            selectedIcon: PhosphorIcon(
-              PhosphorIconsDuotone.user,
-              color: scheme.primary,
-            ),
-            label: 'Account',
-          ),
-        ],
-      ),
     ),
   );
 }
@@ -274,34 +243,44 @@ class _ViewCartBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final slab = brandSlab(theme.colorScheme);
     final label = '$count ${count == 1 ? 'item' : 'items'}';
 
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.3,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Material(
-          color: scheme.primary,
-          borderRadius: BorderRadius.circular(14),
+          color: slab.fill,
+          elevation: 6,
+          shadowColor: slab.fill.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(16),
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             onTap: onTap,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 52),
+              constraints: const BoxConstraints(minHeight: 56),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(8, 8, 18, 8),
                 child: Row(
                   children: [
-                    Icon(Icons.shopping_bag_rounded, color: scheme.onPrimary),
-                    const SizedBox(width: 10),
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: slab.ink.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(PhosphorIconsFill.tote, color: slab.ink),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'View cart · $label',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleSmall?.copyWith(
-                          color: scheme.onPrimary,
+                          color: slab.ink,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -310,7 +289,7 @@ class _ViewCartBar extends StatelessWidget {
                       Text(
                         money(subtotal),
                         style: theme.textTheme.titleSmall?.copyWith(
-                          color: scheme.onPrimary,
+                          color: slab.ink,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
