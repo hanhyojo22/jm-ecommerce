@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/catalog_providers.dart';
 import '../widgets/common.dart';
+import '../widgets/shell.dart';
 import 'product_screen.dart';
 
 /// The buyer's wishlist: products saved to buy later, with today's price and branch stock.
@@ -22,7 +23,10 @@ class SavedScreen extends ConsumerWidget {
           title: 'Nothing saved yet',
           message: 'Tap the heart on a product to keep it here for later.',
           action: FilledButton(
-            onPressed: () => context.go('/'),
+            onPressed: () {
+              ref.read(shellTabProvider.notifier).select(0);
+              context.go('/');
+            },
             child: const Text('Browse the shop'),
           ),
         ),

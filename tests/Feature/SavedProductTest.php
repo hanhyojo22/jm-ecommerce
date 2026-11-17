@@ -50,6 +50,19 @@ class SavedProductTest extends TestCase
         $this->getJson(route('api.v1.saved-products.index'))->assertJsonCount(0, 'data');
     }
 
+    public function test_the_website_list_shows_the_cart_branchs_stock(): void
+    {
+        [$branch, $product] = $this->pharmacy();
+        $buyer = User::factory()->create(['email_verified_at' => now()]);
+        $buyer->savedProducts()->attach($product);
+        $buyer->cart()->create(['store_id' => $branch->id]);
+        BranchStock::query()->where('product_id', $product->id)->update(['quantity' => 0]);
+
+        $this->actingAs($buyer)->get(route('saved-products.index'))
+            ->assertSee('Out of stock')
+            ->assertDontSee('Add Paracetamol 500mg to cart');
+    }
+
     public function test_an_unpublished_product_cannot_be_saved_and_drops_off_the_list(): void
     {
         [, $product] = $this->pharmacy();

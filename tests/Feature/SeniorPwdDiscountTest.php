@@ -68,6 +68,17 @@ class SeniorPwdDiscountTest extends TestCase
         $this->assertSame(['0.00', '0.00'], [(string) $order->refresh()->discount_amount, (string) $order->total]);
     }
 
+    public function test_the_app_pickup_checkout_with_a_card_places_the_order(): void
+    {
+        $buyer = $this->buyerWithCart();
+
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [
+            'recipient_name' => 'Lola Tester', 'phone' => '09171234567', 'address_line' => '', 'city' => 'Cebu', 'province' => '', 'postal_code' => '',
+            'fulfillment_method' => 'pickup', 'payment_method' => 'cod', 'client_request_id' => '6c1f3b9e-1111-4a2b-9c3d-123456789abc',
+            'discount_card' => ['type' => 'senior', 'id_number' => 'SC-TEST-4821', 'name' => 'Lola Tester'],
+        ])->assertCreated()->assertJsonPath('data.total', '165.00');
+    }
+
     public function test_the_website_checkout_offers_the_card_and_applies_it(): void
     {
         $buyer = $this->buyerWithCart();
