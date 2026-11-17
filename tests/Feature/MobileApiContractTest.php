@@ -85,6 +85,20 @@ class MobileApiContractTest extends TestCase
         $this->assertMoney($quote, ['data.subtotal', 'data.store_totals.0.total']);
     }
 
+    public function test_a_prescription_medicine_in_the_cart_is_flagged_for_the_app(): void
+    {
+        [$buyer, $product] = $this->buyerAndProduct();
+        $product->forceFill(['requires_prescription' => true])->save();
+        $this->actingAs($buyer)
+            ->postJson('/api/v1/cart/items', ['branch' => $product->store_id, 'product_id' => $product->id, 'quantity' => 1])
+            ->assertCreated();
+
+        $this->actingAs($buyer)
+            ->getJson('/api/v1/cart')
+            ->assertOk()
+            ->assertJsonPath('data.items.0.product.requires_prescription', true);
+    }
+
     public function test_placed_orders_have_the_fields_the_app_reads(): void
     {
         [$buyer, $product] = $this->buyerAndProduct();
