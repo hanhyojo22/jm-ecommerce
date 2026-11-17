@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Providers\AppServiceProvider;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,20 @@ class TrustedProxyTest extends TestCase
 
         $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.10'])
             ->withHeader('X-Forwarded-For', '203.0.113.20')
+            ->get('/proxy-ip-audit')
+            ->assertOk()
+            ->assertSee('203.0.113.20');
+    }
+
+    public function test_a_forged_forwarded_ip_is_ignored_behind_cloudflare(): void
+    {
+        TrustProxies::at(AppServiceProvider::CLOUDFLARE_PROXIES);
+
+        Route::middleware('web')->get('/proxy-ip-audit', fn (Request $request) => $request->ip());
+
+        // Forged by the visitor, then the visitor as Cloudflare saw them, then Cloudflare's own edge.
+        $this->withServerVariables(['REMOTE_ADDR' => '10.1.2.3'])
+            ->withHeader('X-Forwarded-For', '198.51.100.7, 203.0.113.20, 172.64.9.9')
             ->get('/proxy-ip-audit')
             ->assertOk()
             ->assertSee('203.0.113.20');

@@ -509,8 +509,9 @@ services:
     envVars:
       - key: PORT
         value: "10000"
+      # Tried here first: a wrong proxy list breaks https detection and signed links.
       - key: TRUSTED_PROXIES
-        value: "*"
+        value: cloudflare
       - key: APP_NAME
         value: JMMart Rx Staging
       - key: APP_ENV

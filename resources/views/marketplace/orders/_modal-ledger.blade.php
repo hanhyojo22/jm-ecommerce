@@ -446,7 +446,7 @@
         @elseif ($firstReviewed)
             <a href="{{ route('orders.show', $order) }}#review-item-{{ $firstReviewed->id }}" class="btn btn-primary">View your reviews</a>
         @else
-            <button type="button" class="btn btn-primary" onclick="this.closest('dialog').close()">Done</button>
+            <button type="button" class="btn btn-primary" data-close-dialog>Done</button>
         @endif
     </div>
 </footer>

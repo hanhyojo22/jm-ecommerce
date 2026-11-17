@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
+import '../core/push_notifications.dart';
 import '../models/models.dart';
+import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../providers/store_locator_providers.dart';
@@ -81,14 +83,21 @@ class ErrorView extends StatelessWidget {
             ],
             if (canSignOut) ...[
               const SizedBox(height: 10),
-              TextButton.icon(
-                onPressed: () async {
-                  final router = GoRouter.of(context);
-                  await ClerkAuth.of(context).signOut();
-                  router.go('/');
-                },
-                icon: const Icon(Icons.logout_rounded),
-                label: const Text('Sign out'),
+              Consumer(
+                builder: (context, ref, _) => TextButton.icon(
+                  onPressed: () async {
+                    final router = GoRouter.of(context);
+                    final auth = ClerkAuth.of(context);
+                    // Best-effort, as on the account screen: this phone stops getting the account's pushes.
+                    await PushNotifications.unregister(
+                      ref.read(apiClientProvider),
+                    );
+                    await auth.signOut();
+                    router.go('/');
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Sign out'),
+                ),
               ),
             ],
           ],

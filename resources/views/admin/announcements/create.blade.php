@@ -62,7 +62,7 @@
         $initialAutoBody = $initialTargetBody !== '' && $initialTargetBody === old('body') ? $initialTargetBody : '';
     @endphp
 
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
         // One search box per link type; the page's x-data owns what a pick does.
         window.jmmartLinkSearch = (type, onPick, id) => ({
             type,
@@ -942,7 +942,7 @@
 
                                 @unless ($announcement->isFinished())
                                     <div class="shrink-0 sm:pl-4">
-                                        <form method="POST" action="{{ route('admin.announcements.cancel', $announcement) }}" onsubmit="return confirm('Stop sending this notification? People already reached keep it.')">
+                                        <form method="POST" action="{{ route('admin.announcements.cancel', $announcement) }}" data-confirm="Stop sending this notification? People already reached keep it." data-confirm-tone="danger">
                                             @csrf
                                             @method('PATCH')
                                             <x-danger-button>{{ __('Cancel') }}</x-danger-button>

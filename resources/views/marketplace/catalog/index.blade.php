@@ -327,7 +327,7 @@
                                 @endif
                                 <form method="GET" action="{{ $catalogUrl }}" @submit="loading = true" class="flex min-w-0 flex-1 items-center sm:flex-none">
                                     @foreach (request()->except(['sort', 'page']) as $name => $value) @if (is_scalar($value) && filled($value))<input type="hidden" name="{{ $name }}" value="{{ $value }}">@endif @endforeach
-                                    <select id="sort" name="sort" aria-label="Sort products" onchange="this.form.submit()" class="marketplace-sort">
+                                    <select id="sort" name="sort" aria-label="Sort products" data-submit-on-change class="marketplace-sort">
                                         <option value="relevance" @selected(request('sort', 'relevance') === 'relevance')>Sort: Most relevant</option>
                                         <option value="price_asc" @selected(request('sort') === 'price_asc')>Price: low to high</option>
                                         <option value="price_desc" @selected(request('sort') === 'price_desc')>Price: high to low</option>

@@ -6,6 +6,7 @@ use App\Actions\BranchInventory;
 use App\Models\BranchStock;
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Prescription;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Mockery\MockInterface;
+use RuntimeException;
 use Tests\TestCase;
 
 class PrescriptionTest extends TestCase
@@ -83,6 +85,18 @@ class PrescriptionTest extends TestCase
         $this->actingAs($order->user)->get(route('orders.placed', $order))->assertSee('A pharmacist checks your prescription first.');
         $this->actingAs($order->user)->get(route('orders.show', $order))->assertSee('Waiting for pharmacist review');
         $this->actingAs($order->user)->get(route('orders.show', $order), ['X-Order-Modal' => '1'])->assertSee('Prescription in review');
+    }
+
+    public function test_a_checkout_that_fails_after_saving_the_prescription_removes_the_file(): void
+    {
+        Prescription::creating(fn () => throw new RuntimeException('The database went away.'));
+
+        $this->actingAs($this->buyerWithCart())
+            ->post(route('checkout.store'), [...$this->delivery(), 'prescription' => UploadedFile::fake()->image('rx.jpg')])
+            ->assertServerError();
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertSame([], Storage::disk('chat_attachments')->allFiles());
     }
 
     public function test_the_order_waits_for_a_pharmacist_and_approving_accepts_it(): void

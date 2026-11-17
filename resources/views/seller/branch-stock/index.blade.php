@@ -17,7 +17,7 @@
                 @if ($branches)
                     <div>
                         <label for="branch" class="block text-sm font-semibold text-ink">Branch</label>
-                        <select id="branch" name="branch" class="field-control mt-2 text-base lg:text-sm" onchange="this.form.submit()">
+                        <select id="branch" name="branch" class="field-control mt-2 text-base lg:text-sm" data-submit-on-change>
                             @foreach ($branches as $option)
                                 <option value="{{ $option->id }}" @selected($option->id === $branch->id)>{{ $option->name }}</option>
                             @endforeach

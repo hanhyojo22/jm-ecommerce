@@ -95,7 +95,7 @@
                         </dl>
 
                         <div class="px-6 pb-5 print:hidden">
-                            <button type="button" onclick="window.print()" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#cbd4e0] bg-surface px-5 text-[13.5px] font-semibold text-ink transition hover:border-ink">
+                            <button type="button" data-print class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[#cbd4e0] bg-surface px-5 text-[13.5px] font-semibold text-ink transition hover:border-ink">
                                 <svg class="size-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 9V4h10v5M7 18H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1.5"/></svg>
                                 Print receipt
                             </button>

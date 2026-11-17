@@ -301,8 +301,8 @@ test('customer adds, edits, cancels and removes a delivery address', async ({ br
         await page.getByRole('button', { name: 'Save changes', exact: true }).click();
         await expect(page.getByText('12 Mabini Street, Barangay San Antonio, Taguig, Metro Manila 1600', { exact: true })).toBeVisible();
 
-        page.once('dialog', (dialog) => dialog.accept());
         await page.getByRole('button', { name: `Remove address for ${recipient}` }).click();
+        await page.getByRole('dialog', { name: 'Are you sure?' }).getByRole('button', { name: 'Continue', exact: true }).click();
         await expect(page.getByRole('button', { name: `Remove address for ${recipient}` })).toHaveCount(0);
     } finally {
         await context.close();

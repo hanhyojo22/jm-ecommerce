@@ -27,6 +27,22 @@ use Illuminate\View\View as ViewInstance;
 class AppServiceProvider extends ServiceProvider
 {
     /**
+     * TRUSTED_PROXIES=cloudflare: the host's private network plus Cloudflare's published edge
+     * ranges (cloudflare.com/ips). "*" trusts every hop, so the visitor's IP becomes whatever
+     * X-Forwarded-For value they send; with this list it is the address Cloudflare itself saw.
+     *
+     * @var list<string>
+     */
+    public const CLOUDFLARE_PROXIES = [
+        '127.0.0.0/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '100.64.0.0/10', '::1', 'fc00::/7',
+        '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18',
+        '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17',
+        '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+        '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32', '2405:8100::/32',
+        '2a06:98c0::/29', '2c0f:f248::/32',
+    ];
+
+    /**
      * Register any application services.
      */
     public function register(): void
@@ -44,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         if ($trustedProxies = config('app.trusted_proxies')) {
-            TrustProxies::at($trustedProxies);
+            TrustProxies::at($trustedProxies === 'cloudflare' ? self::CLOUDFLARE_PROXIES : $trustedProxies);
         }
 
         Auth::viaRequest('clerk', fn ($request) => app(ClerkUserResolver::class)->resolve($request));
@@ -54,7 +70,8 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultSimpleView('components.marketplace.pagination');
 
         RateLimiter::for('cart', fn (Request $request): Limit => Limit::perMinute(30)->by(
-            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+            // A signed-in caller is counted by account alone: the IP comes from a forwarded header they can change.
+            $request->user()?->id ?? $request->ip(),
         ));
 
         /*
@@ -63,27 +80,32 @@ class AppServiceProvider extends ServiceProvider
          * working through a long cart cannot spend the allowance that adding and removing needs.
          */
         RateLimiter::for('cart-selection', fn (Request $request): Limit => Limit::perMinute(60)->by(
-            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+            // A signed-in caller is counted by account alone: the IP comes from a forwarded header they can change.
+            $request->user()?->id ?? $request->ip(),
         ));
 
         RateLimiter::for('checkout', fn (Request $request): Limit => Limit::perHour(10)->by(
-            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+            // A signed-in caller is counted by account alone: the IP comes from a forwarded header they can change.
+            $request->user()?->id ?? $request->ip(),
         ));
 
         // The mobile client polls a handful of endpoints; 60 requests a minute leaves room
         // for normal browsing without letting a leaked token hammer the API.
         RateLimiter::for('api', fn (Request $request): Limit => Limit::perMinute(60)->by(
-            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+            // A signed-in caller is counted by account alone: the IP comes from a forwarded header they can change.
+            $request->user()?->id ?? $request->ip(),
         ));
 
         // The app marks a thread read on every refresh; its own budget keeps a busy chat
         // from spending the shared api allowance that browsing and message loads need.
         RateLimiter::for('conversation-read', fn (Request $request): Limit => Limit::perMinute(60)->by(
-            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+            // A signed-in caller is counted by account alone: the IP comes from a forwarded header they can change.
+            $request->user()?->id ?? $request->ip(),
         ));
 
         RateLimiter::for('admin-mutations', fn (Request $request): Limit => Limit::perMinute(20)->by(
-            ($request->user()?->id ?? 'guest').'|'.$request->ip(),
+            // A signed-in caller is counted by account alone: the IP comes from a forwarded header they can change.
+            $request->user()?->id ?? $request->ip(),
         ));
 
         Model::preventLazyLoading(! $this->app->isProduction());

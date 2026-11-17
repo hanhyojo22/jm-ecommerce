@@ -72,6 +72,17 @@ class ClerkBackendSessionVerifierTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    public function test_a_session_cookie_is_not_accepted_on_the_api(): void
+    {
+        $this->fakeKeySet();
+
+        $request = Request::create('/api/v1/me', 'GET', [], [], [], [
+            'HTTP_COOKIE' => '__session='.$this->sessionToken(),
+        ]);
+
+        $this->assertNull(app(ClerkBackendSessionVerifier::class)->verify($request));
+    }
+
     public function test_an_expired_token_is_refused_without_a_second_key_lookup(): void
     {
         $this->fakeKeySet();

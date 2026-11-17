@@ -185,7 +185,7 @@
                         <form method="GET" action="{{ route('seller.orders.index') }}" class="flex items-center gap-2">
                             @foreach (request()->except('per_page', 'page', 'order') as $field => $value)@if (is_string($value))<input type="hidden" name="{{ $field }}" value="{{ $value }}">@endif @endforeach
                             <label for="per-page" class="whitespace-nowrap">Rows per page</label>
-                            <select id="per-page" name="per_page" class="sc-input !h-9 !w-auto !min-h-9 !py-0 !pl-3 !pr-8" onchange="this.form.submit()">@foreach (\App\Http\Controllers\Seller\SellerOrderController::PER_PAGE_OPTIONS as $option)<option value="{{ $option }}" @selected($orders->perPage() === $option)>{{ $option }}</option>@endforeach</select>
+                            <select id="per-page" name="per_page" class="sc-input !h-9 !w-auto !min-h-9 !py-0 !pl-3 !pr-8" data-submit-on-change>@foreach (\App\Http\Controllers\Seller\SellerOrderController::PER_PAGE_OPTIONS as $option)<option value="{{ $option }}" @selected($orders->perPage() === $option)>{{ $option }}</option>@endforeach</select>
                             <noscript><button type="submit" class="seller-outline-button !min-h-9">Show</button></noscript>
                         </form>
                         @if ($orders->hasPages()){{ $orders->links() }}@endif

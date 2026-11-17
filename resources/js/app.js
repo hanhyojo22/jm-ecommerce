@@ -176,6 +176,26 @@ document.querySelectorAll('form[data-confirm-message]').forEach((form) => {
 });
 
 /*
+ * Small behaviours a tag opts into with a data attribute, because the page's script policy
+ * refuses inline handlers such as onclick and onchange.
+ */
+document.addEventListener('change', (event) => {
+    if (event.target instanceof Element && event.target.matches('[data-submit-on-change]')) {
+        event.target.form?.requestSubmit();
+    }
+});
+
+document.addEventListener('click', (event) => {
+    const trigger = event.target instanceof Element ? event.target.closest('[data-print], [data-close-dialog]') : null;
+
+    if (trigger?.hasAttribute('data-print')) {
+        window.print();
+    } else if (trigger) {
+        trigger.closest('dialog')?.close();
+    }
+});
+
+/*
  * An in-page confirmation in place of the browser's own confirm() box, laid out as a claim slip:
  * the question on top, and on the tear-off stub what the action touches and what it changes.
  * A form opts in with data-confirm (the explanation) and optionally data-confirm-title,

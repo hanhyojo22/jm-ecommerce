@@ -159,6 +159,11 @@ class ClerkBackendSessionVerifier implements ClerkSessionVerifier
             return str_replace('Bearer ', '', $authorization);
         }
 
+        // The API has no CSRF check, so a cookie the browser attaches on its own is not accepted there.
+        if ($request->is('api/*')) {
+            return null;
+        }
+
         $cookieHeader = $request->headers->get('Cookie');
 
         if (! is_string($cookieHeader) || $cookieHeader === '') {

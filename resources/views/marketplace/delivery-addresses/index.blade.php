@@ -34,7 +34,7 @@
                             </div>
                             <div class="flex items-center justify-end gap-1 border-t border-line-soft bg-[#fbfcfe] px-2.5 py-1">
                                 <a href="{{ route('delivery-addresses.edit', $address) }}" class="inline-flex min-h-11 items-center rounded-md px-2.5 text-xs font-semibold text-brand transition-colors hover:bg-[var(--color-info-wash)] hover:text-brand-hover lg:min-h-10" aria-label="Edit address for {{ $address->recipient_name }}">Edit</a>
-                                <form method="POST" action="{{ route('delivery-addresses.destroy', $address) }}" onsubmit="return confirm('Remove this saved address? Past orders keep their delivery details.')">
+                                <form method="POST" action="{{ route('delivery-addresses.destroy', $address) }}" data-confirm="Remove this saved address? Past orders keep their delivery details." data-confirm-tone="danger">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="inline-flex min-h-11 items-center rounded-md px-2.5 text-xs font-semibold text-danger transition-colors hover:bg-[var(--color-danger-wash)] lg:min-h-10" aria-label="Remove address for {{ $address->recipient_name }}">Remove</button>
                                 </form>

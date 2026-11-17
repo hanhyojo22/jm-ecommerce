@@ -36,6 +36,16 @@ class PushNotifierTest extends TestCase
         $this->assertSame('1', $sent['updated']['data']['rich_notification']);
     }
 
+    public function test_a_deactivated_account_receives_no_pushes(): void
+    {
+        $user = User::factory()->create(['is_active' => false]);
+        DeviceToken::create(['user_id' => $user->id, 'token' => 'old-phone', 'platform' => 'android']);
+        $messaging = Mockery::mock(Messaging::class);
+        $messaging->shouldNotReceive('sendMulticast');
+
+        (new PushNotifier($messaging))->sendToUser($user, 'JM', 'Hello');
+    }
+
     /**
      * The app runs with QUEUE_CONNECTION=sync, so a chat message's own HTTP
      * request constructs this class. A missing Firebase credential — the

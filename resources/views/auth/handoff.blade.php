@@ -62,7 +62,7 @@
 
     <x-cookie-consent />
 
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
         /*
          * Finishing a hand-off needs the page bundle, Clerk and the server to answer in turn.
          * Any of them stalling would leave the mark turning with nothing to explain it, so this

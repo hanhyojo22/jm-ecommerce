@@ -13,8 +13,10 @@ use App\Support\Distance;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class CheckoutCart
 {
@@ -48,8 +50,10 @@ class CheckoutCart
             }
         }
 
+        $prescriptionPath = null;
+
         try {
-            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin, $prescription): Order {
+            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin, $prescription, &$prescriptionPath): Order {
                 $cart = Cart::query()
                     ->where('user_id', $user->id)
                     ->lockForUpdate()
@@ -221,11 +225,11 @@ class CheckoutCart
                     'fee_amount' => $paymentMethod === 'cod' ? '0.00' : StartOnlinePayment::buyerFee($grandTotal, $paymentMethod),
                 ]);
                 if ($prescriptionMedicines->isNotEmpty()) {
-                    // shortcut: a checkout that fails after this line leaves the file behind, as return evidence does; sweep orphans if storage cost matters.
                     $path = $prescription->store('prescriptions/'.$order->id, 'chat_attachments');
                     if ($path === false) {
                         throw ValidationException::withMessages(['prescription' => 'Your prescription could not be saved. Try again.']);
                     }
+                    $prescriptionPath = $path;
                     $order->prescription()->create(['user_id' => $user->id, 'path' => $path, 'original_name' => $prescription->getClientOriginalName()]);
                 }
                 $cart->items()->whereKey($items->modelKeys())->delete();
@@ -250,6 +254,13 @@ class CheckoutCart
             }
 
             return $this->replay($existing, $fingerprint);
+        } catch (Throwable $exception) {
+            // The order rolled back, so its prescription photo must not stay in storage without one.
+            if ($prescriptionPath !== null) {
+                Storage::disk('chat_attachments')->delete($prescriptionPath);
+            }
+
+            throw $exception;
         }
     }
 

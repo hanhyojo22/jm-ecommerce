@@ -19,7 +19,7 @@
         @endif
         <a href="{{ route('home') }}">Shop</a>
         @if (request()->isMethodSafe())
-            <button type="button" onclick="window.location.reload()">Try again</button>
+            <a href="{{ request()->fullUrl() }}">Try again</a>
         @endif
         <a href="{{ route('orders.index') }}">Check orders</a>
         <small>Reference: {{ request()->attributes->get('request_id') }}</small>

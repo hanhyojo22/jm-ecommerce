@@ -24,7 +24,7 @@
                         <label class="flex min-h-11 cursor-pointer items-center justify-between gap-4 px-4 py-4 sm:px-6">
                             <span class="min-w-0"><span class="block text-meta font-semibold text-ink">Cart reminders</span><span class="mt-0.5 block text-xs leading-5 text-muted">A nudge when items sit in your cart for a day without changes.</span></span>
                             <span class="relative inline-flex shrink-0">
-                                <input type="checkbox" role="switch" name="cart_reminders" value="1" @checked(auth()->user()->cart_reminders) onchange="this.form.requestSubmit()" class="peer absolute inset-0 size-full cursor-pointer appearance-none rounded-full opacity-0">
+                                <input type="checkbox" role="switch" name="cart_reminders" value="1" @checked(auth()->user()->cart_reminders) data-submit-on-change class="peer absolute inset-0 size-full cursor-pointer appearance-none rounded-full opacity-0">
                                 <span class="pointer-events-none h-6 w-11 rounded-full bg-[var(--color-border-strong)] transition-colors peer-checked:bg-brand peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand motion-reduce:transition-none" aria-hidden="true"></span>
                                 <span class="pointer-events-none absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-[0_1px_2px_rgb(24_44_72/25%)] transition-transform peer-checked:translate-x-5 motion-reduce:transition-none" aria-hidden="true"></span>
                             </span>

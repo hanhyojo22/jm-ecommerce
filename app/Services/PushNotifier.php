@@ -59,7 +59,8 @@ class PushNotifier
      */
     public function sendToUser(User $user, string $title, string $body, array $data = []): void
     {
-        if ($this->messaging === null) {
+        // A deactivated account can no longer sign in to unregister its phone, so nothing is sent to it.
+        if ($this->messaging === null || ! $user->is_active) {
             return;
         }
 
