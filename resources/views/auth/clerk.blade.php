@@ -9,7 +9,7 @@
         ? 'We’ll add it for you and take you straight back to the item.'
         : (filled(request('redirect'))
             ? 'You’ll return to the page you were viewing.'
-            : ($isSignUp ? 'Email and password — that’s all it takes.' : 'Sign in to check out, track orders, and message sellers.'));
+            : ($isSignUp ? 'Email and password — that’s all it takes.' : 'Sign in to check out, track orders and chat with a pharmacist.'));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
