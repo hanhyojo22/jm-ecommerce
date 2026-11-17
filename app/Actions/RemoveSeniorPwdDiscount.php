@@ -7,8 +7,10 @@ use App\Models\Order;
 use App\Models\PaymentAdjustment;
 use App\Models\SellerOrder;
 use App\Models\User;
+use App\Services\PushNotifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class RemoveSeniorPwdDiscount
 {
@@ -18,7 +20,7 @@ class RemoveSeniorPwdDiscount
      */
     public function handle(User $actor, SellerOrder $sellerOrder, ?string $ipAddress = null): Order
     {
-        return DB::transaction(function () use ($actor, $sellerOrder, $ipAddress): Order {
+        $order = DB::transaction(function () use ($actor, $sellerOrder, $ipAddress): Order {
             $order = Order::query()->lockForUpdate()->findOrFail($sellerOrder->order_id);
             $sellerOrders = $order->sellerOrders()->orderBy('id')->lockForUpdate()->get();
             $payment = $order->payment()->lockForUpdate()->firstOrFail();
@@ -67,5 +69,19 @@ class RemoveSeniorPwdDiscount
 
             return $order;
         });
+
+        // After the commit, so a failed push never undoes the change; the customer learns the new amount.
+        try {
+            app(PushNotifier::class)->sendToUser(
+                $order->user,
+                'Senior citizen / PWD discount removed',
+                'The branch could not confirm your ID. Your order total is now ₱'.number_format((float) $order->total, 2).'.',
+                ['type' => 'order', 'order_id' => $order->id, 'status' => $sellerOrder->status],
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return $order;
     }
 }

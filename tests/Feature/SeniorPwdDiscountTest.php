@@ -10,8 +10,10 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Services\PushNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Mockery;
 use Tests\TestCase;
 
 class SeniorPwdDiscountTest extends TestCase
@@ -80,6 +82,8 @@ class SeniorPwdDiscountTest extends TestCase
         TenantMember::create(['tenant_id' => $otherTenant->id, 'user_id' => $outsider->id, 'role' => 'owner']);
         $this->actingAs($outsider)->delete(route('seller.orders.senior-pwd-discount.destroy', $sellerOrder))->assertNotFound();
 
+        $push = Mockery::spy(PushNotifier::class);
+        $this->app->instance(PushNotifier::class, $push);
         $manager = $this->staff('manager');
         $this->actingAs($manager)->get(route('seller.orders.show', $sellerOrder))->assertSee('Remove discount');
         $this->delete(route('seller.orders.senior-pwd-discount.destroy', $sellerOrder))->assertSessionHas('status', 'Discount removed. Collect ₱220.00.');
@@ -90,6 +94,9 @@ class SeniorPwdDiscountTest extends TestCase
         $this->assertSame(0, $sellerOrder->items()->where('discount_amount', '>', 0)->count());
         $this->assertDatabaseHas('payment_adjustments', ['payment_id' => $order->payment->id, 'reason' => 'senior_pwd_discount.removed', 'amount' => '6.00']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'order.senior_pwd_discount_removed', 'entity_id' => $order->id]);
+        $push->shouldHaveReceived('sendToUser')->withArgs(fn (User $user, string $title, string $body): bool => $user->is($buyer)
+            && $title === 'Senior citizen / PWD discount removed'
+            && str_contains($body, '₱220.00'))->once();
 
         $this->delete(route('seller.orders.senior-pwd-discount.destroy', $sellerOrder))->assertSessionHasErrors('discount');
     }
