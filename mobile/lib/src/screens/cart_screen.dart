@@ -7,8 +7,10 @@ import 'package:phosphor_icons/phosphor_icons.dart';
 import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
+import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../widgets/common.dart';
+import 'auth_gate.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   const CartScreen({super.key, this.embedded = false, this.onBrowseProducts});
@@ -77,6 +79,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       value: cart,
       onRetry: () => ref.invalidate(cartProvider),
       builder: (value) {
+        // Covers every cart icon (home, product, store) pushing /cart for a guest.
+        if (!ref.watch(isSignedInProvider)) {
+          return const SignInPrompt(
+            icon: PhosphorIconsRegular.tote,
+            title: 'Sign in to start your cart',
+            message:
+                'Browse freely, then sign in to add medicines and check out.',
+          );
+        }
         if (value.lines.isEmpty) {
           return EmptyState(
             icon: Icons.shopping_bag_outlined,

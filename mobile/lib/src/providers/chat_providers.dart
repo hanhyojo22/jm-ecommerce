@@ -33,7 +33,9 @@ final imageSaverProvider =
     );
 
 final conversationsProvider = FutureProvider.autoDispose<List<Conversation>>(
-  (ref) => ref.watch(apiClientProvider).conversations(),
+  (ref) async => ref.watch(isSignedInProvider)
+      ? ref.watch(apiClientProvider).conversations()
+      : const <Conversation>[],
 );
 
 final conversationProvider = FutureProvider.autoDispose

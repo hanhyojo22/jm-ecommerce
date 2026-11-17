@@ -18,6 +18,7 @@ import '../widgets/common.dart';
 import '../widgets/fly_to_cart.dart';
 import '../widgets/image_viewer.dart';
 import '../widgets/store_locator.dart';
+import 'auth_gate.dart';
 import 'order_detail_screen.dart';
 import 'product_discussions.dart';
 
@@ -252,6 +253,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
         (_variant != null && !_variant!.inStock)) {
       return;
     }
+    if (!await requireSignIn(context, ref) || !mounted) {
+      return;
+    }
     if (product.variants.isNotEmpty && !optionsConfirmed) {
       await _openVariationSheet(buyNow: buyNow);
       return;
@@ -346,6 +350,9 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
   }
 
   Future<void> _openChat() async {
+    if (!await requireSignIn(context, ref) || !mounted) {
+      return;
+    }
     setState(() => _chatting = true);
 
     try {
@@ -1287,7 +1294,7 @@ class _ProductReviewsState extends ConsumerState<_ProductReviews> {
   String? _ratingError;
 
   Future<void> _rateProduct() async {
-    if (_ratingBusy) return;
+    if (_ratingBusy || !await requireSignIn(context, ref) || !mounted) return;
     setState(() => _ratingBusy = true);
     try {
       final product = ref.read(productProvider(widget.productKey)).value;

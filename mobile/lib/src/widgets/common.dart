@@ -13,6 +13,7 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../providers/store_locator_providers.dart';
+import '../screens/auth_gate.dart';
 import '../theme.dart';
 import 'store_locator.dart';
 
@@ -704,7 +705,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
   bool _adding = false;
 
   Future<void> _add() async {
-    if (_adding) {
+    if (_adding || !await requireSignIn(context, ref) || !mounted) {
       return;
     }
     // The cart buys from one branch, so one has to be chosen first.

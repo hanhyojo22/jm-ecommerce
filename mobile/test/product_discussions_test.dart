@@ -19,6 +19,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(api),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
@@ -58,6 +59,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            isSignedInProvider.overrideWithValue(true),
             apiClientProvider.overrideWithValue(api),
             activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           ],
@@ -96,6 +98,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(api),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],

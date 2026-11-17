@@ -1176,6 +1176,7 @@ Future<void> _pumpChat(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         reverbProvider.overrideWithValue(_FakeReverbClient(reverbEvents)),
         meProvider.overrideWith(

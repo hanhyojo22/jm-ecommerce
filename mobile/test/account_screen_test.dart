@@ -57,6 +57,7 @@ void main() {
       final api = _AccountApi();
       final container = ProviderContainer(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(api),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
@@ -104,6 +105,7 @@ Future<void> _pump(WidgetTester tester, _AccountApi api) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],

@@ -70,6 +70,7 @@ void main() {
 
 Widget _app(ApiClient api, Widget child) => ProviderScope(
   overrides: [
+    isSignedInProvider.overrideWithValue(true),
     apiClientProvider.overrideWithValue(api),
     activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
   ],

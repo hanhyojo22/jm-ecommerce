@@ -56,6 +56,7 @@ void main() {
     final api = _CartApi()..pending = Completer<Cart>();
     final container = ProviderContainer(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
@@ -76,6 +77,7 @@ void main() {
       final api = _CartApi();
       final container = ProviderContainer(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(api),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
@@ -257,6 +259,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],

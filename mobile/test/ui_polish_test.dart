@@ -45,6 +45,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(_OrderApi()),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
@@ -65,6 +66,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            isSignedInProvider.overrideWithValue(true),
             apiClientProvider.overrideWithValue(_DeliveredOrderApi()),
             activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           ],
@@ -109,6 +111,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(_CartApi()),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
@@ -128,6 +131,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(api),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
@@ -148,6 +152,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(_OrdersApi()),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         ],
@@ -170,6 +175,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            isSignedInProvider.overrideWithValue(true),
             apiClientProvider.overrideWithValue(api),
             activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           ],
@@ -267,6 +273,7 @@ Future<void> _pumpStore(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(_StoreApi()),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],

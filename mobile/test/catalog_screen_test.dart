@@ -79,6 +79,7 @@ void main() {
       final api = _CatalogApi()..paginated = true;
       final container = ProviderContainer(
         overrides: [
+          isSignedInProvider.overrideWithValue(true),
           apiClientProvider.overrideWithValue(api),
           activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
           cartCountProvider.overrideWithValue(0),
@@ -248,6 +249,7 @@ void main() {
     final api = _CatalogApi()..paginated = true;
     final container = ProviderContainer(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         cartCountProvider.overrideWithValue(0),
@@ -283,6 +285,7 @@ void main() {
         final api = _CatalogApi()..paginated = true;
         final container = ProviderContainer(
           overrides: [
+            isSignedInProvider.overrideWithValue(true),
             apiClientProvider.overrideWithValue(api),
             activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
             cartCountProvider.overrideWithValue(0),
@@ -318,6 +321,7 @@ void main() {
     final api = _CatalogApi()..paginated = true;
     final container = ProviderContainer(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         cartCountProvider.overrideWithValue(0),
@@ -371,6 +375,29 @@ void main() {
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       isEmpty,
     );
+  });
+
+  testWidgets('categories without artwork remain visible and selectable', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..categoryItems = const [
+        Category(
+          id: 'seasonal',
+          name: 'Seasonal Picks',
+          slug: 'seasonal-picks',
+          productCount: 3,
+        ),
+      ];
+    await _pumpCatalog(tester, api);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Seasonal Picks'));
+    await tester.pumpAndSettle();
+
+    expect(api.lastCategory, 'seasonal-picks');
+    expect(find.text('All'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('category selection filters products and All resets it', (
@@ -844,6 +871,7 @@ Future<void> _pumpCatalog(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
         cartCountProvider.overrideWithValue(0),
@@ -903,6 +931,7 @@ class _CatalogApi extends ApiClient {
   String? lastSort;
   String? lastSuggestionQuery;
   bool failCategories = false;
+  List<Category>? categoryItems;
   List<Product> boughtBeforeProducts = const [];
   List<Product> elsewhereProducts = const [];
 
@@ -930,20 +959,21 @@ class _CatalogApi extends ApiClient {
         message: 'No connection.',
       );
     }
-    return const [
-      Category(
-        id: 'home',
-        name: 'Home & living',
-        slug: 'home-living',
-        productCount: 20,
-      ),
-      Category(
-        id: 'fashion',
-        name: 'Fashion',
-        slug: 'fashion',
-        productCount: 5,
-      ),
-    ];
+    return categoryItems ??
+        const [
+          Category(
+            id: 'home',
+            name: 'Home & living',
+            slug: 'home-living',
+            productCount: 20,
+          ),
+          Category(
+            id: 'fashion',
+            name: 'Fashion',
+            slug: 'fashion',
+            productCount: 5,
+          ),
+        ];
   }
 
   @override

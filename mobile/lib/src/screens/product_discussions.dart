@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../theme.dart';
+import 'auth_gate.dart';
 
 class ProductDiscussions extends ConsumerStatefulWidget {
   const ProductDiscussions({super.key, required this.productKey});
@@ -69,6 +70,7 @@ class _ProductDiscussionsState extends ConsumerState<ProductDiscussions> {
   Future<void> _post(String value, {ProductDiscussion? parent}) async {
     final body = value.trim();
     if (body.isEmpty || body.length > 2000) return;
+    if (!await requireSignIn(context, ref) || !mounted) return;
     final pending = _PendingDiscussion(
       localId: ++_nextId,
       rootId: parent?.rootId,

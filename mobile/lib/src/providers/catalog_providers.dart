@@ -206,6 +206,9 @@ final elsewhereSearchProvider = FutureProvider.autoDispose
 final boughtBeforeProvider = FutureProvider.autoDispose<List<Product>>((
   ref,
 ) async {
+  if (!ref.watch(isSignedInProvider)) {
+    return const [];
+  }
   final branch = await ref.watch(activeBranchIdProvider.future);
   if (branch == null) {
     return const [];

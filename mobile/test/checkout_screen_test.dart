@@ -196,6 +196,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-MAKATI'),
         nearestStoreProvider.overrideWith(() => _FixedLocator(locator)),

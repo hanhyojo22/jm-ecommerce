@@ -9,11 +9,13 @@ import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
 import 'screens/store_screen.dart';
+import 'widgets/shell.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
-    GoRoute(path: '/', builder: (context, state) => const AuthGate()),
+    GoRoute(path: '/', builder: (context, state) => const AppShell()),
+    GoRoute(path: '/sign-in', builder: (context, state) => const SignInPage()),
     GoRoute(
       path: '/product/:store/:slug',
       builder: (context, state) => ProductScreen(

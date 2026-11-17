@@ -6,7 +6,12 @@ import 'store_locator_providers.dart';
 
 class CartNotifier extends AsyncNotifier<Cart> {
   @override
-  Future<Cart> build() => ref.watch(apiClientProvider).cart();
+  Future<Cart> build() async {
+    if (!ref.watch(isSignedInProvider)) {
+      return const Cart(lines: [], selectedCount: 0, subtotal: '0.00');
+    }
+    return ref.watch(apiClientProvider).cart();
+  }
 
   Future<void> refresh() async {
     final cart = await ref.read(apiClientProvider).cart();

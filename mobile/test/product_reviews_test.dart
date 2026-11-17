@@ -110,6 +110,7 @@ Future<void> _pumpProduct(WidgetTester tester, _ReviewApi api) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],

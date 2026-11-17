@@ -134,6 +134,8 @@ class AccountScreen extends ConsumerWidget {
                     await PushNotifications.unregister(
                       ref.read(apiClientProvider),
                     );
+                    // Signed out, the app keeps running as a guest: back to Shop.
+                    ref.read(shellTabProvider.notifier).select(0);
                     await auth.signOut();
                   },
                   icon: const Icon(Icons.logout_rounded),

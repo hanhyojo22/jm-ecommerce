@@ -6,10 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/formatters.dart';
+import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/push_providers.dart';
 import '../screens/account_screen.dart';
+import '../screens/auth_gate.dart';
 import '../screens/cart_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
@@ -87,11 +89,16 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   Widget build(BuildContext context) {
+    final signedIn = ref.watch(isSignedInProvider);
     // Cached by Riverpod: runs once per signed-in session, not on every tab switch.
-    ref.watch(pushRegistrationProvider);
+    if (signedIn) {
+      ref.watch(pushRegistrationProvider);
+    }
 
     final tab = ref.watch(shellTabProvider);
     final index = tab.index;
+    // Guests see a sign-in prompt, with a title bar, on every tab but Shop.
+    final guestTab = !signedIn && index != 0;
     final unread =
         ref
             .watch(conversationsProvider)
@@ -111,7 +118,8 @@ class _AppShellState extends ConsumerState<AppShell>
       },
       child: Scaffold(
         // Shopping tabs draw their own marketplace headers.
-        appBar: index == 0 || index == 1 || index == 3 || index == 4
+        appBar:
+            !guestTab && (index == 0 || index == 1 || index == 3 || index == 4)
             ? null
             : AppBar(title: Text(_titles[index]), titleSpacing: 20),
         // Tabs with light headers need dark status-bar icons; the Shop tab's band sets its own.
@@ -125,26 +133,30 @@ class _AppShellState extends ConsumerState<AppShell>
             index: index,
             children: [
               const CatalogScreen(),
-              if (tab.loaded.contains(1))
-                const OrdersScreen()
-              else
-                const SizedBox(),
-              if (tab.loaded.contains(2))
-                const MessagesScreen()
-              else
-                const SizedBox(),
-              if (tab.loaded.contains(3))
-                CartScreen(
-                  embedded: true,
-                  onBrowseProducts: () =>
-                      ref.read(shellTabProvider.notifier).select(0),
-                )
-              else
-                const SizedBox(),
-              if (tab.loaded.contains(4))
-                const AccountScreen()
-              else
-                const SizedBox(),
+              if (!signedIn) ...[
+                for (var i = 1; i <= 4; i++) _guestPrompt(i),
+              ] else ...[
+                if (tab.loaded.contains(1))
+                  const OrdersScreen()
+                else
+                  const SizedBox(),
+                if (tab.loaded.contains(2))
+                  const MessagesScreen()
+                else
+                  const SizedBox(),
+                if (tab.loaded.contains(3))
+                  CartScreen(
+                    embedded: true,
+                    onBrowseProducts: () =>
+                        ref.read(shellTabProvider.notifier).select(0),
+                  )
+                else
+                  const SizedBox(),
+                if (tab.loaded.contains(4))
+                  const AccountScreen()
+                else
+                  const SizedBox(),
+              ],
             ],
           ),
         ),
@@ -164,6 +176,29 @@ class _AppShellState extends ConsumerState<AppShell>
       ),
     );
   }
+
+  static Widget _guestPrompt(int index) => switch (index) {
+    1 => const SignInPrompt(
+      icon: PhosphorIconsRegular.receipt,
+      title: 'Sign in to see your orders',
+      message: 'Track deliveries, prescriptions and past orders.',
+    ),
+    2 => const SignInPrompt(
+      icon: PhosphorIconsRegular.chatCircleDots,
+      title: 'Sign in to message the pharmacy',
+      message: 'Ask a pharmacist about a medicine or an order.',
+    ),
+    3 => const SignInPrompt(
+      icon: PhosphorIconsRegular.tote,
+      title: 'Sign in to start your cart',
+      message: 'Browse freely, then sign in to add medicines and check out.',
+    ),
+    _ => const SignInPrompt(
+      icon: PhosphorIconsRegular.user,
+      title: 'Sign in to JMMart',
+      message: 'Create an account or sign in to order medicines.',
+    ),
+  };
 
   Widget _navigation(
     BuildContext context,

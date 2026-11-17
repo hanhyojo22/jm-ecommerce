@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/models/models.dart';
@@ -17,6 +18,7 @@ void main() {
     final api = _CartApi();
     final container = ProviderContainer(
       overrides: [
+        isSignedInProvider.overrideWithValue(true),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
@@ -103,6 +105,19 @@ void main() {
     expect(api.adds, 0);
   });
 
+  testWidgets('a guest who taps add is sent to sign in, not to the cart', (
+    tester,
+  ) async {
+    final api = _CartApi();
+    await _pumpCard(tester, api, signedIn: false);
+    expect(find.text('Cart quantity: 0'), findsOneWidget);
+    await tester.tap(find.text('Add to cart'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign-in page'), findsOneWidget);
+    expect(api.cartReads, 0);
+    expect(api.adds, 0);
+  });
+
   testWidgets('sold-out homepage products cannot be added', (tester) async {
     final api = _CartApi();
     await _pumpCard(tester, api, inStock: false);
@@ -119,42 +134,53 @@ Future<void> _pumpCard(
   _CartApi api, {
   bool variants = false,
   bool inStock = true,
+  bool signedIn = true,
   VoidCallback? onTap,
 }) async {
+  final card = Scaffold(
+    body: Column(
+      children: [
+        Consumer(
+          builder: (context, ref, child) =>
+              Text('Cart quantity: ${ref.watch(cartCountProvider)}'),
+        ),
+        SizedBox(
+          width: 190,
+          height: 450,
+          child: ProductCard(
+            discovery: true,
+            showAddToCart: true,
+            onTap: onTap ?? () {},
+            product: Product.fromJson({
+              'id': 'shirt',
+              'name': 'Test shirt',
+              'slug': 'shirt',
+              'price': '250.00',
+              'in_stock': inStock,
+              'has_variants': variants,
+            }),
+          ),
+        ),
+      ],
+    ),
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        isSignedInProvider.overrideWithValue(signedIn),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
       ],
-      child: MaterialApp(
+      child: MaterialApp.router(
         theme: buildAppTheme(),
-        home: Scaffold(
-          body: Column(
-            children: [
-              Consumer(
-                builder: (context, ref, child) =>
-                    Text('Cart quantity: ${ref.watch(cartCountProvider)}'),
-              ),
-              SizedBox(
-                width: 190,
-                height: 450,
-                child: ProductCard(
-                  discovery: true,
-                  showAddToCart: true,
-                  onTap: onTap ?? () {},
-                  product: Product.fromJson({
-                    'id': 'shirt',
-                    'name': 'Test shirt',
-                    'slug': 'shirt',
-                    'price': '250.00',
-                    'in_stock': inStock,
-                    'has_variants': variants,
-                  }),
-                ),
-              ),
-            ],
-          ),
+        routerConfig: GoRouter(
+          routes: [
+            GoRoute(path: '/', builder: (context, state) => card),
+            GoRoute(
+              path: '/sign-in',
+              builder: (context, state) => const Text('Sign-in page'),
+            ),
+          ],
         ),
       ),
     ),

@@ -94,6 +94,7 @@ ProviderContainer _container({
 }) {
   final container = ProviderContainer(
     overrides: [
+      isSignedInProvider.overrideWithValue(true),
       apiClientProvider.overrideWithValue(api ?? _CartBranchApi(null)),
       storeBranchesProvider.overrideWith((ref) async => branches),
       locationServiceProvider.overrideWithValue(
