@@ -96,6 +96,9 @@
                         @if($sellerOrder->discount_amount > 0)
                             <div><dt>{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$sellerOrder->order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div>
                             <div><dt>Check ID at handover</dt><dd>{{ $sellerOrder->order->discount_card_name }} · {{ $sellerOrder->order->discount_card_number }}</dd></div>
+                            @unless(in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
+                                <div><dt>No valid ID?</dt><dd><form method="POST" action="{{ route('seller.orders.senior-pwd-discount.destroy', $sellerOrder) }}" data-confirm="Charge full price? The customer will pay ₱{{ number_format((float) bcadd((string) $sellerOrder->order->subtotal, (string) $sellerOrder->order->shipping_amount, 2), 2) }}." data-confirm-tone="danger">@csrf @method('DELETE')<button type="submit" class="font-semibold text-danger underline-offset-2 hover:underline">Remove discount</button></form></dd></div>
+                            @endunless
                         @endif
                         <div><dt>Shipping</dt><dd>₱{{ number_format($sellerOrder->shipping_amount, 2) }}</dd></div>
                         <div class="is-total"><dt>Your order total</dt><dd>₱{{ number_format($sellerOrder->total, 2) }}</dd></div>

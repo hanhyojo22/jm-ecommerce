@@ -67,6 +67,9 @@ class CheckoutController extends Controller
         $deliveryFee = $branch === null ? '0.00' : CheckoutCart::deliveryFee($branch->tenant, $subtotal);
         $total = bcadd($subtotal, $deliveryFee, 2);
         $storeTotals = collect([['name' => $branch?->name, 'total' => $subtotal]]);
+        $seniorPwdDiscount = SeniorPwdDiscount::preview($cart->items->map(fn ($item): array => ['product' => $item->product, 'total' => (string) $item->line_total]));
+        // What each online method charges for every way the order can end up: delivery or pickup, with or without a card.
+        $itemsTotals = ['delivery' => $total, 'pickup' => $subtotal, 'deliveryCard' => bcsub($total, $seniorPwdDiscount, 2), 'pickupCard' => bcsub($subtotal, $seniorPwdDiscount, 2)];
 
         return view('marketplace.checkout.create', [
             'orderLimitReached' => $request->user()->hasReachedCodOrderLimit(),
@@ -74,9 +77,15 @@ class CheckoutController extends Controller
             'onlineFees' => $branch?->acceptsOnlinePayments()
                 ? collect(Payment::ONLINE_METHODS)->mapWithKeys(fn (string $method): array => [$method => StartOnlinePayment::buyerFee($total, $method)])->all()
                 : [],
+            'onlineQuotes' => $branch?->acceptsOnlinePayments()
+                ? collect($itemsTotals)->map(fn (string $items): array => ['items' => '₱'.number_format((float) $items, 2)] + collect(Payment::ONLINE_METHODS)->mapWithKeys(fn (string $method): array => [$method => [
+                    'fee' => '₱'.number_format((float) StartOnlinePayment::buyerFee($items, $method), 2),
+                    'pay' => '₱'.number_format((float) bcadd($items, StartOnlinePayment::buyerFee($items, $method), 2), 2),
+                ]])->all())->all()
+                : [],
             'cart' => $cart,
             'subtotal' => $subtotal,
-            'seniorPwdDiscount' => SeniorPwdDiscount::preview($cart->items->map(fn ($item): array => ['product' => $item->product, 'total' => (string) $item->line_total])),
+            'seniorPwdDiscount' => $seniorPwdDiscount,
             'deliveryFee' => $deliveryFee,
             'total' => $total,
             'addresses' => $addresses,

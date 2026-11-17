@@ -131,6 +131,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   /// The online payment fee on what the chosen fulfillment brings the total to.
   String? _paymentFee(CheckoutQuote quote, String method) =>
+      (_cardDiscount(quote) != null
+          ? quote.fulfillment[_method]?.paymentFeesWithCard[method]
+          : null) ??
       quote.fulfillment[_method]?.paymentFees[method] ??
       quote.paymentOptions[method]?.fee;
 

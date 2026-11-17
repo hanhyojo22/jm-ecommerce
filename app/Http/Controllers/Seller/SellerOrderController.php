@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Actions\MarkCodPaymentPaid;
+use App\Actions\RemoveSeniorPwdDiscount;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
@@ -158,6 +159,18 @@ class SellerOrderController extends Controller
         }
 
         return back()->with('status', 'Payment recorded for this store order.');
+    }
+
+    /**
+     * The customer had no valid senior citizen / PWD ID at handover: charge full price.
+     */
+    public function removeDiscount(Request $request, SellerOrder $sellerOrder, RemoveSeniorPwdDiscount $action): RedirectResponse
+    {
+        $member = $this->membership($request, ['owner', 'manager']);
+        $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
+        $order = $action->handle($request->user(), $sellerOrder, $request->ip());
+
+        return back()->with('status', 'Discount removed. Collect ₱'.number_format((float) $order->total, 2).'.');
     }
 
     public function bulkConfirm(Request $request, UpdateSellerOrderStatus $updateStatus): RedirectResponse

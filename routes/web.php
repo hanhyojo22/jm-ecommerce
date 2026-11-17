@@ -178,6 +178,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::get('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'show'])->name('seller.orders.show');
     Route::patch('/seller/orders/{sellerOrder}', [SellerOrderController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.update');
     Route::post('/seller/orders/{sellerOrder}/failed-delivery', [SellerOrderController::class, 'reportFailedDelivery'])->middleware('throttle:10,1')->name('seller.orders.failed-delivery');
+    Route::delete('/seller/orders/{sellerOrder}/senior-pwd-discount', [SellerOrderController::class, 'removeDiscount'])->middleware('throttle:10,1')->name('seller.orders.senior-pwd-discount.destroy');
     Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
     Route::get('/seller/orders/{sellerOrder}/prescription/images/{image}', [SellerPrescriptionController::class, 'show'])->name('seller.orders.prescription.images.show');
     Route::patch('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.prescription.update');

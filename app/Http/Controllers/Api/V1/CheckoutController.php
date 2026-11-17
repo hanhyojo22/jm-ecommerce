@@ -88,6 +88,7 @@ class CheckoutController extends Controller
             ];
         }
 
+        $seniorPwdDiscount = SeniorPwdDiscount::preview($cart->items->map(fn ($item): array => ['product' => $item->product, 'total' => bcmul($item->unitPrice(), (string) $item->quantity, 2)]));
         $onlineFees = fn (string $total): array => $onlineAvailable
             ? collect(Payment::ONLINE_METHODS)->mapWithKeys(fn (string $method): array => [$method => StartOnlinePayment::buyerFee($total, $method)])->all()
             : [];
@@ -96,8 +97,7 @@ class CheckoutController extends Controller
             'items' => CartItemResource::collection($cart->items)->resolve($request),
             'subtotal' => $subtotal,
             // What a senior citizen / PWD card would take off; '0.00' when nothing is a medicine.
-            // shortcut: payment_fees above are on the undiscounted total, so an online fee preview can be a few centavos high with a card; the order charges the right fee.
-            'senior_pwd_discount' => SeniorPwdDiscount::preview($cart->items->map(fn ($item): array => ['product' => $item->product, 'total' => bcmul($item->unitPrice(), (string) $item->quantity, 2)])),
+            'senior_pwd_discount' => $seniorPwdDiscount,
             'branch' => $branch === null ? null : [
                 'id' => $branch->id,
                 'name' => $branch->name,
@@ -108,8 +108,9 @@ class CheckoutController extends Controller
             // Pickup is free; delivery adds head office's flat fee unless the items reach the free-delivery amount.
             'fulfillment_methods' => [
                 // Set while the branch is closed: delivery is refused until then, pickup is not.
-                'delivery' => ['fee' => $deliveryFee, 'total' => $deliveryTotal, 'payment_fees' => $onlineFees($deliveryTotal), 'closed_until' => $branch?->nextOpeningAt(now())?->toIso8601String()],
-                'pickup' => ['fee' => '0.00', 'total' => $subtotal, 'payment_fees' => $onlineFees($subtotal)],
+                // payment_fees_with_card: the same fees on the total after the SC/PWD discount.
+                'delivery' => ['fee' => $deliveryFee, 'total' => $deliveryTotal, 'payment_fees' => $onlineFees($deliveryTotal), 'payment_fees_with_card' => $onlineFees(bcsub($deliveryTotal, $seniorPwdDiscount, 2)), 'closed_until' => $branch?->nextOpeningAt(now())?->toIso8601String()],
+                'pickup' => ['fee' => '0.00', 'total' => $subtotal, 'payment_fees' => $onlineFees($subtotal), 'payment_fees_with_card' => $onlineFees(bcsub($subtotal, $seniorPwdDiscount, 2))],
             ],
             'store_totals' => $storeTotals,
             'addresses' => DeliveryAddressResource::collection($addresses)->resolve($request),

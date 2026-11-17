@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\BranchInventory;
 use App\Actions\ReturnCaseWorkflow;
+use App\Actions\StartOnlinePayment;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\BranchStock;
 use App\Models\Cart;
@@ -207,6 +208,21 @@ class OnlinePaymentTest extends TestCase
         $case->update(['status' => 'appealed']);
         $this->expectException(ValidationException::class);
         app(ReturnCaseWorkflow::class)->act($case, User::factory()->administrator()->create(), 'reopen');
+    }
+
+    public function test_the_checkout_preview_shows_the_online_fee_on_the_discounted_total(): void
+    {
+        config()->set('marketplace.senior_pwd.vat_registered', true);
+        $product = $this->product();
+        $product->update(['generic_name' => 'Cotton']);
+        $buyer = $this->buyerWithCart($product, 2);
+
+        // ₱40.00 is ₱28.57 with a card; the fee follows the total the order will charge.
+        $this->actingAs($buyer)->getJson('/api/v1/checkout')
+            ->assertOk()
+            ->assertJsonPath('data.fulfillment_methods.pickup.payment_fees.gcash', StartOnlinePayment::buyerFee('40.00', 'gcash'))
+            ->assertJsonPath('data.fulfillment_methods.pickup.payment_fees_with_card.gcash', StartOnlinePayment::buyerFee('28.57', 'gcash'));
+        $this->get(route('checkout.create'))->assertSee('pickupCard', false)->assertSee(number_format((float) bcadd('28.57', StartOnlinePayment::buyerFee('28.57', 'gcash'), 2), 2), false);
     }
 
     public function test_a_senior_discount_order_is_charged_and_refunded_the_discounted_amount(): void

@@ -68,6 +68,43 @@ class SeniorPwdDiscountTest extends TestCase
         $this->assertSame(['0.00', '0.00'], [(string) $order->refresh()->discount_amount, (string) $order->total]);
     }
 
+    public function test_a_manager_removes_the_discount_when_the_customer_has_no_valid_id(): void
+    {
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-1', 'name' => 'Lola Ava']])->assertCreated();
+        $order = Order::with('sellerOrders', 'payment')->sole();
+        $sellerOrder = $order->sellerOrders->sole();
+
+        $otherTenant = Tenant::create(['name' => 'Other', 'slug' => 'other', 'status' => 'active']);
+        $outsider = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $otherTenant->id, 'user_id' => $outsider->id, 'role' => 'owner']);
+        $this->actingAs($outsider)->delete(route('seller.orders.senior-pwd-discount.destroy', $sellerOrder))->assertNotFound();
+
+        $manager = $this->staff('manager');
+        $this->actingAs($manager)->get(route('seller.orders.show', $sellerOrder))->assertSee('Remove discount');
+        $this->delete(route('seller.orders.senior-pwd-discount.destroy', $sellerOrder))->assertSessionHas('status', 'Discount removed. Collect ₱220.00.');
+
+        $order->refresh();
+        $this->assertSame(['0.00', '220.00', '220.00'], [(string) $order->discount_amount, (string) $order->total, (string) $order->payment->refresh()->amount]);
+        $this->assertSame(['0.00', '220.00'], [(string) $sellerOrder->refresh()->discount_amount, (string) $sellerOrder->total]);
+        $this->assertSame(0, $sellerOrder->items()->where('discount_amount', '>', 0)->count());
+        $this->assertDatabaseHas('payment_adjustments', ['payment_id' => $order->payment->id, 'reason' => 'senior_pwd_discount.removed', 'amount' => '6.00']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'order.senior_pwd_discount_removed', 'entity_id' => $order->id]);
+
+        $this->delete(route('seller.orders.senior-pwd-discount.destroy', $sellerOrder))->assertSessionHasErrors('discount');
+    }
+
+    public function test_a_paid_order_keeps_its_discount(): void
+    {
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava']])->assertCreated();
+        $order = Order::with('sellerOrders', 'payment')->sole();
+        $order->payment->update(['status' => 'paid']);
+
+        $this->actingAs($this->staff('manager'))->delete(route('seller.orders.senior-pwd-discount.destroy', $order->sellerOrders->sole()))->assertSessionHasErrors('discount');
+        $this->assertSame('6.00', (string) $order->refresh()->discount_amount);
+    }
+
     public function test_the_app_pickup_checkout_with_a_card_places_the_order(): void
     {
         $buyer = $this->buyerWithCart();
@@ -125,10 +162,10 @@ class SeniorPwdDiscountTest extends TestCase
         return $buyer->refresh();
     }
 
-    private function staff(): User
+    private function staff(string $role = 'staff'): User
     {
         $user = User::factory()->seller()->create(['email_verified_at' => now()]);
-        TenantMember::create(['tenant_id' => $this->branch->tenant_id, 'store_id' => $this->branch->id, 'user_id' => $user->id, 'role' => 'staff']);
+        TenantMember::create(['tenant_id' => $this->branch->tenant_id, 'store_id' => $this->branch->id, 'user_id' => $user->id, 'role' => $role]);
 
         return $user;
     }

@@ -25,6 +25,8 @@
                 'pickupCard' => '₱'.number_format(bcsub($subtotal, $seniorPwdDiscount, 2), 2),
             ]),
             get totalText() { return this.totals[this.fulfillment + (this.card ? 'Card' : '')] },
+            onlineQuotes: @js($onlineQuotes),
+            get onlineQuote() { return this.onlineQuotes[this.fulfillment + (this.card ? 'Card' : '')] ?? null },
             get activeFields() { return this.fulfillment === 'pickup' ? ['recipient_name', 'phone'] : this.fields },
             methodLabels: @js(\App\Models\Payment::METHOD_LABELS),
             get placeLabel() { return this.method === 'cod' ? 'Place order' : 'Place order & pay with ' + this.methodLabels[this.method] },
@@ -244,9 +246,9 @@
                                     <p id="online-pay-heading" class="text-[13.5px] font-semibold text-ink">One secure payment</p>
                                     <p class="mt-1 text-[12.5px] leading-normal text-muted">After you place the order you’ll pay on PayMongo’s secure page. There’s nothing to send or confirm yourself.</p>
                                     <dl class="mt-3 grid gap-1.5 border-t border-[#D6E2FB] pt-3 text-[13px]">
-                                        <div class="flex justify-between gap-3"><dt class="text-muted">Items and delivery</dt><dd class="tabular-nums text-ink">₱{{ number_format($total, 2) }}</dd></div>
-                                        <div class="flex justify-between gap-3"><dt class="text-muted">Payment fee <span class="text-xs">(PayMongo)</span></dt><dd class="tabular-nums text-ink">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)">₱{{ number_format($fee, 2) }}</span>@endforeach</dd></div>
-                                        <div class="flex justify-between gap-3 font-semibold text-ink"><dt>You pay now</dt><dd class="tabular-nums">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)">₱{{ number_format(bcadd($total, $fee, 2), 2) }}</span>@endforeach</dd></div>
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">Items and delivery</dt><dd class="tabular-nums text-ink" x-text="onlineQuote?.items">₱{{ number_format($total, 2) }}</dd></div>
+                                        <div class="flex justify-between gap-3"><dt class="text-muted">Payment fee <span class="text-xs">(PayMongo)</span></dt><dd class="tabular-nums text-ink">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)" x-text="onlineQuote?.[@js($feeMethod)]?.fee">₱{{ number_format($fee, 2) }}</span>@endforeach</dd></div>
+                                        <div class="flex justify-between gap-3 font-semibold text-ink"><dt>You pay now</dt><dd class="tabular-nums">@foreach ($onlineFees as $feeMethod => $fee)<span x-show="method === @js($feeMethod)" x-text="onlineQuote?.[@js($feeMethod)]?.pay">₱{{ number_format(bcadd($total, $fee, 2), 2) }}</span>@endforeach</dd></div>
                                     </dl>
                                     <p class="mt-2 text-xs leading-normal text-muted">Items are held for {{ (int) config('marketplace.online_payment.payment_hours') }} hours while you pay. A cancelled store order is refunded to you through PayMongo; the payment fee is not refunded.</p>
                                 </div>
