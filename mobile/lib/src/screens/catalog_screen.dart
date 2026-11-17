@@ -1757,7 +1757,7 @@ class _CategoryStrip extends StatelessWidget {
       container: true,
       label: 'Shop by category',
       child: SizedBox(
-        height: 58 + categoryLabelHeight * 2 + 16,
+        height: 64 + categoryLabelHeight * 2 + 16,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1791,11 +1791,11 @@ class _CategoryStrip extends StatelessWidget {
                               ? Duration.zero
                               : const Duration(milliseconds: 200),
                           curve: Curves.easeOutCubic,
-                          width: 58,
-                          height: 58,
+                          width: 64,
+                          height: 64,
                           decoration: BoxDecoration(
                             color: active
-                                ? scheme.primary
+                                ? scheme.primaryContainer
                                 : scheme.surfaceContainerLowest,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
@@ -1804,15 +1804,33 @@ class _CategoryStrip extends StatelessWidget {
                                   : scheme.outlineVariant,
                             ),
                           ),
-                          child: Icon(
-                            option.slug == null
-                                ? (active
+                          child: option.slug == null
+                              ? Icon(
+                                  active
                                       ? PhosphorIconsBold.check
-                                      : PhosphorIconsRegular.squaresFour)
-                                : categoryIcon(option.name),
-                            size: 26,
-                            color: active ? scheme.onPrimary : scheme.primary,
-                          ),
+                                      : PhosphorIconsRegular.squaresFour,
+                                  size: 26,
+                                  color: active
+                                      ? scheme.onPrimaryContainer
+                                      : scheme.primary,
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Image.asset(
+                                    'assets/categories/${option.slug}.webp',
+                                    fit: BoxFit.contain,
+                                    cacheWidth: 192,
+                                    excludeFromSemantics: true,
+                                    errorBuilder:
+                                        (context, error, stackTrace) => Icon(
+                                          categoryIcon(option.name),
+                                          size: 26,
+                                          color: active
+                                              ? scheme.onPrimaryContainer
+                                              : scheme.primary,
+                                        ),
+                                  ),
+                                ),
                         ),
                         const SizedBox(height: 8),
                         Text(
