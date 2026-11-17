@@ -35,8 +35,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/orders/:id',
-      builder: (context, state) =>
-          OrderDetailScreen(orderId: state.pathParameters['id'] ?? ''),
+      builder: (context, state) => OrderDetailScreen(
+        orderId: state.pathParameters['id'] ?? '',
+        returnFor: state.uri.queryParameters['return'],
+      ),
     ),
     GoRoute(
       path: '/conversations/:id',

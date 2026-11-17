@@ -19,9 +19,13 @@ import '../widgets/common.dart';
 import 'order_support_screen.dart';
 
 class OrderDetailScreen extends ConsumerStatefulWidget {
-  const OrderDetailScreen({super.key, required this.orderId});
+  const OrderDetailScreen({super.key, required this.orderId, this.returnFor});
 
   final String orderId;
+
+  /// A branch order id from the orders list's Return/Refund button: its
+  /// return form opens as soon as the order has loaded.
+  final String? returnFor;
 
   @override
   ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -30,11 +34,32 @@ class OrderDetailScreen extends ConsumerStatefulWidget {
 class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   bool _busy = false;
   bool _summaryExpanded = false;
+  bool _returnOpened = false;
   Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
+    if (widget.returnFor != null) {
+      ref.listenManual(orderProvider(widget.orderId), (_, next) {
+        final order = next.value;
+        if (order == null || _returnOpened) {
+          return;
+        }
+        final branchOrder = order.sellerOrders
+            .where((s) => s.id == widget.returnFor)
+            .firstOrNull;
+        if (branchOrder == null) {
+          return;
+        }
+        _returnOpened = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _openSupport(order, branchOrder, requestReturn: true);
+          }
+        });
+      }, fireImmediately: true);
+    }
     _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (!mounted ||
           _busy ||
@@ -597,9 +622,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Flexible(
+                    // The name takes whatever the status pill leaves, instead of a fixed half.
+                    Expanded(
                       child: InkWell(
                         borderRadius: BorderRadius.circular(appSurfaceRadius),
                         onTap: storeSlug != null && storeSlug.isNotEmpty
@@ -638,7 +663,9 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         ),
                       ),
                     ),
-                    Flexible(
+                    const SizedBox(width: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: StatusPill(status: sellerOrder.status),
@@ -981,70 +1008,88 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
-  /// Sticky bottom bar with Delivery details + primary store/order action.
+  /// Sticky bottom bar: two equal secondary actions, and Order again as the
+  /// one full-width primary action on a delivered order, nearest the thumb.
   Widget _bottomBar(OrderDetail order) {
     final scheme = Theme.of(context).colorScheme;
     // Large text keeps only delivery details so the bar doesn't cover the
     // list; the store stays reachable from its name on the store card.
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(appSurfaceRadius),
+    final storeSlug = order.sellerOrders.firstOrNull?.store?.slug;
+    final showBranch = !largeText && storeSlug != null && storeSlug.isNotEmpty;
+    final secondary = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 48),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      shape: const StadiumBorder(),
+      foregroundColor: scheme.onSurface,
+      side: BorderSide(color: scheme.outlineVariant, width: 1.2),
     );
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        border: Border(top: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              if (order.status == 'delivered')
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    shape: shape,
-                  ),
-                  onPressed: _busy ? null : () => _orderAgain(order),
-                  icon: const Icon(Icons.replay_rounded, size: 18),
-                  label: const Text('Order again'),
+    // Full width: the page body is a Column, which would otherwise shrink the
+    // bar to its buttons and centre it with gaps at both sides.
+    return SizedBox(
+      width: double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerLowest,
+          border: Border(top: BorderSide(color: scheme.outlineVariant)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: secondary,
+                        onPressed: () => _showLogisticSheet(order),
+                        icon: const Icon(
+                          Icons.local_shipping_outlined,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Delivery details',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    if (showBranch) ...[
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: secondary,
+                          onPressed: () => context.push('/store/$storeSlug'),
+                          icon: const Icon(Icons.storefront_outlined, size: 18),
+                          label: const Text(
+                            'Visit branch',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(0, 40),
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  shape: shape,
-                  foregroundColor: scheme.onSurface,
-                  side: BorderSide(color: scheme.outlineVariant),
-                ),
-                onPressed: () => _showLogisticSheet(order),
-                child: const Text('Delivery details'),
-              ),
-              if (!largeText &&
-                  order.sellerOrders.isNotEmpty &&
-                  order.sellerOrders.first.store?.slug != null &&
-                  order.sellerOrders.first.store!.slug.isNotEmpty)
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    shape: shape,
-                    foregroundColor: scheme.primary,
-                    side: BorderSide(color: scheme.primary),
+                if (order.status == 'delivered') ...[
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      shape: const StadiumBorder(),
+                    ),
+                    onPressed: _busy ? null : () => _orderAgain(order),
+                    icon: const Icon(Icons.replay_rounded, size: 20),
+                    label: const Text('Order again'),
                   ),
-                  onPressed: () => context.push(
-                    '/store/${order.sellerOrders.first.store!.slug}',
-                  ),
-                  child: const Text('Visit branch'),
-                ),
-            ],
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1455,8 +1500,13 @@ class _OrderDetailItemRow extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final thumbSize = largeText ? 58.0 : 80.0;
-    final buttonShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(appSurfaceRadius),
+    // Same neutral pill as the bottom bar's secondary actions.
+    final itemAction = OutlinedButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      shape: const StadiumBorder(),
+      foregroundColor: scheme.onSurface,
+      side: BorderSide(color: scheme.outlineVariant, width: 1.2),
     );
 
     return Column(
@@ -1550,37 +1600,19 @@ class _OrderDetailItemRow extends StatelessWidget {
             children: [
               if (status == 'delivered' && !line.reviewed)
                 OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: buttonShape,
-                    foregroundColor: scheme.primary,
-                    side: BorderSide(color: scheme.primary),
-                  ),
+                  style: itemAction,
                   onPressed: busy ? null : onReview,
                   child: const Text('Review'),
                 ),
               if (!largeText && status == 'delivered')
                 OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: buttonShape,
-                    foregroundColor: scheme.onSurface,
-                    side: BorderSide(color: scheme.outlineVariant),
-                  ),
+                  style: itemAction,
                   onPressed: onReturnInfo,
                   child: const Text('Return/Refund'),
                 ),
               if (!largeText && status == 'cancelled')
                 OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 34),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: buttonShape,
-                    foregroundColor: scheme.onSurfaceVariant,
-                    side: BorderSide(color: scheme.outlineVariant),
-                  ),
+                  style: itemAction,
                   onPressed: null,
                   child: const Text('Cancelled'),
                 ),

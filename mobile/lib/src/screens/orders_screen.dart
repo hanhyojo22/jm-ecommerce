@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
+import '../providers/cart_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -39,7 +41,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    final requested = _tabs.indexWhere(
+      (t) => t.key == ref.read(ordersTabProvider),
+    );
+    _tab = requested < 0 ? 'all' : _tabs[requested].key;
+    _tabController = TabController(
+      length: _tabs.length,
+      vsync: this,
+      initialIndex: requested < 0 ? 0 : requested,
+    );
   }
 
   @override
@@ -163,14 +173,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
 
   @override
   Widget build(BuildContext context) {
-    final requestedTab = ref.watch(ordersTabProvider);
-    final requestedIndex = _tabs.indexWhere((t) => t.key == requestedTab);
-    if (requestedIndex >= 0 && _tab != requestedTab) {
-      _tab = requestedTab;
-      if (_tabController.index != requestedIndex) {
-        _tabController.index = requestedIndex;
+    // Account's shortcuts pick a tab from outside; animateTo also scrolls the
+    // tab bar so a far tab like Returns is visible, which setting index did not.
+    ref.listen(ordersTabProvider, (_, next) {
+      final index = _tabs.indexWhere((t) => t.key == next);
+      if (index < 0 || next == _tab) {
+        return;
       }
-    }
+      setState(() => _tab = next);
+      if (_tabController.index != index) {
+        _tabController.animateTo(index);
+      }
+    });
     final orders = ref.watch(ordersProvider(_tab));
     final searchQuery = ref.watch(ordersSearchProvider);
     final scheme = Theme.of(context).colorScheme;
@@ -193,6 +207,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
             border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
           ),
           child: TabBar(
+            // Counts widen the labels after the first layout; a fresh tab bar
+            // scrolls to the selected tab again with the final widths.
+            key: ValueKey(tabCounts.isEmpty),
             controller: _tabController,
             isScrollable: true,
             tabAlignment: TabAlignment.start,
@@ -203,12 +220,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
             labelColor: scheme.primary,
             labelPadding: const EdgeInsets.symmetric(horizontal: 14),
             labelStyle: const TextStyle(
-              fontFamily: 'Roboto',
               fontSize: 14,
               fontWeight: FontWeight.w800,
             ),
             unselectedLabelStyle: const TextStyle(
-              fontFamily: 'Roboto',
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
@@ -647,25 +662,33 @@ class _OrderCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  if (!largeText && !order.canConfirmReceipt)
+                  if (!largeText &&
+                      !order.canConfirmReceipt &&
+                      order.status == 'delivered')
                     _OrderAction(
-                      label: order.status == 'delivered'
-                          ? 'Return/Refund'
-                          : 'Order details',
+                      label: 'Return/Refund',
                       emphasised: false,
                       accentOutline: false,
+                      // Opens the order straight into its return form.
+                      onPressed: order.orderId == null
+                          ? null
+                          : () => context.push(
+                              '/orders/${order.orderId}?return=${order.id}',
+                            ),
+                    ),
+                  if (order.status == 'delivered' &&
+                      !order.canConfirmReceipt &&
+                      order.orderId != null)
+                    _BuyAgainAction(orderId: order.orderId!)
+                  else
+                    _OrderAction(
+                      label: order.canConfirmReceipt
+                          ? 'Tap to confirm receipt'
+                          : 'View order',
+                      emphasised: order.canConfirmReceipt,
+                      accentOutline: !order.canConfirmReceipt,
                       onPressed: openOrder,
                     ),
-                  _OrderAction(
-                    label: order.canConfirmReceipt
-                        ? 'Tap to confirm receipt'
-                        : order.status == 'delivered'
-                        ? 'Buy again'
-                        : 'View order',
-                    emphasised: order.canConfirmReceipt,
-                    accentOutline: !order.canConfirmReceipt,
-                    onPressed: openOrder,
-                  ),
                 ],
               ),
             ],
@@ -771,6 +794,57 @@ class _OrderLineRow extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Puts a delivered order's medicines back in the cart, as "Order again" does
+/// on the order page, then opens the cart.
+class _BuyAgainAction extends ConsumerStatefulWidget {
+  const _BuyAgainAction({required this.orderId});
+
+  final String orderId;
+
+  @override
+  ConsumerState<_BuyAgainAction> createState() => _BuyAgainActionState();
+}
+
+class _BuyAgainActionState extends ConsumerState<_BuyAgainAction> {
+  bool _busy = false;
+
+  Future<void> _buyAgain() async {
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final skipped = await ref
+          .read(cartProvider.notifier)
+          .reorder(widget.orderId);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            skipped.isEmpty
+                ? 'Added to your cart.'
+                : 'Added to your cart. Your branch doesn’t have ${skipped.join(', ')} right now.',
+          ),
+        ),
+      );
+      if (mounted) {
+        context.push('/cart');
+      }
+    } on ApiException catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => _OrderAction(
+    label: 'Buy again',
+    emphasised: false,
+    accentOutline: true,
+    onPressed: _busy ? null : _buyAgain,
+  );
 }
 
 class _OrderAction extends StatelessWidget {

@@ -190,6 +190,38 @@ void main() {
     expect(find.text('Cart destination'), findsOneWidget);
   });
 
+  testWidgets('Buy again on a delivered order card refills the cart', (
+    tester,
+  ) async {
+    final api = _OrderApi()..status = 'delivered';
+    await _pump(tester, api, routed: true, showList: true);
+
+    await tester.tap(find.text('Buy again'));
+    await tester.pumpAndSettle();
+
+    expect(api.reordered, 'order');
+    expect(find.text('Cart destination'), findsOneWidget);
+  });
+
+  testWidgets('Return/Refund on a delivered order card opens its return form', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _OrderApi()..status = 'delivered',
+      routed: true,
+      showList: true,
+    );
+
+    await tester.tap(find.text('Return/Refund'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.widgetWithText(TextFormField, 'Tell us what happened'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('an order not yet delivered has no order again button', (
     tester,
   ) async {
@@ -458,6 +490,13 @@ Future<void> _pump(
               builder: (context, state) =>
                   const Scaffold(body: Text('Cart destination')),
             ),
+            GoRoute(
+              path: '/orders/:id',
+              builder: (context, state) => OrderDetailScreen(
+                orderId: state.pathParameters['id']!,
+                returnFor: state.uri.queryParameters['return'],
+              ),
+            ),
           ],
         )
       : null;
@@ -608,6 +647,7 @@ class _OrderApi extends ApiClient {
       'seller_orders': [
         {
           'id': 'seller-order',
+          'order': {'id': id},
           'status': status,
           'can_confirm_receipt': status == 'shipped',
           'rider': rider,
