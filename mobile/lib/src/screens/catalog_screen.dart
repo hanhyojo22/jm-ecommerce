@@ -433,34 +433,9 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    start: 4,
-                    bottom: 12,
-                  ),
-                  child: Semantics(
-                    header: true,
-                    child: Text.rich(
-                      TextSpan(
-                        children: [
-                          const TextSpan(text: 'JMMart'),
-                          TextSpan(
-                            text: '  Pharmacy',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: slab.ink.withValues(alpha: 0.72),
-                            ),
-                          ),
-                        ],
-                      ),
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: slab.ink,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ),
+                // Stock and prices are per branch, so the branch scopes the search below it.
+                BranchHeader(ink: slab.ink),
+                const SizedBox(height: 8),
                 searchBar,
               ],
             ),
@@ -584,11 +559,11 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             ),
                           ),
                         ),
-                        if (browsing)
+                        if (browsing && needsBranch)
                           const SliverPadding(
                             padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                             sliver: SliverToBoxAdapter(
-                              child: StoreRecommendationCard(),
+                              child: LocationFallbackCard(),
                             ),
                           ),
                         if (needsBranch)

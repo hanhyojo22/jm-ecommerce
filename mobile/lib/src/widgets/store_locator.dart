@@ -30,14 +30,244 @@ String _feeLabel(StoreBranch branch) {
   ].join(', ');
 }
 
-/// Recommended branch card, with loading and location-denied fallbacks.
-class StoreRecommendationCard extends ConsumerWidget {
-  const StoreRecommendationCard({super.key});
+/// The Shop header's branch line: which branch stock and prices come from.
+/// Tapping it opens the branch picker. Drawn in [ink] on the brand band.
+class BranchHeader extends ConsumerWidget {
+  const BranchHeader({super.key, required this.ink});
+
+  final Color ink;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final locator = ref.watch(nearestStoreProvider);
-    if (locator.value?.branches.isEmpty ?? false) {
+    final state = locator.value;
+    if (state != null && state.branches.isEmpty) {
+      return _Wordmark(ink: ink);
+    }
+
+    final active = state?.activeBranch;
+    final String label;
+    final String title;
+    VoidCallback? onTap = () => showBranchSelectorSheet(context);
+    if (state != null && active != null) {
+      final distanceKm = active.distanceKm;
+      final opens = active.branch.isOpen ? null : active.branch.nextOpeningAt;
+      // Most important first, since a narrow screen cuts the end off. The
+      // branch name already carries the brand, so the line skips it.
+      label = [
+        if (opens != null) 'Opens ${opensLabel(opens)}',
+        if (active.isOutOfDeliveryRange) 'Pickup only',
+        if (distanceKm != null) '${distanceKm.toStringAsFixed(1)} km',
+        state.selectedBranchId != null ? 'Your branch' : 'Nearest branch',
+      ].join(' · ');
+      title = active.branch.name;
+    } else if (state != null) {
+      label = 'JMMart Pharmacy';
+      title = 'Choose a branch';
+    } else if (locator.hasError) {
+      label = 'Could not load branches';
+      title = 'Tap to retry';
+      onTap = () => ref.invalidate(storeBranchesProvider);
+    } else {
+      label = 'JMMart Pharmacy';
+      title = 'Finding your nearest branch…';
+      onTap = null;
+    }
+    final labelText = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.textTheme.labelMedium?.copyWith(
+        color: ink.withValues(alpha: 0.78),
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
+    return Semantics(
+      button: onTap != null,
+      label: [title, if (active != null) _hoursLabel(active), label].join(', '),
+      hint: onTap == null ? null : 'Change branch',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        splashColor: ink.withValues(alpha: 0.12),
+        highlightColor: ink.withValues(alpha: 0.08),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(2, 4, 4, 4),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: ink.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: onTap == null
+                      ? SizedBox.square(
+                          dimension: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: ink,
+                          ),
+                        )
+                      : Icon(
+                          PhosphorIconsFill.storefront,
+                          color: ink,
+                          size: 20,
+                        ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Open/closed leads the line so the name below keeps the full width.
+                      if (active != null)
+                        Row(
+                          children: [
+                            _HoursPill(item: active),
+                            const SizedBox(width: 6),
+                            Flexible(child: labelText),
+                          ],
+                        )
+                      else
+                        labelText,
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: ink,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                          ),
+                          if (onTap != null && !locator.hasError) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              PhosphorIconsBold.caretDown,
+                              size: 14,
+                              color: ink,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "JMMart Pharmacy", for when no branch is pinned yet.
+class _Wordmark extends StatelessWidget {
+  const _Wordmark({required this.ink});
+
+  final Color ink;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: 4, top: 6, bottom: 6),
+      child: Semantics(
+        header: true,
+        child: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: 'JMMart'),
+              TextSpan(
+                text: '  Pharmacy',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: ink.withValues(alpha: 0.72),
+                ),
+              ),
+            ],
+          ),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: ink,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Open / closed on a light pill so its green or red reads on the brand band.
+class _HoursPill extends StatelessWidget {
+  const _HoursPill({required this.item});
+
+  final BranchDistance item;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colour = item.branch.isOpen
+        ? statusColour(context, 'completed')
+        : theme.colorScheme.error;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: colour, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                // The reopening time follows on the label beside it.
+                item.branch.isOpen ? _hoursLabel(item) : 'Closed',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colour,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown in the Shop when no branch is known: why, and how to fix it.
+class LocationFallbackCard extends ConsumerWidget {
+  const LocationFallbackCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final issue = ref.watch(nearestStoreProvider).value?.issue;
+    if (issue == null) {
       return const SizedBox.shrink();
     }
 
@@ -45,235 +275,7 @@ class StoreRecommendationCard extends ConsumerWidget {
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-        child: switch (locator) {
-          AsyncData(:final value) => switch (value.activeBranch) {
-            final BranchDistance active => _Recommendation(
-              active: active,
-              isManualPick: value.selectedBranchId != null,
-              issue: value.issue,
-            ),
-            null => _LocationFallback(issue: value.issue!),
-          },
-          AsyncError() => _Message(
-            text: 'Could not load nearby branches.',
-            action: TextButton(
-              onPressed: () => ref.invalidate(storeBranchesProvider),
-              child: const Text('Retry'),
-            ),
-          ),
-          _ => const _Message(
-            text: 'Finding your nearest branch…',
-            leading: SizedBox.square(
-              dimension: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-        },
-      ),
-    );
-  }
-}
-
-class _Recommendation extends StatelessWidget {
-  const _Recommendation({
-    required this.active,
-    required this.isManualPick,
-    this.issue,
-  });
-
-  final BranchDistance active;
-  final bool isManualPick;
-
-  /// Why there is no distance; the card then offers a way to turn location on.
-  final LocationIssue? issue;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final distanceKm = active.distanceKm;
-    final open = active.branch.isOpen;
-    final hoursColour = open
-        ? statusColour(context, 'completed')
-        : scheme.error;
-    final metaStyle = theme.textTheme.bodySmall?.copyWith(
-      color: scheme.onSurfaceVariant,
-      fontWeight: FontWeight.w500,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                PhosphorIconsFill.storefront,
-                color: scheme.primary,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isManualPick ? 'Your branch' : 'Nearest branch',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    active.branch.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.tonal(
-              onPressed: () => showBranchSelectorSheet(context),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(48, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                tapTargetSize: MaterialTapTargetSize.padded,
-                shape: const StadiumBorder(),
-              ),
-              child: const Text('Change'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Divider(color: scheme.outlineVariant),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 14,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: hoursColour,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    _hoursLabel(active),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: hoursColour,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (distanceKm != null)
-              _BranchFact(
-                icon: PhosphorIconsRegular.mapPin,
-                label: _distanceLabel(distanceKm),
-                style: metaStyle,
-              ),
-            if (active.branch.deliveryFee != null)
-              _BranchFact(
-                icon: PhosphorIconsRegular.motorcycle,
-                label: _feeLabel(active.branch),
-                style: metaStyle,
-              ),
-            if (active.isOutOfDeliveryRange) _OutOfRangeBadge(),
-            if (distanceKm == null &&
-                issue != null &&
-                issue != LocationIssue.unavailable)
-              _UseMyLocation(issue: issue!),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-/// A saved branch shows without a distance when location is off; this turns it on.
-class _UseMyLocation extends ConsumerWidget {
-  const _UseMyLocation({required this.issue});
-
-  final LocationIssue issue;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return TextButton.icon(
-      onPressed: switch (issue) {
-        LocationIssue.serviceDisabled => Geolocator.openLocationSettings,
-        LocationIssue.deniedForever => Geolocator.openAppSettings,
-        _ => () => askForLocation(context, ref),
-      },
-      style: TextButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-      ),
-      icon: const Icon(PhosphorIconsRegular.crosshair, size: 16),
-      label: Text(switch (issue) {
-        LocationIssue.serviceDisabled => 'Turn on location',
-        LocationIssue.deniedForever => 'Allow location in Settings',
-        _ => 'Use my location',
-      }),
-    );
-  }
-}
-
-class _BranchFact extends StatelessWidget {
-  const _BranchFact({required this.icon, required this.label, this.style});
-
-  final IconData icon;
-  final String label;
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: style?.color),
-        const SizedBox(width: 4),
-        Flexible(child: Text(label, style: style)),
-      ],
-    );
-  }
-}
-
-class _OutOfRangeBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.errorContainer,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        child: Text(
-          'Out of delivery range',
-          style: Theme.of(context).textTheme.labelSmall
-              ?.copyWith(color: colors.onErrorContainer),
-        ),
+        child: _LocationFallback(issue: issue),
       ),
     );
   }
@@ -488,25 +490,6 @@ class _LocationPrimer extends StatelessWidget {
   }
 }
 
-class _Message extends StatelessWidget {
-  const _Message({required this.text, this.leading, this.action});
-
-  final String text;
-  final Widget? leading;
-  final Widget? action;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        if (leading != null) ...[leading!, const SizedBox(width: 12)],
-        Expanded(child: Text(text)),
-        ?action,
-      ],
-    );
-  }
-}
-
 Future<void> showBranchSelectorSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -527,6 +510,7 @@ class _BranchSelectorSheet extends ConsumerWidget {
     }
     final notifier = ref.read(nearestStoreProvider.notifier);
     final activeId = state.activeBranch?.branch.id;
+    final issue = state.issue;
 
     return ListView(
       shrinkWrap: true,
@@ -542,9 +526,24 @@ class _BranchSelectorSheet extends ConsumerWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
+        // Distances need location; the sheet stays open so they appear once allowed.
+        if (issue != null && issue != LocationIssue.unavailable)
+          ListTile(
+            leading: const Icon(PhosphorIconsRegular.crosshair),
+            title: Text(switch (issue) {
+              LocationIssue.serviceDisabled => 'Turn on location',
+              LocationIssue.deniedForever => 'Allow location in Settings',
+              _ => 'Use my location',
+            }),
+            onTap: switch (issue) {
+              LocationIssue.serviceDisabled => Geolocator.openLocationSettings,
+              LocationIssue.deniedForever => Geolocator.openAppSettings,
+              _ => () => askForLocation(context, ref),
+            },
+          ),
         if (state.nearest != null && state.selectedBranchId != null)
           ListTile(
-            leading: const Icon(Icons.my_location),
+            leading: const Icon(PhosphorIconsRegular.navigationArrow),
             title: const Text('Use nearest branch'),
             onTap: () {
               notifier.useNearest();
@@ -552,28 +551,97 @@ class _BranchSelectorSheet extends ConsumerWidget {
             },
           ),
         for (final item in state.branches)
-          ListTile(
-            title: Text(item.branch.name),
-            subtitle: Text(
-              [
-                item.branch.address,
-                if (item.distanceKm != null) _distanceLabel(item.distanceKm!),
-                _hoursLabel(item),
-              ].join(' · '),
-            ),
-            trailing: item.branch.id == activeId
-                ? Icon(
-                    Icons.check,
-                    color: Theme.of(context).colorScheme.primary,
-                  )
-                : null,
-            selected: item.branch.id == activeId,
+          _BranchOption(
+            item: item,
+            isActive: item.branch.id == activeId,
             onTap: () {
               notifier.selectBranch(item.branch.id);
               Navigator.pop(context);
             },
           ),
       ],
+    );
+  }
+}
+
+/// One branch in the picker: where it is, then whether it is open and what delivery costs.
+class _BranchOption extends StatelessWidget {
+  const _BranchOption({
+    required this.item,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final BranchDistance item;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final branch = item.branch;
+    final hoursColour = branch.isOpen
+        ? statusColour(context, 'completed')
+        : scheme.error;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: ListTile(
+        selected: isActive,
+        // The check and tint mark the pick; the details stay readable ink.
+        selectedColor: scheme.onSurface,
+        selectedTileColor: scheme.secondaryContainer,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: const EdgeInsetsDirectional.only(start: 12, end: 12),
+        isThreeLine: true,
+        title: Text(
+          branch.name,
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              [
+                branch.address,
+                if (item.distanceKm != null) _distanceLabel(item.distanceKm!),
+              ].join(' · '),
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 2),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: _hoursLabel(item),
+                    style: TextStyle(
+                      color: hoursColour,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  // A branch that cannot deliver here has no fee worth showing.
+                  if (branch.deliveryFee != null && !item.isOutOfDeliveryRange)
+                    TextSpan(text: ' · ${_feeLabel(branch)}'),
+                  if (item.isOutOfDeliveryRange)
+                    TextSpan(
+                      text: ' · Pickup only',
+                      style: TextStyle(color: scheme.error),
+                    ),
+                ],
+              ),
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+        trailing: isActive
+            ? Icon(PhosphorIconsFill.checkCircle, color: scheme.primary)
+            : null,
+        onTap: onTap,
+      ),
     );
   }
 }

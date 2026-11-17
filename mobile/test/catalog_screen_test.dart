@@ -496,7 +496,7 @@ void main() {
     expect(find.text('Popular products'), findsNothing);
   });
 
-  testWidgets('the branch card shows the delivery fee', (tester) async {
+  testWidgets('the branch picker shows the delivery fee', (tester) async {
     await _pumpCatalog(
       tester,
       _CatalogApi(),
@@ -519,10 +519,18 @@ void main() {
       ),
     );
 
-    expect(find.text('₱49.00 delivery, free over ₱500.00'), findsOneWidget);
+    expect(find.text('1.1 km · Nearest branch'), findsOneWidget);
+
+    await tester.tap(find.text('Cebu branch'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('₱49.00 delivery, free over ₱500.00'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('the branch card shows open, open 24 hours, or closed', (
+  testWidgets('the branch header shows open, open 24 hours, or closed', (
     tester,
   ) async {
     StoreLocatorState locator({bool open = true}) => StoreLocatorState(
@@ -573,8 +581,9 @@ void main() {
 
     await tester.pumpWidget(const SizedBox());
     await _pumpCatalog(tester, _CatalogApi(), locator: locator(open: false));
+    expect(find.text('Closed'), findsOneWidget);
     // intl puts a narrow no-break space before AM.
-    expect(find.textContaining('Closed · opens Mon 8:00'), findsOneWidget);
+    expect(find.textContaining('Opens Mon 8:00'), findsOneWidget);
   });
 
   testWidgets('medicines bought before show in an Order again row', (
