@@ -50,6 +50,7 @@ class StoreRecommendationCard extends ConsumerWidget {
             final BranchDistance active => _Recommendation(
               active: active,
               isManualPick: value.selectedBranchId != null,
+              issue: value.issue,
             ),
             null => _LocationFallback(issue: value.issue!),
           },
@@ -74,10 +75,17 @@ class StoreRecommendationCard extends ConsumerWidget {
 }
 
 class _Recommendation extends StatelessWidget {
-  const _Recommendation({required this.active, required this.isManualPick});
+  const _Recommendation({
+    required this.active,
+    required this.isManualPick,
+    this.issue,
+  });
 
   final BranchDistance active;
   final bool isManualPick;
+
+  /// Why there is no distance; the card then offers a way to turn location on.
+  final LocationIssue? issue;
 
   @override
   Widget build(BuildContext context) {
@@ -191,9 +199,41 @@ class _Recommendation extends StatelessWidget {
                 style: metaStyle,
               ),
             if (active.isOutOfDeliveryRange) _OutOfRangeBadge(),
+            if (distanceKm == null &&
+                issue != null &&
+                issue != LocationIssue.unavailable)
+              _UseMyLocation(issue: issue!),
           ],
         ),
       ],
+    );
+  }
+}
+
+/// A saved branch shows without a distance when location is off; this turns it on.
+class _UseMyLocation extends ConsumerWidget {
+  const _UseMyLocation({required this.issue});
+
+  final LocationIssue issue;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TextButton.icon(
+      onPressed: switch (issue) {
+        LocationIssue.serviceDisabled => Geolocator.openLocationSettings,
+        LocationIssue.deniedForever => Geolocator.openAppSettings,
+        _ => () => askForLocation(context, ref),
+      },
+      style: TextButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+      icon: const Icon(PhosphorIconsRegular.crosshair, size: 16),
+      label: Text(switch (issue) {
+        LocationIssue.serviceDisabled => 'Turn on location',
+        LocationIssue.deniedForever => 'Allow location in Settings',
+        _ => 'Use my location',
+      }),
     );
   }
 }
@@ -250,8 +290,10 @@ class _LocationFallback extends ConsumerWidget {
     final message = switch (issue) {
       LocationIssue.serviceDisabled =>
         'Turn on location to find your nearest branch.',
-      LocationIssue.denied || LocationIssue.deniedForever =>
+      LocationIssue.denied =>
         'Allow location access to find your nearest branch.',
+      // Android no longer shows its dialog after a second "Don't allow".
+      LocationIssue.deniedForever => 'Location is off for JMMart. In Settings, tap Permissions, then Location, then Allow.',
       LocationIssue.unavailable => 'We could not get your location.',
     };
 
@@ -277,7 +319,12 @@ class _LocationFallback extends ConsumerWidget {
         Wrap(
           spacing: 8,
           children: [
-            if (issue != LocationIssue.unavailable)
+            if (issue == LocationIssue.denied)
+              FilledButton.tonal(
+                onPressed: () => askForLocation(context, ref),
+                child: const Text('Allow location'),
+              )
+            else if (issue != LocationIssue.unavailable)
               FilledButton.tonal(
                 onPressed: issue == LocationIssue.serviceDisabled
                     ? Geolocator.openLocationSettings
@@ -291,6 +338,152 @@ class _LocationFallback extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+bool _askedThisLaunch = false;
+
+/// Explains why JMMart wants location, then shows Android's dialog, where the
+/// customer picks Precise or Approximate. True when location is allowed.
+///
+/// [automatic] prompts (opening the Shop or checkout) show at most once per
+/// launch; a tap on "Allow location" always asks. After a second "Don't allow"
+/// Android stops showing its dialog, so this only offers Settings then.
+// shortcut: "once per launch" is kept in memory; persist it if customers find it repetitive.
+Future<bool> askForLocation(
+  BuildContext context,
+  WidgetRef ref, {
+  bool automatic = false,
+}) async {
+  final service = ref.read(locationServiceProvider);
+  final permission = await service.permission();
+  if (permission == LocationPermission.whileInUse ||
+      permission == LocationPermission.always) {
+    return true;
+  }
+  // Android shows no dialog any more: a tap goes to the app's settings page.
+  if (permission == LocationPermission.deniedForever && !automatic) {
+    await service.openAppSettings();
+    return false;
+  }
+  // Only "denied" can still be asked: not "deniedForever", nor a platform
+  // that cannot tell.
+  if (permission != LocationPermission.denied ||
+      (automatic && _askedThisLaunch) ||
+      !context.mounted) {
+    return false;
+  }
+  _askedThisLaunch = true;
+  final allow = await showModalBottomSheet<bool>(
+    context: context,
+    showDragHandle: true,
+    useSafeArea: true,
+    // Taller than the default half-screen cap with large text or in landscape.
+    isScrollControlled: true,
+    builder: (context) => const SingleChildScrollView(child: _LocationPrimer()),
+  );
+  if (allow != true) {
+    return false;
+  }
+  final asked = DateTime.now();
+  final answer = await service.requestPermission();
+  // Either answer changes the branch card: a distance, or "Allow location in Settings".
+  ref.invalidate(nearestStoreProvider);
+  // An instant "blocked" means Android showed no dialog (blocked before this
+  // launch), so Settings is the only way left; a real "Don't allow" tap is slower.
+  // shortcut: timing is the only signal without storing state; persist the block to drop it.
+  if (answer == LocationPermission.deniedForever &&
+      DateTime.now().difference(asked) < const Duration(milliseconds: 600)) {
+    await service.openAppSettings();
+  }
+  return answer == LocationPermission.whileInUse ||
+      answer == LocationPermission.always;
+}
+
+/// The "why" screen shown before Android's location dialog.
+class _LocationPrimer extends StatelessWidget {
+  const _LocationPrimer();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                PhosphorIconsFill.mapPin,
+                size: 34,
+                color: scheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Semantics(
+            header: true,
+            child: Text(
+              'Find your nearest branch',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'JMMart uses your location to show the closest branch, what it has '
+            'in stock and its delivery fee, and to pin your delivery address.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final (icon, text) in const [
+            (
+              PhosphorIconsRegular.crosshair,
+              'Precise puts the rider at your door.',
+            ),
+            (
+              PhosphorIconsRegular.mapTrifold,
+              'Approximate is enough to pick a branch.',
+            ),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Icon(icon, size: 20, color: scheme.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(text, style: theme.textTheme.bodyMedium),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Allow location'),
+          ),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Not now'),
+          ),
+        ],
+      ),
     );
   }
 }

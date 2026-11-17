@@ -10,6 +10,7 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/push_providers.dart';
+import '../providers/store_locator_providers.dart';
 import '../screens/account_screen.dart';
 import '../screens/auth_gate.dart';
 import '../screens/cart_screen.dart';
@@ -17,6 +18,7 @@ import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
 import '../theme.dart';
+import 'store_locator.dart';
 
 class ShellTabState {
   const ShellTabState({required this.index, required this.loaded});
@@ -68,6 +70,12 @@ class _AppShellState extends ConsumerState<AppShell>
         ref.invalidate(conversationsProvider);
       }
     });
+    // Like other shopping apps: explain, then ask for location on first open.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        askForLocation(context, ref, automatic: true);
+      }
+    });
   }
 
   @override
@@ -84,6 +92,10 @@ class _AppShellState extends ConsumerState<AppShell>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(conversationsProvider);
+      // Back from Settings, where location may have just been allowed.
+      if (ref.read(nearestStoreProvider).value?.issue != null) {
+        ref.invalidate(nearestStoreProvider);
+      }
     }
   }
 

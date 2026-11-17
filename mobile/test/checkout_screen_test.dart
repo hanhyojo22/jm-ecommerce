@@ -233,6 +233,10 @@ class _HereLocation extends LocationService {
   final double longitude;
 
   @override
+  Future<LocationPermission> permission() async =>
+      LocationPermission.whileInUse;
+
+  @override
   Future<Position> currentPosition() async => Position(
     latitude: latitude,
     longitude: longitude,
@@ -249,6 +253,10 @@ class _HereLocation extends LocationService {
 
 class _NoLocation extends LocationService {
   const _NoLocation();
+
+  @override
+  Future<LocationPermission> permission() async =>
+      LocationPermission.deniedForever;
 
   @override
   Future<Position> currentPosition() async =>

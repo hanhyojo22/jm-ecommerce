@@ -19,6 +19,7 @@ import '../providers/checkout_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../widgets/common.dart';
 import '../widgets/delivery_pin_map.dart';
+import '../widgets/store_locator.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -64,6 +65,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Future<void> _locate() async {
     _deliveryBranch = await _cartBranch();
+    // The delivery pin starts at the phone when location is allowed.
+    if (mounted) {
+      await askForLocation(context, ref, automatic: true);
+    }
     LatLng? start;
     try {
       final here = await ref.read(locationServiceProvider).currentPosition();
