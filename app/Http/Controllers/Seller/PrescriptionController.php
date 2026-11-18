@@ -39,13 +39,14 @@ class PrescriptionController extends Controller
     {
         $prescription = $this->prescription($request, $sellerOrder);
         $member = $request->user()->sellerMembership();
-        abort_unless($member->canReviewPrescriptions(), 403);
         $data = $request->validate([
             'decision' => ['required', Rule::in(ReviewPrescription::DECISIONS)],
             'reason' => ['required_unless:decision,approve', 'nullable', 'string', 'max:500'],
         ]);
+        // Any staff who can see the prescription may ask for a clearer photo; only a licensed pharmacist decides it.
+        abort_unless($data['decision'] === 'needs_photo' || $member->canReviewPrescriptions(), 403);
 
-        $review->handle($request->user(), $member->license_number, $prescription, $data['decision'], $data['reason'] ?? null, $request->ip());
+        $review->handle($request->user(), $member->canReviewPrescriptions() ? $member->license_number : null, $prescription, $data['decision'], $data['reason'] ?? null, $request->ip());
 
         return back()->with('status', match ($data['decision']) {
             'approve' => 'Prescription approved. The order is accepted and ready to prepare.',

@@ -101,6 +101,11 @@ class User extends Authenticatable
         return $this->hasMany(DeliveryAddress::class);
     }
 
+    public function discountCards(): HasMany
+    {
+        return $this->hasMany(DiscountCard::class);
+    }
+
     public function productReviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);

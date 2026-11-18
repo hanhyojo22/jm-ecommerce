@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\BranchInventory;
 use App\Models\BranchStock;
 use App\Models\Cart;
+use App\Models\ConversationMessage;
 use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\Product;
@@ -153,6 +154,11 @@ class PrescriptionTest extends TestCase
 
         $this->assertSame('pending', $sellerOrder->refresh()->status);
         $this->assertPushed('Send a clearer prescription photo', 'The photo is blurry.');
+        $this->assertStringContainsString('The photo is blurry.', $order->user->notifications()->where('data->type', 'order')->sole()->data['body']);
+        $chat = ConversationMessage::query()->where('sender_id', $pharmacist->id)->sole();
+        $this->assertStringContainsString('The photo is blurry.', $chat->body);
+        $this->assertTrue($chat->conversation->buyer_id === $order->user_id && $chat->conversation->store_id === $sellerOrder->store_id);
+        $this->push->shouldHaveReceived('sendToUser')->withArgs(fn ($user, string $title, string $body, array $data): bool => $user->is($order->user) && $data['type'] === 'chat')->once();
         $this->actingAs($this->member('manager', $this->branch))->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])->assertSessionHasErrors('status');
         $this->get(route('seller.orders.index'))->assertSee('Waiting for a clearer photo')->assertDontSee('Prescription to review');
         $this->actingAs($order->user)->getJson(route('api.v1.orders.show', $order))
@@ -210,8 +216,15 @@ class PrescriptionTest extends TestCase
         $this->actingAs($staff)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertOk();
         $this->actingAs($staff)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();
 
+        $this->actingAs($staff)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'reject', 'reason' => 'Expired.'])->assertForbidden();
+
         $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending', 'reviewed_by' => null]);
         $this->actingAs($this->member('staff', $this->branch, pharmacist: true))->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertOk();
+
+        $this->actingAs($staff)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'needs_photo', 'reason' => 'Blurry.'])
+            ->assertSessionHas('status', 'The customer was asked for a clearer photo.');
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'needs_photo', 'reviewed_by' => $staff->id, 'reviewer_license_number' => null]);
+        $this->assertPushed('Send a clearer prescription photo', 'Blurry.');
     }
 
     public function test_a_pharmacist_without_a_valid_prc_license_cannot_decide_a_prescription(): void

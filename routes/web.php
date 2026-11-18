@@ -19,6 +19,7 @@ use App\Http\Controllers\Marketplace\CheckoutController;
 use App\Http\Controllers\Marketplace\ConversationAttachmentController;
 use App\Http\Controllers\Marketplace\ConversationController;
 use App\Http\Controllers\Marketplace\DeliveryAddressController;
+use App\Http\Controllers\Marketplace\DiscountCardController;
 use App\Http\Controllers\Marketplace\OrderController;
 use App\Http\Controllers\Marketplace\OrderIssueController;
 use App\Http\Controllers\Marketplace\ProductDiscussionController;
@@ -97,6 +98,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::get('/delivery-addresses/{deliveryAddress}/edit', [DeliveryAddressController::class, 'edit'])->name('delivery-addresses.edit');
     Route::patch('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'update'])->middleware('throttle:10,1')->name('delivery-addresses.update');
     Route::delete('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'destroy'])->middleware('throttle:10,1')->name('delivery-addresses.destroy');
+    Route::delete('/profile/discount-cards/{discountCard}', [DiscountCardController::class, 'destroy'])->middleware('throttle:10,1')->name('profile.discount-cards.destroy');
     Route::post('/order-items/{orderItem}/review', [MarketplaceProductReviewController::class, 'store'])->middleware('throttle:10,1')->name('reviews.store');
     Route::post('/products/{product}/discussions', [ProductDiscussionController::class, 'store'])->middleware('throttle:10,1')->name('discussions.store');
     Route::patch('/reviews/{review}', [MarketplaceProductReviewController::class, 'update'])->middleware('throttle:10,1')->name('reviews.update');

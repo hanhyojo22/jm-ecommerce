@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\ConversationController;
 use App\Http\Controllers\Api\V1\DeliveryAddressController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
+use App\Http\Controllers\Api\V1\DiscountCardController;
 use App\Http\Controllers\Api\V1\MessageAttachmentController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\OrderIssueController;
@@ -90,6 +91,13 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'destroy'])
             ->middleware('throttle:10,1')
             ->name('api.v1.delivery-addresses.destroy');
+
+        Route::get('/discount-cards', [DiscountCardController::class, 'index'])
+            ->middleware('throttle:api')
+            ->name('api.v1.discount-cards.index');
+        Route::delete('/discount-cards/{discountCard}', [DiscountCardController::class, 'destroy'])
+            ->middleware('throttle:10,1')
+            ->name('api.v1.discount-cards.destroy');
 
         Route::get('/saved-products', [SavedProductController::class, 'index'])
             ->middleware('throttle:api')

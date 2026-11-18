@@ -3,7 +3,7 @@
     @php($itemCount = $cart->items->sum('quantity'))
     @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
-    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription', 'prescriptions', 'discount_card', 'discount_card.type', 'discount_card.id_number', 'discount_card.name']) ? 3 : 1)))
+    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription', 'prescriptions', 'discount_card', 'discount_card.type', 'discount_card.id_number', 'discount_card.name', 'discount_card_id', 'save_discount_card']) ? 3 : 1)))
     @php($prescriptionMedicines = $cart->items->filter(fn ($item) => $item->product->requires_prescription)->map(fn ($item) => $item->product->name)->unique())
     @php($fieldInput = 'min-h-[46px] w-full rounded-md border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
 
@@ -17,7 +17,9 @@
             method: @js(old('payment_method', 'cod')),
             {{-- A closed branch takes pickup only; delivery opens again at its next opening. --}}
             fulfillment: @js(old('fulfillment_method', $closedUntil ? 'pickup' : 'delivery')),
-            card: @js(filled(old('discount_card.type'))),
+            card: @js(filled(old('discount_card.type')) || filled(old('discount_card_id'))),
+            cardId: @js((string) old('discount_card_id', '')),
+            saveCard: @js((bool) old('save_discount_card')),
             totals: @js([
                 'delivery' => '₱'.number_format($total, 2),
                 'pickup' => '₱'.number_format($subtotal, 2),
@@ -292,23 +294,52 @@
                                         <input type="checkbox" x-model="card" class="size-4 rounded border-line text-brand">
                                         Senior citizen / PWD discount <span class="font-normal text-success">−₱{{ number_format($seniorPwdDiscount, 2) }}</span>
                                     </label>
-                                    <div x-show="card" x-cloak class="mt-2 grid gap-3 sm:grid-cols-3">
-                                        <div>
-                                            <label for="discount_card_type" class="mb-1 block text-[12.5px] font-semibold text-ink">Card</label>
-                                            <select id="discount_card_type" name="discount_card[type]" :disabled="!card" class="{{ $fieldInput }}">
-                                                @foreach (\App\Support\SeniorPwdDiscount::CARD_TYPES as $cardType => $cardLabel)
-                                                    <option value="{{ $cardType }}" @selected(old('discount_card.type') === $cardType)>{{ $cardLabel }} ID</option>
+                                    <div x-show="card" x-cloak class="mt-2 grid gap-3">
+                                        @if ($discountCards->isNotEmpty())
+                                            {{-- A saved ID sends only its id; the typed fields below stay out of the request. --}}
+                                            <div class="overflow-hidden rounded-lg border border-line bg-white" role="radiogroup" aria-label="Saved discount IDs">
+                                                @foreach ($discountCards as $savedCard)
+                                                    <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-3 border-b border-line px-3.5 py-3 transition-colors hover:bg-slate-50 has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-brand">
+                                                        <input type="radio" name="discount_card_id" value="{{ $savedCard->id }}" x-model="cardId" class="mt-[3px] size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
+                                                        <span class="min-w-0">
+                                                            <span class="block text-sm font-semibold leading-[1.4] text-ink">{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$savedCard->type] }} · {{ $savedCard->name }}</span>
+                                                            <span class="mt-0.5 block text-[13px] leading-normal text-muted">•••• {{ $savedCard->last4 }}</span>
+                                                        </span>
+                                                    </label>
                                                 @endforeach
-                                            </select>
+                                                <label class="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-3.5 py-3 transition-colors hover:bg-slate-50 has-[:checked]:bg-[#EEF3FF] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2 has-[:focus-visible]:outline-brand">
+                                                    <input type="radio" name="discount_card_id" value="" x-model="cardId" class="mt-[3px] size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
+                                                    <span class="min-w-0">
+                                                        <span class="block text-sm font-semibold leading-[1.4] text-ink">Use a different ID</span>
+                                                        <span class="mt-0.5 block text-[13px] leading-normal text-muted">Type the number and the name on the ID.</span>
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        @endif
+                                        <div x-show="cardId === ''" class="grid gap-3 sm:grid-cols-3">
+                                            <div>
+                                                <label for="discount_card_type" class="mb-1 block text-[12.5px] font-semibold text-ink">Card</label>
+                                                <select id="discount_card_type" name="discount_card[type]" :disabled="!card || cardId !== ''" class="{{ $fieldInput }}">
+                                                    @foreach (\App\Support\SeniorPwdDiscount::CARD_TYPES as $cardType => $cardLabel)
+                                                        <option value="{{ $cardType }}" @selected(old('discount_card.type') === $cardType)>{{ $cardLabel }} ID</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label for="discount_card_id_number" class="mb-1 block text-[12.5px] font-semibold text-ink">ID number</label>
+                                                <input id="discount_card_id_number" name="discount_card[id_number]" maxlength="40" autocomplete="off" :disabled="!card || cardId !== ''" :required="card && cardId === ''" value="{{ old('discount_card.id_number') }}" class="{{ $fieldInput }}">
+                                            </div>
+                                            <div>
+                                                <label for="discount_card_name" class="mb-1 block text-[12.5px] font-semibold text-ink">Name on the ID</label>
+                                                <input id="discount_card_name" name="discount_card[name]" maxlength="120" :disabled="!card || cardId !== ''" :required="card && cardId === ''" value="{{ old('discount_card.name') }}" class="{{ $fieldInput }}">
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label for="discount_card_id_number" class="mb-1 block text-[12.5px] font-semibold text-ink">ID number</label>
-                                            <input id="discount_card_id_number" name="discount_card[id_number]" maxlength="40" autocomplete="off" :disabled="!card" :required="card" value="{{ old('discount_card.id_number') }}" class="{{ $fieldInput }}">
-                                        </div>
-                                        <div>
-                                            <label for="discount_card_name" class="mb-1 block text-[12.5px] font-semibold text-ink">Name on the ID</label>
-                                            <input id="discount_card_name" name="discount_card[name]" maxlength="120" :disabled="!card" :required="card" value="{{ old('discount_card.name') }}" class="{{ $fieldInput }}">
-                                        </div>
+                                        @if ($discountCards->count() < \App\Models\DiscountCard::LIMIT)
+                                            <label x-show="cardId === ''" class="flex min-h-11 items-center gap-2.5 text-[13px] font-medium text-ink">
+                                                <input type="checkbox" name="save_discount_card" value="1" x-model="saveCard" :disabled="!card || cardId !== ''" class="size-4 rounded border-line text-brand">
+                                                Save this ID for next time
+                                            </label>
+                                        @endif
                                     </div>
                                     <p x-show="card" x-cloak class="mt-2 text-[12.5px] leading-normal text-muted">For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.</p>
                                     @error('discount_card')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror

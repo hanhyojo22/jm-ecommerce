@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -9,8 +10,10 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(): View
+    public function edit(Request $request): View
     {
-        return view('profile.edit');
+        return view('profile.edit', [
+            'discountCards' => $request->user()->discountCards()->latest()->get(),
+        ]);
     }
 }

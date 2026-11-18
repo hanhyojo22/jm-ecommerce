@@ -140,6 +140,9 @@ class _AccountApi extends ApiClient {
   Future<Account> me() async => _account();
 
   @override
+  Future<List<DiscountCard>> discountCards() async => const [];
+
+  @override
   Future<Account> updateCartReminders(bool enabled) async {
     updates.add(enabled);
     if (fail) {

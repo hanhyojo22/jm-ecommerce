@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../core/push_notifications.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
+import '../providers/discount_card_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -116,6 +118,7 @@ class AccountScreen extends ConsumerWidget {
                   },
                 ),
               ),
+              const _SavedDiscountCardsSection(),
               const SizedBox(height: 8),
               _LazadaToolsGridSection(
                 onSavedTap: () => context.push('/saved'),
@@ -482,5 +485,78 @@ class _LazadaToolsGridSection extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// The IDs saved at checkout, with a way to remove one. Hidden when there are none.
+class _SavedDiscountCardsSection extends ConsumerWidget {
+  const _SavedDiscountCardsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cards =
+        ref.watch(discountCardsProvider).value ?? const <DiscountCard>[];
+
+    if (cards.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+              child: Text(
+                'Saved discount IDs',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            for (final card in cards)
+              ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.only(left: 16, right: 8),
+                title: Text(
+                  '${card.typeLabel} · ${card.idNumberMasked}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(card.name),
+                trailing: IconButton(
+                  tooltip: 'Delete',
+                  onPressed: () => _delete(context, ref, card),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    DiscountCard card,
+  ) async {
+    try {
+      await ref.read(apiClientProvider).deleteDiscountCard(card.id);
+      ref.invalidate(discountCardsProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Saved ID removed.')));
+      }
+    } on ApiException catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.friendly)));
+      }
+    }
   }
 }

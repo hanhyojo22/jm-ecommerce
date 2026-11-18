@@ -31,17 +31,21 @@
                     <button type="submit" class="seller-outline-button mt-2 min-h-11">Mark as checked</button>
                 </form>
             @endif
-            @if ($prescription->status === 'pending' && $canReviewPrescription)
+            @if ($prescription->status === 'pending')
                 <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                    <form method="POST" action="{{ route('seller.orders.prescription.update', $sellerOrder) }}">@csrf @method('PATCH')
-                        <input type="hidden" name="decision" value="approve">
-                        <button type="submit" class="seller-primary-button w-full">Approve prescription</button>
-                    </form>
+                    @if ($canReviewPrescription)
+                        <form method="POST" action="{{ route('seller.orders.prescription.update', $sellerOrder) }}">@csrf @method('PATCH')
+                            <input type="hidden" name="decision" value="approve">
+                            <button type="submit" class="seller-primary-button w-full">Approve prescription</button>
+                        </form>
+                    @endif
                     <form method="POST" action="{{ route('seller.orders.prescription.update', $sellerOrder) }}" class="grid gap-2">@csrf @method('PATCH')
                         <label for="prescription-reason-{{ $sellerOrder->id }}" class="text-sm font-semibold">Message to the customer</label>
-                        <input id="prescription-reason-{{ $sellerOrder->id }}" name="reason" required maxlength="500" class="sc-input" placeholder="For example: the photo is blurry, or the prescription has expired">
+                        <input id="prescription-reason-{{ $sellerOrder->id }}" name="reason" required maxlength="500" class="sc-input" placeholder="{{ $canReviewPrescription ? 'For example: the photo is blurry, or the prescription has expired' : 'For example: the photo is blurry' }}">
                         <button type="submit" name="decision" value="needs_photo" class="sc-btn w-full justify-center">Ask for a clearer photo</button>
-                        <button type="submit" name="decision" value="reject" class="sc-btn sc-btn-danger w-full justify-center">Reject and cancel order</button>
+                        @if ($canReviewPrescription)
+                            <button type="submit" name="decision" value="reject" class="sc-btn sc-btn-danger w-full justify-center">Reject and cancel order</button>
+                        @endif
                     </form>
                 </div>
             @endif

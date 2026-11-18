@@ -3,12 +3,15 @@
 namespace App\Actions;
 
 use App\Models\AuditLog;
+use App\Models\Conversation;
 use App\Models\Order;
 use App\Models\Prescription;
 use App\Models\User;
+use App\Notifications\SellerOrderStatusUpdated;
 use App\Services\GmailOrderMailer;
 use App\Services\PushNotifier;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -22,14 +25,18 @@ class ReviewPrescription
 {
     public const DECISIONS = ['approve', 'reject', 'needs_photo'];
 
-    public function __construct(private UpdateSellerOrderStatus $updateSellerOrderStatus) {}
+    public function __construct(private UpdateSellerOrderStatus $updateSellerOrderStatus, private SendConversationMessage $sendConversationMessage) {}
 
     /**
-     * @param  string  $licenseNumber  The pharmacist's PRC license, kept on the prescription as the record of who decided.
+     * @param  ?string  $licenseNumber  The pharmacist's PRC license, kept on the prescription as the record of who decided. Null only for staff asking for a clearer photo.
      * @param  'approve'|'reject'|'needs_photo'  $decision
      */
-    public function handle(User $pharmacist, string $licenseNumber, Prescription $prescription, string $decision, ?string $reason = null, ?string $ipAddress = null): Prescription
+    public function handle(User $pharmacist, ?string $licenseNumber, Prescription $prescription, string $decision, ?string $reason = null, ?string $ipAddress = null): Prescription
     {
+        if ($licenseNumber === null && $decision !== 'needs_photo') {
+            throw ValidationException::withMessages(['prescription' => 'Only a licensed pharmacist can approve or reject a prescription.']);
+        }
+
         $accepted = false;
         $reviewed = DB::transaction(function () use ($pharmacist, $licenseNumber, $prescription, $decision, $reason, $ipAddress, &$accepted): Prescription {
             // The order lock first, as UpdateSellerOrderStatus takes it, so a status change waits for this decision.
@@ -73,11 +80,11 @@ class ReviewPrescription
             return $prescription;
         });
 
-        DB::afterCommit(function () use ($reviewed, $accepted): void {
+        DB::afterCommit(function () use ($reviewed, $accepted, $pharmacist): void {
             $order = $reviewed->order()->with('user')->first();
             $message = match ($reviewed->status) {
                 'approved' => "A pharmacist approved the prescription for order #{$order->number}. The branch will now prepare your order.",
-                'needs_photo' => "A pharmacist needs a clearer photo of the prescription for order #{$order->number}: {$reviewed->reason} Send a new photo from your order page.",
+                'needs_photo' => "We need a clearer photo of your prescription for order #{$order->number}: {$reviewed->reason} Send a new photo from your order page.",
                 default => "A pharmacist could not accept the prescription for order #{$order->number}, so the order was cancelled: {$reviewed->reason}",
             };
 
@@ -96,6 +103,24 @@ class ReviewPrescription
                         $reviewed->status === 'approved' ? 'Your order will be prepared once your payment arrives.' : (string) $reviewed->reason,
                         ['type' => 'order', 'order_id' => $order->id, 'status' => 'pending'],
                     );
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+
+                try {
+                    $order->user->notify(new SellerOrderStatusUpdated($order->id, 'pending', "Order #{$order->number}", $message));
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            }
+
+            // The request also lands in the buyer's chat with the branch (which pushes it as a message), so they can reply.
+            if ($reviewed->status === 'needs_photo') {
+                try {
+                    $conversation = Conversation::query()->createOrFirst(['buyer_id' => $order->user_id, 'store_id' => $order->sellerOrders()->sole()->store_id], []);
+                    if (! $conversation->isBlocked()) {
+                        $this->sendConversationMessage->handle($conversation, $pharmacist, $message, (string) Str::uuid());
+                    }
                 } catch (Throwable $exception) {
                     report($exception);
                 }

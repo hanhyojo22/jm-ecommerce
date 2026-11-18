@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jmmart/src/core/api_client.dart';
+import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/core/attachment_picker.dart';
 import 'package:jmmart/src/core/location_service.dart';
 import 'package:jmmart/src/models/models.dart';
@@ -48,6 +49,7 @@ void main() {
     await tester.tap(find.text('Use my discount'));
     await tester.pumpAndSettle();
     expect(find.text('₱71.43'), findsWidgets);
+    expect(find.text('Use a different ID'), findsNothing);
 
     await tester.tap(find.text('Place order'));
     await tester.pump();
@@ -202,6 +204,138 @@ void main() {
     }
   }
 
+  testWidgets('a saved discount ID replaces the typed fields', (tester) async {
+    final api = _CheckoutApi(
+      rx: false,
+      seniorPwd: '28.57',
+      cards: const [
+        {
+          'id': 'card-1',
+          'type': 'senior',
+          'name': 'Lola Ana',
+          'id_number_masked': '•••••0123',
+        },
+      ],
+    );
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+    );
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Use my discount'));
+    await tester.tap(find.text('Use my discount'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Senior citizen · Lola Ana'), findsOneWidget);
+    expect(find.text('•••••0123'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'ID number'), findsOneWidget);
+
+    await tester.tap(find.text('Senior citizen · Lola Ana'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'ID number'), findsNothing);
+
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+
+    expect(api.placed!.discountCardId, 'card-1');
+    expect(api.placed!.discountCard, isNull);
+    expect(api.placed!.saveDiscountCard, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the save checkbox sends save_discount_card', (tester) async {
+    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+    );
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Use my discount'));
+    await tester.tap(find.text('Use my discount'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name on the ID'),
+      'Lola Ana',
+    );
+    await tester.ensureVisible(find.text('Save this ID for next time'));
+    await tester.tap(find.text('Save this ID for next time'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+
+    expect(api.placed!.saveDiscountCard, isTrue);
+    expect(api.placed!.discountCardId, isNull);
+    expect(api.placed!.discountCard, (
+      type: 'senior',
+      idNumber: 'SC-9',
+      name: 'Lola Ana',
+    ));
+  });
+
+  testWidgets('a deleted saved ID falls back to the typed fields', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(
+      rx: false,
+      seniorPwd: '28.57',
+      failSavedCard: true,
+      cards: const [
+        {
+          'id': 'card-1',
+          'type': 'pwd',
+          'name': 'Lolo Ben',
+          'id_number_masked': '•••••7788',
+        },
+      ],
+    );
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+    );
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Use my discount'));
+    await tester.tap(find.text('Use my discount'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PWD · Lolo Ben'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+
+    expect(api.placed, isNull);
+    expect(
+      find.text(
+        'That saved ID is no longer available. Type it again and place the order.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.widgetWithText(TextField, 'ID number'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Name on the ID'), findsOneWidget);
+  });
+
   testWidgets('a pin outside the delivery radius cannot be ordered', (
     tester,
   ) async {
@@ -342,15 +476,24 @@ typedef _Placed = ({
   double? longitude,
   List<PickedAttachment> prescriptions,
   ({String type, String idNumber, String name})? discountCard,
+  String? discountCardId,
+  bool saveDiscountCard,
 });
 
 class _CheckoutApi extends ApiClient {
-  _CheckoutApi({required this.rx, this.closedUntil, this.seniorPwd = '0.00'})
-    : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
+  _CheckoutApi({
+    required this.rx,
+    this.closedUntil,
+    this.seniorPwd = '0.00',
+    this.cards = const [],
+    this.failSavedCard = false,
+  }) : super(baseUrl: 'http://localhost', tokenProvider: () async => null);
 
   final bool rx;
   final String? closedUntil;
   final String seniorPwd;
+  final List<Map<String, dynamic>> cards;
+  final bool failSavedCard;
   _Placed? placed;
 
   @override
@@ -374,6 +517,7 @@ class _CheckoutApi extends ApiClient {
     ],
     'subtotal': '100.00',
     'senior_pwd_discount': seniorPwd,
+    'discount_cards': cards,
     'branch': {
       'id': 'B-MAKATI',
       'name': 'Makati branch',
@@ -418,16 +562,28 @@ class _CheckoutApi extends ApiClient {
     double? deliveryLongitude,
     List<PickedAttachment> prescriptions = const [],
     ({String type, String idNumber, String name})? discountCard,
+    String? discountCardId,
+    bool saveDiscountCard = false,
     String? note,
     String? successUrl,
     String? cancelUrl,
   }) async {
+    if (failSavedCard && discountCardId != null) {
+      throw const ApiException(
+        code: 'resource.not_found',
+        message: 'Not found.',
+        statusCode: 404,
+      );
+    }
+
     placed = (
       fulfillment: fulfillmentMethod,
       latitude: deliveryLatitude,
       longitude: deliveryLongitude,
       prescriptions: prescriptions,
       discountCard: discountCard,
+      discountCardId: discountCardId,
+      saveDiscountCard: saveDiscountCard,
     );
     return PlacedOrder.fromJson({'id': 'order-1', 'number': 'JM-1'});
   }

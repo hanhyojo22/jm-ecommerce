@@ -15,6 +15,29 @@
                 <p class="mt-1 text-meta text-muted">Your sign-in details, profile, and which notifications JMMart sends you.</p>
                 @if (session('status'))<p role="status" class="mt-4 rounded-md border border-[var(--color-success-line)] bg-[var(--color-success-wash)] px-3.5 py-2.5 text-meta font-medium text-success">{{ session('status') }}</p>@endif
                 <x-marketplace.account-profile />
+                <section class="account-card mt-4" aria-labelledby="saved-discount-ids">
+                    <div class="border-b border-line px-4 py-3.5 sm:px-6">
+                        <h2 id="saved-discount-ids" class="text-ink">Saved discount IDs</h2>
+                        <p class="mt-0.5 text-xs text-muted">Senior citizen or PWD IDs you saved at checkout. The pharmacy still checks the physical ID when you receive your order.</p>
+                    </div>
+                    @if ($discountCards->isEmpty())
+                        <p class="px-4 py-4 text-meta text-muted sm:px-6">No saved IDs yet. Tick “Save this ID for next time” at checkout.</p>
+                    @else
+                        <ul class="divide-y divide-line">
+                            @foreach ($discountCards as $discountCard)
+                                <li class="flex min-h-11 items-center justify-between gap-4 px-4 py-3 sm:px-6">
+                                    <span class="min-w-0">
+                                        <span class="block text-meta font-semibold text-ink">{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$discountCard->type] }} · •••• {{ $discountCard->last4 }}</span>
+                                        <span class="mt-0.5 block text-xs text-muted">{{ $discountCard->name }}</span>
+                                    </span>
+                                    <form method="POST" action="{{ route('profile.discount-cards.destroy', $discountCard) }}">@csrf @method('DELETE')
+                                        <button type="submit" class="inline-flex min-h-10 items-center rounded-md px-2 text-meta font-semibold text-danger hover:underline">Delete</button>
+                                    </form>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </section>
                 <section class="account-card mt-4" aria-labelledby="notification-settings">
                     <div class="border-b border-line px-4 py-3.5 sm:px-6">
                         <h2 id="notification-settings" class="text-ink">Notifications</h2>

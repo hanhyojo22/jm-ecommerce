@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\AuditLog;
+use App\Models\DiscountCard;
 use App\Models\Order;
 use App\Models\PaymentAdjustment;
 use App\Models\SellerOrder;
@@ -67,6 +68,8 @@ class RemoveSeniorPwdDiscount
                 'ip_address' => $ipAddress,
             ]);
 
+            $this->forgetSavedCard($order);
+
             return $order;
         });
 
@@ -83,5 +86,26 @@ class RemoveSeniorPwdDiscount
         }
 
         return $order;
+    }
+
+    /**
+     * A branch that could not confirm the ID also drops it from the customer's
+     * saved list, so the next checkout does not offer it again. Past orders keep
+     * their own copy.
+     */
+    private function forgetSavedCard(Order $order): void
+    {
+        $number = $order->discount_card_number;
+        $type = $order->discount_card_type;
+
+        if ($number === null || $type === null) {
+            return;
+        }
+
+        $order->user->discountCards()
+            ->where('type', $type)
+            ->get()
+            ->filter(fn (DiscountCard $card): bool => $card->matches($type, $number))
+            ->each(fn (DiscountCard $card) => $card->delete());
     }
 }

@@ -374,18 +374,22 @@ class ApiClient {
     double? deliveryLongitude,
     List<PickedAttachment> prescriptions = const [],
     ({String type, String idNumber, String name})? discountCard,
+    String? discountCardId,
+    bool saveDiscountCard = false,
     String? note,
     String? successUrl,
     String? cancelUrl,
   }) async {
     final fields = <String, dynamic>{
       ...address.toJson(),
+      'discount_card_id': ?discountCardId,
       if (discountCard != null)
         'discount_card': {
           'type': discountCard.type,
           'id_number': discountCard.idNumber,
           'name': discountCard.name,
         },
+      if (saveDiscountCard) 'save_discount_card': true,
       if (note != null && note.trim().isNotEmpty) 'delivery_note': note.trim(),
       'fulfillment_method': fulfillmentMethod,
       'delivery_latitude': ?deliveryLatitude,
@@ -610,6 +614,16 @@ class ApiClient {
 
   Future<void> deleteAddress(String id) async {
     await _raw('DELETE', '/delivery-addresses/$id');
+  }
+
+  Future<List<DiscountCard>> discountCards() async {
+    final body = await _data('GET', '/discount-cards');
+
+    return listOf(body).map(DiscountCard.fromJson).toList(growable: false);
+  }
+
+  Future<void> deleteDiscountCard(String id) async {
+    await _raw('DELETE', '/discount-cards/$id');
   }
 
   Future<List<Conversation>> conversations({String? search}) async {

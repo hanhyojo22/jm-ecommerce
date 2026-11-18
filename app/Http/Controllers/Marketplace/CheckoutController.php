@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Marketplace;
 
 use App\Actions\CheckoutCart;
 use App\Actions\NotifySellersOfNewOrder;
+use App\Actions\SaveDiscountCard;
 use App\Actions\SendOrderReceipt;
 use App\Actions\StartOnlinePayment;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class CheckoutController extends Controller
 {
@@ -90,13 +92,14 @@ class CheckoutController extends Controller
             'total' => $total,
             'addresses' => $addresses,
             'preferredAddress' => $preferredAddress,
+            'discountCards' => $request->user()->discountCards()->latest()->get(),
             'branchName' => $branch?->name ?? 'your branch',
             'branchAddress' => collect([$branch?->address_line, $branch?->city])->filter()->join(', '),
             'closedUntil' => $branch?->nextOpeningAt(now()),
         ]);
     }
 
-    public function store(Request $request, CheckoutCart $checkout, SendOrderReceipt $sendReceipt, NotifySellersOfNewOrder $notifySellers): RedirectResponse
+    public function store(Request $request, CheckoutCart $checkout, SendOrderReceipt $sendReceipt, NotifySellersOfNewOrder $notifySellers, SaveDiscountCard $saveDiscountCard): RedirectResponse
     {
         $data = $request->validate([
             'fulfillment_method' => ['sometimes', Rule::in(['delivery', 'pickup'])],
@@ -113,6 +116,9 @@ class CheckoutController extends Controller
             'prescription' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
             'prescriptions' => ['nullable', 'array', 'max:10'],
             'prescriptions.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            // A saved ID replaces the typed fields; saving applies only to a typed card.
+            'discount_card_id' => ['nullable', 'string'],
+            'save_discount_card' => ['nullable', 'boolean'],
             ...SeniorPwdDiscount::rules(),
         ]);
         $paymentMethod = $data['payment_method'] ?? 'cod';
@@ -121,6 +127,7 @@ class CheckoutController extends Controller
             ...Arr::wrap($request->file('prescriptions')),
             ...Arr::wrap($request->file('prescription')),
         ]));
+        $discountCard = $this->discountCard($request, $data);
         // shortcut: the web checkout has no map pin until Phase 7, so its deliveries skip the radius check.
         $order = $checkout->handle(
             $request->user(),
@@ -129,8 +136,17 @@ class CheckoutController extends Controller
             $data['client_request_id'] ?? null,
             $fulfillmentMethod,
             prescriptions: $prescriptions,
-            discountCard: SeniorPwdDiscount::cardFrom($data),
+            discountCard: $discountCard,
         );
+
+        // A failed save must not turn a placed order into an error: the discount already applies.
+        if (($data['save_discount_card'] ?? false) && blank($data['discount_card_id'] ?? null) && $discountCard !== null) {
+            try {
+                $saveDiscountCard->handle($request->user(), $discountCard);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
         $paymentNote = CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod);
         $buyer = $request->user();
 
@@ -138,5 +154,21 @@ class CheckoutController extends Controller
         $notifySellers->handle($order);
 
         return $paymentMethod === 'cod' ? to_route('orders.placed', $order) : to_route('orders.pay', $order);
+    }
+
+    /**
+     * A saved ID wins over typed fields. Scoping the lookup to the customer makes
+     * anyone else's ID a 404, and ignores a tampered type or number from the client.
+     *
+     * @param  array<string, mixed>  $data
+     * @return ?array{type: string, id_number: string, name: string}
+     */
+    private function discountCard(Request $request, array $data): ?array
+    {
+        if (filled($data['discount_card_id'] ?? null)) {
+            return $request->user()->discountCards()->findOrFail($data['discount_card_id'])->toCard();
+        }
+
+        return SeniorPwdDiscount::cardFrom($data);
     }
 }

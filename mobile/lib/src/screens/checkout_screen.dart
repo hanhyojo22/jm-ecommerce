@@ -40,6 +40,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _useCard = false;
   String _cardType = 'senior';
 
+  /// The saved ID chosen at checkout; null means the customer typed a new one.
+  String? _savedCardId;
+  bool _saveCard = false;
+
   /// The city of a reused address; a new address takes the branch's city.
   String _savedCity = '';
 
@@ -229,6 +233,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     final useCard = _useCard && quote.offersSeniorPwdDiscount;
     if (useCard &&
+        _savedCardId == null &&
         (_cardNumber.text.trim().isEmpty || _cardName.text.trim().isEmpty)) {
       _snack('Enter the ID number and the name on the ID for the discount.');
       return;
@@ -261,13 +266,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             deliveryLatitude: pin?.latitude,
             deliveryLongitude: pin?.longitude,
             prescriptions: _prescriptions,
-            discountCard: useCard
+            discountCard: useCard && _savedCardId == null
                 ? (
                     type: _cardType,
                     idNumber: _cardNumber.text.trim(),
                     name: _cardName.text.trim(),
                   )
                 : null,
+            discountCardId: useCard ? _savedCardId : null,
+            saveDiscountCard: useCard && _savedCardId == null && _saveCard,
           );
 
       await ref.read(cartProvider.notifier).refresh();
@@ -294,7 +301,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } on ApiException catch (error) {
       if (mounted) {
-        _snack(error.friendly);
+        // The saved ID may have been deleted on another device; fall back to typing it.
+        final lostSavedCard =
+            _savedCardId != null &&
+            (error.statusCode == 404 ||
+                (error.statusCode == 422 &&
+                    error.fields.containsKey('discount_card_id')));
+
+        if (lostSavedCard) {
+          setState(() => _savedCardId = null);
+        }
+
+        _snack(
+          lostSavedCard
+              ? 'That saved ID is no longer available. Type it again and place the order.'
+              : error.friendly,
+        );
       }
     } finally {
       if (mounted) {
@@ -712,34 +734,80 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
         if (_useCard) ...[
           const SizedBox(height: 4),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'senior', label: Text('Senior citizen')),
-              ButtonSegment(value: 'pwd', label: Text('PWD')),
-            ],
-            selected: {_cardType},
-            onSelectionChanged: (value) =>
-                setState(() => _cardType = value.first),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _cardNumber,
-            maxLength: 40,
-            decoration: const InputDecoration(
-              labelText: 'ID number',
-              counterText: '',
+          if (quote.discountCards.isNotEmpty) ...[
+            RadioGroup<String>(
+              groupValue: _savedCardId ?? '__typed__',
+              onChanged: (value) => setState(
+                () => _savedCardId = value == null || value == '__typed__'
+                    ? null
+                    : value,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final card in quote.discountCards)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: RadioListTile<String>(
+                        contentPadding: const EdgeInsets.fromLTRB(4, 0, 14, 0),
+                        value: card.id,
+                        selected: _savedCardId == card.id,
+                        shape: _choiceShape(_savedCardId == card.id),
+                        title: Text('${card.typeLabel} · ${card.name}'),
+                        subtitle: Text(card.idNumberMasked),
+                      ),
+                    ),
+                  RadioListTile<String>(
+                    contentPadding: const EdgeInsets.fromLTRB(4, 0, 14, 0),
+                    value: '__typed__',
+                    selected: _savedCardId == null,
+                    shape: _choiceShape(_savedCardId == null),
+                    title: const Text('Use a different ID'),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _cardName,
-            maxLength: 120,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'Name on the ID',
-              counterText: '',
+            const SizedBox(height: 8),
+          ],
+          if (_savedCardId == null) ...[
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'senior', label: Text('Senior citizen')),
+                ButtonSegment(value: 'pwd', label: Text('PWD')),
+              ],
+              selected: {_cardType},
+              onSelectionChanged: (value) =>
+                  setState(() => _cardType = value.first),
             ),
-          ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _cardNumber,
+              maxLength: 40,
+              decoration: const InputDecoration(
+                labelText: 'ID number',
+                counterText: '',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _cardName,
+              maxLength: 120,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Name on the ID',
+                counterText: '',
+              ),
+            ),
+            if (quote.discountCards.length < 3)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _saveCard,
+                onChanged: (value) =>
+                    setState(() => _saveCard = value ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text('Save this ID for next time'),
+              ),
+          ],
           const SizedBox(height: 8),
           Text(
             'For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.',
