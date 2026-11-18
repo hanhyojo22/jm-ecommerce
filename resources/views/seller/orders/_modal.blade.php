@@ -21,7 +21,9 @@
         && $order->payment?->method === 'cod';
     $hasPrimaryAction = $nextTransition !== null || $canRecordCash;
 
+    $waitingForPrescription = $order->prescription !== null && $order->prescription->status !== 'approved' && ! $isCancelled;
     $statusTitle = match (true) {
+        $waitingForPrescription => $order->prescription->status === 'needs_photo' ? 'Waiting for a clearer photo' : 'Waiting for pharmacist approval',
         $isCancelled => 'Order cancelled',
         $sellerOrder->status === 'pending' => 'New order',
         $sellerOrder->status === 'confirmed' => 'Order accepted',
@@ -29,6 +31,7 @@
         default => $label($sellerOrder->status),
     };
     $statusSub = match (true) {
+        $waitingForPrescription => 'Review the submitted documents below. A licensed pharmacist must approve the prescription before preparation begins.',
         $isCancelled => 'This order was cancelled and stock was restored.',
         $awaitingOnlinePayment => 'The customer has not paid online yet. Accept once PayMongo reports the payment.',
         $sellerOrder->status === 'pending' => 'Accept to start preparing. Stock is already reserved for you.',
@@ -39,12 +42,14 @@
         default => 'This order is complete.',
     };
     $statusTone = match (true) {
+        $waitingForPrescription => 'warn',
         $isCancelled => 'danger',
         $awaitingOnlinePayment, $canRecordCash => 'warn',
         $sellerOrder->status === 'delivered' => 'good',
         default => 'moving',
     };
     $statusIcon = match (true) {
+        $waitingForPrescription => 'clock',
         $isCancelled => 'x-circle',
         $awaitingOnlinePayment => 'clock',
         $sellerOrder->status === 'pending' => 'bell',
@@ -95,6 +100,7 @@
     };
 
     $nextStep = match (true) {
+        $waitingForPrescription => null,
         $awaitingOnlinePayment => [
             'icon' => 'clock',
             'title' => 'Waiting for online payment',
@@ -136,14 +142,14 @@
         default => null,
     };
 @endphp
-{{-- Body of the order modal on the orders list. Every form posts back to the list, which reopens this order. --}}
+{{-- Detail fragment for the order queue. Actions return to the selected order in the workspace. --}}
 <header class="sc-modal-head sc-order-head">
     <h2 id="order-modal-title" class="sr-only">Order {{ $order->number }}</h2>
     <div class="sc-order-top">
         <div class="sc-order-id">
             <span class="sc-order-eyebrow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 8 8-4 8 4v9l-8 4-8-4V8Z"/><path d="m4 8 8 4 8-4M12 12v9"/></svg>
-                Seller order
+                Order details
             </span>
             <span class="sc-order-ref" title="{{ $order->number }}">{{ \App\Models\Order::shortNumber($order->number) }}</span>
             <span class="sr-only">Order #{{ $order->number }}</span>
@@ -200,7 +206,7 @@
                 <span class="sc-order-meta-dot" aria-hidden="true">·</span>
                 <span>{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</span>
                 <span class="sc-order-meta-dot" aria-hidden="true">·</span>
-                <span>₱{{ number_format($sellerOrder->total, 2) }}</span>
+                <span class="sc-order-header-total">₱{{ number_format($sellerOrder->total, 2) }}</span>
             </p>
         </div>
     </div>
@@ -216,7 +222,7 @@
             <span class="sc-order-notice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></span>
             <div>
                 <p class="sc-order-notice-title">This order was cancelled</p>
-                <p class="sc-order-notice-copy">Only your store’s part of the checkout was cancelled. Both items were returned to stock and the buyer was notified.</p>
+                <p class="sc-order-notice-copy">Only your store’s part of the checkout was cancelled. The items were returned to stock and the buyer was notified.</p>
             </div>
         </div>
     @endif
@@ -229,7 +235,7 @@
         <div class="sc-notice mb-3" data-tone="info"><span>{{ $sellerOrder->returnCases->count() }} return {{ Str::plural('case', $sellerOrder->returnCases->count()) }} on this order. Respond before the deadline.</span><a href="{{ route('seller.returns.show', $sellerOrder->returnCases->first()) }}">View {{ $sellerOrder->returnCases->count() === 1 ? 'case' : 'cases' }}</a></div>
     @endif
 
-    @include('seller.orders._prescription', ['sellerOrder' => $sellerOrder, 'class' => 'mb-3'])
+    @include('seller.orders._documents', ['sellerOrder' => $sellerOrder, 'class' => 'mb-3', 'approvalInFooter' => true])
 
     <div class="sc-order-grid">
         <div class="sc-order-main">
@@ -359,13 +365,22 @@
                 @endif
             </div>
         </div>
-        <span class="sc-order-hint max-lg:hidden">Esc to close · ← → to switch orders</span>
+        <span class="sc-order-hint max-lg:hidden">← → to switch orders</span>
     </div>
     <div class="sc-order-foot-actions">
         @if ($conversation)
             <a href="{{ route('messages.show', $conversation) }}" class="seller-outline-button sc-order-secondary">Message buyer</a>
         @endif
-        @if ($canManageOrders && $nextTransition === 'shipped' && ! $isPickup)
+        @if ($waitingForPrescription && $order->prescription->status === 'pending' && (auth()->user()->sellerMembership()?->canReviewPrescriptions() ?? false))
+            <form method="POST" action="{{ route('seller.orders.prescription.update', $sellerOrder) }}" class="sc-order-primary-form">
+                @csrf
+                @method('PATCH')
+                <input type="hidden" name="decision" value="approve">
+                <button type="submit" class="seller-primary-button sc-order-primary">Approve prescription</button>
+            </form>
+        @elseif ($waitingForPrescription)
+            <button type="button" class="seller-outline-button" disabled>{{ $order->prescription->status === 'needs_photo' ? 'Awaiting clearer photo' : 'Awaiting pharmacist' }}</button>
+        @elseif ($canManageOrders && $nextTransition === 'shipped' && ! $isPickup)
             {{-- The full page asks for the rider before the order goes out. --}}
             <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="seller-primary-button sc-order-primary">{{ $transitionLabels['shipped'] }}…</a>
         @elseif ($canManageOrders && $nextTransition)

@@ -30,6 +30,7 @@ class SellerOrderController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', 'in:pending,confirmed,processing,shipped,delivered,cancelled'],
+            'review' => ['nullable', 'in:prescription,discount'],
             'payment_status' => ['nullable', 'in:pending,paid,failed,refunded'],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
@@ -74,8 +75,7 @@ class SellerOrderController extends Controller
             $canManageOrders ? ($sellerOrder->issues->contains(fn ($issue) => $issue->status === 'open' && $issue->type === 'cancellation') || ($sellerOrder->order->prescription !== null && $sellerOrder->order->prescription->status !== 'approved') ? ['cancelled'] : UpdateSellerOrderStatus::transitionsFor($sellerOrder->status)) : [],
         );
 
-        // The orders list opens an order in a modal and asks for just its body; a direct visit
-        // (or a browser without JavaScript) still gets the full page.
+        // The queue requests the detail fragment; a direct visit still gets the full page.
         if ($isModal) {
             return view('seller.orders._modal', [
                 'sellerOrder' => $sellerOrder,
@@ -224,6 +224,14 @@ class SellerOrderController extends Controller
                 });
             })
             ->when($filters['status'] ?? null, fn (Builder $query, string $status): Builder => $query->where('status', $status))
+            ->when(($filters['review'] ?? null) === 'prescription', fn (Builder $query): Builder => $query
+                ->where('status', 'pending')
+                ->whereHas('order.prescription', fn (Builder $prescription): Builder => $prescription->whereIn('status', ['pending', 'needs_photo'])))
+            ->when(($filters['review'] ?? null) === 'discount', fn (Builder $query): Builder => $query
+                ->where('discount_amount', '>', 0)
+                ->whereNull('discount_reviewed_at')
+                ->whereNotIn('status', ['delivered', 'cancelled'])
+                ->whereHas('order', fn (Builder $order): Builder => $order->whereNotNull('discount_document_path')))
             ->when($filters['payment_status'] ?? null, function (Builder $query, string $paymentStatus): void {
                 if (in_array($paymentStatus, ['pending', 'paid'], true)) {
                     $paymentStatus === 'paid' ? $query->whereNotNull('cod_collected_at') : $query->whereNull('cod_collected_at');

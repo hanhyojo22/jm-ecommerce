@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
+async function rejectOptionalCookies(page) {
+    const banner = page.locator('[data-cookie-banner]');
+    if (await banner.isVisible()) {
+        await banner.locator('[data-cookie-action="reject"]').click();
+        await expect(banner).toHaveCount(0);
+    }
+}
+
 test('seller catalog shows real products and opens working details at desktop and mobile sizes', async ({ browser }, testInfo) => {
     const { context, page } = await openAsRole(browser, 'seller');
 
@@ -75,6 +83,7 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
 
             for (const section of sections) {
                 await page.goto(section);
+                await rejectOptionalCookies(page);
                 const containerSelector = '.seller-workspace-page';
                 await expect(page.locator(containerSelector)).toBeVisible();
 
@@ -109,8 +118,9 @@ test('seller workspace sections centre with their catalog gutters', async ({ bro
             }
 
             await page.goto('/seller/orders');
-            await page.getByRole('link', { name: 'QA-REVIEW-001' }).click();
-            const orderModal = page.getByRole('dialog', { name: 'QA-REVIEW-001' });
+        await rejectOptionalCookies(page);
+            await page.locator('.sc-queue-order').filter({ hasText: 'QA-REVIEW-001' }).click();
+            const orderModal = page.getByRole('region', { name: 'Selected order details' });
             await expect(orderModal).toBeVisible();
             await expect(page).toHaveURL(/\/seller\/orders\?order=/);
             await orderModal.getByRole('link', { name: 'Full page' }).click();
@@ -330,7 +340,7 @@ test('seller remains signed in when Account and the workspace switch are opened 
     }
 });
 
-test('seller order modal renews the session, preloads neighbours and recovers from a failed load', async ({ browser }) => {
+test('seller order workspace renews the session, preloads neighbours and recovers from a failed load', async ({ browser }) => {
     const { context, page } = await openAsRole(browser, 'seller');
     const modalRequests = [];
     page.on('request', (request) => {
@@ -342,31 +352,56 @@ test('seller order modal renews the session, preloads neighbours and recovers fr
     try {
         await page.setViewportSize({ width: 1682, height: 800 });
         await page.goto('/seller/orders');
-        const orderLinks = page.locator('table tbody th a');
+        await rejectOptionalCookies(page);
+        const orderLinks = page.locator('.sc-queue-order');
         const [firstNumber, secondNumber] = await orderLinks.evaluateAll((links) => links.slice(0, 2).map((link) => link.querySelector('[title]').title));
 
         await orderLinks.first().hover();
         await expect.poll(() => modalRequests.length, 'resting on an order preloads it').toBeGreaterThan(0);
         await orderLinks.first().click();
-        await expect(page.getByRole('dialog', { name: firstNumber })).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Selected order details' })).toContainText(firstNumber);
         await expect.poll(() => new Set(modalRequests.map((request) => request.url())).size, 'the next order is preloaded').toBeGreaterThan(1);
         expect(modalRequests.every((request) => request.headers()['x-requires-session'] === '1')).toBe(true);
 
         await page.keyboard.press('ArrowRight');
-        await expect(page.getByRole('dialog', { name: secondNumber })).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Selected order details' })).toContainText(secondNumber);
         await page.keyboard.press('Escape');
-        await expect(page.getByRole('dialog')).toBeHidden();
-        // Closing pops the modal's history entry; reloading mid-navigation aborts.
+        await expect(page.getByRole('heading', { name: 'Select an order' })).toBeVisible();
+        // Closing clears the selected order without navigating away from the queue.
         await expect(page).not.toHaveURL(/[?&]order=/);
 
-        await page.reload();
         await page.route(/\/seller\/orders\/[^/?]+$/, (route) => (route.request().headers()['x-order-modal'] === '1' ? route.fulfill({ status: 500, body: '' }) : route.continue()));
-        await orderLinks.first().click();
+        await page.reload();
         await expect(page.getByText('We couldn’t load this order.')).toBeVisible();
         await page.unrouteAll();
         await page.getByRole('button', { name: 'Try again' }).click();
-        await expect(page.getByRole('dialog', { name: firstNumber })).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Selected order details' })).toContainText(firstNumber);
         await expect(page.getByText('We couldn’t load this order.')).toBeHidden();
+    } finally {
+        await context.close();
+    }
+});
+
+test('seller order workspace keeps a discount review error visible after redirect', async ({ browser }, testInfo) => {
+    const { context, page } = await openAsRole(browser, 'seller');
+
+    try {
+        await page.goto('/seller/orders');
+        await rejectOptionalCookies(page);
+        await page.locator('.sc-queue-order').filter({ hasText: 'QA-REVIEW-001' }).click();
+        await expect(page.locator('.sc-order-ref')).toHaveText('QA-REVIEW-001');
+        const orderId = new URL(page.url()).searchParams.get('order');
+        const token = await page.locator('meta[name="csrf-token"]').getAttribute('content');
+        const response = await page.request.post(new URL(`/seller/orders/${orderId}/discount-document/review`, page.url()).href, {
+            form: { _token: token },
+            headers: { Referer: page.url() },
+            maxRedirects: 0,
+        });
+        expect(response.status()).toBe(302);
+        await page.reload();
+        const detail = page.getByRole('region', { name: 'Selected order details' });
+        await expect(detail.getByText('Only an active discounted order with a submitted ID can be reviewed.', { exact: true })).toBeVisible();
+        await page.screenshot({ path: testInfo.outputPath('discount-review-error.png'), fullPage: true });
     } finally {
         await context.close();
     }
@@ -383,8 +418,9 @@ test('seller order actions confirm in an in-page dialog instead of the browser p
     try {
         await page.setViewportSize({ width: 1280, height: 900 });
         await page.goto('/seller/orders');
-        await page.locator('table tbody th a').first().click();
-        const orderModal = page.locator('dialog.sc-modal');
+        await rejectOptionalCookies(page);
+        await page.locator('.sc-queue-order').first().click();
+        const orderModal = page.getByRole('region', { name: 'Selected order details' });
         await expect(orderModal.locator('.sc-modal-foot')).toBeVisible();
         // The seeded orders are all settled, so add the action form the modal shows for an unpaid delivery.
         await orderModal.locator('.sc-modal-foot').evaluate((foot) => foot.insertAdjacentHTML('beforeend', '<form method="POST" action="/seller/orders/qa/cod-collection" data-confirm-title="Record cash collected?" data-confirm="Record only cash you actually have." data-confirm-reference="Order QA-1" data-confirm-amount="₱19.99" data-confirm-from="Unpaid" data-confirm-to="Paid" data-confirm-action="Record cash"><button type="submit">Record cash collected</button></form>'));

@@ -15,7 +15,7 @@ async function rejectOptionalCookies(page) {
     }
 }
 
-test('a customer buys an Rx medicine with a prescription and the pharmacist approves it', async ({ browser }) => {
+test('a customer submits prescription and discount ID together and the pharmacy reviews them separately', async ({ browser }, testInfo) => {
     test.setTimeout(90_000);
     const customer = await openAsRole(browser, 'pharmacyCustomer');
 
@@ -42,6 +42,11 @@ test('a customer buys an Rx medicine with a prescription and the pharmacist appr
 
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click().catch(() => {});
         await page.locator('#prescription').setInputFiles(prescriptionPhoto);
+        await page.getByRole('checkbox', { name: /Senior citizen \/ PWD discount/ }).check();
+        await page.locator('#discount_card_type').selectOption('senior');
+        await page.locator('#discount_card_id_number').fill('SC-QA-4821');
+        await page.locator('#discount_card_name').fill('Rosa QA Patient');
+        await page.locator('#discount_document').setInputFiles({ ...prescriptionPhoto, name: 'senior-id.png' });
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
         await expect(page).toHaveURL(/\/orders\/[0-9A-HJKMNP-TV-Z]+\/placed$/i);
         await page.getByRole('link', { name: /Track order/ }).click();
@@ -56,10 +61,23 @@ test('a customer buys an Rx medicine with a prescription and the pharmacist appr
         const { page } = pharmacist;
         await page.goto('/seller/orders');
         await rejectOptionalCookies(page);
-        const row = page.locator('tr').filter({ hasText: 'Prescription to review' }).first();
+        const row = page.locator('.sc-queue-order').filter({ hasText: 'Prescription to review' }).first();
         await expect(row).toContainText('QA Amoxicillin 500 mg');
-        await page.goto(await row.getByRole('link').first().getAttribute('href'));
-        await page.getByRole('button', { name: 'Approve prescription' }).click();
+        await row.click();
+        const detail = page.getByRole('region', { name: 'Selected order details' });
+        await expect(detail.getByRole('button', { name: 'Approve prescription' })).toBeVisible();
+        await detail.getByRole('button', { name: 'Senior citizen ID', exact: true }).click();
+        await expect(detail.getByRole('img', { name: /Senior citizen ID submitted/ })).toBeVisible();
+        for (const [name, width] of [['desktop', 1440], ['mobile', 390]]) {
+            await page.setViewportSize({ width, height: 1000 });
+            const overflow = await page.evaluate(() => ({ width: innerWidth, document: document.documentElement.scrollWidth, elements: [...document.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).slice(0, 6).map(el => ({class: el.className, tag: el.tagName, right: Math.round(el.getBoundingClientRect().right)})) }));
+            expect(overflow.document, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.width);
+            await page.screenshot({ path: testInfo.outputPath(`combined-review-${name}.png`), fullPage: true });
+        }
+        await detail.getByRole('button', { name: 'Mark ID reviewed' }).click();
+        await expect(detail.getByText('SC/PWD · ID reviewed', { exact: true })).toBeVisible();
+        await expect(detail.getByRole('button', { name: 'Approve prescription' })).toBeVisible();
+        await detail.getByRole('button', { name: 'Approve prescription' }).click();
         await expect(page.getByRole('button', { name: 'Approve prescription' })).toHaveCount(0);
     } finally {
         await pharmacist.context.close();

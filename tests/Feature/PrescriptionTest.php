@@ -333,6 +333,39 @@ class PrescriptionTest extends TestCase
         $this->assertCount(2, $prescription->images);
     }
 
+    public function test_combined_prescription_and_discount_documents_keep_their_reviews_separate(): void
+    {
+        $this->medicine->update(['generic_name' => 'Amoxicillin']);
+        $order = $this->checkOut([
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-5501', 'name' => 'Patient'],
+            'discount_document' => UploadedFile::fake()->image('pwd.jpg'),
+        ]);
+        $sellerOrder = $order->sellerOrders()->sole();
+        $staff = $this->member('staff', $this->branch);
+        $before = (string) $order->total;
+
+        $this->actingAs($staff)->get(route('seller.orders.index', ['review' => 'prescription']))->assertSee($order->number);
+        $this->get(route('seller.orders.index', ['review' => 'discount']))->assertSee($order->number);
+        $this->actingAs($staff)->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
+            ->assertSee('Waiting for pharmacist approval')->assertSee('PWD ID')->assertSee('rx.jpg')
+            ->assertSee('Mark ID reviewed')->assertDontSee('Approve prescription');
+        $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasNoErrors();
+        $this->get(route('seller.orders.index', ['review' => 'discount']))->assertDontSee($order->number);
+        $this->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();
+        $this->assertSame('pending', $sellerOrder->refresh()->status);
+        $this->assertSame('pending', $order->prescription->refresh()->status);
+        $this->assertSame($before, (string) $order->refresh()->total);
+
+        $image = $order->prescription->images()->sole();
+        $this->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]))
+            ->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->actingAs($this->member('staff', $this->branch, pharmacist: true))
+            ->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertSessionHasNoErrors();
+        $this->assertSame('confirmed', $sellerOrder->refresh()->status);
+        $this->assertNotNull($sellerOrder->discount_reviewed_at);
+        $this->get(route('seller.orders.index', ['review' => 'prescription']))->assertDontSee($order->number);
+    }
+
     private function assertPushed(string $title, ?string $body = null): void
     {
         $this->push->shouldHaveReceived('sendToUser')
@@ -341,7 +374,7 @@ class PrescriptionTest extends TestCase
     }
 
     /**
-     * @param  array<string, string>  $extra
+     * @param  array<string, mixed>  $extra
      */
     private function checkOut(array $extra = []): Order
     {

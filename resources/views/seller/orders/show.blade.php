@@ -69,7 +69,7 @@
             </section>
         @endif
 
-        @include('seller.orders._prescription', ['sellerOrder' => $sellerOrder])
+        @include('seller.orders._documents', ['sellerOrder' => $sellerOrder])
 
         <div class="sc-grid-detail grid gap-5">
             <div class="sc-stack min-w-0">

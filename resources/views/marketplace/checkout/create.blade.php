@@ -343,6 +343,12 @@
                                         @endif
                                     </div>
                                     <p x-show="card" x-cloak class="mt-2 text-[12.5px] leading-normal text-muted">For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.</p>
+                                    <div x-show="card" x-cloak class="mt-4">
+                                        <label for="discount_document" class="mb-1 block text-sm font-semibold text-ink">Photo of your SC/PWD ID (optional)</label>
+                                        <input id="discount_document" name="discount_document" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" :disabled="!card" class="sc-input !h-auto py-2">
+                                        <p class="mt-1 text-xs text-muted">JPG, PNG, WebP or PDF, up to 8 MB. Only the fulfilling pharmacy can view it. Bring your original ID at handover.</p>
+                                        @error('discount_document')<p role="alert" class="mt-1 text-sm text-danger">{{ $message }}</p>@enderror
+                                    </div>
                                     @error('discount_card')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
                                     @error('discount_card.*')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
                                 </fieldset>

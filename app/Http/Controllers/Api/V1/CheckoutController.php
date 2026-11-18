@@ -160,6 +160,7 @@ class CheckoutController extends Controller
             // A saved ID replaces the typed fields; saving applies only to a typed card.
             'discount_card_id' => ['nullable', 'string'],
             'save_discount_card' => ['nullable', 'boolean'],
+            'discount_document' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
             ...SeniorPwdDiscount::rules(),
         ]);
 
@@ -179,6 +180,7 @@ class CheckoutController extends Controller
             $fulfillmentMethod === 'delivery' ? ['latitude' => (float) $data['delivery_latitude'], 'longitude' => (float) $data['delivery_longitude']] : null,
             $prescriptions,
             $discountCard,
+            $request->file('discount_document'),
         );
 
         // A failed save must not turn a placed order into an error: the discount already applies.

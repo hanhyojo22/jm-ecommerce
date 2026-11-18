@@ -33,8 +33,9 @@ class CheckoutCart
      * @param  ?array{latitude: float, longitude: float}  $deliveryPin  where the customer dropped the delivery pin; checked against the branch's radius
      * @param  list<UploadedFile>  $prescriptions  required when a medicine needs one; a branch pharmacist reviews every page before the order moves past pending
      * @param  ?array{type: 'senior'|'pwd', id_number: string, name: string}  $discountCard  takes the SC/PWD discount off medicines; the branch checks the card at handover
+     * @param  ?UploadedFile  $discountDocument  optional private copy of the discount ID for the fulfilling branch to review
      */
-    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null, array $prescriptions = [], ?array $discountCard = null): Order
+    public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null, array $prescriptions = [], ?array $discountCard = null, ?UploadedFile $discountDocument = null): Order
     {
         abort_unless($user->is_active && in_array($user->account_type, ['buyer', 'seller'], true) && $user->hasVerifiedClerkEmail(), 403);
 
@@ -54,10 +55,13 @@ class CheckoutCart
             }
         }
 
+        if ($discountDocument !== null && $discountCard === null) {
+            throw ValidationException::withMessages(['discount_document' => 'Choose a senior citizen or PWD card before attaching its document.']);
+        }
         $prescriptionPaths = [];
 
         try {
-            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin, $prescriptions, $discountCard, &$prescriptionPaths): Order {
+            return DB::transaction(function () use ($user, $delivery, $paymentMethod, $clientRequestId, $fingerprint, $fulfillmentMethod, $deliveryPin, $prescriptions, $discountCard, $discountDocument, &$prescriptionPaths): Order {
                 $cart = Cart::query()
                     ->where('user_id', $user->id)
                     ->lockForUpdate()
@@ -265,6 +269,18 @@ class CheckoutCart
                         'entity_id' => $prescription->id,
                         'new_values' => ['order_id' => $order->id, 'images' => count($images)],
                     ]);
+                }
+                if ($discountDocument !== null) {
+                    $path = $discountDocument->store('discount-documents/'.$order->id, 'chat_attachments');
+                    if ($path === false) {
+                        throw ValidationException::withMessages(['discount_document' => 'Your discount ID could not be saved. Try again.']);
+                    }
+                    $prescriptionPaths[] = $path;
+                    $order->forceFill([
+                        'discount_document_path' => $path,
+                        'discount_document_name' => $discountDocument->getClientOriginalName(),
+                        'discount_document_mime' => $discountDocument->getMimeType(),
+                    ])->save();
                 }
                 $cart->items()->whereKey($items->modelKeys())->delete();
                 $cart->touch();

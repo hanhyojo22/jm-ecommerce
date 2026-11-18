@@ -25,6 +25,13 @@ class PrescriptionController extends Controller
         $prescription = $this->prescription($request, $sellerOrder);
         abort_unless($image->prescription_id === $prescription->id, 404);
 
+        if ($request->boolean('preview')) {
+            return Storage::disk('chat_attachments')->response($image->path, $image->original_name, [
+                'Cache-Control' => 'private, no-store',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        }
+
         return Storage::disk('chat_attachments')->download($image->path, $image->original_name);
     }
 

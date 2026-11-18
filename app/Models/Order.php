@@ -43,7 +43,7 @@ class Order extends Model
      *
      * @var list<string>
      */
-    protected $hidden = ['discount_card_number'];
+    protected $hidden = ['discount_card_number', 'discount_document_path', 'discount_document_name', 'discount_document_mime'];
 
     protected function casts(): array
     {

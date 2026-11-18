@@ -58,6 +58,7 @@ class SellerOrder extends Model
             'delivered_at' => 'datetime',
             'cod_collected_at' => 'datetime',
             'return_window_hours' => 'integer',
+            'discount_reviewed_at' => 'datetime',
         ];
     }
 

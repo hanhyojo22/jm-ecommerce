@@ -3,12 +3,12 @@
 @php($viewerMembership = auth()->user()->sellerMembership())
 @php($canReviewPrescription = $prescription !== null && ($viewerMembership?->canReviewPrescriptions() ?? false))
 @if ($prescription)
-    <section class="sc-notice !block {{ $class ?? '' }}" data-tone="{{ ['pending' => 'warning', 'approved' => 'info', 'rejected' => 'danger', 'needs_photo' => 'warning'][$prescription->status] ?? 'info' }}" aria-labelledby="prescription-heading-{{ $sellerOrder->id }}">
-        <h2 id="prescription-heading-{{ $sellerOrder->id }}" class="font-semibold">
+    <section class="sc-prescription-panel {{ $class ?? '' }}" data-tone="{{ ['pending' => 'warning', 'approved' => 'info', 'rejected' => 'danger', 'needs_photo' => 'warning'][$prescription->status] ?? 'info' }}" aria-labelledby="prescription-heading-{{ $sellerOrder->id }}">
+        <h3 id="prescription-heading-{{ $sellerOrder->id }}" class="font-semibold">
             Prescription · {{ ['pending' => 'Waiting for pharmacist', 'approved' => 'Approved', 'rejected' => 'Rejected', 'needs_photo' => 'Waiting for a clearer photo'][$prescription->status] ?? ucfirst($prescription->status) }}
-        </h2>
+        </h3>
         @if ($prescription->status === 'pending')
-            <p class="mt-1">This order has a prescription medicine. A pharmacist must approve the customer’s prescription before the order can be prepared. Approving accepts the order.</p>
+            <p class="sc-document-guidance">This order has a prescription medicine. A pharmacist must approve the customer’s prescription before the order can be prepared. Approving accepts the order.</p>
             @if ($prescription->checker)
                 <p class="mt-1 font-semibold">Checked by {{ $prescription->checker->name }} on {{ $prescription->checked_at->format('M j, Y · g:i A') }}. Waiting for a pharmacist to approve.</p>
             @endif
@@ -20,9 +20,14 @@
         @endif
         @if ($viewerMembership)
             <p class="mt-2 font-semibold">Prescription pages ({{ $prescription->images->count() }})</p>
-            <ul class="mt-1 list-disc space-y-1 pl-5">
+            <ul class="sc-prescription-pages">
                 @foreach ($prescription->images as $image)
-                    <li><a href="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image]) }}" class="font-semibold underline">{{ $image->original_name }}</a></li>
+                    <li>
+                        @if (in_array(strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
+                            <div class="sc-document-viewer"><img src="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" alt="Prescription page {{ $loop->iteration }}" loading="lazy"></div>
+                        @endif
+                        <div class="sc-document-file"><span>{{ $image->original_name }}</span><a href="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" target="_blank" rel="noopener" class="seller-outline-button">Open document <span class="sr-only">page {{ $loop->iteration }} in a new tab</span></a></div>
+                    </li>
                 @endforeach
             </ul>
             @if ($prescription->status === 'pending' && ! $canReviewPrescription && $prescription->checked_at === null)
@@ -32,8 +37,8 @@
                 </form>
             @endif
             @if ($prescription->status === 'pending')
-                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                    @if ($canReviewPrescription)
+                <div class="sc-prescription-actions">
+                    @if ($canReviewPrescription && ! ($approvalInFooter ?? false))
                         <form method="POST" action="{{ route('seller.orders.prescription.update', $sellerOrder) }}">@csrf @method('PATCH')
                             <input type="hidden" name="decision" value="approve">
                             <button type="submit" class="seller-primary-button w-full">Approve prescription</button>

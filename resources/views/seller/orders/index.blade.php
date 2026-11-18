@@ -1,7 +1,7 @@
 @php
     $statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
     $paymentStatuses = ['pending' => 'Unpaid', 'paid' => 'Paid', 'failed' => 'Failed', 'refunded' => 'Refunded'];
-    $queryWithoutStatus = request()->except('status', 'page', 'order');
+    $queryWithoutStatus = request()->except('status', 'review', 'page', 'order');
     $hasFilters = collect($filters)->filter()->isNotEmpty();
     $panelFilterCount = collect(['payment_status', 'from', 'to'])->filter(fn (string $field): bool => filled($filters[$field] ?? null))->count();
     $activeStatus = $filters['status'] ?? null;
@@ -26,7 +26,7 @@
         <div class="sc-page-head !items-center">
             <h1 class="sc-title">Orders</h1>
             <form method="GET" action="{{ route('seller.orders.index') }}" role="search" class="relative w-full sm:w-80">
-                @foreach (['status', 'payment_status', 'from', 'to'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
+                @foreach (['status', 'review', 'payment_status', 'from', 'to'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
                 <label for="search" class="sr-only">Search orders</label>
                 <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
                 <input id="search" name="search" type="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search order number or customer" class="sc-input pl-9">
@@ -41,14 +41,13 @@
             <div class="sc-notice" data-tone="warning"><span><strong>{{ number_format($cashToCollectCount) }} delivered {{ Str::plural('order', $cashToCollectCount) }}</strong> still {{ $cashToCollectCount === 1 ? 'has' : 'have' }} cash to collect.</span><a href="{{ route('seller.orders.index', ['status' => 'delivered', 'payment_status' => 'pending']) }}">Review unpaid deliveries</a></div>
         @endif
 
-        {{-- Orders open in a modal over the list. The open order lives in ?order= so a refresh, a shared
-             link or the redirect after an action reopens it, and the browser back button closes it. --}}
-        <section class="sc-card" aria-label="Orders list" @keydown.window="if ($refs.modal.open && ['ArrowLeft', 'ArrowRight'].includes($event.key) && ! $event.target.closest('input, textarea, select')) step($event.key === 'ArrowRight' ? 1 : -1)" x-data="{
+        {{-- The selected order lives in ?order= so refreshes, shared links and action redirects reopen its detail panel. --}}
+        <section class="sc-card sc-orders-workspace" aria-label="Orders list" @keydown.escape.window="if (! filtersOpen && ! document.querySelector('dialog[open]')) close()" @keydown.window="if (current && ! document.querySelector('dialog[open]') && ['ArrowLeft', 'ArrowRight'].includes($event.key) && ! $event.target.closest('input, textarea, select')) step($event.key === 'ArrowRight' ? 1 : -1)" x-data="{
             filtersOpen: false, current: null, shown: null, html: '', loading: false, failed: false, pushed: false, cache: {}, pending: {}, warmTimer: null,
             ids: @js($orders->pluck('id')), showUrl: @js(route('seller.orders.show', '__ORDER__')),
             init() {
                 const id = new URLSearchParams(location.search).get('order');
-                if (id) { this.open(id, 'replace') }
+                if (id || this.ids.length) { this.open(id || this.ids[0], 'replace') }
                 window.addEventListener('popstate', () => { const id = new URLSearchParams(location.search).get('order'); this.pushed = false; id ? this.open(id, 'none') : this.close() });
             },
             {{-- X-Requires-Session lets app.js renew the 60-second Clerk cookie first; without it a lapsed
@@ -67,7 +66,6 @@
                 clearTimeout(this.warmTimer);
                 this.current = id; this.loading = true; this.failed = false;
                 if (this.cache[id]) { this.html = this.cache[id]; this.shown = id }
-                if (! this.$refs.modal.open) { this.$refs.modal.showModal() }
                 const url = new URL(location.href); url.searchParams.set('order', id);
                 if (history === 'push' && ! this.pushed) { window.history.pushState({ order: id }, '', url); this.pushed = true } else if (history !== 'none') { window.history.replaceState({ order: id }, '', url) }
                 try {
@@ -80,15 +78,15 @@
                 } catch (error) {
                     if (this.current === id && this.shown !== id) { this.failed = true; this.html = '' }
                 } finally {
-                    if (this.current === id) { this.loading = false; this.$nextTick(() => { if (! this.$refs.modal.contains(document.activeElement)) { this.$refs.modal.querySelector('[data-modal-focus]')?.focus() } }) }
+                    if (this.current === id) { this.loading = false; this.$nextTick(() => { if (! this.$refs.modal.contains(document.activeElement)) { this.$refs.modal.querySelector('[data-modal-focus]')?.focus({ preventScroll: true }) } }) }
                 }
             },
-            close() { if (this.$refs.modal.open) { this.$refs.modal.close() } },
+            close() { this.closed() },
             closed() {
                 this.loading = false; this.current = null; this.shown = null; this.html = '';
                 const url = new URL(location.href);
                 if (! url.searchParams.has('order')) { return }
-                if (this.pushed) { this.pushed = false; window.history.back(); return }
+                this.pushed = false;
                 url.searchParams.delete('order'); window.history.replaceState({}, '', url);
             },
             hasStep(offset) { const index = this.ids.indexOf(this.current); return index !== -1 && this.ids[index + offset] !== undefined },
@@ -96,7 +94,9 @@
         }">
             <div class="relative flex items-center gap-2 border-b border-[#eef1f5] pr-3 sm:pr-5">
                 <nav class="sc-tabs sc-tabs-scroll min-w-0 flex-1 !border-0" aria-label="Order status">
-                    <a href="{{ route('seller.orders.index', $queryWithoutStatus) }}" class="sc-tab" @if (! $activeStatus) aria-current="page" @endif>All <span class="sc-tab-count" aria-hidden="true">{{ number_format($statusCounts->sum()) }}</span></a>
+                    <a href="{{ route('seller.orders.index', $queryWithoutStatus) }}" class="sc-tab" @if (! $activeStatus && empty($filters['review'])) aria-current="page" @endif>All <span class="sc-tab-count" aria-hidden="true">{{ number_format($statusCounts->sum()) }}</span></a>
+                    <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'review' => 'prescription']) }}" class="sc-tab" @if (($filters['review'] ?? null) === 'prescription') aria-current="page" @endif>Prescription review</a>
+                    <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'review' => 'discount']) }}" class="sc-tab" @if (($filters['review'] ?? null) === 'discount') aria-current="page" @endif>SC/PWD review</a>
                     @foreach ($statuses as $status)
                         <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'status' => $status]) }}" class="sc-tab" @if ($activeStatus === $status) aria-current="page" @endif>{{ \App\Models\SellerOrder::statusLabel($status) }} <span class="sc-tab-count" aria-hidden="true">{{ number_format($statusCounts[$status] ?? 0) }}</span></a>
                     @endforeach
@@ -106,7 +106,7 @@
                 <button type="button" @class(['seller-outline-button !min-h-9 shrink-0', '!border-[#c7d6fb] !bg-[#eef3ff] !text-[#1d4ed8]' => $panelFilterCount > 0]) @click="filtersOpen = ! filtersOpen" :aria-expanded="filtersOpen.toString()" aria-controls="order-filters"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>Filters @if ($panelFilterCount > 0)<span class="sc-tab-count !bg-white !text-[#1d4ed8]" aria-hidden="true">{{ $panelFilterCount }}</span><span class="sr-only">, {{ $panelFilterCount }} active {{ Str::plural('filter', $panelFilterCount) }}</span>@endif</button>
 
                 <form id="order-filters" method="GET" action="{{ route('seller.orders.index') }}" class="sc-popover" x-cloak x-show="filtersOpen" @click.outside="filtersOpen = false" @keydown.escape.window="filtersOpen = false" aria-label="Order filters">
-                    @foreach (['search', 'status'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
+                    @foreach (['search', 'status', 'review'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
                     <div class="sc-field"><label for="payment_status">Payment</label><select id="payment_status" name="payment_status" class="sc-input"><option value="">All payments</option>@foreach ($paymentStatuses as $value => $label)<option value="{{ $value }}" @selected(($filters['payment_status'] ?? null) === $value)>{{ $label }}</option>@endforeach</select></div>
                     <div class="grid grid-cols-2 gap-2">
                         <div class="sc-field"><label for="from">From</label><input id="from" name="from" value="{{ $filters['from'] ?? '' }}" type="date" class="sc-input"></div>
@@ -133,51 +133,35 @@
             @endif
             <x-input-error :messages="$errors->get('seller_order_ids')" class="mx-5 my-3" />
 
-            @if ($orders->isNotEmpty())
-                <div class="sc-table-wrap hidden lg:block">
-                    <table class="sc-table">
-                        <thead><tr><th scope="col">Order</th><th scope="col">Items</th><th scope="col" class="is-num">Your total</th><th scope="col">Status</th><th scope="col" class="is-num">Placed</th></tr></thead>
-                        <tbody>
-                            @foreach ($orders as $sellerOrder)
-                                @php($otherItems = max(0, $sellerOrder->items->count() - 1))
-                                <tr class="cursor-pointer" @click="if (! $event.target.closest('a, button, input, label')) open(@js($sellerOrder->id))">
-                                    {{-- Placed reads as "2h ago" for the past week, then as a date; the full time is in the tooltip. --}}
-                                    <th scope="row" class="max-w-[300px]">
-                                        <p class="whitespace-nowrap"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="font-semibold text-ink hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a></p>
-                                        <p class="truncate sc-meta" title="{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}">{{ collect([$sellerOrder->order->recipient_name, $sellerOrder->order->city])->filter()->join(' · ') }}</p>
-                                    </th>
-                                    <td>@include('seller.orders._items', ['sellerOrder' => $sellerOrder, 'otherItems' => $otherItems])</td>
-                                    <td class="is-num"><span class="block font-semibold">₱{{ number_format($sellerOrder->total, 2) }}</span>@if ($sellerOrder->status === 'delivered' && ! $sellerOrder->cod_collected_at)<span class="mt-0.5 block whitespace-nowrap text-xs font-semibold text-warning-text">Cash due</span>@endif</td>
-                                    <td><x-marketplace.order-status :status="$sellerOrder->status" /><span class="mt-0.5 block whitespace-nowrap text-xs text-muted">{{ $nextStep($sellerOrder) }}</span></td>
-                                    <td class="is-num whitespace-nowrap sc-meta" title="{{ $sellerOrder->created_at->format('M j, Y · g:i A') }}">{{ $sellerOrder->created_at->gt(now()->subWeek()) ? $sellerOrder->created_at->diffForHumans(short: true) : $sellerOrder->created_at->format($sellerOrder->created_at->isCurrentYear() ? 'M j' : 'M j, Y') }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="sc-list lg:hidden">
-                    @foreach ($orders as $sellerOrder)
-                        @php($otherItems = max(0, $sellerOrder->items->count() - 1))
-                        <article class="sc-list-item">
-                            <div class="sc-row">
-                                <p class="sc-grow"><a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="sc-strong hover:text-brand"><x-marketplace.order-number :number="$sellerOrder->order->number" /></a> <span class="sc-meta">· {{ $sellerOrder->created_at->diffForHumans(short: true) }}</span></p>
-                                <x-marketplace.order-status :status="$sellerOrder->status" />
-                            </div>
-                            <div class="sc-row mt-3">
-                                <div class="sc-grow">@include('seller.orders._items', ['sellerOrder' => $sellerOrder, 'otherItems' => $otherItems])<p class="mt-1 truncate sc-meta">{{ $sellerOrder->order->recipient_name }}@if ($sellerOrder->order->city) · {{ $sellerOrder->order->city }}@endif</p></div>
-                                <span class="sc-strong sc-num">₱{{ number_format($sellerOrder->total, 2) }}</span>
-                            </div>
-                            <div class="sc-row mt-2">
-                                <span class="sc-grow truncate text-xs text-muted">{{ $nextStep($sellerOrder) }}</span>
-                                <a href="{{ route('seller.orders.show', $sellerOrder) }}" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))" class="sc-link min-h-10">View order <span aria-hidden="true">&rsaquo;</span></a>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            @else
-                <div class="sc-empty"><h3>{{ $hasFilters ? 'No orders match these filters' : 'No orders yet' }}</h3><p>{{ $hasFilters ? 'Adjust your search or clear filters to try again.' : 'Orders from your store will appear here after checkout.' }}</p>@if ($hasFilters)<a href="{{ route('seller.orders.index') }}" class="seller-outline-button">Clear filters</a>@endif</div>
-            @endif
+            <div class="sc-orders-columns">
+                <aside class="sc-orders-queue" aria-label="Order queue">
+                    <div class="sc-queue-head"><h2>Order queue</h2><span>{{ number_format($orders->total()) }} {{ Str::plural('order', $orders->total()) }}</span></div>
+                    @forelse ($orders as $sellerOrder)
+                        <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="sc-queue-order" :aria-current="current === @js($sellerOrder->id) ? 'true' : null" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))">
+                            <div class="sc-queue-row"><strong><x-marketplace.order-number :number="$sellerOrder->order->number" /></strong><time datetime="{{ $sellerOrder->created_at->toIso8601String() }}" title="{{ $sellerOrder->created_at->format('M j, Y · g:i A') }}">{{ $sellerOrder->created_at->gt(now()->subWeek()) ? $sellerOrder->created_at->diffForHumans(short: true) : $sellerOrder->created_at->format('M j') }}</time></div>
+                            <p class="sc-queue-customer">{{ $sellerOrder->order->recipient_name }}</p>
+                            <div class="sc-queue-items">@include('seller.orders._items', ['sellerOrder' => $sellerOrder, 'otherItems' => max(0, $sellerOrder->items->count() - 1)])</div>
+                            <div class="sc-queue-row"><x-marketplace.order-status :status="$sellerOrder->status" /><strong class="sc-num">₱{{ number_format($sellerOrder->total, 2) }}</strong></div>
+                            <p class="sc-queue-next">{{ $nextStep($sellerOrder) }}</p>
+                            @if (bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0)
+                                <span class="sc-badge mt-2" data-tone="info">{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$sellerOrder->order->discount_card_type] ?? 'SC/PWD' }} · {{ $sellerOrder->order->discount_document_path ? ($sellerOrder->discount_reviewed_at ? 'ID reviewed' : 'ID submitted') : 'Check ID at handover' }}</span>
+                            @endif
+                            <span class="sr-only">View order</span>
+                        </a>
+                    @empty
+                        <div class="sc-empty"><h3>{{ $hasFilters ? 'No orders match these filters' : 'No orders yet' }}</h3><p>{{ $hasFilters ? 'Adjust your search or clear filters to try again.' : 'Orders from your store will appear here after checkout.' }}</p>@if ($hasFilters)<a href="{{ route('seller.orders.index') }}" class="seller-outline-button">Clear filters</a>@endif</div>
+                    @endforelse
+                </aside>
+                <section class="sc-orders-detail" x-ref="modal" role="region" aria-label="Selected order details" :aria-busy="loading">
+                    <x-input-error :messages="$errors->get('discount')" class="mx-6 mt-6" />
+                    <x-input-error :messages="$errors->get('prescription')" class="mx-6 mt-6" />
+                    <x-input-error :messages="$errors->get('reason')" class="mx-6 mt-6" />
+                    <div x-show="loading && ! html" class="sc-modal-body" role="status"><span class="sr-only">Loading order</span><div class="animate-pulse motion-reduce:animate-none space-y-4"><div class="h-6 w-48 rounded bg-paper"></div><div class="h-44 rounded bg-paper"></div></div></div>
+                    <div x-show="failed" x-cloak class="sc-empty" role="alert"><h3>We couldn’t load this order.</h3><p>Check your connection and try again, or open the full order page.</p><div class="mt-4 flex justify-center gap-2"><button type="button" class="seller-outline-button" @click="open(current, 'none')">Try again</button><a :href="showUrl.replace('__ORDER__', current)" class="seller-primary-button">Open full page</a></div></div>
+                    <div x-show="html" x-html="html" :inert="shown !== current" :data-stale="String(shown !== current)"></div>
+                    <div x-show="! current && ! loading" class="sc-empty"><h2>Select an order</h2><p>Choose an order from the queue to review documents and manage its next step.</p></div>
+                </section>
+            </div>
 
             @if ($orders->total() > 0)
                 <div class="sc-card-foot sc-pager">
@@ -193,12 +177,7 @@
                     </div>
                 </div>
             @endif
-            <dialog x-ref="modal" class="sc-modal" aria-labelledby="order-modal-title" @close="closed()" @click="if ($event.target === $refs.modal) close()">
-                <div x-show="loading && ! html" class="sc-modal-body" role="status"><span class="sr-only">Loading order</span><div class="animate-pulse motion-reduce:animate-none space-y-4"><div class="h-5 w-48 rounded-md bg-[#eef1f5]"></div><div class="h-1 w-full rounded-md bg-[#eef1f5]"></div><div class="h-24 rounded-lg bg-[#f5f7fa]"></div><div class="grid gap-4 sm:grid-cols-2"><div class="h-28 rounded-lg bg-[#f5f7fa]"></div><div class="h-28 rounded-lg bg-[#f5f7fa]"></div></div></div></div>
-                <div x-show="failed" x-cloak class="sc-modal-body text-center" role="alert"><p class="font-semibold text-ink">We couldn’t load this order.</p><p class="mt-1 sc-meta">Check your connection and try again, or open the full order page.</p><div class="mt-4 flex justify-center gap-2"><button type="button" class="seller-outline-button" @click="close()">Close</button><button type="button" class="seller-outline-button" @click="open(current, 'none')">Try again</button><a :href="showUrl.replace('__ORDER__', current)" class="seller-primary-button">Open full page</a></div></div>
-                {{-- While the next order loads, the previous one stays visible but its body and actions are disabled so nothing is done to the wrong order. --}}
-                <div x-show="html" x-html="html" class="contents" :data-stale="String(shown !== current)"></div>
-            </dialog>
+
         </section>
     </div></div>
 </x-app-layout>

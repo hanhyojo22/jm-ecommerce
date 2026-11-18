@@ -502,13 +502,13 @@ test('seller order detail and product editor remain usable at each viewport', as
             }
             // On a wide screen the order number is the row's only link.
             const actionLink = name === 'order-detail'
-                ? seller.page.locator('.sc-table-wrap th a:visible, .sc-list a.sc-link:visible').first()
+                ? seller.page.locator('.sc-queue-order').first()
                 : seller.page.getByRole('link', { name: action, exact: true }).first();
             await actionLink.click();
             // Orders open in a modal over the list; products still go to their edit page.
             await expect(seller.page).toHaveURL(name === 'order-detail' ? /\/seller\/orders\?order=[^&]+/ : /\/seller\/products\/[^/]+\/edit$/);
             if (name === 'order-detail') {
-                await expect(seller.page.getByRole('dialog')).toBeVisible();
+                await expect(seller.page.getByRole('region', { name: 'Selected order details' })).toBeVisible();
             }
             await expect(seller.page.locator('header[data-header-role="seller"]')).toBeVisible();
             await expect(seller.page.locator('main h1')).toBeVisible();

@@ -12,7 +12,10 @@ use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
+use RuntimeException;
 use Tests\TestCase;
 
 class DiscountCardTest extends TestCase
@@ -246,6 +249,133 @@ class DiscountCardTest extends TestCase
 
         $this->assertDatabaseCount('discount_cards', 0);
         $this->assertSame('SC-1', $order->refresh()->discount_card_number);
+    }
+
+    public function test_checkout_stores_a_discount_document_privately_and_staff_can_review_it_without_changing_totals(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'senior', 'id_number' => 'SC-4821', 'name' => 'Lola Ava'],
+            'discount_document' => UploadedFile::fake()->image('senior-id.jpg'),
+        ])->assertSessionHasNoErrors();
+        $order = Order::sole();
+        $sellerOrder = $order->sellerOrders()->sole();
+        $staff = $this->staff();
+        Storage::disk('chat_attachments')->assertExists($order->discount_document_path);
+        $this->assertArrayNotHasKey('discount_document_path', $order->toArray());
+        $before = [(string) $order->total, (string) $order->discount_amount, (string) $order->payment->amount];
+
+        $this->actingAs($staff)->get(route('seller.orders.discount-document.show', $sellerOrder))
+            ->assertOk()->assertHeader('Content-Type', 'image/jpeg')->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
+            ->assertSee('Senior citizen discount ID')->assertSee('Mark ID reviewed');
+        $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasNoErrors();
+        $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'discount_reviewed_by' => $staff->id, 'status' => 'pending']);
+        $this->assertNotNull($sellerOrder->refresh()->discount_reviewed_at);
+        $this->assertSame($before, [(string) $order->refresh()->total, (string) $order->discount_amount, (string) $order->payment->amount]);
+        $this->assertDatabaseCount('audit_logs', 1);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'order.discount_id_reviewed', 'entity_id' => $sellerOrder->id]);
+    }
+
+    public function test_discount_documents_and_reviews_are_scoped_to_the_fulfilling_branch(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-5501', 'name' => 'Ava Buyer'],
+            'discount_document' => UploadedFile::fake()->image('pwd.jpg'),
+        ])->assertSessionHasNoErrors();
+        $sellerOrder = Order::sole()->sellerOrders()->sole();
+        $otherBranch = Store::create(['tenant_id' => $this->branch->tenant_id, 'name' => 'Other branch', 'slug' => 'other-branch', 'status' => 'active', 'phone' => '+639171234567', 'address_line' => 'Other Street', 'city' => 'Cebu']);
+        $outsider = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $this->branch->tenant_id, 'store_id' => $otherBranch->id, 'user_id' => $outsider->id, 'role' => 'staff']);
+
+        $this->actingAs($outsider)->get(route('seller.orders.discount-document.show', $sellerOrder))->assertNotFound();
+        $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertNotFound();
+        $this->actingAs($buyer)->get(route('seller.orders.discount-document.show', $sellerOrder))->assertForbidden();
+        $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertForbidden();
+        $this->assertNull($sellerOrder->refresh()->discount_reviewed_at);
+    }
+
+    public function test_discount_document_upload_rejects_invalid_files_and_a_missing_discount_card(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(), 'discount_document' => UploadedFile::fake()->image('id.jpg'),
+        ])->assertSessionHasErrors('discount_document');
+        $this->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava Buyer'],
+            'discount_document' => UploadedFile::fake()->create('id.html', 10, 'text/html'),
+        ])->assertSessionHasErrors('discount_document');
+        $this->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava Buyer'],
+            'discount_document' => UploadedFile::fake()->image('id.jpg')->size(8193),
+        ])->assertSessionHasErrors('discount_document');
+
+        $this->assertDatabaseCount('orders', 0);
+        Storage::disk('chat_attachments')->assertEmpty();
+    }
+
+    public function test_api_checkout_accepts_an_optional_discount_document_and_orders_without_one_still_work(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-5501', 'name' => 'Ava Buyer'],
+            'discount_document' => UploadedFile::fake()->image('pwd.jpg'),
+        ])->assertCreated();
+        $order = Order::sole();
+        Storage::disk('chat_attachments')->assertExists($order->discount_document_path);
+        $this->assertSame('pwd.jpg', $order->discount_document_name);
+    }
+
+    public function test_discount_review_rejects_orders_without_documents_and_completed_orders(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(), 'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava Buyer'],
+        ])->assertSessionHasNoErrors();
+        $order = Order::sole();
+        $sellerOrder = $order->sellerOrders()->sole();
+        $this->actingAs($this->staff())->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
+            ->assertSee('No ID photo was submitted.')->assertDontSee('Mark ID reviewed');
+        $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasErrors('discount');
+        $order->forceFill(['discount_document_path' => 'id.jpg', 'discount_document_mime' => 'image/jpeg'])->save();
+        foreach (['delivered', 'cancelled'] as $status) {
+            $sellerOrder->update(['status' => $status]);
+            $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasErrors('discount');
+        }
+        $this->assertNull($sellerOrder->refresh()->discount_reviewed_at);
+    }
+
+    public function test_a_failed_checkout_does_not_leave_a_private_id_document_in_storage(): void
+    {
+        Storage::fake('chat_attachments');
+        $buyer = $this->buyerWithCart();
+        Order::saving(function (Order $order): void {
+            if ($order->discount_document_path !== null) {
+                throw new RuntimeException('The database is unavailable.');
+            }
+        });
+
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava Buyer'],
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
+        ])->assertServerError();
+
+        $this->assertDatabaseCount('orders', 0);
+        Storage::disk('chat_attachments')->assertEmpty();
     }
 
     private function product(string $name, string $price, ?string $generic): Product
