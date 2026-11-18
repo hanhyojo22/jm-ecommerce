@@ -105,7 +105,7 @@ class CatalogTest extends TestCase
         $this->get(route('catalog.index', ['q' => 'vitamin c']))
             ->assertOk()
             ->assertSee('Showing results for Ascorbic Acid (vitamin c)')
-            ->assertSeeInOrder(['Other brands of Ascorbic Acid', 'Ceelin Drops', 'Other brands of Sodium Ascorbate', 'Fern-C Capsule']);
+            ->assertSeeInOrder(['Ascorbic Acid', 'Ceelin Drops', 'Sodium Ascorbate', 'Fern-C Capsule']);
     }
 
     public function test_product_page_only_promises_free_shipping_when_the_product_has_it(): void

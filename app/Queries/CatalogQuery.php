@@ -149,6 +149,7 @@ class CatalogQuery
         // Relevance search on an ingredient groups results: what was typed, other brands of it, combinations, the rest.
         $grouped = $ingredients !== null && ($filters['sort'] ?? 'relevance') === 'relevance';
         $hasIngredientSections = false;
+        $hasTopMatch = false;
         if ($grouped) {
             $sameMedicine = $ingredients['brand_generic'] === null ? '1 = 0' : 'LOWER(products.generic_name) = ?';
             $groupSql = <<<SQL
@@ -164,11 +165,23 @@ class CatalogQuery
                 ...array_filter([$ingredients['brand_generic']]),
                 ...$genericBindings, ...$genericBindings,
             ];
-            $hasIngredientSections = $products->toBase()->cloneWithout(['columns', 'orders'])->cloneWithoutBindings(['select', 'order'])
-                ->whereRaw("({$groupSql}) IN (1, 2)", $groupBindings)->exists();
+            $groupsPresent = $products->toBase()->cloneWithout(['columns', 'orders'])->cloneWithoutBindings(['select', 'order'])
+                ->selectRaw("MAX(CASE WHEN ({$groupSql}) IN (1, 2) THEN 1 ELSE 0 END) AS sections, MAX(CASE WHEN ({$groupSql}) = 0 THEN 1 ELSE 0 END) AS top_match", [...$groupBindings, ...$groupBindings])
+                ->first();
+            $hasIngredientSections = (bool) ($groupsPresent?->sections ?? false);
+            $hasTopMatch = (bool) ($groupsPresent?->top_match ?? false);
             if ($hasIngredientSections) {
-                $products->selectRaw("({$groupSql}) AS search_group", $groupBindings)->orderByRaw($groupSql, $groupBindings);
-                foreach (['LOWER(products.generic_name)', 'LOWER(products.strength)', 'LOWER(products.dosage_form)', 'products.price'] as $column) {
+                $products->selectRaw("({$groupSql}) AS search_group", $groupBindings)
+                    ->orderByRaw($groupSql, $groupBindings)
+                    ->orderByRaw("CASE WHEN ({$groupSql}) IN (1, 2) THEN LOWER(products.generic_name) END", $groupBindings);
+                // The strength and form of the brand typed lead its group, ahead of syrups or other strengths.
+                if ($ingredients['brand_strength'] !== null || $ingredients['brand_dosage_form'] !== null) {
+                    $products->orderByRaw(
+                        "CASE WHEN ({$groupSql}) IN (1, 2) AND COALESCE(LOWER(products.strength), '') = ? AND COALESCE(LOWER(products.dosage_form), '') = ? THEN 0 ELSE 1 END",
+                        [...$groupBindings, Str::lower((string) $ingredients['brand_strength']), Str::lower((string) $ingredients['brand_dosage_form'])],
+                    );
+                }
+                foreach (['LOWER(products.strength)', 'LOWER(products.dosage_form)', 'products.price'] as $column) {
                     $products->orderByRaw("CASE WHEN ({$groupSql}) IN (1, 2) THEN {$column} END", $groupBindings);
                 }
             }
@@ -212,7 +225,8 @@ class CatalogQuery
         if ($hasIngredientSections) {
             $paginator->getCollection()->each(fn (Product $product) => $product->setAttribute('search_section', match ((int) $product->search_group) {
                 0 => null,
-                1 => 'Other brands of '.self::withoutParenthetical($product->generic_name),
+                // "Other" only reads right under the brand the shopper typed.
+                1 => ($hasTopMatch ? 'Other brands of ' : '').self::withoutParenthetical($product->generic_name),
                 2 => 'Also contains '.self::containedIngredient($product->generic_name, $ingredients),
                 default => 'Other results',
             }));
@@ -231,12 +245,13 @@ class CatalogQuery
      * the shopper typed (so "Biogesic" also finds other paracetamol), and the ingredient and
      * every alias of either (so "vitamin c" also finds sodium ascorbate).
      *
-     * @return array{terms: list<string>, brand_generic: string|null, label: string, alias_of: string|null}
+     * @return array{terms: list<string>, brand_generic: string|null, brand_strength: string|null, brand_dosage_form: string|null, label: string, alias_of: string|null}
      */
     private static function ingredientSearch(string $search, string $searchPrefix): array
     {
         $normalizedSearch = Str::lower($search);
-        $brandGeneric = Str::length($normalizedSearch) < 3 ? null : self::publishedProducts()
+        $brand = Str::length($normalizedSearch) < 3 ? null : self::publishedProducts()
+            ->without('store')
             ->whereNotNull('generic_name')
             ->where('generic_name', '!=', '')
             ->where(fn (Builder $query) => $query
@@ -244,7 +259,8 @@ class CatalogQuery
                 ->orWhereRaw('LOWER(products.brand) = ?', [$normalizedSearch]))
             ->orderByRaw('CASE WHEN LOWER(products.name) = ? OR LOWER(products.brand) = ? THEN 0 ELSE 1 END', [$normalizedSearch, $normalizedSearch])
             ->orderByRaw('LENGTH(products.name)')
-            ->value('generic_name');
+            ->first(['generic_name', 'strength', 'dosage_form']);
+        $brandGeneric = $brand?->generic_name;
         $generic = $brandGeneric === null ? null : self::withoutParenthetical($brandGeneric);
         $names = array_values(array_unique(array_filter([$normalizedSearch, Str::lower((string) $generic)])));
 
@@ -261,6 +277,8 @@ class CatalogQuery
                 ->push(Str::lower((string) $ingredient))
                 ->filter()->unique()->values()->all(),
             'brand_generic' => $brandGeneric === null ? null : Str::lower(trim($brandGeneric)),
+            'brand_strength' => $brand?->strength,
+            'brand_dosage_form' => $brand?->dosage_form,
             'label' => $ingredient ?? $generic ?? Str::ucfirst($search),
             'alias_of' => $aliases->firstWhere('alias', $normalizedSearch)?->ingredient,
         ];

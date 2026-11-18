@@ -186,8 +186,8 @@ class CatalogApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('search.ingredient', 'Ascorbic Acid')
             ->assertJsonPath('data.0.id', $ascorbicAcid->id)
-            ->assertJsonPath('data.0.search_section', 'Other brands of Ascorbic Acid')
-            ->assertJsonPath('data.1.search_section', 'Other brands of Sodium Ascorbate');
+            ->assertJsonPath('data.0.search_section', 'Ascorbic Acid')
+            ->assertJsonPath('data.1.search_section', 'Sodium Ascorbate');
 
         $this->getJson('/api/v1/products/suggestions?q=ascorbate')
             ->assertOk()

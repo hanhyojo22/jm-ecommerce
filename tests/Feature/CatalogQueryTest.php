@@ -138,15 +138,16 @@ class CatalogQueryTest extends TestCase
         $products = CatalogQuery::search(['q' => 'biogesic'], branch: $branch)['products']->getCollection();
 
         $this->assertSame([$ritemed->id], $products->pluck('id')->all());
-        $this->assertSame(['Other brands of Paracetamol'], $products->pluck('search_section')->all());
+        $this->assertSame(['Paracetamol'], $products->pluck('search_section')->all());
     }
 
     public function test_brand_search_lists_the_brand_then_other_brands_then_combinations(): void
     {
         $store = $this->store();
-        $biogesic = $this->product($store, ['name' => 'Biogesic 500 mg Tablet', 'generic_name' => 'Paracetamol', 'price' => 5.50]);
-        $tempra = $this->product($store, ['name' => 'Tempra 500 mg Tablet', 'generic_name' => 'Paracetamol', 'price' => 8]);
-        $ritemed = $this->product($store, ['name' => 'RiteMED 500 mg Tablet', 'generic_name' => 'Paracetamol', 'price' => 2.75]);
+        $tablet = ['generic_name' => 'Paracetamol', 'strength' => '500 mg', 'dosage_form' => 'Tablet'];
+        $biogesic = $this->product($store, ['name' => 'Biogesic 500 mg Tablet', ...$tablet, 'price' => 5.50]);
+        $tempra = $this->product($store, ['name' => 'Tempra 500 mg Tablet', ...$tablet, 'price' => 8]);
+        $ritemed = $this->product($store, ['name' => 'RiteMED Paracetamol Syrup', 'generic_name' => 'Paracetamol', 'strength' => '120 mg/5 mL', 'dosage_form' => 'Syrup', 'price' => 2.75]);
         $neozep = $this->product($store, ['name' => 'Neozep Forte Tablet', 'generic_name' => 'Phenylephrine HCl + Paracetamol', 'price' => 6]);
         $organizer = $this->product($store, ['name' => 'Pill organizer', 'description' => 'Fits a Biogesic strip.']);
         $this->product($store, ['name' => 'Losartan 50 mg', 'generic_name' => 'Losartan Potassium']);
@@ -154,7 +155,7 @@ class CatalogQueryTest extends TestCase
         $products = CatalogQuery::search(['q' => 'biogesic'])['products']->getCollection();
 
         $this->assertSame(
-            [$biogesic->id, $ritemed->id, $tempra->id, $neozep->id, $organizer->id],
+            [$biogesic->id, $tempra->id, $ritemed->id, $neozep->id, $organizer->id],
             $products->pluck('id')->all(),
         );
         $this->assertSame(
