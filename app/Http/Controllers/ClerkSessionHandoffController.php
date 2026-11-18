@@ -66,6 +66,8 @@ class ClerkSessionHandoffController extends Controller
         return view('auth.handoff', [
             'afterAuthUrl' => $redirect,
             'signInUrl' => route('login', ['redirect' => $redirect]),
+            // A visitor with no Clerk session at all simply needs to sign in; that is not an error here.
+            'signedOutGoesToSignIn' => true,
         ]);
     }
 

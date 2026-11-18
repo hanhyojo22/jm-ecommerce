@@ -436,6 +436,13 @@ const completeClerkHandoff = async (clerk) => {
     }
 
     if (!clerk.user) {
+        // Opening a protected page while signed out: go sign in. Right after a sign-in, no user is a real failure.
+        if ('signedOutToSignIn' in clerkHandoff.dataset) {
+            window.clerkHandoffState?.finish();
+            window.location.replace(clerkHandoff.dataset.signInUrl);
+            return;
+        }
+
         renderClerkHandoffError('Your Clerk sign-in could not be confirmed.');
         return;
     }

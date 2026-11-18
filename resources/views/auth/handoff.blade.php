@@ -21,6 +21,7 @@
                 data-session-endpoint="{{ route('clerk.handoff.complete') }}"
                 data-redirect-url="{{ $afterAuthUrl }}"
                 data-sign-in-url="{{ $signInUrl ?? route('login') }}"
+                @if ($signedOutGoesToSignIn ?? false) data-signed-out-to-sign-in @endif
             >
                 <span class="handoff-mark" aria-hidden="true">
                     <span class="handoff-mark-tile">JM</span>

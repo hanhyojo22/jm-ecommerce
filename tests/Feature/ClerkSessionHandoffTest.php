@@ -48,11 +48,15 @@ class ClerkSessionHandoffTest extends TestCase
             ->assertSeeInOrder(['data-clerk-handoff-error', 'hidden', 'role="alert"'], false)
             ->assertSee('data-clerk-handoff-retry', false)
             ->assertSee('window.clerkHandoffState', false)
-            ->assertSee(route('login'), false);
+            ->assertSee(route('login'), false)
+            // Right after signing in, no Clerk user is a failure to show, not a reason to bounce back.
+            ->assertDontSee('data-signed-out-to-sign-in', false);
 
+        // Opening a protected page while signed out goes straight to sign-in instead of the error.
         $this->get(route('clerk.refresh', ['redirect' => '/cart']))
             ->assertOk()
             ->assertSee('data-clerk-session-handoff', false)
+            ->assertSee('data-signed-out-to-sign-in', false)
             ->assertSeeInOrder(['data-clerk-handoff-error', 'hidden'], false)
             ->assertSee(route('login', ['redirect' => '/cart']), false);
     }
