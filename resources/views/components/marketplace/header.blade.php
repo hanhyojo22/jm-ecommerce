@@ -112,7 +112,7 @@
                 action="{{ $isSellerWorkspace ? route('seller.products.index') : route('catalog.index') }}"
                 role="search"
                 aria-label="{{ $isSellerWorkspace ? 'Search your seller catalog' : 'Search the marketplace' }}"
-                x-data="{{ $isSellerWorkspace ? '{ query: '.Js::from(request('search', $search)).', loading: false }' : 'marketplaceSuggestions('.Js::from($search).', '.Js::from(route('catalog.suggestions')).', '.Js::from(route('catalog.index')).')' }}"
+                x-data="{{ $isSellerWorkspace ? '{ query: '.Js::from(request('search', $search)).', loading: false }' : 'marketplaceSuggestions('.Js::from($search).', '.Js::from(route('catalog.suggestions')).', '.Js::from(route('catalog.index')).', '.Js::from(route('catalog.recently-viewed.clear')).')' }}"
                 @submit="loading = true"
                 @unless ($isSellerWorkspace) @click.outside="open = false" @endunless
                 class="relative order-3 min-w-0 basis-full min-[641px]:order-none min-[641px]:basis-0 min-[641px]:flex-1"
@@ -377,7 +377,7 @@
             </div>
 
             @if (! $isSellerWorkspace && ! $isCustomerWorkspace)
-                <form method="GET" action="{{ route('catalog.index') }}" x-data="marketplaceSuggestions(@js($search), @js(route('catalog.suggestions')), @js(route('catalog.index')))" @submit="loading = true" @click.outside="open = false" class="relative border-b border-line px-4 py-4">
+                <form method="GET" action="{{ route('catalog.index') }}" x-data="marketplaceSuggestions(@js($search), @js(route('catalog.suggestions')), @js(route('catalog.index')), @js(route('catalog.recently-viewed.clear')))" @submit="loading = true" @click.outside="open = false" class="relative border-b border-line px-4 py-4">
                     <label for="marketplace-search-drawer" class="flex h-11 items-center gap-3 rounded-md border border-[#cbd4e0] bg-canvas px-3.5 text-muted transition focus-within:border-brand focus-within:bg-white focus-within:ring-4 focus-within:ring-brand/10">
                         <svg class="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
                         <input id="marketplace-search-drawer" name="q" aria-label="Search medicines" role="combobox" aria-autocomplete="list" aria-controls="marketplace-search-results-drawer" :aria-expanded="open.toString()" :aria-activedescendant="active >= 0 ? 'marketplace-drawer-result-' + active : null" @input.debounce.275ms="load()" @focus="load()" @keydown.arrow-down.prevent="move(1)" @keydown.arrow-up.prevent="move(-1)" @keydown.enter="select($event)" @keydown.escape="open = false" x-model="query" value="{{ $search }}" autocomplete="off" placeholder="Search medicines" class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-ink placeholder:text-muted focus:ring-0">

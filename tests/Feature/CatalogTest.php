@@ -486,6 +486,57 @@ class CatalogTest extends TestCase
             ->assertSessionMissing('marketplace.recently_viewed');
     }
 
+    public function test_empty_search_suggestions_return_recent_searches_and_recently_viewed_with_consent(): void
+    {
+        $first = $this->product(['name' => 'Biogesic 500mg', 'price' => '8.50', 'stock_quantity' => 5]);
+        $second = $this->product(['name' => 'Ascorbic Acid 500mg', 'price' => '12.00', 'stock_quantity' => 0]);
+        $draft = $this->product(['name' => 'Draft Medicine', 'status' => 'draft']);
+
+        $cookie = json_encode([
+            'version' => CookiePreferences::VERSION,
+            'functional' => true,
+            'analytics' => false,
+            'marketing' => false,
+        ]);
+
+        // JSON test requests only carry cookies with credentials, like the browser's same-origin fetch.
+        $this->withCredentials()
+            ->withCookie(CookiePreferences::COOKIE_NAME, $cookie)
+            ->withSession([
+                'marketplace.recent_searches' => ['paracetamol', 'vitamin c'],
+                'marketplace.recently_viewed' => [$second->id, $draft->id, $first->id],
+            ])
+            ->getJson(route('catalog.suggestions'))
+            ->assertOk()
+            ->assertJsonPath('items', [])
+            ->assertJsonPath('recent_searches', ['paracetamol', 'vitamin c'])
+            ->assertJsonCount(2, 'recently_viewed')
+            ->assertJsonPath('recently_viewed.0.name', $second->name)
+            ->assertJsonPath('recently_viewed.0.sold_out', true)
+            ->assertJsonPath('recently_viewed.1.name', $first->name)
+            ->assertJsonPath('recently_viewed.1.sold_out', false);
+
+        // Declining functional cookies hides both lists even when the session still has them.
+        $this->withCookie(CookiePreferences::COOKIE_NAME, json_encode(['version' => CookiePreferences::VERSION, 'functional' => false, 'analytics' => false, 'marketing' => false]))
+            ->withSession([
+                'marketplace.recent_searches' => ['paracetamol'],
+                'marketplace.recently_viewed' => [$first->id],
+            ])
+            ->getJson(route('catalog.suggestions'))
+            ->assertOk()
+            ->assertJsonPath('recent_searches', [])
+            ->assertJsonPath('recently_viewed', []);
+
+        $this->withSession([
+            'marketplace.recent_searches' => ['paracetamol'],
+            'marketplace.recently_viewed' => [$first->id],
+        ])
+            ->deleteJson(route('catalog.recently-viewed.clear'))
+            ->assertNoContent()
+            ->assertSessionMissing('marketplace.recent_searches')
+            ->assertSessionMissing('marketplace.recently_viewed');
+    }
+
     public function test_catalog_only_shows_active_products_from_active_stores_and_tenants(): void
     {
         $visible = $this->product();

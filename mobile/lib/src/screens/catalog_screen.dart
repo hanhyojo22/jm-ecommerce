@@ -45,13 +45,20 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   void _onSearchFocusChanged() {
     if (!_searchFocus.hasFocus) {
       _hideSuggestions();
+    } else if (!ref.read(searchHistoryProvider).isEmpty) {
+      _scrollToTop();
+    }
+    if (mounted) {
+      setState(() {});
     }
   }
 
   void _submitSearch(String value) {
+    final trimmed = value.trim();
     _searchFocus.unfocus();
     _hideSuggestions();
-    ref.read(catalogFilterProvider.notifier).setQuery(value.trim());
+    ref.read(searchHistoryProvider.notifier).recordSearch(trimmed);
+    ref.read(catalogFilterProvider.notifier).setQuery(trimmed);
   }
 
   void _clearSearch() {
@@ -210,6 +217,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   void _openSuggestion(Product product) {
     _hideSuggestions();
     _searchFocus.unfocus();
+    ref.read(searchHistoryProvider.notifier).recordViewed(product);
     context.push('/product/${product.store?.slug ?? ''}/${product.slug}');
   }
 
@@ -241,6 +249,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       }
     });
     final filter = ref.watch(catalogFilterProvider);
+    final history = ref.watch(searchHistoryProvider);
     final products = ref.watch(productsProvider);
     final categories = ref.watch(categoriesProvider);
     final theme = Theme.of(context);
@@ -524,6 +533,27 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                                   _searchController.text = _suggestionsQuery;
                                   _submitSearch(_suggestionsQuery);
                                 },
+                              ),
+                            ),
+                          )
+                        else if (_searchFocus.hasFocus && !history.isEmpty)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+                            sliver: SliverToBoxAdapter(
+                              child: _SearchHistoryPanel(
+                                history: history,
+                                onSelectSearch: (term) {
+                                  _searchController.text = term;
+                                  _submitSearch(term);
+                                },
+                                onRemoveSearch: (term) => ref
+                                    .read(searchHistoryProvider.notifier)
+                                    .removeSearch(term),
+                                onSelectProduct: _openSuggestion,
+                                onAutocompleteProduct: _autocompleteSuggestion,
+                                onClear: () => ref
+                                    .read(searchHistoryProvider.notifier)
+                                    .clear(),
                               ),
                             ),
                           ),
@@ -1106,6 +1136,135 @@ class _ScrollingSearchPlaceholderState
       ),
     ),
   );
+}
+
+class _SearchHistoryPanel extends StatelessWidget {
+  const _SearchHistoryPanel({
+    required this.history,
+    required this.onSelectSearch,
+    required this.onRemoveSearch,
+    required this.onSelectProduct,
+    required this.onAutocompleteProduct,
+    required this.onClear,
+  });
+
+  final SearchHistory history;
+  final ValueChanged<String> onSelectSearch;
+  final ValueChanged<String> onRemoveSearch;
+  final ValueChanged<Product> onSelectProduct;
+  final ValueChanged<Product> onAutocompleteProduct;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final viewed = history.recentlyViewed.take(5).toList(growable: false);
+
+    return TextFieldTapRegion(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: theme.colorScheme.surfaceContainerLowest,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(appSurfaceRadius),
+            side: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Semantics(
+            container: true,
+            label: 'Search history',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 8, 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          history.recentSearches.isNotEmpty
+                              ? 'Recent searches'
+                              : 'Recently viewed',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: onClear,
+                        style: TextButton.styleFrom(
+                          minimumSize: const Size(48, 36),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          tapTargetSize: MaterialTapTargetSize.padded,
+                        ),
+                        child: const Text('Clear history'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (history.recentSearches.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final term in history.recentSearches)
+                          InputChip(
+                            avatar: Icon(
+                              Icons.history_rounded,
+                              size: 16,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            label: Text(term),
+                            onPressed: () => onSelectSearch(term),
+                            onDeleted: () => onRemoveSearch(term),
+                            deleteButtonTooltipMessage: 'Remove $term',
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize: MaterialTapTargetSize.padded,
+                          ),
+                      ],
+                    ),
+                  ),
+                if (history.recentSearches.isNotEmpty && viewed.isNotEmpty) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+                    child: Text(
+                      'Recently viewed',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+                for (var index = 0; index < viewed.length; index++) ...[
+                  if (index > 0) const Divider(height: 1),
+                  _SuggestionTile(
+                    product: viewed[index],
+                    onTap: () => onSelectProduct(viewed[index]),
+                    onAutocomplete: () => onAutocompleteProduct(viewed[index]),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SearchSuggestionsPanel extends StatelessWidget {

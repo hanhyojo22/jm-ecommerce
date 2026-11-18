@@ -1,8 +1,163 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
 import 'auth_providers.dart';
 import 'store_locator_providers.dart';
+
+class SearchHistory {
+  const SearchHistory({
+    this.recentSearches = const [],
+    this.recentlyViewed = const [],
+  });
+
+  final List<String> recentSearches;
+  final List<Product> recentlyViewed;
+
+  bool get isEmpty => recentSearches.isEmpty && recentlyViewed.isEmpty;
+
+  factory SearchHistory.fromJson(Map<String, dynamic> json) => SearchHistory(
+    recentSearches:
+        (json['recent_searches'] is List
+                ? (json['recent_searches'] as List)
+                      .whereType<String>()
+                      .map((s) => s.trim())
+                      .where((s) => s.length >= 2)
+                : const <String>[])
+            .take(5)
+            .toList(growable: false),
+    recentlyViewed: listOf(json['recently_viewed'])
+        .map(Product.fromJson)
+        .where((p) => p.id.isNotEmpty && p.slug.isNotEmpty)
+        .take(8)
+        .toList(growable: false),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'recent_searches': recentSearches,
+    'recently_viewed': [
+      for (final product in recentlyViewed)
+        {
+          'id': product.id,
+          'name': product.name,
+          'slug': product.slug,
+          'price': product.price,
+          'effective_price': product.effectivePrice,
+          'compare_at_price': product.compareAtPrice,
+          'thumbnail_url':
+              product.thumbnailUrl ?? product.images.firstOrNull?.url,
+          'in_stock': product.inStock,
+          'stock_quantity': product.stockQuantity,
+          if (product.store != null)
+            'store': {
+              'id': product.store!.id,
+              'name': product.store!.name,
+              'slug': product.store!.slug,
+            },
+        },
+    ],
+  };
+}
+
+/// Optional backing file for device persistence; null in widget tests so
+/// FakeAsync never waits on disk I/O.
+final searchHistoryFileProvider = Provider<File?>((ref) => null);
+
+/// Initial snapshot loaded before runApp when a backing file exists.
+final initialSearchHistoryProvider = Provider<SearchHistory>(
+  (ref) => const SearchHistory(),
+);
+
+class SearchHistoryNotifier extends Notifier<SearchHistory> {
+  static final _hasAlphaNum = RegExp(r'[\p{L}\p{N}]', unicode: true);
+
+  @override
+  SearchHistory build() => ref.watch(initialSearchHistoryProvider);
+
+  void recordSearch(String query) {
+    final trimmed = query.trim();
+    if (trimmed.length < 2 || !_hasAlphaNum.hasMatch(trimmed)) {
+      return;
+    }
+    final lower = trimmed.toLowerCase();
+    final updated = [
+      trimmed,
+      for (final existing in state.recentSearches)
+        if (existing.toLowerCase() != lower) existing,
+    ].take(5).toList(growable: false);
+    state = SearchHistory(
+      recentSearches: updated,
+      recentlyViewed: state.recentlyViewed,
+    );
+    _persist();
+  }
+
+  void removeSearch(String query) {
+    final lower = query.trim().toLowerCase();
+    final updated = state.recentSearches
+        .where((existing) => existing.toLowerCase() != lower)
+        .toList(growable: false);
+    state = SearchHistory(
+      recentSearches: updated,
+      recentlyViewed: state.recentlyViewed,
+    );
+    _persist();
+  }
+
+  void recordViewed(Product product) {
+    if (product.id.isEmpty || product.slug.isEmpty) {
+      return;
+    }
+    final normalized = Product.fromJson({
+      'id': product.id,
+      'name': product.name,
+      'slug': product.slug,
+      'price': product.price,
+      'effective_price': product.effectivePrice,
+      'compare_at_price': product.compareAtPrice,
+      'thumbnail_url': product.thumbnailUrl ?? product.images.firstOrNull?.url,
+      'in_stock': product.inStock,
+      'stock_quantity': product.stockQuantity,
+      if (product.store != null)
+        'store': {
+          'id': product.store!.id,
+          'name': product.store!.name,
+          'slug': product.store!.slug,
+        },
+    });
+    final updated = [
+      normalized,
+      for (final existing in state.recentlyViewed)
+        if (existing.id != product.id) existing,
+    ].take(8).toList(growable: false);
+    state = SearchHistory(
+      recentSearches: state.recentSearches,
+      recentlyViewed: updated,
+    );
+    _persist();
+  }
+
+  void clear() {
+    state = const SearchHistory();
+    _persist();
+  }
+
+  void _persist() {
+    final file = ref.read(searchHistoryFileProvider);
+    if (file == null) {
+      return;
+    }
+    final payload = jsonEncode(state.toJson());
+    file.writeAsString(payload).ignore();
+  }
+}
+
+final searchHistoryProvider =
+    NotifierProvider<SearchHistoryNotifier, SearchHistory>(
+      SearchHistoryNotifier.new,
+    );
 
 class CatalogFilter {
   const CatalogFilter({this.query = '', this.category, this.onSale = false});

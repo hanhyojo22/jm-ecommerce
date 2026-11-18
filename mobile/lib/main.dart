@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:app_links/app_links.dart';
 import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
@@ -10,7 +13,9 @@ import 'src/app.dart';
 import 'src/config.dart';
 import 'src/core/clerk_http_service.dart';
 import 'src/core/push_notifications.dart';
+import 'src/models/models.dart';
 import 'src/providers/auth_providers.dart';
+import 'src/providers/catalog_providers.dart';
 import 'src/theme.dart';
 
 Future<void> main() async {
@@ -18,10 +23,22 @@ Future<void> main() async {
   // Started now and awaited before runApp: it runs alongside Clerk's startup
   // instead of in front of it, and push registration still finds it ready.
   final firebaseReady = _initFirebase();
+  final historyFile = File(
+    '${Directory.systemTemp.path}/jmmart_search_history.json',
+  );
+  final initialHistory = await _loadSearchHistory(historyFile);
 
   if (!AppConfig.hasClerk) {
     await firebaseReady;
-    runApp(const ProviderScope(child: JmMartApp()));
+    runApp(
+      ProviderScope(
+        overrides: [
+          searchHistoryFileProvider.overrideWithValue(historyFile),
+          initialSearchHistoryProvider.overrideWithValue(initialHistory),
+        ],
+        child: const JmMartApp(),
+      ),
+    );
     return;
   }
 
@@ -43,13 +60,28 @@ Future<void> main() async {
 
     runApp(
       ProviderScope(
-        overrides: [clerkAuthProvider.overrideWithValue(authState)],
+        overrides: [
+          clerkAuthProvider.overrideWithValue(authState),
+          searchHistoryFileProvider.overrideWithValue(historyFile),
+          initialSearchHistoryProvider.overrideWithValue(initialHistory),
+        ],
         child: JmMartApp(authState: authState),
       ),
     );
   } catch (error) {
     await firebaseReady;
     runApp(_StartupErrorApp(error: error));
+  }
+}
+
+Future<SearchHistory> _loadSearchHistory(File file) async {
+  try {
+    if (!await file.exists()) {
+      return const SearchHistory();
+    }
+    return SearchHistory.fromJson(mapOf(jsonDecode(await file.readAsString())));
+  } catch (_) {
+    return const SearchHistory();
   }
 }
 

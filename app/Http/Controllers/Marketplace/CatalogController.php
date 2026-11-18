@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -139,30 +140,67 @@ class CatalogController extends Controller
 
     public function suggestions(Request $request): JsonResponse
     {
-        $search = $request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? '';
+        $search = trim((string) ($request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? ''));
 
-        return response()->json(['items' => CatalogQuery::suggestions($search)->map(function (Product $product): array {
-            $price = (string) $product->price;
-            if ($product->variants_min_price !== null && (! $product->variants_using_base_price_exists || bccomp((string) $product->variants_min_price, $price, 2) < 0)) {
-                $price = (string) $product->variants_min_price;
-            }
+        if (Str::length($search) < 2) {
+            $consented = CookiePreferences::fromRequest($request)['functional'] ?? false;
+            $recentSearches = $consented && $request->hasSession()
+                ? array_values(array_slice($request->session()->get('marketplace.recent_searches', []), 0, 5))
+                : [];
+            $recentProductIds = $consented && $request->hasSession()
+                ? array_slice($request->session()->get('marketplace.recently_viewed', []), 0, 5)
+                : [];
+            $recentlyViewed = $recentProductIds === [] ? [] : $this->publishedProducts()
+                ->select(['products.id', 'products.store_id', 'products.name', 'products.slug', 'products.price', 'products.stock_quantity'])
+                ->with('thumbnail')
+                ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
+                ->withMin('variants', 'price')
+                ->whereKey($recentProductIds)
+                ->get()
+                ->sortBy(fn (Product $product): int => (int) array_search($product->id, $recentProductIds, true))
+                ->values()
+                ->map($this->suggestionPayload(...))
+                ->all();
 
-            return [
-                'name' => $product->name,
-                'image' => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null,
-                'price' => '₱'.number_format((float) $price, 2),
-                'store' => $product->store->name,
-                'sold_out' => $product->stock_quantity < 1,
-                'url' => route('catalog.show', [$product->store->slug, $product->slug]),
-            ];
-        })->all()]);
+            return response()->json([
+                'items' => [],
+                'recent_searches' => $recentSearches,
+                'recently_viewed' => $recentlyViewed,
+            ]);
+        }
+
+        return response()->json([
+            'items' => CatalogQuery::suggestions($search)->map($this->suggestionPayload(...))->all(),
+            'recent_searches' => [],
+            'recently_viewed' => [],
+        ]);
     }
 
-    public function clearRecentlyViewed(Request $request): RedirectResponse
+    /**
+     * @return array{name: string, image: string|null, price: string, store: string, sold_out: bool, url: string}
+     */
+    private function suggestionPayload(Product $product): array
+    {
+        $price = (string) $product->price;
+        if ($product->variants_min_price !== null && (! $product->variants_using_base_price_exists || bccomp((string) $product->variants_min_price, $price, 2) < 0)) {
+            $price = (string) $product->variants_min_price;
+        }
+
+        return [
+            'name' => $product->name,
+            'image' => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null,
+            'price' => '₱'.number_format((float) $price, 2),
+            'store' => $product->store->name,
+            'sold_out' => $product->stock_quantity < 1,
+            'url' => route('catalog.show', [$product->store->slug, $product->slug]),
+        ];
+    }
+
+    public function clearRecentlyViewed(Request $request): RedirectResponse|Response
     {
         RecommendationQuery::clearHistory($request);
 
-        return to_route('home');
+        return $request->expectsJson() ? response()->noContent() : to_route('home');
     }
 
     public function topProducts(Request $request): View

@@ -8,37 +8,47 @@ import './web-push';
 import './cart';
 import { clerkComponentAppearance, clerkUserProfileAppearance } from './clerk-appearance';
 
-window.marketplaceSuggestions = (initialQuery, url, resultsUrl) => ({
+window.marketplaceSuggestions = (initialQuery, url, resultsUrl, clearUrl = null) => ({
     query: initialQuery,
     items: [],
+    recentSearches: [],
+    recentlyViewed: [],
     open: false,
     loading: false,
     active: -1,
     url,
     resultsUrl,
+    clearUrl,
     request: null,
+    currentItems() {
+        return [...this.query.trim()].length < 2 ? this.recentlyViewed : this.items;
+    },
     async load() {
         const query = this.query.trim();
+        const isHistory = [...query].length < 2;
         this.request?.abort();
         this.items = [];
         this.active = -1;
-        if ([...query].length < 2) {
-            this.open = false;
-            this.loading = false;
-            return;
-        }
-        this.open = true;
-        this.loading = true;
+        this.open = isHistory ? (this.recentSearches.length > 0 || this.recentlyViewed.length > 0) : true;
+        this.loading = !isHistory;
         const request = new AbortController();
         this.request = request;
         try {
-            const response = await fetch(`${this.url}?q=${encodeURIComponent(query)}`, {
+            const endpoint = isHistory ? this.url : `${this.url}?q=${encodeURIComponent(query)}`;
+            const response = await fetch(endpoint, {
                 signal: request.signal,
                 headers: { Accept: 'application/json' },
             });
             if (!response.ok) throw new Error('Search suggestions failed');
             const data = await response.json();
-            if (this.request === request) this.items = data.items;
+            if (this.request !== request) return;
+            if (isHistory) {
+                this.recentSearches = Array.isArray(data.recent_searches) ? data.recent_searches : [];
+                this.recentlyViewed = Array.isArray(data.recently_viewed) ? data.recently_viewed : [];
+                this.open = this.recentSearches.length > 0 || this.recentlyViewed.length > 0;
+            } else {
+                this.items = Array.isArray(data.items) ? data.items : [];
+            }
         } catch (error) {
             if (error.name !== 'AbortError') this.open = false;
         } finally {
@@ -46,21 +56,42 @@ window.marketplaceSuggestions = (initialQuery, url, resultsUrl) => ({
         }
     },
     move(direction) {
-        if (!this.open || !this.items.length) return;
-        this.active = (this.active + direction + this.items.length) % this.items.length;
+        const list = this.currentItems();
+        if (!this.open || !list.length) return;
+        this.active = (this.active + direction + list.length) % list.length;
     },
     select(event) {
-        if (!this.open || this.active < 0) return;
+        const list = this.currentItems();
+        if (!this.open || this.active < 0 || !list[this.active]) return;
         event.preventDefault();
-        window.location.href = this.items[this.active].url;
+        window.location.href = list[this.active].url;
     },
     clear() {
         this.request?.abort();
         this.query = '';
         this.items = [];
-        this.open = false;
         this.loading = false;
         this.active = -1;
+        this.load();
+    },
+    async clearHistory() {
+        this.request?.abort();
+        this.recentSearches = [];
+        this.recentlyViewed = [];
+        this.active = -1;
+        this.open = false;
+        if (!this.clearUrl) return;
+        try {
+            await fetch(this.clearUrl, {
+                method: 'DELETE',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                },
+            });
+        } catch {
+            // Local state is already cleared.
+        }
     },
 });
 

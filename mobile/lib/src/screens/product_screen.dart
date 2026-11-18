@@ -235,6 +235,11 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     if (product.variants.length == 1) {
       _variantId = product.variants.first.id;
     }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(searchHistoryProvider.notifier).recordViewed(product);
+      }
+    });
   }
 
   @override

@@ -763,6 +763,53 @@ void main() {
     expect(find.text('See all results for "l"'), findsNothing);
   });
 
+  testWidgets(
+    'focusing search shows recent searches and recently viewed products and can clear them',
+    (tester) async {
+      final api = _CatalogApi();
+      await _pumpCatalog(
+        tester,
+        api,
+        initialHistory: SearchHistory(
+          recentSearches: const ['biogesic', 'vitamin c'],
+          recentlyViewed: [
+            _product(77, name: 'Cetirizine 10mg', slug: 'cetirizine-10mg'),
+          ],
+        ),
+      );
+
+      expect(find.text('Recent searches'), findsNothing);
+
+      await tester.tap(find.byType(TextField));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Recent searches'), findsOneWidget);
+      expect(find.text('biogesic'), findsOneWidget);
+      expect(find.text('vitamin c'), findsOneWidget);
+      expect(find.text('Recently viewed'), findsOneWidget);
+      expect(find.text('Cetirizine 10mg'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Remove vitamin c'));
+      await tester.pumpAndSettle();
+      expect(find.text('vitamin c'), findsNothing);
+      expect(find.text('biogesic'), findsOneWidget);
+
+      await tester.tap(find.text('biogesic'));
+      await tester.pumpAndSettle();
+      expect(api.lastQuery, 'biogesic');
+      expect(find.text('Results for “biogesic”'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Clear search'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recent searches'), findsOneWidget);
+
+      await tester.tap(find.text('Clear history'));
+      await tester.pumpAndSettle();
+      expect(find.text('Recent searches'), findsNothing);
+      expect(find.text('Recently viewed'), findsNothing);
+    },
+  );
+
   testWidgets('suggestions fit a narrow screen at large text', (tester) async {
     await _pumpCatalog(tester, _CatalogApi(), width: 320, textScale: 2);
     await tester.enterText(find.byType(TextField), 'linen');
@@ -927,6 +974,7 @@ Future<void> _pumpCatalog(
   bool settle = true,
   bool disableAnimations = false,
   StoreLocatorState? locator,
+  SearchHistory? initialHistory,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -942,6 +990,8 @@ Future<void> _pumpCatalog(
         storeBranchesProvider.overrideWith((ref) async => const []),
         if (locator != null)
           nearestStoreProvider.overrideWith(() => _FixedLocator(locator)),
+        if (initialHistory != null)
+          initialSearchHistoryProvider.overrideWithValue(initialHistory),
       ],
       child: MaterialApp(
         theme: buildAppTheme(),

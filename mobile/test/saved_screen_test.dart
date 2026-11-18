@@ -5,7 +5,6 @@ import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
-import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 import 'package:jmmart/src/screens/saved_screen.dart';
 

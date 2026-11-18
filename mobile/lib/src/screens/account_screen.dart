@@ -8,6 +8,7 @@ import '../core/formatters.dart';
 import '../core/push_notifications.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
+import '../providers/catalog_providers.dart';
 import '../providers/discount_card_providers.dart';
 import '../providers/order_providers.dart';
 import '../theme.dart';
@@ -138,6 +139,8 @@ class AccountScreen extends ConsumerWidget {
                     await PushNotifications.unregister(
                       ref.read(apiClientProvider),
                     );
+                    // Medicine searches are personal: the next person on this phone starts clean.
+                    ref.read(searchHistoryProvider.notifier).clear();
                     // Signed out, the app keeps running as a guest: back to Shop.
                     ref.read(shellTabProvider.notifier).select(0);
                     await auth.signOut();
