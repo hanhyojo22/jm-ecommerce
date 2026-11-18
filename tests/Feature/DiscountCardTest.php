@@ -75,6 +75,21 @@ class DiscountCardTest extends TestCase
         $this->assertDatabaseCount('orders', 2);
     }
 
+    public function test_the_app_saves_an_id_sent_as_form_fields_like_a_prescription_upload(): void
+    {
+        $buyer = $this->buyerWithCart();
+
+        // With prescription pages the app posts multipart, where every value arrives as a string.
+        $this->actingAs($buyer)->post('/api/v1/checkout', [
+            ...$this->delivery(),
+            'payment_method' => 'cod',
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-55501', 'name' => 'Ava Cruz'],
+            'save_discount_card' => '1',
+        ], ['Accept' => 'application/json'])->assertCreated();
+
+        $this->assertSame(['pwd', '5501'], [DiscountCard::query()->sole()->type, DiscountCard::query()->sole()->last4]);
+    }
+
     public function test_nothing_is_saved_without_the_checkbox(): void
     {
         $buyer = $this->buyerWithCart();

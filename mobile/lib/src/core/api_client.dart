@@ -389,7 +389,8 @@ class ApiClient {
           'id_number': discountCard.idNumber,
           'name': discountCard.name,
         },
-      if (saveDiscountCard) 'save_discount_card': true,
+      // 1, not true: with a prescription this goes as multipart, where true becomes "true" and fails Laravel's boolean rule.
+      if (saveDiscountCard) 'save_discount_card': 1,
       if (note != null && note.trim().isNotEmpty) 'delivery_note': note.trim(),
       'fulfillment_method': fulfillmentMethod,
       'delivery_latitude': ?deliveryLatitude,
