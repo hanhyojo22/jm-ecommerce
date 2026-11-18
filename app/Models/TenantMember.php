@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class TenantMember extends Model
 {
@@ -33,6 +34,49 @@ class TenantMember extends Model
             && filled($this->license_number)
             && $this->license_expires_on !== null
             && ! $this->license_expires_on->isBefore(today());
+    }
+
+    /**
+     * The job title shown in Seller Center: a manager tied to one branch is a branch manager.
+     */
+    public function roleLabel(): string
+    {
+        return match ($this->role) {
+            'owner' => 'Owner',
+            'manager' => $this->isHeadOffice() ? 'Manager' : 'Branch manager',
+            default => 'Staff',
+        };
+    }
+
+    /**
+     * Where this member works, e.g. "Ermita branch" for "JMMart Pharmacy Ermita", or "Head office".
+     */
+    public function placeLabel(): string
+    {
+        if ($this->store === null) {
+            return 'Head office';
+        }
+
+        $place = trim(Str::after($this->store->name, $this->tenant->name)) ?: $this->store->name;
+
+        return Str::endsWith(Str::lower($place), 'branch') ? $place : "{$place} branch";
+    }
+
+    /**
+     * Where a pharmacist's license stands, so the workspace can say why they can't review yet.
+     * Null for members who are not pharmacists; "expiring" still allows reviews.
+     *
+     * @return 'missing'|'expired'|'expiring'|'valid'|null
+     */
+    public function licenseStatus(): ?string
+    {
+        return match (true) {
+            ! $this->is_pharmacist => null,
+            blank($this->license_number) || $this->license_expires_on === null => 'missing',
+            $this->license_expires_on->isBefore(today()) => 'expired',
+            $this->license_expires_on->isBefore(today()->addDays(30)) => 'expiring',
+            default => 'valid',
+        };
     }
 
     public function tenant(): BelongsTo

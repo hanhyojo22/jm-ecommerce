@@ -79,9 +79,12 @@
                 </button>
                 @if ($isSellerWorkspace)
                     <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-md border border-line text-ink shadow-sm transition hover:bg-canvas hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle Seller Center sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
-                    <a href="{{ route('seller.dashboard') }}" class="inline-flex items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
+                    <a href="{{ route('seller.dashboard') }}" class="inline-flex min-w-0 items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
                         <img src="{{ asset('favicon.svg') }}" alt="" class="size-8 shrink-0 rounded-md" width="32" height="32">
-                        <span class="text-sm font-semibold text-ink sm:text-base">Seller Center</span>
+                        <span class="min-w-0 max-w-[8rem]">
+                            <span class="block text-sm font-semibold leading-tight text-ink sm:text-base">Seller Center</span>
+                            @if ($sellerMember)<span class="block truncate text-xs text-muted" data-seller-role>{{ $sellerMember->roleLabel() }}</span>@endif
+                        </span>
                     </a>
                     <div class="hidden min-w-0 items-center gap-2 text-sm lg:flex">
                         <span class="font-medium text-muted">Seller Center</span>
@@ -388,19 +391,7 @@
             @endif
 
             @if ($isSellerWorkspace)
-                <div class="mx-4 mt-4 flex items-center gap-3 workspace-sidebar-card">
-                    <span class="workspace-sidebar-avatar" aria-hidden="true">
-                        @if ($sellerTenant?->store?->logo_path)
-                            <img src="{{ Storage::disk('public')->url($sellerTenant->store->logo_path) }}" alt="" class="size-full object-cover">
-                        @else
-                            {{ Str::upper(Str::substr($sellerTenant?->name ?? 'S', 0, 1)) }}
-                        @endif
-                    </span>
-                    <div class="min-w-0">
-                        <p class="text-xs text-muted">Your store</p>
-                        <p class="mt-0.5 truncate text-sm font-semibold text-ink">{{ $sellerTenant?->name ?? 'Your store' }}</p>
-                    </div>
-                </div>
+                <x-marketplace.seller-identity class="mx-4 mt-4" />
                 <x-marketplace.seller-nav-links mode="mobile" />
                 <div class="space-y-1 border-t border-line p-4">
                     @if ($sellerTenant)

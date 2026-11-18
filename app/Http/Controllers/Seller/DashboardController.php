@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,8 +30,12 @@ class DashboardController extends Controller
                 ->first();
             $orderMetrics = $member->sellerOrders()
                 ->toBase()
-                ->selectRaw("count(*) as total_orders, sum(case when status = 'pending' then 1 else 0 end) as pending_orders, sum(case when status != 'cancelled' then total else 0 end) as sales_total")
+                ->selectRaw("count(*) as total_orders, sum(case when status = 'pending' then 1 else 0 end) as pending_orders, sum(case when status = 'confirmed' then 1 else 0 end) as confirmed_orders, sum(case when status = 'processing' then 1 else 0 end) as processing_orders, sum(case when status = 'shipped' then 1 else 0 end) as shipped_orders, sum(case when status != 'cancelled' then total else 0 end) as sales_total")
                 ->first();
+            $waitingForPharmacist = fn (Builder $query): Builder => $query
+                ->where('status', 'pending')
+                ->whereHas('order.prescription', fn (Builder $prescription): Builder => $prescription->whereIn('status', ['pending', 'needs_photo']));
+            $prescriptionsWaitingCount = $member->sellerOrders()->tap($waitingForPharmacist)->count();
             $customerCount = $member->sellerOrders()
                 ->join('orders', 'orders.id', '=', 'seller_orders.order_id')
                 ->where('seller_orders.status', '!=', 'cancelled')
@@ -51,12 +56,36 @@ class DashboardController extends Controller
             $canManageOrders = in_array($member->role, ['owner', 'manager'], true);
             $canManageProducts = $canManageOrders && $member->isHeadOffice();
             $storeSettingsUrl = $canManageProducts ? route('seller.store-settings.edit') : null;
+            $branches = $canManageProducts ? $tenant->stores()
+                ->orderBy('name')
+                ->withCount([
+                    'sellerOrders as pending_orders_count' => fn (Builder $query): Builder => $query->where('status', 'pending'),
+                    'sellerOrders as prescriptions_waiting_count' => $waitingForPharmacist,
+                ])
+                ->get() : collect();
 
             return response()->view('seller.dashboard', [
                 'store' => $store,
                 'totalProducts' => (int) $productMetrics->total_products,
                 'activeProducts' => (int) $productMetrics->active_products,
                 'pendingOrderCount' => (int) $orderMetrics->pending_orders,
+                'orderQueue' => [
+                    ['count' => (int) $orderMetrics->pending_orders, 'label' => 'To accept', 'href' => route('seller.orders.index', ['status' => 'pending']), 'urgent' => true],
+                    ['count' => (int) $orderMetrics->confirmed_orders, 'label' => 'Accepted', 'href' => route('seller.orders.index', ['status' => 'confirmed']), 'urgent' => false],
+                    ['count' => (int) $orderMetrics->processing_orders, 'label' => 'Preparing', 'href' => route('seller.orders.index', ['status' => 'processing']), 'urgent' => false],
+                    ['count' => (int) $orderMetrics->shipped_orders, 'label' => 'Ready or out for delivery', 'href' => route('seller.orders.index', ['status' => 'shipped']), 'urgent' => false],
+                ],
+                'member' => $member,
+                'prescriptionsWaitingCount' => $prescriptionsWaitingCount,
+                'prescriptionQueue' => $member->canReviewPrescriptions() ? $member->sellerOrders()
+                    ->tap($waitingForPharmacist)
+                    ->with(['order.prescription', 'store'])
+                    ->withCount('items')
+                    ->oldest()
+                    ->limit(5)
+                    ->get() : collect(),
+                // Only worth a table once there is more than one branch to compare.
+                'branches' => $branches->count() > 1 ? $branches : collect(),
                 'totalOrders' => (int) $orderMetrics->total_orders,
                 'salesTotal' => $orderMetrics->sales_total ?? 0,
                 'salesHistory' => $salesHistory,

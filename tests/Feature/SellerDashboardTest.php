@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\Prescription;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -110,6 +111,77 @@ class SellerDashboardTest extends TestCase
             ->assertViewHas('customerCount', 1)
             ->assertViewHas('totalOrders', 2)
             ->assertViewHas('salesHistory', fn ($history): bool => $history->count() === 30 && (float) $history->last()['amount'] === 100.0);
+    }
+
+    public function test_branch_pharmacist_sees_who_they_are_and_the_prescriptions_waiting_for_them(): void
+    {
+        [, $tenant, $headStore] = $this->seller();
+        $branch = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Ermita', 'slug' => 'northwind-ermita-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '1 Taft Avenue', 'city' => 'Manila', 'status' => 'active']);
+        $pharmacist = User::factory()->seller()->create(['name' => 'Liza Garcia', 'email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'store_id' => $branch->id, 'user_id' => $pharmacist->id, 'role' => 'staff', 'is_pharmacist' => true, 'license_number' => '0123456', 'license_expires_on' => now()->addYear()->toDateString()]);
+        $buyer = User::factory()->create();
+        $this->createSellerOrder($branch, $buyer, 'RX-1001', 'pending', 250);
+        Prescription::create(['order_id' => Order::where('number', 'RX-1001')->value('id'), 'user_id' => $buyer->id, 'status' => 'pending']);
+        $this->createSellerOrder($headStore, $buyer, 'RX-OTHER-BRANCH', 'pending', 300);
+        Prescription::create(['order_id' => Order::where('number', 'RX-OTHER-BRANCH')->value('id'), 'user_id' => $buyer->id, 'status' => 'pending']);
+
+        $this->actingAs($pharmacist)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('Liza Garcia')
+            ->assertSee('Ermita branch')
+            ->assertSee('Pharmacist</strong> · PRC 0123456', false)
+            ->assertSee('Today’s orders')
+            ->assertSee('1 prescription waiting for you')
+            ->assertSee('RX-1001')
+            ->assertDontSee('RX-OTHER-BRANCH')
+            ->assertSee(route('seller.orders.index', ['review' => 'prescription']), false)
+            ->assertSee('View only')
+            ->assertDontSee('Sales overview')
+            ->assertDontSee(route('seller.staff.index'), false)
+            ->assertDontSee(route('seller.branches.index'), false);
+    }
+
+    public function test_owner_without_a_license_is_told_why_they_cannot_review_prescriptions(): void
+    {
+        [$seller, $tenant] = $this->seller();
+        TenantMember::where('tenant_id', $tenant->id)->update(['is_pharmacist' => true]);
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('Owner')
+            ->assertSee('Head office · all branches')
+            ->assertSee('no PRC license on file')
+            ->assertSee('Add your PRC license number and expiry date to review prescriptions.')
+            ->assertDontSee('data-prescription-desk', false)
+            ->assertSee(route('seller.staff.index'), false);
+    }
+
+    public function test_branch_manager_overview_is_titled_with_their_branch(): void
+    {
+        [, $tenant] = $this->seller();
+        $branch = Store::create(['tenant_id' => $tenant->id, 'name' => 'Cebu Lahug', 'slug' => 'cebu-lahug-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '2 Gorordo Avenue', 'city' => 'Cebu City', 'status' => 'active']);
+        $manager = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'store_id' => $branch->id, 'user_id' => $manager->id, 'role' => 'manager']);
+
+        $this->actingAs($manager)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('<h1 class="sc-title">Cebu Lahug branch</h1>', false)
+            ->assertSee('Branch manager')
+            ->assertSee('Sales overview')
+            ->assertSee(route('seller.opening-hours.edit'), false)
+            ->assertDontSee(route('seller.branches.index'), false);
+    }
+
+    public function test_license_status_warns_a_month_before_expiry(): void
+    {
+        $member = new TenantMember(['is_pharmacist' => true, 'license_number' => '0123456']);
+
+        $this->assertSame('valid', $member->fill(['license_expires_on' => today()->addDays(30)])->licenseStatus());
+        $this->assertSame('expiring', $member->fill(['license_expires_on' => today()->addDays(29)])->licenseStatus());
+        $this->assertSame('expiring', $member->fill(['license_expires_on' => today()])->licenseStatus());
+        $this->assertSame('expired', $member->fill(['license_expires_on' => today()->subDay()])->licenseStatus());
+        $this->assertSame('missing', $member->fill(['license_number' => null])->licenseStatus());
+        $this->assertNull($member->fill(['is_pharmacist' => false])->licenseStatus());
     }
 
     public function test_dashboard_reuses_role_and_product_counts(): void

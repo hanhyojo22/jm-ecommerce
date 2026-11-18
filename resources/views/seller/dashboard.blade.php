@@ -8,8 +8,17 @@
     $storeTone = match ($store->status) { 'active' => 'success', 'suspended' => 'danger', default => 'neutral' };
     $attentionItems = array_filter([
         $pendingOrderCount > 0 ? ['count' => number_format($pendingOrderCount), 'text' => Str::plural('order', $pendingOrderCount).' awaiting confirmation', 'cta' => 'Review orders', 'href' => route('seller.orders.index', ['status' => 'pending']), 'tone' => ''] : null,
+        $prescriptionsWaitingCount > 0 && ! $member->canReviewPrescriptions() ? ['count' => number_format($prescriptionsWaitingCount), 'text' => Str::plural('prescription', $prescriptionsWaitingCount).' waiting for a pharmacist', 'cta' => 'See which', 'href' => route('seller.orders.index', ['review' => 'prescription']), 'tone' => ''] : null,
         $outOfStockCount > 0 ? ['count' => number_format($outOfStockCount), 'text' => Str::plural('product', $outOfStockCount).' out of stock', 'cta' => 'Review products', 'href' => route('seller.products.index', ['stock' => 'out_of_stock']), 'tone' => ''] : null,
     ]);
+    // The page leads with this person's job: the whole business for head office, one branch for a branch manager, the order queue for staff.
+    $pageTitle = match (true) {
+        $isHeadOffice => 'Overview',
+        $canManageOrders => $member->placeLabel(),
+        default => 'Today’s orders',
+    };
+    $licenseStatus = $member->licenseStatus();
+    $nextOpening = $isHeadOffice ? null : $store->nextOpeningAt(now());
 @endphp
 
 <x-app-layout>
@@ -17,9 +26,17 @@
         <div class="sc-page-head">
             <div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <h1 class="sc-title">Overview</h1>
-                    <span class="sc-badge" data-tone="{{ $storeTone }}">{{ ucfirst($store->status) }} store</span>
-                </div>            </div>
+                    <h1 class="sc-title">{{ $pageTitle }}</h1>
+                    <span class="sc-badge" data-tone="{{ $storeTone }}">{{ ucfirst($store->status) }} {{ $isHeadOffice ? 'store' : 'branch' }}</span>
+                </div>
+                <p class="mt-1 text-sm text-muted" data-dashboard-scope>
+                    @if ($isHeadOffice)
+                        Head office · all branches
+                    @else
+                        {{ $canManageOrders ? '' : $member->placeLabel().' · ' }}{{ $nextOpening ? 'Closed · opens '.$nextOpening->format('D g:i A') : ($store->closing_time ? 'Open now · closes '.\Carbon\Carbon::parse($store->closing_time)->format('g:i A') : 'Open now') }}
+                    @endif
+                </p>
+            </div>
             <div class="sc-page-actions">
                 <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $store->name }} storefront in a new tab">View storefront <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>
                 @if ($canManageProducts)<a href="{{ $nextSetupItem['href'] ?? route('seller.products.create') }}" class="seller-primary-button">{{ $nextSetupItem && $nextSetupItem['label'] !== 'First product' ? 'Finish store setup' : 'Add product' }}</a>@endif
@@ -101,6 +118,46 @@
             </section>
         @endif
 
+        @if ($licenseStatus === 'missing' || $licenseStatus === 'expired')
+            <div class="sc-notice" data-tone="{{ $licenseStatus === 'expired' ? 'danger' : 'warning' }}" role="status" data-license-notice>
+                <p><strong>{{ $licenseStatus === 'expired' ? 'Your PRC license expired on '.$member->license_expires_on->format('M j, Y').', so you can’t approve or reject prescriptions.' : 'Add your PRC license number and expiry date to review prescriptions.' }}</strong> You can still ask a customer for a clearer photo.</p>
+                @if ($member->isOwner())<a href="{{ route('seller.staff.index') }}">Add it under Staff</a>@else<span>Ask the owner to update it under Staff.</span>@endif
+            </div>
+        @elseif ($licenseStatus === 'expiring')
+            <div class="sc-notice" data-tone="warning" role="status" data-license-notice><p><strong>Your PRC license expires on {{ $member->license_expires_on->format('M j, Y') }}.</strong> After that you can’t approve prescriptions until the new expiry date is saved.</p></div>
+        @endif
+
+        @if ($member->canReviewPrescriptions() && $prescriptionsWaitingCount > 0)
+            <section class="sc-rx-desk" aria-labelledby="prescription-desk-heading" data-prescription-desk>
+                <div class="sc-rx-desk-head">
+                    <div class="min-w-0">
+                        <h2 id="prescription-desk-heading">{{ number_format($prescriptionsWaitingCount) }} {{ Str::plural('prescription', $prescriptionsWaitingCount) }} waiting for you</h2>
+                        <p>These orders can’t be prepared until a pharmacist approves them.{{ $isHeadOffice ? ' Showing every branch.' : '' }}</p>
+                    </div>
+                    <a href="{{ route('seller.orders.index', ['review' => 'prescription']) }}" class="sc-rx-desk-button">Open prescription queue</a>
+                </div>
+                <ul class="sc-rx-list">
+                    @foreach ($prescriptionQueue as $sellerOrder)
+                        <li class="sc-rx-row">
+                            <div class="min-w-0">
+                                <p class="flex flex-wrap items-center gap-x-2.5 gap-y-1 font-semibold text-ink">
+                                    <x-marketplace.order-number :number="$sellerOrder->order->number" />
+                                    <span class="font-medium">{{ $sellerOrder->order->recipient_name }}</span>
+                                    @if ($sellerOrder->order->prescription->status === 'needs_photo')
+                                        <span class="sc-badge" data-tone="neutral">Asked for a clearer photo</span>
+                                    @elseif ($sellerOrder->order->prescription->checked_at)
+                                        <span class="sc-badge" data-tone="info">Checked by staff</span>
+                                    @endif
+                                </p>
+                                <p class="mt-0.5 sc-meta">{{ $sellerOrder->items_count }} {{ Str::plural('item', $sellerOrder->items_count) }} · ordered {{ $sellerOrder->created_at->diffForHumans() }}@if ($isHeadOffice) · {{ $sellerOrder->store?->name }}@endif</p>
+                            </div>
+                            <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="seller-primary-button" aria-label="Review prescription for order {{ $sellerOrder->order->number }}">Review</a>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
+
         @if ($attentionItems)
             <section class="sc-card" aria-labelledby="action-required-heading">
                 <div class="sc-card-head"><h2 id="action-required-heading" class="sc-card-title">Needs your attention</h2></div>
@@ -112,6 +169,7 @@
             </section>
         @endif
 
+        @if ($canManageOrders)
         <section aria-label="Store summary">
             <dl class="sc-metrics" data-columns="4">
                 <div class="sc-metric"><dt>Sales total</dt><dd><strong class="sc-metric-value">₱{{ number_format($salesTotal, 2) }}</strong><span class="sc-metric-context">All time · seller order totals; cancelled orders excluded</span></dd></div>
@@ -136,9 +194,37 @@
                     <div class="mt-2 flex justify-between text-xs text-muted"><span>{{ \Carbon\Carbon::parse($salesHistory->first()['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory[15]['date'])->format('M j') }}</span><span>{{ \Carbon\Carbon::parse($salesHistory->last()['date'])->format('M j') }}</span></div>
                     @if (bccomp($lastThirtyDaysSales, '0.00', 2) === 0)<p class="mt-3 sc-meta">No sales recorded in the last 30 days.</p>@endif
                 </section>
+                @endif
+
+                @if ($branches->isNotEmpty())
+                    <section class="sc-card" aria-labelledby="branches-heading" data-dashboard-branches>
+                        <div class="sc-card-head"><h2 id="branches-heading" class="sc-card-title">Branches today</h2><a href="{{ route('seller.branches.index') }}" class="sc-link">Manage branches</a></div>
+                        <div class="sc-table-wrap">
+                            <table class="sc-table min-w-[480px]">
+                                <thead><tr><th scope="col">Branch</th><th scope="col">Status</th><th scope="col" class="is-num">To accept</th><th scope="col" class="is-num">Prescriptions waiting</th></tr></thead>
+                                <tbody>
+                                    @foreach ($branches as $branchRow)
+                                        @php($branchOpensAt = $branchRow->status === 'active' ? $branchRow->nextOpeningAt(now()) : null)
+                                        <tr>
+                                            <th scope="row" class="font-semibold text-ink">{{ $branchRow->name }}</th>
+                                            <td><span class="sc-badge" data-tone="{{ $branchRow->status === 'active' && ! $branchOpensAt ? 'success' : 'neutral' }}">{{ $branchRow->status !== 'active' ? ucfirst($branchRow->status) : ($branchOpensAt ? 'Closed · opens '.$branchOpensAt->format('D g:i A') : 'Open') }}</span></td>
+                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->pending_orders_count > 0, 'is-muted' => $branchRow->pending_orders_count === 0])>{{ number_format($branchRow->pending_orders_count) }}</td>
+                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->prescriptions_waiting_count > 0, 'is-muted' => $branchRow->prescriptions_waiting_count === 0])>{{ number_format($branchRow->prescriptions_waiting_count) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                @endif
 
                 <section class="sc-card" data-dashboard-section="orders" aria-labelledby="recent-orders-heading">
-                    <div class="sc-card-head"><h2 id="recent-orders-heading" class="sc-card-title">Recent orders</h2><a href="{{ route('seller.orders.index') }}" data-seller-shortcut="orders" aria-keyshortcuts="O" class="sc-link">View all orders</a></div>
+                    <div class="sc-card-head"><h2 id="recent-orders-heading" class="sc-card-title">{{ $isHeadOffice ? 'Recent orders' : 'Orders at this branch' }}</h2><a href="{{ route('seller.orders.index') }}" data-seller-shortcut="orders" aria-keyshortcuts="O" class="sc-link">View all orders</a></div>
+                    <ul class="sc-order-queue" aria-label="Orders by status">
+                        @foreach ($orderQueue as $stage)
+                            <li><a href="{{ $stage['href'] }}" @class(['is-urgent' => $stage['urgent'] && $stage['count'] > 0, 'is-zero' => $stage['count'] === 0])><strong>{{ number_format($stage['count']) }}</strong><span>{{ $stage['label'] }}</span></a></li>
+                        @endforeach
+                    </ul>
                     @if ($recentOrders->isNotEmpty())
                         <div class="sc-table-wrap hidden sm:block">
                             <table class="sc-table min-w-[560px]">

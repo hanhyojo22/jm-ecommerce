@@ -157,7 +157,8 @@ class AppServiceProvider extends ServiceProvider
                 ->whereNotNull('category_id')
                 ->select('category_id');
 
-            $sellerTenant = $user?->account_type === 'seller' ? $user->sellerTenant() : null;
+            $sellerMember = $user?->account_type === 'seller' ? $user->sellerMembership() : null;
+            $sellerTenant = $sellerMember?->tenant;
 
             $view->with([
                 'cartItemCount' => $user?->cartItemCount() ?? 0,
@@ -167,6 +168,7 @@ class AppServiceProvider extends ServiceProvider
                     ->orderBy('name')
                     ->get(['id', 'name', 'slug']),
                 'sellerTenant' => $sellerTenant,
+                'sellerMember' => $sellerMember,
             ]);
         });
 
