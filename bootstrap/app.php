@@ -95,7 +95,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if (! $request->is('api/*') && ! $request->expectsJson() && ! $request->hasHeader('X-Livewire')
                 && in_array($status, [404, 405, 419, 429, 500, 502, 503, 504], true)) {
-                return response()->view('errors.request', ['status' => $status], $status, $response->headers->all());
+                return response()->view('errors.request', ['status' => $status, 'retryAfter' => $response->headers->get('Retry-After')], $status, $response->headers->all());
             }
 
             return $response;
@@ -151,7 +151,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 405 => ApiError::response('request.method_not_allowed', 'This request is not supported.', 405),
                 409 => ApiError::response('request.conflict', 'This action is already in progress. Check its status before trying again.', 409),
                 419 => ApiError::response('auth.session_expired', 'Your session expired. Refresh the page and sign in again.', 419),
-                429 => ApiError::response('rate.limited', 'Too many requests. Try again shortly.', 429),
+                429 => ApiError::response('rate.limited', 'Too many tries. '.ApiError::retryAfterMessage($exception->getHeaders()['Retry-After'] ?? 0), 429),
                 default => ApiError::response($status >= 500 ? 'server.unavailable' : 'request.failed',
                     $status >= 500 ? 'This service is temporarily unavailable. Please try again later.' : 'This request could not be completed.', $status),
             };

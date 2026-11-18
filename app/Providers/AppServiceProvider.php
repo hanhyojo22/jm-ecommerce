@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\View\View as ViewInstance;
+use Symfony\Component\HttpFoundation\Response;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -84,10 +85,19 @@ class AppServiceProvider extends ServiceProvider
             $request->user()?->id ?? $request->ip(),
         ));
 
-        RateLimiter::for('checkout', fn (Request $request): Limit => Limit::perHour(10)->by(
+        RateLimiter::for('checkout', function (Request $request): array {
             // A signed-in caller is counted by account alone: the IP comes from a forwarded header they can change.
-            $request->user()?->id ?? $request->ip(),
-        ));
+            $caller = $request->user()?->id ?? $request->ip();
+
+            return [
+                // Only placed orders count, so fixing a typo or a refused field never locks a customer out.
+                // A refusal is a 4xx (API) or a redirect back with errors (web).
+                Limit::perHour(10)->by('placed:'.$caller)->after(
+                    fn (Response $response): bool => $response->isSuccessful() || ($response->isRedirection() && ! session()->has('errors')),
+                ),
+                Limit::perHour(30)->by('tries:'.$caller),
+            ];
+        });
 
         // The mobile client polls a handful of endpoints; 60 requests a minute leaves room
         // for normal browsing without letting a leaked token hammer the API.

@@ -13,7 +13,7 @@
     <main>
         <p>JMMart · {{ $status }}</p>
         <h1>{{ match ($status) { 404 => 'We could not find that page', 419 => 'Your session has expired', 429 => 'Please wait a moment', default => 'We could not complete this request' } }}</h1>
-        <p>{{ match ($status) { 404 => 'The page may have moved or is no longer available.', 419 => 'Refresh the page and sign in again before continuing.', 429 => 'Too many requests were sent. Wait a moment before trying again.', default => 'The service may be temporarily unavailable. Please try again later.' } }}</p>
+        <p>{{ match ($status) { 404 => 'The page may have moved or is no longer available.', 419 => 'Refresh the page and sign in again before continuing.', 429 => 'Too many tries were sent. '.\App\Support\ApiError::retryAfterMessage($retryAfter ?? 0), default => 'The service may be temporarily unavailable. Please try again later.' } }}</p>
         @if (! request()->isMethodSafe() || $status >= 500)
             <p>Check your orders before trying a purchase again.</p>
         @endif
