@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateStoreSettingsRequest;
 use App\Models\AuditLog;
 use App\Models\Store;
 use App\Models\Tenant;
+use App\Models\TenantMember;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,7 +38,7 @@ class StoreSettingsController extends Controller
             $request->session()->forget('seller_store_settings_undo');
         }
 
-        return view('seller.store-settings.edit', ['store' => $this->branch($request, $tenant), 'canUndo' => $canUndo]);
+        return view('seller.store-settings.edit', ['store' => $this->branch($request, $tenant), 'canUndo' => $canUndo, 'canManageBranches' => $this->member($request)->isHeadOffice()]);
     }
 
     public function update(UpdateStoreSettingsRequest $request, StorePublicImage $storePublicImage): RedirectResponse
@@ -72,8 +73,8 @@ class StoreSettingsController extends Controller
                 $oldLogoPath = $lockedStore->logo_path;
                 $logoPath = $newLogoPath ?? ($request->boolean('remove_logo') ? null : $oldLogoPath);
                 $oldValues = $lockedStore->only(self::UNDO_FIELDS);
-                // Head office opens or closes a branch; one the platform suspended stays suspended. Read from the locked row.
-                $status = $lockedStore->status === 'suspended' ? 'suspended' : ($request->validated('status') ?? $lockedStore->status);
+                // Head office opens or closes a branch; a branch manager cannot close their own. One the platform suspended stays suspended. Read from the locked row.
+                $status = $lockedStore->status === 'suspended' || ! $this->member($request)->isHeadOffice() ? $lockedStore->status : ($request->validated('status') ?? $lockedStore->status);
                 // Same key order as UNDO_FIELDS, which undo checks.
                 $newValues = array_replace(array_fill_keys(self::UNDO_FIELDS, null), $data, ['status' => $status, 'logo_path' => $logoPath]);
 
@@ -206,11 +207,18 @@ class StoreSettingsController extends Controller
     }
 
     /**
-     * The branch being edited: the one named in the request, looked up inside the member's own
-     * company so another company's branch is a 404, or the first branch when none is named.
+     * The branch being edited. A branch manager always edits their own branch. Head office edits the
+     * one named in the request, looked up inside its own company so another company's branch is a
+     * 404, or the first branch when none is named.
      */
     private function branch(Request $request, Tenant $tenant): Store
     {
+        $member = $this->member($request);
+
+        if (! $member->isHeadOffice()) {
+            return $member->store;
+        }
+
         return $request->filled('branch')
             ? $tenant->stores()->whereKey($request->string('branch')->toString())->firstOrFail()
             : $tenant->store;
@@ -218,7 +226,12 @@ class StoreSettingsController extends Controller
 
     private function managedTenant(Request $request): Tenant
     {
-        return $request->user()->headOfficeTenant() ?? abort(403);
+        return $this->member($request)->tenant;
+    }
+
+    private function member(Request $request): TenantMember
+    {
+        return $request->user()->sellerMembership(['owner', 'manager']) ?? abort(403);
     }
 
     private function deleteUploadedLogo(?string $path): void

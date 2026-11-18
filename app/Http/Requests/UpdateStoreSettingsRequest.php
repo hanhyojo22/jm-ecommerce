@@ -12,7 +12,7 @@ class UpdateStoreSettingsRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->headOfficeTenant() !== null;
+        return $this->user()?->sellerMembership(['owner', 'manager']) !== null;
     }
 
     /**

@@ -7,7 +7,6 @@ use App\Actions\ChangeStaffMember;
 use App\Actions\RemoveStaffMember;
 use App\Actions\TransferOwnership;
 use App\Http\Controllers\Controller;
-use App\Models\Tenant;
 use App\Models\TenantMember;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,23 +17,26 @@ class StaffController extends Controller
 {
     public function index(Request $request): View
     {
-        $tenant = $this->headOffice($request);
+        $actor = $this->actor($request);
+        // A branch manager sees and staffs only their own branch.
+        $branchId = $actor->isHeadOffice() ? null : $actor->store_id;
 
         return view('seller.staff.index', [
-            'members' => $tenant->members()->with(['user', 'store'])->orderByRaw("CASE role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END")->oldest()->get(),
-            'branches' => $tenant->stores()->orderBy('name')->get(['id', 'name']),
-            'isOwner' => $this->actor($request)->isOwner(),
+            'members' => $actor->tenant->members()->with(['user', 'store'])->when($branchId, fn ($query, string $id) => $query->where('store_id', $id))->orderByRaw("CASE role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END")->oldest()->get(),
+            'branches' => $actor->tenant->stores()->when($branchId, fn ($query, string $id) => $query->whereKey($id))->orderBy('name')->get(['id', 'name']),
+            'isOwner' => $actor->isOwner(),
+            'canAssignManagers' => $actor->isHeadOffice(),
         ]);
     }
 
     public function store(Request $request, AddStaffMember $addStaffMember): RedirectResponse
     {
-        $tenant = $this->headOffice($request);
         $actor = $this->actor($request);
+        $tenant = $actor->tenant;
         $details = [...$request->validate(['email' => ['required', 'email', 'max:255'], ...$this->assignmentRules($actor)]), ...$this->pharmacistDetails($request, $actor)];
         $details['store_id'] ??= null;
         AddStaffMember::assertOwnBranch($tenant, $details['store_id']);
-        $this->assertMayAssignHeadOffice($actor, $details['store_id']);
+        $this->assertMayAssign($actor, $details['role'], $details['store_id']);
 
         $addStaffMember->handle($request->user(), $tenant, $details, $request->ip());
 
@@ -43,8 +45,8 @@ class StaffController extends Controller
 
     public function update(Request $request, TenantMember $member, ChangeStaffMember $changeStaffMember): RedirectResponse
     {
-        $tenant = $this->headOffice($request);
         $actor = $this->actor($request);
+        $tenant = $actor->tenant;
         $member = $tenant->members()->whereKey($member)->firstOrFail();
 
         // The owner keeps their role and branch; this only updates their own pharmacist license.
@@ -59,7 +61,7 @@ class StaffController extends Controller
         $details = [...$request->validate($this->assignmentRules($actor)), ...$this->pharmacistDetails($request, $actor, $member)];
         $details['store_id'] ??= null;
         AddStaffMember::assertOwnBranch($tenant, $details['store_id']);
-        $this->assertMayAssignHeadOffice($actor, $details['store_id']);
+        $this->assertMayAssign($actor, $details['role'], $details['store_id']);
 
         $changeStaffMember->handle($request->user(), $member, $details, $request->ip());
 
@@ -68,9 +70,9 @@ class StaffController extends Controller
 
     public function destroy(Request $request, TenantMember $member, RemoveStaffMember $removeStaffMember): RedirectResponse
     {
-        $tenant = $this->headOffice($request);
-        $member = $tenant->members()->whereKey($member)->firstOrFail();
-        $this->assertMayManage($this->actor($request), $member);
+        $actor = $this->actor($request);
+        $member = $actor->tenant->members()->whereKey($member)->firstOrFail();
+        $this->assertMayManage($actor, $member);
 
         $removeStaffMember->handle($request->user(), $member, $request->ip());
 
@@ -79,7 +81,7 @@ class StaffController extends Controller
 
     public function transferOwnership(Request $request, TenantMember $member, TransferOwnership $transferOwnership): RedirectResponse
     {
-        $tenant = $this->headOffice($request);
+        $tenant = $this->actor($request)->tenant;
         abort_unless($this->actor($request)->isOwner(), 403);
         $member = $tenant->members()->with('user')->whereKey($member)->firstOrFail();
         $request->validate(['confirm_email' => ['required', 'string']]);
@@ -140,12 +142,22 @@ class StaffController extends Controller
     }
 
     /**
-     * Head-office people see every branch, so only the owner may add them or move someone there.
+     * Head-office people see every branch, so only the owner may add them or move someone there,
+     * and only as a manager: staff fill orders and count stock, which needs a branch. A branch
+     * manager staffs their own branch only.
      */
-    private function assertMayAssignHeadOffice(TenantMember $actor, ?string $storeId): void
+    private function assertMayAssign(TenantMember $actor, string $role, ?string $storeId): void
     {
+        if ($storeId === null && $role === 'staff') {
+            throw ValidationException::withMessages(['store_id' => 'Staff work at a branch. Choose one, or make them a manager.']);
+        }
+
         if ($storeId === null && ! $actor->isOwner()) {
             throw ValidationException::withMessages(['store_id' => 'Only the owner can add people to head office. Choose a branch.']);
+        }
+
+        if (! $actor->isHeadOffice() && ($role !== 'staff' || $storeId !== $actor->store_id)) {
+            throw ValidationException::withMessages(['store_id' => 'Branch managers add staff to their own branch only.']);
         }
     }
 
@@ -154,11 +166,10 @@ class StaffController extends Controller
         if ($member->isHeadOffice() && ! $actor->isOwner()) {
             throw ValidationException::withMessages(['member' => 'Only the owner can change or remove head-office people.']);
         }
-    }
 
-    private function headOffice(Request $request): Tenant
-    {
-        return $request->user()->headOfficeTenant() ?? abort(403);
+        if (! $actor->isHeadOffice() && ($member->role !== 'staff' || $member->store_id !== $actor->store_id)) {
+            throw ValidationException::withMessages(['member' => 'Branch managers change staff at their own branch only.']);
+        }
     }
 
     private function actor(Request $request): TenantMember

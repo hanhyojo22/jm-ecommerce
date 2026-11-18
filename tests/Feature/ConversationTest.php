@@ -52,6 +52,9 @@ class ConversationTest extends TestCase
         $otherSeller = User::factory()->seller()->create();
         $product = $this->product();
         TenantMember::create(['tenant_id' => $product->tenant_id, 'user_id' => $seller->id, 'role' => 'staff']);
+        $otherBranch = Store::create(['tenant_id' => $product->tenant_id, 'name' => 'Other branch', 'slug' => 'other-branch-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '2 Colon Street', 'city' => 'Cebu City', 'status' => 'active']);
+        $otherBranchStaff = User::factory()->seller()->create();
+        TenantMember::create(['tenant_id' => $product->tenant_id, 'store_id' => $otherBranch->id, 'user_id' => $otherBranchStaff->id, 'role' => 'staff']);
         Event::fake([ConversationInboxChanged::class, MessageSent::class]);
 
         $this->actingAs($buyer)->post(route('messages.products.start', $product))->assertRedirect();
@@ -63,6 +66,7 @@ class ConversationTest extends TestCase
         $this->assertContains('private-chat.inbox.'.$buyer->id, $channelNames);
         $this->assertContains('private-chat.inbox.'.$seller->id, $channelNames);
         $this->assertNotContains('private-chat.inbox.'.$otherSeller->id, $channelNames);
+        $this->assertNotContains('private-chat.inbox.'.$otherBranchStaff->id, $channelNames);
         $this->assertSame(['private-chat.inbox.'.$buyer->id], array_map(fn ($channel) => $channel->name, (new ConversationInboxChanged($conversation, $buyer->id))->broadcastOn()));
 
         app(SendConversationMessage::class)->handle($conversation, $buyer, 'Hello', (string) str()->uuid());

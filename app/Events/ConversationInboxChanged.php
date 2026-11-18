@@ -32,6 +32,8 @@ class ConversationInboxChanged implements ShouldBroadcastNow, ShouldDispatchAfte
             $recipientIds = array_merge($recipientIds, TenantMember::query()
                 ->where('tenant_id', $this->conversation->store->tenant_id)
                 ->whereIn('role', ['owner', 'manager', 'staff'])
+                // Head office and the chat's own branch, the same people who can open it.
+                ->where(fn ($query) => $query->whereNull('store_id')->orWhere('store_id', $this->conversation->store_id))
                 ->whereHas('user', fn ($query) => $query->where('account_type', 'seller')->where('is_active', true))
                 ->pluck('user_id')->all());
         }

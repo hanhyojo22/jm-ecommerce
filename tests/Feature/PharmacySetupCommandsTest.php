@@ -19,7 +19,7 @@ class PharmacySetupCommandsTest extends TestCase
         $tenant = Tenant::query()->sole();
         $owner = User::query()->where('email', 'owner@example.com')->sole();
         $this->assertSame(['JMMart Pharmacy', 'active', 'seller'], [$tenant->name, $tenant->status, $owner->account_type]);
-        $this->assertDatabaseHas('tenant_members', ['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner', 'store_id' => null, 'is_pharmacist' => true]);
+        $this->assertDatabaseHas('tenant_members', ['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner', 'store_id' => null, 'is_pharmacist' => false]);
         $this->assertSame($tenant->id, $owner->headOfficeTenant()?->id);
         $this->assertDatabaseHas('audit_logs', ['action' => 'tenant.set_up', 'entity_id' => $tenant->id]);
     }

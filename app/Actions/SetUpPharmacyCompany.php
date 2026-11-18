@@ -40,7 +40,7 @@ class SetUpPharmacyCompany
             $owner->forceFill(['account_type' => 'seller', 'preferred_workspace' => 'seller'])->save();
 
             $tenant = Tenant::query()->create(['name' => $companyName, 'slug' => $this->uniqueSlug($companyName), 'status' => 'active']);
-            TenantMember::query()->create(['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner', 'is_pharmacist' => true]);
+            TenantMember::query()->create(['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner']);
 
             AuditLog::query()->create([
                 'actor_user_id' => null,

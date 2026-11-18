@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Models\TenantMember;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -77,6 +79,7 @@ class DashboardController extends Controller
                     ['count' => (int) $orderMetrics->shipped_orders, 'label' => 'Ready or out for delivery', 'href' => route('seller.orders.index', ['status' => 'shipped']), 'urgent' => false],
                 ],
                 'member' => $member,
+                'pharmacistAlerts' => $canManageOrders ? $this->pharmacistAlerts($member) : ['uncovered' => collect(), 'expiring' => collect()],
                 'prescriptionsWaitingCount' => $prescriptionsWaitingCount,
                 'prescriptionQueue' => $member->canReviewPrescriptions() ? $member->sellerOrders()
                     ->tap($waitingForPharmacist)
@@ -120,5 +123,38 @@ class DashboardController extends Controller
 
             return response()->view('seller.dashboard-unavailable', [], Response::HTTP_SERVICE_UNAVAILABLE);
         }
+    }
+
+    /**
+     * Open branches where nobody can approve a prescription, and licenses running out within 30
+     * days, for the owner or manager who has to sort them out. A branch manager sees their own branch.
+     *
+     * @return array{uncovered: Collection<int, string>, expiring: Collection<int, TenantMember>}
+     */
+    private function pharmacistAlerts(TenantMember $member): array
+    {
+        $licensed = fn (): Builder => TenantMember::query()
+            ->where('tenant_id', $member->tenant_id)
+            ->where('is_pharmacist', true)
+            ->whereNotNull('license_number')
+            ->whereDate('license_expires_on', '>=', today());
+        // A head-office pharmacist can review every branch's prescriptions.
+        $headOfficeCovers = $licensed()->whereNull('store_id')->exists();
+
+        return [
+            'uncovered' => $headOfficeCovers ? collect() : $member->tenant->stores()
+                ->where('status', 'active')
+                ->when($member->store_id, fn (Builder $query, string $storeId): Builder => $query->whereKey($storeId))
+                ->whereNotIn('id', $licensed()->whereNotNull('store_id')->select('store_id'))
+                ->orderBy('name')
+                ->pluck('name'),
+            'expiring' => $licensed()
+                ->whereDate('license_expires_on', '<', today()->addDays(30))
+                ->whereKeyNot($member->id)
+                ->when($member->store_id, fn (Builder $query, string $storeId): Builder => $query->where('store_id', $storeId))
+                ->with('user:id,name')
+                ->orderBy('license_expires_on')
+                ->get(),
+        ];
     }
 }

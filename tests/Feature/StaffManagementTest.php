@@ -39,11 +39,11 @@ class StaffManagementTest extends TestCase
 
     public function test_an_existing_account_is_never_taken_over_as_staff(): void
     {
-        [$tenant] = $this->pharmacy('botika');
+        [$tenant, $branch] = $this->pharmacy('botika');
         $owner = $this->member($tenant, 'owner');
         $customer = User::factory()->create(['email' => 'shopper@example.com']);
 
-        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'Shopper@Example.com', 'role' => 'staff'])
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'Shopper@Example.com', 'role' => 'staff', 'store_id' => $branch->id])
             ->assertSessionHasErrors('email');
 
         $this->assertSame('buyer', $customer->fresh()->account_type);
@@ -53,11 +53,47 @@ class StaffManagementTest extends TestCase
     public function test_branch_staff_cannot_manage_staff(): void
     {
         [$tenant, $branch] = $this->pharmacy('botika');
-        $branchManager = $this->member($tenant, 'manager', $branch);
+        $branchStaff = $this->member($tenant, 'staff', $branch);
 
-        $this->actingAs($branchManager)->get(route('seller.staff.index'))->assertForbidden();
-        $this->actingAs($branchManager)->post(route('seller.staff.store'), ['email' => 'x@example.com', 'role' => 'staff'])->assertForbidden();
+        $this->actingAs($branchStaff)->get(route('seller.staff.index'))->assertForbidden();
+        $this->actingAs($branchStaff)->post(route('seller.staff.store'), ['email' => 'x@example.com', 'role' => 'staff', 'store_id' => $branch->id])->assertForbidden();
         $this->assertDatabaseMissing('users', ['email' => 'x@example.com']);
+    }
+
+    public function test_a_branch_manager_staffs_only_their_own_branch(): void
+    {
+        [$tenant, $branch] = $this->pharmacy('botika');
+        $otherBranch = Store::create(['tenant_id' => $tenant->id, 'name' => 'Botika Cebu', 'slug' => 'botika-cebu', 'phone' => '+639171234567', 'address_line' => '2 Colon Street', 'city' => 'Cebu City', 'status' => 'active']);
+        $branchManager = $this->member($tenant, 'manager', $branch);
+        $otherBranchStaff = $this->member($tenant, 'staff', $otherBranch)->tenantMemberships()->sole();
+        $fellowManager = $this->member($tenant, 'manager', $branch)->tenantMemberships()->sole();
+
+        $this->actingAs($branchManager)->get(route('seller.staff.index'))
+            ->assertOk()
+            ->assertDontSee($otherBranchStaff->user->email);
+        $this->actingAs($branchManager)->post(route('seller.staff.store'), ['email' => 'new.clerk@example.com', 'role' => 'staff', 'store_id' => $branch->id])
+            ->assertRedirect(route('seller.staff.index'));
+        $this->assertDatabaseHas('tenant_members', ['store_id' => $branch->id, 'role' => 'staff', 'user_id' => User::where('email', 'new.clerk@example.com')->value('id')]);
+
+        $this->actingAs($branchManager)->post(route('seller.staff.store'), ['email' => 'boss@example.com', 'role' => 'manager', 'store_id' => $branch->id])->assertSessionHasErrors('store_id');
+        $this->actingAs($branchManager)->post(route('seller.staff.store'), ['email' => 'far@example.com', 'role' => 'staff', 'store_id' => $otherBranch->id])->assertSessionHasErrors('store_id');
+        $this->actingAs($branchManager)->delete(route('seller.staff.destroy', $otherBranchStaff))->assertSessionHasErrors('member');
+        $this->actingAs($branchManager)->delete(route('seller.staff.destroy', $fellowManager))->assertSessionHasErrors('member');
+        $this->assertDatabaseMissing('users', ['email' => 'boss@example.com']);
+        $this->assertDatabaseHas('tenant_members', ['id' => $otherBranchStaff->id]);
+        $this->assertDatabaseHas('tenant_members', ['id' => $fellowManager->id]);
+    }
+
+    public function test_staff_must_work_at_a_branch(): void
+    {
+        [$tenant] = $this->pharmacy('botika');
+        $owner = $this->member($tenant, 'owner');
+
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'desk@example.com', 'role' => 'staff'])
+            ->assertSessionHasErrors('store_id');
+        $this->actingAs($owner)->post(route('seller.staff.store'), ['email' => 'desk@example.com', 'role' => 'manager'])
+            ->assertRedirect(route('seller.staff.index'));
+        $this->assertDatabaseHas('tenant_members', ['store_id' => null, 'role' => 'manager', 'user_id' => User::where('email', 'desk@example.com')->value('id')]);
     }
 
     public function test_another_companys_employee_and_branch_are_out_of_reach(): void

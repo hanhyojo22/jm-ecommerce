@@ -19,9 +19,7 @@ class ProductPolicy
 
     public function view(User $user, Product $product): bool
     {
-        return $user->isPlatformAdministrator() || $user->tenantMemberships()
-            ->where('tenant_id', $product->tenant_id)
-            ->exists();
+        return $user->isPlatformAdministrator() || $user->sellerTenant()?->id === $product->tenant_id;
     }
 
     public function update(User $user, Product $product): bool

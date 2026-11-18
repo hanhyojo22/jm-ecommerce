@@ -3,6 +3,7 @@
 @php
     // The menu follows the signed-in role: pages a role can't open are left out, and pages it can
     // open but not change say "View only", matching the checks in the seller controllers.
+    // Returns stay "View only" for staff: deciding a return is an owner's or manager's call.
     $member = auth()->user()?->sellerMembership();
     $canManage = in_array($member?->role, ['owner', 'manager'], true);
     $isHeadOffice = (bool) $member?->isHeadOffice();
@@ -40,6 +41,13 @@
                 ...($canManage
                     ? [['label' => 'Opening hours', 'href' => route('seller.opening-hours.edit'), 'icon' => 'clock', 'active' => request()->routeIs('seller.opening-hours.*')]]
                     : []),
+                // A branch manager runs their own branch's details and staff; head office has these under Business.
+                ...($canManage && ! $isHeadOffice
+                    ? [
+                        ['label' => 'Branch details', 'href' => route('seller.store-settings.edit'), 'icon' => 'settings', 'active' => request()->routeIs('seller.store-settings.*')],
+                        ['label' => 'Staff', 'href' => route('seller.staff.index'), 'icon' => 'staff', 'active' => request()->routeIs('seller.staff.*')],
+                    ]
+                    : []),
             ],
         ],
         [
@@ -55,7 +63,7 @@
                 'items' => [
                     ['label' => 'Branches', 'href' => route('seller.branches.index'), 'icon' => 'storefront', 'active' => request()->routeIs('seller.branches.*')],
                     ['label' => 'Staff', 'href' => route('seller.staff.index'), 'icon' => 'staff', 'active' => request()->routeIs('seller.staff.*')],
-                    ['label' => 'Store settings', 'href' => route('seller.store-settings.edit'), 'icon' => 'settings', 'active' => request()->routeIs('seller.store-settings.*')],
+                    ['label' => 'Branch details', 'href' => route('seller.store-settings.edit'), 'icon' => 'settings', 'active' => request()->routeIs('seller.store-settings.*')],
                 ],
             ]]
             : []),

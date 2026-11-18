@@ -3,7 +3,7 @@
         <div class="sc-page-head">
             <div>
                 <h1 class="sc-title">{{ $store->name }}</h1>
-                <p class="mt-1 text-sm text-muted"><a href="{{ route('seller.branches.index') }}" class="font-semibold text-brand">All branches</a></p>
+                @if ($canManageBranches)<p class="mt-1 text-sm text-muted"><a href="{{ route('seller.branches.index') }}" class="font-semibold text-brand">All branches</a></p>@endif
             </div>
         </div>
     </x-slot>
@@ -125,7 +125,7 @@
                             <input id="city" name="city" x-model="city" autocomplete="address-level2" maxlength="100" required @error('city') aria-describedby="city-error" aria-invalid="true" @enderror value="{{ old('city', $store->city) }}" class="field-control mt-2 text-base lg:text-sm @error('city') border-rose-500 @enderror">
                             <x-input-error id="city-error" :messages="$errors->get('city')" class="mt-2" />
                         </div>
-                        @if ($store->status !== 'suspended')
+                        @if ($store->status !== 'suspended' && $canManageBranches)
                             <div class="min-w-0">
                                 <label for="status" class="block text-sm font-semibold text-ink">Branch status</label>
                                 <select id="status" name="status" class="field-control mt-2 text-base lg:text-sm">

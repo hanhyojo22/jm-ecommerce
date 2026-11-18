@@ -201,6 +201,28 @@ class SellerDashboardTest extends TestCase
             ->assertDontSee(route('seller.branch-stock.index'), false);
     }
 
+    public function test_owner_is_warned_about_branches_without_a_pharmacist_and_expiring_licenses(): void
+    {
+        [$owner, $tenant, $headStore] = $this->seller();
+        $branch = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Ermita', 'slug' => 'northwind-ermita-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '1 Taft Avenue', 'city' => 'Manila', 'status' => 'active']);
+        $pharmacist = User::factory()->seller()->create(['name' => 'Liza Garcia']);
+        TenantMember::create(['tenant_id' => $tenant->id, 'store_id' => $branch->id, 'user_id' => $pharmacist->id, 'role' => 'staff', 'is_pharmacist' => true, 'license_number' => '0123456', 'license_expires_on' => today()->addDays(10)->toDateString()]);
+
+        $this->actingAs($owner)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('No pharmacist with a valid license at '.$headStore->name.'.')
+            ->assertDontSee('at '.$branch->name.'.')
+            ->assertSee('Liza Garcia on '.today()->addDays(10)->format('M j'));
+
+        $headOfficePharmacist = User::factory()->seller()->create();
+        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $headOfficePharmacist->id, 'role' => 'manager', 'is_pharmacist' => true, 'license_number' => '7654321', 'license_expires_on' => today()->addYear()->toDateString()]);
+
+        // A head-office pharmacist can review every branch, so no branch is left uncovered.
+        $this->actingAs($owner)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertDontSee('data-pharmacist-coverage', false);
+    }
+
     public function test_license_status_warns_a_month_before_expiry(): void
     {
         $member = new TenantMember(['is_pharmacist' => true, 'license_number' => '0123456']);

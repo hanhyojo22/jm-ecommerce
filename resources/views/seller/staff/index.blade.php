@@ -17,7 +17,7 @@
             <x-input-error :messages="$errors->get('license_number')" />
             <x-input-error :messages="$errors->get('license_expires_on')" />
             @unless ($isOwner)
-                <p class="sc-notice" data-tone="info">Only the owner can add head-office people, change them, or make someone a pharmacist.</p>
+                <p class="sc-notice" data-tone="info">{{ $canAssignManagers ? 'Only the owner can add head-office people, change them, or make someone a pharmacist.' : 'You add and change staff at your own branch. Head office adds managers and pharmacists.' }}</p>
             @endunless
 
             <form method="POST" action="{{ route('seller.staff.store') }}" x-data="{ pharmacist: @js((bool) old('is_pharmacist')) }" class="sc-card flex flex-wrap items-end gap-4 p-4" aria-labelledby="add-staff-heading">
@@ -32,7 +32,7 @@
                     <label for="role" class="block text-sm font-semibold text-ink">Role</label>
                     <select id="role" name="role" class="field-control mt-2 !w-32 text-base lg:text-sm">
                         <option value="staff" @selected(old('role') === 'staff')>Staff</option>
-                        <option value="manager" @selected(old('role') === 'manager')>Manager</option>
+                        @if ($canAssignManagers)<option value="manager" @selected(old('role') === 'manager')>Manager</option>@endif
                     </select>
                 </div>
                 <div>
@@ -97,7 +97,7 @@
                                 <input x-show="pharmacist" x-cloak id="expires-{{ $member->id }}" name="license_expires_on" type="date" value="{{ $member->license_expires_on?->toDateString() }}" class="field-control !w-44 text-base lg:text-sm">
                                 <button type="submit" class="seller-outline-button min-h-11">Save</button>
                             </form>
-                        @elseif ($member->role !== 'owner' && ! $isSelf && ($isOwner || ! $member->isHeadOffice()))
+                        @elseif ($member->role !== 'owner' && ! $isSelf && ($isOwner || ! $member->isHeadOffice()) && ($canAssignManagers || $member->role === 'staff'))
                             <div class="flex flex-wrap items-center gap-2">
                                 <form method="POST" action="{{ route('seller.staff.update', $member) }}" x-data="{ pharmacist: @js($member->is_pharmacist) }" class="flex flex-wrap items-center gap-2">
                                     @csrf
@@ -105,7 +105,7 @@
                                     <label class="sr-only" for="role-{{ $member->id }}">Role for {{ $member->user?->email }}</label>
                                     <select id="role-{{ $member->id }}" name="role" class="field-control !w-32 text-base lg:text-sm">
                                         <option value="staff" @selected($member->role === 'staff')>Staff</option>
-                                        <option value="manager" @selected($member->role === 'manager')>Manager</option>
+                                        @if ($canAssignManagers)<option value="manager" @selected($member->role === 'manager')>Manager</option>@endif
                                     </select>
                                     <label class="sr-only" for="branch-{{ $member->id }}">Branch for {{ $member->user?->email }}</label>
                                     <select id="branch-{{ $member->id }}" name="store_id" class="field-control !w-56 text-base lg:text-sm">

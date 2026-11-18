@@ -127,6 +127,19 @@
             <div class="sc-notice" data-tone="warning" role="status" data-license-notice><p><strong>Your PRC license expires on {{ $member->license_expires_on->format('M j, Y') }}.</strong> After that you can’t approve prescriptions until the new expiry date is saved.</p></div>
         @endif
 
+        @if ($pharmacistAlerts['uncovered']->isNotEmpty())
+            <div class="sc-notice" data-tone="danger" role="status" data-pharmacist-coverage>
+                <p><strong>No pharmacist with a valid license {{ $isHeadOffice ? 'at '.$pharmacistAlerts['uncovered']->join(', ', ' and ') : 'at your branch' }}.</strong> Prescription orders there can’t be approved until one is added.</p>
+                @if ($member->isOwner())<a href="{{ route('seller.staff.index') }}">Add a pharmacist under Staff</a>@else<span>Ask the owner to add one under Staff.</span>@endif
+            </div>
+        @endif
+        @if ($pharmacistAlerts['expiring']->isNotEmpty())
+            <div class="sc-notice" data-tone="warning" role="status" data-pharmacist-expiring>
+                <p><strong>{{ Str::plural('Pharmacist license', $pharmacistAlerts['expiring']->count()) }} expiring soon:</strong> {{ $pharmacistAlerts['expiring']->map(fn ($pharmacist) => ($pharmacist->user?->name ?? 'A pharmacist').' on '.$pharmacist->license_expires_on->format('M j'))->join(', ', ' and ') }}. After that they can’t approve prescriptions.</p>
+                @if ($member->isOwner())<a href="{{ route('seller.staff.index') }}">Update under Staff</a>@else<span>Ask the owner to update it under Staff.</span>@endif
+            </div>
+        @endif
+
         @if ($member->canReviewPrescriptions() && $prescriptionsWaitingCount > 0)
             <section class="sc-rx-desk" aria-labelledby="prescription-desk-heading" data-prescription-desk>
                 <div class="sc-rx-desk-head">

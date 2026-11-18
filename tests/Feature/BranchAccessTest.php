@@ -72,14 +72,25 @@ class BranchAccessTest extends TestCase
             ->assertSee('CEBU-1001');
     }
 
-    public function test_only_head_office_manages_medicines_and_store_settings(): void
+    public function test_only_head_office_manages_medicines_and_a_branch_manager_edits_only_their_branch(): void
     {
-        [$tenant, $makati] = $this->pharmacy();
+        [$tenant, $makati, $cebu] = $this->pharmacy();
         $branchManager = $this->member($tenant, 'manager', $makati);
         $headOffice = $this->member($tenant, 'manager');
+        $branchStaff = $this->member($tenant, 'staff', $makati);
 
         $this->actingAs($branchManager)->get(route('seller.products.create'))->assertForbidden();
-        $this->actingAs($branchManager)->get(route('seller.store-settings.edit'))->assertForbidden();
+        $this->actingAs($branchStaff)->get(route('seller.store-settings.edit'))->assertForbidden();
+        // The branch in the request is ignored: a branch manager always gets their own branch, and cannot close it.
+        $this->actingAs($branchManager)->get(route('seller.store-settings.edit', ['branch' => $cebu->id]))
+            ->assertOk()
+            ->assertViewHas('store', fn ($store): bool => $store->is($makati))
+            ->assertDontSee('Branch status');
+        $this->actingAs($branchManager)
+            ->patch(route('seller.store-settings.update', ['branch' => $cebu->id]), ['phone' => '+639179998888', 'address_line' => '5 Ayala Avenue', 'city' => 'Makati', 'status' => 'inactive'])
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('stores', ['id' => $makati->id, 'phone' => '+639179998888', 'status' => 'active']);
+        $this->assertDatabaseMissing('stores', ['id' => $cebu->id, 'phone' => '+639179998888']);
 
         $this->actingAs($headOffice)->get(route('seller.products.create'))->assertOk();
         $this->actingAs($headOffice)->get(route('seller.store-settings.edit'))->assertOk();
