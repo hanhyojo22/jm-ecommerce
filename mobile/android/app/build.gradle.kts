@@ -33,13 +33,16 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["appLabel"] = "JMMart"
+        manifestPlaceholders["oauthScheme"] = "jmmart"
     }
 
     // `-P pharmacy=true` builds the pharmacy test app beside the live one: its
-    // own app ID and name. Firebase only knows the live ID, so push is off there.
+    // own app ID, name and sign-in link scheme (pair it with OAUTH_SCHEME=jmmartrx
+    // in .env.pharmacy). Firebase only knows the live ID, so push is off there.
     if (project.hasProperty("pharmacy")) {
         defaultConfig.applicationIdSuffix = ".pharmacy"
         defaultConfig.manifestPlaceholders["appLabel"] = "JMMart Rx"
+        defaultConfig.manifestPlaceholders["oauthScheme"] = "jmmartrx"
     }
 
     // android/key.properties (never committed) holds storeFile, storePassword, keyAlias, keyPassword.

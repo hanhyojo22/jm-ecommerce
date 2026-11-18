@@ -21,7 +21,11 @@ class AppConfig {
 
   /// Where the browser hands Facebook sign-in back to the app. Must match the
   /// intent filter in AndroidManifest.xml and Clerk's allowlisted redirect URLs.
-  static final Uri oauthRedirectUri = Uri.parse('jmmart://oauth-callback');
+  /// The pharmacy test app sets OAUTH_SCHEME=jmmartrx (with `-P pharmacy=true`)
+  /// so the browser never asks which JMMart app should finish the sign-in.
+  static final Uri oauthRedirectUri = Uri.parse(
+    '${const String.fromEnvironment('OAUTH_SCHEME', defaultValue: 'jmmart')}://oauth-callback',
+  );
 
   static const String reverbKey = String.fromEnvironment(
     'REVERB_APP_KEY',
