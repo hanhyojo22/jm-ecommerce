@@ -9,6 +9,7 @@
     $nextStep = fn ($sellerOrder): string => match ($sellerOrder->status) {
         'pending' => match (true) {
             (bool) $sellerOrder->awaiting_prescription_photo => 'Waiting for a clearer photo',
+            (bool) $sellerOrder->prescription_checked => 'Checked · pharmacist to approve',
             (bool) $sellerOrder->needs_prescription_review => 'Prescription to review',
             default => 'Accept to start preparing',
         },

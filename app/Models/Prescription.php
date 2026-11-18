@@ -17,11 +17,11 @@ class Prescription extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['order_id', 'user_id', 'status', 'reviewed_by', 'reviewer_license_number', 'reviewed_at', 'reason'];
+    protected $fillable = ['order_id', 'user_id', 'status', 'checked_by', 'checked_at', 'reviewed_by', 'reviewer_license_number', 'reviewed_at', 'reason'];
 
     protected function casts(): array
     {
-        return ['reviewed_at' => 'datetime'];
+        return ['checked_at' => 'datetime', 'reviewed_at' => 'datetime'];
     }
 
     public function order(): BelongsTo
@@ -43,6 +43,14 @@ class Prescription extends Model
     }
 
     /**
+     * The branch staff member who pre-checked it for the pharmacist; null until someone does.
+     */
+    public function checker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'checked_by');
+    }
+
+    /**
      * The review history, oldest first. Every change to a prescription writes an audit log, so the
      * log is the timeline rather than a second table that could drift from it.
      *
@@ -57,5 +65,15 @@ class Prescription extends Model
             ->orderBy('created_at')
             ->orderBy('id')
             ->get();
+    }
+
+    /**
+     * The history the customer sees: staff's internal pre-check is left out.
+     *
+     * @return Collection<int, AuditLog>
+     */
+    public function customerTimeline(): Collection
+    {
+        return $this->timeline()->reject(fn (AuditLog $event): bool => $event->action === 'prescription.checked')->values();
     }
 }

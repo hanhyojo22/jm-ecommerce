@@ -56,7 +56,7 @@ class OrderResource extends JsonResource
                     ->map(fn ($image): array => ['id' => $image->id, 'name' => $image->original_name])
                     ->values()
                     ->all(),
-                'timeline' => $this->prescription->timeline()
+                'timeline' => $this->prescription->customerTimeline()
                     ->map(fn ($event): array => [
                         'action' => $event->action,
                         'at' => $event->created_at?->toIso8601String(),

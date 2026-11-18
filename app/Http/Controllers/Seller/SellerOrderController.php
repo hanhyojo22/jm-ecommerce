@@ -67,7 +67,7 @@ class SellerOrderController extends Controller
 
         $sellerOrder = $member->sellerOrders()
             ->whereKey($sellerOrder)
-            ->with($isModal ? ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'order.prescription.images', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'order.prescription.images', 'issues', 'returnCases.items.orderItem'])
+            ->with($isModal ? ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'order.prescription.checker', 'order.prescription.images', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'order.prescription.checker', 'order.prescription.images', 'issues', 'returnCases.items.orderItem'])
             ->firstOrFail();
         $sellerOrder->setAttribute(
             'available_transitions',
@@ -214,6 +214,7 @@ class SellerOrderController extends Controller
             // Bulk confirm also skips orders whose prescription a pharmacist has not approved yet.
             ->withExists(['order as needs_prescription_review' => fn (Builder $query): Builder => $query->whereHas('prescription', fn (Builder $prescription): Builder => $prescription->where('status', '!=', 'approved'))])
             ->withExists(['order as awaiting_prescription_photo' => fn (Builder $query): Builder => $query->whereHas('prescription', fn (Builder $prescription): Builder => $prescription->where('status', 'needs_photo'))])
+            ->withExists(['order as prescription_checked' => fn (Builder $query): Builder => $query->whereHas('prescription', fn (Builder $prescription): Builder => $prescription->where('status', 'pending')->whereNotNull('checked_at'))])
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $search = '%'.mb_strtolower($search).'%';
 

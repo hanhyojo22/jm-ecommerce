@@ -183,6 +183,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
     Route::get('/seller/orders/{sellerOrder}/prescription/images/{image}', [SellerPrescriptionController::class, 'show'])->name('seller.orders.prescription.images.show');
     Route::patch('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.prescription.update');
+    Route::post('/seller/orders/{sellerOrder}/prescription/check', [SellerPrescriptionController::class, 'check'])->middleware('throttle:10,1')->name('seller.orders.prescription.check');
     Route::get('/seller/reviews', [SellerProductReviewController::class, 'index'])->name('seller.reviews.index');
     Route::post('/seller/reviews/{review}/response', [SellerProductReviewController::class, 'respond'])->middleware('throttle:10,1')->name('seller.reviews.respond');
 

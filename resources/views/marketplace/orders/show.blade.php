@@ -100,7 +100,7 @@
                             @error('prescription')<p class="mt-2 text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
                             @error('prescriptions.*')<p class="mt-2 text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror
                         @endif
-                        @php($timeline = $order->prescription->timeline())
+                        @php($timeline = $order->prescription->customerTimeline())
                         @if ($timeline->isNotEmpty())
                             <details class="mt-3">
                                 <summary class="cursor-pointer text-[13px] font-semibold">Review history</summary>

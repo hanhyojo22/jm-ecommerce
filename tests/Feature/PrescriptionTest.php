@@ -198,7 +198,7 @@ class PrescriptionTest extends TestCase
         $this->assertSame('pending', $order->prescription()->first()->status);
     }
 
-    public function test_only_pharmacists_at_the_orders_branch_can_read_or_decide_its_prescription(): void
+    public function test_staff_at_the_orders_branch_read_the_prescription_but_only_pharmacists_decide(): void
     {
         $sellerOrder = $this->checkOut()->sellerOrders()->sole();
         $otherBranchPharmacist = $this->member('staff', $this->branch('Cebu'), pharmacist: true);
@@ -207,14 +207,14 @@ class PrescriptionTest extends TestCase
 
         $this->actingAs($otherBranchPharmacist)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertNotFound();
         $this->actingAs($otherBranchPharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertNotFound();
-        $this->actingAs($staff)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertForbidden();
+        $this->actingAs($staff)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertOk();
         $this->actingAs($staff)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();
 
         $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending', 'reviewed_by' => null]);
         $this->actingAs($this->member('staff', $this->branch, pharmacist: true))->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertOk();
     }
 
-    public function test_a_pharmacist_without_a_valid_prc_license_cannot_read_or_decide_a_prescription(): void
+    public function test_a_pharmacist_without_a_valid_prc_license_cannot_decide_a_prescription(): void
     {
         $sellerOrder = $this->checkOut()->sellerOrders()->sole();
         $image = Prescription::query()->sole()->images()->sole();
@@ -227,11 +227,38 @@ class PrescriptionTest extends TestCase
             $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))
                 ->assertSee('Your PRC license is missing or expired')
                 ->assertDontSee('Approve prescription');
-            $this->actingAs($pharmacist)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertForbidden();
+            $this->actingAs($pharmacist)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertOk();
             $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();
         }
 
         $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending']);
+    }
+
+    public function test_branch_staff_pre_check_a_prescription_and_a_pharmacist_still_approves_it(): void
+    {
+        $order = $this->checkOut();
+        $sellerOrder = $order->sellerOrders()->sole();
+        $staff = $this->member('staff', $this->branch);
+        $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
+
+        $this->actingAs($this->member('staff', $this->branch('Cebu')))->post(route('seller.orders.prescription.check', $sellerOrder))->assertNotFound();
+        $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))->assertDontSee('Mark as checked');
+        $this->actingAs($staff)->get(route('seller.orders.show', $sellerOrder))->assertSee('Mark as checked')->assertDontSee('Approve prescription');
+
+        $this->actingAs($staff)->post(route('seller.orders.prescription.check', $sellerOrder))->assertSessionHas('status');
+        $this->actingAs($staff)->post(route('seller.orders.prescription.check', $sellerOrder))->assertSessionHasErrors('prescription');
+
+        $this->assertSame('pending', $sellerOrder->refresh()->status);
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $order->id, 'status' => 'pending', 'checked_by' => $staff->id, 'reviewed_by' => null]);
+        $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $staff->id, 'action' => 'prescription.checked']);
+        $this->actingAs($pharmacist)->get(route('seller.orders.index'))->assertSee('Checked · pharmacist to approve');
+        $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))->assertSee('Checked by '.$staff->name)->assertSee('Approve prescription');
+        $this->actingAs($order->user)->getJson(route('api.v1.orders.show', $order))->assertJsonMissing(['action' => 'prescription.checked']);
+
+        // A new photo from the customer needs a fresh check.
+        $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'needs_photo', 'reason' => 'Blurry.']);
+        $this->actingAs($order->user)->post(route('orders.prescription.store', $order), ['prescription' => UploadedFile::fake()->image('clear.jpg')]);
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $order->id, 'status' => 'pending', 'checked_by' => null, 'checked_at' => null]);
     }
 
     public function test_checkout_stores_every_prescription_page_in_order(): void

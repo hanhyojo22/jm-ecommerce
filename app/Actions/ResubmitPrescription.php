@@ -57,7 +57,10 @@ class ResubmitPrescription
 
                 $prescription->update([
                     'status' => 'pending',
+                    'checked_by' => null,
+                    'checked_at' => null,
                     'reviewed_by' => null,
+                    'reviewer_license_number' => null,
                     'reviewed_at' => null,
                     'reason' => null,
                 ]);

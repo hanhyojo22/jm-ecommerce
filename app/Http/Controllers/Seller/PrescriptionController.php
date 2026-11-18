@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Actions\CheckPrescription;
 use App\Actions\ReviewPrescription;
 use App\Http\Controllers\Controller;
 use App\Models\Prescription;
@@ -14,8 +15,8 @@ use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Pharmacists at the filling branch (or at head office) read every page of an order's prescription
- * and decide it.
+ * Staff at the filling branch (or at head office) read every page of an order's prescription and may
+ * pre-check it; only a pharmacist with a valid PRC license decides it.
  */
 class PrescriptionController extends Controller
 {
@@ -27,16 +28,24 @@ class PrescriptionController extends Controller
         return Storage::disk('chat_attachments')->download($image->path, $image->original_name);
     }
 
+    public function check(Request $request, SellerOrder $sellerOrder, CheckPrescription $check): RedirectResponse
+    {
+        $check->handle($request->user(), $this->prescription($request, $sellerOrder), $request->ip());
+
+        return back()->with('status', 'Marked as checked. A pharmacist still has to approve it.');
+    }
+
     public function update(Request $request, SellerOrder $sellerOrder, ReviewPrescription $review): RedirectResponse
     {
         $prescription = $this->prescription($request, $sellerOrder);
-        $licenseNumber = $request->user()->sellerMembership()->license_number;
+        $member = $request->user()->sellerMembership();
+        abort_unless($member->canReviewPrescriptions(), 403);
         $data = $request->validate([
             'decision' => ['required', Rule::in(ReviewPrescription::DECISIONS)],
             'reason' => ['required_unless:decision,approve', 'nullable', 'string', 'max:500'],
         ]);
 
-        $review->handle($request->user(), $licenseNumber, $prescription, $data['decision'], $data['reason'] ?? null, $request->ip());
+        $review->handle($request->user(), $member->license_number, $prescription, $data['decision'], $data['reason'] ?? null, $request->ip());
 
         return back()->with('status', match ($data['decision']) {
             'approve' => 'Prescription approved. The order is accepted and ready to prepare.',
@@ -46,13 +55,12 @@ class PrescriptionController extends Controller
     }
 
     /**
-     * Another branch's order is a 404; anyone at the right branch without a valid pharmacist license is a 403.
+     * Another branch's order is a 404, so its prescription never leaks.
      */
     private function prescription(Request $request, SellerOrder $sellerOrder): Prescription
     {
         $member = $request->user()->sellerMembership() ?? abort(403);
         $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
-        abort_unless($member->canReviewPrescriptions(), 403);
 
         return Prescription::query()->where('order_id', $sellerOrder->order_id)->firstOrFail();
     }
