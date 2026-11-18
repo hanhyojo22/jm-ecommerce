@@ -169,12 +169,22 @@ class SellerOrderTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 0);
     }
 
-    public function test_staff_can_confirm_orders_in_bulk(): void
+    public function test_branch_staff_confirm_orders_in_bulk_but_head_office_staff_cannot(): void
     {
         [, $tenant, $store] = $this->seller();
+        $headOfficeStaff = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $headOfficeStaff->id, 'role' => 'staff']);
         $staff = User::factory()->seller()->create(['email_verified_at' => now()]);
-        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $staff->id, 'role' => 'staff']);
+        TenantMember::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'user_id' => $staff->id, 'role' => 'staff']);
         $sellerOrder = $this->sellerOrder($tenant, $store, 'SELLER-1001');
+
+        $this->actingAs($headOfficeStaff)->post(route('seller.orders.bulk-confirm'), [
+            'seller_order_ids' => [$sellerOrder->id],
+        ])->assertForbidden();
+        $this->actingAs($headOfficeStaff)
+            ->patch(route('seller.orders.update', $sellerOrder), ['status' => 'confirmed'])
+            ->assertForbidden();
+        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'pending']);
 
         $this->actingAs($staff)->post(route('seller.orders.bulk-confirm'), [
             'seller_order_ids' => [$sellerOrder->id],

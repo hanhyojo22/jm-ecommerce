@@ -51,7 +51,7 @@ class SellerOrderController extends Controller
                 ->selectRaw('status, count(*) as aggregate')
                 ->groupBy('status')
                 ->pluck('aggregate', 'status'),
-            'canManageOrders' => true,
+            'canManageOrders' => $this->canAdvance($member),
             'canSupervise' => $this->canSupervise($member),
         ]);
     }
@@ -71,7 +71,7 @@ class SellerOrderController extends Controller
             'available_transitions',
             $isOnHold ? ($canSupervise ? ['cancelled'] : []) : $this->transitionsFor($member, $sellerOrder->status),
         );
-        $canManageOrders = true;
+        $canManageOrders = $this->canAdvance($member);
 
         // The queue requests the detail fragment; a direct visit still gets the full page.
         if ($isModal) {
@@ -126,7 +126,7 @@ class SellerOrderController extends Controller
     public function update(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
         $member = $this->membership($request);
-        abort_if($request->input('status') === 'cancelled' && ! $this->canSupervise($member), 403);
+        abort_unless($request->input('status') === 'cancelled' ? $this->canSupervise($member) : $this->canAdvance($member), 403);
         $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
 
         $sellerOrder->load('order');
@@ -151,6 +151,7 @@ class SellerOrderController extends Controller
     public function collectCod(Request $request, SellerOrder $sellerOrder, MarkCodPaymentPaid $action): RedirectResponse
     {
         $member = $this->membership($request);
+        abort_unless($this->canAdvance($member), 403);
         $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
         try {
             $action->collectSellerOrder($request->user(), $sellerOrder, $request->ip());
@@ -176,6 +177,7 @@ class SellerOrderController extends Controller
     public function bulkConfirm(Request $request, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
         $member = $this->membership($request);
+        abort_unless($this->canAdvance($member), 403);
         $data = $request->validate([
             'seller_order_ids' => ['required', 'array', 'min:1', 'max:40'],
             'seller_order_ids.*' => ['required', 'string', 'ulid'],
@@ -246,7 +248,7 @@ class SellerOrderController extends Controller
 
     /**
      * Owners and managers may cancel an order, remove a discount, or report a failed delivery.
-     * Every member moves their branch's orders forward: accept, prepare, hand over, record cash.
+     * Branch staff move their own branch's orders forward (see canAdvance).
      */
     private function canSupervise(TenantMember $member): bool
     {
@@ -254,10 +256,22 @@ class SellerOrderController extends Controller
     }
 
     /**
+     * Branch staff run their own branch's orders; head-office staff, who see every branch, only read them.
+     */
+    private function canAdvance(TenantMember $member): bool
+    {
+        return $this->canSupervise($member) || $member->store_id !== null;
+    }
+
+    /**
      * @return list<string>
      */
     private function transitionsFor(TenantMember $member, string $status): array
     {
+        if (! $this->canAdvance($member)) {
+            return [];
+        }
+
         return array_values(array_filter(
             UpdateSellerOrderStatus::transitionsFor($status),
             fn (string $next): bool => $next !== 'cancelled' || $this->canSupervise($member),
