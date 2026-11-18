@@ -143,9 +143,7 @@
                                 <p class="flex flex-wrap items-center gap-x-2.5 gap-y-1 font-semibold text-ink">
                                     <x-marketplace.order-number :number="$sellerOrder->order->number" />
                                     <span class="font-medium">{{ $sellerOrder->order->recipient_name }}</span>
-                                    @if ($sellerOrder->order->prescription->status === 'needs_photo')
-                                        <span class="sc-badge" data-tone="neutral">Asked for a clearer photo</span>
-                                    @elseif ($sellerOrder->order->prescription->checked_at)
+                                    @if ($sellerOrder->order->prescription->checked_at)
                                         <span class="sc-badge" data-tone="info">Checked by staff</span>
                                     @endif
                                 </p>

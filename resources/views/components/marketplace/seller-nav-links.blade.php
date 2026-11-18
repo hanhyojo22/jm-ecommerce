@@ -9,7 +9,8 @@
     $canManageStore = $canManage && $isHeadOffice;
     $isPrescriptionQueue = request()->routeIs('seller.orders.index') && request('review') === 'prescription';
     $prescriptionCount = $member?->is_pharmacist
-        ? $member->sellerOrders()->where('status', 'pending')->whereHas('order.prescription', fn ($prescription) => $prescription->whereIn('status', ['pending', 'needs_photo']))->count()
+        // Prescriptions waiting on the customer for a clearer photo are not the pharmacist's move yet.
+        ? $member->sellerOrders()->where('status', 'pending')->whereHas('order.prescription', fn ($prescription) => $prescription->where('status', 'pending'))->count()
         : 0;
     $groups = [
         [
@@ -32,7 +33,10 @@
             'label' => $isHeadOffice ? 'Catalog' : 'Branch',
             'items' => [
                 ['label' => 'Products', 'href' => route('seller.products.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.products.*'), 'viewOnly' => ! $canManageStore],
-                ['label' => 'Branch stock', 'href' => route('seller.branch-stock.index'), 'icon' => 'stock', 'active' => request()->routeIs('seller.branch-stock.*'), 'viewOnly' => ! $canManage],
+                // Branch staff count their own branch's stock; head-office staff have no branch to count.
+                ...($canManage || ! $isHeadOffice
+                    ? [['label' => 'Branch stock', 'href' => route('seller.branch-stock.index'), 'icon' => 'stock', 'active' => request()->routeIs('seller.branch-stock.*')]]
+                    : []),
                 ...($canManage
                     ? [['label' => 'Opening hours', 'href' => route('seller.opening-hours.edit'), 'icon' => 'clock', 'active' => request()->routeIs('seller.opening-hours.*')]]
                     : []),

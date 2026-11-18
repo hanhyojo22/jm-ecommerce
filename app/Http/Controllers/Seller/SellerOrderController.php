@@ -35,17 +35,12 @@ class SellerOrderController extends Controller
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
-        $canManageOrders = $this->canManageOrders($member);
-
         $ordersQuery = $this->filteredOrders($member, $filters);
         $perPage = in_array((int) $request->query('per_page'), self::PER_PAGE_OPTIONS, true) ? (int) $request->query('per_page') : self::PER_PAGE_OPTIONS[0];
         $orders = $ordersQuery->paginate($perPage)->onEachSide(1)->appends($request->except('order', 'page'));
 
-        $orders->getCollection()->each(function (SellerOrder $sellerOrder) use ($canManageOrders): void {
-            $sellerOrder->setAttribute(
-                'available_transitions',
-                $canManageOrders ? UpdateSellerOrderStatus::transitionsFor($sellerOrder->status) : [],
-            );
+        $orders->getCollection()->each(function (SellerOrder $sellerOrder) use ($member): void {
+            $sellerOrder->setAttribute('available_transitions', $this->transitionsFor($member, $sellerOrder->status));
         });
 
         return view('seller.orders.index', [
@@ -56,30 +51,34 @@ class SellerOrderController extends Controller
                 ->selectRaw('status, count(*) as aggregate')
                 ->groupBy('status')
                 ->pluck('aggregate', 'status'),
-            'canManageOrders' => $canManageOrders,
+            'canManageOrders' => true,
+            'canSupervise' => $this->canSupervise($member),
         ]);
     }
 
     public function show(Request $request, SellerOrder $sellerOrder): View
     {
         $member = $this->membership($request);
-        $canManageOrders = $this->canManageOrders($member);
+        $canSupervise = $this->canSupervise($member);
         $isModal = $request->header('X-Order-Modal') === '1';
 
         $sellerOrder = $member->sellerOrders()
             ->whereKey($sellerOrder)
             ->with($isModal ? ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'order.prescription.checker', 'order.prescription.images', 'issues', 'returnCases'] : ['items.product.images', 'order.payment', 'order.prescription.reviewer', 'order.prescription.checker', 'order.prescription.images', 'issues', 'returnCases.items.orderItem'])
             ->firstOrFail();
+        $isOnHold = $sellerOrder->issues->contains(fn ($issue) => $issue->status === 'open' && $issue->type === 'cancellation') || ($sellerOrder->order->prescription !== null && $sellerOrder->order->prescription->status !== 'approved');
         $sellerOrder->setAttribute(
             'available_transitions',
-            $canManageOrders ? ($sellerOrder->issues->contains(fn ($issue) => $issue->status === 'open' && $issue->type === 'cancellation') || ($sellerOrder->order->prescription !== null && $sellerOrder->order->prescription->status !== 'approved') ? ['cancelled'] : UpdateSellerOrderStatus::transitionsFor($sellerOrder->status)) : [],
+            $isOnHold ? ($canSupervise ? ['cancelled'] : []) : $this->transitionsFor($member, $sellerOrder->status),
         );
+        $canManageOrders = true;
 
         // The queue requests the detail fragment; a direct visit still gets the full page.
         if ($isModal) {
             return view('seller.orders._modal', [
                 'sellerOrder' => $sellerOrder,
                 'canManageOrders' => $canManageOrders,
+                'canSupervise' => $canSupervise,
                 'conversation' => Conversation::query()->where('buyer_id', $sellerOrder->order->user_id)->where('store_id', $sellerOrder->store_id)->first(),
             ]);
         }
@@ -89,7 +88,7 @@ class SellerOrderController extends Controller
             ? (int) $sellerOrder->order->user()->first()?->codRefusalCount()
             : 0;
 
-        return view('seller.orders.show', compact('sellerOrder', 'canManageOrders', 'buyerCodRefusals'));
+        return view('seller.orders.show', compact('sellerOrder', 'canManageOrders', 'canSupervise', 'buyerCodRefusals'));
     }
 
     /**
@@ -126,7 +125,8 @@ class SellerOrderController extends Controller
 
     public function update(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
-        $member = $this->membership($request, ['owner', 'manager']);
+        $member = $this->membership($request);
+        abort_if($request->input('status') === 'cancelled' && ! $this->canSupervise($member), 403);
         $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
 
         $sellerOrder->load('order');
@@ -150,7 +150,7 @@ class SellerOrderController extends Controller
 
     public function collectCod(Request $request, SellerOrder $sellerOrder, MarkCodPaymentPaid $action): RedirectResponse
     {
-        $member = $this->membership($request, ['owner', 'manager']);
+        $member = $this->membership($request);
         $sellerOrder = $member->sellerOrders()->whereKey($sellerOrder)->firstOrFail();
         try {
             $action->collectSellerOrder($request->user(), $sellerOrder, $request->ip());
@@ -175,7 +175,7 @@ class SellerOrderController extends Controller
 
     public function bulkConfirm(Request $request, UpdateSellerOrderStatus $updateStatus): RedirectResponse
     {
-        $member = $this->membership($request, ['owner', 'manager']);
+        $member = $this->membership($request);
         $data = $request->validate([
             'seller_order_ids' => ['required', 'array', 'min:1', 'max:40'],
             'seller_order_ids.*' => ['required', 'string', 'ulid'],
@@ -244,9 +244,24 @@ class SellerOrderController extends Controller
             ->latest();
     }
 
-    private function canManageOrders(TenantMember $member): bool
+    /**
+     * Owners and managers may cancel an order, remove a discount, or report a failed delivery.
+     * Every member moves their branch's orders forward: accept, prepare, hand over, record cash.
+     */
+    private function canSupervise(TenantMember $member): bool
     {
         return in_array($member->role, ['owner', 'manager'], true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function transitionsFor(TenantMember $member, string $status): array
+    {
+        return array_values(array_filter(
+            UpdateSellerOrderStatus::transitionsFor($status),
+            fn (string $next): bool => $next !== 'cancelled' || $this->canSupervise($member),
+        ));
     }
 
     /**

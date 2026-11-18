@@ -96,7 +96,7 @@
                         @if($sellerOrder->discount_amount > 0)
                             <div><dt>{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$sellerOrder->order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div>
                             <div><dt>Check ID at handover</dt><dd>{{ $sellerOrder->order->discount_card_name }} · {{ $sellerOrder->order->discount_card_number }}</dd></div>
-                            @unless(in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
+                            @unless(! ($canSupervise ?? false) || in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
                                 <div><dt>No valid ID?</dt><dd><form method="POST" action="{{ route('seller.orders.senior-pwd-discount.destroy', $sellerOrder) }}" data-confirm="Charge full price? The customer will pay ₱{{ number_format((float) bcadd((string) $sellerOrder->order->subtotal, (string) $sellerOrder->order->shipping_amount, 2), 2) }}." data-confirm-tone="danger">@csrf @method('DELETE')<button type="submit" class="font-semibold text-danger underline-offset-2 hover:underline">Remove discount</button></form></dd></div>
                             @endunless
                         @endif
@@ -151,7 +151,7 @@
                     </section>
                 @endif
 
-                @if ($canManageOrders && $sellerOrder->status === 'shipped' && ! $sellerOrder->issues->contains('status', 'open'))
+                @if (($canSupervise ?? false) && $sellerOrder->status === 'shipped' && ! $sellerOrder->issues->contains('status', 'open'))
                     <section class="sc-card sc-card-pad" aria-labelledby="failed-delivery-heading">
                         <h2 id="failed-delivery-heading" class="sc-card-title">Parcel didn't arrive?</h2>
                         <p class="mt-1 sc-card-note">If delivery failed or the customer refused it, report it here so the pharmacy can resolve the order. Otherwise it is automatically marked delivered on {{ ($sellerOrder->shipped_at ?? now())->copy()->addDays((int) config('marketplace.orders.auto_deliver_days'))->format('M j') }}.</p>

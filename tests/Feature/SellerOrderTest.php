@@ -169,7 +169,7 @@ class SellerOrderTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 0);
     }
 
-    public function test_staff_cannot_confirm_orders_in_bulk(): void
+    public function test_staff_can_confirm_orders_in_bulk(): void
     {
         [, $tenant, $store] = $this->seller();
         $staff = User::factory()->seller()->create(['email_verified_at' => now()]);
@@ -178,9 +178,9 @@ class SellerOrderTest extends TestCase
 
         $this->actingAs($staff)->post(route('seller.orders.bulk-confirm'), [
             'seller_order_ids' => [$sellerOrder->id],
-        ])->assertForbidden();
+        ])->assertRedirect(route('seller.orders.index'));
 
-        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'pending']);
+        $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'status' => 'confirmed']);
     }
 
     public function test_orders_page_counts_only_this_stores_delivered_orders_with_cash_to_collect(): void

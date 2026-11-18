@@ -32,9 +32,10 @@ class DashboardController extends Controller
                 ->toBase()
                 ->selectRaw("count(*) as total_orders, sum(case when status = 'pending' then 1 else 0 end) as pending_orders, sum(case when status = 'confirmed' then 1 else 0 end) as confirmed_orders, sum(case when status = 'processing' then 1 else 0 end) as processing_orders, sum(case when status = 'shipped' then 1 else 0 end) as shipped_orders, sum(case when status != 'cancelled' then total else 0 end) as sales_total")
                 ->first();
+            // A prescription sent back for a clearer photo waits on the customer, not the pharmacist.
             $waitingForPharmacist = fn (Builder $query): Builder => $query
                 ->where('status', 'pending')
-                ->whereHas('order.prescription', fn (Builder $prescription): Builder => $prescription->whereIn('status', ['pending', 'needs_photo']));
+                ->whereHas('order.prescription', fn (Builder $prescription): Builder => $prescription->where('status', 'pending'));
             $prescriptionsWaitingCount = $member->sellerOrders()->tap($waitingForPharmacist)->count();
             $customerCount = $member->sellerOrders()
                 ->join('orders', 'orders.id', '=', 'seller_orders.order_id')

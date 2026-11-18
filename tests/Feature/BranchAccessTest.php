@@ -36,6 +36,30 @@ class BranchAccessTest extends TestCase
         $this->actingAs($makatiStaff)->get(route('seller.orders.show', $makatiOrder))->assertOk();
     }
 
+    public function test_branch_staff_move_orders_forward_but_only_managers_cancel(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $order = $this->sellerOrder($makati, 'MAKATI-2001');
+        $staff = $this->member($tenant, 'staff', $makati);
+
+        $this->actingAs($staff)->get(route('seller.orders.show', $order))
+            ->assertOk()
+            ->assertViewHas('sellerOrder', fn ($sellerOrder): bool => $sellerOrder->available_transitions === ['confirmed']);
+
+        $this->actingAs($staff)
+            ->patch(route('seller.orders.update', $order), ['status' => 'cancelled'])
+            ->assertForbidden();
+        $this->actingAs($staff)
+            ->delete(route('seller.orders.senior-pwd-discount.destroy', $order))
+            ->assertForbidden();
+        $this->assertDatabaseHas('seller_orders', ['id' => $order->id, 'status' => 'pending']);
+
+        $this->actingAs($staff)
+            ->patch(route('seller.orders.update', $order), ['status' => 'confirmed'])
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('seller_orders', ['id' => $order->id, 'status' => 'confirmed']);
+    }
+
     public function test_head_office_sees_every_branch_order(): void
     {
         [$tenant, $makati, $cebu] = $this->pharmacy();

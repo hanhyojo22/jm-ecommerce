@@ -122,6 +122,8 @@ class SellerDashboardTest extends TestCase
         $buyer = User::factory()->create();
         $this->createSellerOrder($branch, $buyer, 'RX-1001', 'pending', 250);
         Prescription::create(['order_id' => Order::where('number', 'RX-1001')->value('id'), 'user_id' => $buyer->id, 'status' => 'pending']);
+        $this->createSellerOrder($branch, $buyer, 'RX-NEEDS-PHOTO', 'pending', 180);
+        Prescription::create(['order_id' => Order::where('number', 'RX-NEEDS-PHOTO')->value('id'), 'user_id' => $buyer->id, 'status' => 'needs_photo']);
         $this->createSellerOrder($headStore, $buyer, 'RX-OTHER-BRANCH', 'pending', 300);
         Prescription::create(['order_id' => Order::where('number', 'RX-OTHER-BRANCH')->value('id'), 'user_id' => $buyer->id, 'status' => 'pending']);
 
@@ -134,6 +136,8 @@ class SellerDashboardTest extends TestCase
             ->assertSee('1 prescription waiting for you')
             ->assertSee('RX-1001')
             ->assertDontSee('RX-OTHER-BRANCH')
+            ->assertViewHas('prescriptionQueue', fn ($queue): bool => $queue->map(fn ($sellerOrder) => $sellerOrder->order->number)->all() === ['RX-1001'])
+            ->assertSee(route('seller.branch-stock.index'), false)
             ->assertSee(route('seller.orders.index', ['review' => 'prescription']), false)
             ->assertSee('View only')
             ->assertDontSee('Sales overview')
@@ -170,6 +174,31 @@ class SellerDashboardTest extends TestCase
             ->assertSee('Sales overview')
             ->assertSee(route('seller.opening-hours.edit'), false)
             ->assertDontSee(route('seller.branches.index'), false);
+    }
+
+    public function test_head_office_compares_branches_and_head_office_staff_get_no_stock_link(): void
+    {
+        [$owner, $tenant, $headStore] = $this->seller();
+        $branch = Store::create(['tenant_id' => $tenant->id, 'name' => 'Northwind Ermita', 'slug' => 'northwind-ermita-'.str()->lower(str()->random(6)), 'phone' => '+639171234567', 'address_line' => '1 Taft Avenue', 'city' => 'Manila', 'status' => 'active']);
+        $buyer = User::factory()->create();
+        $this->createSellerOrder($branch, $buyer, 'BRANCH-1001', 'pending', 250);
+        Prescription::create(['order_id' => Order::where('number', 'BRANCH-1001')->value('id'), 'user_id' => $buyer->id, 'status' => 'pending']);
+
+        $this->actingAs($owner)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('Branches today')
+            ->assertViewHas('branches', fn ($branches): bool => $branches->count() === 2
+                && $branches->firstWhere('id', $branch->id)->pending_orders_count === 1
+                && $branches->firstWhere('id', $branch->id)->prescriptions_waiting_count === 1
+                && $branches->firstWhere('id', $headStore->id)->pending_orders_count === 0);
+
+        $headOfficeStaff = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $tenant->id, 'user_id' => $headOfficeStaff->id, 'role' => 'staff']);
+
+        $this->actingAs($headOfficeStaff)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertDontSee('Branches today')
+            ->assertDontSee(route('seller.branch-stock.index'), false);
     }
 
     public function test_license_status_warns_a_month_before_expiry(): void

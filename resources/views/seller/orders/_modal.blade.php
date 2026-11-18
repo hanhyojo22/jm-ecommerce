@@ -92,7 +92,7 @@
                 <div class="sc-clean-total"><dt>Total</dt><dd>₱{{ number_format($sellerOrder->total, 2) }}</dd></div>
             </dl>
             <p class="sc-clean-payment">{{ $methodLabel }} · {{ $paymentState }}</p>
-            @if ($canManageOrders && bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0 && ! in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
+            @if (($canSupervise ?? false) && bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0 && ! in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
                 <details class="sc-clean-adjustment"><summary>Discount details</summary>
                     <p>{{ $order->discount_card_name }} · {{ $order->discount_card_number }}</p>
                     <form method="POST" action="{{ route('seller.orders.senior-pwd-discount.destroy', $sellerOrder) }}" data-confirm="Remove the discount and charge full price?">
