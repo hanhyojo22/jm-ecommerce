@@ -27,7 +27,7 @@ class NotifySellersOfNewOrder
             return;
         }
 
-        $order->loadMissing('sellerOrders.store');
+        $order->loadMissing('sellerOrders.store', 'prescription');
 
         defer(function () use ($order): void {
             foreach ($order->sellerOrders as $sellerOrder) {
@@ -42,6 +42,12 @@ class NotifySellersOfNewOrder
 
         $title = "New order #{$order->number}";
         $body = "{$sellerOrder->store->name} received a new order worth PHP {$sellerOrder->total}.";
+
+        // Says so up front, so a pharmacist knows the order waits on them.
+        if ($order->prescription !== null) {
+            $title .= ' · prescription to review';
+            $body .= ' A pharmacist must check the prescription before it can be prepared.';
+        }
 
         foreach ($recipients as $recipient) {
             try {
@@ -62,7 +68,7 @@ class NotifySellersOfNewOrder
             try {
                 $this->mailer->send(
                     $recipient,
-                    "JMMart new order #{$order->number}",
+                    "JMMart {$title}",
                     $body."\n\nView the order: ".route('seller.orders.show', $sellerOrder->id),
                 );
             } catch (Throwable $exception) {

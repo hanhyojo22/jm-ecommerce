@@ -101,6 +101,15 @@ class PrescriptionTest extends TestCase
         $this->assertSame([], Storage::disk('chat_attachments')->allFiles());
     }
 
+    public function test_branch_staff_are_told_a_new_order_has_a_prescription_to_review(): void
+    {
+        $pharmacist = $this->member('staff', $this->branch, pharmacist: true);
+        $order = $this->checkOut();
+
+        $this->assertPushed("New order #{$order->number} · prescription to review", "{$this->branch->name} received a new order worth PHP {$order->sellerOrders()->sole()->total}. A pharmacist must check the prescription before it can be prepared.");
+        $this->assertSame("New order #{$order->number} · prescription to review", $pharmacist->notifications()->sole()->data['title']);
+    }
+
     public function test_the_order_waits_for_a_pharmacist_and_approving_accepts_it(): void
     {
         $sellerOrder = $this->checkOut()->sellerOrders()->sole();
