@@ -315,7 +315,7 @@
                             @if ($isListing && ! $sellerStore)
                                 <div>
                                     <h1 id="product-results-heading" class="marketplace-page-title">{{ filled($search) ? 'Results for “'.Str::limit($search, 40).'”' : (request('category') ? ($categories->firstWhere('slug', request('category'))?->name ?? 'All medicines') : 'All medicines') }}</h1>
-                                    <p class="marketplace-page-subtitle">In stock at your branch · {{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
+                                    <p class="marketplace-page-subtitle">In stock at your branch · {{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}@if ($searchIngredient) · Showing results for {{ $searchIngredient }} ({{ Str::limit($search, 40) }})@endif</p>
                                 </div>
                             @else
                                 <p class="self-center text-sm text-muted" role="status">{{ number_format($products->total()) }} {{ Str::plural('result', $products->total()) }}</p>
@@ -360,6 +360,9 @@
                             @if ($products->isNotEmpty())
                                 <div id="catalog-products" :data-view="viewMode" class="marketplace-product-grid">
                                     @foreach ($products as $product)
+                                        @if ($product->search_section !== null && $product->search_section !== ($loop->first ? null : $products[$loop->index - 1]->search_section))
+                                            <h2 class="col-span-full {{ $loop->first ? '' : 'mt-4' }} text-base font-semibold text-ink">{{ $product->search_section }}</h2>
+                                        @endif
                                         <x-marketplace.top-product-card :product="$product" :eager="! $sellerStore && $loop->index < 4" />
                                     @endforeach
                                 </div>

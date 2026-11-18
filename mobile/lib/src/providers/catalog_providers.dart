@@ -69,6 +69,7 @@ class ProductFeed {
     required this.total,
     this.loadingMore = false,
     this.loadMoreFailed = false,
+    this.searchIngredient,
   });
 
   final CatalogFilter filter;
@@ -78,6 +79,7 @@ class ProductFeed {
   final int total;
   final bool loadingMore;
   final bool loadMoreFailed;
+  final String? searchIngredient;
 
   bool get hasMore => page < lastPage;
 
@@ -96,6 +98,7 @@ class ProductFeed {
     total: total ?? this.total,
     loadingMore: loadingMore ?? this.loadingMore,
     loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
+    searchIngredient: searchIngredient,
   );
 }
 
@@ -121,6 +124,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
       page: page.page,
       lastPage: page.lastPage,
       total: page.total,
+      searchIngredient: page.searchIngredient,
     );
   }
 
@@ -168,6 +172,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
           page: next.page,
           lastPage: next.lastPage,
           total: next.total,
+          searchIngredient: current.searchIngredient,
         ),
       );
     } catch (_) {

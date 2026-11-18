@@ -792,6 +792,46 @@ void main() {
     expect(find.text('Nothing matches that search'), findsNothing);
   });
 
+  testWidgets(
+    'an ingredient search shows each result group under its heading',
+    (tester) async {
+      final api = _CatalogApi()
+        ..searchPage = ProductPage(
+          products: [
+            _product(1, name: 'Biogesic 500 mg Tablet'),
+            _product(
+              2,
+              name: 'RiteMED 500 mg Tablet',
+              searchSection: 'Other brands of Paracetamol',
+            ),
+            _product(
+              3,
+              name: 'Neozep Forte Tablet',
+              searchSection: 'Also contains Paracetamol',
+            ),
+          ],
+          page: 1,
+          lastPage: 1,
+          total: 3,
+          searchIngredient: 'Paracetamol',
+        );
+      await _pumpCatalog(tester, api);
+      await tester.enterText(find.byType(TextField), 'acetaminophen');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Showing results for Paracetamol (acetaminophen)'),
+        findsOneWidget,
+      );
+      expect(find.text('Other brands of Paracetamol'), findsOneWidget);
+      expect(find.text('Biogesic 500 mg Tablet'), findsOneWidget);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(find.text('Also contains Paracetamol'), findsOneWidget);
+    },
+  );
+
   testWidgets('top deals list only marked-down products, deepest first', (
     tester,
   ) async {
@@ -908,28 +948,30 @@ Future<void> _pumpCatalog(
   }
 }
 
-Product _product(int index, {String? name, String? slug, String? compareAt}) =>
-    Product(
-      id: '$index',
-      name: name ?? 'Everyday linen shirt with a long product name',
-      slug: slug ?? 'shirt-$index',
-      price: '55000.00',
-      effectivePrice: '55000.00',
-      compareAtPrice: compareAt,
-      inStock: true,
-      hasVariants: false,
-      requiresVariantSelection: false,
-      freeShipping: false,
-      stockQuantity: 3,
-      soldQuantity: 0,
-      ratingAverage: 4.8,
-      ratingCount: 12,
-      store: const StoreInfo(
-        id: 'store',
-        name: 'Independent store',
-        slug: 'store',
-      ),
-    );
+Product _product(
+  int index, {
+  String? name,
+  String? slug,
+  String? compareAt,
+  String? searchSection,
+}) => Product(
+  id: '$index',
+  searchSection: searchSection,
+  name: name ?? 'Everyday linen shirt with a long product name',
+  slug: slug ?? 'shirt-$index',
+  price: '55000.00',
+  effectivePrice: '55000.00',
+  compareAtPrice: compareAt,
+  inStock: true,
+  hasVariants: false,
+  requiresVariantSelection: false,
+  freeShipping: false,
+  stockQuantity: 3,
+  soldQuantity: 0,
+  ratingAverage: 4.8,
+  ratingCount: 12,
+  store: const StoreInfo(id: 'store', name: 'Independent store', slug: 'store'),
+);
 
 class _CatalogApi extends ApiClient {
   _CatalogApi()
@@ -943,6 +985,7 @@ class _CatalogApi extends ApiClient {
   List<Category>? categoryItems;
   List<Product> boughtBeforeProducts = const [];
   List<Product> elsewhereProducts = const [];
+  ProductPage? searchPage;
 
   @override
   Future<List<Product>> boughtBefore(String branch) async =>
@@ -1016,6 +1059,9 @@ class _CatalogApi extends ApiClient {
     lastQuery = query;
     lastCategory = category;
     lastSort = sort;
+    if (searchPage != null && (query?.isNotEmpty ?? false)) {
+      return searchPage!;
+    }
     if (page == 1) firstPageRequests++;
     if (page == 1 && failFirstPage) {
       throw const ApiException(

@@ -139,6 +139,7 @@ class ApiClient {
         page: integer(meta['current_page'], page),
         lastPage: integer(meta['last_page'], page),
         total: integer(meta['total']),
+        searchIngredient: mapOf(body['search'])['ingredient'] as String?,
       );
     } finally {
       if (identical(_productSearchCancelToken, cancelToken)) {

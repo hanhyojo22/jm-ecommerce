@@ -330,6 +330,7 @@ class Product {
     this.related = const [],
     this.moreFromStore = const [],
     this.cheaperAlternatives = const [],
+    this.searchSection,
   });
 
   final String id;
@@ -367,6 +368,9 @@ class Product {
   /// Cheaper products with the same generic name, strength and form, cheapest first.
   final List<Product> cheaperAlternatives;
 
+  /// Search-result heading this product falls under, e.g. "Other brands of Paracetamol".
+  final String? searchSection;
+
   factory Product.fromJson(Map<String, dynamic> json) {
     final rating = mapOf(json['rating']);
     final category = json['category'] == null
@@ -389,6 +393,7 @@ class Product {
       hasVariants: boolean(json['has_variants']),
       requiresVariantSelection: boolean(json['requires_variant_selection']),
       requiresPrescription: boolean(json['requires_prescription']),
+      searchSection: json['search_section'] as String?,
       branchName: mapOf(json['branch'])['name'] as String?,
       branchSlug: mapOf(json['branch'])['slug'] as String?,
       freeShipping: boolean(json['free_shipping']),
@@ -428,12 +433,16 @@ class ProductPage {
     required this.page,
     required this.lastPage,
     required this.total,
+    this.searchIngredient,
   });
 
   final List<Product> products;
   final int page;
   final int lastPage;
   final int total;
+
+  /// The ingredient an alias search reached, e.g. "Ascorbic Acid" for "vitamin c".
+  final String? searchIngredient;
 
   bool get hasMore => page < lastPage;
 }

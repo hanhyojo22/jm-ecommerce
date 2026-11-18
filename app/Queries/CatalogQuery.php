@@ -3,6 +3,7 @@
 namespace App\Queries;
 
 use App\Models\Category;
+use App\Models\IngredientAlias;
 use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Contracts\Cache\LockTimeoutException;
@@ -52,17 +53,18 @@ class CatalogQuery
             ->with('thumbnail')
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
-            ->where(function (Builder $query) use ($prefix, $wordMatch, $wordBindings, $useFullText, $search): void {
+            ->where(function (Builder $query) use ($prefix, $wordMatch, $wordBindings, $useFullText, $search, $escaped): void {
                 $query->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$prefix])
                     ->orWhereRaw($wordMatch, $wordBindings);
                 if ($useFullText && Str::length($search) >= 3) {
                     $query->orWhereRaw('LOWER(products.name) %>> ?', [$search]);
                 }
+                $query->orWhereRaw("LOWER(products.generic_name) LIKE ? ESCAPE '!'", ['%'.$escaped.'%']);
             });
 
-        $rank = "CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 WHEN {$wordMatch} THEN 2 ELSE 3 END";
+        $rank = "CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 WHEN {$wordMatch} THEN 2 WHEN LOWER(products.generic_name) LIKE ? ESCAPE '!' THEN 3 ELSE 4 END";
 
-        return $query->orderByRaw($rank, [$search, $prefix, ...$wordBindings])
+        return $query->orderByRaw($rank, [$search, $prefix, ...$wordBindings, '%'.$escaped.'%'])
             ->orderBy('products.name')
             ->orderBy('products.id')
             ->limit(8)
@@ -87,16 +89,20 @@ class CatalogQuery
      * @return array{
      *     products: LengthAwarePaginator,
      *     categories: Collection<int, Category>,
-     *     brands: Collection<int, string>
+     *     brands: Collection<int, string>,
+     *     search: array{ingredient: string|null}
      * }
      */
     public static function search(array $filters, ?Store $seller = null, int $perPage = 12, ?Store $branch = null): array
     {
         $search = trim($filters['q'] ?? '');
         $normalizedSearch = Str::lower($search);
-        $escapedSearch = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $normalizedSearch);
+        $escapedSearch = self::escapeLike($normalizedSearch);
         $searchPrefix = $escapedSearch.'%';
         $searchTerm = '%'.$escapedSearch.'%';
+        $ingredients = $search === '' ? null : self::ingredientSearch($search, $searchPrefix);
+        $genericMatch = $ingredients === null ? '1 = 0' : '('.implode(' OR ', array_fill(0, count($ingredients['terms']), "LOWER(products.generic_name) LIKE ? ESCAPE '!'")).')';
+        $genericBindings = $ingredients === null ? [] : array_map(fn (string $term): string => '%'.self::escapeLike($term).'%', $ingredients['terms']);
 
         $categoryProducts = self::publishedProducts()
             ->when($seller, fn (Builder $query) => $query->whereBelongsTo($seller))
@@ -108,6 +114,7 @@ class CatalogQuery
                 ->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$searchTerm])
                 ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$searchTerm])
                 ->orWhereRaw("LOWER(products.brand) LIKE ? ESCAPE '!'", [$searchTerm])
+                ->orWhereRaw($genericMatch, $genericBindings)
                 ->orWhereHas('store', fn (Builder $store) => $store
                     ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
                     ->orWhereHas('tenant', fn (Builder $tenant) => $tenant
@@ -137,6 +144,34 @@ class CatalogQuery
         // shortcut: facets stay company-wide even when a branch narrows the list; scope them per branch if filters show empty choices.
         if ($branch !== null) {
             self::inStockAt($products, $branch);
+        }
+
+        // Relevance search on an ingredient groups results: what was typed, other brands of it, combinations, the rest.
+        $grouped = $ingredients !== null && ($filters['sort'] ?? 'relevance') === 'relevance';
+        $hasIngredientSections = false;
+        if ($grouped) {
+            $sameMedicine = $ingredients['brand_generic'] === null ? '1 = 0' : 'LOWER(products.generic_name) = ?';
+            $groupSql = <<<SQL
+                CASE
+                    WHEN LOWER(products.name) = ? OR LOWER(products.name) LIKE ? ESCAPE '!' OR LOWER(products.brand) = ? THEN 0
+                    WHEN {$sameMedicine} OR ({$genericMatch} AND products.generic_name NOT LIKE '%+%') THEN 1
+                    WHEN {$genericMatch} THEN 2
+                    ELSE 3
+                END
+            SQL;
+            $groupBindings = [
+                $normalizedSearch, $searchPrefix, $normalizedSearch,
+                ...array_filter([$ingredients['brand_generic']]),
+                ...$genericBindings, ...$genericBindings,
+            ];
+            $hasIngredientSections = $products->toBase()->cloneWithout(['columns', 'orders'])->cloneWithoutBindings(['select', 'order'])
+                ->whereRaw("({$groupSql}) IN (1, 2)", $groupBindings)->exists();
+            if ($hasIngredientSections) {
+                $products->selectRaw("({$groupSql}) AS search_group", $groupBindings)->orderByRaw($groupSql, $groupBindings);
+                foreach (['LOWER(products.generic_name)', 'LOWER(products.strength)', 'LOWER(products.dosage_form)', 'products.price'] as $column) {
+                    $products->orderByRaw("CASE WHEN ({$groupSql}) IN (1, 2) THEN {$column} END", $groupBindings);
+                }
+            }
         }
 
         match ($filters['sort'] ?? 'relevance') {
@@ -173,11 +208,91 @@ class CatalogQuery
             ->get();
         $categories->each(fn (Category $category) => $category->setAttribute('product_count', $categoryCounts->get($category->id, 0)));
 
+        $paginator = $products->paginate($perPage)->withQueryString();
+        if ($hasIngredientSections) {
+            $paginator->getCollection()->each(fn (Product $product) => $product->setAttribute('search_section', match ((int) $product->search_group) {
+                0 => null,
+                1 => 'Other brands of '.self::withoutParenthetical($product->generic_name),
+                2 => 'Also contains '.self::containedIngredient($product->generic_name, $ingredients),
+                default => 'Other results',
+            }));
+        }
+
         return [
-            'products' => $products->paginate($perPage)->withQueryString(),
+            'products' => $paginator,
             'categories' => $categories,
             'brands' => $brands,
+            'search' => ['ingredient' => $ingredients['alias_of'] ?? null],
         ];
+    }
+
+    /**
+     * What an ingredient search should also match in `generic_name`: the generic of the brand
+     * the shopper typed (so "Biogesic" also finds other paracetamol), and the ingredient and
+     * every alias of either (so "vitamin c" also finds sodium ascorbate).
+     *
+     * @return array{terms: list<string>, brand_generic: string|null, label: string, alias_of: string|null}
+     */
+    private static function ingredientSearch(string $search, string $searchPrefix): array
+    {
+        $normalizedSearch = Str::lower($search);
+        $brandGeneric = Str::length($normalizedSearch) < 3 ? null : self::publishedProducts()
+            ->whereNotNull('generic_name')
+            ->where('generic_name', '!=', '')
+            ->where(fn (Builder $query) => $query
+                ->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$searchPrefix])
+                ->orWhereRaw('LOWER(products.brand) = ?', [$normalizedSearch]))
+            ->orderByRaw('CASE WHEN LOWER(products.name) = ? OR LOWER(products.brand) = ? THEN 0 ELSE 1 END', [$normalizedSearch, $normalizedSearch])
+            ->orderByRaw('LENGTH(products.name)')
+            ->value('generic_name');
+        $generic = $brandGeneric === null ? null : self::withoutParenthetical($brandGeneric);
+        $names = array_values(array_unique(array_filter([$normalizedSearch, Str::lower((string) $generic)])));
+
+        $aliases = IngredientAlias::query()
+            ->whereIn('ingredient', IngredientAlias::query()->select('ingredient')
+                ->whereIn('alias', $names)
+                ->orWhereRaw('LOWER(ingredient) IN ('.implode(', ', array_fill(0, count($names), '?')).')', $names))
+            ->get(['alias', 'ingredient']);
+        $ingredient = $aliases->first()?->ingredient;
+
+        return [
+            'terms' => collect($names)
+                ->merge($aliases->pluck('alias'))
+                ->push(Str::lower((string) $ingredient))
+                ->filter()->unique()->values()->all(),
+            'brand_generic' => $brandGeneric === null ? null : Str::lower(trim($brandGeneric)),
+            'label' => $ingredient ?? $generic ?? Str::ucfirst($search),
+            'alias_of' => $aliases->firstWhere('alias', $normalizedSearch)?->ingredient,
+        ];
+    }
+
+    /**
+     * The searched ingredient as this combination's own generic name spells it, so "Sodium
+     * Ascorbate + Zinc" found through "vitamin c" says Sodium Ascorbate, not Ascorbic Acid.
+     *
+     * @param  array{terms: list<string>, label: string}  $ingredients
+     */
+    private static function containedIngredient(string $genericName, array $ingredients): string
+    {
+        foreach ($ingredients['terms'] as $term) {
+            $position = mb_stripos($genericName, $term);
+            if ($position !== false) {
+                return mb_substr($genericName, $position, mb_strlen($term));
+            }
+        }
+
+        return $ingredients['label'];
+    }
+
+    /** "Ascorbic Acid (Vitamin C)" → "Ascorbic Acid". */
+    private static function withoutParenthetical(string $value): string
+    {
+        return trim(preg_replace('/\s*\([^)]*\)/', '', $value));
+    }
+
+    private static function escapeLike(string $value): string
+    {
+        return str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $value);
     }
 
     private static function orderByRelevance(
@@ -195,11 +310,12 @@ class CatalogQuery
                         WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 2
                         WHEN LOWER(products.brand) = ? THEN 3
                         WHEN LOWER(products.brand) LIKE ? ESCAPE '!' THEN 4
-                        WHEN LOWER(products.description) LIKE ? ESCAPE '!' THEN 5
-                        ELSE 6
+                        WHEN LOWER(products.generic_name) LIKE ? ESCAPE '!' THEN 5
+                        WHEN LOWER(products.description) LIKE ? ESCAPE '!' THEN 6
+                        ELSE 7
                     END
                 SQL,
-                [$search, $searchPrefix, $searchTerm, $search, $searchTerm, $searchTerm],
+                [$search, $searchPrefix, $searchTerm, $search, $searchTerm, $searchTerm, $searchTerm],
             )
             ->orderByDesc('products.created_at')
             ->orderBy('products.id');

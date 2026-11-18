@@ -804,57 +804,38 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           ),
         ),
       ),
-      // Masonry like marketplace feeds: each column stacks on its own, so cards
-      // hug their details instead of sharing a row height.
-      // shortcut: products alternate columns rather than filling the shorter one; balance by height if the column ends drift noticeably.
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        sliver: SliverCrossAxisGroup(
-          slivers: [
-            for (
-              var column = 0;
-              column < gridDelegate.crossAxisCount;
-              column++
-            ) ...[
-              if (column > 0)
-                SliverConstrainedCrossAxis(
-                  maxExtent: gridDelegate.crossAxisSpacing,
-                  sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
-                ),
-              SliverCrossAxisExpanded(
-                flex: 1,
-                sliver: SliverList.builder(
-                  itemCount:
-                      (products.length -
-                          column +
-                          gridDelegate.crossAxisCount -
-                          1) ~/
-                      gridDelegate.crossAxisCount,
-                  itemBuilder: (context, row) {
-                    final product =
-                        products[row * gridDelegate.crossAxisCount + column];
-
-                    return Padding(
-                      key: ValueKey(product.id),
-                      padding: EdgeInsets.only(
-                        bottom: gridDelegate.mainAxisSpacing,
-                      ),
-                      child: ProductCard(
-                        product: product,
-                        discovery: true,
-                        showAddToCart: true,
-                        onTap: () => context.push(
-                          '/product/${product.store?.slug ?? ''}/${product.slug}',
-                        ),
-                      ),
-                    );
-                  },
+      if (feed.searchIngredient != null)
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          sliver: SliverToBoxAdapter(
+            child: Text(
+              'Showing results for ${feed.searchIngredient} (${feed.filter.query})',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      // An ingredient search comes back grouped ("Other brands of …", "Also contains …");
+      // each group gets its heading and its own masonry block.
+      for (final (index, section) in _searchSections(products).indexed) ...[
+        if (section.first.searchSection != null)
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, index == 0 ? 0 : 4, 16, 12),
+            sliver: SliverToBoxAdapter(
+              child: Semantics(
+                header: true,
+                child: Text(
+                  section.first.searchSection!,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ],
-          ],
-        ),
-      ),
+            ),
+          ),
+        _productMasonry(section, gridDelegate),
+      ],
       if (feed.loadMoreFailed)
         SliverToBoxAdapter(
           child: Padding(
@@ -908,6 +889,78 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           ),
         ),
     ];
+  }
+
+  /// Consecutive products that share a search heading. One run when nothing is grouped.
+  List<List<Product>> _searchSections(List<Product> products) {
+    final sections = <List<Product>>[];
+    for (final product in products) {
+      if (sections.isEmpty ||
+          sections.last.first.searchSection != product.searchSection) {
+        sections.add([product]);
+      } else {
+        sections.last.add(product);
+      }
+    }
+
+    return sections;
+  }
+
+  // Masonry like marketplace feeds: each column stacks on its own, so cards
+  // hug their details instead of sharing a row height.
+  // shortcut: products alternate columns rather than filling the shorter one; balance by height if the column ends drift noticeably.
+  Widget _productMasonry(
+    List<Product> products,
+    SliverGridDelegateWithFixedCrossAxisCount gridDelegate,
+  ) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      sliver: SliverCrossAxisGroup(
+        slivers: [
+          for (
+            var column = 0;
+            column < gridDelegate.crossAxisCount;
+            column++
+          ) ...[
+            if (column > 0)
+              SliverConstrainedCrossAxis(
+                maxExtent: gridDelegate.crossAxisSpacing,
+                sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
+              ),
+            SliverCrossAxisExpanded(
+              flex: 1,
+              sliver: SliverList.builder(
+                itemCount:
+                    (products.length -
+                        column +
+                        gridDelegate.crossAxisCount -
+                        1) ~/
+                    gridDelegate.crossAxisCount,
+                itemBuilder: (context, row) {
+                  final product =
+                      products[row * gridDelegate.crossAxisCount + column];
+
+                  return Padding(
+                    key: ValueKey(product.id),
+                    padding: EdgeInsets.only(
+                      bottom: gridDelegate.mainAxisSpacing,
+                    ),
+                    child: ProductCard(
+                      product: product,
+                      discovery: true,
+                      showAddToCart: true,
+                      onTap: () => context.push(
+                        '/product/${product.store?.slug ?? ''}/${product.slug}',
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   List<Widget> _productSkeletonSlivers(

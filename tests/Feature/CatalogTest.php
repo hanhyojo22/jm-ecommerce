@@ -97,6 +97,17 @@ class CatalogTest extends TestCase
             ->assertSee('InStock');
     }
 
+    public function test_shop_search_shows_the_ingredient_it_searched_and_groups_other_brands(): void
+    {
+        $this->product(['name' => 'Ceelin Drops', 'generic_name' => 'Ascorbic Acid']);
+        $this->product(['name' => 'Fern-C Capsule', 'generic_name' => 'Sodium Ascorbate']);
+
+        $this->get(route('catalog.index', ['q' => 'vitamin c']))
+            ->assertOk()
+            ->assertSee('Showing results for Ascorbic Acid (vitamin c)')
+            ->assertSeeInOrder(['Other brands of Ascorbic Acid', 'Ceelin Drops', 'Other brands of Sodium Ascorbate', 'Fern-C Capsule']);
+    }
+
     public function test_product_page_only_promises_free_shipping_when_the_product_has_it(): void
     {
         $paidShipping = $this->product(['free_shipping' => false]);

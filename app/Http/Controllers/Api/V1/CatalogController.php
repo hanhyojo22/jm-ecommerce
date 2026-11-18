@@ -57,6 +57,7 @@ class CatalogController extends Controller
                     'categories' => CategoryResource::collection($catalog['categories'])->resolve($request),
                     'brands' => $catalog['brands']->values()->all(),
                 ],
+                'search' => $catalog['search'],
             ])
             ->response($request);
     }

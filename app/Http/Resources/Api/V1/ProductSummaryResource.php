@@ -58,6 +58,8 @@ class ProductSummaryResource extends JsonResource
             ],
             'sold_quantity' => (int) ($this->sold_quantity ?? 0),
             'net_quantity_sold' => $this->when(isset($this->net_quantity_sold), fn (): int => (int) $this->net_quantity_sold),
+            // Heading of the search-result group this product starts or continues, e.g. "Other brands of Paracetamol".
+            'search_section' => $this->when(isset($this->search_section), fn (): string => $this->search_section),
         ];
     }
 

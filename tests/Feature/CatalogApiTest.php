@@ -177,6 +177,23 @@ class CatalogApiTest extends TestCase
             ->assertJsonMissingPath('data.0.pickup_address');
     }
 
+    public function test_an_alias_search_returns_section_headings_and_the_ingredient_it_searched(): void
+    {
+        $ascorbicAcid = $this->product(['name' => 'Ceelin Drops', 'generic_name' => 'Ascorbic Acid']);
+        $this->product(['name' => 'Fern-C Capsule', 'generic_name' => 'Sodium Ascorbate']);
+
+        $this->getJson('/api/v1/products?q=vitamin+c')
+            ->assertOk()
+            ->assertJsonPath('search.ingredient', 'Ascorbic Acid')
+            ->assertJsonPath('data.0.id', $ascorbicAcid->id)
+            ->assertJsonPath('data.0.search_section', 'Other brands of Ascorbic Acid')
+            ->assertJsonPath('data.1.search_section', 'Other brands of Sodium Ascorbate');
+
+        $this->getJson('/api/v1/products/suggestions?q=ascorbate')
+            ->assertOk()
+            ->assertJsonPath('items.0.name', 'Fern-C Capsule');
+    }
+
     public function test_suggestions_and_top_products_are_public(): void
     {
         $product = $this->product(['name' => 'Copper Headphones', 'price' => '299.00']);

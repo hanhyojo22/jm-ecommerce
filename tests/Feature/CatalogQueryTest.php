@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\BranchStock;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
@@ -97,6 +98,84 @@ class CatalogQueryTest extends TestCase
             [$exact->id, $prefix->id, $description->id],
             $result['products']->getCollection()->pluck('id')->all(),
         );
+    }
+
+    public function test_search_matches_generic_names_and_their_aliases(): void
+    {
+        $store = $this->store();
+        $biogesic = $this->product($store, ['name' => 'Biogesic 500 mg Tablet', 'generic_name' => 'Paracetamol']);
+        $ascorbicAcid = $this->product($store, ['name' => 'Ceelin Drops', 'generic_name' => 'Ascorbic Acid (Vitamin C)']);
+        $sodiumAscorbate = $this->product($store, ['name' => 'Fern-C 500 mg Capsule', 'generic_name' => 'Sodium Ascorbate']);
+        $this->product($store, ['name' => 'Cotton balls']);
+
+        $ids = fn (string $search): array => CatalogQuery::search(['q' => $search])['products']->getCollection()->pluck('id')->sort()->values()->all();
+
+        $this->assertSame([$biogesic->id], $ids('paracetamol'));
+        $this->assertSame([$biogesic->id], $ids('Acetaminophen'));
+        $this->assertEqualsCanonicalizing([$ascorbicAcid->id, $sodiumAscorbate->id], $ids('vitamin c'));
+        $this->assertSame('Ascorbic Acid', CatalogQuery::search(['q' => 'vitamin c'])['search']['ingredient']);
+        $this->assertNull(CatalogQuery::search(['q' => 'paracetamol'])['search']['ingredient']);
+    }
+
+    public function test_a_combination_reached_through_an_alias_names_its_own_ingredient(): void
+    {
+        $store = $this->store();
+        $this->product($store, ['name' => 'Ceelin Drops', 'generic_name' => 'Ascorbic Acid']);
+        $combination = $this->product($store, ['name' => 'Immunpro Tablet', 'generic_name' => 'Sodium Ascorbate + Zinc']);
+
+        $products = CatalogQuery::search(['q' => 'vitamin c'])['products']->getCollection()->keyBy('id');
+
+        $this->assertSame('Also contains Sodium Ascorbate', $products[$combination->id]->search_section);
+    }
+
+    public function test_a_brand_the_branch_lacks_still_lists_other_brands_the_branch_has(): void
+    {
+        $branch = $this->store();
+        $this->product($branch, ['name' => 'Biogesic 500 mg Tablet', 'generic_name' => 'Paracetamol']);
+        $ritemed = $this->product($branch, ['name' => 'RiteMED 500 mg Tablet', 'generic_name' => 'Paracetamol']);
+        BranchStock::create(['store_id' => $branch->id, 'product_id' => $ritemed->id, 'variant_key' => 'default', 'quantity' => 4]);
+
+        $products = CatalogQuery::search(['q' => 'biogesic'], branch: $branch)['products']->getCollection();
+
+        $this->assertSame([$ritemed->id], $products->pluck('id')->all());
+        $this->assertSame(['Other brands of Paracetamol'], $products->pluck('search_section')->all());
+    }
+
+    public function test_brand_search_lists_the_brand_then_other_brands_then_combinations(): void
+    {
+        $store = $this->store();
+        $biogesic = $this->product($store, ['name' => 'Biogesic 500 mg Tablet', 'generic_name' => 'Paracetamol', 'price' => 5.50]);
+        $tempra = $this->product($store, ['name' => 'Tempra 500 mg Tablet', 'generic_name' => 'Paracetamol', 'price' => 8]);
+        $ritemed = $this->product($store, ['name' => 'RiteMED 500 mg Tablet', 'generic_name' => 'Paracetamol', 'price' => 2.75]);
+        $neozep = $this->product($store, ['name' => 'Neozep Forte Tablet', 'generic_name' => 'Phenylephrine HCl + Paracetamol', 'price' => 6]);
+        $organizer = $this->product($store, ['name' => 'Pill organizer', 'description' => 'Fits a Biogesic strip.']);
+        $this->product($store, ['name' => 'Losartan 50 mg', 'generic_name' => 'Losartan Potassium']);
+
+        $products = CatalogQuery::search(['q' => 'biogesic'])['products']->getCollection();
+
+        $this->assertSame(
+            [$biogesic->id, $ritemed->id, $tempra->id, $neozep->id, $organizer->id],
+            $products->pluck('id')->all(),
+        );
+        $this->assertSame(
+            [null, 'Other brands of Paracetamol', 'Other brands of Paracetamol', 'Also contains Paracetamol', 'Other results'],
+            $products->pluck('search_section')->all(),
+        );
+        $this->assertSame(
+            [$ritemed->id, $biogesic->id, $neozep->id, $tempra->id, $organizer->id],
+            CatalogQuery::search(['q' => 'biogesic', 'sort' => 'price_asc'])['products']->getCollection()->pluck('id')->all(),
+        );
+    }
+
+    public function test_search_without_ingredient_matches_has_no_sections(): void
+    {
+        $store = $this->store();
+        $this->product($store, ['name' => 'Arc Keyboard']);
+        $this->product($store, ['name' => 'Stand', 'description' => 'For an arc keyboard.']);
+
+        $products = CatalogQuery::search(['q' => 'arc'])['products']->getCollection();
+
+        $this->assertSame([null, null], $products->pluck('search_section')->all());
     }
 
     public function test_search_treats_sql_wildcards_as_literal_characters(): void

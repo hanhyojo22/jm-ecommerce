@@ -357,6 +357,7 @@ class CatalogController extends Controller
             'recommendedProducts' => $recommendedProducts,
             'brands' => $catalog['brands'],
             'search' => trim($filters['q'] ?? ''),
+            'searchIngredient' => $catalog['search']['ingredient'],
             'sellerStore' => $seller,
             'filterStores' => $seller ? collect() : $this->publicStores()
                 ->whereHas('products', fn (Builder $query) => $query->where('status', 'active'))
