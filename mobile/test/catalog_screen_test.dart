@@ -245,6 +245,21 @@ void main() {
     expect(find.text('Results for “l”').hitTestable(), findsOneWidget);
   });
 
+  testWidgets('emptying the search box returns to the shop', (tester) async {
+    final api = _CatalogApi();
+    await _pumpCatalog(tester, api);
+    await tester.enterText(find.byType(TextField), 'l');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+    expect(find.text('Results for “l”'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Results for “l”'), findsNothing);
+    expect(api.lastQuery, isEmpty);
+  });
+
   test('overlapping pages do not repeat a product in the feed', () async {
     final api = _CatalogApi()..paginated = true;
     final container = ProviderContainer(

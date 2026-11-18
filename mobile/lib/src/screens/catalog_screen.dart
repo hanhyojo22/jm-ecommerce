@@ -120,6 +120,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   void _onSearchChanged(String value) {
     _suggestDebounce?.cancel();
     final query = value.trim();
+    // Emptying the box ends the search; the clear button is gone by then, so nothing else would.
+    if (query.isEmpty && ref.read(catalogFilterProvider).query.isNotEmpty) {
+      ref.read(catalogFilterProvider.notifier).setQuery('');
+    }
     if (query.length < _suggestionMinLength) {
       _hideSuggestions();
       return;
