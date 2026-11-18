@@ -84,12 +84,14 @@ test('head office adds a pharmacist to a branch from the Staff page', async ({ b
         await page.getByRole('combobox', { name: 'Role', exact: true }).selectOption('staff');
         await page.getByRole('combobox', { name: 'Works at' }).selectOption({ label: 'QA Northwind Store' });
         await page.getByRole('checkbox', { name: 'Pharmacist' }).first().check();
+        await page.getByRole('textbox', { name: 'PRC license no.', exact: true }).fill('0123456');
+        await page.getByLabel('License valid until', { exact: true }).fill('2030-12-31');
         await page.getByRole('button', { name: 'Add employee' }).click();
 
         await expect(page.getByRole('status')).toContainText(`Added ${email}`);
         const employee = page.getByRole('list', { name: 'Employees' }).getByRole('listitem').filter({ hasText: email });
         await expect(employee).toContainText('QA Northwind Store');
-        await expect(employee).toContainText('Pharmacist');
+        await expect(employee).toContainText('PRC 0123456');
     } finally {
         await context.close();
     }

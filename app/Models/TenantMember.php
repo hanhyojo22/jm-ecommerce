@@ -12,11 +12,27 @@ class TenantMember extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['tenant_id', 'store_id', 'user_id', 'role', 'is_pharmacist'];
+    protected $fillable = ['tenant_id', 'store_id', 'user_id', 'role', 'is_pharmacist', 'license_number', 'license_expires_on'];
 
     protected function casts(): array
     {
-        return ['is_pharmacist' => 'boolean'];
+        return ['is_pharmacist' => 'boolean', 'license_expires_on' => 'date'];
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === 'owner';
+    }
+
+    /**
+     * Only a pharmacist with a PRC license on file that has not expired may open or decide prescriptions (RA 10918).
+     */
+    public function canReviewPrescriptions(): bool
+    {
+        return $this->is_pharmacist
+            && filled($this->license_number)
+            && $this->license_expires_on !== null
+            && ! $this->license_expires_on->isBefore(today());
     }
 
     public function tenant(): BelongsTo

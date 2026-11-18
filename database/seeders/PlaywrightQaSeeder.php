@@ -139,7 +139,7 @@ class PlaywrightQaSeeder extends Seeder
             'status' => 'active',
         ]);
 
-        TenantMember::query()->create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner', 'is_pharmacist' => true]);
+        TenantMember::query()->create(['tenant_id' => $tenant->id, 'user_id' => $seller->id, 'role' => 'owner', 'is_pharmacist' => true, 'license_number' => '0000001', 'license_expires_on' => now()->addYears(3)]);
 
         return [$tenant, $store];
     }

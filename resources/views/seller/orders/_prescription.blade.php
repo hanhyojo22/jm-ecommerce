@@ -1,6 +1,7 @@
 {{-- Shown on an order with a prescription medicine. Only pharmacists can open the pages or decide. --}}
 @php($prescription = $sellerOrder->order->prescription)
-@php($canReviewPrescription = $prescription !== null && (auth()->user()->sellerMembership()?->is_pharmacist ?? false))
+@php($viewerMembership = auth()->user()->sellerMembership())
+@php($canReviewPrescription = $prescription !== null && ($viewerMembership?->canReviewPrescriptions() ?? false))
 @if ($prescription)
     <section class="sc-notice !block {{ $class ?? '' }}" data-tone="{{ ['pending' => 'warning', 'approved' => 'info', 'rejected' => 'danger', 'needs_photo' => 'warning'][$prescription->status] ?? 'info' }}" aria-labelledby="prescription-heading-{{ $sellerOrder->id }}">
         <h2 id="prescription-heading-{{ $sellerOrder->id }}" class="font-semibold">
@@ -9,7 +10,10 @@
         @if ($prescription->status === 'pending')
             <p class="mt-1">This order has a prescription medicine. A pharmacist must approve the customer’s prescription before the order can be prepared. Approving accepts the order.</p>
         @elseif ($prescription->reviewer)
-            <p class="mt-1">{{ $prescription->status === 'needs_photo' ? 'Clearer photo asked for' : ucfirst($prescription->status) }} by {{ $prescription->reviewer->name }} on {{ $prescription->reviewed_at->format('M j, Y · g:i A') }}.@if ($prescription->reason) Reason: {{ $prescription->reason }}@endif</p>
+            <p class="mt-1">{{ $prescription->status === 'needs_photo' ? 'Clearer photo asked for' : ucfirst($prescription->status) }} by {{ $prescription->reviewer->name }}@if ($prescription->reviewer_license_number) (PRC license {{ $prescription->reviewer_license_number }})@endif on {{ $prescription->reviewed_at->format('M j, Y · g:i A') }}.@if ($prescription->reason) Reason: {{ $prescription->reason }}@endif</p>
+        @endif
+        @if ($viewerMembership?->is_pharmacist && ! $canReviewPrescription)
+            <p class="mt-2 font-semibold">Your PRC license is missing or expired, so you cannot open or decide prescriptions. Ask the owner to update it on the Staff page.</p>
         @endif
         @if ($canReviewPrescription)
             <p class="mt-2 font-semibold">Prescription pages ({{ $prescription->images->count() }})</p>

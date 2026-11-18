@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Seller;
 use App\Actions\AddStaffMember;
 use App\Actions\ChangeStaffMember;
 use App\Actions\RemoveStaffMember;
+use App\Actions\TransferOwnership;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class StaffController extends Controller
@@ -21,15 +23,18 @@ class StaffController extends Controller
         return view('seller.staff.index', [
             'members' => $tenant->members()->with(['user', 'store'])->orderByRaw("CASE role WHEN 'owner' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END")->oldest()->get(),
             'branches' => $tenant->stores()->orderBy('name')->get(['id', 'name']),
+            'isOwner' => $this->actor($request)->isOwner(),
         ]);
     }
 
     public function store(Request $request, AddStaffMember $addStaffMember): RedirectResponse
     {
         $tenant = $this->headOffice($request);
-        $details = [...$request->validate(['email' => ['required', 'email', 'max:255'], ...$this->assignmentRules()]), 'is_pharmacist' => $request->boolean('is_pharmacist')];
+        $actor = $this->actor($request);
+        $details = [...$request->validate(['email' => ['required', 'email', 'max:255'], ...$this->assignmentRules($actor)]), ...$this->pharmacistDetails($request, $actor)];
         $details['store_id'] ??= null;
         AddStaffMember::assertOwnBranch($tenant, $details['store_id']);
+        $this->assertMayAssignHeadOffice($actor, $details['store_id']);
 
         $addStaffMember->handle($request->user(), $tenant, $details, $request->ip());
 
@@ -39,10 +44,22 @@ class StaffController extends Controller
     public function update(Request $request, TenantMember $member, ChangeStaffMember $changeStaffMember): RedirectResponse
     {
         $tenant = $this->headOffice($request);
+        $actor = $this->actor($request);
         $member = $tenant->members()->whereKey($member)->firstOrFail();
-        $details = [...$request->validate($this->assignmentRules()), 'is_pharmacist' => $request->boolean('is_pharmacist')];
+
+        // The owner keeps their role and branch; this only updates their own pharmacist license.
+        if ($actor->isOwner() && $member->is($actor)) {
+            $request->validate($this->pharmacistRules());
+            $changeStaffMember->handle($request->user(), $member, ['role' => 'owner', 'store_id' => null, ...$this->pharmacistDetails($request, $actor)], $request->ip());
+
+            return to_route('seller.staff.index')->with('status', 'Your pharmacist license was updated.');
+        }
+
+        $this->assertMayManage($actor, $member);
+        $details = [...$request->validate($this->assignmentRules($actor)), ...$this->pharmacistDetails($request, $actor, $member)];
         $details['store_id'] ??= null;
         AddStaffMember::assertOwnBranch($tenant, $details['store_id']);
+        $this->assertMayAssignHeadOffice($actor, $details['store_id']);
 
         $changeStaffMember->handle($request->user(), $member, $details, $request->ip());
 
@@ -53,24 +70,99 @@ class StaffController extends Controller
     {
         $tenant = $this->headOffice($request);
         $member = $tenant->members()->whereKey($member)->firstOrFail();
+        $this->assertMayManage($this->actor($request), $member);
 
         $removeStaffMember->handle($request->user(), $member, $request->ip());
 
         return to_route('seller.staff.index')->with('status', 'Employee removed.');
     }
 
+    public function transferOwnership(Request $request, TenantMember $member, TransferOwnership $transferOwnership): RedirectResponse
+    {
+        $tenant = $this->headOffice($request);
+        abort_unless($this->actor($request)->isOwner(), 403);
+        $member = $tenant->members()->with('user')->whereKey($member)->firstOrFail();
+        $request->validate(['confirm_email' => ['required', 'string']]);
+
+        // Typing the new owner's email is the deliberate step, like Shopify's password check.
+        if (strcasecmp(trim($request->string('confirm_email')->toString()), (string) $member->user?->email) !== 0) {
+            throw ValidationException::withMessages(['confirm_email' => 'Type the new owner’s email exactly to confirm.']);
+        }
+
+        $transferOwnership->handle($request->user(), $member, $request->ip());
+
+        return to_route('seller.staff.index')->with('status', "{$member->user->email} now owns the pharmacy. You stay on as a head-office manager.");
+    }
+
     /** @return array<string, list<string>> */
-    private function assignmentRules(): array
+    private function assignmentRules(TenantMember $actor): array
     {
         return [
             'role' => ['required', 'in:manager,staff'],
             'store_id' => ['nullable', 'string'],
-            'is_pharmacist' => ['nullable', 'boolean'],
+            ...($actor->isOwner() ? $this->pharmacistRules() : []),
         ];
+    }
+
+    /** @return array<string, list<string>> */
+    private function pharmacistRules(): array
+    {
+        return [
+            'is_pharmacist' => ['nullable', 'boolean'],
+            'license_number' => ['nullable', 'required_if_accepted:is_pharmacist', 'regex:/^\d{1,20}$/'],
+            'license_expires_on' => ['nullable', 'required_if_accepted:is_pharmacist', 'date', 'after_or_equal:today'],
+        ];
+    }
+
+    /**
+     * Only the owner grants or changes the pharmacist role. Anyone else keeps the employee's current
+     * pharmacist details (none for a new employee), so moving a pharmacist between branches keeps their license.
+     *
+     * @return array{is_pharmacist: bool, license_number: ?string, license_expires_on: ?string}
+     */
+    private function pharmacistDetails(Request $request, TenantMember $actor, ?TenantMember $member = null): array
+    {
+        if (! $actor->isOwner()) {
+            return [
+                'is_pharmacist' => (bool) $member?->is_pharmacist,
+                'license_number' => $member?->license_number,
+                'license_expires_on' => $member?->license_expires_on?->toDateString(),
+            ];
+        }
+
+        $isPharmacist = $request->boolean('is_pharmacist');
+
+        return [
+            'is_pharmacist' => $isPharmacist,
+            'license_number' => $isPharmacist ? $request->string('license_number')->toString() : null,
+            'license_expires_on' => $isPharmacist ? $request->string('license_expires_on')->toString() : null,
+        ];
+    }
+
+    /**
+     * Head-office people see every branch, so only the owner may add them or move someone there.
+     */
+    private function assertMayAssignHeadOffice(TenantMember $actor, ?string $storeId): void
+    {
+        if ($storeId === null && ! $actor->isOwner()) {
+            throw ValidationException::withMessages(['store_id' => 'Only the owner can add people to head office. Choose a branch.']);
+        }
+    }
+
+    private function assertMayManage(TenantMember $actor, TenantMember $member): void
+    {
+        if ($member->isHeadOffice() && ! $actor->isOwner()) {
+            throw ValidationException::withMessages(['member' => 'Only the owner can change or remove head-office people.']);
+        }
     }
 
     private function headOffice(Request $request): Tenant
     {
         return $request->user()->headOfficeTenant() ?? abort(403);
+    }
+
+    private function actor(Request $request): TenantMember
+    {
+        return $request->user()->sellerMembership(['owner', 'manager']) ?? abort(403);
     }
 }

@@ -112,10 +112,10 @@ class PrescriptionTest extends TestCase
 
         $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approve prescription');
         $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertSessionHas('status');
-        $this->actingAs($manager)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approved by '.$pharmacist->name);
+        $this->actingAs($manager)->get(route('seller.orders.show', $sellerOrder))->assertSee('Approved by '.$pharmacist->name.' (PRC license 0123456)');
 
         $this->assertSame('confirmed', $sellerOrder->refresh()->status);
-        $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'approved', 'reviewed_by' => $pharmacist->id]);
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'approved', 'reviewed_by' => $pharmacist->id, 'reviewer_license_number' => '0123456']);
         $this->assertDatabaseHas('audit_logs', ['actor_user_id' => $pharmacist->id, 'action' => 'prescription.approved']);
         $this->assertPushed('Prescription approved · your order is being prepared');
     }
@@ -212,6 +212,26 @@ class PrescriptionTest extends TestCase
 
         $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending', 'reviewed_by' => null]);
         $this->actingAs($this->member('staff', $this->branch, pharmacist: true))->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertOk();
+    }
+
+    public function test_a_pharmacist_without_a_valid_prc_license_cannot_read_or_decide_a_prescription(): void
+    {
+        $sellerOrder = $this->checkOut()->sellerOrders()->sole();
+        $image = Prescription::query()->sole()->images()->sole();
+        $unlicensed = $this->member('staff', $this->branch, pharmacist: true);
+        $unlicensed->tenantMemberships()->update(['license_number' => null]);
+        $expired = $this->member('staff', $this->branch, pharmacist: true);
+        $expired->tenantMemberships()->update(['license_expires_on' => today()->subDay()]);
+
+        foreach ([$unlicensed, $expired] as $pharmacist) {
+            $this->actingAs($pharmacist)->get(route('seller.orders.show', $sellerOrder))
+                ->assertSee('Your PRC license is missing or expired')
+                ->assertDontSee('Approve prescription');
+            $this->actingAs($pharmacist)->get(route('seller.orders.prescription.images.show', [$sellerOrder, $image]))->assertForbidden();
+            $this->actingAs($pharmacist)->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();
+        }
+
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $sellerOrder->order_id, 'status' => 'pending']);
     }
 
     public function test_checkout_stores_every_prescription_page_in_order(): void
@@ -313,7 +333,7 @@ class PrescriptionTest extends TestCase
     private function member(string $role, ?Store $branch, bool $pharmacist = false): User
     {
         $user = User::factory()->seller()->create(['email_verified_at' => now()]);
-        TenantMember::create(['tenant_id' => $this->tenant->id, 'store_id' => $branch?->id, 'user_id' => $user->id, 'role' => $role, 'is_pharmacist' => $pharmacist]);
+        TenantMember::create(['tenant_id' => $this->tenant->id, 'store_id' => $branch?->id, 'user_id' => $user->id, 'role' => $role, 'is_pharmacist' => $pharmacist, 'license_number' => $pharmacist ? '0123456' : null, 'license_expires_on' => $pharmacist ? today()->addYear() : null]);
 
         return $user;
     }

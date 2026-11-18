@@ -18,7 +18,7 @@ class AddStaffMember
      * Adds an employee to the pharmacy. The email must be new: it gets an account they claim by signing
      * in through Clerk with it.
      *
-     * @param  array{email: string, role: string, store_id: ?string, is_pharmacist: bool}  $details
+     * @param  array{email: string, role: string, store_id: ?string, is_pharmacist: bool, license_number: ?string, license_expires_on: ?string}  $details
      */
     public function handle(User $actor, Tenant $tenant, array $details, ?string $ipAddress = null): TenantMember
     {
@@ -41,6 +41,8 @@ class AddStaffMember
                 'role' => $details['role'],
                 'store_id' => $details['store_id'],
                 'is_pharmacist' => $details['is_pharmacist'],
+                'license_number' => $details['license_number'],
+                'license_expires_on' => $details['license_expires_on'],
             ]);
 
             AuditLog::query()->create([
@@ -48,7 +50,7 @@ class AddStaffMember
                 'action' => 'tenant_member.added',
                 'entity_type' => TenantMember::class,
                 'entity_id' => $member->id,
-                'new_values' => ['email' => $email, 'role' => $details['role'], 'store_id' => $details['store_id'], 'is_pharmacist' => $details['is_pharmacist']],
+                'new_values' => ['email' => $email, 'role' => $details['role'], 'store_id' => $details['store_id'], 'is_pharmacist' => $details['is_pharmacist'], 'license_number' => $details['license_number'], 'license_expires_on' => $details['license_expires_on']],
                 'ip_address' => $ipAddress,
             ]);
 

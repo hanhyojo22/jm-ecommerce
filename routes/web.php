@@ -156,6 +156,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::post('/seller/staff', [StaffController::class, 'store'])->middleware('throttle:10,1')->name('seller.staff.store');
     Route::patch('/seller/staff/{member}', [StaffController::class, 'update'])->middleware('throttle:10,1')->name('seller.staff.update');
     Route::delete('/seller/staff/{member}', [StaffController::class, 'destroy'])->middleware('throttle:10,1')->name('seller.staff.destroy');
+    Route::post('/seller/staff/{member}/transfer-ownership', [StaffController::class, 'transferOwnership'])->middleware('throttle:10,1')->name('seller.staff.transfer-ownership');
     Route::get('/seller/opening-hours', [BranchHoursController::class, 'edit'])->name('seller.opening-hours.edit');
     Route::patch('/seller/opening-hours', [BranchHoursController::class, 'update'])->middleware('throttle:10,1')->name('seller.opening-hours.update');
     Route::get('/seller/branch-stock', [BranchStockController::class, 'index'])->name('seller.branch-stock.index');

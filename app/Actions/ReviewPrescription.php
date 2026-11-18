@@ -25,12 +25,13 @@ class ReviewPrescription
     public function __construct(private UpdateSellerOrderStatus $updateSellerOrderStatus) {}
 
     /**
+     * @param  string  $licenseNumber  The pharmacist's PRC license, kept on the prescription as the record of who decided.
      * @param  'approve'|'reject'|'needs_photo'  $decision
      */
-    public function handle(User $pharmacist, Prescription $prescription, string $decision, ?string $reason = null, ?string $ipAddress = null): Prescription
+    public function handle(User $pharmacist, string $licenseNumber, Prescription $prescription, string $decision, ?string $reason = null, ?string $ipAddress = null): Prescription
     {
         $accepted = false;
-        $reviewed = DB::transaction(function () use ($pharmacist, $prescription, $decision, $reason, $ipAddress, &$accepted): Prescription {
+        $reviewed = DB::transaction(function () use ($pharmacist, $licenseNumber, $prescription, $decision, $reason, $ipAddress, &$accepted): Prescription {
             // The order lock first, as UpdateSellerOrderStatus takes it, so a status change waits for this decision.
             $order = Order::query()->with('payment')->lockForUpdate()->findOrFail($prescription->order_id);
             $prescription = Prescription::query()->lockForUpdate()->findOrFail($prescription->id);
@@ -45,7 +46,7 @@ class ReviewPrescription
             }
 
             $status = ['approve' => 'approved', 'reject' => 'rejected', 'needs_photo' => 'needs_photo'][$decision];
-            $prescription->update(['status' => $status, 'reviewed_by' => $pharmacist->id, 'reviewed_at' => now(), 'reason' => $reason]);
+            $prescription->update(['status' => $status, 'reviewed_by' => $pharmacist->id, 'reviewer_license_number' => $licenseNumber, 'reviewed_at' => now(), 'reason' => $reason]);
 
             AuditLog::query()->create([
                 'actor_user_id' => $pharmacist->id,
@@ -53,7 +54,7 @@ class ReviewPrescription
                 'entity_type' => Prescription::class,
                 'entity_id' => $prescription->id,
                 'old_values' => ['status' => 'pending'],
-                'new_values' => ['status' => $status, 'reason' => $reason, 'order_id' => $order->id],
+                'new_values' => ['status' => $status, 'reason' => $reason, 'order_id' => $order->id, 'license_number' => $licenseNumber],
                 'ip_address' => $ipAddress,
             ]);
 

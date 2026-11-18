@@ -17,7 +17,7 @@ class Prescription extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['order_id', 'user_id', 'status', 'reviewed_by', 'reviewed_at', 'reason'];
+    protected $fillable = ['order_id', 'user_id', 'status', 'reviewed_by', 'reviewer_license_number', 'reviewed_at', 'reason'];
 
     protected function casts(): array
     {
