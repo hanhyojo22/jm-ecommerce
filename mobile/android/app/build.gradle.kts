@@ -38,7 +38,7 @@ android {
 
     // `-P pharmacy=true` builds the pharmacy test app beside the live one: its
     // own app ID, name and sign-in link scheme (pair it with OAUTH_SCHEME=jmmartrx
-    // in .env.pharmacy). Firebase only knows the live ID, so push is off there.
+    // in .env.pharmacy). google-services.json lists both IDs, so push works in both.
     if (project.hasProperty("pharmacy")) {
         defaultConfig.applicationIdSuffix = ".pharmacy"
         defaultConfig.manifestPlaceholders["appLabel"] = "JMMart Rx"
@@ -86,8 +86,4 @@ dependencies {
 
 flutter {
     source = "../.."
-}
-
-if (project.hasProperty("pharmacy")) {
-    tasks.matching { it.name.contains("GoogleServices") }.configureEach { enabled = false }
 }
