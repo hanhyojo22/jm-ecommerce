@@ -31,7 +31,7 @@ class SellerOrderTest extends TestCase
             ->assertSee($visibleOrder->order->number)
             ->assertDontSee('OTHER-1001')
             ->assertSee('value="seller-1001"', false)
-            ->assertSee('1 active filter');
+            ->assertSee('2 active filters');
     }
 
     public function test_buyer_account_with_a_tenant_membership_cannot_open_seller_orders(): void

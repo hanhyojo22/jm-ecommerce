@@ -24,59 +24,10 @@
     $waitingForPrescription = $order->prescription !== null && $order->prescription->status !== 'approved' && ! $isCancelled;
     $statusTitle = match (true) {
         $waitingForPrescription => $order->prescription->status === 'needs_photo' ? 'Waiting for a clearer photo' : 'Waiting for pharmacist approval',
-        $isCancelled => 'Order cancelled',
-        $sellerOrder->status === 'pending' => 'New order',
-        $sellerOrder->status === 'confirmed' => 'Order accepted',
-        $sellerOrder->status === 'processing' => 'Preparing',
+        $isCancelled => 'Cancelled',
+        $awaitingOnlinePayment => 'Awaiting payment',
+        $canRecordCash => 'Cash to collect',
         default => $label($sellerOrder->status),
-    };
-    $statusSub = match (true) {
-        $waitingForPrescription => 'Review the submitted documents below. A licensed pharmacist must approve the prescription before preparation begins.',
-        $isCancelled => 'This order was cancelled and stock was restored.',
-        $awaitingOnlinePayment => 'The customer has not paid online yet. Accept once PayMongo reports the payment.',
-        $sellerOrder->status === 'pending' => 'Accept to start preparing. Stock is already reserved for you.',
-        $sellerOrder->status === 'confirmed' => 'Start preparing the order.',
-        $sellerOrder->status === 'processing' => $isPickup ? 'Mark ready once it is waiting at the counter.' : 'Mark out for delivery once the rider leaves.',
-        $sellerOrder->status === 'shipped' => $isPickup ? 'Mark picked up once the customer has it.' : 'Mark delivered once the customer has it.',
-        $canRecordCash => 'The customer has the order. Record the cash once you have it.',
-        default => 'This order is complete.',
-    };
-    $statusTone = match (true) {
-        $waitingForPrescription => 'warn',
-        $isCancelled => 'danger',
-        $awaitingOnlinePayment, $canRecordCash => 'warn',
-        $sellerOrder->status === 'delivered' => 'good',
-        default => 'moving',
-    };
-    $statusIcon = match (true) {
-        $waitingForPrescription => 'clock',
-        $isCancelled => 'x-circle',
-        $awaitingOnlinePayment => 'clock',
-        $sellerOrder->status === 'pending' => 'bell',
-        $sellerOrder->status === 'confirmed' => 'check-circle',
-        $sellerOrder->status === 'processing' => 'box',
-        $sellerOrder->status === 'shipped' => 'truck',
-        $canRecordCash => 'banknote',
-        default => 'check-circle',
-    };
-    $journeyDate = match (true) {
-        $sellerOrder->status === 'delivered' && $sellerOrder->delivered_at => $label('delivered').' '.$sellerOrder->delivered_at->format('M j, Y'),
-        $sellerOrder->status === 'shipped' && $sellerOrder->shipped_at => $label('shipped').' · '.$sellerOrder->shipped_at->format('M j, Y'),
-        default => 'Placed '.$sellerOrder->created_at->format('M j, Y · g:i A'),
-    };
-
-    $itemsHint = match (true) {
-        $isCancelled => 'Stock restored',
-        $sellerOrder->status === 'delivered' => 'Delivered',
-        default => 'Stock reserved',
-    };
-    $paymentTone = match (true) {
-        $isCancelled => 'neutral',
-        $sellerOrder->cod_collected_at !== null => 'good',
-        $order->payment?->status === 'failed' => 'danger',
-        $isOnline => 'warn',
-        $sellerOrder->status === 'delivered' => 'warn',
-        default => 'neutral',
     };
     $paymentState = match (true) {
         $isCancelled && ($order->payment?->status === 'refunded' || $sellerOrder->gateway_refund_id !== null) => 'Refunded',
@@ -86,253 +37,80 @@
         $order->payment?->status === 'failed' => 'Failed',
         $isOnline => 'Awaiting payment',
         $sellerOrder->status === 'delivered' => 'Cash due',
-        default => 'Due on delivery',
-    };
-    $paymentLine = match (true) {
-        $isCancelled && ($order->payment?->status === 'refunded' || $sellerOrder->gateway_refund_id !== null) => 'Refund sent through PayMongo.',
-        $isCancelled && $isOnline && $order->payment?->status === 'paid' => 'Refund is being processed through PayMongo.',
-        $isCancelled => 'No cash was collected for this order.',
-        $sellerOrder->cod_collected_at !== null => ($isOnline ? 'Paid ' : 'Collected ').$sellerOrder->cod_collected_at->format('M j, Y'),
-        $order->payment?->status === 'failed' => 'PayMongo could not complete the payment.',
-        $isOnline => 'The buyer pays through PayMongo before you confirm.',
-        $sellerOrder->status === 'delivered' => 'Collect ₱'.number_format($sellerOrder->total, 2).' from the buyer.',
-        default => 'Collect ₱'.number_format($sellerOrder->total, 2).' on delivery.',
-    };
-
-    $nextStep = match (true) {
-        $waitingForPrescription => null,
-        $awaitingOnlinePayment => [
-            'icon' => 'clock',
-            'title' => 'Waiting for online payment',
-            'copy' => 'PayMongo has not reported the buyer’s payment yet. The order cannot be confirmed until it does.',
-            'note' => 'Payment is confirmed automatically.',
-        ],
-        $nextTransition === 'confirmed' => [
-            'icon' => 'check-circle',
-            'title' => 'Confirm this order',
-            'copy' => 'Confirming accepts the order and tells '.$order->recipient_name.' you are preparing it. Stock is already reserved for you.',
-            'note' => $sellerOrder->cod_collected_at !== null
-                ? 'Payment confirmed via '.$methodLabel.'.'
-                : 'Collect ₱'.number_format($sellerOrder->total, 2).' on delivery.',
-        ],
-        $nextTransition === 'processing' => [
-            'icon' => 'box',
-            'title' => 'Start preparing',
-            'copy' => 'Move the order to processing when you begin packing. The buyer sees the change right away.',
-            'note' => 'The delivery clock starts only when you mark it shipped.',
-        ],
-        $nextTransition === 'shipped' => [
-            'icon' => 'truck',
-            'title' => 'Hand the parcel to your courier',
-            'copy' => $order->recipient_name.' is notified when you mark it shipped. Do this only once the parcel has left your store.',
-            'note' => 'The delivery clock starts when you mark it shipped.',
-        ],
-        $nextTransition === 'delivered' => [
-            'icon' => 'check-circle',
-            'title' => 'Deliver to the buyer',
-            'copy' => 'Mark delivered after the customer receives it. That starts the return and auto-confirm clocks.',
-            'note' => 'Only mark delivered once the buyer has the parcel.',
-        ],
-        $canRecordCash => [
-            'icon' => 'banknote',
-            'title' => 'Record cash collected',
-            'copy' => 'Confirm you received ₱'.number_format($sellerOrder->total, 2).' from '.$order->recipient_name.'. Only record cash you actually have.',
-            'note' => 'This closes your side of the order.',
-        ],
-        default => null,
+        default => 'Unpaid',
     };
 @endphp
-{{-- Detail fragment for the order queue. Actions return to the selected order in the workspace. --}}
-<header class="sc-modal-head sc-order-head">
-    <h2 id="order-modal-title" class="sr-only">Order {{ $order->number }}</h2>
-    <div class="sc-order-top">
-        <div class="sc-order-id">
-            <span class="sc-order-eyebrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 8 8-4 8 4v9l-8 4-8-4V8Z"/><path d="m4 8 8 4 8-4M12 12v9"/></svg>
-                Order details
-            </span>
-            <span class="sc-order-ref" title="{{ $order->number }}">{{ \App\Models\Order::shortNumber($order->number) }}</span>
-            <span class="sr-only">Order #{{ $order->number }}</span>
-            <button type="button" class="sc-order-copy" x-data="{ copied: false }" @click="navigator.clipboard?.writeText(@js($order->number)); copied = true; setTimeout(() => copied = false, 1500)" :class="copied && 'is-copied'" :aria-label="copied ? 'Order number copied' : 'Copy full order number'" title="Copy full order number">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>
-            </button>
+<header class="sc-clean-head">
+    <div class="sc-clean-heading">
+        <div>
+            <h2 id="order-modal-title" class="sc-order-ref" title="{{ $order->number }}">{{ \App\Models\Order::shortNumber($order->number) }}</h2>
+            <span class="sr-only">Order {{ $order->number }}</span>
+            <p class="sc-clean-customer">{{ $order->recipient_name }} <span>{{ $sellerOrder->created_at->format('M j, g:i A') }}</span></p>
         </div>
         <div class="sc-order-head-actions">
-            <span class="sc-order-nav">
-                <button type="button" class="sc-icon-button" @click="step(-1)" :disabled="! hasStep(-1)" aria-label="Previous order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
-                <button type="button" class="sc-icon-button" @click="step(1)" :disabled="! hasStep(1)" aria-label="Next order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-            </span>
-            <button type="button" class="sc-icon-button" @click="close()" aria-label="Close order details" data-modal-focus><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+            <button type="button" class="sc-icon-button" @click="step(-1)" :disabled="! hasStep(-1)" aria-label="Previous order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button type="button" class="sc-icon-button" @click="step(1)" :disabled="! hasStep(1)" aria-label="Next order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
+            <button type="button" class="sc-icon-button" @click="close()" aria-label="Close order details" data-modal-focus><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
         </div>
     </div>
-
-    <div class="sc-order-status">
-        <span class="sc-order-status-icon is-{{ $statusTone }}" aria-hidden="true">
-            @switch($statusIcon)
-                @case('bell')
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-                    @break
-                @case('clock')
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                    @break
-                @case('box')
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 8-4 8 4v9l-8 4-8-4V8Z"/><path d="m4 8 8 4 8-4M12 12v9"/></svg>
-                    @break
-                @case('truck')
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>
-                    @break
-                @case('banknote')
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 10h.01M18 14h.01"/></svg>
-                    @break
-                @case('x-circle')
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>
-                    @break
-                @default
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
-            @endswitch
-        </span>
-        <div class="sc-order-status-copy">
-            <div class="sc-order-status-line">
-                <p class="sc-order-status-title">{{ $statusTitle }}</p>
-                @if ($canRecordCash)
-                    <span class="sc-badge" data-tone="warning">Cash to collect</span>
-                @else
-                    <x-marketplace.order-status :status="$sellerOrder->status" />
-                @endif
-            </div>
-            <p class="sc-order-sub">{{ $statusSub }}</p>
-            <p class="sc-order-meta">
-                <span>{{ $journeyDate }}</span>
-                <span class="sc-order-meta-dot" aria-hidden="true">·</span>
-                <span>{{ $itemCount }} {{ Str::plural('item', $itemCount) }}</span>
-                <span class="sc-order-meta-dot" aria-hidden="true">·</span>
-                <span class="sc-order-header-total">₱{{ number_format($sellerOrder->total, 2) }}</span>
-            </p>
-        </div>
-    </div>
-
-    @if (! $isCancelled)
-        @include('seller.orders._steps', ['sellerOrder' => $sellerOrder, 'class' => 'sc-order-tracker'])
-    @endif
+    <span class="sc-clean-state" data-tone="{{ $waitingForPrescription || $awaitingOnlinePayment || $canRecordCash ? 'warning' : ($isCancelled ? 'danger' : 'neutral') }}">{{ $statusTitle }}</span>
 </header>
-
-<div class="sc-modal-body sc-order-body">
-    @if ($isCancelled)
-        <div class="sc-order-notice is-danger" role="status">
-            <span class="sc-order-notice-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></span>
-            <div>
-                <p class="sc-order-notice-title">This order was cancelled</p>
-                <p class="sc-order-notice-copy">Only your store’s part of the checkout was cancelled. The items were returned to stock and the buyer was notified.</p>
-            </div>
-        </div>
-    @endif
-
+<div class="sc-modal-body sc-clean-body">
     @foreach ($sellerOrder->issues as $issue)
-        <div class="sc-notice !block mb-3" data-tone="warning"><p class="font-semibold">{{ str($issue->type)->replace('_', ' ')->title() }} request · {{ ucfirst($issue->status) }}</p><p class="mt-1 whitespace-pre-wrap">{{ $issue->details }}</p>@if ($issue->status === 'open')<p class="mt-1">JMMart support reviews this request. Wait for the decision before preparing this order.</p>@endif</div>
+        <div class="sc-notice mb-4" data-tone="warning"><div><strong>{{ str($issue->type)->replace('_', ' ')->title() }} · {{ ucfirst($issue->status) }}</strong><p>{{ $issue->details }}</p>@if ($issue->status === 'open')<p>Wait for JMMart support before preparing this order.</p>@endif</div></div>
     @endforeach
-
     @if ($sellerOrder->returnCases->isNotEmpty())
-        <div class="sc-notice mb-3" data-tone="info"><span>{{ $sellerOrder->returnCases->count() }} return {{ Str::plural('case', $sellerOrder->returnCases->count()) }} on this order. Respond before the deadline.</span><a href="{{ route('seller.returns.show', $sellerOrder->returnCases->first()) }}">View {{ $sellerOrder->returnCases->count() === 1 ? 'case' : 'cases' }}</a></div>
+        <div class="sc-notice mb-4" data-tone="info"><span>{{ $sellerOrder->returnCases->count() }} return {{ Str::plural('case', $sellerOrder->returnCases->count()) }}</span><a href="{{ route('seller.returns.show', $sellerOrder->returnCases->first()) }}">View returns</a></div>
     @endif
-
-    @include('seller.orders._documents', ['sellerOrder' => $sellerOrder, 'class' => 'mb-3', 'approvalInFooter' => true])
-
-    <div class="sc-order-grid">
-        <div class="sc-order-main">
-            @if ($nextStep)
-                <section class="sc-order-next">
-                    <p class="sc-order-next-eyebrow">
-                        <span class="sc-order-next-icon" aria-hidden="true">
-                            @switch($nextStep['icon'])
-                                @case('clock')
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                                    @break
-                                @case('box')
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 8-4 8 4v9l-8 4-8-4V8Z"/><path d="m4 8 8 4 8-4M12 12v9"/></svg>
-                                    @break
-                                @case('truck')
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v10H3z"/><path d="M14 9h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>
-                                    @break
-                                @case('banknote')
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 10h.01M18 14h.01"/></svg>
-                                    @break
-                                @default
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
-                            @endswitch
-                        </span>
-                        Next step
-                    </p>
-                    <h3 class="sc-order-next-title">{{ $nextStep['title'] }}</h3>
-                    <p class="sc-order-next-copy">{{ $nextStep['copy'] }}</p>
-                    @if ($nextStep['note'])
-                        <p class="sc-order-next-note">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
-                            {{ $nextStep['note'] }}
-                        </p>
-                    @endif
-                </section>
-            @endif
-
-            <section @class(['sc-order-card', 'is-muted' => $isCancelled]) aria-labelledby="order-modal-items">
-                <header class="sc-order-card-head">
-                    <p class="sc-order-card-title">Items <b>({{ $sellerOrder->items->count() }})</b></p>
-                    <span class="sc-order-card-hint">{{ $itemsHint }}</span>
-                </header>
+    <div class="sc-clean-grid">
+        <div class="sc-clean-main">
+            @include('seller.orders._documents', ['sellerOrder' => $sellerOrder, 'approvalInFooter' => true])
+            <section class="sc-clean-items" aria-label="Order items">
+                <h3>Items</h3>
                 <ul>
                     @foreach ($sellerOrder->items as $item)
-                        <li class="sc-order-item">
-                            <span class="sc-thumb">@if ($item->product?->images->first())<img src="{{ Storage::disk('product_images')->url($item->product->images->first()->path) }}" alt="" loading="lazy">@endif</span>
-                            <div class="sc-order-item-copy">
-                                <p class="sc-order-item-title">{{ $item->product_name }}</p>
-                                @if ($item->variant_label)<p class="sc-order-item-meta">{{ $item->variant_label }}</p>@endif
-                                <p class="sc-order-item-meta">SKU {{ $item->sku }} · Qty {{ $item->quantity }} × ₱{{ number_format($item->unit_price, 2) }}</p>
-                            </div>
-                            <span class="sc-order-item-amount">₱{{ number_format($item->line_total, 2) }}</span>
+                        <li class="sc-clean-item">
+                            <div><p>{{ $item->product_name }}</p><small>{{ $item->quantity }} × ₱{{ number_format($item->unit_price, 2) }}@if ($item->variant_label) · {{ $item->variant_label }}@endif</small></div>
+                            <strong>₱{{ number_format($item->line_total, 2) }}</strong>
                         </li>
                     @endforeach
                 </ul>
             </section>
+            <details class="sc-clean-history">
+                <summary>Order history</summary>
+                @include('seller.orders._steps', ['sellerOrder' => $sellerOrder])
+                @if ($isCancelled)<p class="sc-meta mt-3">Cancelled items were returned to stock.</p>@endif
+            </details>
         </div>
-
-        <aside class="sc-order-rail">
-            <section class="sc-order-rail-card" aria-labelledby="order-modal-summary">
-                <h3 id="order-modal-summary" class="sc-order-rail-label">Order summary</h3>
-                <dl class="sc-order-summary">
-                    <div><dt>Subtotal</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div>
-                    @if($sellerOrder->discount_amount > 0)
-                        <div><dt>{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$sellerOrder->order->discount_card_type] ?? 'SC/PWD' }} discount</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div>
-                        <div><dt>Check ID at handover</dt><dd>{{ $sellerOrder->order->discount_card_name }} · {{ $sellerOrder->order->discount_card_number }}</dd></div>
-                        @unless(in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
-                            <div><dt>No valid ID?</dt><dd><form method="POST" action="{{ route('seller.orders.senior-pwd-discount.destroy', $sellerOrder) }}" data-confirm="Charge full price? The customer will pay ₱{{ number_format((float) bcadd((string) $sellerOrder->order->subtotal, (string) $sellerOrder->order->shipping_amount, 2), 2) }}." data-confirm-tone="danger">@csrf @method('DELETE')<button type="submit" class="font-semibold text-danger underline-offset-2 hover:underline">Remove discount</button></form></dd></div>
-                        @endunless
-                    @endif
-                    <div><dt>Shipping</dt><dd>{{ bccomp((string) $sellerOrder->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($sellerOrder->shipping_amount, 2) }}</dd></div>
-                </dl>
-                <div class="sc-order-total">
-                    <span>Your total</span>
-                    <strong>₱{{ number_format($sellerOrder->total, 2) }}</strong>
-                </div>
-                <p class="sc-order-pay"><span class="sc-order-dot" data-tone="{{ $paymentTone }}" aria-hidden="true"></span>{{ $methodLabel }} · {{ $paymentState }}</p>
-                <p class="sc-order-rail-line">{{ $paymentLine }}</p>
-            </section>
-
-            <section class="sc-order-rail-card" aria-labelledby="order-modal-delivery">
-                <h3 id="order-modal-delivery" class="sc-order-rail-label">Deliver to</h3>
-                <p class="sc-order-rail-name">{{ $order->recipient_name }}</p>
-                <p class="sc-order-rail-line" x-data="{ copied: false }">
-                    {{ $order->phone }}
-                    <button type="button" class="sc-order-copy-mini" @click="navigator.clipboard?.writeText(@js($order->phone)); copied = true; setTimeout(() => copied = false, 1500)" :class="copied && 'is-copied'" :aria-label="copied ? 'Phone number copied' : 'Copy phone number'" title="Copy phone number">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="11" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2"/></svg>
-                    </button>
-                </p>
-                <p class="sc-order-rail-line">{{ $order->address_line }}, {{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>
-                @if ($order->delivery_note)<p class="sc-order-rail-note">“{{ $order->delivery_note }}”</p>@endif
-                <x-marketplace.delivery-pin :order="$order" />
+        <aside class="sc-clean-summary" aria-label="Order summary">
+            <dl>
+                <div><dt>Subtotal</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div>
+                @if (bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0)
+                    <div class="sc-clean-saving"><dt>{{ $order->discount_card_type === 'senior' ? 'SC discount' : 'PWD discount' }}</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div>
+                @endif
+                <div><dt>{{ $isPickup ? 'Pickup' : 'Delivery' }}</dt><dd>{{ bccomp((string) $sellerOrder->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($sellerOrder->shipping_amount, 2) }}</dd></div>
+                <div class="sc-clean-total"><dt>Total</dt><dd>₱{{ number_format($sellerOrder->total, 2) }}</dd></div>
+            </dl>
+            <p class="sc-clean-payment">{{ $methodLabel }} · {{ $paymentState }}</p>
+            @if ($canManageOrders && bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0 && ! in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
+                <details class="sc-clean-adjustment"><summary>Discount details</summary>
+                    <p>{{ $order->discount_card_name }} · {{ $order->discount_card_number }}</p>
+                    <form method="POST" action="{{ route('seller.orders.senior-pwd-discount.destroy', $sellerOrder) }}" data-confirm="Remove the discount and charge full price?">
+                        @csrf @method('DELETE')
+                        <button type="submit" class="sc-link text-danger">Remove discount</button>
+                    </form>
+                </details>
+            @endif
+            <section class="sc-clean-delivery">
+                <h3>{{ $isPickup ? 'Pickup' : 'Delivery' }}</h3>
+                <a href="tel:{{ $order->phone }}">{{ $order->phone }}</a>
+                @unless ($isPickup)<p class="sc-meta">{{ $order->address_line }}, {{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endunless
+                @if ($order->delivery_note)<p class="sc-meta">{{ $order->delivery_note }}</p>@endif
+                @unless ($isPickup)<x-marketplace.delivery-pin :order="$order" />@endunless
             </section>
         </aside>
     </div>
 </div>
-
 <footer class="sc-modal-foot sc-order-foot">
     <div class="sc-order-foot-left">
         <div class="sc-more" x-data="{ open: false }" @keydown.escape.window="open = false">
@@ -365,7 +143,7 @@
                 @endif
             </div>
         </div>
-        <span class="sc-order-hint max-lg:hidden">← → to switch orders</span>
+
     </div>
     <div class="sc-order-foot-actions">
         @if ($conversation)
@@ -376,10 +154,8 @@
                 @csrf
                 @method('PATCH')
                 <input type="hidden" name="decision" value="approve">
-                <button type="submit" class="seller-primary-button sc-order-primary">Approve prescription</button>
+                <button type="submit" class="seller-primary-button sc-order-primary" aria-label="Approve prescription and accept order">Approve &amp; accept</button>
             </form>
-        @elseif ($waitingForPrescription)
-            <button type="button" class="seller-outline-button" disabled>{{ $order->prescription->status === 'needs_photo' ? 'Awaiting clearer photo' : 'Awaiting pharmacist' }}</button>
         @elseif ($canManageOrders && $nextTransition === 'shipped' && ! $isPickup)
             {{-- The full page asks for the rider before the order goes out. --}}
             <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="seller-primary-button sc-order-primary">{{ $transitionLabels['shipped'] }}…</a>
@@ -397,7 +173,7 @@
                 <button type="submit" class="seller-primary-button sc-order-primary">Record cash collected</button>
             </form>
         @else
-            <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="seller-primary-button sc-order-primary">Full page</a>
+            <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="sc-link sc-full-page">Full page</a>
         @endif
     </div>
 </footer>
