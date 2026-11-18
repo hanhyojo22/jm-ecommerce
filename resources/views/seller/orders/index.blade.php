@@ -25,12 +25,7 @@
     <x-slot name="header">
         <div class="sc-page-head !items-center">
             <h1 class="sc-title">Orders</h1>
-            <form method="GET" action="{{ route('seller.orders.index') }}" role="search" class="relative w-full sm:w-80">
-                @foreach (['status', 'review', 'payment_status', 'from', 'to'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
-                <label for="search" class="sr-only">Search orders</label>
-                <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-                <input id="search" name="search" type="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search order number or customer" class="sc-input pl-9">
-            </form>
+
         </div>
     </x-slot>
 
@@ -92,20 +87,13 @@
             hasStep(offset) { const index = this.ids.indexOf(this.current); return index !== -1 && this.ids[index + offset] !== undefined },
             step(offset) { if (this.hasStep(offset)) { this.open(this.ids[this.ids.indexOf(this.current) + offset], 'replace') } },
         }">
-            <div class="relative flex items-center gap-2 border-b border-[#eef1f5] pr-3 sm:pr-5">
-                <nav class="sc-tabs sc-tabs-scroll min-w-0 flex-1 !border-0" aria-label="Order status">
-                    <a href="{{ route('seller.orders.index', $queryWithoutStatus) }}" class="sc-tab" @if (! $activeStatus && empty($filters['review'])) aria-current="page" @endif>All orders</a>
-                    <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'review' => 'prescription']) }}" class="sc-tab" @if (($filters['review'] ?? null) === 'prescription') aria-current="page" @endif>Prescriptions</a>
-                    <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'review' => 'discount']) }}" class="sc-tab" @if (($filters['review'] ?? null) === 'discount') aria-current="page" @endif>SC/PWD</a>
-
-                </nav>
-
-                {{-- Search shows in its box and status in the tabs; payment and dates are summarised on this button. --}}
-                @if ($hasFilters)<a href="{{ route('seller.orders.index') }}" class="sc-link shrink-0 max-sm:hidden">Clear</a>@endif
-                <button type="button" @class(['seller-outline-button !min-h-9 shrink-0', '!border-[#c7d6fb] !bg-[#eef3ff] !text-[#1d4ed8]' => $panelFilterCount > 0]) @click="filtersOpen = ! filtersOpen" :aria-expanded="filtersOpen.toString()" aria-controls="order-filters"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="max-sm:sr-only">Filters</span> @if ($panelFilterCount > 0)<span class="sc-tab-count !bg-white !text-[#1d4ed8]" aria-hidden="true">{{ $panelFilterCount }}</span><span class="sr-only">, {{ $panelFilterCount }} active {{ Str::plural('filter', $panelFilterCount) }}</span>@endif</button>
-
+            <div class="sc-orders-columns">
+                <aside class="sc-orders-queue" aria-label="Order queue">
+                    <div class="sc-queue-head"><h2>Order queue</h2><span>{{ number_format($orders->total()) }}</span>
+                <button type="button" @class(['seller-outline-button !min-h-9 shrink-0', '!border-[#c7d6fb] !bg-[#eef3ff] !text-[#1d4ed8]' => $panelFilterCount > 0]) @click="filtersOpen = ! filtersOpen" :aria-expanded="filtersOpen.toString()" aria-controls="order-filters"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg><span class="sr-only">Filters</span> @if ($panelFilterCount > 0)<span class="sc-tab-count !bg-white !text-[#1d4ed8]" aria-hidden="true">{{ $panelFilterCount }}</span><span class="sr-only">, {{ $panelFilterCount }} active {{ Str::plural('filter', $panelFilterCount) }}</span>@endif</button>
                 <form id="order-filters" method="GET" action="{{ route('seller.orders.index') }}" class="sc-popover" x-cloak x-show="filtersOpen" @click.outside="filtersOpen = false" @keydown.escape.window="filtersOpen = false" aria-label="Order filters">
-                    @foreach (['search', 'review'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
+                    @foreach (['search'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
+                    <div class="sc-field"><label for="review-filter">Documents</label><select id="review-filter" name="review" class="sc-input"><option value="">All documents</option><option value="prescription" @selected(($filters['review'] ?? null) === 'prescription')>Prescription</option><option value="discount" @selected(($filters['review'] ?? null) === 'discount')>SC/PWD</option></select></div>
                     <div class="sc-field"><label for="order-status-filter">Status</label><select id="order-status-filter" name="status" class="sc-input"><option value="">All statuses</option>@foreach ($statuses as $status)<option value="{{ $status }}" @selected($activeStatus === $status)>{{ \App\Models\SellerOrder::statusLabel($status) }}</option>@endforeach</select></div>
                     <div class="sc-field"><label for="payment_status">Payment</label><select id="payment_status" name="payment_status" class="sc-input"><option value="">All payments</option>@foreach ($paymentStatuses as $value => $label)<option value="{{ $value }}" @selected(($filters['payment_status'] ?? null) === $value)>{{ $label }}</option>@endforeach</select></div>
                     <div class="grid grid-cols-2 gap-2">
@@ -117,11 +105,18 @@
                         <button type="submit" class="seller-primary-button">Apply filters</button>
                     </div>
                 </form>
-            </div>
-
-
-            {{-- On the Pending tab, one button confirms the pending orders on this page, up to the 20 the bulk
-                 action accepts. Orders the buyer asked to cancel are left for support to decide. --}}
+                    </div>
+            <form method="GET" action="{{ route('seller.orders.index') }}" role="search" class="sc-queue-search">
+                @foreach (['status', 'review', 'payment_status', 'from', 'to'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
+                <label for="search" class="sr-only">Search orders</label>
+                <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                <input id="search" name="search" type="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search customer or order" data-seller-shortcut="search" class="sc-input pl-9">
+            </form>
+                    <nav class="sc-queue-filters" aria-label="Order status">
+                        <a href="{{ route('seller.orders.index', $queryWithoutStatus) }}" @if (! $activeStatus && empty($filters['review'])) aria-current="page" @endif>All orders</a>
+                        <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'review' => 'prescription']) }}" @if (($filters['review'] ?? null) === 'prescription') aria-current="page" @endif>Prescription</a>
+                        <a href="{{ route('seller.orders.index', [...$queryWithoutStatus, 'status' => 'processing']) }}" @if ($activeStatus === 'processing') aria-current="page" @endif>Preparing</a>
+                    </nav>
             @php($confirmableIds = $orders->filter(fn ($sellerOrder) => $sellerOrder->status === 'pending' && ! $sellerOrder->has_open_cancellation && ! $sellerOrder->needs_prescription_review)->pluck('id')->take(20))
             @if ($canManageOrders && $activeStatus === 'pending' && $confirmableIds->isNotEmpty())
                 <form method="POST" action="{{ route('seller.orders.bulk-confirm') }}" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[#eef1f5] bg-[#f8fafc] px-5 py-2.5 max-sm:px-4" data-confirm-title="Confirm {{ $confirmableIds->count() }} pending {{ Str::plural('order', $confirmableIds->count()) }}?" data-confirm="They move to confirmed and the buyers are notified." data-confirm-reference="{{ $orders->whereIn('id', $confirmableIds)->take(3)->map(fn ($sellerOrder) => \App\Models\Order::shortNumber($sellerOrder->order->number))->join(', ') }}{{ $confirmableIds->count() > 3 ? ' and '.($confirmableIds->count() - 3).' more' : '' }}" data-confirm-from="Pending" data-confirm-to="Confirmed" data-confirm-action="Confirm {{ Str::plural('order', $confirmableIds->count()) }}">
@@ -133,21 +128,35 @@
             @endif
             <x-input-error :messages="$errors->get('seller_order_ids')" class="mx-5 my-3" />
 
-            <div class="sc-orders-columns">
-                <aside class="sc-orders-queue" aria-label="Order queue">
-                    <h2 class="sr-only">Order queue</h2>
+
+                    <div class="sc-queue-list">
                     @forelse ($orders as $sellerOrder)
                         <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="sc-queue-order" :aria-current="current === @js($sellerOrder->id) ? 'true' : null" @click="if (! ($event.metaKey || $event.ctrlKey || $event.shiftKey)) { $event.preventDefault(); open(@js($sellerOrder->id)) }" @pointerenter="warm(@js($sellerOrder->id))" @pointerleave="clearTimeout(warmTimer)" @focus="preload(@js($sellerOrder->id))">
                             <div class="sc-queue-row"><strong><x-marketplace.order-number :number="$sellerOrder->order->number" /></strong><time datetime="{{ $sellerOrder->created_at->toIso8601String() }}" title="{{ $sellerOrder->created_at->format('M j, Y · g:i A') }}">{{ $sellerOrder->created_at->gt(now()->subWeek()) ? $sellerOrder->created_at->diffForHumans(short: true) : $sellerOrder->created_at->format('M j') }}</time></div>
                             <p class="sc-queue-customer">{{ $sellerOrder->order->recipient_name }}</p>
-                            <p class="sc-queue-product">{{ $sellerOrder->items->first()?->product_name }}@if ($sellerOrder->items->count() > 1) <span>+{{ $sellerOrder->items->count() - 1 }}</span>@endif</p>
-                            <div class="sc-queue-row"><span class="sc-queue-next">{{ $sellerOrder->needs_prescription_review ? $nextStep($sellerOrder) : \App\Models\SellerOrder::statusLabel($sellerOrder->status, $sellerOrder->order->fulfillment_method) }}</span><strong class="sc-num">₱{{ number_format($sellerOrder->total, 2) }}</strong></div>
+                            <p class="sr-only">{{ $sellerOrder->items->first()?->product_name }}@if ($sellerOrder->items->count() > 1) <span>+{{ $sellerOrder->items->count() - 1 }}</span>@endif</p>
+                            <div class="sc-queue-row"><span class="sc-queue-state" data-tone="{{ $sellerOrder->needs_prescription_review ? 'warning' : ($sellerOrder->status === 'delivered' ? 'success' : 'info') }}">{{ $sellerOrder->needs_prescription_review ? ($sellerOrder->awaiting_prescription_photo ? 'Clearer photo requested' : 'Prescription review') : \App\Models\SellerOrder::statusLabel($sellerOrder->status, $sellerOrder->order->fulfillment_method) }}</span><span class="sr-only">{{ $nextStep($sellerOrder) }}</span><strong class="sc-num">₱{{ number_format($sellerOrder->total, 2) }}</strong></div>
 
+                            @if ($sellerOrder->order->discount_document_path)<span class="sc-queue-document">SC/PWD ID</span>@endif
                             <span class="sr-only">View order</span>
                         </a>
                     @empty
                         <div class="sc-empty"><h3>{{ $hasFilters ? 'No orders match these filters' : 'No orders yet' }}</h3><p>{{ $hasFilters ? 'Adjust your search or clear filters to try again.' : 'Orders from your store will appear here after checkout.' }}</p>@if ($hasFilters)<a href="{{ route('seller.orders.index') }}" class="seller-outline-button">Clear filters</a>@endif</div>
                     @endforelse
+                    </div>
+                    @if ($orders->total() > 0)
+                        <div class="sc-queue-footer">
+                            <span>{{ $orders->firstItem() }}–{{ $orders->lastItem() }} of {{ number_format($orders->total()) }}</span>
+                            <span class="sr-only">Showing {{ $orders->firstItem() }}–{{ $orders->lastItem() }} of {{ number_format($orders->total()) }} {{ Str::plural('order', $orders->total()) }}</span>
+                            <form method="GET" action="{{ route('seller.orders.index') }}">
+                                @foreach (request()->except('per_page', 'page', 'order') as $field => $value)@if (is_string($value))<input type="hidden" name="{{ $field }}" value="{{ $value }}">@endif @endforeach
+                                <label for="per-page" class="sr-only">Rows per page</label><select id="per-page" name="per_page" data-submit-on-change>@foreach (\App\Http\Controllers\Seller\SellerOrderController::PER_PAGE_OPTIONS as $option)<option value="{{ $option }}" @selected($orders->perPage() === $option)>{{ $option }}</option>@endforeach</select>
+                                <noscript><button type="submit">Show</button></noscript>
+                            </form>
+                            @if ($orders->previousPageUrl())<a href="{{ $orders->previousPageUrl() }}" aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m15 18-6-6 6-6"/></svg></a>@endif
+                            @if ($orders->nextPageUrl())<a href="{{ $orders->nextPageUrl() }}" aria-label="Next page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m9 6 6 6-6 6"/></svg></a>@endif
+                        </div>
+                    @endif
                 </aside>
                 <section class="sc-orders-detail" x-ref="modal" role="region" aria-label="Selected order details" :aria-busy="loading">
                     <x-input-error :messages="$errors->get('discount')" class="mx-6 mt-6" />
@@ -159,22 +168,6 @@
                     <div x-show="! current && ! loading" class="sc-empty"><h2>Select an order</h2><p>Choose an order from the queue to review documents and manage its next step.</p></div>
                 </section>
             </div>
-
-            @if ($orders->total() > 0)
-                <div class="sc-card-foot sc-pager">
-                    <span>Showing {{ $orders->firstItem() ?? 0 }}–{{ $orders->lastItem() ?? 0 }} of {{ number_format($orders->total()) }} {{ Str::plural('order', $orders->total()) }}</span>
-                    <div class="flex flex-wrap items-center gap-x-5 gap-y-3">
-                        <form method="GET" action="{{ route('seller.orders.index') }}" class="flex items-center gap-2">
-                            @foreach (request()->except('per_page', 'page', 'order') as $field => $value)@if (is_string($value))<input type="hidden" name="{{ $field }}" value="{{ $value }}">@endif @endforeach
-                            <label for="per-page" class="whitespace-nowrap">Rows per page</label>
-                            <select id="per-page" name="per_page" class="sc-input !h-9 !w-auto !min-h-9 !py-0 !pl-3 !pr-8" data-submit-on-change>@foreach (\App\Http\Controllers\Seller\SellerOrderController::PER_PAGE_OPTIONS as $option)<option value="{{ $option }}" @selected($orders->perPage() === $option)>{{ $option }}</option>@endforeach</select>
-                            <noscript><button type="submit" class="seller-outline-button !min-h-9">Show</button></noscript>
-                        </form>
-                        @if ($orders->hasPages()){{ $orders->links() }}@endif
-                    </div>
-                </div>
-            @endif
-
         </section>
     </div></div>
 </x-app-layout>

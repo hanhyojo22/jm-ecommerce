@@ -39,84 +39,52 @@
         $sellerOrder->status === 'delivered' => 'Cash due',
         default => 'Unpaid',
     };
+    $progressIndex = match ($sellerOrder->status) { 'pending' => 0, 'confirmed' => 1, 'processing' => 2, default => 3 };
+    $progressLabels = [$waitingForPrescription ? 'Prescription review' : 'Order placed', 'Accepted', 'Preparing', $label($sellerOrder->status === 'delivered' ? 'delivered' : 'shipped')];
 @endphp
-<header class="sc-clean-head">
-    <div class="sc-clean-heading">
-        <div>
-            <h2 id="order-modal-title" class="sc-order-ref" title="{{ $order->number }}">{{ \App\Models\Order::shortNumber($order->number) }}</h2>
-            <span class="sr-only">Order {{ $order->number }}</span>
-            <p class="sc-clean-customer">{{ $order->recipient_name }} <span>{{ $sellerOrder->created_at->format('M j, g:i A') }}</span></p>
-        </div>
-        <div class="sc-order-head-actions">
-            <button type="button" class="sc-icon-button" @click="step(-1)" :disabled="! hasStep(-1)" aria-label="Previous order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
-            <button type="button" class="sc-icon-button" @click="step(1)" :disabled="! hasStep(1)" aria-label="Next order"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
-            <button type="button" class="sc-icon-button" @click="close()" aria-label="Close order details" data-modal-focus><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
-        </div>
-    </div>
-    <span class="sc-clean-state" data-tone="{{ $waitingForPrescription || $awaitingOnlinePayment || $canRecordCash ? 'warning' : ($isCancelled ? 'danger' : 'neutral') }}">{{ $statusTitle }}</span>
+<header class="sc-premium-head">
+    <div><h2 id="order-modal-title" class="sc-order-ref" title="{{ $order->number }}">Order {{ \App\Models\Order::shortNumber($order->number) }}</h2><span class="sr-only">Order {{ $order->number }}</span><p>{{ $order->recipient_name }} · {{ $sellerOrder->created_at->format('M j, g:i A') }}</p></div>
+    <div class="sc-premium-price"><strong>₱{{ number_format($sellerOrder->total, 2) }}</strong><small>{{ $methodLabel }} · {{ $paymentState }}</small></div>
 </header>
-<div class="sc-modal-body sc-clean-body">
+@if (! $isCancelled)
+    <ol class="sc-premium-steps" aria-label="Order progress">
+        @foreach ($progressLabels as $index => $stepLabel)<li @if ($index === $progressIndex) aria-current="step" @endif>{{ $stepLabel }}</li>@endforeach
+    </ol>
+@endif
+<div class="sc-modal-body sc-premium-body">
+    @if ($waitingForPrescription || $awaitingOnlinePayment || $isCancelled || $canRecordCash)
+        <div class="sc-premium-notice" data-tone="{{ $isCancelled ? 'danger' : 'warning' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h3>{{ $statusTitle }}</h3></div>
+    @endif
     @foreach ($sellerOrder->issues as $issue)
         <div class="sc-notice mb-4" data-tone="warning"><div><strong>{{ str($issue->type)->replace('_', ' ')->title() }} · {{ ucfirst($issue->status) }}</strong><p>{{ $issue->details }}</p>@if ($issue->status === 'open')<p>Wait for JMMart support before preparing this order.</p>@endif</div></div>
     @endforeach
-    @if ($sellerOrder->returnCases->isNotEmpty())
-        <div class="sc-notice mb-4" data-tone="info"><span>{{ $sellerOrder->returnCases->count() }} return {{ Str::plural('case', $sellerOrder->returnCases->count()) }}</span><a href="{{ route('seller.returns.show', $sellerOrder->returnCases->first()) }}">View returns</a></div>
-    @endif
-    <div class="sc-clean-grid">
-        <div class="sc-clean-main">
-            @include('seller.orders._documents', ['sellerOrder' => $sellerOrder, 'approvalInFooter' => true])
-            <section class="sc-clean-items" aria-label="Order items">
-                <h3>Items</h3>
-                <ul>
-                    @foreach ($sellerOrder->items as $item)
-                        <li class="sc-clean-item">
-                            <div><p>{{ $item->product_name }}</p><small>{{ $item->quantity }} × ₱{{ number_format($item->unit_price, 2) }}@if ($item->variant_label) · {{ $item->variant_label }}@endif</small></div>
-                            <strong>₱{{ number_format($item->line_total, 2) }}</strong>
-                        </li>
-                    @endforeach
-                </ul>
-            </section>
-            <details class="sc-clean-history">
-                <summary>Order history</summary>
-                @include('seller.orders._steps', ['sellerOrder' => $sellerOrder])
-                @if ($isCancelled)<p class="sc-meta mt-3">Cancelled items were returned to stock.</p>@endif
-            </details>
-        </div>
-        <aside class="sc-clean-summary" aria-label="Order summary">
-            <dl>
-                <div><dt>Subtotal</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div>
-                @if (bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0)
-                    <div class="sc-clean-saving"><dt>{{ $order->discount_card_type === 'senior' ? 'SC discount' : 'PWD discount' }}</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div>
-                @endif
-                <div><dt>{{ $isPickup ? 'Pickup' : 'Delivery' }}</dt><dd>{{ bccomp((string) $sellerOrder->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($sellerOrder->shipping_amount, 2) }}</dd></div>
-                <div class="sc-clean-total"><dt>Total</dt><dd>₱{{ number_format($sellerOrder->total, 2) }}</dd></div>
-            </dl>
-            <p class="sc-clean-payment">{{ $methodLabel }} · {{ $paymentState }}</p>
-            @if (($canSupervise ?? false) && bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0 && ! in_array($sellerOrder->status, ['delivered', 'cancelled'], true))
-                <details class="sc-clean-adjustment"><summary>Discount details</summary>
-                    <p>{{ $order->discount_card_name }} · {{ $order->discount_card_number }}</p>
-                    <form method="POST" action="{{ route('seller.orders.senior-pwd-discount.destroy', $sellerOrder) }}" data-confirm="Remove the discount and charge full price?">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="sc-link text-danger">Remove discount</button>
-                    </form>
-                </details>
-            @endif
-            <section class="sc-clean-delivery">
-                <h3>{{ $isPickup ? 'Pickup' : 'Delivery' }}</h3>
-                <a href="tel:{{ $order->phone }}">{{ $order->phone }}</a>
-                @unless ($isPickup)<p class="sc-meta">{{ $order->address_line }}, {{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endunless
-                @if ($order->delivery_note)<p class="sc-meta">{{ $order->delivery_note }}</p>@endif
-                @unless ($isPickup)<x-marketplace.delivery-pin :order="$order" />@endunless
-            </section>
-        </aside>
+    @if ($sellerOrder->returnCases->isNotEmpty())<div class="sc-notice mb-4" data-tone="info"><span>{{ $sellerOrder->returnCases->count() }} return {{ Str::plural('case', $sellerOrder->returnCases->count()) }}</span><a href="{{ route('seller.returns.show', $sellerOrder->returnCases->first()) }}">View returns</a></div>@endif
+    @include('seller.orders._documents', ['sellerOrder' => $sellerOrder, 'approvalInFooter' => true])
+    <div class="sc-premium-order-info">
+        <section class="sc-clean-items" aria-label="Order items"><h3>Order items</h3><ul>
+            @foreach ($sellerOrder->items as $item)
+                <li class="sc-clean-item"><span class="sc-premium-item-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 3 9 5v9l-9 5-9-5V8l9-5ZM3 8l9 5 9-5M12 13v9"/></svg></span><div><p>{{ $item->product_name }}</p><small>{{ $item->quantity }} × ₱{{ number_format($item->unit_price, 2) }}@if ($item->variant_label) · {{ $item->variant_label }}@endif</small></div><strong>₱{{ number_format($item->line_total, 2) }}</strong></li>
+            @endforeach
+        </ul><p class="sc-meta">{{ $isPickup ? 'Pickup' : 'Delivery' }} · {{ bccomp((string) $sellerOrder->shipping_amount, '0', 2) === 0 ? 'Free' : '₱'.number_format($sellerOrder->shipping_amount, 2) }}</p></section>
+        <section class="sc-premium-customer"><h3>Customer</h3><p>{{ $order->recipient_name }}</p><a href="tel:{{ $order->phone }}">{{ $order->phone }}</a>@unless ($isPickup)<p class="sc-meta">{{ $order->address_line }}, {{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endunless @if ($order->delivery_note)<p class="sc-meta">{{ $order->delivery_note }}</p>@endif @unless ($isPickup)<x-marketplace.delivery-pin :order="$order" />@endunless</section>
     </div>
+    @if (bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0)
+        <dl class="sc-premium-costs" aria-label="Discount summary"><div><dt>Subtotal</dt><dd>₱{{ number_format($sellerOrder->subtotal, 2) }}</dd></div><div><dt>{{ $order->discount_card_type === 'senior' ? 'SC discount' : 'PWD discount' }}</dt><dd>−₱{{ number_format($sellerOrder->discount_amount, 2) }}</dd></div><div><dt>Total</dt><dd>₱{{ number_format($sellerOrder->total, 2) }}</dd></div></dl>
+    @endif
+    <details class="sc-clean-history"><summary>Review history</summary>
+        @if ($order->prescription)@include('seller.orders._prescription-history', ['prescription' => $order->prescription])@else @include('seller.orders._steps', ['sellerOrder' => $sellerOrder])@endif
+        @if ($canManageOrders && bccomp((string) $sellerOrder->discount_amount, '0', 2) > 0)
+            <p class="sc-meta">{{ $order->discount_card_name }} · {{ $order->discount_card_number }}</p>
+            @unless (! ($canSupervise ?? false) || in_array($sellerOrder->status, ['delivered', 'cancelled'], true))<form method="POST" action="{{ route('seller.orders.senior-pwd-discount.destroy', $sellerOrder) }}" data-confirm="Remove the discount and charge full price?">@csrf @method('DELETE')<button type="submit" class="sc-link text-danger">Remove discount</button></form>@endunless
+        @endif
+    </details>
 </div>
 <footer class="sc-modal-foot sc-order-foot">
     <div class="sc-order-foot-left">
         <div class="sc-more" x-data="{ open: false }" @keydown.escape.window="open = false">
             <button type="button" class="sc-btn sc-more-btn" @click="open = ! open" :aria-expanded="open" aria-haspopup="menu" aria-label="More order actions">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
-                <span>More</span>
+                <span class="sr-only">More</span>
             </button>
             <div class="sc-more-menu" role="menu" x-show="open" x-cloak @click.outside="open = false">
                 <button type="button" class="sc-more-item" role="menuitem" @click="navigator.clipboard?.writeText(@js($order->number)); open = false">
@@ -146,6 +114,9 @@
 
     </div>
     <div class="sc-order-foot-actions">
+        @if ($waitingForPrescription && $order->prescription->status === 'pending')
+            <button type="button" class="seller-outline-button" aria-haspopup="dialog" aria-controls="prescription-change-{{ $sellerOrder->id }}" @click="document.getElementById(@js('prescription-change-'.$sellerOrder->id)).showModal()">Request clearer photo</button>
+        @endif
         @if ($conversation)
             <a href="{{ route('messages.show', $conversation) }}" class="seller-outline-button sc-order-secondary">Message buyer</a>
         @endif
@@ -156,6 +127,8 @@
                 <input type="hidden" name="decision" value="approve">
                 <button type="submit" class="seller-primary-button sc-order-primary" aria-label="Approve prescription and accept order">Approve &amp; accept</button>
             </form>
+        @elseif ($waitingForPrescription)
+            <button type="button" class="seller-outline-button" disabled>{{ $order->prescription->status === 'needs_photo' ? 'Awaiting clearer photo' : 'Awaiting pharmacist' }}</button>
         @elseif ($canManageOrders && $nextTransition === 'shipped' && ! $isPickup)
             {{-- The full page asks for the rider before the order goes out. --}}
             <a href="{{ route('seller.orders.show', $sellerOrder) }}" class="seller-primary-button sc-order-primary">{{ $transitionLabels['shipped'] }}…</a>

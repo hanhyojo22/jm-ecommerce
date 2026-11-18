@@ -110,6 +110,7 @@
                 @endif
             </div>
 
+            @unless ($isSellerWorkspace && request()->routeIs('seller.orders.index'))
             <form
                 method="GET"
                 action="{{ $isSellerWorkspace ? route('seller.products.index') : route('catalog.index') }}"
@@ -173,6 +174,9 @@
                     @include('components.marketplace.search-suggestions', ['listId' => 'marketplace-search-results', 'optionPrefix' => 'marketplace-result-'])
                 @endunless
             </form>
+            @else
+                <div class="hidden min-[641px]:block min-[641px]:flex-1" aria-hidden="true"></div>
+            @endunless
 
             <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 sm:gap-2 min-[641px]:order-none min-[641px]:ml-0">
                 @if ($isSellerWorkspace || $isCustomerWorkspace)

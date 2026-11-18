@@ -389,7 +389,7 @@ test('seller order workspace keeps a discount review error visible after redirec
         await page.goto('/seller/orders');
         await rejectOptionalCookies(page);
         await page.locator('.sc-queue-order').filter({ hasText: 'QA-REVIEW-001' }).click();
-        await expect(page.locator('.sc-order-ref')).toHaveText('QA-REVIEW-001');
+        await expect(page.locator('.sc-order-ref')).toHaveText('Order QA-REVIEW-001');
         const orderId = new URL(page.url()).searchParams.get('order');
         const token = await page.locator('meta[name="csrf-token"]').getAttribute('content');
         const response = await page.request.post(new URL(`/seller/orders/${orderId}/discount-document/review`, page.url()).href, {

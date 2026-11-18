@@ -67,9 +67,9 @@ test('a customer submits prescription and discount ID together and the pharmacy 
         const detail = page.getByRole('region', { name: 'Selected order details' });
         await expect(detail.getByRole('button', { name: 'Approve prescription' })).toBeVisible();
         await expect(detail.getByLabel('Message to the customer')).toBeHidden();
-        await detail.getByText('Request a change', { exact: true }).click();
+        await detail.getByRole('button', { name: 'Request clearer photo', exact: true }).click();
         await expect(detail.getByLabel('Message to the customer')).toBeVisible();
-        await detail.getByText('Request a change', { exact: true }).click();
+        await detail.getByRole('button', { name: 'Cancel', exact: true }).click();
         await page.setViewportSize({ width: 1440, height: 1000 });
         await expect(detail.getByRole('img', { name: 'Prescription page 1', exact: true })).toBeVisible();
         await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
