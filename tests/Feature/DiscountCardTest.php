@@ -196,6 +196,7 @@ class DiscountCardTest extends TestCase
             ->assertOk()
             ->assertSee('name="discount_card_id"', false)
             ->assertSee('value="'.$card->id.'"', false)
+            ->assertSee("cardId: '{$card->id}'", false)
             ->assertSee('•••• 0123')
             ->assertDontSee('SC-2026-00123');
 

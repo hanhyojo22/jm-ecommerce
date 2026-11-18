@@ -233,8 +233,13 @@ void main() {
     await tester.tap(find.text('Use my discount'));
     await tester.pumpAndSettle();
 
+    // The saved ID starts selected, so there is nothing to type.
     expect(find.text('Senior citizen · Lola Ana'), findsOneWidget);
     expect(find.text('•••••0123'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'ID number'), findsNothing);
+
+    await tester.tap(find.text('Use a different ID'));
+    await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'ID number'), findsOneWidget);
 
     await tester.tap(find.text('Senior citizen · Lola Ana'));

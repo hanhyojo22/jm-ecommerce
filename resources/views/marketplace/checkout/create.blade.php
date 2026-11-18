@@ -18,7 +18,8 @@
             {{-- A closed branch takes pickup only; delivery opens again at its next opening. --}}
             fulfillment: @js(old('fulfillment_method', $closedUntil ? 'pickup' : 'delivery')),
             card: @js(filled(old('discount_card.type')) || filled(old('discount_card_id'))),
-            cardId: @js((string) old('discount_card_id', '')),
+            {{-- A saved ID starts selected; after a failed submit, keep whatever the customer chose. --}}
+            cardId: @js(session()->hasOldInput() ? (string) old('discount_card_id', '') : (string) ($discountCards->first()?->id ?? '')),
             saveCard: @js((bool) old('save_discount_card')),
             totals: @js([
                 'delivery' => '₱'.number_format($total, 2),

@@ -174,6 +174,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _paymentMethod = quote.paymentOptions['cod']?.available == true
         ? 'cod'
         : _firstAvailablePayment(quote);
+
+    // A saved ID is ready to use; typing a different one is the exception.
+    _savedCardId = quote.discountCards.firstOrNull?.id;
   }
 
   String _firstAvailablePayment(CheckoutQuote quote) {
