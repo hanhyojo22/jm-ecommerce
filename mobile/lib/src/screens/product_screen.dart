@@ -1158,21 +1158,21 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                     ],
                   ),
                 ),
-              if (product.cheaperAlternatives.isNotEmpty)
+              if (product.sameMedicine.isNotEmpty)
                 _block(
                   context,
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Same medicine, lower price',
+                        'Other brands of this medicine',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Same generic name, strength and form. Ask the pharmacist if you are unsure.',
+                        'Same ingredient, strength and form, by price. Inactive ingredients and appearance may differ. Ask our pharmacist before switching.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -1180,7 +1180,7 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                       const SizedBox(height: 10),
                       _productStrip(
                         context,
-                        product.cheaperAlternatives,
+                        product.sameMedicine,
                         padding: EdgeInsets.zero,
                       ),
                     ],

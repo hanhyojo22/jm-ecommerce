@@ -294,8 +294,8 @@ class CatalogController extends Controller
             'cartItemCount' => $request->user()?->cartItemCount() ?? 0,
             'relatedProducts' => $relatedProducts,
             'sellerProducts' => $sellerProducts,
-            'cheaperAlternatives' => $branch === null ? collect() : CatalogQuery::cheaperAlternatives(
-                CatalogQuery::inStockAt($this->publishedProducts()->with('thumbnail'), $branch),
+            'sameMedicine' => CatalogQuery::sameMedicine(
+                $this->publishedProducts()->when($branch, fn (Builder $query) => CatalogQuery::inStockAt($query, $branch)),
                 $product,
             )->get(),
         ]);

@@ -404,29 +404,27 @@ class CatalogQuery
     }
 
     /**
-     * Up to three cheaper products with the same generic name, strength and dosage form,
-     * cheapest first. Nothing when the product has no generic name. Products with options are
+     * Every other product with the same generic name, strength and dosage form, cheaper and
+     * dearer, by price. The law asks for all of them (RA 6675 §6(d)), so nothing is picked out.
+     * Nothing when any of the three is blank, so an unfilled strength never matches every
+     * strength. Spacing and case are ignored ("500mg" = "500 MG"). Products with options are
      * left out because their price depends on the option chosen.
      */
-    public static function cheaperAlternatives(Builder $products, Product $product): Builder
+    public static function sameMedicine(Builder $products, Product $product): Builder
     {
-        $sameText = fn (Builder $query, string $column, ?string $value): Builder => blank($value)
-            ? $query
-            : $query->whereRaw("lower({$column}) = ?", [mb_strtolower(trim($value))]);
-
-        if (blank($product->generic_name)) {
+        if (blank($product->generic_name) || blank($product->strength) || blank($product->dosage_form)) {
             return $products->whereRaw('1 = 0');
         }
 
-        $products = $sameText($products, 'generic_name', $product->generic_name);
-        $products = $sameText($products, 'strength', $product->strength);
+        foreach (['generic_name', 'strength', 'dosage_form'] as $column) {
+            $products->whereRaw("REPLACE(LOWER(products.{$column}), ' ', '') = ?", [preg_replace('/\s+/u', '', mb_strtolower($product->{$column}))]);
+        }
 
-        return $sameText($products, 'dosage_form', $product->dosage_form)
+        return $products
             ->where('products.id', '!=', $product->id)
-            ->where('price', '<', (string) $product->price)
             ->whereDoesntHave('variants')
             ->reorder('price')
-            ->limit(3);
+            ->orderBy('products.name');
     }
 
     /**

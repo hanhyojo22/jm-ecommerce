@@ -390,14 +390,14 @@ void main() {
     expect(find.text('Store route'), findsOneWidget);
   });
 
-  testWidgets('a cheaper same-generic medicine is suggested', (tester) async {
-    await _pump(tester, _ProductApi()..withCheaper = true);
+  testWidgets('other brands of the same medicine are listed', (tester) async {
+    await _pump(tester, _ProductApi()..withSameMedicine = true);
     await tester.scrollUntilVisible(
       find.text('Generic paracetamol'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Same medicine, lower price'), findsOneWidget);
+    expect(find.text('Other brands of this medicine'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -554,7 +554,7 @@ class _ProductApi extends ApiClient {
   int adds = 0;
   bool variants = false;
   bool withStore = false;
-  bool withCheaper = false;
+  bool withSameMedicine = false;
   bool coloredVariants = false;
   bool largeInStock = true;
   String effectivePrice = '250.00';
@@ -614,8 +614,8 @@ class _ProductApi extends ApiClient {
       if (withStore)
         {'id': 'hoodie', 'name': 'Hoodie', 'slug': 'hoodie', 'price': '1.00'},
     ],
-    'cheaper_alternatives': [
-      if (withCheaper)
+    'same_medicine': [
+      if (withSameMedicine)
         {
           'id': 'generic',
           'name': 'Generic paracetamol',

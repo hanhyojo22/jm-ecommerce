@@ -99,16 +99,16 @@
                 </div>
                 <div class="pd-meta">@if ($product->free_shipping)<span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 5h13v13H2zM15 10h4l3 4v4h-7"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg>Free shipping</span>@endif<span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Report issues within 24 hours</span><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Cash on delivery</span><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 8 3v6c0 5-5 8-8 10-3-2-8-5-8-10V6l8-3Z"/><path d="m8 12 3 3 5-6"/></svg>Licensed pharmacy</span></div>
                 <div class="pd-store-card"><span class="pd-store-avatar">@if ($branch->logo_path)<img src="{{ Storage::disk('public')->url($branch->logo_path) }}" alt="" class="size-full object-cover">@else{{ Str::upper(Str::substr($branch->name, 0, 2)) }}@endif</span><div><b>{{ $branch->name }}</b><p>Pharmacy branch @if ($branch->city)&middot; {{ $branch->city }}@endif</p></div><div class="pd-store-actions">@if (Auth::check() && in_array(Auth::user()->account_type, ['buyer', 'seller'], true) && Auth::user()->hasVerifiedClerkEmail() && ! Auth::user()->isMemberOfTenant($product->tenant_id))<form method="POST" action="{{ route('messages.products.start', $product) }}">@csrf<button type="submit" class="pd-btn secondary small">Message pharmacy</button></form>@endif<a href="{{ route('catalog.store', $branch->slug) }}" class="pd-btn secondary small">Visit branch <span aria-hidden="true">&#8594;</span></a></div></div>
-                @if ($cheaperAlternatives->isNotEmpty())
-                    <div class="mt-4 rounded-lg border border-line bg-surface p-4" aria-labelledby="cheaper-heading">
-                        <h2 id="cheaper-heading" class="text-sm font-semibold text-ink">Same medicine, lower price</h2>
-                        <p class="mt-0.5 text-xs text-muted">Same generic name, strength and form. Ask the pharmacist if you are unsure.</p>
+                @if ($sameMedicine->isNotEmpty())
+                    <div class="mt-4 rounded-lg border border-line bg-surface p-4" aria-labelledby="same-medicine-heading">
+                        <h2 id="same-medicine-heading" class="text-sm font-semibold text-ink">Other brands of this medicine</h2>
+                        <p class="mt-0.5 text-xs text-muted">Same ingredient, strength and form, by price. Inactive ingredients and appearance may differ. Ask our pharmacist before switching.</p>
                         <ul class="mt-3 divide-y divide-line-soft">
-                            @foreach ($cheaperAlternatives as $alternative)
+                            @foreach ($sameMedicine as $alternative)
                                 <li>
                                     <a href="{{ route('catalog.show', [$alternative->store->slug, $alternative->slug]) }}" class="flex min-h-11 items-center justify-between gap-3 py-2 text-sm hover:text-brand">
                                         <span class="min-w-0 truncate font-medium text-ink">{{ $alternative->name }}</span>
-                                        <span class="shrink-0 text-right tabular-nums"><b class="text-ink">₱{{ number_format((float) $alternative->price, 2) }}</b> <span class="text-xs text-success">₱{{ number_format((float) bcsub((string) $product->price, (string) $alternative->price, 2), 2) }} less</span></span>
+                                        <span class="flex shrink-0 items-center gap-2 tabular-nums">@if ($alternative->requires_prescription)<span class="rounded bg-canvas px-1.5 py-0.5 text-[11px] font-semibold text-muted" title="Prescription required">Rx</span>@endif<b class="text-ink">₱{{ number_format((float) $alternative->price, 2) }}</b></span>
                                     </a>
                                 </li>
                             @endforeach

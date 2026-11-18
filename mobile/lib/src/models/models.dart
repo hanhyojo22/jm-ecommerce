@@ -329,7 +329,7 @@ class Product {
     this.reviewSummary,
     this.related = const [],
     this.moreFromStore = const [],
-    this.cheaperAlternatives = const [],
+    this.sameMedicine = const [],
     this.searchSection,
   });
 
@@ -365,8 +365,8 @@ class Product {
   final List<Product> related;
   final List<Product> moreFromStore;
 
-  /// Cheaper products with the same generic name, strength and form, cheapest first.
-  final List<Product> cheaperAlternatives;
+  /// Every other product with the same generic name, strength and form, by price.
+  final List<Product> sameMedicine;
 
   /// Search-result heading this product falls under, e.g. "Other brands of Paracetamol".
   final String? searchSection;
@@ -420,7 +420,7 @@ class Product {
       moreFromStore: listOf(json['more_from_store'])
           .map(Product.fromJson)
           .toList(growable: false),
-      cheaperAlternatives: listOf(json['cheaper_alternatives'])
+      sameMedicine: listOf(json['same_medicine'])
           .map(Product.fromJson)
           .toList(growable: false),
     );

@@ -226,7 +226,7 @@ class CatalogController extends Controller
             ->limit(4)
             ->get();
 
-        $cheaperAlternatives = CatalogQuery::cheaperAlternatives(
+        $sameMedicine = CatalogQuery::sameMedicine(
             $this->summaryQuery()->when($branch, fn (Builder $query) => CatalogQuery::inStockAt($query, $branch)),
             $product,
         )->get();
@@ -234,7 +234,7 @@ class CatalogController extends Controller
         return response()->json([
             'data' => [
                 ...ProductResource::make($product)->resolve($request),
-                'cheaper_alternatives' => ProductSummaryResource::collection($cheaperAlternatives)->resolve($request),
+                'same_medicine' => ProductSummaryResource::collection($sameMedicine)->resolve($request),
                 'review_summary' => [
                     'count' => (int) ($product->published_reviews_count ?? 0),
                     'average' => round((float) ($product->published_reviews_avg_rating ?? 0), 2),
