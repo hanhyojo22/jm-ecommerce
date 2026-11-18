@@ -199,6 +199,21 @@ class CatalogTest extends TestCase
         }
     }
 
+    public function test_product_cards_and_page_print_the_generic_name_above_the_brand(): void
+    {
+        $brand = $this->product(['name' => 'Biogesic 500 mg Caplet', 'generic_name' => 'Paracetamol']);
+        $generic = $this->product(['name' => 'Ascorbic Acid 500 mg Tablet', 'generic_name' => 'ascorbic acid']);
+
+        foreach ([route('home'), route('catalog.index'), route('catalog.store', $brand->store->slug)] as $url) {
+            $this->get($url)->assertSeeInOrder(['Paracetamol</p>', 'Biogesic 500 mg Caplet'], false);
+        }
+
+        $this->get(route('catalog.show', [$brand->store->slug, $brand->slug]))
+            ->assertSeeInOrder(['<p class="pd-generic">Paracetamol</p>', 'Biogesic 500 mg Caplet</h1>'], false);
+        $this->get(route('catalog.show', [$generic->store->slug, $generic->slug]))
+            ->assertDontSee('pd-generic"', false);
+    }
+
     public function test_sold_out_product_shows_availability_notice_across_public_product_pages(): void
     {
         $product = $this->product(['stock_quantity' => 0]);

@@ -17,6 +17,22 @@ import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
+  test('generic name label shows only when the product name lacks it', () {
+    Product medicine(String name, String? generic) =>
+        Product.fromJson({'id': name, 'name': name, 'generic_name': generic});
+
+    expect(
+      medicine('Biogesic 500 mg Caplet', 'Paracetamol').genericNameLabel,
+      'Paracetamol',
+    );
+    expect(
+      medicine('Ascorbic Acid 500 mg', 'ascorbic acid').genericNameLabel,
+      isNull,
+    );
+    expect(medicine('Bandage', ' ').genericNameLabel, isNull);
+    expect(medicine('Bandage', null).genericNameLabel, isNull);
+  });
+
   for (final height in [640.0, 844.0]) {
     for (final scale in [1.0, 2.0]) {
       testWidgets(

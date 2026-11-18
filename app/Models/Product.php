@@ -70,6 +70,20 @@ class Product extends Model
         return $this->status !== 'pending';
     }
 
+    /**
+     * The generic name to print above the brand (FDA generics labelling), or null when the product name already says it.
+     */
+    public function genericNameLabel(): ?string
+    {
+        $genericName = trim((string) $this->generic_name);
+
+        if ($genericName === '' || str_contains(mb_strtolower($this->name), mb_strtolower($genericName))) {
+            return null;
+        }
+
+        return $genericName;
+    }
+
     protected function casts(): array
     {
         return ['price' => 'decimal:2', 'compare_at_price' => 'decimal:2', 'free_shipping' => 'boolean', 'requires_prescription' => 'boolean', 'content_changed_at' => 'datetime'];

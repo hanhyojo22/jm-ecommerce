@@ -926,6 +926,17 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                   children: [
                     // Medicine first, then strength/brand, then price: what you
                     // are buying matters more than what it costs.
+                    if (product.genericNameLabel != null) ...[
+                      Text(
+                        product.genericNameLabel!.toUpperCase(),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                    ],
                     Text(
                       product.name,
                       style: theme.textTheme.headlineSmall?.copyWith(

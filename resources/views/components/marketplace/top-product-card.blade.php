@@ -37,6 +37,9 @@
                 <span class="inline-flex h-5 items-center whitespace-nowrap rounded bg-slate-600 px-1.5"><span aria-hidden="true">Rx</span><span class="sr-only">Prescription required</span></span>
             </div>
         @endif
+        @if ($product->genericNameLabel())
+            <p class="truncate text-xs font-semibold uppercase tracking-wide text-muted">{{ $product->genericNameLabel() }}</p>
+        @endif
         <h3 class="product-card-title min-h-12 text-[16px] font-medium leading-6 text-ink"><a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" class="line-clamp-2 hover:text-brand-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">{{ $product->name }}</a></h3>
         <div class="flex flex-wrap items-center gap-2">
             <p class="product-card-price text-[20px] font-bold leading-6 tabular-nums {{ $isOnSale ? 'text-danger' : 'text-ink' }}">₱{{ number_format($displayPrice, $priceDecimals) }}</p>

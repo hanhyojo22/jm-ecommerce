@@ -308,6 +308,7 @@ class Product {
     this.compareAtPrice,
     this.thumbnailUrl,
     this.brand,
+    this.genericName,
     this.condition,
     this.description,
     this.sku,
@@ -341,6 +342,7 @@ class Product {
   final String? compareAtPrice;
   final String? thumbnailUrl;
   final String? brand;
+  final String? genericName;
   final String? condition;
   final String? description;
   final String? sku;
@@ -371,6 +373,15 @@ class Product {
   /// Search-result heading this product falls under, e.g. "Other brands of Paracetamol".
   final String? searchSection;
 
+  /// Generic name to print above the brand, or null when the name already says it (mirrors Product::genericNameLabel).
+  String? get genericNameLabel {
+    final generic = genericName?.trim() ?? '';
+    if (generic.isEmpty || name.toLowerCase().contains(generic.toLowerCase())) {
+      return null;
+    }
+    return generic;
+  }
+
   factory Product.fromJson(Map<String, dynamic> json) {
     final rating = mapOf(json['rating']);
     final category = json['category'] == null
@@ -386,6 +397,7 @@ class Product {
       compareAtPrice: json['compare_at_price'] as String?,
       thumbnailUrl: json['thumbnail_url'] as String?,
       brand: json['brand'] as String?,
+      genericName: json['generic_name'] as String?,
       condition: json['condition'] as String?,
       description: json['description'] as String?,
       sku: json['sku'] as String?,
@@ -616,9 +628,33 @@ class Address {
   );
 }
 
+/// A senior citizen or PWD ID the customer saved at checkout. The number only
+/// ever arrives masked.
+class DiscountCard {
+  const DiscountCard({
+    required this.id,
+    required this.type,
+    required this.name,
+    required this.idNumberMasked,
+  });
+
+  final String id;
+  final String type;
+  final String name;
+  final String idNumberMasked;
+
+  String get typeLabel => type == 'pwd' ? 'PWD' : 'Senior citizen';
+
+  factory DiscountCard.fromJson(Map<String, dynamic> json) => DiscountCard(
+    id: str(json['id']),
+    type: str(json['type']),
+    name: str(json['name']),
+    idNumberMasked: str(json['id_number_masked']),
+  );
+}
+
 class PaymentOption {
   const PaymentOption({required this.available, this.fee, this.reason});
-
   final bool available;
   final String? fee;
   final String? reason;
@@ -653,6 +689,7 @@ class CheckoutQuote {
     this.branchCity,
     this.fulfillment = const {},
     this.seniorPwdDiscount = '0.00',
+    this.discountCards = const [],
   });
 
   final List<CartLine> lines;
@@ -663,6 +700,9 @@ class CheckoutQuote {
 
   bool get offersSeniorPwdDiscount =>
       (double.tryParse(seniorPwdDiscount) ?? 0) > 0;
+
+  /// IDs this customer saved earlier; empty means the typed fields are the only way.
+  final List<DiscountCard> discountCards;
   final List<StoreTotal> storeTotals;
   final List<Address> addresses;
   final Address? preferredAddress;
@@ -684,6 +724,9 @@ class CheckoutQuote {
     lines: listOf(json['items']).map(CartLine.fromJson).toList(growable: false),
     subtotal: str(json['subtotal'], '0.00'),
     seniorPwdDiscount: str(json['senior_pwd_discount'], '0.00'),
+    discountCards: listOf(json['discount_cards'])
+        .map(DiscountCard.fromJson)
+        .toList(growable: false),
     storeTotals: listOf(json['store_totals'])
         .map(StoreTotal.fromJson)
         .toList(growable: false),

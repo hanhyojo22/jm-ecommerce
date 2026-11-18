@@ -108,7 +108,7 @@ class TopProductQuery
         $orderCases = $productIds->map(fn (string $productId, int $position): string => "WHEN ? THEN {$position}")->implode(' ');
 
         return Product::query()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status'])
             ->with(['thumbnail', 'store:id,name,slug,status,city,logo_path'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')

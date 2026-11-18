@@ -17,6 +17,7 @@
 .prototype-product .pd-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:48px; align-items:start; }
 .prototype-product .pd-info { min-width:0; padding-top:3px; }
 .prototype-product .pd-store-line { display:flex; align-items:center; gap:4px; color:var(--pd-muted); font-size:12px; }
+.prototype-product .pd-generic { margin:10px 0 -6px; color:var(--pd-muted); font-size:13px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
 .prototype-product .pd-info h1 { font-size:clamp(22px, 1.1rem + 0.6vw, 26px); font-weight:600; line-height:1.16; letter-spacing:-.025em; margin:10px 0 12px; overflow-wrap:anywhere; text-wrap:balance; }
 .prototype-product .pd-rating { display:flex; align-items:center; gap:5px; flex-wrap:wrap; font-size:14px; color:var(--pd-muted); margin-bottom:15px; }
 .prototype-product .pd-stars { color:#b77912; letter-spacing:1px; font-size:13px; }
