@@ -414,7 +414,30 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Other brands of this medicine'), findsOneWidget);
+    expect(find.textContaining('needs care'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a switch-with-care medicine warns before the other brands', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _ProductApi()
+        ..withSameMedicine = true
+        ..switchWithCare = true,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Generic paracetamol'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.text(
+        'Switching brands of this medicine needs care. Talk to your pharmacist or doctor before changing brands.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('header cart shortcut opens the cart', (tester) async {
@@ -571,6 +594,7 @@ class _ProductApi extends ApiClient {
   bool variants = false;
   bool withStore = false;
   bool withSameMedicine = false;
+  bool switchWithCare = false;
   bool coloredVariants = false;
   bool largeInStock = true;
   String effectivePrice = '250.00';
@@ -611,6 +635,7 @@ class _ProductApi extends ApiClient {
     'effective_price': effectivePrice,
     'in_stock': inStock,
     'requires_prescription': requiresPrescription,
+    'switch_with_care': switchWithCare,
     'stock_quantity': 5,
     'images': coloredVariants
         ? [

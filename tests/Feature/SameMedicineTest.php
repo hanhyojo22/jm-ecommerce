@@ -50,6 +50,29 @@ class SameMedicineTest extends TestCase
             ->assertSeeInOrder(['Other brands of this medicine', 'RiteMed Paracetamol 500mg', '₱3.50', 'Generika Paracetamol 500mg', 'Tempra Paracetamol 500mg', 'Rx', '₱9.00']);
     }
 
+    public function test_one_switch_with_care_brand_warns_on_every_brand_of_that_medicine(): void
+    {
+        $eltroxin = $this->medicine('Eltroxin 50mcg', '12.00', generic: 'Levothyroxine', strength: '50 mcg');
+        $generic = $this->medicine('Levothyroxine 50mcg', '6.00', generic: 'Levothyroxine', strength: '50 mcg');
+        $paracetamol = $this->medicine('Biogesic 500mg', '8.00');
+        $this->medicine('Generika Paracetamol 500mg', '5.00');
+        $eltroxin->update(['switch_with_care' => true]);
+        $warning = 'Switching brands of this medicine needs care.';
+
+        // Flagged on the brand alone, the generic's page still warns: the group is one medicine.
+        foreach ([$eltroxin, $generic] as $product) {
+            $this->getJson(route('api.v1.products.show', [$this->branch->slug, $product->slug, 'branch' => $this->branch->id]))
+                ->assertOk()
+                ->assertJsonPath('data.switch_with_care', true)
+                ->assertJsonCount(1, 'data.same_medicine');
+            $this->get(route('catalog.show', [$this->branch->slug, $product->slug]))->assertOk()->assertSee($warning);
+        }
+
+        $this->getJson(route('api.v1.products.show', [$this->branch->slug, $paracetamol->slug, 'branch' => $this->branch->id]))
+            ->assertJsonPath('data.switch_with_care', false);
+        $this->get(route('catalog.show', [$this->branch->slug, $paracetamol->slug]))->assertDontSee($warning);
+    }
+
     public function test_a_product_missing_its_generic_name_strength_or_form_gets_no_matches(): void
     {
         $vitamins = $this->medicine('Multivitamins', '8.00', generic: null);

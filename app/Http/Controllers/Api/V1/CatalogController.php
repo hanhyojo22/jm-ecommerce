@@ -235,6 +235,8 @@ class CatalogController extends Controller
             'data' => [
                 ...ProductResource::make($product)->resolve($request),
                 'same_medicine' => ProductSummaryResource::collection($sameMedicine)->resolve($request),
+                // One flagged brand makes the whole group a switch-with-care medicine.
+                'switch_with_care' => $product->switch_with_care || $sameMedicine->contains('switch_with_care', true),
                 'review_summary' => [
                     'count' => (int) ($product->published_reviews_count ?? 0),
                     'average' => round((float) ($product->published_reviews_avg_rating ?? 0), 2),
@@ -386,7 +388,7 @@ class CatalogController extends Controller
     private function summaryQuery(): Builder
     {
         return CatalogQuery::publishedProducts()
-            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'dosage_form', 'strength', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
+            ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'dosage_form', 'strength', 'requires_prescription', 'switch_with_care', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
             ->with(['thumbnail', 'category:id,name,slug'])
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')

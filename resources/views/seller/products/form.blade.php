@@ -399,6 +399,11 @@
                             <label class="flex items-start gap-3"><input type="checkbox" name="requires_prescription" value="1" @checked(old('requires_prescription', $product?->requires_prescription)) class="mt-1"><span><span class="pe-label">Prescription required</span><span class="block text-sm text-muted">Customers must upload a prescription for a pharmacist to approve before this is prepared.</span></span></label>
                             <x-input-error :messages="$errors->get('requires_prescription')" class="mt-2" />
                         </div>
+                        <div>
+                            <input type="hidden" name="switch_with_care" value="0">
+                            <label class="flex items-start gap-3"><input type="checkbox" name="switch_with_care" value="1" @checked(old('switch_with_care', $product?->switch_with_care)) class="mt-1"><span><span class="pe-label">Careful when switching brands</span><span class="block text-sm text-muted">For medicines like levothyroxine, anti-seizure medicines or warfarin. Customers still see every brand, with a note to talk to their pharmacist or doctor before switching.</span></span></label>
+                            <x-input-error :messages="$errors->get('switch_with_care')" class="mt-2" />
+                        </div>
                         <fieldset>
                             <legend class="pe-label">Condition</legend>
                             <div class="pe-segmented ps-segmented">

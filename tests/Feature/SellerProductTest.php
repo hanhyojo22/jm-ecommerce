@@ -43,17 +43,19 @@ class SellerProductTest extends TestCase
         $this->actingAs($owner)->post(route('seller.products.store'), [
             'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0,
             'generic_name' => 'Paracetamol', 'dosage_form' => 'Tablet', 'strength' => '500 mg', 'manufacturer' => 'Unilab',
-            'requires_prescription' => '1',
+            'requires_prescription' => '1', 'switch_with_care' => '1',
         ])->assertRedirect(route('seller.products.index'));
 
         $product = $tenant->products()->where('sku', 'BIO-500')->sole();
-        $this->assertSame(['Paracetamol', 'Tablet', '500 mg', 'Unilab', true], [$product->generic_name, $product->dosage_form, $product->strength, $product->manufacturer, $product->requires_prescription]);
+        $this->assertSame(['Paracetamol', 'Tablet', '500 mg', 'Unilab', true, true], [$product->generic_name, $product->dosage_form, $product->strength, $product->manufacturer, $product->requires_prescription, $product->switch_with_care]);
 
         $this->actingAs($owner)->patch(route('seller.products.update', $product), [
-            'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0, 'status' => 'draft', 'requires_prescription' => '0',
+            'name' => 'Biogesic 500mg', 'sku' => 'BIO-500', 'price' => '6.50', 'stock_quantity' => 0, 'status' => 'draft', 'requires_prescription' => '0', 'switch_with_care' => '0',
         ])->assertSessionHasNoErrors();
 
         $this->assertFalse($product->fresh()->requires_prescription);
+        $this->assertFalse($product->fresh()->switch_with_care);
+        $this->actingAs($owner)->get(route('seller.products.edit', $product))->assertSee('Careful when switching brands');
     }
 
     public function test_seller_can_create_color_and_size_options_with_multiple_photos(): void

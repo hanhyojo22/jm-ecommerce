@@ -318,6 +318,11 @@ class CatalogController extends Controller
         $product->setAttribute('stock_quantity', $product->variants->isEmpty() ? (int) ($counts['default'] ?? 0) : $product->variants->sum('stock_quantity'));
         $branch = $branchId === $product->store_id ? $product->store : Store::query()->find($branchId, ['id', 'name', 'slug', 'status', 'city', 'logo_path']);
 
+        $sameMedicine = CatalogQuery::sameMedicine(
+            $this->publishedProducts()->when($branch, fn (Builder $query) => CatalogQuery::inStockAt($query, $branch)),
+            $product,
+        )->get();
+
         return view('marketplace.catalog.show', [
             'product' => $product,
             'isSaved' => (bool) $request->user()?->savedProducts()->whereKey($product->id)->exists(),
@@ -332,10 +337,9 @@ class CatalogController extends Controller
             'cartItemCount' => $request->user()?->cartItemCount() ?? 0,
             'relatedProducts' => $relatedProducts,
             'sellerProducts' => $sellerProducts,
-            'sameMedicine' => CatalogQuery::sameMedicine(
-                $this->publishedProducts()->when($branch, fn (Builder $query) => CatalogQuery::inStockAt($query, $branch)),
-                $product,
-            )->get(),
+            'sameMedicine' => $sameMedicine,
+            // One flagged brand makes the whole group a switch-with-care medicine.
+            'switchWithCare' => $product->switch_with_care || $sameMedicine->contains('switch_with_care', true),
         ]);
     }
 

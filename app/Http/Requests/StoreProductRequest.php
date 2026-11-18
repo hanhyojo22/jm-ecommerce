@@ -29,6 +29,7 @@ class StoreProductRequest extends FormRequest
             'strength' => ['nullable', 'string', 'max:60'],
             'manufacturer' => ['nullable', 'string', 'max:160'],
             'requires_prescription' => ['sometimes', 'boolean'],
+            'switch_with_care' => ['sometimes', 'boolean'],
             'condition' => ['nullable', Rule::in(['new', 'refurbished'])],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'compare_at_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99', 'gt:price'],

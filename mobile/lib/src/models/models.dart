@@ -316,6 +316,7 @@ class Product {
     required this.hasVariants,
     required this.requiresVariantSelection,
     this.requiresPrescription = false,
+    this.switchWithCare = false,
     this.branchName,
     this.branchSlug,
     required this.freeShipping,
@@ -350,6 +351,9 @@ class Product {
   final bool hasVariants;
   final bool requiresVariantSelection;
   final bool requiresPrescription;
+
+  /// Changing brands of this medicine needs a pharmacist's or doctor's say (e.g. levothyroxine).
+  final bool switchWithCare;
 
   /// The branch whose stock [inStock] and [stockQuantity] describe; null when company-wide.
   final String? branchName;
@@ -405,6 +409,7 @@ class Product {
       hasVariants: boolean(json['has_variants']),
       requiresVariantSelection: boolean(json['requires_variant_selection']),
       requiresPrescription: boolean(json['requires_prescription']),
+      switchWithCare: boolean(json['switch_with_care']),
       searchSection: json['search_section'] as String?,
       branchName: mapOf(json['branch'])['name'] as String?,
       branchSlug: mapOf(json['branch'])['slug'] as String?,

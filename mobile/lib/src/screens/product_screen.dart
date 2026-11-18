@@ -1193,6 +1193,27 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
+                      if (product.switchWithCare) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.tertiaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'Switching brands of this medicine needs care. Talk to your pharmacist or doctor before changing brands.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onTertiaryContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       _productStrip(
                         context,

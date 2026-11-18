@@ -104,6 +104,7 @@
                     <div class="mt-4 rounded-lg border border-line bg-surface p-4" aria-labelledby="same-medicine-heading">
                         <h2 id="same-medicine-heading" class="text-sm font-semibold text-ink">Other brands of this medicine</h2>
                         <p class="mt-0.5 text-xs text-muted">Same ingredient, strength and form, by price. Inactive ingredients and appearance may differ. Ask our pharmacist before switching.</p>
+                        @if ($switchWithCare)<p class="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900" role="note">Switching brands of this medicine needs care. Talk to your pharmacist or doctor before changing brands.</p>@endif
                         <ul class="mt-3 divide-y divide-line-soft">
                             @foreach ($sameMedicine as $alternative)
                                 <li>
