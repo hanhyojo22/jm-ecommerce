@@ -375,7 +375,7 @@ test('customer adds an item to the cart on the session token the request carries
         });
         await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         const startingCartCount = Number((await page.locator('[data-cart-link]').getAttribute('aria-label')).match(/\d+/)[0]);
-        const addToCartForm = page.locator('#purchase form');
+        const addToCartForm = page.locator('#pd-purchase-form');
         await expect(addToCartForm).toHaveAttribute('data-clerk-session-refresh', /auth\/session/);
         await expect(addToCartForm).toHaveAttribute('action', /cart\/products\//);
         const add = page.waitForResponse((response) => /\/cart\/products\//.test(response.url()) && response.request().method() === 'POST');
