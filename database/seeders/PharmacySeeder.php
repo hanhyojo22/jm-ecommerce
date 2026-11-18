@@ -67,6 +67,8 @@ class PharmacySeeder extends Seeder
             // Product stock is the company total across branches.
             $product->update(['stock_quantity' => BranchStock::query()->where('product_id', $product->id)->sum('quantity')]);
         }
+
+        $this->call(PharmacyImageSeeder::class);
     }
 
     /** @return list<array{name: string, address_line: string, city: string, barangay: string, latitude: float, longitude: float}> */

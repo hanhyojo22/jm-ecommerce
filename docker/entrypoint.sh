@@ -31,6 +31,9 @@ if [ "${RUN_SEEDERS:-false}" = "true" ]; then
     php artisan db:seed --class=PharmacySeeder --force --no-interaction
 fi
 
+# Attach bundled images to existing sample medicines without changing stock.
+php artisan db:seed --class=PharmacyImageSeeder --force --no-interaction
+
 if [ "${RUN_OPTIMIZATIONS:-true}" = "true" ]; then
     php artisan config:cache
     php artisan route:cache
