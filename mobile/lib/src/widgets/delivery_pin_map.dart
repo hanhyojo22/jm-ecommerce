@@ -4,19 +4,19 @@ import 'package:latlong2/latlong.dart';
 
 import '../theme.dart';
 
-/// A small map with a pin fixed in the middle: the customer drags the map
-/// until the pin sits on their door, like a ride or food app.
+/// A still map preview of the delivery pin for the checkout list. It does not
+/// take drags (they would fight the page scroll); tapping it opens the picker.
 class DeliveryPinMap extends StatelessWidget {
   const DeliveryPinMap({
     super.key,
-    required this.initial,
-    required this.onMoved,
+    required this.pin,
+    required this.onTap,
     this.branch,
-    this.height = 220,
+    this.height = 124,
   });
 
-  final LatLng initial;
-  final ValueChanged<LatLng> onMoved;
+  final LatLng pin;
+  final VoidCallback onTap;
 
   /// Where the branch is, shown as a small store marker for orientation.
   final LatLng? branch;
@@ -32,56 +32,39 @@ class DeliveryPinMap extends StatelessWidget {
         height: height,
         child: Stack(
           children: [
-            FlutterMap(
-              options: MapOptions(
-                initialCenter: initial,
-                initialZoom: 17,
-                minZoom: 12,
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.drag | InteractiveFlag.pinchZoom,
+            IgnorePointer(
+              child: FlutterMap(
+                // A new pin needs a new map: initialCenter only applies once.
+                key: ValueKey(pin),
+                options: MapOptions(
+                  initialCenter: pin,
+                  initialZoom: 16,
+                  interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.none,
+                  ),
                 ),
-                onPositionChanged: (camera, hasGesture) {
-                  if (hasGesture) onMoved(camera.center);
-                },
-              ),
-              children: [
-                // shortcut: OpenStreetMap's public tiles allow light use only;
-                // move to a paid tile host (MapTiler, Stadia) before heavy traffic.
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.jmmart.jmmart',
-                ),
-                if (branch != null)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: branch!,
-                        width: 32,
-                        height: 32,
-                        child: Icon(
-                          Icons.storefront_rounded,
-                          color: scheme.secondary,
-                          semanticLabel: 'Branch',
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.jmmart.jmmart',
+                  ),
+                  if (branch != null)
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: branch!,
+                          width: 28,
+                          height: 28,
+                          child: Icon(
+                            Icons.storefront_rounded,
+                            color: scheme.secondary,
+                            semanticLabel: 'Branch',
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            // OpenStreetMap's licence asks for this credit on the map.
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: ColoredBox(
-                color: Colors.white.withValues(alpha: 0.8),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  child: Text(
-                    '© OpenStreetMap',
-                    maxLines: 1,
-                    style: TextStyle(fontSize: 10, color: Colors.black87),
-                  ),
-                ),
+                      ],
+                    ),
+                ],
               ),
             ),
             IgnorePointer(
@@ -91,11 +74,52 @@ class DeliveryPinMap extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 40),
                   child: Icon(
                     Icons.location_on_rounded,
-                    size: 44,
+                    size: 40,
                     color: scheme.primary,
                     semanticLabel: 'Delivery pin',
                   ),
                 ),
+              ),
+            ),
+            Positioned.fill(
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(onTap: onTap, excludeFromSemantics: true),
+              ),
+            ),
+            // OpenStreetMap's licence asks for this credit on the map.
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    child: Text(
+                      '© OpenStreetMap',
+                      maxLines: 1,
+                      style: TextStyle(fontSize: 11, color: Colors.black87),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 8,
+              bottom: 8,
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  backgroundColor: scheme.surfaceContainerLowest,
+                  foregroundColor: scheme.primary,
+                  elevation: 2,
+                  shape: const StadiumBorder(),
+                ),
+                onPressed: onTap,
+                icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
+                label: const Text('Adjust pin'),
               ),
             ),
           ],

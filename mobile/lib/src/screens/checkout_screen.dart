@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
@@ -17,8 +16,10 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/checkout_providers.dart';
 import '../providers/store_locator_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/delivery_pin_map.dart';
+import 'delivery_pin_screen.dart';
 import '../widgets/store_locator.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
@@ -62,7 +63,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   /// Where the rider goes. Starts at the phone's location, or at the branch
   /// when location is off, and follows the map as the customer moves it.
   LatLng? _pin;
-  bool _locatedPhone = false;
+
+  /// The pin is trusted once it came from the phone or the customer confirmed it;
+  /// a pin parked on the branch because location was off is not.
+  bool _pinConfirmed = false;
 
   /// The branch the cart buys from, which the delivery radius is measured from.
   StoreBranch? _deliveryBranch;
@@ -86,7 +90,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     try {
       final here = await ref.read(locationServiceProvider).currentPosition();
       start = LatLng(here.latitude, here.longitude);
-      _locatedPhone = true;
+      _pinConfirmed = true;
     } on LocationFailure {
       final branch = _deliveryBranch;
       start = branch == null ? null : LatLng(branch.latitude, branch.longitude);
@@ -121,14 +125,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (branch == null || pin == null || radius == null) {
       return null;
     }
-    final km =
-        Geolocator.distanceBetween(
-          branch.latitude,
-          branch.longitude,
-          pin.latitude,
-          pin.longitude,
-        ) /
-        1000;
+    final km = pinDistanceKm(branch, pin);
     return km > radius
         ? 'This pin is ${km.toStringAsFixed(1)} km away. ${branch.name} delivers within ${radius.toStringAsFixed(0)} km. Move the pin or choose pickup.'
         : null;
@@ -250,8 +247,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     if (_method == 'delivery') {
-      if (_pin == null) {
-        _snack('Move the map to set the delivery pin.');
+      if (_pin == null || !_pinConfirmed) {
+        _snack('Set the delivery pin so the rider can find you.');
         return;
       }
       final problem = _pinProblem;
@@ -336,12 +333,45 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
   }
 
+  Future<void> _openPinPicker() async {
+    final start = _pin;
+    if (start == null) {
+      return;
+    }
+    final choice = await Navigator.of(context).push<PinChoice>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) =>
+            DeliveryPinScreen(initial: start, branch: _deliveryBranch),
+      ),
+    );
+    if (choice == null || !mounted) {
+      return;
+    }
+    setState(() {
+      if (choice.pickup) {
+        _fulfillment = 'pickup';
+      } else {
+        _pin = choice.pin;
+        _pinConfirmed = true;
+      }
+    });
+  }
+
   Future<void> _pickPrescription({required bool photo}) async {
     final picker = ref.read(attachmentPickerProvider);
     try {
-      final picked = photo
-          ? await picker.pickImages()
-          : await picker.pickDocuments();
+      final List<PickedAttachment> picked;
+      if (photo) {
+        final camera = await _askCamera();
+        if (camera == null) {
+          return;
+        }
+        final shot = camera ? await picker.takePhoto() : null;
+        picked = camera ? [?shot] : await picker.pickImages();
+      } else {
+        picked = await picker.pickDocuments();
+      }
       if (picked.isEmpty || !mounted) {
         return;
       }
@@ -367,9 +397,42 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     (card) => card.id == _savedCardId && card.hasDocument,
   );
 
+  /// Asks camera (true) or gallery (false); null when the sheet is dismissed.
+  Future<bool?> _askCamera() => showModalBottomSheet<bool>(
+    context: context,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(context, true),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, false),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+
   Future<void> _pickCardPhoto() async {
     try {
-      final photo = await ref.read(attachmentPickerProvider).pickImage();
+      final camera = await _askCamera();
+      if (camera == null) {
+        return;
+      }
+      final picker = ref.read(attachmentPickerProvider);
+      final photo = camera
+          ? await picker.takePhoto()
+          : await picker.pickImage();
       if (photo != null && mounted) {
         setState(() => _cardPhoto = photo);
       }
@@ -427,7 +490,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       _addressCard(value),
                       if (value.needsPrescription) ...[
                         const SizedBox(height: 12),
-                        _prescriptionCard(),
+                        _prescriptionCard(value),
                       ],
                       if (value.offersSeniorPwdDiscount) ...[
                         const SizedBox(height: 12),
@@ -453,77 +516,35 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ),
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final largeText =
-                              MediaQuery.textScalerOf(context).scale(14) > 18;
-                          final total = Text(
-                            money(_total(value)),
-                            textAlign: TextAlign.end,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.5,
-                                ),
-                          );
-
-                          if (largeText) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  'Total',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                      ),
-                                ),
-                                const SizedBox(height: 2),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    alignment: Alignment.centerRight,
-                                    child: total,
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
-
-                          return Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  'Total',
-                                  style: Theme.of(context).textTheme.bodyMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                      ),
-                                ),
+                  child: Builder(
+                    builder: (context) {
+                      final theme = Theme.of(context);
+                      final largeText =
+                          MediaQuery.textScalerOf(context).scale(14) > 18;
+                      final total = Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              money(_total(value)),
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
                               ),
-                              const SizedBox(width: 12),
-                              Flexible(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerRight,
-                                  child: total,
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      FilledButton(
+                            ),
+                          ),
+                        ],
+                      );
+                      final button = FilledButton(
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(54),
                           shape: const StadiumBorder(),
@@ -538,8 +559,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                 ),
                               )
                             : const Text('Place order'),
-                      ),
-                    ],
+                      );
+
+                      // Large text needs the button's full width; otherwise they share a row.
+                      return largeText
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                total,
+                                const SizedBox(height: 10),
+                                button,
+                              ],
+                            )
+                          : Row(
+                              children: [
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 140,
+                                  ),
+                                  child: total,
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(child: button),
+                              ],
+                            );
+                    },
                   ),
                 ),
               ),
@@ -550,11 +595,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  /// One card per checkout step, each opened by the same icon-and-title header.
+  /// One card per checkout step, headed by an inline icon and title, with an
+  /// optional status tag at the right.
   Widget _section({
     required IconData icon,
     required String title,
     required List<Widget> children,
+    Widget? trailing,
   }) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
@@ -567,16 +614,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           children: [
             Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 18, color: scheme.primary),
-                ),
-                const SizedBox(width: 10),
+                Icon(icon, size: 20, color: scheme.primary),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     title,
@@ -585,9 +624,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                   ),
                 ),
+                if (trailing != null) ...[const SizedBox(width: 8), trailing],
               ],
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
             ...children,
           ],
         ),
@@ -708,7 +748,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               label: const Text('SC/PWD discount'),
               amount: Text(
                 '−${money(discount)}',
-                style: TextStyle(color: Colors.green.shade700),
+                style: TextStyle(color: statusColour(context, 'completed')),
               ),
             ),
           ),
@@ -743,158 +783,320 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _discountCardSection(CheckoutQuote quote) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final ok = statusColour(context, 'completed');
 
-    return _section(
-      icon: Icons.badge_outlined,
-      title: 'Senior citizen / PWD',
-      children: [
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          value: _useCard,
-          onChanged: (value) => setState(() => _useCard = value),
-          title: const Text('Use my discount'),
-          subtitle: Text(
-            '−${money(quote.seniorPwdDiscount)} on medicines',
-            style: TextStyle(color: Colors.green.shade700),
-          ),
-        ),
-        if (_useCard) ...[
-          const SizedBox(height: 4),
-          if (quote.discountCards.isNotEmpty) ...[
-            RadioGroup<String>(
-              groupValue: _savedCardId ?? '__typed__',
-              onChanged: (value) => setState(
-                () => _savedCardId = value == null || value == '__typed__'
-                    ? null
-                    : value,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final card in quote.discountCards)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: RadioListTile<String>(
-                        contentPadding: const EdgeInsets.fromLTRB(4, 0, 14, 0),
-                        value: card.id,
-                        selected: _savedCardId == card.id,
-                        shape: _choiceShape(_savedCardId == card.id),
-                        title: Text('${card.typeLabel} · ${card.name}'),
-                        subtitle: Text(
-                          card.hasDocument
-                              ? '${card.idNumberMasked} · Photo on file'
-                              : card.idNumberMasked,
-                        ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Heading and switch are one row, so the card stays one line while off.
+            MergeSemantics(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(appSurfaceRadius),
+                onTap: () => setState(() => _useCard = !_useCard),
+                child: Row(
+                  children: [
+                    Icon(Icons.badge_outlined, size: 20, color: scheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Senior citizen / PWD',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            '${_useCard ? 'Saving' : 'Save'} ${money(quote.seniorPwdDiscount)} on medicines',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: ok,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  RadioListTile<String>(
-                    contentPadding: const EdgeInsets.fromLTRB(4, 0, 14, 0),
-                    value: '__typed__',
-                    selected: _savedCardId == null,
-                    shape: _choiceShape(_savedCardId == null),
-                    title: const Text('Use a different ID'),
+                    Switch(
+                      value: _useCard,
+                      onChanged: (value) => setState(() => _useCard = value),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_useCard) ...[
+              const SizedBox(height: 12),
+              if (quote.discountCards.isNotEmpty)
+                RadioGroup<String>(
+                  groupValue: _savedCardId ?? '__typed__',
+                  onChanged: (value) => setState(
+                    () => _savedCardId = value == null || value == '__typed__'
+                        ? null
+                        : value,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final card in quote.discountCards)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: RadioListTile<String>(
+                            contentPadding: const EdgeInsets.fromLTRB(
+                              4,
+                              4,
+                              8,
+                              4,
+                            ),
+                            value: card.id,
+                            selected: _savedCardId == card.id,
+                            shape: _choiceShape(_savedCardId == card.id),
+                            selectedTileColor: scheme.primaryContainer
+                                .withValues(alpha: 0.35),
+                            title: Text(
+                              card.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${card.typeLabel} ID · ${card.idNumberMasked}',
+                                ),
+                                if (_savedCardId == card.id && card.hasDocument)
+                                  _savedPhotoLine(theme),
+                              ],
+                            ),
+                          ),
+                        ),
+                      RadioListTile<String>(
+                        contentPadding: const EdgeInsets.fromLTRB(4, 0, 8, 0),
+                        value: '__typed__',
+                        selected: _savedCardId == null,
+                        shape: _choiceShape(_savedCardId == null),
+                        selectedTileColor: scheme.primaryContainer.withValues(
+                          alpha: 0.35,
+                        ),
+                        title: const Text(
+                          'Use a different ID',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_savedCardId == null) ...[
+                if (quote.discountCards.isNotEmpty) const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'senior',
+                      label: Text('Senior citizen'),
+                    ),
+                    ButtonSegment(value: 'pwd', label: Text('PWD')),
+                  ],
+                  selected: {_cardType},
+                  onSelectionChanged: (value) =>
+                      setState(() => _cardType = value.first),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cardNumber,
+                  maxLength: 40,
+                  decoration: const InputDecoration(
+                    labelText: 'ID number',
+                    counterText: '',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cardName,
+                  maxLength: 120,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Name on the ID',
+                    hintText: 'As printed on the card',
+                    counterText: '',
+                  ),
+                ),
+              ],
+              if (!_savedCardHasPhoto(quote)) ...[
+                const SizedBox(height: 12),
+                _idPhotoSlot(theme),
+              ],
+              if (_savedCardId == null && quote.discountCards.length < 3)
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _saveCard,
+                  onChanged: (value) =>
+                      setState(() => _saveCard = value ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: const Text('Save this ID for next time'),
+                ),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: scheme.outlineVariant),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.front_hand_outlined,
+                    size: 20,
+                    color: scheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Show this ID when you receive your order. ',
+                            style: TextStyle(
+                              color: scheme.onSurface,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const TextSpan(
+                            text: 'Without it the discount can’t be given. For medicines only.',
+                          ),
+                        ],
+                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
+            ],
           ],
-          if (_savedCardId == null) ...[
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'senior', label: Text('Senior citizen')),
-                ButtonSegment(value: 'pwd', label: Text('PWD')),
-              ],
-              selected: {_cardType},
-              onSelectionChanged: (value) =>
-                  setState(() => _cardType = value.first),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _cardNumber,
-              maxLength: 40,
-              decoration: const InputDecoration(
-                labelText: 'ID number',
-                counterText: '',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _cardName,
-              maxLength: 120,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Name on the ID',
-                counterText: '',
-              ),
-            ),
-            if (quote.discountCards.length < 3)
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _saveCard,
-                onChanged: (value) =>
-                    setState(() => _saveCard = value ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                title: const Text('Save this ID for next time'),
-              ),
-          ],
-          const SizedBox(height: 8),
-          _cardPhotoRow(quote),
-          const SizedBox(height: 8),
-          Text(
-            'For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.',
+        ),
+      ),
+    );
+  }
+
+  /// Inside the chosen saved ID: its photo is on file, or a newer one replaces it.
+  Widget _savedPhotoLine(ThemeData theme) {
+    final ok = statusColour(context, 'completed');
+    final replaced = _cardPhoto != null;
+
+    return Row(
+      children: [
+        Icon(Icons.check_circle_rounded, size: 16, color: ok),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            replaced ? 'New photo added' : 'ID photo on file',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: ok,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ],
+        ),
+        TextButton(
+          style: TextButton.styleFrom(
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          onPressed: replaced
+              ? () => setState(() => _cardPhoto = null)
+              : _pickCardPhoto,
+          child: Text(replaced ? 'Undo' : 'Replace photo'),
+        ),
       ],
     );
   }
 
-  /// The ID photo the branch checks. A saved ID with a photo reuses it unless
-  /// the customer picks a newer one, which then replaces the saved photo.
-  Widget _cardPhotoRow(CheckoutQuote quote) {
-    final theme = Theme.of(context);
+  /// The ID photo the branch checks: a tap target until one is added, then a preview.
+  Widget _idPhotoSlot(ThemeData theme) {
+    final scheme = theme.colorScheme;
     final photo = _cardPhoto;
-    final onFile = _savedCardHasPhoto(quote);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          photo != null
-              ? 'Photo of your ID added.'
-              : onFile
-              ? 'We’ll use the photo saved with this ID. Add a new one only if your ID changed.'
-              : 'Add a photo of your ID. Only the pharmacy filling your order can see it.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
+    return Material(
+      color: scheme.surfaceContainerLow,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        side: BorderSide(
+          color: photo == null
+              ? scheme.outline
+              : statusColour(context, 'completed'),
+          width: 1.2,
+        ),
+      ),
+      child: InkWell(
+        onTap: photo == null ? _pickCardPhoto : null,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              if (photo == null)
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: scheme.secondaryContainer,
+                  child: Icon(
+                    Icons.add_a_photo_outlined,
+                    color: scheme.primary,
+                  ),
+                )
+              else
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(appDetailRadius),
+                  child: Image.memory(
+                    photo.bytes,
+                    width: 44,
+                    height: 44,
+                    cacheWidth: 132,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => SizedBox.square(
+                      dimension: 44,
+                      child: Icon(Icons.badge_outlined, color: scheme.primary),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      photo == null
+                          ? 'Add photo of ID'
+                          : 'Photo of your ID added',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      photo == null
+                          ? 'Only the pharmacy filling your order can see it.'
+                          : photo.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (photo != null)
+                IconButton(
+                  tooltip: 'Remove ID photo',
+                  onPressed: () => setState(() => _cardPhoto = null),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        if (photo != null)
-          InputChip(
-            avatar: const Icon(Icons.badge_outlined, size: 18),
-            label: Text(
-              photo.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            onDeleted: () => setState(() => _cardPhoto = null),
-            deleteButtonTooltipMessage: 'Remove ${photo.name}',
-          )
-        else
-          FilledButton.tonalIcon(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, 48),
-              shape: const StadiumBorder(),
-            ),
-            onPressed: _pickCardPhoto,
-            icon: const Icon(Icons.photo_camera_outlined, size: 18),
-            label: Text(onFile ? 'Use a new photo' : 'Add photo of ID'),
-          ),
-      ],
+      ),
     );
   }
 
@@ -1031,6 +1233,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _pinSection(ThemeData theme) {
+    final scheme = theme.colorScheme;
     final pin = _pin;
     final problem = _pinProblem;
     final branch = _deliveryBranch;
@@ -1038,55 +1241,88 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     if (pin == null && _located) {
       return Text(
         'We could not find your location or the branch on the map. Turn on location, or choose pickup.',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.error,
+        style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
+      );
+    }
+
+    if (pin == null) {
+      return const SizedBox(
+        height: 124,
+        child: Center(
+          child: CircularProgressIndicator(semanticsLabel: 'Finding you'),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (pin == null)
-          const SizedBox(
-            height: 220,
-            child: Center(
-              child: CircularProgressIndicator(semanticsLabel: 'Finding you'),
-            ),
-          )
-        else
-          DeliveryPinMap(
-            initial: pin,
-            branch: branch == null
-                ? null
-                : LatLng(branch.latitude, branch.longitude),
-            onMoved: (center) => setState(() => _pin = center),
-          ),
-        const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    // Location was off: the pin only sits on the branch, so ask for a real one.
+    if (!_pinConfirmed) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
+        ),
+        child: Column(
           children: [
-            Icon(
-              Icons.pan_tool_alt_outlined,
-              size: 16,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                _locatedPhone ? 'Drag the map so the pin sits on your door.' : 'We could not find your location. Drag the map to your door.',
-                style: theme.textTheme.bodySmall,
+            Text(
+              'We could not find your location. Put a pin on your door so the rider knows where to go.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
               ),
+            ),
+            const SizedBox(height: 10),
+            FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                shape: const StadiumBorder(),
+              ),
+              onPressed: _openPinPicker,
+              icon: const Icon(Icons.add_location_alt_outlined, size: 18),
+              label: const Text('Set delivery pin'),
             ),
           ],
         ),
-        if (problem != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            problem,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.error,
-            ),
+      );
+    }
+
+    final km = branch == null ? null : pinDistanceKm(branch, pin);
+    final ok = statusColour(context, 'completed');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DeliveryPinMap(
+          pin: pin,
+          branch: branch == null
+              ? null
+              : LatLng(branch.latitude, branch.longitude),
+          onTap: _openPinPicker,
+        ),
+        if (problem != null || km != null) ...[
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                problem == null
+                    ? Icons.check_circle_rounded
+                    : Icons.error_rounded,
+                size: 18,
+                color: problem == null ? ok : scheme.error,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  problem ??
+                      '${km!.toStringAsFixed(1)} km from ${branch!.name}${branch.maxDeliveryRadiusKm == null ? '' : ' · inside the delivery area'}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: problem == null ? ok : scheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ],
@@ -1134,10 +1370,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           )
           .add(labels[o.key] ?? o.key);
     }
-    String joinNames(List<String> names) => names.length < 2
-        ? names.join()
-        : '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';
-
     return _section(
       icon: Icons.payments_outlined,
       title: 'Payment',
@@ -1229,7 +1461,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '${joinNames(group.value)}: ${group.key}',
+                    '${_joinNames(group.value)}: ${group.key}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
@@ -1385,119 +1617,266 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _prescriptionCard() {
+  Widget _prescriptionCard(CheckoutQuote quote) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final pages = _prescriptions;
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
-    final pill = const StadiumBorder();
-    final photoButton = FilledButton.tonalIcon(
-      style: FilledButton.styleFrom(
-        minimumSize: const Size(0, 48),
-        shape: pill,
-      ),
-      onPressed: () => _pickPrescription(photo: true),
-      icon: const Icon(Icons.photo_camera_outlined, size: 18),
-      label: Text(
-        pages.isEmpty ? 'Add photos' : 'Add more photos',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-    final pdfButton = OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 48),
-        shape: pill,
-      ),
-      onPressed: () => _pickPrescription(photo: false),
-      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-      label: const Text(
-        'Add PDF',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+    final names = {
+      for (final line in quote.lines)
+        if (line.requiresPrescription) line.productName,
+    }.toList();
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
     );
 
     return _section(
       icon: Icons.medication_outlined,
       title: 'Prescription',
+      trailing: pages.isEmpty
+          ? _tag('Needed', statusColour(context, 'pending'))
+          : _tag(
+              '${pages.length} ${pages.length == 1 ? 'page' : 'pages'}',
+              statusColour(context, 'completed'),
+              icon: Icons.check_circle_rounded,
+            ),
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: pages.isEmpty
-                ? scheme.tertiaryContainer
-                : scheme.primaryContainer.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  pages.isEmpty
-                      ? Icons.receipt_long_outlined
-                      : Icons.check_circle_rounded,
-                  size: 20,
-                  color: pages.isEmpty
-                      ? scheme.onTertiaryContainer
-                      : scheme.primary,
+        Text.rich(
+          TextSpan(
+            children: [
+              if (names.isNotEmpty) ...[
+                const TextSpan(text: 'For '),
+                TextSpan(
+                  text: _joinNames(names),
+                  style: TextStyle(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    pages.isEmpty
-                        ? 'Some items need a doctor’s prescription. Add every page as a photo or PDF (up to 10). A pharmacist checks it before your order is prepared.'
-                        : '${pages.length} ${pages.length == 1 ? 'page' : 'pages'} added. Include every page of the prescription.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: pages.isEmpty
-                          ? scheme.onTertiaryContainer
-                          : scheme.onSurface,
-                      fontWeight: FontWeight.w600,
+                const TextSpan(text: '. '),
+              ],
+              const TextSpan(
+                text: 'A pharmacist checks it before your order is prepared.',
+              ),
+            ],
+          ),
+          style: muted,
+        ),
+        const SizedBox(height: 12),
+        if (pages.isEmpty)
+          Material(
+            color: scheme.surfaceContainerLow,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(appSurfaceRadius),
+              side: BorderSide(color: scheme.outline, width: 1.2),
+            ),
+            child: InkWell(
+              onTap: () => _pickPrescription(photo: true),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: scheme.primary,
+                      child: Icon(
+                        Icons.photo_camera_outlined,
+                        color: scheme.onPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Take photos of every page',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Up to 10 pages · sharp and readable',
+                            style: muted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else ...[
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final (index, page) in pages.indexed)
+                _pageThumb(index, page),
+              if (pages.length < 10)
+                Material(
+                  color: scheme.surfaceContainerLow,
+                  clipBehavior: Clip.antiAlias,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(color: scheme.outline, width: 1.2),
+                  ),
+                  child: InkWell(
+                    onTap: () => _pickPrescription(photo: true),
+                    child: SizedBox(
+                      width: 76,
+                      height: 100,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_a_photo_outlined,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'Add page',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-        if (pages.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final (index, page) in pages.indexed)
-                InputChip(
-                  label: Text(
-                    page.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onDeleted: () => setState(
-                    () => _prescriptions = [..._prescriptions]..removeAt(index),
-                  ),
-                  deleteButtonTooltipMessage: 'Remove ${page.name}',
-                ),
             ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Include every page, front and back. ${pages.length} of 10 used.',
+            style: muted,
           ),
         ],
-        const SizedBox(height: 12),
-        if (largeText) ...[
-          photoButton,
-          const SizedBox(height: 8),
-          pdfButton,
-        ] else
-          Row(
-            children: [
-              Expanded(child: photoButton),
-              const SizedBox(width: 10),
-              Expanded(child: pdfButton),
-            ],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
+            onPressed: () => _pickPrescription(photo: false),
+            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+            label: Text(pages.isEmpty ? 'Upload a PDF instead' : 'Add a PDF'),
           ),
+        ),
       ],
     );
   }
+
+  /// One prescription page: its photo (or a PDF face), its number, and a remove button.
+  Widget _pageThumb(int index, PickedAttachment page) {
+    final scheme = Theme.of(context).colorScheme;
+    final face = ColoredBox(
+      color: scheme.surfaceContainerLowest,
+      child: Center(
+        child: Icon(
+          page.isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined,
+          color: scheme.primary,
+        ),
+      ),
+    );
+
+    return SizedBox(
+      width: 76,
+      height: 100,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: page.isImage
+                    ? Image.memory(
+                        page.bytes,
+                        fit: BoxFit.cover,
+                        cacheWidth: 228,
+                        errorBuilder: (_, _, _) => face,
+                      )
+                    : face,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 5,
+            bottom: 5,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${index + 1}',
+                textAlign: TextAlign.center,
+                textScaler: TextScaler.noScaling,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: IconButton(
+              tooltip: 'Remove page ${index + 1}',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black.withValues(alpha: 0.65),
+                foregroundColor: Colors.white,
+                fixedSize: const Size.square(32),
+                minimumSize: const Size.square(32),
+                padding: EdgeInsets.zero,
+              ),
+              iconSize: 18,
+              onPressed: () => setState(
+                () => _prescriptions = [..._prescriptions]..removeAt(index),
+              ),
+              icon: const Icon(Icons.close_rounded),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A small status pill beside a section title.
+  Widget _tag(String label, Color colour, {IconData? icon}) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+    decoration: BoxDecoration(
+      color: colour.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 16, color: colour),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium
+              ?.copyWith(color: colour, fontWeight: FontWeight.w800),
+        ),
+      ],
+    ),
+  );
 
   Widget _storeTotalLabel(CheckoutQuote quote, StoreTotal store) {
     final slugs = quote.lines
@@ -1546,3 +1925,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 }
+
+/// "A", "A and B", "A, B and C".
+String _joinNames(List<String> names) => names.length < 2
+    ? names.join()
+    : '${names.sublist(0, names.length - 1).join(', ')} and ${names.last}';

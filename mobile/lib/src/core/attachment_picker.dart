@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 /// Upload limit for picked files (prescriptions): 5 MB, under the server's 8 MB.
 const maxChatAttachmentBytes = 5 * 1024 * 1024;
@@ -36,6 +37,9 @@ class AttachmentTooLargeException implements Exception {
 abstract class AttachmentPicker {
   Future<PickedAttachment?> pickImage();
 
+  /// A new photo from the phone's camera app, or null when the customer backs out.
+  Future<PickedAttachment?> takePhoto();
+
   Future<PickedAttachment?> pickDocument();
 
   /// Every page the customer picked in one go, for a multi-page prescription.
@@ -50,6 +54,27 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
   @override
   Future<PickedAttachment?> pickImage() =>
       _pick(type: FileType.image, dialogTitle: 'Choose a photo');
+
+  @override
+  Future<PickedAttachment?> takePhoto() async {
+    // Camera shots run 4-10 MB; 2000px at 85% stays readable and under the limit.
+    final shot = await ImagePicker().pickImage(
+      source: ImageSource.camera,
+      maxWidth: 2000,
+      maxHeight: 2000,
+      imageQuality: 85,
+    );
+    if (shot == null) {
+      return null;
+    }
+
+    final bytes = await shot.readAsBytes();
+    if (bytes.length > maxChatAttachmentBytes) {
+      throw const AttachmentTooLargeException();
+    }
+
+    return PickedAttachment(name: shot.name, bytes: bytes);
+  }
 
   @override
   Future<PickedAttachment?> pickDocument() => _pick(

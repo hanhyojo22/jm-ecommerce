@@ -45,8 +45,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('₱100.00'), findsWidgets);
 
-    await tester.ensureVisible(find.text('Use my discount'));
-    await tester.tap(find.text('Use my discount'));
+    await tester.ensureVisible(find.text('Senior citizen / PWD'));
+    await tester.tap(find.text('Senior citizen / PWD'));
     await tester.pumpAndSettle();
     expect(find.text('₱71.43'), findsWidgets);
     expect(find.text('Use a different ID'), findsNothing);
@@ -70,6 +70,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Add photo of ID'));
     await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take a photo'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Place order'));
     await tester.pumpAndSettle();
@@ -97,7 +99,9 @@ void main() {
     );
 
     expect(
-      find.text('We could not find your location. Drag the map to your door.'),
+      find.text(
+        'We could not find your location. Put a pin on your door so the rider knows where to go.',
+      ),
       findsOneWidget,
     );
     await tester.tap(find.text('Pickup · Free'));
@@ -109,14 +113,19 @@ void main() {
     expect(find.text('Add a photo of your prescription.'), findsOneWidget);
     expect(api.placed, isNull);
 
-    await tester.ensureVisible(find.text('Add photos'));
-    await tester.tap(find.text('Add photos'));
+    expect(find.text('Needed'), findsOneWidget);
+    expect(find.textContaining('For Amoxicillin 500mg'), findsOneWidget);
+    await tester.ensureVisible(find.text('Take photos of every page'));
+    await tester.tap(find.text('Take photos of every page'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take a photo'));
     await tester.pumpAndSettle();
     expect(
-      find.text('1 page added. Include every page of the prescription.'),
+      find.text('Include every page, front and back. 1 of 10 used.'),
       findsOneWidget,
     );
-    expect(find.text('rx.jpg'), findsOneWidget);
+    expect(find.text('1 page'), findsOneWidget);
+    expect(find.byTooltip('Remove page 1'), findsOneWidget);
     tester
         .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
         .removeCurrentSnackBar();
@@ -126,7 +135,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.placed!.fulfillment, 'pickup');
-    expect(api.placed!.prescriptions.single.name, 'rx.jpg');
+    expect(api.placed!.prescriptions.single.name, 'camera.jpg');
     expect(api.placed!.latitude, isNull);
     expect(find.text('Order route'), findsOneWidget);
   });
@@ -233,20 +242,21 @@ void main() {
     await tester.tap(find.text('Pickup · Free'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Use my discount'));
-    await tester.tap(find.text('Use my discount'));
+    await tester.ensureVisible(find.text('Senior citizen / PWD'));
+    await tester.tap(find.text('Senior citizen / PWD'));
     await tester.pumpAndSettle();
 
     // The saved ID starts selected, so there is nothing to type.
-    expect(find.text('Senior citizen · Lola Ana'), findsOneWidget);
-    expect(find.text('•••••0123 · Photo on file'), findsOneWidget);
+    expect(find.text('Lola Ana'), findsOneWidget);
+    expect(find.text('Senior citizen ID · •••••0123'), findsOneWidget);
+    expect(find.text('ID photo on file'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'ID number'), findsNothing);
 
     await tester.tap(find.text('Use a different ID'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'ID number'), findsOneWidget);
 
-    await tester.tap(find.text('Senior citizen · Lola Ana'));
+    await tester.tap(find.text('Lola Ana'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(TextField, 'ID number'), findsNothing);
 
@@ -275,8 +285,8 @@ void main() {
     await tester.tap(find.text('Pickup · Free'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Use my discount'));
-    await tester.tap(find.text('Use my discount'));
+    await tester.ensureVisible(find.text('Senior citizen / PWD'));
+    await tester.tap(find.text('Senior citizen / PWD'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
     await tester.enterText(
@@ -302,6 +312,8 @@ void main() {
 
     await tester.ensureVisible(find.text('Add photo of ID'));
     await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Place order'));
     await tester.pumpAndSettle();
@@ -345,10 +357,10 @@ void main() {
     await tester.tap(find.text('Pickup · Free'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Use my discount'));
-    await tester.tap(find.text('Use my discount'));
+    await tester.ensureVisible(find.text('Senior citizen / PWD'));
+    await tester.tap(find.text('Senior citizen / PWD'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('PWD · Lolo Ben'));
+    await tester.tap(find.text('Lolo Ben'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Place order'));
@@ -385,6 +397,77 @@ void main() {
     await tester.pump();
     expect(problem, findsWidgets);
     expect(api.placed, isNull);
+  });
+
+  testWidgets('the pin picker shows a far pin and can switch to pickup', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false);
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, 1.2)],
+      ),
+      location: const _HereLocation(latitude: 14.65, longitude: 121.02),
+    );
+
+    await tester.tap(find.text('Adjust pin'));
+    await tester.pumpAndSettle();
+    expect(find.text('Too far for delivery'), findsOneWidget);
+    expect(find.textContaining('This pin is'), findsOneWidget);
+    final confirm = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Move the pin closer'),
+    );
+    expect(confirm.onPressed, isNull);
+
+    await tester.tap(find.text('Choose pickup instead'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pay at the counter'), findsOneWidget);
+
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed!.fulfillment, 'pickup');
+  });
+
+  testWidgets('with location off, delivery waits for a confirmed pin', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false);
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+    );
+
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(
+      find.text('Set the delivery pin so the rider can find you.'),
+      findsOneWidget,
+    );
+    expect(api.placed, isNull);
+    tester
+        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
+        .removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Set delivery pin'));
+    await tester.pumpAndSettle();
+    expect(find.text('Is the pin on your door?'), findsOneWidget);
+    await tester.tap(find.text('Confirm pin'));
+    await tester.pumpAndSettle();
+    expect(find.text('Adjust pin'), findsOneWidget);
+
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed!.fulfillment, 'delivery');
+    expect(api.placed!.latitude, _branch.latitude);
+    expect(api.placed!.longitude, _branch.longitude);
   });
 }
 
@@ -482,6 +565,12 @@ class _NoLocation extends LocationService {
 
 class _PickedRx implements AttachmentPicker {
   const _PickedRx();
+
+  @override
+  Future<PickedAttachment?> takePhoto() async => PickedAttachment(
+    name: 'camera.jpg',
+    bytes: Uint8List.fromList([4, 5, 6]),
+  );
 
   @override
   Future<PickedAttachment?> pickImage() async =>

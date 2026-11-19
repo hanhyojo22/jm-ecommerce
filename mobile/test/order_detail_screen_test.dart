@@ -714,6 +714,12 @@ class _ClearPhoto implements AttachmentPicker {
   const _ClearPhoto();
 
   @override
+  Future<PickedAttachment?> takePhoto() async => PickedAttachment(
+    name: 'camera.jpg',
+    bytes: Uint8List.fromList([4, 5, 6]),
+  );
+
+  @override
   Future<PickedAttachment?> pickImage() async =>
       PickedAttachment(name: 'clear.jpg', bytes: Uint8List.fromList([1, 2, 3]));
 
