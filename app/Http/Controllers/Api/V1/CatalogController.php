@@ -135,6 +135,36 @@ class CatalogController extends Controller
         return response()->json(['data' => ProductSummaryResource::collection($products)->resolve($request)]);
     }
 
+    /**
+     * The branch's ten best sellers by units over the last 30 days that it has on hand now.
+     * Prescription medicines are left out: the FDA bars advertising them to the public.
+     */
+    public function bestSellers(Request $request): JsonResponse
+    {
+        $branch = $this->branch($request->validate(['branch' => ['required', 'string', 'ulid']])['branch']);
+
+        // shortcut: ranks the top 40 sold, so a branch whose top 40 are all Rx or sold out shows fewer than 10; widen if that happens.
+        $productIds = OrderItem::query()
+            ->whereNotNull('product_id')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->whereHas('sellerOrder', fn (Builder $sellerOrder) => $sellerOrder
+                ->where('store_id', $branch->id)
+                ->where('status', '!=', 'cancelled'))
+            ->groupBy('product_id')
+            ->orderByRaw('SUM(quantity) DESC')
+            ->orderBy('product_id')
+            ->limit(40)
+            ->pluck('product_id');
+
+        $products = CatalogQuery::inStockAt($this->summaryQuery()->whereIn('id', $productIds)->where('requires_prescription', false), $branch)
+            ->get()
+            ->sortBy(fn (Product $product): int => $productIds->search($product->id))
+            ->take(10)
+            ->values();
+
+        return response()->json(['data' => ProductSummaryResource::collection($products)->resolve($request)]);
+    }
+
     public function recommended(Request $request): JsonResponse
     {
         $search = $request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? null;

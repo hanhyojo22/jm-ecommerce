@@ -13,11 +13,13 @@ import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
+import 'package:jmmart/src/providers/order_providers.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 import 'package:jmmart/src/screens/catalog_screen.dart';
 import 'package:jmmart/src/screens/search_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/widgets/shell.dart';
 
 void main() {
   testWidgets('search placeholder scrolls without submitting a search', (
@@ -98,7 +100,7 @@ void main() {
       find.byType(CustomScrollView),
     );
     expect(scroll.controller!.offset, 0);
-    expect(find.text(_campaignTitle).hitTestable(), findsOneWidget);
+    expect(find.text(_homeMarker).hitTestable(), findsOneWidget);
   });
 
   testWidgets('a new filter does not display products from the previous feed', (
@@ -345,13 +347,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.lastCategory, 'home-living');
-    expect(find.text(_campaignTitle), findsNothing);
+    expect(find.text(_homeMarker), findsNothing);
     expect(find.text('Home & living'), findsNWidgets(2));
 
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
     expect(api.lastCategory, isNull);
-    expect(find.text(_campaignTitle), findsOneWidget);
+    expect(find.text(_homeMarker), findsOneWidget);
   });
 
   testWidgets('search stays visible while browsing the product feed', (
@@ -383,21 +385,38 @@ void main() {
     expect(find.text('Reload categories'), findsNothing);
   });
 
-  testWidgets('explore products brings the live catalog into view', (
+  testWidgets('quick actions open delivered orders and the branch chat', (
     tester,
   ) async {
-    await _pumpCatalog(tester, _CatalogApi());
-    final before = tester.getTopLeft(find.text('Popular products')).dy;
-    await tester.tap(find.text('See popular products'));
-    await tester.pumpAndSettle();
-
-    expect(
-      tester.getTopLeft(find.text('Popular products')).dy,
-      lessThan(before),
+    final api = _CatalogApi();
+    await _pumpShopRouter(tester, api);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(CatalogScreen)),
     );
-    final search = find.bySemanticsLabel('Search medicines');
-    expect(tester.getTopLeft(search).dy, greaterThanOrEqualTo(0));
-    expect(search.hitTestable(), findsOneWidget);
+
+    await tester.tap(find.text('Refill medicines'));
+    await tester.pump();
+    expect(container.read(ordersTabProvider), 'delivered');
+    expect(container.read(shellTabProvider).index, 1);
+
+    await tester.tap(find.text('Send prescription'));
+    await tester.pumpAndSettle();
+    expect(api.chatBranch, 'B-TEST');
+    expect(find.text('Chat C-1'), findsOneWidget);
+  });
+
+  testWidgets('best sellers show ranked at the branch', (tester) async {
+    final api = _CatalogApi()
+      ..bestSellerProducts = [
+        _product(91, name: 'Cetirizine 10 mg'),
+        _product(92, name: 'Ascorbic Acid 500 mg'),
+      ];
+    await _pumpCatalog(tester, api);
+
+    expect(find.text('Best sellers at your branch'), findsOneWidget);
+    expect(find.text('Cetirizine 10 mg'), findsOneWidget);
+    expect(find.bySemanticsLabel('Number 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Number 2'), findsOneWidget);
   });
 
   testWidgets('without a known branch the shop asks for one first', (
@@ -623,17 +642,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.dealsFeedRequests, 1);
     expect(find.text('Deals'), findsOneWidget);
-    expect(find.text(_campaignTitle), findsNothing);
+    expect(find.text(_homeMarker), findsNothing);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text(_campaignTitle), findsOneWidget);
+    expect(find.text(_homeMarker), findsOneWidget);
 
     await tester.tap(find.text('See all'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
-    expect(find.text(_campaignTitle), findsOneWidget);
+    expect(find.text(_homeMarker), findsOneWidget);
   });
 
   testWidgets('top deals stay hidden when nothing is on sale', (tester) async {
@@ -1045,6 +1064,10 @@ Future<void> _pumpShopRouter(
         path: '/search',
         builder: (context, state) => const SearchScreen(),
       ),
+      GoRoute(
+        path: '/conversations/:id',
+        builder: (context, state) => Text('Chat ${state.pathParameters['id']}'),
+      ),
     ],
   );
   addTearDown(router.dispose);
@@ -1126,6 +1149,23 @@ class _CatalogApi extends ApiClient {
   @override
   Future<List<Product>> boughtBefore(String branch) async =>
       boughtBeforeProducts;
+
+  List<Product> bestSellerProducts = const [];
+
+  @override
+  Future<List<Product>> bestSellers(String branch) async => bestSellerProducts;
+
+  String? chatBranch;
+
+  @override
+  Future<Conversation> startConversation({
+    String? productId,
+    String? sellerOrderId,
+    String? branch,
+  }) async {
+    chatBranch = branch;
+    return Conversation.fromJson({'id': 'C-1'});
+  }
 
   bool failFirstPage = false;
   bool empty = false;
@@ -1266,7 +1306,8 @@ class _CatalogApi extends ApiClient {
   }
 }
 
-const _campaignTitle = 'Your medicines,\nfrom your branch.';
+/// Shown only on the Shop's home, not on a category, search or deals list.
+const _homeMarker = 'Send prescription';
 
 class _FixedLocator extends NearestStoreNotifier {
   _FixedLocator(this.fixed);

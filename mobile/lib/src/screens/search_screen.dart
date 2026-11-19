@@ -19,6 +19,36 @@ import '../widgets/store_locator.dart';
 import 'auth_gate.dart';
 import 'catalog_screen.dart' show categoryIcon;
 
+/// Opens the buyer's chat with their branch, e.g. to send a prescription photo. A guest signs
+/// in first, and someone without a branch is asked to pick one.
+Future<void> openBranchChat(BuildContext context, WidgetRef ref) async {
+  if (!await requireSignIn(context, ref) || !context.mounted) {
+    return;
+  }
+  final branch = await ref.read(activeBranchIdProvider.future);
+  if (!context.mounted) {
+    return;
+  }
+  if (branch == null) {
+    await showBranchSelectorSheet(context);
+    return;
+  }
+
+  try {
+    final conversation = await ref
+        .read(apiClientProvider)
+        .startConversation(branch: branch);
+    if (context.mounted) {
+      context.push('/conversations/${conversation.id}');
+    }
+  } on ApiException catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.friendly)));
+    }
+  }
+}
+
 /// Full-screen search, opened from the Shop's search box. Before typing it shows recent
 /// searches, recently viewed medicines, categories and a prescription shortcut; while typing,
 /// matching names, categories and medicines; after a search, the results with sort and filter.
@@ -169,31 +199,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _sendPrescription() async {
-    if (_openingChat || !await requireSignIn(context, ref) || !mounted) {
+    if (_openingChat) {
       return;
     }
-    final branch = await ref.read(activeBranchIdProvider.future);
-    if (!mounted) {
-      return;
-    }
-    if (branch == null) {
-      await showBranchSelectorSheet(context);
-      return;
-    }
-
     setState(() => _openingChat = true);
     try {
-      final conversation = await ref
-          .read(apiClientProvider)
-          .startConversation(branch: branch);
-      if (mounted) {
-        context.push('/conversations/${conversation.id}');
-      }
-    } on ApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
-      }
+      await openBranchChat(context, ref);
     } finally {
       if (mounted) {
         setState(() => _openingChat = false);
@@ -981,8 +992,9 @@ class _SuggestionsView extends StatelessWidget {
                                 text: '  ${category.count}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  color: scheme.onSecondaryContainer
-                                      .withValues(alpha: 0.7),
+                                  color: scheme.onSecondaryContainer.withValues(
+                                    alpha: 0.7,
+                                  ),
                                 ),
                               ),
                             ],

@@ -205,7 +205,35 @@ class BranchCatalogApiTest extends TestCase
         $this->getJson(route('api.v1.products.bought-before', ['branch' => $cebu->id]))->assertUnauthorized();
     }
 
-    private function bought(User $buyer, Store $branch, Product $product, string $status, CarbonInterface $at): void
+    public function test_best_sellers_rank_what_the_branch_sold_most_without_prescription_medicines(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $paracetamol = $this->product($tenant, $makati, 'Paracetamol 500mg');
+        $cetirizine = $this->product($tenant, $makati, 'Cetirizine 10mg');
+        $cancelled = $this->product($tenant, $makati, 'Loratadine 10mg');
+        $prescription = $this->product($tenant, $makati, 'Amoxicillin 500mg', ['requires_prescription' => true]);
+        $soldElsewhere = $this->product($tenant, $makati, 'Ascorbic Acid 500mg');
+        $soldLongAgo = $this->product($tenant, $makati, 'Zinc 10mg');
+        $soldOut = $this->product($tenant, $makati, 'Ibuprofen 200mg');
+        foreach ([$paracetamol, $cetirizine, $cancelled, $prescription, $soldElsewhere, $soldLongAgo] as $product) {
+            $this->stock($cebu, $product, 10);
+        }
+        $this->stock($cebu, $soldOut, 0);
+        $buyer = User::factory()->create();
+        $this->bought($buyer, $cebu, $paracetamol, 'delivered', now(), quantity: 3);
+        $this->bought($buyer, $cebu, $cetirizine, 'pending', now(), quantity: 5);
+        $this->bought($buyer, $cebu, $cancelled, 'cancelled', now(), quantity: 9);
+        $this->bought($buyer, $cebu, $prescription, 'delivered', now(), quantity: 9);
+        $this->bought($buyer, $makati, $soldElsewhere, 'delivered', now(), quantity: 9);
+        $this->bought($buyer, $cebu, $soldLongAgo, 'delivered', now()->subDays(40), quantity: 9);
+        $this->bought($buyer, $cebu, $soldOut, 'delivered', now(), quantity: 9);
+
+        $this->getJson(route('api.v1.products.best-sellers', ['branch' => $cebu->id]))
+            ->assertOk()
+            ->assertJsonPath('data.*.id', [$cetirizine->id, $paracetamol->id]);
+    }
+
+    private function bought(User $buyer, Store $branch, Product $product, string $status, CarbonInterface $at, int $quantity = 1): void
     {
         $order = Order::create([
             'user_id' => $buyer->id,
@@ -231,7 +259,7 @@ class BranchCatalogApiTest extends TestCase
             'product_name' => $product->name,
             'sku' => $product->sku,
             'unit_price' => '10.00',
-            'quantity' => 1,
+            'quantity' => $quantity,
             'line_total' => '10.00',
         ])->forceFill(['created_at' => $at])->save();
     }

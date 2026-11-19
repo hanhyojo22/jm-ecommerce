@@ -41,6 +41,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/products', [CatalogController::class, 'index'])->name('api.v1.products.index');
         Route::get('/products/suggestions', [CatalogController::class, 'suggestions'])->name('api.v1.products.suggestions');
         Route::get('/products/top', [CatalogController::class, 'top'])->name('api.v1.products.top');
+        Route::get('/products/best-sellers', [CatalogController::class, 'bestSellers'])->name('api.v1.products.best-sellers');
         Route::get('/products/recommended', [CatalogController::class, 'recommended'])->name('api.v1.products.recommended');
         Route::get('/stores', [CatalogController::class, 'stores'])->name('api.v1.stores.index');
         Route::get('/store-locations', [CatalogController::class, 'storeLocations'])->name('api.v1.store-locations.index');

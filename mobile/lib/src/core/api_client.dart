@@ -613,6 +613,11 @@ class ApiClient {
     await _data('GET', '/products/bought-before', query: {'branch': branch}),
   ).map(Product.fromJson).toList(growable: false);
 
+  /// The branch's best sellers it has on hand, without prescription medicines.
+  Future<List<Product>> bestSellers(String branch) async => listOf(
+    await _data('GET', '/products/best-sellers', query: {'branch': branch}),
+  ).map(Product.fromJson).toList(growable: false);
+
   /// The signed-in buyer's wishlist; with a [branch], stock is that branch's.
   Future<List<Product>> savedProducts({String? branch}) async => listOf(
     await _data(

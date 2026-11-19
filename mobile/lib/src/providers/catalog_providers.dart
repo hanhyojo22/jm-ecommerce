@@ -402,6 +402,21 @@ final boughtBeforeProvider = FutureProvider.autoDispose<List<Product>>((
   }
 });
 
+/// The branch's best sellers, for guests too; empty before a branch is known or if the request fails.
+final bestSellersProvider = FutureProvider.autoDispose<List<Product>>((
+  ref,
+) async {
+  final branch = await ref.watch(activeBranchIdProvider.future);
+  if (branch == null) {
+    return const [];
+  }
+  try {
+    return await ref.watch(apiClientProvider).bestSellers(branch);
+  } catch (_) {
+    return const [];
+  }
+});
+
 /// The buyer's wishlist; empty when signed out. Stock is the active branch's when one is known.
 final savedProductsProvider = FutureProvider.autoDispose<List<Product>>((
   ref,

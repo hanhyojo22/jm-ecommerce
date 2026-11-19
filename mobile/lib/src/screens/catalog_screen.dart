@@ -9,12 +9,14 @@ import 'package:phosphor_icons/phosphor_icons.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/catalog_providers.dart';
+import '../providers/order_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/product_feed.dart';
 import '../widgets/shell.dart';
 import '../widgets/store_locator.dart';
+import 'search_screen.dart' show openBranchChat;
 
 class CatalogScreen extends ConsumerStatefulWidget {
   const CatalogScreen({super.key});
@@ -46,20 +48,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       ..setCategory(slug);
   }
 
-  void _exploreProducts() {
-    final target = _productsHeadingKey.currentContext;
-    if (target != null) {
-      Scrollable.ensureVisible(
-        target,
-        alignment: 0.2,
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
   @override
   void dispose() {
     _scrollController.dispose();
@@ -86,6 +74,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
   Future<void> _refreshProducts() async {
     ref.invalidate(categoriesProvider);
     ref.invalidate(dealsProvider);
+    ref.invalidate(bestSellersProvider);
     ref.invalidate(productsProvider);
     try {
       await ref.read(productsProvider.future);
@@ -108,6 +97,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final browsing = filter.isDefault;
     final deals = ref.watch(dealsProvider).value;
     final boughtBefore = ref.watch(boughtBeforeProvider).value ?? const [];
+    final bestSellers = ref.watch(bestSellersProvider).value ?? const [];
     final locator = ref.watch(nearestStoreProvider).value;
     // Stock and prices are per branch, so the list waits until one is known.
     final needsBranch =
@@ -334,9 +324,19 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             ),
                           )
                         else ...[
+                          if (browsing)
+                            const SliverPadding(
+                              padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
+                              sliver: SliverToBoxAdapter(
+                                child: _QuickActions(),
+                              ),
+                            ),
                           if (browsing && boughtBefore.isNotEmpty)
                             SliverToBoxAdapter(
-                              child: _OrderAgain(products: boughtBefore),
+                              child: _ProductRail(
+                                title: 'Order again',
+                                products: boughtBefore,
+                              ),
                             ),
                           if (browsing && deals != null)
                             SliverToBoxAdapter(
@@ -345,20 +345,12 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                                 onSeeAll: _showDeals,
                               ),
                             ),
-                          if (browsing)
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                              sliver: SliverToBoxAdapter(
-                                child: SizedBox(
-                                  height: MediaQuery.textScalerOf(context)
-                                      .scale(200)
-                                      .clamp(200.0, 320.0),
-                                  child: _CampaignCard(
-                                    onExplore: feed?.products.isNotEmpty == true
-                                        ? _exploreProducts
-                                        : null,
-                                  ),
-                                ),
+                          if (browsing && bestSellers.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: _ProductRail(
+                                title: 'Best sellers at your branch',
+                                products: bestSellers,
+                                ranked: true,
                               ),
                             ),
                           if (products.hasError && feed == null)
@@ -711,15 +703,22 @@ class _TopDeals extends StatelessWidget {
   }
 }
 
-/// Discovery campaign with store previews that adapt to the available width.
-class _OrderAgain extends StatelessWidget {
-  const _OrderAgain({required this.products});
+/// A titled sideways row of product cards, such as "Order again"; [ranked] numbers them 1, 2, 3….
+class _ProductRail extends StatelessWidget {
+  const _ProductRail({
+    required this.title,
+    required this.products,
+    this.ranked = false,
+  });
 
+  final String title;
   final List<Product> products;
+  final bool ranked;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Padding(
       padding: const EdgeInsets.only(top: 28),
@@ -731,7 +730,7 @@ class _OrderAgain extends StatelessWidget {
             child: Semantics(
               header: true,
               child: Text(
-                'Order again',
+                title,
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontSize: 19,
                   fontWeight: FontWeight.w800,
@@ -748,19 +747,62 @@ class _OrderAgain extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final product in products)
+                  for (final (index, product) in products.indexed)
                     Padding(
                       padding: const EdgeInsetsDirectional.only(end: 10),
                       child: SizedBox(
                         width: 160,
-                        child: ProductCard(
-                          product: product,
-                          discovery: true,
-                          showAddToCart: true,
-                          fillHeight: true,
-                          onTap: () => context.push(
-                            '/product/${product.store?.slug ?? ''}/${product.slug}',
-                          ),
+                        // Passthrough keeps the rail's equal heights reaching the card.
+                        child: Stack(
+                          fit: StackFit.passthrough,
+                          children: [
+                            ProductCard(
+                              product: product,
+                              discovery: true,
+                              showAddToCart: true,
+                              fillHeight: true,
+                              onTap: () => context.push(
+                                '/product/${product.store?.slug ?? ''}/${product.slug}',
+                              ),
+                            ),
+                            if (ranked)
+                              PositionedDirectional(
+                                start: 8,
+                                top: 8,
+                                child: Semantics(
+                                  label: 'Number ${index + 1}',
+                                  excludeSemantics: true,
+                                  child: Container(
+                                    constraints: const BoxConstraints(
+                                      minWidth: 28,
+                                      minHeight: 28,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: index < 3
+                                          ? scheme.primary
+                                          : scheme.surfaceContainerHighest,
+                                      borderRadius: BorderRadius.circular(
+                                        appDetailRadius,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: theme.textTheme.labelLarge
+                                          ?.copyWith(
+                                            color: index < 3
+                                                ? scheme.onPrimary
+                                                : scheme.onSurface,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -774,89 +816,143 @@ class _OrderAgain extends StatelessWidget {
   }
 }
 
-class _CampaignCard extends StatelessWidget {
-  const _CampaignCard({this.onExplore});
+/// Shortcuts to what pharmacy shoppers come back for, like Watsons' "Only in the APP" row.
+class _QuickActions extends ConsumerStatefulWidget {
+  const _QuickActions();
 
-  final VoidCallback? onExplore;
+  @override
+  ConsumerState<_QuickActions> createState() => _QuickActionsState();
+}
+
+class _QuickActionsState extends ConsumerState<_QuickActions> {
+  bool _openingChat = false;
+
+  Future<void> _sendPrescription() async {
+    if (_openingChat) {
+      return;
+    }
+    setState(() => _openingChat = true);
+    try {
+      await openBranchChat(context, ref);
+    } finally {
+      if (mounted) {
+        setState(() => _openingChat = false);
+      }
+    }
+  }
+
+  void _openOrders(String tab) {
+    ref.read(ordersTabProvider.notifier).select(tab);
+    ref.read(shellTabProvider.notifier).select(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(appSurfaceRadius),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _QuickAction(
+              icon: PhosphorIconsRegular.prescription,
+              label: 'Send prescription',
+              busy: _openingChat,
+              onTap: _sendPrescription,
+            ),
+            _QuickAction(
+              icon: PhosphorIconsRegular.arrowsClockwise,
+              // Delivered orders, where each has its Order again button.
+              label: 'Refill medicines',
+              onTap: () => _openOrders('delivered'),
+            ),
+            _QuickAction(
+              icon: PhosphorIconsRegular.truck,
+              label: 'Track order',
+              onTap: () => _openOrders('all'),
+            ),
+            _QuickAction(
+              icon: PhosphorIconsRegular.heart,
+              label: 'Saved items',
+              onTap: () => context.push('/saved'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.busy = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final slab = brandSlab(theme.colorScheme);
+    final scheme = theme.colorScheme;
 
-    return Material(
-      color: slab.fill,
-      borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // One large capsule bleeding off the right edge: the pharmacy's mark, not a stock icon.
-          Positioned(
-            right: -46,
-            top: -18,
-            bottom: -18,
-            child: ExcludeSemantics(
-              child: Transform.rotate(
-                angle: -0.62,
-                child: Icon(
-                  PhosphorIconsFill.pill,
-                  size: 236,
-                  color: slab.ink.withValues(alpha: 0.11),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(22),
+    return Expanded(
+      child: Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: InkWell(
+          onTap: busy ? null : onTap,
+          borderRadius: BorderRadius.circular(appSurfaceRadius),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Semantics(
-                  header: true,
-                  child: Text(
-                    'Your medicines,\nfrom your branch.',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: slab.ink,
-                      fontSize: 25,
-                      height: 1.08,
-                      letterSpacing: -0.7,
-                    ),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: scheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  child: busy
+                      ? Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: scheme.onPrimaryContainer,
+                          ),
+                        )
+                      : Icon(icon, size: 24, color: scheme.onPrimaryContainer),
                 ),
-                const SizedBox(height: 18),
-                FilledButton.icon(
-                  onPressed: onExplore,
-                  iconAlignment: IconAlignment.end,
-                  // It scrolls to the list below, so the label says where it goes.
-                  icon: const Icon(Icons.arrow_downward_rounded, size: 16),
-                  label: const Text(
-                    'See popular products',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: slab.ink,
-                    foregroundColor: slab.fill,
-                    disabledBackgroundColor: slab.ink.withValues(alpha: 0.75),
-                    disabledForegroundColor: slab.fill.withValues(alpha: 0.85),
-                    minimumSize: const Size(48, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    tapTargetSize: MaterialTapTargetSize.padded,
-                    shape: const StadiumBorder(),
-                    textStyle: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
