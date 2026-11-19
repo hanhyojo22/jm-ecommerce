@@ -786,70 +786,67 @@ class _PrescriptionCard extends StatelessWidget {
         color: slab.fill,
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
-        child: Ink(
-          decoration: BoxDecoration(gradient: brandGradient(theme.colorScheme)),
-          child: InkWell(
-            onTap: busy ? null : onTap,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 14, 16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: slab.ink.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.description_outlined, color: slab.ink),
+        child: InkWell(
+          onTap: busy ? null : onTap,
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 14, 16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: slab.ink.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Have a prescription?',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: slab.ink,
-                            fontWeight: FontWeight.w800,
-                          ),
+                  child: Icon(Icons.description_outlined, color: slab.ink),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Have a prescription?',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: slab.ink,
+                          fontWeight: FontWeight.w800,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Send a photo to a pharmacist at your branch.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: slab.ink.withValues(alpha: 0.82),
-                            height: 1.35,
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Send a photo to a pharmacist at your branch.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: slab.ink.withValues(alpha: 0.82),
+                          height: 1.35,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: slab.ink,
-                      shape: BoxShape.circle,
-                    ),
-                    child: busy
-                        ? Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: slab.fill,
-                            ),
-                          )
-                        : Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 18,
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: slab.ink,
+                    shape: BoxShape.circle,
+                  ),
+                  child: busy
+                      ? Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                             color: slab.fill,
                           ),
-                  ),
-                ],
-              ),
+                        )
+                      : Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                          color: slab.fill,
+                        ),
+                ),
+              ],
             ),
           ),
         ),

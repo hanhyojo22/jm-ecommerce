@@ -74,102 +74,253 @@ class BranchHeader extends ConsumerWidget {
       title = 'Finding your nearest branch…';
       onTap = null;
     }
-    final labelText = Text(
-      label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: theme.textTheme.labelMedium?.copyWith(
-        color: ink.withValues(alpha: 0.78),
-        fontWeight: FontWeight.w600,
-      ),
-    );
+    final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
+    // Forecast tiles are white cards on the sky, so they take navy ink.
+    final tileInk = dark ? scheme.onSurface : scheme.primary;
+    final tiles = active == null
+        ? null
+        : _forecast(context, active, state!.selectedBranchId != null);
 
     return Semantics(
       button: onTap != null,
-      label: [title, if (active != null) _hoursLabel(active), label].join(', '),
+      label: [
+        title,
+        if (tiles != null)
+          for (final tile in tiles) '${tile.title} ${tile.detail}'
+        else
+          label,
+      ].join(', '),
       hint: onTap == null ? null : 'Change branch',
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         splashColor: ink.withValues(alpha: 0.12),
         highlightColor: ink.withValues(alpha: 0.08),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(2, 4, 4, 4),
-            child: Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: ink.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: onTap == null
-                      ? SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: ink,
-                          ),
-                        )
-                      : Icon(
-                          PhosphorIconsFill.storefront,
-                          color: ink,
-                          size: 20,
-                        ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Open/closed leads the line so the name below keeps the full width.
-                      if (active != null)
-                        Row(
-                          children: [
-                            _HoursPill(item: active),
-                            const SizedBox(width: 6),
-                            Flexible(child: labelText),
-                          ],
-                        )
-                      else
-                        labelText,
-                      const SizedBox(height: 2),
-                      Row(
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(2, 2, 2, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    // The caret is a font glyph after a no-break space, so it
+                    // wraps together with the last word of the name.
+                    child: Text.rich(
+                      TextSpan(
+                        text: title,
                         children: [
-                          Flexible(
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: ink,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.3,
+                          if (onTap == null)
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  start: 6,
+                                ),
+                                child: SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: ink,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else if (!locator.hasError)
+                            TextSpan(
+                              text:
+                                  '\u00A0${String.fromCharCode(PhosphorIconsBold.caretDown.codePoint)}',
+                              style: TextStyle(
+                                fontFamily:
+                                    PhosphorIconsBold.caretDown.fontFamily,
+                                package:
+                                    PhosphorIconsBold.caretDown.fontPackage,
+                                fontSize: 16,
+                                letterSpacing: 0,
                               ),
                             ),
-                          ),
-                          if (onTap != null && !locator.hasError) ...[
-                            const SizedBox(width: 4),
-                            Icon(
-                              PhosphorIconsBold.caretDown,
-                              size: 14,
-                              color: ink,
-                            ),
-                          ],
                         ],
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: ink,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        height: 1.15,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // The logo's sun and cloud: today's forecast for this branch.
+                  ExcludeSemantics(
+                    child: Image.asset(
+                      'assets/branding/everyday-emblem.png',
+                      height: 34,
+                    ),
+                  ),
+                ],
+              ),
+              if (tiles == null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: ink.withValues(alpha: 0.78),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Row(
+                    children: [
+                      for (final (index, tile) in tiles.indexed) ...[
+                        if (index > 0) const SizedBox(width: 8),
+                        Expanded(
+                          child: _ForecastTile(tile: tile, ink: tileInk),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Open status, distance and delivery for the active branch, most
+  /// important first, each a glyph with a short title and detail.
+  List<_Forecast> _forecast(
+    BuildContext context,
+    BranchDistance active,
+    bool picked,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final branch = active.branch;
+    final km = active.distanceKm;
+    final opens = branch.nextOpeningAt;
+    final fee = double.tryParse(branch.deliveryFee ?? '') ?? 0;
+    final minimum = branch.freeDeliveryMinimum;
+    final which = picked ? 'Your branch' : 'Nearest branch';
+
+    return [
+      branch.isOpen
+          ? _Forecast(
+              icon: PhosphorIconsFill.sun,
+              glyph: scheme.secondary,
+              title: 'Open',
+              titleColour: statusColour(context, 'completed'),
+              detail: branch.open24Hours ? '24 hours' : 'now',
+            )
+          : _Forecast(
+              icon: PhosphorIconsFill.moon,
+              glyph: scheme.error,
+              title: 'Closed',
+              titleColour: scheme.error,
+              detail: opens == null
+                  ? 'for today'
+                  : 'Opens ${opensLabel(opens)}',
+            ),
+      _Forecast(
+        icon: PhosphorIconsFill.cloud,
+        glyph: const Color(0xFF8DB6F3),
+        title: km == null ? which : '${km.toStringAsFixed(1)} km',
+        detail: active.isOutOfDeliveryRange
+            ? 'Pickup only'
+            : km == null
+            ? 'Distance unknown'
+            : which,
+      ),
+      active.isOutOfDeliveryRange
+          ? const _Forecast(
+              icon: PhosphorIconsFill.storefront,
+              title: 'Pickup',
+              detail: 'Too far to deliver',
+            )
+          : _Forecast(
+              icon: PhosphorIconsFill.truck,
+              title: fee > 0 ? money(branch.deliveryFee) : 'Free',
+              detail: fee > 0
+                  ? (minimum == null
+                        ? 'Delivery fee'
+                        : 'Free over ${money(minimum)}')
+                  : 'Delivery',
+            ),
+    ];
+  }
+}
+
+class _Forecast {
+  const _Forecast({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    this.glyph,
+    this.titleColour,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+
+  /// Null draws the glyph in the tile's ink.
+  final Color? glyph;
+  final Color? titleColour;
+}
+
+/// One white forecast tile on the sky: glyph, big title, small detail.
+class _ForecastTile extends StatelessWidget {
+  const _ForecastTile({required this.tile, required this.ink});
+
+  final _Forecast tile;
+  final Color ink;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(tile.icon, size: 26, color: tile.glyph ?? ink),
+            const SizedBox(height: 6),
+            Text(
+              tile.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: tile.titleColour ?? ink,
+              ),
+            ),
+            Text(
+              tile.detail,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -212,54 +363,6 @@ class _Wordmark extends StatelessWidget {
             fontWeight: FontWeight.w800,
             letterSpacing: -0.5,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Open / closed on a light pill so its green or red reads on the brand band.
-class _HoursPill extends StatelessWidget {
-  const _HoursPill({required this.item});
-
-  final BranchDistance item;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colour = item.branch.isOpen
-        ? statusColour(context, 'completed')
-        : theme.colorScheme.error;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(color: colour, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                // The reopening time follows on the label beside it.
-                item.branch.isOpen ? _hoursLabel(item) : 'Closed',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colour,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

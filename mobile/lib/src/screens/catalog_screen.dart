@@ -124,7 +124,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         color: scheme.surfaceContainerLowest,
         elevation: 0,
         shadowColor: Colors.transparent,
-        shape: const StadiumBorder(),
+        shape: StadiumBorder(side: BorderSide(color: scheme.outlineVariant)),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => context.push('/search'),
@@ -154,14 +154,14 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                   child: Container(
                     width: barHeight - 12,
                     height: barHeight - 12,
-                    decoration: const BoxDecoration(
-                      gradient: sunFill,
+                    decoration: BoxDecoration(
+                      color: scheme.primary,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.search_rounded,
                       size: 22,
-                      color: scheme.onSecondary,
+                      color: scheme.onPrimary,
                     ),
                   ),
                 ),
@@ -172,7 +172,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       ),
     );
 
-    final slab = brandSlab(scheme);
+    final slab = skySlab(scheme);
     // The shell drops its app bar on this tab, so this band sits behind the status bar.
     final search = AnnotatedRegion<SystemUiOverlayStyle>(
       value:
@@ -183,33 +183,24 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       child: Material(
         color: slab.fill,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: brandHeaderSweep,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(24),
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: 1.6,
+          child: Padding(
+            padding: EdgeInsetsDirectional.fromSTEB(
+              16,
+              MediaQuery.paddingOf(context).top + 10,
+              16,
+              16,
             ),
-          ),
-          child: MediaQuery.withClampedTextScaling(
-            maxScaleFactor: 1.6,
-            child: Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(
-                16,
-                MediaQuery.paddingOf(context).top + 10,
-                16,
-                // Room for the sun horizon under the search bar.
-                30,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Stock and prices are per branch, so the branch scopes the search below it.
-                  BranchHeader(ink: slab.ink),
-                  const SizedBox(height: 8),
-                  searchBar,
-                ],
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Stock and prices are per branch, so the branch scopes the search below it.
+                BranchHeader(ink: slab.ink),
+                const SizedBox(height: 8),
+                searchBar,
+              ],
             ),
           ),
         ),
@@ -859,41 +850,34 @@ class _QuickActionsState extends ConsumerState<_QuickActions> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(appSurfaceRadius),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _QuickAction(
-              icon: PhosphorIconsRegular.prescription,
-              label: 'Send prescription',
-              busy: _openingChat,
-              onTap: _sendPrescription,
-            ),
-            _QuickAction(
-              icon: PhosphorIconsRegular.arrowsClockwise,
-              // Delivered orders, where each has its Order again button.
-              label: 'Refill medicines',
-              onTap: () => _openOrders('delivered'),
-            ),
-            _QuickAction(
-              icon: PhosphorIconsRegular.truck,
-              label: 'Track order',
-              onTap: () => _openOrders('all'),
-            ),
-            _QuickAction(
-              icon: PhosphorIconsRegular.heart,
-              label: 'Saved items',
-              onTap: () => context.push('/saved'),
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _QuickAction(
+            icon: PhosphorIconsRegular.prescription,
+            label: 'Send prescription',
+            busy: _openingChat,
+            onTap: _sendPrescription,
+          ),
+          _QuickAction(
+            icon: PhosphorIconsRegular.arrowsClockwise,
+            // Delivered orders, where each has its Order again button.
+            label: 'Refill medicines',
+            onTap: () => _openOrders('delivered'),
+          ),
+          _QuickAction(
+            icon: PhosphorIconsRegular.truck,
+            label: 'Track order',
+            onTap: () => _openOrders('all'),
+          ),
+          _QuickAction(
+            icon: PhosphorIconsRegular.heart,
+            label: 'Saved items',
+            onTap: () => context.push('/saved'),
+          ),
+        ],
       ),
     );
   }
@@ -930,15 +914,16 @@ class _QuickAction extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 54,
+                  height: 54,
                   decoration: BoxDecoration(
-                    gradient: brandTileSweep,
-                    borderRadius: BorderRadius.circular(14),
+                    color: sunWash,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: sunWashEdge, width: 1.5),
                   ),
                   child: busy
                       ? Padding(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(16),
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: scheme.onSecondary,

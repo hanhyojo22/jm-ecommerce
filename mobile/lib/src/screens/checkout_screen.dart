@@ -544,33 +544,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           ),
                         ],
                       );
-                      final button = sunSweep(
-                        lit: true,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Theme.of(context)
-                                .colorScheme
-                                .onSecondary,
-                            // Keep the sweep while the order is placed.
-                            disabledBackgroundColor: Colors.transparent,
-                            disabledForegroundColor: Theme.of(context)
-                                .colorScheme
-                                .onSecondary,
-                            minimumSize: const Size.fromHeight(54),
-                            shape: const StadiumBorder(),
-                          ),
-                          onPressed: _placing ? null : () => _placeOrder(value),
-                          child: _placing
-                              ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('Place order'),
+                      final button = FilledButton(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(54),
+                          shape: const StadiumBorder(),
                         ),
+                        onPressed: _placing ? null : () => _placeOrder(value),
+                        child: _placing
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Place order'),
                       );
 
                       // Large text needs the button's full width; otherwise they share a row.

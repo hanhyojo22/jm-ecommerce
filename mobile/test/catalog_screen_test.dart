@@ -470,9 +470,12 @@ void main() {
       ),
     );
 
-    expect(find.text('1.1 km · Nearest branch'), findsOneWidget);
+    expect(find.text('1.1 km'), findsOneWidget);
+    expect(find.text('Nearest branch'), findsOneWidget);
+    expect(find.text('₱49.00'), findsOneWidget);
+    expect(find.text('Free over ₱500.00'), findsOneWidget);
 
-    await tester.tap(find.text('Cebu branch'));
+    await tester.tap(find.textContaining('Cebu branch'));
     await tester.pumpAndSettle();
 
     expect(
@@ -527,7 +530,7 @@ void main() {
         ],
       ),
     );
-    expect(find.text('Open 24 hours'), findsOneWidget);
+    expect(find.text('24 hours'), findsOneWidget);
     expect(find.textContaining('min'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());

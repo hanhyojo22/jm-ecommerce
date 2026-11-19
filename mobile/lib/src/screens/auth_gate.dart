@@ -501,64 +501,61 @@ class _AuthFrame extends StatelessWidget {
     return Scaffold(
       // The slab colour sits behind the sheet's rounded corners.
       backgroundColor: slab.fill,
-      body: DecoratedBox(
-        decoration: BoxDecoration(gradient: brandGradient(scheme)),
-        child: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle.light.copyWith(
-            statusBarColor: Colors.transparent,
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      header,
-                      Expanded(
-                        // The one authored moment: the sheet settles up into place.
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: 1, end: 0),
-                          duration: reduceMotion
-                              ? Duration.zero
-                              : const Duration(milliseconds: 560),
-                          curve: Curves.easeOutExpo,
-                          builder: (context, t, child) => Transform.translate(
-                            offset: Offset(0, 36 * t),
-                            child: child,
-                          ),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: scheme.surfaceContainerLowest,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(appModalRadius + 4),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.12),
-                                  offset: const Offset(0, -6),
-                                  blurRadius: 24,
-                                ),
-                              ],
+      body: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light.copyWith(
+          statusBarColor: Colors.transparent,
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    header,
+                    Expanded(
+                      // The one authored moment: the sheet settles up into place.
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 1, end: 0),
+                        duration: reduceMotion
+                            ? Duration.zero
+                            : const Duration(milliseconds: 560),
+                        curve: Curves.easeOutExpo,
+                        builder: (context, t, child) => Transform.translate(
+                          offset: Offset(0, 36 * t),
+                          child: child,
+                        ),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceContainerLowest,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(appModalRadius + 4),
                             ),
-                            child: SafeArea(
-                              top: false,
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  24,
-                                  28,
-                                  24,
-                                  20,
-                                ),
-                                child: sheet,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                offset: const Offset(0, -6),
+                                blurRadius: 24,
                               ),
+                            ],
+                          ),
+                          child: SafeArea(
+                            top: false,
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                28,
+                                24,
+                                20,
+                              ),
+                              child: sheet,
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

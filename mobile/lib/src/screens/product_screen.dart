@@ -485,16 +485,15 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     );
     Widget purchaseButton({required bool buyNow}) {
       // Buy now is the one solid action; Add to cart sits beside it as its tonal partner.
-      // Buy now's fill is the sun sweep painted behind it.
       final background = buyNow
-          ? Colors.transparent
+          ? theme.colorScheme.primary
           : theme.colorScheme.secondaryContainer;
       final foreground = buyNow
-          ? theme.colorScheme.onSecondary
+          ? theme.colorScheme.onPrimary
           : theme.colorScheme.onSecondaryContainer;
       // Only checkout shows a spinner; adding is confirmed by the flight.
       final busy = buyNow && inFlight == true;
-      final button = FilledButton(
+      return FilledButton(
         key: buyNow ? null : _addButtonKey,
         style: FilledButton.styleFrom(
           backgroundColor: background,
@@ -529,9 +528,6 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
                 textAlign: TextAlign.center,
               ),
       );
-      return buyNow
-          ? sunSweep(lit: enabled || inFlight != null, child: button)
-          : button;
     }
 
     final actions = Row(
