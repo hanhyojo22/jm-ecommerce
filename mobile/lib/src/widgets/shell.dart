@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
-import '../core/formatters.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
@@ -17,7 +16,6 @@ import '../screens/cart_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
-import '../theme.dart';
 import 'store_locator.dart';
 
 class ShellTabState {
@@ -184,19 +182,10 @@ class _AppShellState extends ConsumerState<AppShell>
                 ],
               )
             : page,
-        bottomNavigationBar: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Like a food app: while shopping, the cart rides along above the tabs.
-            if (index == 0 && cartCount > 0)
-              _ViewCartBar(
-                count: cartCount,
-                subtotal: ref.watch(cartProvider).value?.availableTotal,
-                onTap: () => ref.read(shellTabProvider.notifier).select(3),
-              ),
-            if (!wide) _navigation(context, index, unread, cartCount, scheme),
-          ],
-        ),
+        // The Cart tab and its count badge are the way to the cart.
+        bottomNavigationBar: wide
+            ? null
+            : _navigation(context, index, unread, cartCount, scheme),
       ),
     );
   }
@@ -336,84 +325,6 @@ class _AppShellState extends ConsumerState<AppShell>
       ],
     ),
   );
-}
-
-class _ViewCartBar extends StatelessWidget {
-  const _ViewCartBar({
-    required this.count,
-    required this.subtotal,
-    required this.onTap,
-  });
-
-  final int count;
-  final String? subtotal;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final slab = brandSlab(theme.colorScheme);
-    final label = '$count ${count == 1 ? 'item' : 'items'}';
-
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: 1.3,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-        child: Material(
-          color: slab.fill,
-          elevation: 6,
-          shadowColor: slab.fill.withValues(alpha: 0.45),
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 56),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 18, 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.secondary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        PhosphorIconsFill.tote,
-                        color: theme.colorScheme.onSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'View cart · $label',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: slab.ink,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    if (subtotal != null)
-                      Text(
-                        money(subtotal),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: theme.colorScheme.secondary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _NavBadge extends StatelessWidget {
