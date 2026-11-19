@@ -27,6 +27,9 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
   // reads as the one brand colour and the sun yellow stays an accent.
   final scheme = dark
       ? seeded.copyWith(
+          // Deep navy from the logo, not the seeded dusty violet.
+          primaryContainer: const Color(0xFF13216E),
+          onPrimaryContainer: const Color(0xFFDCE4FF),
           surface: const Color(0xFF0B0F1C),
           surfaceContainerLowest: const Color(0xFF10162A),
           surfaceContainerLow: const Color(0xFF151C33),
@@ -196,7 +199,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surfaceLowest,
-      indicatorColor: dark ? scheme.secondary.withValues(alpha: 0.30) : sunWash,
+      indicatorColor: dark ? scheme.primaryContainer : sunWash,
       indicatorShape: const StadiumBorder(),
       surfaceTintColor: Colors.transparent,
       elevation: 0,

@@ -515,8 +515,9 @@ class ProductCard extends StatelessWidget {
             ],
           );
 
-    final photo = Padding(
-      padding: EdgeInsets.zero,
+    final photo = ColoredBox(
+      // Product photos are shot on white; one white plate keeps them even in dark mode.
+      color: Colors.white,
       child: Stack(
         fit: StackFit.expand,
         children: [

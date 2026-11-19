@@ -21,6 +21,16 @@ String _hoursLabel(BranchDistance item) {
   return branch.open24Hours ? 'Open 24 hours' : 'Open';
 }
 
+/// "Everyday Pharmacy Cebu Capitol" -> "Cebu Capitol" for the header, where
+/// the logo beside it already says Everyday Pharmacy. Semantics keep the full name.
+// shortcut: the brand prefix is fixed text; read the company name from the API if branches ever carry another brand.
+String _withoutBrand(String name) {
+  const brand = 'Everyday Pharmacy ';
+  return name.startsWith(brand) && name.length > brand.length
+      ? name.substring(brand.length)
+      : name;
+}
+
 String _feeLabel(StoreBranch branch) {
   final fee = double.tryParse(branch.deliveryFee ?? '') ?? 0;
   final minimum = branch.freeDeliveryMinimum;
@@ -111,7 +121,7 @@ class BranchHeader extends ConsumerWidget {
                     // wraps together with the last word of the name.
                     child: Text.rich(
                       TextSpan(
-                        text: title,
+                        text: _withoutBrand(title),
                         children: [
                           if (onTap == null)
                             WidgetSpan(

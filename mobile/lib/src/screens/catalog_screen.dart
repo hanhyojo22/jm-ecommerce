@@ -116,6 +116,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final barHeight = headerScaler.scale(48).clamp(48.0, 56.0);
     // Looks like the search field, but opens the full search page, as tapping search does in
     // most shopping apps; the page has the keyboard, history and suggestions.
+    final dark = scheme.brightness == Brightness.dark;
     final searchBar = Semantics(
       button: true,
       label: 'Search medicines',
@@ -155,13 +156,13 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     width: barHeight - 12,
                     height: barHeight - 12,
                     decoration: BoxDecoration(
-                      color: scheme.primary,
+                      color: dark ? scheme.secondary : scheme.primary,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.search_rounded,
                       size: 22,
-                      color: scheme.onPrimary,
+                      color: dark ? scheme.onSecondary : scheme.onPrimary,
                     ),
                   ),
                 ),
@@ -920,14 +921,10 @@ class _QuickAction extends StatelessWidget {
                   width: 54,
                   height: 54,
                   decoration: BoxDecoration(
-                    color: dark
-                        ? scheme.secondary.withValues(alpha: 0.16)
-                        : sunWash,
+                    color: dark ? scheme.surfaceContainerLow : sunWash,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: dark
-                          ? scheme.secondary.withValues(alpha: 0.45)
-                          : sunWashEdge,
+                      color: dark ? scheme.secondary : sunWashEdge,
                       width: 1.5,
                     ),
                   ),
@@ -942,15 +939,20 @@ class _QuickAction extends StatelessWidget {
                       : Icon(icon, size: 24, color: glyph),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                    height: 1.2,
+                // Capped so "prescription" fits its column instead of
+                // breaking mid-word at large font sizes.
+                MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: 1.15,
+                  child: Text(
+                    label,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                    ),
                   ),
                 ),
               ],
