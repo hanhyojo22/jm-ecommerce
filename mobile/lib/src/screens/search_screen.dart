@@ -1349,7 +1349,7 @@ class _ResultsView extends ConsumerWidget {
                               if (branchName != null)
                                 Text(
                                   'at $branchName',
-                                  maxLines: 1,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: scheme.onSurfaceVariant,
