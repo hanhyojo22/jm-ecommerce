@@ -160,7 +160,8 @@ test('seller can search dashboard help and use keyboard shortcuts', async ({ bro
 
         await page.goto('/seller');
         await page.keyboard.press('o');
-        await expect(page).toHaveURL(/\/seller\/orders$/);
+        // The orders workspace opens the first order in the queue.
+        await expect(page).toHaveURL(/\/seller\/orders(\?order=\w+)?$/);
     } finally {
         await context.close();
     }
