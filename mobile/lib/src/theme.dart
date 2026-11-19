@@ -336,6 +336,26 @@ TextTheme _textTheme(ColorScheme scheme) {
     ? (fill: scheme.primaryContainer, ink: scheme.onPrimaryContainer)
     : (fill: scheme.primary, ink: scheme.onPrimary);
 
+/// The brand slab as a diagonal sweep from the logo navy to a brighter royal
+/// blue, for headers and the cart bar. Dark mode keeps it subtle so the light
+/// ink stays readable.
+LinearGradient brandGradient(ColorScheme scheme) {
+  final dark = scheme.brightness == Brightness.dark;
+  final fill = brandSlab(scheme).fill;
+  return LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      fill,
+      Color.lerp(
+        fill,
+        dark ? scheme.primary : const Color(0xFF3B6EF0),
+        dark ? 0.2 : 0.45,
+      )!,
+    ],
+  );
+}
+
 Color statusColour(BuildContext context, String status) {
   final scheme = Theme.of(context).colorScheme;
   final dark = scheme.brightness == Brightness.dark;

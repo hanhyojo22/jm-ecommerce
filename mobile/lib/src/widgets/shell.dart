@@ -364,45 +364,51 @@ class _ViewCartBar extends StatelessWidget {
           elevation: 6,
           shadowColor: slab.fill.withValues(alpha: 0.45),
           borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 56),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 18, 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: slab.ink.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
+          child: Ink(
+            decoration: BoxDecoration(
+              gradient: brandGradient(theme.colorScheme),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 18, 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: slab.ink.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(PhosphorIconsFill.tote, color: slab.ink),
                       ),
-                      child: Icon(PhosphorIconsFill.tote, color: slab.ink),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'View cart · $label',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: slab.ink,
-                          fontWeight: FontWeight.w800,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'View cart · $label',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: slab.ink,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
-                    ),
-                    if (subtotal != null)
-                      Text(
-                        money(subtotal),
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: slab.ink,
-                          fontWeight: FontWeight.w800,
+                      if (subtotal != null)
+                        Text(
+                          money(subtotal),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: slab.ink,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -183,24 +183,32 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       child: Material(
         color: slab.fill,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-        child: MediaQuery.withClampedTextScaling(
-          maxScaleFactor: 1.6,
-          child: Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(
-              16,
-              MediaQuery.paddingOf(context).top + 10,
-              16,
-              16,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: brandGradient(scheme),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(24),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Stock and prices are per branch, so the branch scopes the search below it.
-                BranchHeader(ink: slab.ink),
-                const SizedBox(height: 8),
-                searchBar,
-              ],
+          ),
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: 1.6,
+            child: Padding(
+              padding: EdgeInsetsDirectional.fromSTEB(
+                16,
+                MediaQuery.paddingOf(context).top + 10,
+                16,
+                16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Stock and prices are per branch, so the branch scopes the search below it.
+                  BranchHeader(ink: slab.ink),
+                  const SizedBox(height: 8),
+                  searchBar,
+                ],
+              ),
             ),
           ),
         ),
