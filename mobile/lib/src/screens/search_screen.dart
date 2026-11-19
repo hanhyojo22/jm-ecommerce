@@ -531,23 +531,23 @@ class _LandingView extends ConsumerWidget {
                   )
                 : null,
           ),
-          // A horizontal row needs a fixed height, so its text stops growing at 1.4x.
+          // At most 8 tiles, so a plain Row sizes the strip to its tallest tile instead of a guessed height.
           MediaQuery.withClampedTextScaling(
             maxScaleFactor: 1.4,
-            child: Builder(
-              builder: (context) => SizedBox(
-                height: MediaQuery.textScalerOf(context).scale(84) + 104,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: viewed.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 10),
-                  itemBuilder: (context, index) => _ViewedTile(
-                    product: viewed[index],
-                    onTap: () => onProduct(viewed[index]),
-                  ),
-                ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final (index, product) in viewed.indexed) ...[
+                    if (index > 0) const SizedBox(width: 10),
+                    _ViewedTile(
+                      product: product,
+                      onTap: () => onProduct(product),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -595,29 +595,39 @@ class _SectionHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Same height with or without the 48px action button, so every section sits the same distance below.
     return Padding(
       padding: EdgeInsetsDirectional.fromSTEB(
         16,
-        20,
+        12,
         action == null ? 16 : 4,
-        10,
+        4,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Semantics(
-              header: true,
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.2,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
             ),
-          ),
-          if (action != null) Flexible(child: action!),
-        ],
+            if (action != null)
+              Flexible(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: action,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -963,7 +973,21 @@ class _SuggestionsView extends StatelessWidget {
                   children: [
                     for (final category in suggestions.categories)
                       ActionChip(
-                        label: Text('${category.name}  ${category.count}'),
+                        label: Text.rich(
+                          TextSpan(
+                            text: category.name,
+                            children: [
+                              TextSpan(
+                                text: '  ${category.count}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: scheme.onSecondaryContainer
+                                      .withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         onPressed: () => onCategory(category.slug),
                         backgroundColor: scheme.secondaryContainer,
                         labelStyle: theme.textTheme.labelLarge?.copyWith(

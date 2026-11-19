@@ -25,10 +25,11 @@ class CatalogQuery
         Cache::forget(self::PUBLIC_FACETS_CACHE_KEY);
     }
 
-    /** @return Collection<int, Product> */
     /**
      * Up to eight products whose name, generic name or keywords match, for the search box. With
      * a branch, each carries `at_branch` and the ones that branch has on hand come first.
+     *
+     * @return Collection<int, Product>
      */
     public static function suggestions(string $search, ?Store $branch = null): Collection
     {

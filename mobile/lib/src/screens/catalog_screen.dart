@@ -976,7 +976,7 @@ class _CategoryStrip extends StatelessWidget {
 
             return SizedBox(
               // Wide enough at 2× text that one-word names like "Electronics" never split mid-word.
-              width: scaler.scale(72).clamp(68, 168),
+              width: scaler.scale(84).clamp(80, 184),
               child: Semantics(
                 button: true,
                 selected: active,
