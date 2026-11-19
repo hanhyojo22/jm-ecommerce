@@ -365,6 +365,51 @@ class DiscountCardTest extends TestCase
         Storage::disk('chat_attachments')->assertEmpty();
     }
 
+    public function test_a_reviewed_saved_id_arrives_reviewed_until_its_photo_changes(): void
+    {
+        $buyer = $this->buyer();
+        $this->checkoutWithCard($buyer, 'SC-0001')->assertCreated();
+        $staff = $this->staff();
+        $first = Order::query()->sole()->sellerOrders()->sole();
+        $this->actingAs($staff)->post(route('seller.orders.discount-document.review', $first))->assertSessionHasNoErrors();
+
+        $this->travel(1)->minutes();
+        $this->fillCart($buyer);
+        $card = DiscountCard::query()->sole();
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card_id' => $card->id])->assertCreated();
+        $second = Order::query()->latest('id')->firstOrFail()->sellerOrders()->sole();
+        $this->assertEquals($first->refresh()->discount_reviewed_at, $second->discount_reviewed_at);
+        $this->assertSame($staff->id, $second->discount_reviewed_by);
+        $this->actingAs($staff)->get(route('seller.orders.show', $second), ['X-Order-Modal' => '1'])
+            ->assertSee('Same ID photo reviewed on an earlier order')->assertDontSee('Mark ID reviewed');
+
+        // A new photo needs a fresh review.
+        $this->fillCart($buyer);
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [
+            ...$this->delivery(), 'discount_card_id' => $card->id, 'discount_document' => UploadedFile::fake()->image('renewed.jpg'),
+        ])->assertCreated();
+        $this->assertNull(Order::query()->latest('id')->firstOrFail()->sellerOrders()->sole()->discount_reviewed_at);
+        $this->assertNull($card->refresh()->document_reviewed_at);
+    }
+
+    public function test_a_pwd_review_stops_carrying_over_after_a_year(): void
+    {
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava Buyer'],
+            'save_discount_card' => true,
+            'discount_document' => UploadedFile::fake()->image('pwd.jpg'),
+        ])->assertCreated();
+        $this->actingAs($this->staff())->post(route('seller.orders.discount-document.review', Order::query()->sole()->sellerOrders()->sole()))->assertSessionHasNoErrors();
+
+        $this->travel(DiscountCard::PWD_REVIEW_MONTHS + 1)->months();
+        $this->fillCart($buyer);
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card_id' => DiscountCard::query()->sole()->id])->assertCreated();
+
+        $this->assertNull(Order::query()->latest('id')->firstOrFail()->sellerOrders()->sole()->discount_reviewed_at);
+    }
+
     public function test_api_checkout_requires_a_photo_of_the_discount_id(): void
     {
         $buyer = $this->buyerWithCart();

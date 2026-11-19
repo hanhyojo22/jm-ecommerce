@@ -189,9 +189,9 @@ class CheckoutController extends Controller
         // A failed save must not turn a placed order into an error: the discount already applies.
         try {
             if ($savedCard !== null && $discountDocument !== null) {
-                $saveDiscountCard->replaceDocument($savedCard, $discountDocument);
+                $saveDiscountCard->replaceDocument($savedCard, $order);
             } elseif ($savedCard === null && $discountCard !== null && $discountDocument !== null && ($data['save_discount_card'] ?? false)) {
-                $saveDiscountCard->handle($request->user(), $discountCard, $discountDocument);
+                $saveDiscountCard->handle($request->user(), $discountCard, $order);
             }
         } catch (Throwable $exception) {
             report($exception);

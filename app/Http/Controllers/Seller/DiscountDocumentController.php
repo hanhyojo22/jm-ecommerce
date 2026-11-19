@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\DiscountCard;
 use App\Models\Order;
 use App\Models\SellerOrder;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +42,14 @@ class DiscountDocumentController extends Controller
                 return;
             }
             $sellerOrder->forceFill(['discount_reviewed_by' => $request->user()->id, 'discount_reviewed_at' => now()])->save();
+            // A saved ID holding this same photo carries the review to the customer's later orders.
+            $photo = basename($sellerOrder->order->discount_document_path);
+            DiscountCard::query()->where('user_id', $sellerOrder->order->user_id)->where('document_path', 'like', '%/'.$photo)->get()
+                ->each(fn (DiscountCard $card) => $card->update([
+                    'document_reviewed_at' => $sellerOrder->discount_reviewed_at,
+                    'document_reviewed_by' => $request->user()->id,
+                    'document_reviewed_tenant_id' => $sellerOrder->tenant_id,
+                ]));
             AuditLog::query()->create([
                 'actor_user_id' => $request->user()->id,
                 'action' => 'order.discount_id_reviewed',

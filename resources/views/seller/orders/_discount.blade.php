@@ -18,7 +18,7 @@
     </dl>
 <a href="{{ route('seller.orders.discount-document.show', $sellerOrder) }}" target="_blank" rel="noopener" class="sc-document-open">Open ID <span class="sr-only">in a new tab</span></a>
         @if ($sellerOrder->discount_reviewed_at)
-            <p class="sc-document-checked">ID reviewed · {{ $sellerOrder->discount_reviewed_at->format('M j, Y · g:i A') }}</p>
+            <p class="sc-document-checked">{{ $sellerOrder->discount_reviewed_at->lt($discountOrder->created_at) ? 'Same ID photo reviewed on an earlier order' : 'ID reviewed' }} · {{ $sellerOrder->discount_reviewed_at->format('M j, Y · g:i A') }}</p>
         @elseif (! in_array($sellerOrder->status, ['cancelled', 'delivered'], true))
             <form method="POST" action="{{ route('seller.orders.discount-document.review', $sellerOrder) }}" class="sc-document-check-form">
                 @csrf

@@ -13,6 +13,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Distance;
 use App\Support\SeniorPwdDiscount;
+use Carbon\CarbonInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class CheckoutCart
      * @param  'delivery'|'pickup'  $fulfillmentMethod  pickup is collected at the branch: no fee, and 'cod' means pay at the counter
      * @param  ?array{latitude: float, longitude: float}  $deliveryPin  where the customer dropped the delivery pin; checked against the branch's radius
      * @param  list<UploadedFile>  $prescriptions  required when a medicine needs one; a branch pharmacist reviews every page before the order moves past pending
-     * @param  ?array{type: 'senior'|'pwd', id_number: string, name: string, document?: array{path: string, name: ?string, mime: ?string}}  $discountCard  takes the SC/PWD discount off medicines; the branch checks the card at handover
+     * @param  ?array{type: 'senior'|'pwd', id_number: string, name: string, document?: array{path: string, name: ?string, mime: ?string, review: ?array{at: CarbonInterface, by: ?string, tenant_id: string}}}  $discountCard  takes the SC/PWD discount off medicines; the branch checks the card at handover
      * @param  ?UploadedFile  $discountDocument  photo of the discount ID for the fulfilling branch to review; required unless the saved card already has one
      */
     public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null, array $prescriptions = [], ?array $discountCard = null, ?UploadedFile $discountDocument = null): Order
@@ -297,6 +298,13 @@ class CheckoutCart
                         'discount_document_name' => $saved['name'],
                         'discount_document_mime' => $saved['mime'],
                     ])->save();
+                    // This company already reviewed the same photo, so its branch need not read it again.
+                    if ($saved['review'] !== null) {
+                        $order->sellerOrders()->where('tenant_id', $saved['review']['tenant_id'])->update([
+                            'discount_reviewed_at' => $saved['review']['at'],
+                            'discount_reviewed_by' => $saved['review']['by'],
+                        ]);
+                    }
                 }
                 $cart->items()->whereKey($items->modelKeys())->delete();
                 $cart->touch();
