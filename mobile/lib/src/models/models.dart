@@ -589,6 +589,20 @@ class Cart {
 
   static const empty = Cart(lines: [], selectedCount: 0, subtotal: '0.00');
 
+  /// What checkout will charge for the items: every available line. [subtotal] counts only
+  /// selected lines, and a line can sit unselected until the cart page selects it.
+  String get availableTotal {
+    final cents = lines
+        .where((line) => line.available)
+        .fold<int>(
+          0,
+          (sum, line) =>
+              sum + ((double.tryParse(line.lineTotal) ?? 0) * 100).round(),
+        );
+
+    return (cents / 100).toStringAsFixed(2);
+  }
+
   factory Cart.fromJson(Map<String, dynamic> json) => Cart(
     id: json['id'] as String?,
     branchId: mapOf(json['branch'])['id'] as String?,

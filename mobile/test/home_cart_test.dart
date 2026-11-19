@@ -33,6 +33,32 @@ void main() {
     expect(api.adds, 1);
   });
 
+  test(
+    'the cart bar total counts unselected lines but not unavailable ones',
+    () {
+      final cart = Cart.fromJson({
+        'subtotal': '0.00',
+        'items': [
+          {
+            'id': 'a',
+            'available': true,
+            'selected': false,
+            'line_total': '18.00',
+          },
+          {
+            'id': 'b',
+            'available': true,
+            'selected': true,
+            'line_total': '4.50',
+          },
+          {'id': 'c', 'available': false, 'line_total': '99.00'},
+        ],
+      });
+
+      expect(cart.availableTotal, '22.50');
+    },
+  );
+
   testWidgets(
     'home add disables while pending and increases quantity without opening product',
     (tester) async {

@@ -191,7 +191,7 @@ class _AppShellState extends ConsumerState<AppShell>
             if (index == 0 && cartCount > 0)
               _ViewCartBar(
                 count: cartCount,
-                subtotal: ref.watch(cartProvider).value?.subtotal,
+                subtotal: ref.watch(cartProvider).value?.availableTotal,
                 onTap: () => ref.read(shellTabProvider.notifier).select(3),
               ),
             if (!wide) _navigation(context, index, unread, cartCount, scheme),
