@@ -10,10 +10,10 @@ import '../providers/catalog_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
-const _shopGreenDeep = Color(0xFF071F1B);
-const _shopGreen = Color(0xFF0B3B34);
-const _shopGreenBright = Color(0xFF177565);
-const _shopGold = Color(0xFFF0C36A);
+const _shopNavyDeep = Color(0xFF040E52);
+const _shopNavy = Color(0xFF071C94);
+const _shopNavyBright = Color(0xFF2346C8);
+const _shopGold = Color(0xFFF8B800);
 const _gridGap = 12.0;
 const _gridInset = 12.0;
 
@@ -90,8 +90,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final header = theme.brightness == Brightness.dark
-        ? _shopGreenDeep
-        : _shopGreen;
+        ? _shopNavyDeep
+        : _shopNavy;
     final scaler = MediaQuery.textScalerOf(context).clamp(maxScaleFactor: 1.6);
     final probe = TextPainter(
       text: TextSpan(text: 'Ag', style: theme.textTheme.bodyLarge),
@@ -228,8 +228,8 @@ class _StoreScreenState extends ConsumerState<StoreScreen> {
   ) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final headerStart = dark ? _shopGreenDeep : _shopGreen;
-    final headerEnd = dark ? _shopGreen : _shopGreenBright;
+    final headerStart = dark ? _shopNavyDeep : _shopNavy;
+    final headerEnd = dark ? _shopNavy : _shopNavyBright;
     final productsLoaded = products.hasValue;
     final all = products.value?.products ?? const <Product>[];
     final categories = _categoriesOf(all);

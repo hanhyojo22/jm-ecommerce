@@ -16,7 +16,7 @@ class SetUpPharmacyCompany
     /**
      * Creates the pharmacy company and its head-office owner, run once on a new server. The owner
      * signs in through Clerk with this email; the verified email links the account on first sign-in.
-     * An existing customer account is promoted, since an owner can still shop. JMMart itself is the actor.
+     * An existing customer account is promoted, since an owner can still shop. Everyday Pharmacy itself is the actor.
      */
     public function handle(string $companyName, string $ownerEmail): Tenant
     {

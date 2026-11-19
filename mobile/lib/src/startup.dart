@@ -43,7 +43,7 @@ class _StartupErrorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'JMMart',
+    title: 'Everyday Pharmacy',
     theme: buildAppTheme(),
     darkTheme: buildAppTheme(brightness: Brightness.dark),
     themeMode: ThemeMode.system,
@@ -63,7 +63,7 @@ class _StartupErrorApp extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Could not start JMMart',
+                'Could not start Everyday Pharmacy',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),

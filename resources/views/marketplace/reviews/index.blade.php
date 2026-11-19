@@ -98,9 +98,9 @@
 
                             @if ($review->status !== 'published')
                                 <div class="mt-4 rounded-md border border-[var(--color-warning-line)] bg-[var(--color-warning-wash)] px-3.5 py-2.5" role="note">
-                                    <p class="text-meta font-semibold text-ink">{{ $review->status === 'removed' ? 'JMMart removed this review' : 'This review is hidden from the product page' }}</p>
+                                    <p class="text-meta font-semibold text-ink">{{ $review->status === 'removed' ? 'Everyday Pharmacy removed this review' : 'This review is hidden from the product page' }}</p>
                                     {{-- The moderation reason is an internal admin note, so the buyer gets the outcome only. --}}
-                                    <p class="mt-0.5 text-xs leading-5 text-muted">Other buyers can't see it. JMMart support can explain the decision if you ask.</p>
+                                    <p class="mt-0.5 text-xs leading-5 text-muted">Other buyers can't see it. Everyday Pharmacy support can explain the decision if you ask.</p>
                                 </div>
                             @endif
 

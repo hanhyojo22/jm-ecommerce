@@ -18,7 +18,7 @@
     <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
     <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
     <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
-    <title>Stores · JMMart</title>
+    <title>Stores · Everyday Pharmacy</title>
     @include('partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -58,7 +58,7 @@
                             </span>
                             <div class="min-w-0">
                                 <h2 class="truncate text-base font-semibold text-ink group-hover:text-brand-hover">{{ $store->name }}</h2>
-                                <p class="truncate text-sm text-muted">{{ $store->city ?: 'JMMart seller' }}</p>
+                                <p class="truncate text-sm text-muted">{{ $store->city ?: 'Everyday Pharmacy seller' }}</p>
                             </div>
                         </div>
                         <div class="mt-5 flex items-center justify-between gap-3 border-t border-line pt-4 text-sm">

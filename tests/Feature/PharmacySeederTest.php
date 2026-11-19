@@ -35,7 +35,7 @@ class PharmacySeederTest extends TestCase
         }
 
         $cefalexin = Product::query()->where('slug', 'cefalexin-500-mg-capsule')->sole();
-        $this->assertSame(['JMMart Pharmacy Quezon City'], BranchStock::query()->where('product_id', $cefalexin->id)->with('store')->get()->pluck('store.name')->all());
+        $this->assertSame(['Everyday Pharmacy Quezon City'], BranchStock::query()->where('product_id', $cefalexin->id)->with('store')->get()->pluck('store.name')->all());
         $this->assertSame(60, $cefalexin->stock_quantity);
 
         Storage::disk('product_images')->delete($cefalexin->images()->sole()->path);

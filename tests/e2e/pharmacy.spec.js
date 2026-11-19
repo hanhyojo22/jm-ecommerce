@@ -6,7 +6,7 @@ async function documentPhoto(browser) {
     const context = await browser.newContext({ viewport: { width: 640, height: 760 } });
     try {
         const page = await context.newPage();
-        await page.setContent('<main style="padding:48px;font:18px/1.8 sans-serif;color:#182c48"><p>JMMart browser test</p><h1>Sample document</h1><hr><p>For viewer verification only.</p><p>Customer: QA Patient</p><p>Reference: QA-TEST-001</p><p>This fixture contains no real medical or identity information.</p></main>');
+        await page.setContent('<main style="padding:48px;font:18px/1.8 sans-serif;color:#182c48"><p>Everyday Pharmacy browser test</p><h1>Sample document</h1><hr><p>For viewer verification only.</p><p>Customer: QA Patient</p><p>Reference: QA-TEST-001</p><p>This fixture contains no real medical or identity information.</p></main>');
         return { name: 'prescription.png', mimeType: 'image/png', buffer: await page.screenshot() };
     } finally {
         await context.close();

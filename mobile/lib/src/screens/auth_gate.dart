@@ -186,7 +186,7 @@ class _SignInScreenState extends State<SignInScreen> {
         title: signUp ? 'Create your account' : 'Sign in with email',
         subtitle: signUp
             ? 'It takes a minute. Then add medicines and check out.'
-            : 'Welcome back to JMMart Pharmacy.',
+            : 'Welcome back to Everyday Pharmacy.',
         sheet: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -202,7 +202,9 @@ class _SignInScreenState extends State<SignInScreen> {
             // Mid-attempt Clerk keeps the current mode, so switching would do nothing.
             if (!authState.isSigningIn && !authState.isSigningUp)
               _SwitchLine(
-                prompt: signUp ? 'Already have an account?' : 'New to JMMart?',
+                prompt: signUp
+                    ? 'Already have an account?'
+                    : 'New to Everyday Pharmacy?',
                 action: signUp ? 'Sign in' : 'Create an account',
                 onPressed: () => setState(() => _signUp = !signUp),
               ),
@@ -227,7 +229,7 @@ class _SignInScreenState extends State<SignInScreen> {
         onPressed: () => Navigator.of(context).maybePop(),
         icon: const Icon(PhosphorIconsRegular.x),
       ),
-      title: 'Sign in to JMMart',
+      title: 'Sign in to Everyday Pharmacy',
       subtitle: 'Sign in or create an account to add medicines to your cart, order and chat with a pharmacist.',
       large: true,
       sheet: Column(
@@ -268,7 +270,7 @@ class _SignInScreenState extends State<SignInScreen> {
           const Spacer(),
           const SizedBox(height: 28),
           _SwitchLine(
-            prompt: 'New to JMMart?',
+            prompt: 'New to Everyday Pharmacy?',
             action: 'Create an account',
             onPressed: idle ? () => _openEmailForm(signUp: true) : null,
           ),
@@ -428,7 +430,15 @@ class _AuthFrame extends StatelessWidget {
                         Text.rich(
                           TextSpan(
                             children: [
-                              const TextSpan(text: 'JMMart'),
+                              // Two-tone like the logo: sun-yellow "Everyday".
+                              TextSpan(
+                                text: 'Everyday',
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .secondary,
+                                ),
+                              ),
                               TextSpan(
                                 text: '  Pharmacy',
                                 style: TextStyle(

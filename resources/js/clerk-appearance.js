@@ -1,6 +1,6 @@
 /**
  * Clerk's hosted screens (sign-in, sign-up, user button, account settings) painted with the
- * JMMart palette, so an account screen reads as part of the marketplace rather than beside it.
+ * Everyday Pharmacy palette, so an account screen reads as part of the marketplace rather than beside it.
  *
  * The palette itself is not repeated here: it is read from the tokens on :root, which app.css
  * defines, so a colour that changes there changes on these screens too. Clerk derives its own

@@ -30,7 +30,7 @@ class UpdateSellerOrderStatus
     public function __construct(private RefundOnlinePayment $refundOnlinePayment) {}
 
     /**
-     * A null actor is JMMart itself, completing an order the buyer never confirmed or cancelling
+     * A null actor is Everyday Pharmacy itself, completing an order the buyer never confirmed or cancelling
      * one the buyer never paid for.
      *
      * Cancelling a store order the buyer already paid online refunds its share through PayMongo
@@ -79,7 +79,7 @@ class UpdateSellerOrderStatus
 
             // Paid to the store's own account before PayMongo, so there is no gateway payment to refund from.
             if ($isOnlinePayment && $status === 'cancelled' && $sellerOrder->cod_collected_at !== null && $payment->gateway_payment_id === null && ! $actor?->isPlatformAdministrator()) {
-                throw ValidationException::withMessages(['status' => 'This order was paid to your store directly before online payments moved to PayMongo. Ask JMMart support to cancel it so the refund is recorded.']);
+                throw ValidationException::withMessages(['status' => 'This order was paid to your store directly before online payments moved to PayMongo. Ask Everyday Pharmacy support to cancel it so the refund is recorded.']);
             }
 
             if ($isOnlinePayment && $status === 'confirmed' && $sellerOrder->cod_collected_at === null) {
@@ -187,7 +187,7 @@ class UpdateSellerOrderStatus
             try {
                 app(GmailOrderMailer::class)->send(
                     $updatedSellerOrder->order->user,
-                    "JMMart order {$number} update",
+                    "Everyday Pharmacy order {$number} update",
                     $message."\n\n".BuyerLink::emailLine('View your order', route('orders.show', $updatedSellerOrder->order_id)),
                 );
             } catch (Throwable $exception) {

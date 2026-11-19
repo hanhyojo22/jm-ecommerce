@@ -110,7 +110,7 @@
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0">
                         <h2 id="desktop-notifications-heading" class="sc-card-title">Never miss a new order</h2>
-                        <p class="mt-1 max-w-2xl text-sm text-muted">Turn on desktop notifications so new orders and buyer messages appear on this computer even when JMMart is closed.</p>
+                        <p class="mt-1 max-w-2xl text-sm text-muted">Turn on desktop notifications so new orders and buyer messages appear on this computer even when Everyday Pharmacy is closed.</p>
                         <p x-show="error" x-text="error" class="mt-2 text-sm text-danger" role="alert"></p>
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
@@ -321,7 +321,7 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="sc-empty"><h3>No products yet</h3><p>Add your first product to start selling on JMMart.</p>@if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="seller-primary-button">Add product</a>@endif</div>
+                        <div class="sc-empty"><h3>No products yet</h3><p>Add your first product to start selling on Everyday Pharmacy.</p>@if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="seller-primary-button">Add product</a>@endif</div>
                     @endif
                 </details>
             </div>

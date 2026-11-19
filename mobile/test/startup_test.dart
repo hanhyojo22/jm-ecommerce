@@ -56,7 +56,7 @@ void main() {
     application.completeError(StateError('Sign-in service unavailable'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Could not start JMMart'), findsOneWidget);
+    expect(find.text('Could not start Everyday Pharmacy'), findsOneWidget);
     expect(find.textContaining('Check your connection'), findsOneWidget);
     expect(find.byType(StartupSplash), findsNothing);
     expect(tester.takeException(), isNull);

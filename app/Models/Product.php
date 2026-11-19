@@ -57,14 +57,14 @@ class Product extends Model
             'Make the title match the product in the photos.',
         ],
         'rejected' => [
-            'This item is not allowed on JMMart.',
+            'This item is not allowed on Everyday Pharmacy.',
             'The photos or details are misleading.',
             'This listing duplicates another listing from your store.',
         ],
         'inactive' => [
             'Buyers reported this listing for a policy violation.',
             'The edited listing no longer matches what was approved.',
-            'This item is not allowed on JMMart.',
+            'This item is not allowed on Everyday Pharmacy.',
         ],
     ];
 

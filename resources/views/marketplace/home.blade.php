@@ -1,8 +1,8 @@
 <x-app-layout>
-    @section('title', 'JMMart · Pharmacy delivery')
+    @section('title', 'Everyday Pharmacy · Delivery')
 
     <div class="page-container marketplace-home" data-homepage>
-        <h1 class="sr-only">JMMart pharmacy</h1>
+        <h1 class="sr-only">Everyday Pharmacy</h1>
 
         <x-marketplace.hero-carousel />
 

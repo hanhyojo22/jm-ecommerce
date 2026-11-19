@@ -68,7 +68,7 @@ class NotifySellersOfNewOrder
             try {
                 $this->mailer->send(
                     $recipient,
-                    "JMMart {$title}",
+                    "Everyday Pharmacy {$title}",
                     $body."\n\nView the order: ".route('seller.orders.show', $sellerOrder->id),
                 );
             } catch (Throwable $exception) {

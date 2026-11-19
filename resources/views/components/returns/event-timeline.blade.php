@@ -8,17 +8,17 @@
      */
     $types = [
         'submitted' => ['Request submitted', 'send', 'brand'],
-        'admin_opened' => ['Opened by JMMart', 'shield', 'violet'],
+        'admin_opened' => ['Opened by Everyday Pharmacy', 'shield', 'violet'],
         'offer' => ['Remedy offered', 'tag', 'brand'],
         'reject' => ['Request rejected', 'x-circle', 'amber'],
         'accept' => ['Offer accepted', 'check', 'brand'],
-        'appeal' => ['Escalated to JMMart', 'flag', 'violet'],
+        'appeal' => ['Escalated to Everyday Pharmacy', 'flag', 'violet'],
         'handoff' => ['Goods handed over', 'truck', 'brand'],
         'receive' => ['Returned goods received', 'box', 'brand'],
         'refund' => ['Refund recorded', 'cash', 'green'],
         'ship' => ['Replacement shipped', 'truck', 'green'],
-        'decide' => ['JMMart decided the appeal', 'scale', 'violet'],
-        'takeover' => ['JMMart took over', 'shield', 'violet'],
+        'decide' => ['Everyday Pharmacy decided the appeal', 'scale', 'violet'],
+        'takeover' => ['Everyday Pharmacy took over', 'shield', 'violet'],
         'reopen' => ['Outcome set aside', 'rotate', 'amber'],
         'confirm' => ['Outcome confirmed', 'check', 'green'],
         'verify' => ['Completion verified', 'check', 'green'],
@@ -57,8 +57,8 @@
         @php
             [$label, $icon, $tone] = $types[$event->type] ?? [str($event->type)->replace('_', ' ')->headline(), 'dot', 'slate'];
             $actorRole = $event->actor === null
-                ? 'JMMart'
-                : ($event->actor->id === $case->buyer_id ? 'Buyer' : ($event->actor->isPlatformAdministrator() ? 'JMMart support' : 'Seller'));
+                ? 'Everyday Pharmacy'
+                : ($event->actor->id === $case->buyer_id ? 'Buyer' : ($event->actor->isPlatformAdministrator() ? 'Everyday Pharmacy support' : 'Seller'));
             $detail = $detailFor($event);
         @endphp
         <li class="relative flex gap-3.5 {{ $loop->last ? '' : 'pb-5' }}">

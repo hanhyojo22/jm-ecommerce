@@ -64,7 +64,7 @@ class StartOnlinePayment
             'success_url' => $successUrl ?? route('orders.placed', $order),
             'cancel_url' => $cancelUrl ?? route('orders.show', $order),
             'reference_number' => $order->number,
-            'description' => "JMMart order {$order->number}",
+            'description' => "Everyday Pharmacy order {$order->number}",
             'metadata' => ['order_id' => $order->id, 'payment_id' => $payment->id],
         ]);
 

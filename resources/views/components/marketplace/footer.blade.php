@@ -1,8 +1,8 @@
 <footer class="border-t border-line bg-white text-[13px] leading-6 text-muted">
     <div class="marketplace-container flex flex-col gap-4 py-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <a href="{{ route('home') }}" class="inline-flex items-center text-xl font-bold tracking-[-0.05em] text-ink" aria-label="JMMart home">
-                <span class="mr-2 grid size-[27px] place-items-center rounded-lg bg-brand text-sm font-bold text-white" aria-hidden="true">jm</span>JM<span class="text-brand">Mart.</span>
+            <a href="{{ route('home') }}" class="inline-flex items-center text-xl font-bold tracking-[-0.05em] text-ink" aria-label="Everyday Pharmacy home">
+                <span class="mr-2 grid size-[27px] place-items-center rounded-lg bg-brand text-sm font-bold text-white" aria-hidden="true">ep</span>Everyday <span class="text-brand">Pharmacy</span>
             </a>
             <span>Your neighborhood pharmacy, delivered.</span>
         </div>
@@ -11,7 +11,7 @@
             <a href="{{ route('privacy-policy') }}" class="inline-flex min-h-11 items-center hover:text-brand">Privacy</a>
             <a href="{{ route('cookie-policy') }}" class="inline-flex min-h-11 items-center hover:text-brand">Cookie Policy</a>
             <button type="button" data-cookie-preferences-open class="min-h-11 hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">Cookie Preferences</button>
-            <span class="inline-flex min-h-11 items-center">&copy; {{ date('Y') }} JMMart</span>
+            <span class="inline-flex min-h-11 items-center">&copy; {{ date('Y') }} Everyday Pharmacy</span>
         </nav>
     </div>
 </footer>

@@ -162,7 +162,7 @@
                 <details class="seller-form-card sc-settings-disclosure" @if ($errors->hasAny(array_keys($shippingFields))) open @endif>
                     <summary id="shipping-details-heading">Pickup &amp; shipping<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
                     <div class="sc-disclosure-body">
-                    <p class="mt-0.5 text-sm text-muted">Only you and JMMart see your pickup and return addresses.</p>
+                    <p class="mt-0.5 text-sm text-muted">Only you and Everyday Pharmacy see your pickup and return addresses.</p>
                     <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-2">
                         @foreach ($shippingFields as $name => $field)
                             <div @class(['min-w-0', 'sm:col-span-2' => $field['wide'] ?? false])>
@@ -187,7 +187,7 @@
                     x-data="{ locating: false, locationError: '', useCurrentLocation() { if (! navigator.geolocation) { this.locationError = 'This browser cannot share its location. Enter the coordinates instead.'; return; } this.locating = true; this.locationError = ''; navigator.geolocation.getCurrentPosition((position) => { this.$refs.latitude.value = position.coords.latitude.toFixed(7); this.$refs.longitude.value = position.coords.longitude.toFixed(7); this.locating = false; dirty = true; }, () => { this.locating = false; this.locationError = 'We could not get your location. Allow location access or enter the coordinates instead.'; }, { enableHighAccuracy: true, timeout: 15000 }); } }">
                     <summary id="map-location-heading">Map location<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
                     <div class="sc-disclosure-body">
-                    <p class="mt-0.5 text-sm text-muted">Buyers see this pin and your delivery radius when the JMMart app suggests nearby stores. Leave it empty to stay out of nearby suggestions.</p>
+                    <p class="mt-0.5 text-sm text-muted">Buyers see this pin and your delivery radius when the Everyday Pharmacy app suggests nearby stores. Leave it empty to stay out of nearby suggestions.</p>
                     <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">
                         <div class="min-w-0">
                             <label for="latitude" class="block text-sm font-semibold text-ink">Latitude</label>

@@ -14,7 +14,7 @@ class MakeSuperAdministrator
     /**
      * Creates or promotes the platform owner, run from the server console. The person signs in through
      * Clerk with this email; admin_invited_at marks the row as safe to link by verified email.
-     * Pharmacy staff cannot also be administrators, so their accounts are refused. JMMart itself is the actor.
+     * Pharmacy staff cannot also be administrators, so their accounts are refused. Everyday Pharmacy itself is the actor.
      */
     public function handle(string $email): User
     {

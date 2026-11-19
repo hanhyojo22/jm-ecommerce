@@ -520,7 +520,7 @@ test('homepage shows compact product rows at desktop, tablet, and phone sizes', 
     await expect(page.getByRole('navigation', { name: 'Homepage shortcuts' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Browse marketplace', exact: true })).toHaveCount(0);
     await expect(page.getByRole('navigation', { name: 'Marketplace sections' })).toBeVisible();
-    await expect(page.getByRole('banner').getByRole('link', { name: 'JMMart marketplace home' })).toBeVisible();
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Everyday Pharmacy marketplace home' })).toBeVisible();
 
     const widths = testInfo.project.name === 'desktop-chromium' ? [1440, 1024, 768, 390] : [page.viewportSize().width];
     for (const width of widths) {
@@ -636,7 +636,7 @@ test('customer header uses the intended shopping and account layouts', async ({ 
                 await expect(page.locator('[data-header-promo]')).toHaveCount(0);
                 accountHeights.push(Math.round((await header.boundingBox()).height));
             } else {
-                await expect(header.getByRole('link', { name: 'JMMart marketplace home' })).toBeVisible();
+                await expect(header.getByRole('link', { name: 'Everyday Pharmacy marketplace home' })).toBeVisible();
                 await expect(header.getByRole('navigation', { name: 'Marketplace sections' })).toBeVisible();
                 await expect(page.locator('[data-header-promo]')).toBeVisible();
                 shoppingHeights.push(Math.round((await header.boundingBox()).height));

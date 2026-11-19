@@ -4,7 +4,7 @@
     /*
      * One label and tone per case status, shared by the queues and the case page so both
      * read the same. Blue marks work in progress, amber a decision owed by one side,
-     * violet JMMart review, green a granted remedy, red a denial, and slate a closed case.
+     * violet Everyday Pharmacy review, green a granted remedy, red a denial, and slate a closed case.
      */
     $styles = [
         'awaiting_seller' => ['Awaiting seller response', 'bg-blue-50 text-brand-hover ring-blue-200', 'bg-brand-hover'],
@@ -14,7 +14,7 @@
         'awaiting_return' => ['Return in progress', 'bg-blue-50 text-brand-hover ring-blue-200', 'bg-brand-hover'],
         'awaiting_receipt' => ['Return in transit', 'bg-blue-50 text-brand-hover ring-blue-200', 'bg-brand-hover'],
         'awaiting_fulfillment' => ['Remedy in progress', 'bg-blue-50 text-brand-hover ring-blue-200', 'bg-brand-hover'],
-        'appealed' => ['With JMMart support', 'bg-violet-50 text-violet-700 ring-violet-200', 'bg-violet-600'],
+        'appealed' => ['With Everyday Pharmacy support', 'bg-violet-50 text-violet-700 ring-violet-200', 'bg-violet-600'],
         'completed' => ['Completed', 'bg-green-50 text-success ring-green-200', 'bg-success'],
         'denied' => ['Claim denied', 'bg-red-50 text-danger-text ring-red-200', 'bg-danger'],
         'closed' => ['Closed without remedy', 'bg-slate-100 text-muted ring-line', 'bg-muted'],

@@ -1,8 +1,9 @@
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 
-const _brand = Color(0xFF0F5C52);
-const _accent = Color(0xFFD9982B);
+/// Everyday Pharmacy logo colours: "PHARMACY" navy, "EVERYDAY" sun yellow.
+const _brand = Color(0xFF071C94);
+const _accent = Color(0xFFF8B800);
 
 /// Static weights cut from the variable font: Flutter's fontWeight does not
 /// reliably drive a variable font's weight axis on Android. Chosen for a plain
@@ -20,40 +21,48 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     seedColor: _brand,
     brightness: brightness,
     secondary: _accent,
+    onSecondary: _brand,
   );
-  // Light: a cool mineral ground with white cards and green-black ink, so the
-  // teal reads as the one brand colour instead of a tint over everything.
+  // Light: a cool sky-white ground with white cards and navy ink, so the navy
+  // reads as the one brand colour and the sun yellow stays an accent.
   final scheme = dark
       ? seeded.copyWith(
-          surface: const Color(0xFF0C1311),
-          surfaceContainerLowest: const Color(0xFF111A17),
-          surfaceContainerLow: const Color(0xFF16201D),
-          outlineVariant: const Color(0xFF2A3633),
-          secondaryContainer: const Color(0xFF173A34),
-          onSecondaryContainer: const Color(0xFFBFE9DF),
+          surface: const Color(0xFF0B0F1C),
+          surfaceContainerLowest: const Color(0xFF10162A),
+          surfaceContainerLow: const Color(0xFF151C33),
+          outlineVariant: const Color(0xFF2A3350),
+          secondaryContainer: const Color(0xFF1A2659),
+          onSecondaryContainer: const Color(0xFFD2DCFF),
+          tertiary: const Color(0xFFFFC94A),
+          onTertiary: const Color(0xFF3D2800),
+          tertiaryContainer: const Color(0xFF4A3300),
+          onTertiaryContainer: const Color(0xFFFFE3A3),
         )
       : seeded.copyWith(
           primary: _brand,
           onPrimary: Colors.white,
-          primaryContainer: const Color(0xFFD3ECE5),
-          onPrimaryContainer: const Color(0xFF07332D),
-          // Tonal buttons and chips stay in the teal family; amber is for stars only.
-          secondaryContainer: const Color(0xFFE2F0EC),
-          onSecondaryContainer: const Color(0xFF0B4A41),
-          tertiary: const Color(0xFF3E4C9A),
+          // The logo's cloud blue.
+          primaryContainer: const Color(0xFFDCEBFA),
+          onPrimaryContainer: const Color(0xFF05105C),
+          // Tonal buttons and chips stay in the navy family; yellow is for fills
+          // with navy ink and stars only, since yellow text fails on white.
+          secondaryContainer: const Color(0xFFE6EEFB),
+          onSecondaryContainer: const Color(0xFF0B1E73),
+          // Rx and caution notes: the logo's sun, deepened for readable text.
+          tertiary: const Color(0xFF9A5B00),
           onTertiary: Colors.white,
-          tertiaryContainer: const Color(0xFFE5E8F8),
-          onTertiaryContainer: const Color(0xFF1E2766),
-          surface: const Color(0xFFF3F5F2),
+          tertiaryContainer: const Color(0xFFFFEDB8),
+          onTertiaryContainer: const Color(0xFF4A2C00),
+          surface: const Color(0xFFF3F6FB),
           surfaceContainerLowest: Colors.white,
-          surfaceContainerLow: const Color(0xFFF8FAF8),
-          surfaceContainer: const Color(0xFFEDF1EE),
-          surfaceContainerHigh: const Color(0xFFE7ECE9),
-          surfaceContainerHighest: const Color(0xFFE1E7E3),
-          onSurface: const Color(0xFF13211D),
-          onSurfaceVariant: const Color(0xFF55655F),
-          outline: const Color(0xFF8A9893),
-          outlineVariant: const Color(0xFFDDE4E0),
+          surfaceContainerLow: const Color(0xFFF8FAFD),
+          surfaceContainer: const Color(0xFFEDF1F8),
+          surfaceContainerHigh: const Color(0xFFE7ECF5),
+          surfaceContainerHighest: const Color(0xFFE0E6F1),
+          onSurface: const Color(0xFF111A33),
+          onSurfaceVariant: const Color(0xFF525D78),
+          outline: const Color(0xFF8790A8),
+          outlineVariant: const Color(0xFFDCE2EE),
         );
   final surface = scheme.surface;
   final surfaceLowest = scheme.surfaceContainerLowest;
@@ -250,7 +259,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       ),
     ),
     // Without this, selected radio tiles fall back to colorScheme.secondary,
-    // which is the amber kept for review stars.
+    // which is the sun yellow kept for stars and fills.
     radioTheme: RadioThemeData(
       fillColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.disabled)
@@ -321,7 +330,7 @@ TextTheme _textTheme(ColorScheme scheme) {
 }
 
 /// Fill and ink for solid brand panels. Dark mode's primary is a light tone,
-/// so panels switch to the deep container teal to stay a slab, not a glow.
+/// so panels switch to the deep container navy to stay a slab, not a glow.
 ({Color fill, Color ink}) brandSlab(ColorScheme scheme) =>
     scheme.brightness == Brightness.dark
     ? (fill: scheme.primaryContainer, ink: scheme.onPrimaryContainer)

@@ -4,7 +4,7 @@
             'name' => 'Medicines',
             'theme' => 'dark',
             'headline' => ['Your pharmacy.', 'Closer to home.'],
-            'description' => 'Find medicines and daily health essentials from your JMMart pharmacy.',
+            'description' => 'Find medicines and daily health essentials from your Everyday Pharmacy.',
             'image' => null,
             'action' => 'Browse medicines',
             'href' => route('catalog.index', ['sort' => 'newest']),

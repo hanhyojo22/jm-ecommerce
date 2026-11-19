@@ -254,7 +254,7 @@ class CheckoutTest extends TestCase
             'https://gmail.googleapis.com/gmail/v1/users/me/messages/send' => Http::response(['id' => 'sent-message']),
         ]);
         // The buyer's receipt and the seller's new-order notice are both sent through Gmail.
-        Log::shouldReceive('info')->twice()->withArgs(fn (string $message, array $context): bool => $message === 'Gmail email accepted by API.' && str_starts_with($context['subject'], 'JMMart '));
+        Log::shouldReceive('info')->twice()->withArgs(fn (string $message, array $context): bool => $message === 'Gmail email accepted by API.' && str_starts_with($context['subject'], 'Everyday Pharmacy '));
         [$seller, $product] = $this->sellerProduct('19.99', 5);
         $customer = User::factory()->create(['email_verified_at' => now()]);
         $cart = Cart::create(['user_id' => $customer->id]);

@@ -56,11 +56,11 @@ class PushNotifications {
   static const _updatesChannel = AndroidNotificationChannel(
     'marketplace_updates',
     'Updates and offers',
-    description: 'JMMart announcements and cart reminders.',
+    description: 'Everyday Pharmacy announcements and cart reminders.',
     importance: Importance.defaultImportance,
   );
   static const _icon = '@drawable/ic_stat_notification';
-  static const _accent = Color(0xFF14665A);
+  static const _accent = Color(0xFF071C94);
 
   static final _local = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
@@ -264,7 +264,7 @@ class PushNotifications {
   static String _title(RemoteMessage message) =>
       message.notification?.title ??
       message.data['title']?.toString() ??
-      'JMMart';
+      'Everyday Pharmacy';
   static String _body(RemoteMessage message) =>
       message.notification?.body ?? message.data['body']?.toString() ?? '';
 

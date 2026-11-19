@@ -31,7 +31,7 @@ class SendOrderReceipt
             try {
                 $this->mailer->send(
                     $buyer,
-                    "JMMart order {$order->number} received",
+                    "Everyday Pharmacy order {$order->number} received",
                     "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, {$paymentNote}\n\n".BuyerLink::emailLine('Track your order or request help', route('orders.show', $order)),
                 );
             } catch (Throwable $exception) {

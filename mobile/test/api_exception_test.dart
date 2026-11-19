@@ -64,7 +64,7 @@ void main() {
 
       expect(timeout.code, 'network.error');
       expect(timeout.message, contains('took too long'));
-      expect(offline.message, contains('Cannot reach JMMart'));
+      expect(offline.message, contains('Cannot reach Everyday Pharmacy'));
     });
   });
 

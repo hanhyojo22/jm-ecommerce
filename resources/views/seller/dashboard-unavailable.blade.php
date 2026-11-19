@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Seller Center unavailable · {{ config('app.name', 'JMMart') }}</title>
+        <title>Seller Center unavailable · {{ config('app.name', 'Everyday Pharmacy') }}</title>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="bg-canvas font-sans text-ink">

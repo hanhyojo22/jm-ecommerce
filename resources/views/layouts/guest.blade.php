@@ -21,7 +21,7 @@
             <section class="w-full max-w-md text-center">
                 <a href="{{ route('home') }}" class="inline-flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
                     <x-application-logo class="size-10 fill-current text-brand" />
-                    JMMart
+                    Everyday Pharmacy
                 </a>
 
                 <div class="mt-8 text-left">

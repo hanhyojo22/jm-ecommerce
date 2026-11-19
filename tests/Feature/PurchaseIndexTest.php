@@ -283,7 +283,7 @@ class PurchaseIndexTest extends TestCase
         $this->get(route('orders.index'))->assertOk()
             ->assertViewHas('attentionCounts', fn (array $counts): bool => $counts['returns'] === 3)
             ->assertSee('Store missed its deadline')
-            ->assertDontSee('Ask JMMart to step in')
+            ->assertDontSee('Ask Everyday Pharmacy to step in')
             ->assertDontSee('send-back date passed. Record the handoff now');
 
         // Confirming or disputing an outcome has no buyer cutoff, so it keeps waiting on the buyer past its date.

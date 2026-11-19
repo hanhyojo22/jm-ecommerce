@@ -25,7 +25,7 @@
                 <h2 id="cookie-dialog-title" class="text-lg font-semibold">Cookie preferences</h2>
                 <button type="button" data-cookie-action="close" aria-label="Close cookie preferences" class="grid size-11 shrink-0 place-items-center rounded-lg text-xl hover:bg-canvas focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">×</button>
             </div>
-            <p class="text-sm leading-5 text-muted">Choose what JMMart may remember. Essential services stay on.</p>
+            <p class="text-sm leading-5 text-muted">Choose what Everyday Pharmacy may remember. Essential services stay on.</p>
         </div>
         <div class="divide-y divide-line px-4">
             <section class="py-3">

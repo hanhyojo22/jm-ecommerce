@@ -33,7 +33,7 @@ test('buyer, seller, and support complete a return case', async ({ browser }) =>
 
         await buyer.page.reload();
         await buyer.page.getByLabel('Why should support review this?').fill('The damage is visible and the item cannot be used.');
-        await buyer.page.getByRole('button', { name: 'Appeal to JMMart' }).click();
+        await buyer.page.getByRole('button', { name: 'Appeal to Everyday Pharmacy' }).click();
 
         const admin = await openAsRole(browser, 'admin');
         try {

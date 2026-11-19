@@ -75,7 +75,7 @@ class ApiException implements Exception {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
       DioExceptionType.receiveTimeout => 'The server took too long to answer. Check your connection and try again.',
-      DioExceptionType.connectionError => 'Cannot reach JMMart. Check your connection and that API_BASE_URL points at the server.',
+      DioExceptionType.connectionError => 'Cannot reach Everyday Pharmacy. Check your connection and that API_BASE_URL points at the server.',
       DioExceptionType.badCertificate =>
         'The server certificate could not be trusted.',
       DioExceptionType.cancel => 'The request was cancelled.',

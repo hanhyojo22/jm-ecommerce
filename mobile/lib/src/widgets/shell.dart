@@ -219,7 +219,7 @@ class _AppShellState extends ConsumerState<AppShell>
     ),
     _ => const SignInPrompt(
       icon: PhosphorIconsRegular.user,
-      title: 'Sign in to JMMart',
+      title: 'Sign in to Everyday Pharmacy',
       message: 'Create an account or sign in to order medicines.',
     ),
   };

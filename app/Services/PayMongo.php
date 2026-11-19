@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * The few PayMongo calls JMMart makes. Amounts come in as two-decimal peso strings and leave as
+ * The few PayMongo calls Everyday Pharmacy makes. Amounts come in as two-decimal peso strings and leave as
  * integer centavos, which is what PayMongo expects.
  */
 class PayMongo

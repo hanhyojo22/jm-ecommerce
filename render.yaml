@@ -37,7 +37,7 @@ services:
       - key: TRUSTED_PROXIES
         value: "*"
       - key: APP_NAME
-        value: JMMart
+        value: Everyday Pharmacy
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -140,7 +140,7 @@ services:
     autoDeployTrigger: commit
     envVars:
       - key: APP_NAME
-        value: JMMart
+        value: Everyday Pharmacy
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -218,7 +218,7 @@ services:
       - key: PORT
         value: "10000"
       - key: APP_NAME
-        value: JMMart
+        value: Everyday Pharmacy
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -272,7 +272,7 @@ services:
     autoDeployTrigger: commit
     envVars:
       - key: APP_NAME
-        value: JMMart
+        value: Everyday Pharmacy
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -353,7 +353,7 @@ services:
       - key: TRUSTED_PROXIES
         value: "*"
       - key: APP_NAME
-        value: JMMart Staging
+        value: Everyday Pharmacy Staging
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -453,7 +453,7 @@ services:
       - key: PORT
         value: "10000"
       - key: APP_NAME
-        value: JMMart Staging
+        value: Everyday Pharmacy Staging
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
@@ -513,7 +513,7 @@ services:
       - key: TRUSTED_PROXIES
         value: cloudflare
       - key: APP_NAME
-        value: JMMart Rx Staging
+        value: Everyday Rx Staging
       - key: APP_ENV
         value: production
       - key: APP_DEBUG

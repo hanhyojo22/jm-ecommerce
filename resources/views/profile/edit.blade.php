@@ -12,7 +12,7 @@
         <x-marketplace.account-shell active="settings">
             <div>
                 <h1 class="text-3xl font-semibold tracking-[-0.03em] text-ink">Account settings</h1>
-                <p class="mt-1 text-meta text-muted">Your sign-in details, profile, and which notifications JMMart sends you.</p>
+                <p class="mt-1 text-meta text-muted">Your sign-in details, profile, and which notifications Everyday Pharmacy sends you.</p>
                 @if (session('status'))<p role="status" class="mt-4 rounded-md border border-[var(--color-success-line)] bg-[var(--color-success-wash)] px-3.5 py-2.5 text-meta font-medium text-success">{{ session('status') }}</p>@endif
                 <x-marketplace.account-profile />
                 <section class="account-card mt-4" aria-labelledby="saved-discount-ids">

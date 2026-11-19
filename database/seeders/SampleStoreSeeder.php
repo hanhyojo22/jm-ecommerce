@@ -43,7 +43,7 @@ class SampleStoreSeeder extends Seeder
             [
                 'tenant_id' => $tenant->id,
                 'name' => 'Demo Store',
-                'description' => 'Sample JMMart seller store with affordable, quality finds.',
+                'description' => 'Sample Everyday Pharmacy seller store with affordable, quality finds.',
                 'phone' => '+639171234567',
                 'address_line' => '123 Sample Street',
                 'city' => 'Manila',
@@ -144,7 +144,7 @@ class SampleStoreSeeder extends Seeder
         imagefill($image, 0, 0, $background);
 
         $lines = explode("\n", wordwrap($name, 18, "\n"));
-        $lines[] = 'JMMart Demo Store';
+        $lines[] = 'Everyday Pharmacy Demo Store';
         $lines[] = 'Sample image '.($index + 1).' of 12';
 
         $font = 5;

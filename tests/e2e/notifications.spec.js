@@ -74,9 +74,9 @@ test('admin starts a notification from a ready-made template', async ({ browser 
 
         await expect(productAd).toHaveAttribute('aria-pressed', 'true');
         await expect(page.getByLabel('Title')).toHaveValue('Fresh finds just landed');
-        await expect(page.getByLabel('Message')).toHaveValue('Discover new arrivals from JMMart sellers. Browse the latest products and find something to love.');
+        await expect(page.getByLabel('Message')).toHaveValue('Discover new arrivals from Everyday Pharmacy sellers. Browse the latest products and find something to love.');
         await expect(page.getByRole('radio', { name: 'Other page' })).toHaveAttribute('aria-checked', 'true');
-        await expect(page.getByLabel('JMMart link')).toHaveValue(new URL('/search', page.url()).href);
+        await expect(page.getByLabel('Everyday Pharmacy link')).toHaveValue(new URL('/search', page.url()).href);
 
         await page.getByLabel('Title').fill('Custom title');
         await expect(productAd).toHaveAttribute('aria-pressed', 'false');
@@ -217,13 +217,13 @@ test('admin cannot send a notification that links to another site or an unknown 
         await page.getByLabel('Title').fill('Phishing check');
         await page.getByLabel('Message').fill('This must not be sent.');
         await page.getByRole('radio', { name: 'Other page' }).click();
-        await page.getByLabel('JMMart link').fill('https://example.com/login');
+        await page.getByLabel('Everyday Pharmacy link').fill('https://example.com/login');
         await reviewAndSend(page);
         // The layout also lists errors in a summary; the field's own message sits inside the form.
-        await expect(page.locator('form').getByText('The link must be a JMMart page.')).toBeVisible();
+        await expect(page.locator('form').getByText('The link must be a Everyday Pharmacy page.')).toBeVisible();
 
         // Confirming once and going back to edit must not let Enter skip a second review.
-        await page.getByLabel('JMMart link').fill('');
+        await page.getByLabel('Everyday Pharmacy link').fill('');
         await page.getByRole('radio', { name: 'Home' }).click();
         await page.getByRole('button', { name: 'Review and send' }).click();
         const review = page.getByRole('dialog', { name: 'Review before sending' });

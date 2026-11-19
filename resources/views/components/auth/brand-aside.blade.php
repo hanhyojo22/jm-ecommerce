@@ -1,8 +1,8 @@
 <aside class="relative hidden flex-col overflow-hidden bg-[linear-gradient(158deg,#163a86_0%,#10234d_58%,#0b1a3c_100%)] px-12 py-10 text-white lg:flex">
     <span class="pointer-events-none absolute -right-36 top-10 size-[460px] rounded-full bg-[radial-gradient(circle_at_35%_35%,rgba(59,130,246,.4),transparent_62%)]" aria-hidden="true"></span>
-    <a href="{{ config('marketplace.web_store.enabled') ? route('catalog.index') : route('login') }}" class="relative z-10 inline-flex items-center gap-2.5 self-start font-display text-lg font-semibold tracking-[-0.02em] text-white" aria-label="JMMart Pharmacy home">
-        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-semibold text-[#10234d]" aria-hidden="true">JM</span>
-        JMMart
+    <a href="{{ config('marketplace.web_store.enabled') ? route('catalog.index') : route('login') }}" class="relative z-10 inline-flex items-center gap-2.5 self-start font-display text-lg font-semibold tracking-[-0.02em] text-white" aria-label="Everyday Pharmacy home">
+        <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-semibold text-[#10234d]" aria-hidden="true">EP</span>
+        Everyday Pharmacy
     </a>
 
     <div class="relative z-10 my-auto max-w-[27rem] py-10">

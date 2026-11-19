@@ -109,7 +109,7 @@ class SellerOrderController extends Controller
             }
 
             if ($sellerOrder->issues()->where('status', 'open')->exists()) {
-                throw ValidationException::withMessages(['details' => 'A request for this order is already open with JMMart support.']);
+                throw ValidationException::withMessages(['details' => 'A request for this order is already open with Everyday Pharmacy support.']);
             }
 
             OrderIssue::query()->create([
@@ -120,7 +120,7 @@ class SellerOrderController extends Controller
             ]);
         });
 
-        return back()->with('status', 'Failed delivery reported. JMMart support will review it and cancel the order if the parcel came back.');
+        return back()->with('status', 'Failed delivery reported. Everyday Pharmacy support will review it and cancel the order if the parcel came back.');
     }
 
     public function update(Request $request, SellerOrder $sellerOrder, UpdateSellerOrderStatus $updateStatus): RedirectResponse

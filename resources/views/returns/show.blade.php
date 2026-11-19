@@ -14,23 +14,23 @@
 
         $statusCopy = match ($case->status) {
             'awaiting_seller' => 'The seller is reviewing the request and aims to respond within 48 hours of it being sent.',
-            'offered' => 'The seller offered a remedy. Accept it to start the return, or ask JMMart to review it.',
-            'rejected' => 'The seller rejected the request. The buyer can ask JMMart to review the decision.',
+            'offered' => 'The seller offered a remedy. Accept it to start the return, or ask Everyday Pharmacy to review it.',
+            'rejected' => 'The seller rejected the request. The buyer can ask Everyday Pharmacy to review the decision.',
             'awaiting_return' => 'The seller approved a remedy. The buyer sends the goods back using the agreed method, then records the handoff here.',
             'awaiting_receipt' => 'The goods are on their way back. The seller confirms the parcel on arrival.',
             'awaiting_fulfillment' => 'The seller is completing the approved remedy: refund or replacement.',
-            'awaiting_confirmation' => 'An outcome was recorded. The buyer confirms it, or disputes it for JMMart review.',
-            'appealed' => 'JMMart support is reviewing this case. They can decide it, or hand it back to the seller.',
+            'awaiting_confirmation' => 'An outcome was recorded. The buyer confirms it, or disputes it for Everyday Pharmacy review.',
+            'appealed' => 'Everyday Pharmacy support is reviewing this case. They can decide it, or hand it back to the seller.',
             'completed' => 'The case is complete and the outcome was confirmed.',
-            'denied' => 'JMMart denied this claim. The reasons are recorded in the decision below.',
-            'closed' => 'JMMart closed this case because its deadline passed without a response.',
+            'denied' => 'Everyday Pharmacy denied this claim. The reasons are recorded in the decision below.',
+            'closed' => 'Everyday Pharmacy closed this case because its deadline passed without a response.',
             default => '',
         };
 
         $overdueCopy = match (true) {
-            $role === 'buyer' && in_array($case->status, ['offered', 'rejected', 'awaiting_confirmation', 'awaiting_return'], true) => 'Your response window has passed. JMMart can close the case without a remedy — contact support if you still want to respond.',
-            $role === 'buyer' => 'The seller missed this deadline. JMMart can step in — use the action panel below to ask for their review.',
-            $role === 'seller' => 'This case is overdue. JMMart can step in at any time — complete your step now to keep the resolution on your side.',
+            $role === 'buyer' && in_array($case->status, ['offered', 'rejected', 'awaiting_confirmation', 'awaiting_return'], true) => 'Your response window has passed. Everyday Pharmacy can close the case without a remedy — contact support if you still want to respond.',
+            $role === 'buyer' => 'The seller missed this deadline. Everyday Pharmacy can step in — use the action panel below to ask for their review.',
+            $role === 'seller' => 'This case is overdue. Everyday Pharmacy can step in at any time — complete your step now to keep the resolution on your side.',
             default => 'The current party missed this deadline. Take the case over or close it using the options in the action panel.',
         };
     @endphp
@@ -56,7 +56,7 @@
                                 @endif
                                 opened {{ $case->created_at->format('M j, Y') }}
                                 @if ($case->opened_by !== $case->buyer_id)
-                                    by JMMart support
+                                    by Everyday Pharmacy support
                                 @endif
                             </p>
                             <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -149,13 +149,13 @@
                     <p class="returns-section-kicker">Your next step</p>
                     @if ($role === 'seller' && $case->status === 'awaiting_seller')
                         <h2 id="next-step-heading" class="returns-section-title">Your turn: respond to the request</h2>
-                        <p class="mt-1.5 text-sm leading-6 text-muted">Approve with a remedy or reject with reasons. The buyer sees your response and can appeal it to JMMart, so explain the decision clearly.</p>
+                        <p class="mt-1.5 text-sm leading-6 text-muted">Approve with a remedy or reject with reasons. The buyer sees your response and can appeal it to Everyday Pharmacy, so explain the decision clearly.</p>
                         <form method="POST" action="{{ $actionRoute }}" class="mt-5 grid gap-5" x-data="{ waived: {{ old('return_waived', $case->return_waived) ? 'true' : 'false' }} }">@csrf @method('PATCH')
                             <fieldset>
                                 <legend class="field-label">Your response</legend>
                                 <label for="seller-note" class="sr-only">Response with reasons</label>
                                 <textarea id="seller-note" name="note" required minlength="10" maxlength="2000" rows="4" class="field-control" placeholder="Explain your decision on the request.">{{ old('note') }}</textarea>
-                                <p class="mt-1.5 text-xs text-muted">Shown to the buyer and JMMart support. At least 10 characters.</p>
+                                <p class="mt-1.5 text-xs text-muted">Shown to the buyer and Everyday Pharmacy support. At least 10 characters.</p>
                                 <x-input-error :messages="$errors->get('note')" class="mt-2" />
                             </fieldset>
                             <fieldset>
@@ -209,12 +209,12 @@
                             </fieldset>
                             <div class="flex flex-wrap items-center gap-3 border-t border-line pt-5">
                                 <button type="submit" name="action" value="offer" class="button-primary">Send offer</button>
-                                <button type="submit" name="action" value="reject" class="button-danger" x-data @click="if (! window.confirm('Reject this request? The buyer can appeal to JMMart and your reasons are recorded.')) $event.preventDefault()">Reject with reason</button>
+                                <button type="submit" name="action" value="reject" class="button-danger" x-data @click="if (! window.confirm('Reject this request? The buyer can appeal to Everyday Pharmacy and your reasons are recorded.')) $event.preventDefault()">Reject with reason</button>
                             </div>
                         </form>
                     @elseif ($role === 'buyer' && in_array($case->status, ['offered', 'rejected'], true))
                         <h2 id="next-step-heading" class="returns-section-title">Your turn: respond to the seller</h2>
-                        <p class="mt-1.5 text-sm leading-6 text-muted">Respond by <strong>{{ $case->buyer_respond_by?->format('M j, g:i A') }}</strong>. After that JMMart can close the case without a remedy.</p>
+                        <p class="mt-1.5 text-sm leading-6 text-muted">Respond by <strong>{{ $case->buyer_respond_by?->format('M j, g:i A') }}</strong>. After that Everyday Pharmacy can close the case without a remedy.</p>
                         @if ($case->status === 'offered')
                             <div class="mt-4 rounded-md border border-blue-200 bg-blue-50/60 px-4 py-3.5">
                                 <p class="text-sm font-semibold text-ink">Offer: {{ ucfirst($case->remedy) }}</p>
@@ -232,14 +232,14 @@
                             <div>
                                 <label for="buyer-appeal-note" class="field-label">{{ $case->status === 'offered' ? 'Not happy with the offer?' : 'Why should support review this?' }}</label>
                                 <textarea id="buyer-appeal-note" name="note" required minlength="10" maxlength="2000" rows="3" class="field-control" placeholder="Explain what should happen instead.">{{ old('note') }}</textarea>
-                                <p class="mt-1.5 text-xs text-muted">JMMart reviews the case and can decide the remedy themselves.</p>
+                                <p class="mt-1.5 text-xs text-muted">Everyday Pharmacy reviews the case and can decide the remedy themselves.</p>
                                 <x-input-error :messages="$errors->get('note')" class="mt-2" />
                             </div>
-                            <button type="submit" name="action" value="appeal" @class(['w-fit', 'button-primary' => $case->status === 'rejected', 'button-secondary' => $case->status === 'offered'])>Appeal to JMMart</button>
+                            <button type="submit" name="action" value="appeal" @class(['w-fit', 'button-primary' => $case->status === 'rejected', 'button-secondary' => $case->status === 'offered'])>Appeal to Everyday Pharmacy</button>
                         </form>
                     @elseif ($role === 'buyer' && $case->status === 'awaiting_return')
                         <h2 id="next-step-heading" class="returns-section-title">Your turn: send the goods back</h2>
-                        <p class="mt-1.5 text-sm leading-6 text-muted">Use the agreed method, then record the handoff with proof. If you do not send the goods back, JMMart can close the case without a remedy.</p>
+                        <p class="mt-1.5 text-sm leading-6 text-muted">Use the agreed method, then record the handoff with proof. If you do not send the goods back, Everyday Pharmacy can close the case without a remedy.</p>
                         <form method="POST" action="{{ $actionRoute }}" enctype="multipart/form-data" class="mt-5 grid gap-4">@csrf @method('PATCH')
                             <div>
                                 <label for="buyer-handoff-proof" class="field-label">Handoff proof</label>
@@ -286,7 +286,7 @@
                         </form>
                     @elseif ($role === 'buyer' && $case->status === 'awaiting_confirmation')
                         <h2 id="next-step-heading" class="returns-section-title">Your turn: confirm the outcome</h2>
-                        <p class="mt-1.5 text-sm leading-6 text-muted">Confirm that you received the {{ $case->remedy }}, or dispute it and JMMart will review the recorded outcome.</p>
+                        <p class="mt-1.5 text-sm leading-6 text-muted">Confirm that you received the {{ $case->remedy }}, or dispute it and Everyday Pharmacy will review the recorded outcome.</p>
                         <form method="POST" action="{{ $actionRoute }}" class="mt-5">@csrf @method('PATCH')
                             <button type="submit" name="action" value="confirm" class="button-primary">Confirm receipt</button>
                         </form>
@@ -388,7 +388,7 @@
                                 <textarea id="admin-takeover-note" name="note" required minlength="10" maxlength="2000" rows="3" class="field-control" placeholder="Record what the seller or buyer missed and when.">{{ old('note') }}</textarea>
                                 <x-input-error :messages="$errors->get('note')" class="mt-2" />
                             </div>
-                            <button type="submit" name="action" value="takeover" class="button-primary w-fit" @click="if (! window.confirm('Take over this overdue case? You will decide it as JMMart support.')) $event.preventDefault()">Take over overdue case</button>
+                            <button type="submit" name="action" value="takeover" class="button-primary w-fit" @click="if (! window.confirm('Take over this overdue case? You will decide it as Everyday Pharmacy support.')) $event.preventDefault()">Take over overdue case</button>
                         </form>
                         @if ($case->status === 'awaiting_confirmation' && $case->outcome)
                             <form method="POST" action="{{ $actionRoute }}" class="mt-5 grid gap-3 border-t border-line pt-5">@csrf @method('PATCH')
@@ -412,21 +412,21 @@
                             <button type="submit" name="action" value="close" class="button-danger w-fit" x-data @click="if (! window.confirm('Close this case without a remedy? The buyer\'s claim ends and cannot be reopened online.')) $event.preventDefault()">Close unanswered case</button>
                         </form>
                     @elseif ($role === 'buyer' && $case->status === 'awaiting_seller' && $overdue)
-                        <h2 id="next-step-heading" class="returns-section-title">Ask JMMart to step in</h2>
-                        <p class="mt-1.5 text-sm leading-6 text-muted">The seller did not respond in time. JMMart can decide the case instead.</p>
+                        <h2 id="next-step-heading" class="returns-section-title">Ask Everyday Pharmacy to step in</h2>
+                        <p class="mt-1.5 text-sm leading-6 text-muted">The seller did not respond in time. Everyday Pharmacy can decide the case instead.</p>
                         <form method="POST" action="{{ $actionRoute }}" class="mt-5 grid gap-4">@csrf @method('PATCH')
                             <div>
                                 <label for="buyer-escalate-note" class="field-label">Why should support step in?</label>
                                 <textarea id="buyer-escalate-note" name="note" required minlength="10" maxlength="2000" rows="3" class="field-control" placeholder="Explain how the seller missed the deadline.">{{ old('note') }}</textarea>
                                 <x-input-error :messages="$errors->get('note')" class="mt-2" />
                             </div>
-                            <button type="submit" name="action" value="appeal" class="button-primary w-fit">Ask JMMart to step in</button>
+                            <button type="submit" name="action" value="appeal" class="button-primary w-fit">Ask Everyday Pharmacy to step in</button>
                         </form>
                     @elseif ($isTerminal)
                         @php
                             $closedCopy = match ($case->status) {
                                 'completed' => 'This case is complete. Email support with the order number if something is still outstanding.',
-                                'denied' => 'JMMart denied this claim. Email support with the order number if you have new evidence.',
+                                'denied' => 'Everyday Pharmacy denied this claim. Email support with the order number if you have new evidence.',
                                 default => 'This case was closed. Email support with the order number if something is still outstanding.',
                             };
                             $closedIconClasses = match ($case->status) {
@@ -455,7 +455,7 @@
                             </span>
                             <div>
                                 <h2 id="next-step-heading" class="returns-section-title">Waiting for the next step</h2>
-                                <p class="mt-1 text-sm leading-6 text-muted">The other side is on the clock. JMMart steps in once the deadline above passes.</p>
+                                <p class="mt-1 text-sm leading-6 text-muted">The other side is on the clock. Everyday Pharmacy steps in once the deadline above passes.</p>
                             </div>
                         </div>
                     @endif
@@ -550,7 +550,7 @@
                         </div>
                         <span class="text-xs text-muted">{{ $case->evidence->count() }} {{ Str::plural('file', $case->evidence->count()) }}</span>
                     </div>
-                    <p class="mt-1 text-xs text-muted">Visible to the buyer, the seller, and JMMart support only.</p>
+                    <p class="mt-1 text-xs text-muted">Visible to the buyer, the seller, and Everyday Pharmacy support only.</p>
                     <ul class="mt-3 divide-y divide-line">
                         @forelse ($case->evidence as $evidence)
                             @php
@@ -617,7 +617,7 @@
                             <dt class="text-muted">Opened</dt>
                             <dd class="text-right font-semibold text-ink">
                                 {{ $case->created_at->format('M j, Y') }}
-                                <span class="block text-xs font-normal text-muted">by {{ $case->opened_by === $case->buyer_id ? 'the buyer' : 'JMMart support' }}</span>
+                                <span class="block text-xs font-normal text-muted">by {{ $case->opened_by === $case->buyer_id ? 'the buyer' : 'Everyday Pharmacy support' }}</span>
                             </dd>
                         </div>
                         <div class="flex items-start justify-between gap-3">
@@ -680,7 +680,7 @@
                         <p class="mt-1 text-sm leading-6 text-muted">Refund destinations are coordinated privately, outside the app. Never record bank details in case notes.</p>
                     @endif
                     <div class="mt-4 space-y-2 border-t border-white/15 pt-4 text-sm">
-                        <p>JMMart support: <a class="font-semibold" href="mailto:itservices@jmsolutionitservices.com?subject=Return%20case%20{{ urlencode($case->sellerOrder->order->number) }}">itservices@jmsolutionitservices.com</a></p>
+                        <p>Everyday Pharmacy support: <a class="font-semibold" href="mailto:itservices@jmsolutionitservices.com?subject=Return%20case%20{{ urlencode($case->sellerOrder->order->number) }}">itservices@jmsolutionitservices.com</a></p>
                         <p><a class="font-semibold" href="{{ route('returns') }}">Return and refund policy</a></p>
                     </div>
                 </section>

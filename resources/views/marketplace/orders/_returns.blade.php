@@ -182,7 +182,7 @@
                                     <div>
                                         <label for="return-details-{{ $sellerOrder->id }}" class="field-label flex items-center gap-2"><span class="returns-form-step" aria-hidden="true">4</span> Details</label>
                                         <textarea id="return-details-{{ $sellerOrder->id }}" name="details" required minlength="10" maxlength="2000" rows="3" class="field-control" placeholder="Describe the problem and what you have tried.">{{ $resubmitted ? old('details') : '' }}</textarea>
-                                        <p class="mt-1.5 text-xs text-muted">At least 10 characters. JMMart support sees this if the case is escalated.</p>
+                                        <p class="mt-1.5 text-xs text-muted">At least 10 characters. Everyday Pharmacy support sees this if the case is escalated.</p>
                                         <x-input-error :messages="$errors->get('details')" class="mt-2" />
                                     </div>
 

@@ -29,7 +29,7 @@ class AddStaffMember
             // Existing accounts are never taken over: becoming staff changes what that person can do
             // (staff cannot buy from their own company), so it needs an email nobody uses yet.
             if ($user !== null) {
-                throw ValidationException::withMessages(['email' => 'That email already has a JMMart account. Use a work email that has not signed up yet.']);
+                throw ValidationException::withMessages(['email' => 'That email already has a Everyday Pharmacy account. Use a work email that has not signed up yet.']);
             }
 
             $user = User::query()->create(['name' => Str::before($email, '@'), 'email' => $email, 'password' => Hash::make(Str::random(64)), 'is_active' => true]);

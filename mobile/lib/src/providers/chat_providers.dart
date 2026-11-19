@@ -26,7 +26,7 @@ final imageSaverProvider =
 
         await Gal.putImageBytes(
           response.bodyBytes,
-          album: 'JMMart',
+          album: 'Everyday Pharmacy',
           name: name.replaceAll(RegExp(r'\.[^.]+$'), ''),
         );
       },

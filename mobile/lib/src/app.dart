@@ -17,7 +17,7 @@ class JmMartApp extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!AppConfig.hasClerk || authState == null) {
       return MaterialApp(
-        title: 'JMMart',
+        title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
         darkTheme: buildAppTheme(brightness: Brightness.dark),
         themeMode: ThemeMode.system,
@@ -29,7 +29,7 @@ class JmMartApp extends StatelessWidget {
     return ClerkAuth(
       authState: authState,
       child: MaterialApp.router(
-        title: 'JMMart',
+        title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
         darkTheme: buildAppTheme(brightness: Brightness.dark),
         themeMode: ThemeMode.system,

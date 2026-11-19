@@ -86,7 +86,7 @@ class SendAdminAnnouncement implements ShouldQueue
 
         // Re-checked so an account deactivated after queueing is skipped.
         $storeSlug = self::storeSlug($announcement->url);
-        // The link is always a JMMart page (validated on create), so its path is a safe app destination.
+        // The link is always a Everyday Pharmacy page (validated on create), so its path is a safe app destination.
         $appPath = parse_url($announcement->url, PHP_URL_PATH) ?: '/';
 
         $recipients->whereKey($this->batchUserIds)->get()->each(function (User $user) use ($notifier, $announcement, $storeSlug, $appPath): void {

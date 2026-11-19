@@ -9,7 +9,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Title('Messages · JMMart')]
+#[Title('Messages · Everyday Pharmacy')]
 class Inbox extends Component
 {
     use WithPagination;

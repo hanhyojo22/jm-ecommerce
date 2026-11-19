@@ -19,7 +19,7 @@ class PharmacySeeder extends Seeder
 {
     public function run(): void
     {
-        $tenant = Tenant::query()->firstOrCreate(['slug' => 'jmmart-pharmacy'], ['name' => 'JMMart Pharmacy', 'status' => 'active']);
+        $tenant = Tenant::query()->firstOrCreate(['slug' => 'jmmart-pharmacy'], ['name' => 'Everyday Pharmacy', 'status' => 'active']);
 
         $branches = collect($this->branches())->map(fn (array $branch): Store => Store::query()->firstOrCreate(
             ['slug' => Str::slug($branch['name'])],
@@ -47,9 +47,9 @@ class PharmacySeeder extends Seeder
                     'manufacturer' => 'Sample Laboratories',
                     'requires_prescription' => $rx,
                     'sku' => 'RX-'.str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT),
-                    'description' => "{$name}. Sample medicine for the JMMart pharmacy test server.",
+                    'description' => "{$name}. Sample medicine for the Everyday Pharmacy test server.",
                     'price' => number_format($price, 2, '.', ''),
-                    'brand' => 'JMMart Pharmacy',
+                    'brand' => 'Everyday Pharmacy',
                     'condition' => 'new',
                     'free_shipping' => false,
                     'stock_quantity' => 0,
@@ -75,11 +75,11 @@ class PharmacySeeder extends Seeder
     private function branches(): array
     {
         return [
-            ['name' => 'JMMart Pharmacy Ermita', 'address_line' => '1200 Taft Avenue', 'city' => 'Manila', 'barangay' => 'Ermita', 'latitude' => 14.5826, 'longitude' => 120.9845],
-            ['name' => 'JMMart Pharmacy Makati', 'address_line' => '6750 Ayala Avenue', 'city' => 'Makati', 'barangay' => 'San Lorenzo', 'latitude' => 14.5547, 'longitude' => 121.0244],
-            ['name' => 'JMMart Pharmacy Quezon City', 'address_line' => '88 Timog Avenue', 'city' => 'Quezon City', 'barangay' => 'Sacred Heart', 'latitude' => 14.6345, 'longitude' => 121.0353],
+            ['name' => 'Everyday Pharmacy Ermita', 'address_line' => '1200 Taft Avenue', 'city' => 'Manila', 'barangay' => 'Ermita', 'latitude' => 14.5826, 'longitude' => 120.9845],
+            ['name' => 'Everyday Pharmacy Makati', 'address_line' => '6750 Ayala Avenue', 'city' => 'Makati', 'barangay' => 'San Lorenzo', 'latitude' => 14.5547, 'longitude' => 121.0244],
+            ['name' => 'Everyday Pharmacy Quezon City', 'address_line' => '88 Timog Avenue', 'city' => 'Quezon City', 'barangay' => 'Sacred Heart', 'latitude' => 14.6345, 'longitude' => 121.0353],
             // Beside the Cebu Provincial Capitol, at the north end of Osmena Boulevard.
-            ['name' => 'JMMart Pharmacy Cebu Capitol', 'address_line' => 'Osmena Boulevard', 'city' => 'Cebu City', 'barangay' => 'Capitol Site', 'latitude' => 10.3160, 'longitude' => 123.8912],
+            ['name' => 'Everyday Pharmacy Cebu Capitol', 'address_line' => 'Osmena Boulevard', 'city' => 'Cebu City', 'barangay' => 'Capitol Site', 'latitude' => 10.3160, 'longitude' => 123.8912],
         ];
     }
 

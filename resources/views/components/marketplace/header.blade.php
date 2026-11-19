@@ -81,7 +81,7 @@
                 </button>
                 @if ($isSellerWorkspace)
                     <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-md border border-line text-ink shadow-sm transition hover:bg-canvas hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle Seller Center sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
-                    <a href="{{ route('seller.dashboard') }}" class="inline-flex min-w-0 items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
+                    <a href="{{ route('seller.dashboard') }}" class="inline-flex min-w-0 items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="Everyday Pharmacy Seller Center overview">
                         <span class="min-w-0 max-w-[8rem]">
                             <span class="block truncate text-sm font-semibold leading-tight text-ink">{{ $sellerMember?->placeLabel() ?? 'Seller Center' }}</span>
                             @if ($sellerMember)<span class="block truncate text-xs text-muted" data-seller-role>{{ $sellerMember->roleLabel() }}</span>@endif
@@ -94,7 +94,7 @@
                     </div>
                 @elseif ($isCustomerWorkspace)
                     <button type="button" @click="$dispatch('customer-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-md border border-line text-ink shadow-sm transition hover:bg-canvas hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle My account sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
-                    <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart My account">
+                    <a href="{{ route('orders.index') }}" class="inline-flex items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="Everyday Pharmacy My account">
                         <img src="{{ asset('favicon.svg') }}" alt="" class="size-8 shrink-0 rounded-md" width="32" height="32">
                         <span class="text-sm font-semibold text-ink sm:text-base">My account</span>
                     </a>
@@ -104,9 +104,9 @@
                         <strong class="truncate font-semibold text-ink">{{ $customerPageTitle }}</strong>
                     </div>
                 @else
-                    <a href="{{ route('home') }}" class="group flex shrink-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:gap-2.5" aria-label="JMMart marketplace home">
-                        <span class="hidden size-8 shrink-0 place-items-center rounded-md bg-brand text-sm font-bold leading-none tracking-[-0.03em] text-white transition group-hover:bg-brand-hover min-[400px]:grid sm:size-9 sm:text-[15px]" aria-hidden="true">jm</span>
-                        <span class="text-xl font-bold leading-none tracking-[-0.04em] text-ink sm:text-2xl">JM<span class="text-brand">Mart.</span></span>
+                    <a href="{{ route('home') }}" class="group flex shrink-0 items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:gap-2.5" aria-label="Everyday Pharmacy marketplace home">
+                        <span class="hidden size-8 shrink-0 place-items-center rounded-md bg-brand text-sm font-bold leading-none tracking-[-0.03em] text-white transition group-hover:bg-brand-hover min-[400px]:grid sm:size-9 sm:text-[15px]" aria-hidden="true">ep</span>
+                        <span class="text-xl font-bold leading-none tracking-[-0.04em] text-ink sm:text-2xl">Everyday <span class="text-brand">Pharmacy</span></span>
                     </a>
                 @endif
             </div>
@@ -381,7 +381,7 @@
             <div class="flex h-[56px] items-center justify-between border-b border-line px-5">
                 <a href="{{ $isSellerWorkspace ? route('seller.dashboard') : ($isCustomerWorkspace ? route('orders.index') : route('home')) }}" data-drawer-focus @click="closeDrawer" class="workspace-sidebar-brand">
                     @if ($isSellerWorkspace || $isCustomerWorkspace)<img src="{{ asset('favicon.svg') }}" alt="" class="size-8 rounded-md" width="32" height="32">@else<x-application-logo class="size-8 fill-current text-brand" />@endif
-                    <span class="workspace-sidebar-brand-name">{{ $isSellerWorkspace ? 'Seller Center' : ($isCustomerWorkspace ? 'My account' : 'JMMart') }}</span>
+                    <span class="workspace-sidebar-brand-name">{{ $isSellerWorkspace ? 'Seller Center' : ($isCustomerWorkspace ? 'My account' : 'Everyday Pharmacy') }}</span>
                 </a>
                 <button type="button" @click="closeDrawer" class="workspace-drawer-close grid size-11 place-items-center rounded-md text-muted transition hover:bg-canvas hover:text-ink focus-visible:ring-2 focus-visible:ring-brand" aria-label="Close navigation menu"><svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
             </div>

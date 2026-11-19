@@ -99,10 +99,10 @@ class AdminProductControllerTest extends TestCase
 
         $this->actingAs($administrator)->patch(route('admin.products.moderate', $product), ['status' => 'rejected', 'reason' => ''])
             ->assertSessionHasErrors(['reason' => 'Tell the seller why before you request changes, reject or suspend a listing.']);
-        $this->patch(route('admin.products.moderate', $product), ['status' => 'rejected', 'reason' => 'This item is not allowed on JMMart.'])
+        $this->patch(route('admin.products.moderate', $product), ['status' => 'rejected', 'reason' => 'This item is not allowed on Everyday Pharmacy.'])
             ->assertRedirect(route('admin.products.show', $product));
 
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'rejected', 'moderation_reason' => 'This item is not allowed on JMMart.']);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'status' => 'rejected', 'moderation_reason' => 'This item is not allowed on Everyday Pharmacy.']);
     }
 
     public function test_administrator_approves_a_live_listings_edits_without_taking_it_offline(): void

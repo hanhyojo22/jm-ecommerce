@@ -40,7 +40,7 @@ class GmailOrderMailer
         }
 
         $message = (new Email)
-            ->from(new Address(config('services.gmail.from'), 'JMMart'))
+            ->from(new Address(config('services.gmail.from'), 'Everyday Pharmacy'))
             ->to(new Address($recipient->email, $recipient->name))
             ->subject($subject)
             ->text($body);

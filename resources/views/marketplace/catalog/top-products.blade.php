@@ -18,7 +18,7 @@
     <meta name="reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}">
     <meta name="reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
     <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
-    <title>Top products · JMMart</title>
+    <title>Top products · Everyday Pharmacy</title>
     @include('partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

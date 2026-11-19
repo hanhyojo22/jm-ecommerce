@@ -8,7 +8,7 @@
     <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
     <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
     <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
-    <title>Finishing your sign-in · JMMart</title>
+    <title>Finishing your sign-in · Everyday Pharmacy</title>
     @include('partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -24,7 +24,7 @@
                 @if ($signedOutGoesToSignIn ?? false) data-signed-out-to-sign-in @endif
             >
                 <span class="handoff-mark" aria-hidden="true">
-                    <span class="handoff-mark-tile">JM</span>
+                    <span class="handoff-mark-tile">EP</span>
                 </span>
 
                 <h1 class="mt-6 text-balance font-display text-xl font-semibold leading-[1.3] tracking-[-0.02em] sm:text-[1.375rem]">Finishing your sign-in</h1>
@@ -44,7 +44,7 @@
                 role="alert"
             >
                 <span class="handoff-mark" data-stopped aria-hidden="true">
-                    <span class="handoff-mark-tile">JM</span>
+                    <span class="handoff-mark-tile">EP</span>
                 </span>
 
                 <h1 data-clerk-handoff-error-title tabindex="-1" class="mt-6 text-balance font-display text-xl font-semibold leading-[1.3] tracking-[-0.02em] outline-none sm:text-[1.375rem]">We could not finish signing you in.</h1>
@@ -83,7 +83,7 @@
             const labels = {
                 load: 'Checking your sign-in…',
                 session: 'Confirming your account with Clerk…',
-                server: 'Securing your JMMart session…',
+                server: 'Securing your Everyday Pharmacy session…',
                 done: 'Taking you back…',
             };
 

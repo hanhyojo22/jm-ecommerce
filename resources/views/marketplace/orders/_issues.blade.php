@@ -14,7 +14,7 @@
     get canCancel() { return ['pending', 'confirmed'].includes(this.statuses[this.sellerOrder]) },
 }" x-effect="if (!canCancel && requestType === 'cancellation') requestType = 'other'">
     <h2 id="order-help-heading" class="text-lg font-semibold text-ink">Need help with this order?</h2>
-    <p class="mt-1 text-sm text-muted">Send a request to JMMart support. We review each request and reply here.</p>
+    <p class="mt-1 text-sm text-muted">Send a request to Everyday Pharmacy support. We review each request and reply here.</p>
     @foreach($order->sellerOrders as $sellerOrder)
         @foreach($sellerOrder->issues as $issue)
             <div class="mt-4 rounded-lg border border-line bg-canvas p-4 text-sm">

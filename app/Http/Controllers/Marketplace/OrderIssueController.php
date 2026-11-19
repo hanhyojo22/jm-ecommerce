@@ -21,6 +21,6 @@ class OrderIssueController extends Controller
 
         $openIssue->handle($sellerOrder, $request->user(), $data['type'], $data['details']);
 
-        return to_route('orders.show', $sellerOrder->order_id)->with('status', 'Your request was sent to JMMart support.');
+        return to_route('orders.show', $sellerOrder->order_id)->with('status', 'Your request was sent to Everyday Pharmacy support.');
     }
 }

@@ -72,7 +72,7 @@ class CatalogSeeder extends Seeder
                         'category_id' => $category->id,
                         'name' => $name,
                         'sku' => strtoupper(str_replace('-', '', $slug)).'-'.str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT),
-                        'description' => $name.' from '.$sample['name'].'. A sample product for the JMMart marketplace.',
+                        'description' => $name.' from '.$sample['name'].'. A sample product for the Everyday Pharmacy marketplace.',
                         'price' => ($sample['base_price'] + $sample['price_step'] * $index).'.00',
                         'brand' => $sample['name'],
                         'condition' => 'new',

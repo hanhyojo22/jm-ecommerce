@@ -18,7 +18,7 @@
                     <article class="sc-card sc-branch-card">
                         <div class="flex items-center justify-between gap-3">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 9.5 5 4h14l2 5.5M4 10h16v10H4zM9 20v-6h6v6M3 9.5a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></svg>
-                            <span class="sc-badge" data-tone="{{ $branch->status === 'active' ? 'success' : ($branch->status === 'suspended' ? 'danger' : 'neutral') }}">{{ ['active' => 'Open', 'inactive' => 'Closed', 'suspended' => 'Suspended by JMMart'][$branch->status] ?? $branch->status }}</span>
+                            <span class="sc-badge" data-tone="{{ $branch->status === 'active' ? 'success' : ($branch->status === 'suspended' ? 'danger' : 'neutral') }}">{{ ['active' => 'Open', 'inactive' => 'Closed', 'suspended' => 'Suspended by Everyday Pharmacy'][$branch->status] ?? $branch->status }}</span>
                         </div>
                         <div><h2>{{ $branch->name }}</h2><p>{{ $branch->address_line }}, {{ $branch->city }}</p></div>
                         <dl class="sc-branch-facts">

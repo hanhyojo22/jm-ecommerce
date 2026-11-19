@@ -9,7 +9,7 @@
         ? 'We’ll add it for you and take you straight back to the item.'
         : (filled(request('redirect'))
             ? 'You’ll return to the page you were viewing.'
-            : ($isSignUp ? 'Email and password — that’s all it takes.' : (config('marketplace.web_store.enabled') ? 'Sign in to check out, track orders and chat with a pharmacist.' : 'Sign in to Seller Center or the admin workspace. Customers shop in the JMMart mobile app.')));
+            : ($isSignUp ? 'Email and password — that’s all it takes.' : (config('marketplace.web_store.enabled') ? 'Sign in to check out, track orders and chat with a pharmacist.' : 'Sign in to Seller Center or the admin workspace. Customers shop in the Everyday Pharmacy mobile app.')));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -21,7 +21,7 @@
     <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
     <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
     <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
-    <title>{{ $isSignUp ? 'Create account' : 'Sign in' }} · JMMart</title>
+    <title>{{ $isSignUp ? 'Create account' : 'Sign in' }} · Everyday Pharmacy</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

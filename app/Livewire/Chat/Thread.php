@@ -17,7 +17,7 @@ use Livewire\Attributes\Renderless;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Conversation · JMMart')]
+#[Title('Conversation · Everyday Pharmacy')]
 class Thread extends Component
 {
     private const INITIAL_MESSAGE_LIMIT = 50;

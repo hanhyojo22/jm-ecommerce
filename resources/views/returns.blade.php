@@ -6,11 +6,11 @@
                     <div>
                         <p class="returns-eyebrow flex items-center gap-2">
                             <x-returns.icon name="shield" class="size-4" />
-                            JMMart · Buyer protection
+                            Everyday Pharmacy · Buyer protection
                         </p>
                         <h1 class="returns-policy-title mt-4">Returns and Refunds</h1>
                         <p class="mt-5 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
-                            How to ask for help with an order, what the seller owes you, and how JMMart keeps the record straight.
+                            How to ask for help with an order, what the seller owes you, and how Everyday Pharmacy keeps the record straight.
                             <span class="mt-1 block text-xs text-slate-500">Last updated October 19, 2026.</span>
                         </p>
                         <div class="mt-7 flex flex-wrap gap-3">
@@ -39,7 +39,7 @@
                             </li>
                             <li>
                                 <span class="returns-policy-summary-mark" aria-hidden="true"><x-returns.icon name="check-plain" class="size-2.5" /></span>
-                                JMMart support can step in when a deadline passes.
+                                Everyday Pharmacy support can step in when a deadline passes.
                             </li>
                         </ul>
                     </div>
@@ -101,7 +101,7 @@
                             </div>
                         </div>
                         <div class="returns-policy-body">
-                            <p>You can request cancellation while a store order is pending or confirmed. Open your order page, choose the store order, and send a cancellation request. JMMart reviews the request; the order is cancelled only when an admin approves it. Once preparation or delivery begins, use the order help option instead.</p>
+                            <p>You can request cancellation while a store order is pending or confirmed. Open your order page, choose the store order, and send a cancellation request. Everyday Pharmacy reviews the request; the order is cancelled only when an admin approves it. Once preparation or delivery begins, use the order help option instead.</p>
                         </div>
                     </section>
 
@@ -132,7 +132,7 @@
                             </div>
                         </div>
                         <div class="returns-policy-body">
-                            <p>The seller aims to respond within 48 hours with reasons for any rejection or with a refund or replacement offer. You may accept an offer or appeal an unsuitable offer or rejection to JMMart within seven days. Support decides appeals and can take over cases that pass a deadline. If you neither accept nor appeal within seven days, JMMart can close the case without a remedy. Your case page shows its history, the next action, and the date it is due.</p>
+                            <p>The seller aims to respond within 48 hours with reasons for any rejection or with a refund or replacement offer. You may accept an offer or appeal an unsuitable offer or rejection to Everyday Pharmacy within seven days. Support decides appeals and can take over cases that pass a deadline. If you neither accept nor appeal within seven days, Everyday Pharmacy can close the case without a remedy. Your case page shows its history, the next action, and the date it is due.</p>
                         </div>
                     </section>
 
@@ -145,7 +145,7 @@
                             </div>
                         </div>
                         <div class="returns-policy-body">
-                            <p>The seller may waive return of the original goods. Otherwise, for a qualifying problem the seller must give instructions and a no-cost return method. Send the goods back and upload handoff proof in your case within seven days of accepting, or JMMart can close the case without a remedy. The seller then records receipt.</p>
+                            <p>The seller may waive return of the original goods. Otherwise, for a qualifying problem the seller must give instructions and a no-cost return method. Send the goods back and upload handoff proof in your case within seven days of accepting, or Everyday Pharmacy can close the case without a remedy. The seller then records receipt.</p>
                             <p>The seller aims to complete an approved refund or ship a replacement within five business days after receiving the return, or after approval when return is waived. The seller records refund payment date and proof or replacement shipment details. Confirm receipt in the case, or dispute an unsatisfactory outcome for support review. Support can set aside a recorded outcome it finds unsupported and put the seller back on the hook. An unconfirmed outcome does not close automatically.</p>
                         </div>
                     </section>
@@ -192,7 +192,7 @@
                         <div class="returns-contact-card mt-6">
                             <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">
                                 <x-returns.icon name="chat" class="size-4" />
-                                JMMart support
+                                Everyday Pharmacy support
                             </p>
                             <h3 class="mt-2">A real person can review the case.</h3>
                             <p class="mt-2 max-w-2xl text-sm leading-6">Use the request form on your order page or email itservices@jmsolutionitservices.com with your order number.</p>

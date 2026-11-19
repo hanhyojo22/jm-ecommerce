@@ -1,6 +1,6 @@
 /*
  * PC browser push (VAPID + /sw.js). Reverb only refreshes an open tab; this is the
- * path that shows an OS notification when JMMart is closed.
+ * path that shows an OS notification when Everyday Pharmacy is closed.
  *
  * Both the Livewire bell and the plain seller-dashboard prompt call these helpers.
  * Livewire is preferred when it is on the page because it shares the component's

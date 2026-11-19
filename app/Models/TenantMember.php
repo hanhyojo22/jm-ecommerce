@@ -58,7 +58,7 @@ class TenantMember extends Model
     }
 
     /**
-     * Where this member works, e.g. "Ermita branch" for "JMMart Pharmacy Ermita", or "Head office".
+     * Where this member works, e.g. "Ermita branch" for "Everyday Pharmacy Ermita", or "Head office".
      */
     public function placeLabel(): string
     {

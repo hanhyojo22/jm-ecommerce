@@ -6,7 +6,7 @@
         'draft', 'changes_required', 'rejected', 'pending' => 'Only your team can see this medicine. Publish it when the checklist is complete.',
         'active' => 'Customers can find and order this medicine. Changes go live as soon as you save.',
         'unlisted' => 'You unlisted this listing, so buyers cannot see it. Relist it from Products whenever you are ready.',
-        'inactive' => 'JMMart suspended this medicine. Contact JMMart support to put it back on sale.',
+        'inactive' => 'Everyday Pharmacy suspended this medicine. Contact Everyday Pharmacy support to put it back on sale.',
         default => null,
     };
     $checks = [

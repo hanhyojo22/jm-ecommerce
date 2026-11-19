@@ -64,8 +64,8 @@ Artisan::command('returns:remind', function (GmailOrderMailer $mailer): void {
             try {
                 $mailer->send(
                     $recipient,
-                    'JMMart return case is overdue',
-                    "The return case for order {$case->sellerOrder->order->number} passed its {$case->deadline()->format('M j, Y g:i A')} deadline and is waiting on you. JMMart can take the case over while it stays unanswered."
+                    'Everyday Pharmacy return case is overdue',
+                    "The return case for order {$case->sellerOrder->order->number} passed its {$case->deadline()->format('M j, Y g:i A')} deadline and is waiting on you. Everyday Pharmacy can take the case over while it stays unanswered."
                     ."\n\nView the case: ".route($sellerTurn ? 'seller.returns.show' : 'returns.show', $case),
                 );
             } catch (Throwable $exception) {
@@ -82,7 +82,7 @@ Artisan::command('returns:remind', function (GmailOrderMailer $mailer): void {
         foreach (User::query()->where('account_type', 'admin')->whereIn('platform_role', ['super_admin', 'admin'])->get() as $administrator) {
             $mailer->send(
                 $administrator,
-                'JMMart return cases need support review',
+                'Everyday Pharmacy return cases need support review',
                 "{$overdue} return case(s) are past their deadline and need support to take them over or close them."
                 ."\n\nOpen the queue: ".route('admin.returns.index', ['needs_action' => 1]),
             );

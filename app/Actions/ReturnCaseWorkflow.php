@@ -32,21 +32,21 @@ class ReturnCaseWorkflow
      */
     private const NOTICES = [
         'submitted' => 'A buyer opened a return request.',
-        'admin_opened' => 'JMMart opened a return case for this order.',
-        'offer' => 'The seller offered a remedy. The buyer can accept it or appeal to JMMart.',
-        'reject' => 'The seller rejected the request. The buyer can appeal to JMMart.',
+        'admin_opened' => 'Everyday Pharmacy opened a return case for this order.',
+        'offer' => 'The seller offered a remedy. The buyer can accept it or appeal to Everyday Pharmacy.',
+        'reject' => 'The seller rejected the request. The buyer can appeal to Everyday Pharmacy.',
         'accept' => 'The buyer accepted the offer.',
-        'appeal' => 'The case was appealed to JMMart.',
+        'appeal' => 'The case was appealed to Everyday Pharmacy.',
         'handoff' => 'The buyer handed the goods over for return.',
         'receive' => 'The seller recorded the returned goods as received.',
         'refund' => 'The seller recorded a refund payment. The buyer should confirm receipt.',
         'ship' => 'The seller recorded a replacement shipment. The buyer should confirm receipt.',
-        'decide' => 'JMMart decided the appeal.',
-        'takeover' => 'JMMart took the overdue case over for review.',
-        'reopen' => 'JMMart set the recorded outcome aside. The seller must fulfil the remedy again.',
+        'decide' => 'Everyday Pharmacy decided the appeal.',
+        'takeover' => 'Everyday Pharmacy took the overdue case over for review.',
+        'reopen' => 'Everyday Pharmacy set the recorded outcome aside. The seller must fulfil the remedy again.',
         'confirm' => 'The buyer confirmed the outcome and the case is complete.',
-        'verify' => 'JMMart verified the outcome and closed the case.',
-        'close' => 'JMMart closed the case because its deadline passed without a response.',
+        'verify' => 'Everyday Pharmacy verified the outcome and closed the case.',
+        'close' => 'Everyday Pharmacy closed the case because its deadline passed without a response.',
     ];
 
     /** @param array<string, mixed> $data */
@@ -167,7 +167,7 @@ class ReturnCaseWorkflow
                         $refunded = (string) ReturnCaseOutcome::query()->where('kind', 'refund')
                             ->whereHas('returnCase', fn ($query) => $query->where('seller_order_id', $case->seller_order_id))->sum('amount');
                         if (bccomp(bcadd($refunded, $amount, 2), (string) $case->sellerOrder->total, 2) > 0) {
-                            throw ValidationException::withMessages(['action' => 'This refund would take more back than the buyer paid for this store order. Contact JMMart support.']);
+                            throw ValidationException::withMessages(['action' => 'This refund would take more back than the buyer paid for this store order. Contact Everyday Pharmacy support.']);
                         }
                         $refundId = $this->refundOnlinePayment->refund($case->sellerOrder, $amount, 'return-case:'.$case->id);
                         $case->outcome()->create(['recorded_by' => $actor->id, 'kind' => 'refund', 'amount' => $amount, 'paid_at' => now(), 'created_at' => now()]);
@@ -390,11 +390,11 @@ class ReturnCaseWorkflow
                     foreach ($recipients as $recipient) {
                         $url = $recipient->id === $case->buyer_id ? route('returns.show', $case) : route('seller.returns.show', $case);
                         $caseLine = $recipient->id === $case->buyer_id
-                            ? BuyerLink::emailLine('View the case', $url, 'Open the JMMart app to see the return case.')
+                            ? BuyerLink::emailLine('View the case', $url, 'Open the Everyday Pharmacy app to see the return case.')
                             : "View the case: {$url}";
 
                         try {
-                            app(GmailOrderMailer::class)->send($recipient, 'JMMart return case update', $emailBody."\n\n".$caseLine);
+                            app(GmailOrderMailer::class)->send($recipient, 'Everyday Pharmacy return case update', $emailBody."\n\n".$caseLine);
                         } catch (\Throwable $exception) {
                             report($exception);
                         }

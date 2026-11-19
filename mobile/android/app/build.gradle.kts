@@ -32,7 +32,7 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        manifestPlaceholders["appLabel"] = "JMMart"
+        manifestPlaceholders["appLabel"] = "Everyday Pharmacy"
         manifestPlaceholders["oauthScheme"] = "jmmart"
     }
 
@@ -41,7 +41,7 @@ android {
     // in .env.pharmacy). google-services.json lists both IDs, so push works in both.
     if (project.hasProperty("pharmacy")) {
         defaultConfig.applicationIdSuffix = ".pharmacy"
-        defaultConfig.manifestPlaceholders["appLabel"] = "JMMart Rx"
+        defaultConfig.manifestPlaceholders["appLabel"] = "Everyday Rx"
         defaultConfig.manifestPlaceholders["oauthScheme"] = "jmmartrx"
     }
 

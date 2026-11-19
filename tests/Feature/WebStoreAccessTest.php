@@ -26,7 +26,7 @@ class WebStoreAccessTest extends TestCase
     {
         [$store, $product] = $this->publicStore();
 
-        $this->get(route('home'))->assertStatus(410)->assertSee('JMMart mobile app');
+        $this->get(route('home'))->assertStatus(410)->assertSee('Everyday Pharmacy mobile app');
         $this->get(route('catalog.index'))->assertStatus(410);
         $this->get(route('catalog.suggestions'))->assertStatus(410);
         $this->get(route('catalog.top-products'))->assertStatus(410);
@@ -136,12 +136,12 @@ class WebStoreAccessTest extends TestCase
             ->assertOk()
             ->assertDontSee('Browse without an account')
             ->assertDontSee(route('catalog.index'), false)
-            ->assertSee('Customers shop in the JMMart mobile app.');
+            ->assertSee('Customers shop in the Everyday Pharmacy mobile app.');
     }
 
     public function test_buyer_emails_point_to_the_app_instead_of_the_closed_web_store(): void
     {
-        $this->assertSame('Open the JMMart app to see your order.', BuyerLink::emailLine('View your order', 'https://example.test/orders/1'));
+        $this->assertSame('Open the Everyday Pharmacy app to see your order.', BuyerLink::emailLine('View your order', 'https://example.test/orders/1'));
 
         config()->set('marketplace.web_store.enabled', true);
 

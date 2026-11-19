@@ -184,7 +184,7 @@ class OnlinePaymentTest extends TestCase
             app(UpdateSellerOrderStatus::class)->handle($sellerOrder, 'cancelled', $sellerOrder->store->tenant->members()->first()->user);
             $this->fail('A store cancelled an order paid directly to it.');
         } catch (ValidationException $exception) {
-            $this->assertStringContainsString('Ask JMMart support', $exception->errors()['status'][0]);
+            $this->assertStringContainsString('Ask Everyday Pharmacy support', $exception->errors()['status'][0]);
         }
 
         app(UpdateSellerOrderStatus::class)->handle($sellerOrder, 'cancelled', User::factory()->administrator()->create());

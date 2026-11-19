@@ -14,11 +14,11 @@ class PharmacySetupCommandsTest extends TestCase
 
     public function test_setup_creates_the_company_with_a_head_office_pharmacist_owner(): void
     {
-        $this->artisan('pharmacy:setup', ['company' => 'JMMart Pharmacy', 'owner' => 'Owner@Example.com'])->assertExitCode(0);
+        $this->artisan('pharmacy:setup', ['company' => 'Everyday Pharmacy', 'owner' => 'Owner@Example.com'])->assertExitCode(0);
 
         $tenant = Tenant::query()->sole();
         $owner = User::query()->where('email', 'owner@example.com')->sole();
-        $this->assertSame(['JMMart Pharmacy', 'active', 'seller'], [$tenant->name, $tenant->status, $owner->account_type]);
+        $this->assertSame(['Everyday Pharmacy', 'active', 'seller'], [$tenant->name, $tenant->status, $owner->account_type]);
         $this->assertDatabaseHas('tenant_members', ['tenant_id' => $tenant->id, 'user_id' => $owner->id, 'role' => 'owner', 'store_id' => null, 'is_pharmacist' => false]);
         $this->assertSame($tenant->id, $owner->headOfficeTenant()?->id);
         $this->assertDatabaseHas('audit_logs', ['action' => 'tenant.set_up', 'entity_id' => $tenant->id]);
@@ -28,7 +28,7 @@ class PharmacySetupCommandsTest extends TestCase
     {
         $customer = User::factory()->create(['email' => 'owner@example.com']);
 
-        $this->artisan('pharmacy:setup', ['company' => 'JMMart Pharmacy', 'owner' => 'owner@example.com'])->assertExitCode(0);
+        $this->artisan('pharmacy:setup', ['company' => 'Everyday Pharmacy', 'owner' => 'owner@example.com'])->assertExitCode(0);
 
         $this->assertSame('seller', $customer->fresh()->account_type);
         $this->assertSame(1, User::query()->where('email', 'owner@example.com')->count());
@@ -37,7 +37,7 @@ class PharmacySetupCommandsTest extends TestCase
     public function test_setup_refuses_an_administrator_or_existing_staff_email(): void
     {
         User::factory()->administrator()->create(['email' => 'admin@example.com']);
-        $this->artisan('pharmacy:setup', ['company' => 'JMMart Pharmacy', 'owner' => 'admin@example.com'])->assertExitCode(1);
+        $this->artisan('pharmacy:setup', ['company' => 'Everyday Pharmacy', 'owner' => 'admin@example.com'])->assertExitCode(1);
 
         $this->artisan('pharmacy:setup', ['company' => 'First', 'owner' => 'owner@example.com'])->assertExitCode(0);
         $this->artisan('pharmacy:setup', ['company' => 'Second', 'owner' => 'owner@example.com'])->assertExitCode(1);
@@ -62,7 +62,7 @@ class PharmacySetupCommandsTest extends TestCase
         $this->assertSame('super_admin', $admin->fresh()->platform_role);
 
         $staff = User::factory()->seller()->create(['email' => 'staff@example.com']);
-        $tenant = Tenant::query()->create(['name' => 'JMMart Pharmacy', 'slug' => 'jmmart-pharmacy', 'status' => 'active']);
+        $tenant = Tenant::query()->create(['name' => 'Everyday Pharmacy', 'slug' => 'jmmart-pharmacy', 'status' => 'active']);
         TenantMember::query()->create(['tenant_id' => $tenant->id, 'user_id' => $staff->id, 'role' => 'staff']);
 
         $this->artisan('admin:super', ['email' => 'staff@example.com'])->assertExitCode(1);

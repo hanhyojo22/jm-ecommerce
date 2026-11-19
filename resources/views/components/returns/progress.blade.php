@@ -46,7 +46,7 @@
 
     $steps = [
         $step('done', 'Request sent', 'Opened '.$case->created_at->format('M j')),
-        $step($reviewDone ? 'done' : ($reviewCurrent ? 'current' : 'upcoming'), $status === 'appealed' && $reviewCurrent ? 'JMMart review' : 'Seller review', $reviewCopy),
+        $step($reviewDone ? 'done' : ($reviewCurrent ? 'current' : 'upcoming'), $status === 'appealed' && $reviewCurrent ? 'Everyday Pharmacy review' : 'Seller review', $reviewCopy),
         $step($case->return_waived ? 'done' : ($returnDone ? 'done' : ($returnCurrent ? 'current' : 'upcoming')), $case->return_waived ? 'Return waived' : 'Return', $returnCopy),
         $step($remedyDone ? 'done' : ($remedyCurrent ? 'current' : 'upcoming'), $remedyLabel, $remedyCopy),
     ];
@@ -60,7 +60,7 @@
     $yourTurn = ($role === 'seller' && $waitingOn === 'seller')
         || ($role === 'buyer' && $waitingOn === 'buyer')
         || ($role === 'admin' && $waitingOn === 'support');
-    $waitingLabel = ['seller' => 'the seller', 'buyer' => 'the buyer', 'support' => 'JMMart support'][$waitingOn] ?? null;
+    $waitingLabel = ['seller' => 'the seller', 'buyer' => 'the buyer', 'support' => 'Everyday Pharmacy support'][$waitingOn] ?? null;
 @endphp
 
 <div {{ $attributes }}>
@@ -90,8 +90,8 @@
         @php
             $terminalCopy = match ($status) {
                 'completed' => 'The remedy was confirmed and the case is complete. No further action is needed.',
-                'denied' => 'JMMart denied this claim. The reasons are recorded in the decision below.',
-                default => 'JMMart closed this case because its deadline passed without a response.',
+                'denied' => 'Everyday Pharmacy denied this claim. The reasons are recorded in the decision below.',
+                default => 'Everyday Pharmacy closed this case because its deadline passed without a response.',
             };
             $terminalClasses = match ($status) {
                 'completed' => 'border-green-200 bg-green-50 text-success',
@@ -114,7 +114,7 @@
                 <p><strong class="font-semibold">Your turn.</strong> Take the next step in the action panel below.</p>
             @else
                 <svg class="mt-0.5 size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></svg>
-                <p>Waiting on <strong class="font-semibold">{{ $waitingLabel }}.</strong> JMMart support steps in once a deadline passes.</p>
+                <p>Waiting on <strong class="font-semibold">{{ $waitingLabel }}.</strong> Everyday Pharmacy support steps in once a deadline passes.</p>
             @endif
         </div>
     @endif

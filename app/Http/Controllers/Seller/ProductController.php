@@ -307,7 +307,7 @@ class ProductController extends Controller
         $product = $this->editableProduct($request, $product);
         DB::transaction(function () use ($request, $product): void {
             $product = Product::query()->lockForUpdate()->findOrFail($product->id);
-            // One pharmacy company publishes its own medicines; only a suspension needs JMMart to lift it.
+            // One pharmacy company publishes its own medicines; only a suspension needs Everyday Pharmacy to lift it.
             if (! in_array($product->status, ['draft', 'changes_required', 'rejected', 'pending'], true)) {
                 throw ValidationException::withMessages(['status' => 'Only a draft can be published.']);
             }

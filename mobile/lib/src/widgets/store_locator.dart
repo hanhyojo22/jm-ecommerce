@@ -63,14 +63,14 @@ class BranchHeader extends ConsumerWidget {
       ].join(' · ');
       title = active.branch.name;
     } else if (state != null) {
-      label = 'JMMart Pharmacy';
+      label = 'Everyday Pharmacy';
       title = 'Choose a branch';
     } else if (locator.hasError) {
       label = 'Could not load branches';
       title = 'Tap to retry';
       onTap = () => ref.invalidate(storeBranchesProvider);
     } else {
-      label = 'JMMart Pharmacy';
+      label = 'Everyday Pharmacy';
       title = 'Finding your nearest branch…';
       onTap = null;
     }
@@ -176,7 +176,7 @@ class BranchHeader extends ConsumerWidget {
   }
 }
 
-/// "JMMart Pharmacy", for when no branch is pinned yet.
+/// "Everyday Pharmacy", for when no branch is pinned yet.
 class _Wordmark extends StatelessWidget {
   const _Wordmark({required this.ink});
 
@@ -191,7 +191,13 @@ class _Wordmark extends StatelessWidget {
         child: Text.rich(
           TextSpan(
             children: [
-              const TextSpan(text: 'JMMart'),
+              // Two-tone like the logo: sun-yellow "Everyday".
+              TextSpan(
+                text: 'Everyday',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
               TextSpan(
                 text: '  Pharmacy',
                 style: TextStyle(
@@ -295,7 +301,7 @@ class _LocationFallback extends ConsumerWidget {
       LocationIssue.denied =>
         'Allow location access to find your nearest branch.',
       // Android no longer shows its dialog after a second "Don't allow".
-      LocationIssue.deniedForever => 'Location is off for JMMart. In Settings, tap Permissions, then Location, then Allow.',
+      LocationIssue.deniedForever => 'Location is off for Everyday Pharmacy. In Settings, tap Permissions, then Location, then Allow.',
       LocationIssue.unavailable => 'We could not get your location.',
     };
 
@@ -444,7 +450,7 @@ class _LocationPrimer extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'JMMart uses your location to show the closest branch, what it has '
+            'Everyday Pharmacy uses your location to show the closest branch, what it has '
             'in stock and its delivery fee, and to pin your delivery address.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(

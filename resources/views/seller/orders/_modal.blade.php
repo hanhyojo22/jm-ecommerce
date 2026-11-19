@@ -56,7 +56,7 @@
         <div class="sc-premium-notice" data-tone="{{ $isCancelled ? 'danger' : 'warning' }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><h3>{{ $statusTitle }}</h3></div>
     @endif
     @foreach ($sellerOrder->issues as $issue)
-        <div class="sc-notice mb-4" data-tone="warning"><div><strong>{{ str($issue->type)->replace('_', ' ')->title() }} · {{ ucfirst($issue->status) }}</strong><p>{{ $issue->details }}</p>@if ($issue->status === 'open')<p>Wait for JMMart support before preparing this order.</p>@endif</div></div>
+        <div class="sc-notice mb-4" data-tone="warning"><div><strong>{{ str($issue->type)->replace('_', ' ')->title() }} · {{ ucfirst($issue->status) }}</strong><p>{{ $issue->details }}</p>@if ($issue->status === 'open')<p>Wait for Everyday Pharmacy support before preparing this order.</p>@endif</div></div>
     @endforeach
     @if ($sellerOrder->returnCases->isNotEmpty())<div class="sc-notice mb-4" data-tone="info"><span>{{ $sellerOrder->returnCases->count() }} return {{ Str::plural('case', $sellerOrder->returnCases->count()) }}</span><a href="{{ route('seller.returns.show', $sellerOrder->returnCases->first()) }}">View returns</a></div>@endif
     @include('seller.orders._documents', ['sellerOrder' => $sellerOrder, 'approvalInFooter' => true])

@@ -42,11 +42,11 @@
             ['label' => 'Cart', 'url' => route('cart.index')],
         ];
         $templates = [
-            ['key' => 'product-ad', 'label' => 'Product ad', 'title' => 'Fresh finds just landed', 'body' => 'Discover new arrivals from JMMart sellers. Browse the latest products and find something to love.', 'url' => route('catalog.index')],
+            ['key' => 'product-ad', 'label' => 'Product ad', 'title' => 'Fresh finds just landed', 'body' => 'Discover new arrivals from Everyday Pharmacy sellers. Browse the latest products and find something to love.', 'url' => route('catalog.index')],
             ['key' => 'flash-sale', 'label' => 'Flash sale', 'title' => 'Flash sale is live', 'body' => 'Limited-time deals on top products. Shop now before your favorite items sell out.', 'url' => route('catalog.top-products')],
-            ['key' => 'store-spotlight', 'label' => 'Store spotlight', 'title' => 'Support local sellers', 'body' => 'Explore trusted JMMart stores and shop their latest offers, all in one place.', 'url' => route('catalog.stores')],
+            ['key' => 'store-spotlight', 'label' => 'Store spotlight', 'title' => 'Support local sellers', 'body' => 'Explore trusted Everyday Pharmacy stores and shop their latest offers, all in one place.', 'url' => route('catalog.stores')],
             ['key' => 'cart-reminder', 'label' => 'Cart reminder', 'title' => 'Still thinking it over?', 'body' => 'Your cart is waiting. Complete your order before the items you picked sell out.', 'url' => route('cart.index')],
-            ['key' => 'announcement', 'label' => 'Announcement', 'title' => 'A quick update from JMMart', 'body' => 'We have made a few improvements to make shopping at JMMart easier. Take a look around and see what is new.', 'url' => route('home')],
+            ['key' => 'announcement', 'label' => 'Announcement', 'title' => 'A quick update from Everyday Pharmacy', 'body' => 'We have made a few improvements to make shopping at Everyday Pharmacy easier. Take a look around and see what is new.', 'url' => route('home')],
         ];
         $oldUrl = (string) old('url', '');
         $initialOpens = $initialLinkTarget['kind'] ?? ($oldUrl === '' || $oldUrl === route('home') ? 'home' : 'other');
@@ -214,7 +214,7 @@
                                 return this.target.kind === 'product' ? 'View product' : 'Open store';
                             }
 
-                            return /\/cart\/?$/.test(this.url.trim()) ? 'View cart' : 'Open JMMart';
+                            return /\/cart\/?$/.test(this.url.trim()) ? 'View cart' : 'Open Everyday Pharmacy';
                         },
                         setOpens(kind) {
                             if (kind === this.opens) {
@@ -477,7 +477,7 @@
                                         <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--color-info-wash)] text-brand" aria-hidden="true">
                                             <svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z" /></svg>
                                         </span>
-                                        <p class="text-sm leading-6 text-muted">Opens the JMMart home screen in the app and the home page in browsers.</p>
+                                        <p class="text-sm leading-6 text-muted">Opens the Everyday Pharmacy home screen in the app and the home page in browsers.</p>
                                     </div>
 
                                     <div x-show="opens === 'store' && ! target" x-cloak>
@@ -529,7 +529,7 @@
                                             @endforeach
                                         </div>
                                         <div>
-                                            <x-input-label for="other_link" :value="__('JMMart link')" class="!text-ink" />
+                                            <x-input-label for="other_link" :value="__('Everyday Pharmacy link')" class="!text-ink" />
                                             <x-text-input
                                                 id="other_link"
                                                 class="mt-1.5"
@@ -734,7 +734,7 @@
                                         <p class="pb-1 text-center text-3xl font-light tabular-nums text-[#e9eef5]" aria-hidden="true">9:41</p>
                                         <div class="flex items-center gap-2.5 rounded-2xl bg-[#2a3446] px-3.5 py-3 text-[#f1f5f9]">
                                             <div class="min-w-0 flex-1">
-                                                <p class="text-[11px] text-[#b8c6d8]">JMMart · now</p>
+                                                <p class="text-[11px] text-[#b8c6d8]">Everyday Pharmacy · now</p>
                                                 <p class="truncate text-[13px] font-semibold" x-text="title.trim() || 'Notification title'"></p>
                                                 <p class="truncate text-xs text-[#d5dee9]" x-text="body.trim() || 'Your message appears here as you type.'"></p>
                                             </div>
@@ -743,7 +743,7 @@
                                             </template>
                                         </div>
                                         <div class="space-y-2 rounded-2xl bg-[#2a3446] px-3.5 py-3 text-[#f1f5f9]">
-                                            <p class="text-[11px] text-[#b8c6d8]">JMMart · expanded</p>
+                                            <p class="text-[11px] text-[#b8c6d8]">Everyday Pharmacy · expanded</p>
                                             <p class="break-words text-[13px] font-semibold" x-text="title.trim() || 'Notification title'"></p>
                                             <p class="break-words text-xs leading-5 text-[#d5dee9]" x-text="body.trim() || 'Your message appears here as you type.'"></p>
                                             <template x-if="imagePreview && ! imageFailed">
@@ -825,7 +825,7 @@
                                 <div class="grid gap-5 sm:grid-cols-2">
                                     <div class="space-y-2 self-start rounded-2xl bg-[#1b2433] p-3 text-[#f1f5f9]">
                                         <div class="space-y-2 rounded-xl bg-[#2a3446] p-3">
-                                            <p class="text-[11px] text-[#b8c6d8]">JMMart · now</p>
+                                            <p class="text-[11px] text-[#b8c6d8]">Everyday Pharmacy · now</p>
                                             <p class="break-words text-[13px] font-semibold" x-text="title.trim()"></p>
                                             <p class="break-words text-xs leading-5 text-[#d5dee9]" x-text="body.trim()"></p>
                                             <template x-if="imagePreview && ! imageFailed">

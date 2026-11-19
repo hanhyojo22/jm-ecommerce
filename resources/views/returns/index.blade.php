@@ -12,7 +12,7 @@
                 'awaiting_receipt' => 'Returns arriving',
                 'awaiting_fulfillment' => 'Remedies due',
                 'awaiting_buyer' => 'Waiting on buyer',
-                'with_support' => 'With JMMart',
+                'with_support' => 'With Everyday Pharmacy',
                 'closed' => 'Closed',
             ]
             : [
@@ -28,7 +28,7 @@
                 ['label' => 'Awaiting my response', 'count' => $counts['awaiting_seller'], 'hint' => 'Reply to the buyer within 48 hours.', 'href' => route($routeName, ['status' => 'awaiting_seller']), 'active' => $filters['status'] === 'awaiting_seller', 'icon' => 'chat'],
                 ['label' => 'Returns arriving', 'count' => $counts['awaiting_receipt'], 'hint' => 'Inspect the parcel and confirm receipt.', 'href' => route($routeName, ['status' => 'awaiting_receipt']), 'active' => $filters['status'] === 'awaiting_receipt', 'icon' => 'package'],
                 ['label' => 'Remedies due', 'count' => $counts['awaiting_fulfillment'], 'hint' => 'Refund or ship within 5 business days.', 'href' => route($routeName, ['status' => 'awaiting_fulfillment']), 'active' => $filters['status'] === 'awaiting_fulfillment', 'icon' => 'refund'],
-                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'JMMart can step in at any time.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true, 'icon' => 'alert'],
+                ['label' => 'Overdue', 'count' => $counts['overdue'], 'hint' => 'Everyday Pharmacy can step in at any time.', 'href' => route($routeName, ['overdue' => 1]), 'active' => $filters['overdue'], 'danger' => true, 'icon' => 'alert'],
             ]
             : [
                 ['label' => 'Needs review', 'count' => $counts['needs_review'], 'hint' => 'Appeals and stalled cases.', 'href' => route($routeName, ['needs_action' => 1]), 'active' => $filters['needs_action'], 'danger' => $counts['needs_review'] > 0, 'icon' => 'shield'],
@@ -160,7 +160,7 @@
                             <a href="{{ route($routeName) }}" class="button-secondary mt-4">Clear filters</a>
                         @else
                             <h2 class="mt-4 font-display text-xl font-semibold text-ink">{{ $isSeller ? 'No return cases yet' : 'Nothing to review' }}</h2>
-                            <p class="mx-auto mt-1 max-w-md text-sm text-muted">{{ $isSeller ? 'When a buyer opens a return request, it lands here and JMMart emails you.' : 'Appeals and overdue cases land here. New cases appear as buyers and sellers work through them.' }}</p>
+                            <p class="mx-auto mt-1 max-w-md text-sm text-muted">{{ $isSeller ? 'When a buyer opens a return request, it lands here and Everyday Pharmacy emails you.' : 'Appeals and overdue cases land here. New cases appear as buyers and sellers work through them.' }}</p>
                         @endif
                     </div>
                 @endforelse
