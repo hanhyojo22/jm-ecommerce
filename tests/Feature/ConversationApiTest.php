@@ -138,6 +138,32 @@ class ConversationApiTest extends TestCase
         $this->assertDatabaseCount('conversations', 1);
     }
 
+    public function test_a_buyer_can_open_a_plain_chat_with_a_branch_but_its_staff_cannot(): void
+    {
+        [$buyer, $seller, , $store] = $this->conversation();
+        Conversation::query()->delete();
+
+        $first = $this->actingAs($buyer)
+            ->postJson('/api/v1/conversations/start', ['branch' => $store->id])
+            ->assertCreated()
+            ->assertJsonPath('data.store.id', $store->id)
+            ->json('data.id');
+
+        $this->actingAs($buyer)
+            ->postJson('/api/v1/conversations/start', ['branch' => $store->id])
+            ->assertOk()
+            ->assertJsonPath('data.id', $first);
+
+        $this->actingAs($seller)
+            ->postJson('/api/v1/conversations/start', ['branch' => $store->id])
+            ->assertForbidden();
+
+        $store->update(['status' => 'suspended']);
+        $this->actingAs(User::factory()->create())
+            ->postJson('/api/v1/conversations/start', ['branch' => $store->id])
+            ->assertNotFound();
+    }
+
     public function test_starting_a_conversation_without_sending_a_message_is_not_listed(): void
     {
         [$buyer, , , $store, $product] = $this->conversation();

@@ -160,7 +160,13 @@ final searchHistoryProvider =
     );
 
 class CatalogFilter {
-  const CatalogFilter({this.query = '', this.category, this.onSale = false});
+  const CatalogFilter({
+    this.query = '',
+    this.category,
+    this.onSale = false,
+    this.priceSort,
+    this.noPrescription = false,
+  });
 
   final String query;
   final String? category;
@@ -168,9 +174,17 @@ class CatalogFilter {
   /// The "See all" deals list: only discounted products.
   final bool onSale;
 
-  bool get isDefault => query.isEmpty && category == null && !onSale;
+  /// `price_asc` or `price_desc` chosen on the search page; null keeps the default order.
+  final String? priceSort;
 
-  String get sort => query.trim().isEmpty ? 'popular' : 'relevance';
+  /// Search page filter: leave out medicines that need a prescription.
+  final bool noPrescription;
+
+  bool get isDefault =>
+      query.isEmpty && category == null && !onSale && !noPrescription;
+
+  String get sort =>
+      priceSort ?? (query.trim().isEmpty ? 'popular' : 'relevance');
 
   CatalogFilter copyWith({
     String? query,
@@ -179,7 +193,7 @@ class CatalogFilter {
   }) => CatalogFilter(
     query: query ?? this.query,
     category: clearCategory ? null : (category ?? this.category),
-    // Searching or picking a category leaves the deals list.
+    // Searching or picking a category leaves the deals list and the search page's sort and filter.
     onSale: false,
   );
 
@@ -188,10 +202,13 @@ class CatalogFilter {
       other is CatalogFilter &&
       other.query == query &&
       other.category == category &&
-      other.onSale == onSale;
+      other.onSale == onSale &&
+      other.priceSort == priceSort &&
+      other.noPrescription == noPrescription;
 
   @override
-  int get hashCode => Object.hash(query, category, onSale);
+  int get hashCode =>
+      Object.hash(query, category, onSale, priceSort, noPrescription);
 }
 
 class CatalogFilterNotifier extends Notifier<CatalogFilter> {
@@ -204,6 +221,9 @@ class CatalogFilterNotifier extends Notifier<CatalogFilter> {
       state = state.copyWith(category: slug, clearCategory: slug == null);
 
   void showDeals() => state = const CatalogFilter(onSale: true);
+
+  /// The search page sets its whole filter at once and puts the Shop's back when it closes.
+  void apply(CatalogFilter filter) => state = filter;
 
   void reset() => state = const CatalogFilter();
 }
@@ -269,6 +289,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
           category: filter.category,
           sort: filter.sort,
           onSale: filter.onSale,
+          noPrescription: filter.noPrescription,
           perPage: catalogPageSize,
           branch: branch,
         );
@@ -307,6 +328,7 @@ class ProductsNotifier extends AsyncNotifier<ProductFeed> {
             category: current.filter.category,
             sort: current.filter.sort,
             onSale: current.filter.onSale,
+            noPrescription: current.filter.noPrescription,
             page: current.page + 1,
             perPage: catalogPageSize,
             branch: ref.read(activeBranchIdProvider).value,

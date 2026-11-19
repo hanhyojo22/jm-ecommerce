@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\BranchStock;
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -40,6 +41,40 @@ class BranchCatalogApiTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $amoxicillin->id)
             ->assertJsonPath('data.0.requires_prescription', true);
+    }
+
+    public function test_search_suggestions_count_exactly_what_the_branch_search_lists(): void
+    {
+        [$tenant, $makati, $cebu] = $this->pharmacy();
+        $painRelief = Category::create(['name' => 'Pain & Fever', 'slug' => 'pain-fever', 'is_active' => true]);
+        $tablet = $this->product($tenant, $makati, 'Paracetamol 500mg Tablet', ['generic_name' => 'Paracetamol', 'category_id' => $painRelief->id]);
+        $biogesic = $this->product($tenant, $makati, 'Biogesic 500mg', ['generic_name' => 'Paracetamol', 'category_id' => $painRelief->id]);
+        $combination = $this->product($tenant, $makati, 'Decolgen Tablet', ['generic_name' => 'Phenylephrine + Paracetamol', 'requires_prescription' => true]);
+        $syrup = $this->product($tenant, $makati, 'Paracetamol Syrup', ['generic_name' => 'Paracetamol']);
+        foreach ([$tablet, $biogesic, $combination] as $product) {
+            $this->stock($makati, $product, 10);
+        }
+        $this->stock($cebu, $syrup, 4);
+
+        $this->getJson(route('api.v1.products.suggestions', ['q' => 'para', 'branch' => $makati->id]))
+            ->assertOk()
+            ->assertJsonPath('total', 3)
+            ->assertJsonPath('names.0', ['name' => 'Paracetamol', 'count' => 2])
+            ->assertJsonPath('names.1', ['name' => 'Phenylephrine + Paracetamol', 'count' => 1])
+            ->assertJsonPath('categories', [['slug' => 'pain-fever', 'name' => 'Pain & Fever', 'count' => 2]])
+            ->assertJsonPath('items.0.at_branch', true)
+            ->assertJsonPath('items.3.product_id', $syrup->id)
+            ->assertJsonPath('items.3.at_branch', false)
+            ->assertJsonPath('items.3.generic_name', 'Paracetamol');
+
+        $this->getJson(route('api.v1.products.index', ['q' => 'para', 'branch' => $makati->id]))
+            ->assertOk()
+            ->assertJsonPath('meta.total', 3);
+
+        $this->getJson(route('api.v1.products.index', ['q' => 'para', 'branch' => $makati->id, 'no_prescription' => 'true']))
+            ->assertOk()
+            ->assertJsonPath('meta.total', 2)
+            ->assertJsonMissing(['id' => $combination->id]);
     }
 
     public function test_a_closed_branch_is_not_found(): void

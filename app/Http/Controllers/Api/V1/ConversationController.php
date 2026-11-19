@@ -14,6 +14,7 @@ use App\Models\Conversation;
 use App\Models\ConversationMessage;
 use App\Models\Product;
 use App\Models\SellerOrder;
+use App\Queries\CatalogQuery;
 use App\Support\ApiError;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -88,8 +89,9 @@ class ConversationController extends Controller
     public function start(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'product_id' => ['nullable', 'ulid', 'required_without:seller_order_id', 'prohibits:seller_order_id'],
-            'seller_order_id' => ['nullable', 'ulid', 'required_without:product_id'],
+            'product_id' => ['nullable', 'ulid', 'required_without_all:seller_order_id,branch', 'prohibits:seller_order_id'],
+            'seller_order_id' => ['nullable', 'ulid', 'required_without_all:product_id,branch'],
+            // A branch alone opens a plain chat with it, e.g. to send a prescription photo from search.
             'branch' => ['nullable', 'ulid'],
         ]);
 
@@ -109,6 +111,11 @@ class ConversationController extends Controller
                 ['buyer_id' => $user->id, 'store_id' => Conversation::branchForProduct($product, $user, $data['branch'] ?? null)],
                 [],
             );
+        } elseif (($data['seller_order_id'] ?? null) === null) {
+            $branch = CatalogQuery::publicStores()->whereKey($data['branch'])->firstOrFail();
+            abort_if($user->isMemberOfTenant($branch->tenant_id), 403);
+
+            $conversation = Conversation::query()->createOrFirst(['buyer_id' => $user->id, 'store_id' => $branch->id], []);
         } else {
             $sellerOrder = SellerOrder::query()->with(['order', 'store'])->findOrFail($data['seller_order_id']);
             abort_unless($sellerOrder->order->user_id === $user->id, 404);

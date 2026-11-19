@@ -26,7 +26,11 @@ class CatalogQuery
     }
 
     /** @return Collection<int, Product> */
-    public static function suggestions(string $search): Collection
+    /**
+     * Up to eight products whose name, generic name or keywords match, for the search box. With
+     * a branch, each carries `at_branch` and the ones that branch has on hand come first.
+     */
+    public static function suggestions(string $search, ?Store $branch = null): Collection
     {
         $search = Str::lower(trim($search));
         if (Str::length($search) < 2 || ! preg_match('/[\pL\pN]/u', $search)) {
@@ -49,7 +53,7 @@ class CatalogQuery
         }
 
         $query = self::publishedProducts()
-            ->select(['products.id', 'products.store_id', 'products.name', 'products.slug', 'products.price', 'products.stock_quantity'])
+            ->select(['products.id', 'products.store_id', 'products.name', 'products.generic_name', 'products.requires_prescription', 'products.slug', 'products.price', 'products.stock_quantity'])
             ->with('thumbnail')
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
@@ -65,11 +69,65 @@ class CatalogQuery
 
         $rank = "CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 WHEN {$wordMatch} THEN 2 WHEN LOWER(products.generic_name) LIKE ? ESCAPE '!' THEN 3 ELSE 4 END";
 
+        if ($branch !== null) {
+            $query->withExists(['branchStocks as at_branch' => fn (Builder $stock) => $stock->where('store_id', $branch->id)->where('quantity', '>', 0)])
+                ->orderByDesc('at_branch');
+        }
+
         return $query->orderByRaw($rank, [$search, $prefix, ...$wordBindings, '%'.$escaped.'%'])
             ->orderBy('products.name')
             ->orderBy('products.id')
             ->limit(8)
             ->get();
+    }
+
+    /**
+     * What the search box lists above its products: generic names and categories among the
+     * products a full search would show, with counts, and that search's total. It matches the
+     * way search() does, so "See all N results" opens exactly N.
+     *
+     * @return array{names: list<array{name: string, count: int}>, categories: list<array{slug: string, name: string, count: int}>, total: int}
+     */
+    public static function suggestionGroups(string $search, ?Store $branch = null): array
+    {
+        $search = trim($search);
+        if (Str::length($search) < 2 || ! preg_match('/[\pL\pN]/u', $search)) {
+            return ['names' => [], 'categories' => [], 'total' => 0];
+        }
+
+        $escaped = self::escapeLike(Str::lower($search));
+        [$genericMatch, $genericBindings] = self::genericMatch(self::ingredientSearch($search, $escaped.'%'));
+        $matching = self::publishedProducts()
+            ->when($branch, fn (Builder $query) => $query->whereHas('branchStocks', fn (Builder $stock) => $stock->where('store_id', $branch->id)->where('quantity', '>', 0)));
+        self::whereMatchesSearch($matching, '%'.$escaped.'%', $genericMatch, $genericBindings);
+
+        $names = (clone $matching)->toBase()
+            ->whereNotNull('products.generic_name')
+            ->whereRaw($genericMatch, $genericBindings)
+            ->selectRaw('products.generic_name AS name, COUNT(*) AS matches')
+            ->groupBy('products.generic_name')
+            ->orderByDesc('matches')
+            ->orderBy('products.generic_name')
+            ->limit(3)
+            ->get();
+        $categoryCounts = (clone $matching)->toBase()
+            ->whereNotNull('products.category_id')
+            ->selectRaw('products.category_id, COUNT(*) AS matches')
+            ->groupBy('products.category_id')
+            ->pluck('matches', 'category_id');
+        $categories = Category::query()
+            ->where('is_active', true)
+            ->whereKey($categoryCounts->keys())
+            ->get(['id', 'name', 'slug'])
+            ->map(fn (Category $category): array => ['slug' => $category->slug, 'name' => $category->name, 'count' => (int) $categoryCounts[$category->id]])
+            ->sortByDesc('count')
+            ->take(4);
+
+        return [
+            'names' => $names->map(fn (object $row): array => ['name' => self::withoutParenthetical($row->name), 'count' => (int) $row->matches])->all(),
+            'categories' => $categories->values()->all(),
+            'total' => (clone $matching)->count(),
+        ];
     }
 
     /**
@@ -81,6 +139,7 @@ class CatalogQuery
      *     min_price?: string|int|float|null,
      *     max_price?: string|int|float|null,
      *     in_stock?: bool|int|string|null,
+     *     no_prescription?: bool|int|string|null,
      *     brands?: list<string>,
      *     conditions?: list<'new'|'refurbished'>,
      *     on_sale?: bool|int|string|null,
@@ -102,8 +161,7 @@ class CatalogQuery
         $searchPrefix = $escapedSearch.'%';
         $searchTerm = '%'.$escapedSearch.'%';
         $ingredients = $search === '' ? null : self::ingredientSearch($search, $searchPrefix);
-        $genericMatch = $ingredients === null ? '1 = 0' : '('.implode(' OR ', array_fill(0, count($ingredients['terms']), "LOWER(products.generic_name) LIKE ? ESCAPE '!'")).')';
-        $genericBindings = $ingredients === null ? [] : array_map(fn (string $term): string => '%'.self::escapeLike($term).'%', $ingredients['terms']);
+        [$genericMatch, $genericBindings] = self::genericMatch($ingredients);
 
         $categoryProducts = self::publishedProducts()
             ->when($seller, fn (Builder $query) => $query->whereBelongsTo($seller))
@@ -111,18 +169,7 @@ class CatalogQuery
             ->when($branch, fn (Builder $query) => $query->whereHas('branchStocks', fn (Builder $stock) => $stock->where('store_id', $branch->id)->where('quantity', '>', 0)));
 
         $catalogProducts = (clone $categoryProducts)
-            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
-                ->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$searchTerm])
-                ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$searchTerm])
-                ->orWhereRaw("LOWER(products.brand) LIKE ? ESCAPE '!'", [$searchTerm])
-                // Keywords are saved lowercase, so they compare without LOWER().
-                ->orWhereRaw("products.search_keywords LIKE ? ESCAPE '!'", [$searchTerm])
-                ->orWhereRaw($genericMatch, $genericBindings)
-                ->orWhereHas('store', fn (Builder $store) => $store
-                    ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
-                    ->orWhereHas('tenant', fn (Builder $tenant) => $tenant
-                        ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
-                        ->orWhereHas('members.user', fn (Builder $seller) => $seller->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm]))))));
+            ->when($search !== '', fn ($query) => self::whereMatchesSearch($query, $searchTerm, $genericMatch, $genericBindings));
 
         $products = (clone $catalogProducts)
             ->select(['id', 'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'dosage_form', 'strength', 'requires_prescription', 'slug', 'price', 'compare_at_price', 'brand', 'condition', 'free_shipping', 'stock_quantity', 'status', 'created_at'])
@@ -138,6 +185,7 @@ class CatalogQuery
             ->when(isset($filters['min_price']) && $filters['min_price'] !== null, fn ($query) => $query->where('price', '>=', $filters['min_price']))
             ->when(isset($filters['max_price']) && $filters['max_price'] !== null, fn ($query) => $query->where('price', '<=', $filters['max_price']))
             ->when(! empty($filters['in_stock']), fn ($query) => $query->where('stock_quantity', '>', 0))
+            ->when(! empty($filters['no_prescription']), fn (Builder $query) => $query->where('requires_prescription', false))
             ->when($filters['brands'] ?? [], fn (Builder $query, array $brands) => $query->whereIn('brand', $brands))
             ->when($filters['conditions'] ?? [], fn (Builder $query, array $conditions) => $query->whereIn('condition', $conditions))
             ->when(! empty($filters['on_sale']), fn (Builder $query) => $query->whereNotNull('compare_at_price')->whereColumn('compare_at_price', '>', 'price'))
@@ -309,6 +357,47 @@ class CatalogQuery
     private static function withoutParenthetical(string $value): string
     {
         return trim(preg_replace('/\s*\([^)]*\)/', '', $value));
+    }
+
+    /**
+     * The `generic_name` condition an ingredient search adds, with its bindings; never true
+     * without a search.
+     *
+     * @param  array{terms: list<string>}|null  $ingredients
+     * @return array{0: string, 1: list<string>}
+     */
+    private static function genericMatch(?array $ingredients): array
+    {
+        if ($ingredients === null) {
+            return ['1 = 0', []];
+        }
+
+        return [
+            '('.implode(' OR ', array_fill(0, count($ingredients['terms']), "LOWER(products.generic_name) LIKE ? ESCAPE '!'")).')',
+            array_map(fn (string $term): string => '%'.self::escapeLike($term).'%', $ingredients['terms']),
+        ];
+    }
+
+    /**
+     * What a typed search matches: name, description, brand, keywords, generic name (with its
+     * aliases), or the branch, company or staff name.
+     *
+     * @param  list<string>  $genericBindings
+     */
+    private static function whereMatchesSearch(Builder $query, string $searchTerm, string $genericMatch, array $genericBindings): Builder
+    {
+        return $query->where(fn (Builder $query) => $query
+            ->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$searchTerm])
+            ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$searchTerm])
+            ->orWhereRaw("LOWER(products.brand) LIKE ? ESCAPE '!'", [$searchTerm])
+            // Keywords are saved lowercase, so they compare without LOWER().
+            ->orWhereRaw("products.search_keywords LIKE ? ESCAPE '!'", [$searchTerm])
+            ->orWhereRaw($genericMatch, $genericBindings)
+            ->orWhereHas('store', fn (Builder $store) => $store
+                ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
+                ->orWhereHas('tenant', fn (Builder $tenant) => $tenant
+                    ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
+                    ->orWhereHas('members.user', fn (Builder $seller) => $seller->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])))));
     }
 
     private static function escapeLike(string $value): string

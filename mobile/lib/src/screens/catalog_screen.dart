@@ -8,11 +8,11 @@ import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../core/formatters.dart';
 import '../models/models.dart';
-import '../providers/auth_providers.dart';
 import '../providers/catalog_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/product_feed.dart';
 import '../widgets/shell.dart';
 import '../widgets/store_locator.dart';
 
@@ -24,76 +24,23 @@ class CatalogScreen extends ConsumerStatefulWidget {
 }
 
 class _CatalogScreenState extends ConsumerState<CatalogScreen> {
-  final _searchController = TextEditingController();
-  final _searchFocus = FocusNode();
   final _scrollController = ScrollController();
   final _productsHeadingKey = GlobalKey();
-  Timer? _suggestDebounce;
-  List<Product> _suggestions = const [];
-  String _suggestionsQuery = '';
-  bool _suggestionsLoading = false;
-  int _suggestionRequest = 0;
-
-  static const _suggestionMinLength = 2;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchFocus.addListener(_onSearchFocusChanged);
-  }
-
-  void _onSearchFocusChanged() {
-    if (!_searchFocus.hasFocus) {
-      _hideSuggestions();
-    } else if (!ref.read(searchHistoryProvider).isEmpty) {
-      _scrollToTop();
-    }
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  void _submitSearch(String value) {
-    final trimmed = value.trim();
-    _searchFocus.unfocus();
-    _hideSuggestions();
-    ref.read(searchHistoryProvider.notifier).recordSearch(trimmed);
-    ref.read(catalogFilterProvider.notifier).setQuery(trimmed);
-  }
-
-  void _clearSearch() {
-    _searchController.clear();
-    _hideSuggestions();
-    ref.read(catalogFilterProvider.notifier).setQuery('');
-    _searchFocus.requestFocus();
-  }
-
   void _clearFilters() {
-    _searchController.clear();
-    _searchFocus.unfocus();
-    _hideSuggestions();
     ref.read(catalogFilterProvider.notifier)
       ..setQuery('')
       ..setCategory(null);
   }
 
   void _showDeals() {
-    _searchController.clear();
-    _searchFocus.unfocus();
-    _hideSuggestions();
     ref.read(catalogFilterProvider.notifier).showDeals();
   }
 
   void _selectCategory(String? slug) {
-    _searchFocus.unfocus();
-    _hideSuggestions();
     ref.read(catalogFilterProvider.notifier).setCategory(slug);
   }
 
   void _browseCategory(String slug) {
-    _searchController.clear();
-    _searchFocus.unfocus();
-    _hideSuggestions();
     ref.read(catalogFilterProvider.notifier)
       ..setQuery('')
       ..setCategory(slug);
@@ -115,38 +62,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
 
   @override
   void dispose() {
-    _suggestDebounce?.cancel();
-    _searchFocus
-      ..removeListener(_onSearchFocusChanged)
-      ..dispose();
-    _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _onSearchChanged(String value) {
-    _suggestDebounce?.cancel();
-    final query = value.trim();
-    // Emptying the box ends the search; the clear button is gone by then, so nothing else would.
-    if (query.isEmpty && ref.read(catalogFilterProvider).query.isNotEmpty) {
-      ref.read(catalogFilterProvider.notifier).setQuery('');
-    }
-    if (query.length < _suggestionMinLength) {
-      _hideSuggestions();
-      return;
-    }
-
-    _suggestionRequest++;
-    setState(() {
-      _suggestionsQuery = query;
-      _suggestions = const [];
-      _suggestionsLoading = true;
-    });
-    _scrollToTop();
-
-    _suggestDebounce = Timer(const Duration(milliseconds: 220), () {
-      _loadSuggestions(query);
-    });
   }
 
   void _scrollToTop() {
@@ -164,70 +81,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
     );
-  }
-
-  Future<void> _loadSuggestions(String query) async {
-    final request = ++_suggestionRequest;
-
-    try {
-      final items = await ref.read(apiClientProvider).suggestedProducts(query);
-
-      if (!mounted || request != _suggestionRequest) {
-        return;
-      }
-
-      setState(() {
-        _suggestions = items.take(5).toList(growable: false);
-        _suggestionsLoading = false;
-      });
-    } catch (_) {
-      if (!mounted || request != _suggestionRequest) {
-        return;
-      }
-
-      setState(() {
-        _suggestions = const [];
-        _suggestionsLoading = false;
-      });
-    }
-  }
-
-  void _hideSuggestions() {
-    _suggestDebounce?.cancel();
-    _suggestionRequest++;
-    ref.read(apiClientProvider).cancelProductSuggestions();
-
-    if (_suggestions.isEmpty &&
-        !_suggestionsLoading &&
-        _suggestionsQuery.isEmpty) {
-      return;
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _suggestions = const [];
-      _suggestionsQuery = '';
-      _suggestionsLoading = false;
-    });
-  }
-
-  void _openSuggestion(Product product) {
-    _hideSuggestions();
-    _searchFocus.unfocus();
-    ref.read(searchHistoryProvider.notifier).recordViewed(product);
-    context.push('/product/${product.store?.slug ?? ''}/${product.slug}');
-  }
-
-  void _autocompleteSuggestion(Product product) {
-    _searchController.value = TextEditingValue(
-      text: product.name,
-      selection: TextSelection.collapsed(offset: product.name.length),
-    );
-    _searchFocus.requestFocus();
-    _onSearchChanged(product.name);
   }
 
   Future<void> _refreshProducts() async {
@@ -249,7 +102,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       }
     });
     final filter = ref.watch(catalogFilterProvider);
-    final history = ref.watch(searchHistoryProvider);
     final products = ref.watch(productsProvider);
     final categories = ref.watch(categoriesProvider);
     final theme = Theme.of(context);
@@ -269,157 +121,65 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final refreshing = products.isLoading && feed != null;
 
     final scheme = theme.colorScheme;
-    // One height for the field and its button so the header reads as a single row;
-    // it grows a little with large text instead of clipping it.
     final headerScaler = MediaQuery.textScalerOf(context)
         .clamp(maxScaleFactor: 1.6);
     final barHeight = headerScaler.scale(48).clamp(48.0, 56.0);
-    // Pad the single text line evenly so the field fills the pill (one 48dp tap target)
-    // with hint and typed text centred; textAlignVertical alone did not centre it here.
-    final inputLine = TextPainter(
-      text: TextSpan(text: 'Ag', style: theme.textTheme.bodyLarge),
-      textDirection: TextDirection.ltr,
-      textScaler: headerScaler,
-    )..layout();
-    final inputPadding = ((barHeight - inputLine.height) / 2).clamp(0.0, 24.0);
-    inputLine.dispose();
-    final trailingSize = barHeight - 12;
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final searchListenables = Listenable.merge([
-      _searchController,
-      _searchFocus,
-    ]);
-    // Pill search: soft white field on the brand band, a focus ring instead of a
-    // permanent border, and a round inset submit button.
-    final searchBar = ListenableBuilder(
-      listenable: searchListenables,
-      builder: (context, child) {
-        final hasFocus = _searchFocus.hasFocus;
-        final hasText = _searchController.text.isNotEmpty;
-        final active = hasFocus || hasText || filter.query.isNotEmpty;
-
-        return AnimatedContainer(
-          duration: reduceMotion
-              ? Duration.zero
-              : const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          height: barHeight,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(barHeight / 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: hasFocus ? 0.16 : 0.08),
-                blurRadius: hasFocus ? 16 : 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          // Paint the ring over the field to preserve 48dp button touch areas.
-          foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(barHeight / 2),
-            border: Border.all(
-              color: hasFocus ? scheme.secondary : Colors.transparent,
-              width: 2,
-            ),
-          ),
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsetsDirectional.only(start: 16, end: 8),
-                child: Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: active ? scheme.primary : scheme.onSurfaceVariant,
+    // Looks like the search field, but opens the full search page, as tapping search does in
+    // most shopping apps; the page has the keyboard, history and suggestions.
+    final searchBar = Semantics(
+      button: true,
+      label: 'Search medicines',
+      excludeSemantics: true,
+      child: Material(
+        color: scheme.surfaceContainerLowest,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/search'),
+          child: SizedBox(
+            height: barHeight,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 16, end: 10),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Semantics(
-                  label: 'Search medicines',
-                  child: TextField(
-                    controller: _searchController,
-                    focusNode: _searchFocus,
-                    onChanged: _onSearchChanged,
-                    onSubmitted: _submitSearch,
-                    onTapOutside: (_) => _searchFocus.unfocus(),
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    maxLines: 1,
+                Expanded(
+                  child: DefaultTextStyle.merge(
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
                     ),
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hint: DefaultTextStyle.merge(
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        child: ExcludeSemantics(
-                          child: !hasText && !hasFocus
-                              ? const _ScrollingSearchPlaceholder()
-                              : const Text('Search medicines'),
-                        ),
-                      ),
-                      filled: false,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        vertical: inputPadding,
-                      ),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
+                    child: const _ScrollingSearchPlaceholder(),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 6),
+                  child: Container(
+                    width: barHeight - 12,
+                    height: barHeight - 12,
+                    decoration: BoxDecoration(
+                      color: scheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.search_rounded,
+                      size: 22,
+                      color: scheme.onPrimary,
                     ),
                   ),
                 ),
-              ),
-              // Clear appears once typing; the Search button sits cleanly inset on the right,
-              // collapsing to an icon only when typing on a narrow/large-text screen.
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 2),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (hasText)
-                      IconButton(
-                        tooltip: 'Clear search',
-                        onPressed: _clearSearch,
-                        color: scheme.onSurfaceVariant,
-                        style: IconButton.styleFrom(
-                          fixedSize: Size.square(trailingSize),
-                          minimumSize: Size.square(trailingSize),
-                          tapTargetSize: MaterialTapTargetSize.padded,
-                          padding: EdgeInsets.zero,
-                        ),
-                        icon: const Icon(Icons.close_rounded, size: 20),
-                      ),
-                    IconButton.filled(
-                      tooltip: 'Search',
-                      onPressed: () => _submitSearch(_searchController.text),
-                      style: IconButton.styleFrom(
-                        backgroundColor: scheme.primary,
-                        foregroundColor: scheme.onPrimary,
-                        fixedSize: Size.square(trailingSize),
-                        minimumSize: Size.square(trailingSize),
-                        tapTargetSize: MaterialTapTargetSize.padded,
-                        padding: EdgeInsets.zero,
-                        shape: const CircleBorder(),
-                      ),
-                      icon: Icon(
-                        hasText
-                            ? Icons.arrow_forward_rounded
-                            : Icons.search_rounded,
-                        size: 22,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
 
     final slab = brandSlab(scheme);
@@ -487,18 +247,15 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final scaler = MediaQuery.textScalerOf(context);
-                final width = constraints.maxWidth - 32;
-                final columns = scaler.scale(14) > 21 && width < 600
-                    ? 1
-                    : (width / 190).floor().clamp(2, 4);
-                final cardWidth = (width - (columns - 1) * 10) / columns;
-                final gridDelegate = SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  // Loading skeleton only; loaded cards hug their own height.
-                  mainAxisExtent: cardWidth + scaler.scale(157),
+                final grid = productGrid(context, constraints);
+                final feedSlivers = ProductFeedSlivers(
+                  context: context,
+                  ref: ref,
+                  gridDelegate: grid.delegate,
+                  onClearFilters: _clearFilters,
+                  onBrowseCategory: _browseCategory,
+                  onBackToTop: _scrollToTop,
+                  headingKey: _productsHeadingKey,
                 );
 
                 return NotificationListener<ScrollNotification>(
@@ -519,44 +276,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       slivers: [
-                        if (_suggestionsQuery.length >= _suggestionMinLength)
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                            sliver: SliverToBoxAdapter(
-                              child: _SearchSuggestionsPanel(
-                                query: _suggestionsQuery,
-                                suggestions: _suggestions,
-                                loading: _suggestionsLoading,
-                                onSelected: _openSuggestion,
-                                onAutocomplete: _autocompleteSuggestion,
-                                onSeeAll: () {
-                                  _searchController.text = _suggestionsQuery;
-                                  _submitSearch(_suggestionsQuery);
-                                },
-                              ),
-                            ),
-                          )
-                        else if (_searchFocus.hasFocus && !history.isEmpty)
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                            sliver: SliverToBoxAdapter(
-                              child: _SearchHistoryPanel(
-                                history: history,
-                                onSelectSearch: (term) {
-                                  _searchController.text = term;
-                                  _submitSearch(term);
-                                },
-                                onRemoveSearch: (term) => ref
-                                    .read(searchHistoryProvider.notifier)
-                                    .removeSearch(term),
-                                onSelectProduct: _openSuggestion,
-                                onAutocompleteProduct: _autocompleteSuggestion,
-                                onClear: () => ref
-                                    .read(searchHistoryProvider.notifier)
-                                    .clear(),
-                              ),
-                            ),
-                          ),
                         SliverToBoxAdapter(
                           child: Material(
                             type: MaterialType.transparency,
@@ -651,14 +370,12 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                               ),
                             )
                           else if (feed != null)
-                            ..._productSlivers(
+                            ...feedSlivers.products(
                               feed,
-                              theme,
                               categories.value ?? const [],
-                              gridDelegate,
                             )
                           else
-                            ..._productSkeletonSlivers(gridDelegate, cardWidth),
+                            ...feedSlivers.skeleton(grid.cardWidth),
                         ],
                       ],
                     ),
@@ -670,388 +387,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         ],
       ),
     );
-  }
-
-  List<Widget> _productSlivers(
-    ProductFeed feed,
-    ThemeData theme,
-    List<Category> categories,
-    SliverGridDelegateWithFixedCrossAxisCount gridDelegate,
-  ) {
-    final products = feed.products;
-
-    if (products.isEmpty) {
-      final filtered = !feed.filter.isDefault;
-      final suggestions = categories
-          .where((category) => category.productCount > 0)
-          .take(4)
-          .toList(growable: false);
-      final query = feed.filter.query;
-      final elsewhere = query.isEmpty
-          ? const <Product>[]
-          : ref.watch(elsewhereSearchProvider(query)).value ?? const [];
-
-      if (elsewhere.isNotEmpty) {
-        return [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 28, 16, 4),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      'Not at your branch',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Other branches have these. Open one to see the nearest branch that has it.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SliverList.list(
-            children: [
-              for (final product in elsewhere)
-                ListTile(
-                  leading: NetworkThumb(
-                    url: product.thumbnailUrl,
-                    width: 48,
-                    height: 48,
-                  ),
-                  title: Text(product.name),
-                  subtitle: Text(money(product.effectivePrice)),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => context.push(
-                    '/product/${product.store?.slug ?? ''}/${product.slug}',
-                  ),
-                ),
-            ],
-          ),
-        ];
-      }
-
-      return [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: EmptyState(
-            icon: Icons.search_off_rounded,
-            title: filtered ? 'Nothing matches that search' : 'No products yet',
-            message: filtered
-                ? 'Try a different word, or start from a category.'
-                : 'Pull down to refresh and see what is new.',
-            action: filtered
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      OutlinedButton(
-                        onPressed: _clearFilters,
-                        child: const Text('Clear filters'),
-                      ),
-                      if (suggestions.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        Text(
-                          'Browse categories',
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final category in suggestions)
-                              ActionChip(
-                                label: Text(category.name),
-                                onPressed: () => _browseCategory(category.slug),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  )
-                : OutlinedButton(
-                    onPressed: () => ref.invalidate(productsProvider),
-                    child: const Text('Refresh products'),
-                  ),
-          ),
-        ),
-      ];
-    }
-
-    return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
-        sliver: SliverToBoxAdapter(
-          // Same row shape as the loading skeleton, so nothing jumps when products arrive.
-          child: Row(
-            key: _productsHeadingKey,
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    feed.filter.query.isNotEmpty
-                        ? 'Results for “${feed.filter.query}”'
-                        : feed.filter.onSale
-                        ? 'Deals'
-                        : categories
-                                  .where(
-                                    (category) =>
-                                        category.slug == feed.filter.category,
-                                  )
-                                  .firstOrNull
-                                  ?.name ??
-                              'Popular products',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                '${feed.total > 0 ? feed.total : products.length} ${(feed.total > 0 ? feed.total : products.length) == 1 ? 'product' : 'products'}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      if (feed.searchIngredient != null)
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          sliver: SliverToBoxAdapter(
-            child: Text(
-              'Showing results for ${feed.searchIngredient} (${feed.filter.query})',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-      // An ingredient search comes back grouped ("Other brands of …", "Also contains …");
-      // each group gets its heading and its own masonry block.
-      for (final (index, section) in _searchSections(products).indexed) ...[
-        if (section.first.searchSection != null)
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(16, index == 0 ? 0 : 4, 16, 12),
-            sliver: SliverToBoxAdapter(
-              child: Semantics(
-                header: true,
-                child: Text(
-                  section.first.searchSection!,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        _productMasonry(section, gridDelegate),
-      ],
-      if (feed.loadMoreFailed)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            child: Column(
-              children: [
-                const Text('Could not load more products.'),
-                TextButton(
-                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                  onPressed: () =>
-                      ref.read(productsProvider.notifier).loadMore(retry: true),
-                  child: const Text('Retry loading more'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      if (feed.loadingMore)
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: 28),
-            child: Center(
-              child: SizedBox.square(
-                dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          ),
-        ),
-      if (!feed.hasMore)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-            child: Column(
-              children: [
-                Text(
-                  'You have seen all ${products.length} ${products.length == 1 ? 'product' : 'products'}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton.icon(
-                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                  onPressed: _scrollToTop,
-                  icon: const Icon(Icons.arrow_upward_rounded, size: 18),
-                  label: const Text('Back to top'),
-                ),
-              ],
-            ),
-          ),
-        ),
-    ];
-  }
-
-  /// Consecutive products that share a search heading. One run when nothing is grouped.
-  List<List<Product>> _searchSections(List<Product> products) {
-    final sections = <List<Product>>[];
-    for (final product in products) {
-      if (sections.isEmpty ||
-          sections.last.first.searchSection != product.searchSection) {
-        sections.add([product]);
-      } else {
-        sections.last.add(product);
-      }
-    }
-
-    return sections;
-  }
-
-  // Rows of equal-height cards: each row takes its tallest card's height and
-  // the cart buttons sit on one line, so prices and actions are easy to compare.
-  Widget _productMasonry(
-    List<Product> products,
-    SliverGridDelegateWithFixedCrossAxisCount gridDelegate,
-  ) {
-    final columns = gridDelegate.crossAxisCount;
-
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      sliver: SliverList.builder(
-        itemCount: (products.length + columns - 1) ~/ columns,
-        itemBuilder: (context, row) {
-          final rowProducts = products
-              .skip(row * columns)
-              .take(columns)
-              .toList();
-
-          return Padding(
-            key: ValueKey(rowProducts.first.id),
-            padding: EdgeInsets.only(bottom: gridDelegate.mainAxisSpacing),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var column = 0; column < columns; column++) ...[
-                    if (column > 0)
-                      SizedBox(width: gridDelegate.crossAxisSpacing),
-                    Expanded(
-                      child: column < rowProducts.length
-                          ? ProductCard(
-                              product: rowProducts[column],
-                              discovery: true,
-                              showAddToCart: true,
-                              fillHeight: true,
-                              onTap: () => context.push(
-                                '/product/${rowProducts[column].store?.slug ?? ''}/${rowProducts[column].slug}',
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  List<Widget> _productSkeletonSlivers(
-    SliverGridDelegateWithFixedCrossAxisCount gridDelegate,
-    double cardWidth,
-  ) {
-    return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 28, 16, 12),
-        sliver: SliverToBoxAdapter(
-          child: Semantics(
-            container: true,
-            liveRegion: true,
-            label: 'Loading products',
-            child: ExcludeSemantics(
-              child: Row(
-                children: [
-                  SkeletonBox(width: 168, height: 20),
-                  const Spacer(),
-                  SkeletonBox(width: 64, height: 14),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-        sliver: SliverGrid(
-          gridDelegate: gridDelegate,
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => ExcludeSemantics(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Expanded(
-                        child: SkeletonBox(
-                          width: double.infinity,
-                          radius: appSurfaceRadius,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SkeletonBox(width: cardWidth - 24, height: 12),
-                      const SizedBox(height: 6),
-                      SkeletonBox(width: cardWidth * 0.58, height: 12),
-                      const SizedBox(height: 12),
-                      SkeletonBox(width: cardWidth * 0.48, height: 16),
-                      const SizedBox(height: 16),
-                      SkeletonBox(width: cardWidth * 0.58, height: 10),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            childCount: gridDelegate.crossAxisCount * 3,
-          ),
-        ),
-      ),
-    ];
   }
 }
 
@@ -1130,326 +465,6 @@ class _ScrollingSearchPlaceholderState
       ),
     ),
   );
-}
-
-class _SearchHistoryPanel extends StatelessWidget {
-  const _SearchHistoryPanel({
-    required this.history,
-    required this.onSelectSearch,
-    required this.onRemoveSearch,
-    required this.onSelectProduct,
-    required this.onAutocompleteProduct,
-    required this.onClear,
-  });
-
-  final SearchHistory history;
-  final ValueChanged<String> onSelectSearch;
-  final ValueChanged<String> onRemoveSearch;
-  final ValueChanged<Product> onSelectProduct;
-  final ValueChanged<Product> onAutocompleteProduct;
-  final VoidCallback onClear;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final viewed = history.recentlyViewed.take(5).toList(growable: false);
-
-    return TextFieldTapRegion(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(appSurfaceRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: theme.colorScheme.surfaceContainerLowest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(appSurfaceRadius),
-            side: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Semantics(
-            container: true,
-            label: 'Search history',
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 8, 2),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          history.recentSearches.isNotEmpty
-                              ? 'Recent searches'
-                              : 'Recently viewed',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: onClear,
-                        style: TextButton.styleFrom(
-                          minimumSize: const Size(48, 36),
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          tapTargetSize: MaterialTapTargetSize.padded,
-                        ),
-                        child: const Text('Clear history'),
-                      ),
-                    ],
-                  ),
-                ),
-                if (history.recentSearches.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final term in history.recentSearches)
-                          InputChip(
-                            avatar: Icon(
-                              Icons.history_rounded,
-                              size: 16,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            label: Text(term),
-                            onPressed: () => onSelectSearch(term),
-                            onDeleted: () => onRemoveSearch(term),
-                            deleteButtonTooltipMessage: 'Remove $term',
-                            visualDensity: VisualDensity.compact,
-                            materialTapTargetSize: MaterialTapTargetSize.padded,
-                          ),
-                      ],
-                    ),
-                  ),
-                if (history.recentSearches.isNotEmpty && viewed.isNotEmpty) ...[
-                  const Divider(height: 1),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-                    child: Text(
-                      'Recently viewed',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-                for (var index = 0; index < viewed.length; index++) ...[
-                  if (index > 0) const Divider(height: 1),
-                  _SuggestionTile(
-                    product: viewed[index],
-                    onTap: () => onSelectProduct(viewed[index]),
-                    onAutocomplete: () => onAutocompleteProduct(viewed[index]),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchSuggestionsPanel extends StatelessWidget {
-  const _SearchSuggestionsPanel({
-    required this.query,
-    required this.suggestions,
-    required this.loading,
-    required this.onSelected,
-    required this.onAutocomplete,
-    required this.onSeeAll,
-  });
-
-  final String query;
-  final List<Product> suggestions;
-  final bool loading;
-  final ValueChanged<Product> onSelected;
-  final ValueChanged<Product> onAutocomplete;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return TextFieldTapRegion(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(appSurfaceRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Material(
-          color: theme.colorScheme.surfaceContainerLowest,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(appSurfaceRadius),
-            side: BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Semantics(
-            container: true,
-            label: 'Search suggestions',
-            child: loading && suggestions.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    child: Row(
-                      children: [
-                        const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Looking for products…',
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (
-                        var index = 0;
-                        index < suggestions.length;
-                        index++
-                      ) ...[
-                        if (index > 0) const Divider(height: 1),
-                        _SuggestionTile(
-                          product: suggestions[index],
-                          onTap: () => onSelected(suggestions[index]),
-                          onAutocomplete: () =>
-                              onAutocomplete(suggestions[index]),
-                        ),
-                      ],
-                      if (suggestions.isNotEmpty) const Divider(height: 1),
-                      ListTile(
-                        leading: Icon(
-                          Icons.search_rounded,
-                          color: theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          'See all results for "$query"',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        trailing: Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 18,
-                          color: theme.colorScheme.primary,
-                        ),
-                        onTap: onSeeAll,
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SuggestionTile extends StatelessWidget {
-  const _SuggestionTile({
-    required this.product,
-    required this.onTap,
-    required this.onAutocomplete,
-  });
-
-  final Product product;
-  final VoidCallback onTap;
-  final VoidCallback onAutocomplete;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final largeText = MediaQuery.textScalerOf(context).scale(14) > 21;
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            NetworkThumb(
-              url: product.thumbnailUrl,
-              width: 44,
-              height: 44,
-              radius: appDetailRadius,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                  if (largeText) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      money(product.effectivePrice),
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            if (!largeText) ...[
-              const SizedBox(width: 8),
-              Text(
-                money(product.effectivePrice),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-            IconButton(
-              tooltip: 'Complete with ${product.name}',
-              onPressed: onAutocomplete,
-              icon: Icon(
-                Icons.north_west_rounded,
-                size: 18,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// "Deals for you": the deepest markdowns in the loaded feed, in a swipeable row.
@@ -1850,7 +865,6 @@ class _CampaignCard extends StatelessWidget {
 /// Head office names categories freely, so the icon follows words in the name.
 /// Keys match whole words (plural allowed); a trailing `*` matches a word prefix,
 /// so "Kidney Care" never gets the baby icon nor "IV Fluids" the cold icon.
-@visibleForTesting
 IconData categoryIcon(String name) {
   final lower = name.toLowerCase();
   bool has(List<String> keys) => keys.any((key) {

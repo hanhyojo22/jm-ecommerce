@@ -9,6 +9,7 @@ import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
 import 'screens/saved_screen.dart';
+import 'screens/search_screen.dart';
 import 'screens/store_screen.dart';
 import 'widgets/shell.dart';
 
@@ -31,6 +32,7 @@ final appRouter = GoRouter(
       builder: (context, state) =>
           StoreScreen(slug: state.pathParameters['slug'] ?? ''),
     ),
+    GoRoute(path: '/search', builder: (context, state) => const SearchScreen()),
     GoRoute(path: '/cart', builder: (context, state) => const CartScreen()),
     GoRoute(
       path: '/checkout',

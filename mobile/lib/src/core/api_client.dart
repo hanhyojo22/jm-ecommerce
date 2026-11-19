@@ -96,6 +96,7 @@ class ApiClient {
     String? seller,
     String? sort,
     bool onSale = false,
+    bool noPrescription = false,
     int page = 1,
     int perPage = 20,
     String? branch,
@@ -123,6 +124,7 @@ class ApiClient {
             if (seller != null && seller.isNotEmpty) 'seller': seller,
             if (sort != null && sort.isNotEmpty) 'sort': sort,
             if (onSale) 'on_sale': 1,
+            if (noPrescription) 'no_prescription': 1,
             'branch': ?branch,
             'page': page,
             'per_page': perPage,
@@ -148,45 +150,75 @@ class ApiClient {
     }
   }
 
-  Future<List<Product>> suggestedProducts(String query) async {
+  /// Names, categories and products for what the shopper has typed so far. Each part is
+  /// optional, so an older server that only sends `items` still works.
+  Future<SearchSuggestions> searchSuggestions(
+    String query, {
+    String? branch,
+  }) async {
     _productSuggestionsCancelToken?.cancel('Replaced by newer suggestions.');
     final cancelToken = CancelToken();
     _productSuggestionsCancelToken = cancelToken;
 
     try {
-      final body = await _raw(
-        'GET',
-        '/products/suggestions',
-        query: {'q': query},
-        cancelToken: cancelToken,
+      final body = mapOf(
+        await _raw(
+          'GET',
+          '/products/suggestions',
+          query: {'q': query, 'branch': ?branch},
+          cancelToken: cancelToken,
+        ),
       );
-      final items = body is Map ? body['items'] : null;
 
-      return listOf(items)
-          .map((json) {
-            return Product(
-              id: str(json['product_id']),
-              name: str(json['name']),
-              slug: str(json['slug']),
-              price: str(json['price']),
-              effectivePrice: str(json['price']),
-              inStock: !boolean(json['sold_out']),
-              hasVariants: false,
-              requiresVariantSelection: false,
-              freeShipping: false,
-              stockQuantity: boolean(json['sold_out']) ? 0 : 1,
-              soldQuantity: 0,
-              ratingAverage: 0,
-              ratingCount: 0,
-              thumbnailUrl: json['image_url'] as String?,
-              store: StoreInfo(
-                id: '',
-                name: str(json['store_name']),
-                slug: str(json['store_slug']),
+      return SearchSuggestions(
+        names: listOf(body['names'])
+            .map(
+              (json) =>
+                  (name: str(json['name']), count: integer(json['count'])),
+            )
+            .where((name) => name.name.isNotEmpty)
+            .toList(growable: false),
+        categories: listOf(body['categories'])
+            .map(
+              (json) => (
+                slug: str(json['slug']),
+                name: str(json['name']),
+                count: integer(json['count']),
               ),
-            );
-          })
-          .toList(growable: false);
+            )
+            .toList(growable: false),
+        products: listOf(body['items'])
+            .map(
+              (json) => (
+                product: Product(
+                  id: str(json['product_id']),
+                  name: str(json['name']),
+                  slug: str(json['slug']),
+                  price: str(json['price']),
+                  effectivePrice: str(json['price']),
+                  inStock: !boolean(json['sold_out']),
+                  hasVariants: false,
+                  requiresVariantSelection: false,
+                  freeShipping: false,
+                  stockQuantity: boolean(json['sold_out']) ? 0 : 1,
+                  soldQuantity: 0,
+                  ratingAverage: 0,
+                  ratingCount: 0,
+                  thumbnailUrl: json['image_url'] as String?,
+                  genericName: json['generic_name'] as String?,
+                  requiresPrescription: boolean(json['requires_prescription']),
+                  store: StoreInfo(
+                    id: '',
+                    name: str(json['store_name']),
+                    slug: str(json['store_slug']),
+                  ),
+                ),
+                atBranch: json['at_branch'] as bool?,
+              ),
+            )
+            .toList(growable: false),
+        total: body['total'] is num ? integer(body['total']) : null,
+      );
     } finally {
       if (identical(_productSuggestionsCancelToken, cancelToken)) {
         _productSuggestionsCancelToken = null;

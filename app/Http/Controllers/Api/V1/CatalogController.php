@@ -64,9 +64,14 @@ class CatalogController extends Controller
 
     public function suggestions(Request $request): JsonResponse
     {
-        $search = $request->validate(['q' => ['nullable', 'string', 'max:100']])['q'] ?? '';
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'branch' => ['nullable', 'string', 'max:64'],
+        ]);
+        $search = $data['q'] ?? '';
+        $branch = $this->branch($data['branch'] ?? null);
 
-        return response()->json(['items' => CatalogQuery::suggestions($search)->map(function (Product $product): array {
+        return response()->json([...CatalogQuery::suggestionGroups($search, $branch), 'items' => CatalogQuery::suggestions($search, $branch)->map(function (Product $product) use ($branch): array {
             $price = (string) $product->price;
 
             if (
@@ -85,6 +90,9 @@ class CatalogController extends Controller
                 'image_url' => $product->thumbnail ? Storage::disk('product_images')->url($product->thumbnail->path) : null,
                 'price' => $price,
                 'sold_out' => $product->stock_quantity < 1,
+                'generic_name' => $product->generic_name,
+                'requires_prescription' => (bool) $product->requires_prescription,
+                'at_branch' => $branch === null ? null : (bool) $product->at_branch,
             ];
         })->all()]);
     }
@@ -329,7 +337,7 @@ class CatalogController extends Controller
     {
         // A query string sends "false", which is a non-empty string; normalize it to a real flag
         // before validation so the rule below sees "1" or "0".
-        foreach (['in_stock', 'on_sale', 'with_photos'] as $flag) {
+        foreach (['in_stock', 'no_prescription', 'on_sale', 'with_photos'] as $flag) {
             if ($request->has($flag)) {
                 $request->merge([$flag => $request->boolean($flag) ? '1' : '0']);
             }
@@ -343,6 +351,7 @@ class CatalogController extends Controller
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
             'in_stock' => ['nullable', 'boolean'],
+            'no_prescription' => ['nullable', 'boolean'],
             'brands' => ['nullable', 'array', 'max:20'],
             'brands.*' => ['string', 'max:100', 'distinct'],
             'conditions' => ['nullable', 'array', 'max:2'],

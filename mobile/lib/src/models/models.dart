@@ -464,6 +464,28 @@ class ProductPage {
   bool get hasMore => page < lastPage;
 }
 
+/// What the search page lists while the shopper types.
+class SearchSuggestions {
+  const SearchSuggestions({
+    this.names = const [],
+    this.categories = const [],
+    this.products = const [],
+    this.total,
+  });
+
+  /// Generic names among the matches, e.g. "Paracetamol" with how many products have it.
+  final List<({String name, int count})> names;
+  final List<({String slug, String name, int count})> categories;
+
+  /// [atBranch] is null when no branch was sent.
+  final List<({Product product, bool? atBranch})> products;
+
+  /// How many results "See all" opens; null from a server that does not send it yet.
+  final int? total;
+
+  bool get isEmpty => names.isEmpty && categories.isEmpty && products.isEmpty;
+}
+
 class CartLine {
   const CartLine({
     required this.id,

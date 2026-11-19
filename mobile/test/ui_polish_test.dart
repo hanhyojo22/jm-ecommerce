@@ -497,6 +497,7 @@ class _StoreApi extends ApiClient {
     String? seller,
     String? sort,
     bool onSale = false,
+    bool noPrescription = false,
     int page = 1,
     int perPage = 20,
   }) async => ProductPage(

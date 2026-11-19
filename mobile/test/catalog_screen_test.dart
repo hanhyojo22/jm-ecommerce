@@ -4,6 +4,7 @@ import 'dart:ui' show SemanticsAction;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/core/location_service.dart';
@@ -14,6 +15,7 @@ import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 import 'package:jmmart/src/screens/catalog_screen.dart';
+import 'package:jmmart/src/screens/search_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
 
@@ -32,34 +34,6 @@ void main() {
 
     expect(find.text('Search generic or brand name'), findsOneWidget);
     expect(api.firstPageRequests, requests);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      isEmpty,
-    );
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('search placeholder pauses on focus and preserves typed text', (
-    tester,
-  ) async {
-    await _pumpCatalog(tester, _CatalogApi());
-    await tester.tap(find.byType(TextField));
-    await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Search generic or brand name'), findsNothing);
-    expect(find.text('Search medicines'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField), 'linen');
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      'linen',
-    );
-
-    tester.widget<TextField>(find.byType(TextField)).focusNode!.unfocus();
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Search generic or brand name'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -133,8 +107,7 @@ void main() {
     final api = _CatalogApi();
     await _pumpCatalog(tester, api);
     api.pendingFirstPage = Completer<ProductPage>();
-    await tester.enterText(find.byType(TextField), 'bag');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.tap(find.text('Fashion'));
     await tester.pump();
 
     expect(find.byType(ProductCard), findsNothing);
@@ -225,39 +198,6 @@ void main() {
       reason:
           'Scrolling should lay out retained cards without rebuilding them.',
     );
-  });
-
-  testWidgets('a search from deep in the feed starts at the first result', (
-    tester,
-  ) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    final scroll = tester.widget<CustomScrollView>(
-      find.byType(CustomScrollView),
-    );
-    scroll.controller!.jumpTo(1200);
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'l');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
-
-    expect(scroll.controller!.offset, 0);
-    expect(find.text('Results for “l”').hitTestable(), findsOneWidget);
-  });
-
-  testWidgets('emptying the search box returns to the shop', (tester) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    await tester.enterText(find.byType(TextField), 'l');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
-    expect(find.text('Results for “l”'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField), '');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Results for “l”'), findsNothing);
-    expect(api.lastQuery, isEmpty);
   });
 
   test('overlapping pages do not repeat a product in the feed', () async {
@@ -373,25 +313,6 @@ void main() {
     }
   });
 
-  testWidgets('clearing a pending search keeps discovery unfiltered', (
-    tester,
-  ) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    await tester.enterText(find.byType(TextField), 'lamp');
-    await tester.pump();
-    await tester.tap(find.byTooltip('Clear search'));
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pumpAndSettle();
-
-    expect(api.lastQuery, isEmpty);
-    expect(find.text(_campaignTitle), findsOneWidget);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      isEmpty,
-    );
-  });
-
   testWidgets('categories without artwork remain visible and selectable', (
     tester,
   ) async {
@@ -440,12 +361,10 @@ void main() {
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -650));
     await tester.pumpAndSettle();
 
-    expect(
-      tester.getTopLeft(find.byType(TextField)).dy,
-      greaterThanOrEqualTo(0),
-    );
-    expect(tester.getBottomLeft(find.byType(TextField)).dy, lessThan(120));
-    expect(find.byType(TextField).hitTestable(), findsOneWidget);
+    final search = find.bySemanticsLabel('Search medicines');
+    expect(tester.getTopLeft(search).dy, greaterThanOrEqualTo(0));
+    expect(tester.getBottomLeft(search).dy, lessThan(120));
+    expect(search.hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -476,11 +395,9 @@ void main() {
       tester.getTopLeft(find.text('Popular products')).dy,
       lessThan(before),
     );
-    expect(
-      tester.getTopLeft(find.byType(TextField)).dy,
-      greaterThanOrEqualTo(0),
-    );
-    expect(find.byType(TextField).hitTestable(), findsOneWidget);
+    final search = find.bySemanticsLabel('Search medicines');
+    expect(tester.getTopLeft(search).dy, greaterThanOrEqualTo(0));
+    expect(search.hitTestable(), findsOneWidget);
   });
 
   testWidgets('without a known branch the shop asks for one first', (
@@ -650,70 +567,6 @@ void main() {
     },
   );
 
-  testWidgets('search suggestions offer a direct product and full results', (
-    tester,
-  ) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    await tester.enterText(find.byType(TextField), 'linen');
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pumpAndSettle();
-
-    expect(api.lastSuggestionQuery, 'linen');
-    expect(find.text('Linen weekend shirt'), findsOneWidget);
-    expect(find.text('See all results for "linen"'), findsOneWidget);
-
-    await tester.tap(find.text('See all results for "linen"'));
-    await tester.pumpAndSettle();
-
-    expect(api.lastQuery, 'linen');
-    expect(find.text('Results for “linen”'), findsOneWidget);
-    expect(find.text('See all results for "linen"'), findsNothing);
-  });
-
-  testWidgets('typing requests suggestions without replacing the catalog', (
-    tester,
-  ) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    final initialCatalogRequests = api.firstPageRequests;
-
-    await tester.enterText(find.byType(TextField), 'linen');
-    await tester.pump(const Duration(milliseconds: 600));
-    await tester.pumpAndSettle();
-
-    expect(api.lastSuggestionQuery, 'linen');
-    expect(api.firstPageRequests, initialCatalogRequests);
-    expect(find.text('Linen weekend shirt'), findsOneWidget);
-
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
-
-    expect(api.lastQuery, 'linen');
-    expect(api.firstPageRequests, initialCatalogRequests + 1);
-  });
-
-  testWidgets('autocomplete fills a product name without submitting search', (
-    tester,
-  ) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    final initialCatalogRequests = api.firstPageRequests;
-
-    await tester.enterText(find.byType(TextField), 'linen');
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Complete with Linen weekend shirt'));
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pumpAndSettle();
-
-    final search = tester.widget<TextField>(find.byType(TextField));
-    expect(search.controller!.text, 'Linen weekend shirt');
-    expect(api.lastSuggestionQuery, 'Linen weekend shirt');
-    expect(api.firstPageRequests, initialCatalogRequests);
-  });
-
   testWidgets('the product grid shows a skeleton while the first page loads', (
     tester,
   ) async {
@@ -722,7 +575,7 @@ void main() {
       final api = _CatalogApi()..pendingFirstPage = Completer<ProductPage>();
       await _pumpCatalog(tester, api, settle: false);
 
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.bySemanticsLabel('Search medicines'), findsOneWidget);
       expect(find.bySemanticsLabel('Loading products'), findsOneWidget);
 
       api.pendingFirstPage!.complete(
@@ -736,163 +589,6 @@ void main() {
       semantics.dispose();
     }
   });
-
-  testWidgets('searching after scrolling brings suggestions into view', (
-    tester,
-  ) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -700));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField), 'linen');
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Linen weekend shirt').hitTestable(), findsOneWidget);
-  });
-
-  testWidgets('suggestions wait for two characters', (tester) async {
-    final api = _CatalogApi();
-    await _pumpCatalog(tester, api);
-    await tester.enterText(find.byType(TextField), 'l');
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pumpAndSettle();
-
-    expect(api.lastSuggestionQuery, isNull);
-    expect(find.text('See all results for "l"'), findsNothing);
-  });
-
-  testWidgets(
-    'focusing search shows recent searches and recently viewed products and can clear them',
-    (tester) async {
-      final api = _CatalogApi();
-      await _pumpCatalog(
-        tester,
-        api,
-        initialHistory: SearchHistory(
-          recentSearches: const ['biogesic', 'vitamin c'],
-          recentlyViewed: [
-            _product(77, name: 'Cetirizine 10mg', slug: 'cetirizine-10mg'),
-          ],
-        ),
-      );
-
-      expect(find.text('Recent searches'), findsNothing);
-
-      await tester.tap(find.byType(TextField));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Recent searches'), findsOneWidget);
-      expect(find.text('biogesic'), findsOneWidget);
-      expect(find.text('vitamin c'), findsOneWidget);
-      expect(find.text('Recently viewed'), findsOneWidget);
-      expect(find.text('Cetirizine 10mg'), findsOneWidget);
-
-      await tester.tap(find.byTooltip('Remove vitamin c'));
-      await tester.pumpAndSettle();
-      expect(find.text('vitamin c'), findsNothing);
-      expect(find.text('biogesic'), findsOneWidget);
-
-      await tester.tap(find.text('biogesic'));
-      await tester.pumpAndSettle();
-      expect(api.lastQuery, 'biogesic');
-      expect(find.text('Results for “biogesic”'), findsOneWidget);
-
-      await tester.tap(find.byTooltip('Clear search'));
-      await tester.pumpAndSettle();
-      expect(find.text('Recent searches'), findsOneWidget);
-
-      await tester.tap(find.text('Clear history'));
-      await tester.pumpAndSettle();
-      expect(find.text('Recent searches'), findsNothing);
-      expect(find.text('Recently viewed'), findsNothing);
-    },
-  );
-
-  testWidgets('suggestions fit a narrow screen at large text', (tester) async {
-    await _pumpCatalog(tester, _CatalogApi(), width: 320, textScale: 2);
-    await tester.enterText(find.byType(TextField), 'linen');
-    await tester.pump(const Duration(milliseconds: 250));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Linen weekend shirt'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('an empty search offers category shortcuts', (tester) async {
-    final api = _CatalogApi()..emptySearch = true;
-    await _pumpCatalog(tester, api);
-    await tester.enterText(find.byType(TextField), 'lamp');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Nothing matches that search'), findsOneWidget);
-    expect(find.text('Browse categories'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(ActionChip, 'Fashion'));
-    await tester.pumpAndSettle();
-
-    expect(api.lastQuery, isEmpty);
-    expect(api.lastCategory, 'fashion');
-    expect(find.text('Nothing matches that search'), findsNothing);
-  });
-
-  testWidgets('a search the branch lacks lists what other branches have', (
-    tester,
-  ) async {
-    final api = _CatalogApi()
-      ..emptySearch = true
-      ..elsewhereProducts = [_product(77, name: 'Losartan 50 mg')];
-    await _pumpCatalog(tester, api);
-    await tester.enterText(find.byType(TextField), 'losartan');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Not at your branch'), findsOneWidget);
-    expect(find.text('Losartan 50 mg'), findsOneWidget);
-    expect(find.text('Nothing matches that search'), findsNothing);
-  });
-
-  testWidgets(
-    'an ingredient search shows each result group under its heading',
-    (tester) async {
-      final api = _CatalogApi()
-        ..searchPage = ProductPage(
-          products: [
-            _product(1, name: 'Biogesic 500 mg Tablet'),
-            _product(
-              2,
-              name: 'RiteMED 500 mg Tablet',
-              searchSection: 'Other brands of Paracetamol',
-            ),
-            _product(
-              3,
-              name: 'Neozep Forte Tablet',
-              searchSection: 'Also contains Paracetamol',
-            ),
-          ],
-          page: 1,
-          lastPage: 1,
-          total: 3,
-          searchIngredient: 'Paracetamol',
-        );
-      await _pumpCatalog(tester, api);
-      await tester.enterText(find.byType(TextField), 'acetaminophen');
-      await tester.testTextInput.receiveAction(TextInputAction.search);
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Showing results for Paracetamol (acetaminophen)'),
-        findsOneWidget,
-      );
-      expect(find.text('Other brands of Paracetamol'), findsOneWidget);
-      expect(find.text('Biogesic 500 mg Tablet'), findsOneWidget);
-      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
-      await tester.pumpAndSettle();
-      expect(find.text('Also contains Paracetamol'), findsOneWidget);
-    },
-  );
 
   testWidgets('top deals list only marked-down products, deepest first', (
     tester,
@@ -911,8 +607,7 @@ void main() {
       lessThan(tester.getTopLeft(find.text('-8%').first).dx),
     );
 
-    await tester.enterText(find.byType(TextField), 'bag');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.tap(find.text('Fashion'));
     await tester.pumpAndSettle();
     expect(find.text('See all'), findsNothing);
   });
@@ -945,6 +640,320 @@ void main() {
     await _pumpCatalog(tester, _CatalogApi());
     expect(find.text('See all'), findsNothing);
   });
+
+  testWidgets(
+    'the search box opens search and back returns the Shop as it was',
+    (tester) async {
+      final api = _CatalogApi();
+      await _pumpShopRouter(tester, api);
+      await tester.tap(find.text('Fashion'));
+      await tester.pumpAndSettle();
+
+      await _openSearch(tester);
+      expect(find.text('Medicine, brand or symptom'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,
+        isTrue,
+      );
+
+      await tester.enterText(find.byType(TextField), 'linen');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(api.lastQuery, 'linen');
+      expect(api.lastCategory, isNull);
+      expect(find.text('12 medicines'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      expect(find.byType(SearchScreen), findsNothing);
+      expect(api.lastQuery, isEmpty);
+      expect(api.lastCategory, 'fashion');
+    },
+  );
+
+  testWidgets(
+    'typing shows names, categories and medicines, and See all opens that many results',
+    (tester) async {
+      final api = _CatalogApi()
+        ..suggestions = SearchSuggestions(
+          names: const [(name: 'Paracetamol', count: 2)],
+          categories: const [(slug: 'fashion', name: 'Fashion', count: 3)],
+          products: [
+            (
+              product: _product(98, name: 'Paracetamol 500 mg Tablet'),
+              atBranch: true,
+            ),
+            (product: _product(99, name: 'Paracetamol Syrup'), atBranch: false),
+          ],
+          total: 12,
+        );
+      await _pumpShopRouter(tester, api);
+      await _openSearch(tester);
+      final initialCatalogRequests = api.firstPageRequests;
+
+      await tester.enterText(find.byType(TextField), 'para');
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pumpAndSettle();
+
+      expect(api.lastSuggestionQuery, 'para');
+      expect(api.lastSuggestionBranch, 'B-TEST');
+      expect(api.firstPageRequests, initialCatalogRequests);
+      expect(
+        find.text('Paracetamol 500 mg Tablet', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.text('In stock here'), findsOneWidget);
+      expect(find.text('Other branches'), findsOneWidget);
+      expect(find.text('Fashion  3'), findsOneWidget);
+
+      await tester.tap(find.text('See all 12 results for “para”'));
+      await tester.pumpAndSettle();
+      expect(api.lastQuery, 'para');
+      expect(find.text('12 medicines'), findsOneWidget);
+      expect(find.text('See all 12 results for “para”'), findsNothing);
+    },
+  );
+
+  testWidgets('a category suggestion searches within that category', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..suggestions = const SearchSuggestions(
+        categories: [(slug: 'fashion', name: 'Fashion', count: 3)],
+        total: 3,
+      );
+    await _pumpShopRouter(tester, api);
+    await _openSearch(tester);
+    await tester.enterText(find.byType(TextField), 'linen');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fashion  3'));
+    await tester.pumpAndSettle();
+    expect(api.lastQuery, 'linen');
+    expect(api.lastCategory, 'fashion');
+    expect(find.widgetWithText(InputChip, 'Fashion'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Show every category'));
+    await tester.pumpAndSettle();
+    expect(api.lastCategory, isNull);
+  });
+
+  testWidgets('suggestions wait for two characters', (tester) async {
+    final api = _CatalogApi();
+    await _pumpShopRouter(tester, api);
+    await _openSearch(tester);
+    await tester.enterText(find.byType(TextField), 'l');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(api.lastSuggestionQuery, isNull);
+    expect(find.textContaining('results for'), findsNothing);
+  });
+
+  testWidgets('filling a suggested name keeps typing without searching', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..suggestions = const SearchSuggestions(
+        names: [(name: 'Paracetamol', count: 2)],
+      );
+    await _pumpShopRouter(tester, api);
+    await _openSearch(tester);
+    final initialCatalogRequests = api.firstPageRequests;
+    await tester.enterText(find.byType(TextField), 'para');
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Use Paracetamol'));
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'Paracetamol',
+    );
+    expect(api.lastSuggestionQuery, 'Paracetamol');
+    expect(api.firstPageRequests, initialCatalogRequests);
+  });
+
+  testWidgets(
+    'before typing, recent searches and recently viewed show and can be cleared',
+    (tester) async {
+      final api = _CatalogApi();
+      await _pumpShopRouter(
+        tester,
+        api,
+        initialHistory: SearchHistory(
+          recentSearches: const ['biogesic', 'vitamin c'],
+          recentlyViewed: [
+            _product(77, name: 'Cetirizine 10mg', slug: 'cetirizine-10mg'),
+          ],
+        ),
+      );
+      await _openSearch(tester);
+
+      expect(find.text('Recent searches'), findsOneWidget);
+      expect(find.text('Recently viewed'), findsOneWidget);
+      expect(find.text('Cetirizine 10mg'), findsOneWidget);
+      expect(find.text('Shop by need'), findsOneWidget);
+      expect(find.text('Have a prescription?'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Remove vitamin c'));
+      await tester.pumpAndSettle();
+      expect(find.text('vitamin c'), findsNothing);
+
+      await tester.tap(find.text('biogesic'));
+      await tester.pumpAndSettle();
+      expect(api.lastQuery, 'biogesic');
+
+      await tester.tap(find.byTooltip('Clear search'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Clear history').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Recent searches'), findsNothing);
+      expect(find.text('Recently viewed'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'results sort by price and can leave out prescription medicines',
+    (tester) async {
+      final api = _CatalogApi();
+      await _pumpShopRouter(tester, api);
+      await _openSearch(tester);
+      await tester.enterText(find.byType(TextField), 'linen');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(api.lastSort, 'relevance');
+
+      await tester.tap(find.byTooltip('Sort results'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Price: low to high'));
+      await tester.pumpAndSettle();
+      expect(api.lastSort, 'price_asc');
+
+      await tester.tap(find.text('No prescription'));
+      await tester.pumpAndSettle();
+      expect(api.lastNoPrescription, isTrue);
+      expect(api.lastSort, 'price_asc');
+    },
+  );
+
+  testWidgets('an empty search offers categories that open the Shop on them', (
+    tester,
+  ) async {
+    final api = _CatalogApi()..emptySearch = true;
+    await _pumpShopRouter(tester, api);
+    await _openSearch(tester);
+    await tester.enterText(find.byType(TextField), 'lamp');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nothing matches that search'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ActionChip, 'Fashion'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SearchScreen), findsNothing);
+    expect(api.lastQuery, isEmpty);
+    expect(api.lastCategory, 'fashion');
+  });
+
+  testWidgets('a search the branch lacks lists what other branches have', (
+    tester,
+  ) async {
+    final api = _CatalogApi()
+      ..emptySearch = true
+      ..elsewhereProducts = [_product(77, name: 'Losartan 50 mg')];
+    await _pumpShopRouter(tester, api);
+    await _openSearch(tester);
+    await tester.enterText(find.byType(TextField), 'losartan');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not at your branch'), findsOneWidget);
+    expect(find.text('Losartan 50 mg'), findsOneWidget);
+    expect(find.text('Nothing matches that search'), findsNothing);
+  });
+
+  testWidgets(
+    'an ingredient search shows each result group under its heading',
+    (tester) async {
+      final api = _CatalogApi()
+        ..searchPage = ProductPage(
+          products: [
+            _product(1, name: 'Biogesic 500 mg Tablet'),
+            _product(
+              2,
+              name: 'RiteMED 500 mg Tablet',
+              searchSection: 'Other brands of Paracetamol',
+            ),
+            _product(
+              3,
+              name: 'Neozep Forte Tablet',
+              searchSection: 'Also contains Paracetamol',
+            ),
+          ],
+          page: 1,
+          lastPage: 1,
+          total: 3,
+          searchIngredient: 'Paracetamol',
+        );
+      await _pumpShopRouter(tester, api);
+      await _openSearch(tester);
+      await tester.enterText(find.byType(TextField), 'acetaminophen');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 medicines'), findsOneWidget);
+      expect(
+        find.text('Showing results for Paracetamol (acetaminophen)'),
+        findsOneWidget,
+      );
+      expect(find.text('Other brands of Paracetamol'), findsOneWidget);
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(find.text('Also contains Paracetamol'), findsOneWidget);
+    },
+  );
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('the search page fits 320px at ${scale}x text', (tester) async {
+      final api = _CatalogApi()
+        ..suggestions = SearchSuggestions(
+          names: const [(name: 'Paracetamol', count: 2)],
+          categories: const [(slug: 'fashion', name: 'Fashion', count: 3)],
+          products: [
+            (
+              product: _product(98, name: 'Paracetamol 500 mg Tablet'),
+              atBranch: false,
+            ),
+          ],
+          total: 12,
+        );
+      await _pumpShopRouter(
+        tester,
+        api,
+        width: 320,
+        textScale: scale,
+        initialHistory: SearchHistory(
+          recentSearches: const ['cough syrup for kids'],
+          recentlyViewed: [_product(77, name: 'Cetirizine 10mg')],
+        ),
+      );
+      await _openSearch(tester);
+      expect(tester.takeException(), isNull);
+
+      await tester.enterText(find.byType(TextField), 'para');
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final width in [320.0, 375.0, 390.0, 768.0, 844.0]) {
     for (final scale in [1.0, 1.3, 2.0]) {
@@ -1013,6 +1022,65 @@ Future<void> _pumpCatalog(
   }
 }
 
+/// The Shop at `/` and search at `/search`, as in the app, so search opens from the Shop.
+Future<void> _pumpShopRouter(
+  WidgetTester tester,
+  _CatalogApi api, {
+  double width = 390,
+  double height = 844,
+  double textScale = 1,
+  SearchHistory? initialHistory,
+}) async {
+  tester.view.physicalSize = Size(width, height);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  final router = GoRouter(
+    routes: [
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const Scaffold(body: CatalogScreen()),
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        isSignedInProvider.overrideWithValue(true),
+        apiClientProvider.overrideWithValue(api),
+        activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
+        cartCountProvider.overrideWithValue(0),
+        storeBranchesProvider.overrideWith((ref) async => const []),
+        if (initialHistory != null)
+          initialSearchHistoryProvider.overrideWithValue(initialHistory),
+      ],
+      child: MaterialApp.router(
+        theme: buildAppTheme(),
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(textScale),
+            disableAnimations: true,
+          ),
+          child: child!,
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openSearch(WidgetTester tester) async {
+  await tester.tap(find.bySemanticsLabel('Search medicines'));
+  await tester.pumpAndSettle();
+  expect(find.byType(SearchScreen), findsOneWidget);
+}
+
 Product _product(
   int index, {
   String? name,
@@ -1046,6 +1114,9 @@ class _CatalogApi extends ApiClient {
   String? lastCategory;
   String? lastSort;
   String? lastSuggestionQuery;
+  String? lastSuggestionBranch;
+  bool lastNoPrescription = false;
+  SearchSuggestions? suggestions;
   bool failCategories = false;
   List<Category>? categoryItems;
   List<Product> boughtBeforeProducts = const [];
@@ -1101,6 +1172,7 @@ class _CatalogApi extends ApiClient {
     String? seller,
     String? sort,
     bool onSale = false,
+    bool noPrescription = false,
     int page = 1,
     int perPage = 20,
   }) async {
@@ -1124,6 +1196,7 @@ class _CatalogApi extends ApiClient {
     lastQuery = query;
     lastCategory = category;
     lastSort = sort;
+    lastNoPrescription = noPrescription;
     if (searchPage != null && (query?.isNotEmpty ?? false)) {
       return searchPage!;
     }
@@ -1170,12 +1243,26 @@ class _CatalogApi extends ApiClient {
   }
 
   @override
-  Future<List<Product>> suggestedProducts(String query) async {
+  Future<SearchSuggestions> searchSuggestions(
+    String query, {
+    String? branch,
+  }) async {
     lastSuggestionQuery = query;
+    lastSuggestionBranch = branch;
 
-    return [
-      _product(99, name: 'Linen weekend shirt', slug: 'linen-weekend-shirt'),
-    ];
+    return suggestions ??
+        SearchSuggestions(
+          products: [
+            (
+              product: _product(
+                99,
+                name: 'Linen weekend shirt',
+                slug: 'linen-weekend-shirt',
+              ),
+              atBranch: true,
+            ),
+          ],
+        );
   }
 }
 
