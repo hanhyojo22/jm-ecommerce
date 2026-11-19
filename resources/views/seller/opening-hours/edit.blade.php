@@ -2,8 +2,8 @@
     <x-slot name="header">
         <div class="sc-page-head">
             <div>
-                <h1 class="sc-title">Opening hours · {{ $branch->name }}</h1>
-                <p class="sc-subtitle">Same hours every day, Philippine time. While the branch is closed, the app takes pickup orders only.</p>
+                <h1 class="sc-title">Opening hours</h1>
+                <p class="sc-subtitle">{{ $branch->name }}</p>
             </div>
         </div>
     </x-slot>
@@ -13,6 +13,9 @@
             @if (session('status'))<p class="sc-notice" data-tone="success" role="status">{{ session('status') }}</p>@endif
             @if ($errors->any())<p class="sc-notice" data-tone="danger" role="alert">{{ $errors->first() }}</p>@endif
 
+            <div class="sc-settings-layout">
+            <x-marketplace.seller-settings-nav active="hours" :branch="$branch->id" />
+            <div class="min-w-0 space-y-6">
             @if ($branches)
                 <form method="GET" action="{{ route('seller.opening-hours.edit') }}">
                     <label for="branch" class="block text-sm font-semibold text-ink">Branch</label>
@@ -33,7 +36,7 @@
                     <input type="checkbox" name="open_24_hours" value="1" x-model="allDay" class="h-5 w-5 rounded border-line text-brand">
                     Open 24 hours
                 </label>
-                <p class="mt-1 text-sm text-muted">Otherwise set when the branch opens and closes. A closing time before the opening time runs past midnight.</p>
+                <p class="mt-2 text-xs leading-5 text-muted">Same hours every day, Philippine time. A closing time before opening runs past midnight.</p>
                 <div class="mt-5 grid min-w-0 max-w-2xl gap-4 sm:grid-cols-2">
                     <div class="min-w-0">
                         <label for="opening_time" class="block text-sm font-semibold text-ink">Opens at</label>
@@ -50,6 +53,9 @@
                     <button type="submit" class="seller-primary-button min-h-11">Save hours</button>
                 </div>
             </form>
+            <p class="text-xs leading-5 text-muted">While the branch is closed, customers can place pickup orders only.</p>
+            </div>
+            </div>
         </div>
     </div>
 </x-app-layout>

@@ -20,7 +20,8 @@ class BranchHoursTest extends TestCase
 
         $this->actingAs($manager)->get(route('seller.opening-hours.edit', ['branch' => $makati->id]))
             ->assertOk()
-            ->assertSee('Opening hours · Botika Plus Cebu')
+            ->assertSee('Opening hours')
+            ->assertSee('Botika Plus Cebu')
             ->assertSee('Seller Center sidebar');
         $this->patch(route('seller.opening-hours.update', ['branch' => $makati->id]), ['opening_time' => '08:00', 'closing_time' => '21:30'])
             ->assertSessionHas('status');
