@@ -3,7 +3,7 @@
     @php($itemCount = $cart->items->sum('quantity'))
     @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
-    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription', 'prescriptions', 'discount_card', 'discount_card.type', 'discount_card.id_number', 'discount_card.name', 'discount_card_id', 'save_discount_card']) ? 3 : 1)))
+    @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription', 'prescriptions', 'discount_card', 'discount_card.type', 'discount_card.id_number', 'discount_card.name', 'discount_card_id', 'save_discount_card', 'discount_document']) ? 3 : 1)))
     @php($prescriptionMedicines = $cart->items->filter(fn ($item) => $item->product->requires_prescription)->map(fn ($item) => $item->product->name)->unique())
     @php($fieldInput = 'min-h-[46px] w-full rounded-md border-[#CBD4E0] bg-white px-3 text-[14.5px] text-ink caret-brand transition placeholder:text-slate-500 focus:border-brand focus:shadow-[0_0_0_3px_rgb(32_91_244/12%)] focus:ring-0 aria-[invalid=true]:border-danger')
 
@@ -21,6 +21,9 @@
             {{-- A saved ID starts selected; after a failed submit, keep whatever the customer chose. --}}
             cardId: @js(session()->hasOldInput() ? (string) old('discount_card_id', '') : (string) ($discountCards->first()?->id ?? '')),
             saveCard: @js((bool) old('save_discount_card')),
+            {{-- Saved IDs that already have a photo; any other ID needs one with the order. --}}
+            cardsWithPhoto: @js($discountCards->whereNotNull('document_path')->pluck('id')->values()),
+            get photoOnFile() { return this.cardId !== '' && this.cardsWithPhoto.includes(this.cardId) },
             totals: @js([
                 'delivery' => '₱'.number_format($total, 2),
                 'pickup' => '₱'.number_format($subtotal, 2),
@@ -304,7 +307,7 @@
                                                         <input type="radio" name="discount_card_id" value="{{ $savedCard->id }}" x-model="cardId" class="mt-[3px] size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
                                                         <span class="min-w-0">
                                                             <span class="block text-sm font-semibold leading-[1.4] text-ink">{{ \App\Support\SeniorPwdDiscount::CARD_TYPES[$savedCard->type] }} · {{ $savedCard->name }}</span>
-                                                            <span class="mt-0.5 block text-[13px] leading-normal text-muted">•••• {{ $savedCard->last4 }}</span>
+                                                            <span class="mt-0.5 block text-[13px] leading-normal text-muted">•••• {{ $savedCard->last4 }} · {{ $savedCard->document_path === null ? 'Add a photo of this ID below' : 'Photo on file' }}</span>
                                                         </span>
                                                     </label>
                                                 @endforeach
@@ -344,9 +347,9 @@
                                     </div>
                                     <p x-show="card" x-cloak class="mt-2 text-[12.5px] leading-normal text-muted">For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.</p>
                                     <div x-show="card" x-cloak class="mt-4">
-                                        <label for="discount_document" class="mb-1 block text-sm font-semibold text-ink">Photo of your SC/PWD ID (optional)</label>
-                                        <input id="discount_document" name="discount_document" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" :disabled="!card" class="sc-input !h-auto py-2">
-                                        <p class="mt-1 text-xs text-muted">JPG, PNG, WebP or PDF, up to 8 MB. Only the fulfilling pharmacy can view it. Bring your original ID at handover.</p>
+                                        <label for="discount_document" class="mb-1 block text-sm font-semibold text-ink" x-text="photoOnFile ? 'New photo of your SC/PWD ID (optional)' : 'Photo of your SC/PWD ID'">Photo of your SC/PWD ID</label>
+                                        <input id="discount_document" name="discount_document" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" :disabled="!card" :required="card && !photoOnFile" @error('discount_document') aria-invalid="true" @enderror class="sc-input !h-auto py-2">
+                                        <p class="mt-1 text-xs text-muted" x-text="photoOnFile ? 'We’ll use the photo saved with this ID. Add a new one only if your ID changed.' : 'Required for the discount. JPG, PNG, WebP or PDF, up to 8 MB. Only the fulfilling pharmacy can view it. Bring your original ID at handover.'">Required for the discount. JPG, PNG, WebP or PDF, up to 8 MB. Only the fulfilling pharmacy can view it. Bring your original ID at handover.</p>
                                         @error('discount_document')<p role="alert" class="mt-1 text-sm text-danger">{{ $message }}</p>@enderror
                                     </div>
                                     @error('discount_card')<p class="mt-[5px] text-[12.5px] font-medium text-danger" role="alert">{{ $message }}</p>@enderror

@@ -170,7 +170,10 @@ class CheckoutController extends Controller
             ...Arr::wrap($request->file('prescriptions')),
             ...Arr::wrap($request->file('prescription')),
         ]));
-        $discountCard = $this->discountCard($request, $data);
+        // A saved ID wins over typed fields; scoping it to the customer makes anyone else's ID a 404.
+        $savedCard = filled($data['discount_card_id'] ?? null) ? $request->user()->discountCards()->findOrFail($data['discount_card_id']) : null;
+        $discountCard = $savedCard?->toCard() ?? SeniorPwdDiscount::cardFrom($data);
+        $discountDocument = $request->file('discount_document');
         $order = $checkout->handle(
             $request->user(),
             Arr::only($data, ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code', 'delivery_note']),
@@ -180,16 +183,18 @@ class CheckoutController extends Controller
             $fulfillmentMethod === 'delivery' ? ['latitude' => (float) $data['delivery_latitude'], 'longitude' => (float) $data['delivery_longitude']] : null,
             $prescriptions,
             $discountCard,
-            $request->file('discount_document'),
+            $discountDocument,
         );
 
         // A failed save must not turn a placed order into an error: the discount already applies.
-        if (($data['save_discount_card'] ?? false) && blank($data['discount_card_id'] ?? null) && $discountCard !== null) {
-            try {
-                $saveDiscountCard->handle($request->user(), $discountCard);
-            } catch (Throwable $exception) {
-                report($exception);
+        try {
+            if ($savedCard !== null && $discountDocument !== null) {
+                $saveDiscountCard->replaceDocument($savedCard, $discountDocument);
+            } elseif ($savedCard === null && $discountCard !== null && $discountDocument !== null && ($data['save_discount_card'] ?? false)) {
+                $saveDiscountCard->handle($request->user(), $discountCard, $discountDocument);
             }
+        } catch (Throwable $exception) {
+            report($exception);
         }
 
         $sendReceipt->handle($request->user(), $order, CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod));
@@ -220,21 +225,5 @@ class CheckoutController extends Controller
             'payment_url' => $paymentUrl,
             'payment_error' => $paymentError,
         ]], $order->wasRecentlyCreated ? 201 : 200);
-    }
-
-    /**
-     * A saved ID wins over typed fields. Scoping the lookup to the customer makes
-     * anyone else's ID a 404, and ignores a tampered type or number from the client.
-     *
-     * @param  array<string, mixed>  $data
-     * @return ?array{type: string, id_number: string, name: string}
-     */
-    private function discountCard(Request $request, array $data): ?array
-    {
-        if (filled($data['discount_card_id'] ?? null)) {
-            return $request->user()->discountCards()->findOrFail($data['discount_card_id'])->toCard();
-        }
-
-        return SeniorPwdDiscount::cardFrom($data);
     }
 }

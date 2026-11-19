@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class DiscountCard extends Model
 {
@@ -16,14 +17,26 @@ class DiscountCard extends Model
     /** @use HasFactory<DiscountCardFactory> */
     use HasFactory, HasUlids;
 
-    protected $fillable = ['type', 'id_number', 'name', 'last4'];
+    protected $fillable = ['type', 'id_number', 'name', 'last4', 'document_path', 'document_name', 'document_mime'];
 
     /**
      * The number is the sensitive part; screens only ever show the last four.
      *
      * @var list<string>
      */
-    protected $hidden = ['id_number'];
+    protected $hidden = ['id_number', 'document_path'];
+
+    /**
+     * The ID photo goes with the saved ID; orders keep their own copies.
+     */
+    protected static function booted(): void
+    {
+        static::deleted(function (DiscountCard $card): void {
+            if ($card->document_path !== null) {
+                Storage::disk('chat_attachments')->delete($card->document_path);
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -36,9 +49,9 @@ class DiscountCard extends Model
     }
 
     /**
-     * The same shape CheckoutCart takes for a typed card.
+     * The same shape CheckoutCart takes for a typed card, plus the saved ID photo.
      *
-     * @return array{type: string, id_number: string, name: string}
+     * @return array{type: string, id_number: string, name: string, document?: array{path: string, name: ?string, mime: ?string}}
      */
     public function toCard(): array
     {
@@ -46,6 +59,11 @@ class DiscountCard extends Model
             'type' => $this->type,
             'id_number' => $this->id_number,
             'name' => $this->name,
+            ...($this->document_path === null ? [] : ['document' => [
+                'path' => $this->document_path,
+                'name' => $this->document_name,
+                'mime' => $this->document_mime,
+            ]]),
         ];
     }
 

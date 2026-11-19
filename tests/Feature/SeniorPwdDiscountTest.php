@@ -12,7 +12,9 @@ use App\Models\TenantMember;
 use App\Models\User;
 use App\Services\PushNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Mockery;
 use Tests\TestCase;
 
@@ -30,6 +32,7 @@ class SeniorPwdDiscountTest extends TestCase
     {
         parent::setUp();
         config()->set('marketplace.senior_pwd.vat_registered', true);
+        Storage::fake('chat_attachments');
 
         $tenant = Tenant::create(['name' => 'Botika Plus', 'slug' => 'botika-plus', 'status' => 'active', 'delivery_fee' => '49.00']);
         $this->branch = Store::create([
@@ -47,7 +50,7 @@ class SeniorPwdDiscountTest extends TestCase
         // 3 × ₱7.00 = ₱21.00 → ₱18.75 without VAT → less ₱3.75 → pays ₱15.00, so ₱6.00 off. Shampoo is not a medicine.
         $this->actingAs($buyer)->getJson('/api/v1/checkout')->assertOk()->assertJsonPath('data.senior_pwd_discount', '6.00');
 
-        $orderId = $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod', 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-2026-00123', 'name' => 'Lola Ava']])
+        $orderId = $this->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'cod', 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-2026-00123', 'name' => 'Lola Ava'], 'discount_document' => UploadedFile::fake()->image('id.jpg')])
             ->assertCreated()
             ->assertJsonPath('data.subtotal', '171.00')
             ->assertJsonPath('data.discount_amount', '6.00')
@@ -73,7 +76,7 @@ class SeniorPwdDiscountTest extends TestCase
     public function test_a_manager_removes_the_discount_when_the_customer_has_no_valid_id(): void
     {
         $buyer = $this->buyerWithCart();
-        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-1', 'name' => 'Lola Ava']])->assertCreated();
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-1', 'name' => 'Lola Ava'], 'discount_document' => UploadedFile::fake()->image('id.jpg')])->assertCreated();
         $order = Order::with('sellerOrders', 'payment')->sole();
         $sellerOrder = $order->sellerOrders->sole();
 
@@ -104,7 +107,7 @@ class SeniorPwdDiscountTest extends TestCase
     public function test_a_paid_order_keeps_its_discount(): void
     {
         $buyer = $this->buyerWithCart();
-        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava']])->assertCreated();
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava'], 'discount_document' => UploadedFile::fake()->image('id.jpg')])->assertCreated();
         $order = Order::with('sellerOrders', 'payment')->sole();
         $order->payment->update(['status' => 'paid']);
 
@@ -120,6 +123,7 @@ class SeniorPwdDiscountTest extends TestCase
             'recipient_name' => 'Lola Tester', 'phone' => '09171234567', 'address_line' => '', 'city' => 'Cebu', 'province' => '', 'postal_code' => '',
             'fulfillment_method' => 'pickup', 'payment_method' => 'cod', 'client_request_id' => '6c1f3b9e-1111-4a2b-9c3d-123456789abc',
             'discount_card' => ['type' => 'senior', 'id_number' => 'SC-TEST-4821', 'name' => 'Lola Tester'],
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ])->assertCreated()->assertJsonPath('data.total', '165.00');
     }
 
@@ -128,7 +132,7 @@ class SeniorPwdDiscountTest extends TestCase
         $buyer = $this->buyerWithCart();
 
         $this->actingAs($buyer)->get(route('checkout.create'))->assertSee('Senior citizen / PWD discount')->assertSee('−₱6.00', false);
-        $this->post(route('checkout.store'), [...$this->delivery(), 'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-778', 'name' => 'Ava Buyer']])
+        $this->post(route('checkout.store'), [...$this->delivery(), 'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-778', 'name' => 'Ava Buyer'], 'discount_document' => UploadedFile::fake()->image('id.jpg')])
             ->assertSessionHasNoErrors();
 
         $this->assertSame(['pwd', '6.00', '214.00'], [Order::sole()->discount_card_type, (string) Order::sole()->discount_amount, (string) Order::sole()->total]);
@@ -143,7 +147,7 @@ class SeniorPwdDiscountTest extends TestCase
             ->assertJsonStructure(['error' => ['fields' => ['discount_card.id_number', 'discount_card.name']]]);
 
         $buyer->cart->items()->where('product_id', $this->paracetamol->id)->delete();
-        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-1', 'name' => 'Lola Ava']])
+        $this->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-1', 'name' => 'Lola Ava'], 'discount_document' => UploadedFile::fake()->image('id.jpg')])
             ->assertUnprocessable()
             ->assertJsonPath('error.fields.discount_card.0', 'The senior citizen / PWD discount is for medicines, and none of these items are medicines.');
         $this->assertDatabaseCount('orders', 0);

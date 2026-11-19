@@ -25,6 +25,8 @@ class DiscountCardResource extends JsonResource
             'type' => $this->type,
             'name' => $this->name,
             'id_number_masked' => SeniorPwdDiscount::mask($this->id_number),
+            // Without a photo on file, checkout needs one with this ID.
+            'has_document' => $this->document_path !== null,
         ];
     }
 }

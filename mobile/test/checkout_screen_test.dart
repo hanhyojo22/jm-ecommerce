@@ -68,6 +68,9 @@ void main() {
         .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
         .removeCurrentSnackBar();
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Add photo of ID'));
+    await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Place order'));
     await tester.pumpAndSettle();
 
@@ -214,6 +217,7 @@ void main() {
           'type': 'senior',
           'name': 'Lola Ana',
           'id_number_masked': '•••••0123',
+          'has_document': true,
         },
       ],
     );
@@ -235,7 +239,7 @@ void main() {
 
     // The saved ID starts selected, so there is nothing to type.
     expect(find.text('Senior citizen · Lola Ana'), findsOneWidget);
-    expect(find.text('•••••0123'), findsOneWidget);
+    expect(find.text('•••••0123 · Photo on file'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'ID number'), findsNothing);
 
     await tester.tap(find.text('Use a different ID'));
@@ -252,6 +256,8 @@ void main() {
     expect(api.placed!.discountCardId, 'card-1');
     expect(api.placed!.discountCard, isNull);
     expect(api.placed!.saveDiscountCard, isFalse);
+    // Its photo is on file, so none goes up with the order.
+    expect(api.placed!.discountDocument, isNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -281,9 +287,26 @@ void main() {
     await tester.tap(find.text('Save this ID for next time'));
     await tester.pumpAndSettle();
 
+    // A typed ID needs its photo before the order can go.
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+    expect(api.placed, isNull);
+    expect(
+      find.text('Add a photo of your senior citizen or PWD ID.'),
+      findsOneWidget,
+    );
+    tester
+        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
+        .removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Add photo of ID'));
+    await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Place order'));
     await tester.pumpAndSettle();
 
+    expect(api.placed!.discountDocument?.name, 'rx.jpg');
     expect(api.placed!.saveDiscountCard, isTrue);
     expect(api.placed!.discountCardId, isNull);
     expect(api.placed!.discountCard, (
@@ -306,6 +329,7 @@ void main() {
           'type': 'pwd',
           'name': 'Lolo Ben',
           'id_number_masked': '•••••7788',
+          'has_document': true,
         },
       ],
     );
@@ -483,6 +507,7 @@ typedef _Placed = ({
   ({String type, String idNumber, String name})? discountCard,
   String? discountCardId,
   bool saveDiscountCard,
+  PickedAttachment? discountDocument,
 });
 
 class _CheckoutApi extends ApiClient {
@@ -569,6 +594,7 @@ class _CheckoutApi extends ApiClient {
     ({String type, String idNumber, String name})? discountCard,
     String? discountCardId,
     bool saveDiscountCard = false,
+    PickedAttachment? discountDocument,
     String? note,
     String? successUrl,
     String? cancelUrl,
@@ -589,6 +615,7 @@ class _CheckoutApi extends ApiClient {
       discountCard: discountCard,
       discountCardId: discountCardId,
       saveDiscountCard: saveDiscountCard,
+      discountDocument: discountDocument,
     );
     return PlacedOrder.fromJson({'id': 'order-1', 'number': 'JM-1'});
   }

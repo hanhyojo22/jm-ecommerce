@@ -641,12 +641,16 @@ class DiscountCard {
     required this.type,
     required this.name,
     required this.idNumberMasked,
+    this.hasDocument = false,
   });
 
   final String id;
   final String type;
   final String name;
   final String idNumberMasked;
+
+  /// A photo of this ID is on file, so checkout needs no new one.
+  final bool hasDocument;
 
   String get typeLabel => type == 'pwd' ? 'PWD' : 'Senior citizen';
 
@@ -655,6 +659,7 @@ class DiscountCard {
     type: str(json['type']),
     name: str(json['name']),
     idNumberMasked: str(json['id_number_masked']),
+    hasDocument: boolean(json['has_document']),
   );
 }
 

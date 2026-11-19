@@ -44,6 +44,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   String? _savedCardId;
   bool _saveCard = false;
 
+  /// Photo of the discount ID; needed unless the chosen saved ID has one on file.
+  PickedAttachment? _cardPhoto;
+
   /// The city of a reused address; a new address takes the branch's city.
   String _savedCity = '';
 
@@ -241,6 +244,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _snack('Enter the ID number and the name on the ID for the discount.');
       return;
     }
+    if (useCard && _cardPhoto == null && !_savedCardHasPhoto(quote)) {
+      _snack('Add a photo of your senior citizen or PWD ID.');
+      return;
+    }
 
     if (_method == 'delivery') {
       if (_pin == null) {
@@ -278,6 +285,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 : null,
             discountCardId: useCard ? _savedCardId : null,
             saveDiscountCard: useCard && _savedCardId == null && _saveCard,
+            discountDocument: useCard ? _cardPhoto : null,
           );
 
       await ref.read(cartProvider.notifier).refresh();
@@ -352,6 +360,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } on AttachmentTooLargeException {
       _snack('Choose a file under 5 MB.');
+    }
+  }
+
+  bool _savedCardHasPhoto(CheckoutQuote quote) => quote.discountCards.any(
+    (card) => card.id == _savedCardId && card.hasDocument,
+  );
+
+  Future<void> _pickCardPhoto() async {
+    try {
+      final photo = await ref.read(attachmentPickerProvider).pickImage();
+      if (photo != null && mounted) {
+        setState(() => _cardPhoto = photo);
+      }
+    } on AttachmentTooLargeException {
+      _snack('Choose a photo under 5 MB.');
     }
   }
 
@@ -757,7 +780,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         selected: _savedCardId == card.id,
                         shape: _choiceShape(_savedCardId == card.id),
                         title: Text('${card.typeLabel} · ${card.name}'),
-                        subtitle: Text(card.idNumberMasked),
+                        subtitle: Text(
+                          card.hasDocument
+                              ? '${card.idNumberMasked} · Photo on file'
+                              : card.idNumberMasked,
+                        ),
                       ),
                     ),
                   RadioListTile<String>(
@@ -812,6 +839,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
           ],
           const SizedBox(height: 8),
+          _cardPhotoRow(quote),
+          const SizedBox(height: 8),
           Text(
             'For medicines only. Show this ID to the pharmacy when you receive your order; without it the discount can’t be given.',
             style: theme.textTheme.bodySmall?.copyWith(
@@ -819,6 +848,52 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  /// The ID photo the branch checks. A saved ID with a photo reuses it unless
+  /// the customer picks a newer one, which then replaces the saved photo.
+  Widget _cardPhotoRow(CheckoutQuote quote) {
+    final theme = Theme.of(context);
+    final photo = _cardPhoto;
+    final onFile = _savedCardHasPhoto(quote);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          photo != null
+              ? 'Photo of your ID added.'
+              : onFile
+              ? 'We’ll use the photo saved with this ID. Add a new one only if your ID changed.'
+              : 'Add a photo of your ID. Only the pharmacy filling your order can see it.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (photo != null)
+          InputChip(
+            avatar: const Icon(Icons.badge_outlined, size: 18),
+            label: Text(
+              photo.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            onDeleted: () => setState(() => _cardPhoto = null),
+            deleteButtonTooltipMessage: 'Remove ${photo.name}',
+          )
+        else
+          FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 48),
+              shape: const StadiumBorder(),
+            ),
+            onPressed: _pickCardPhoto,
+            icon: const Icon(Icons.photo_camera_outlined, size: 18),
+            label: Text(onFile ? 'Use a new photo' : 'Add photo of ID'),
+          ),
       ],
     );
   }

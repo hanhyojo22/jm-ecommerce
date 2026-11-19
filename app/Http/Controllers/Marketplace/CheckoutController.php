@@ -128,7 +128,10 @@ class CheckoutController extends Controller
             ...Arr::wrap($request->file('prescriptions')),
             ...Arr::wrap($request->file('prescription')),
         ]));
-        $discountCard = $this->discountCard($request, $data);
+        // A saved ID wins over typed fields; scoping it to the customer makes anyone else's ID a 404.
+        $savedCard = filled($data['discount_card_id'] ?? null) ? $request->user()->discountCards()->findOrFail($data['discount_card_id']) : null;
+        $discountCard = $savedCard?->toCard() ?? SeniorPwdDiscount::cardFrom($data);
+        $discountDocument = $request->file('discount_document');
         // shortcut: the web checkout has no map pin until Phase 7, so its deliveries skip the radius check.
         $order = $checkout->handle(
             $request->user(),
@@ -138,16 +141,18 @@ class CheckoutController extends Controller
             $fulfillmentMethod,
             prescriptions: $prescriptions,
             discountCard: $discountCard,
-            discountDocument: $request->file('discount_document'),
+            discountDocument: $discountDocument,
         );
 
         // A failed save must not turn a placed order into an error: the discount already applies.
-        if (($data['save_discount_card'] ?? false) && blank($data['discount_card_id'] ?? null) && $discountCard !== null) {
-            try {
-                $saveDiscountCard->handle($request->user(), $discountCard);
-            } catch (Throwable $exception) {
-                report($exception);
+        try {
+            if ($savedCard !== null && $discountDocument !== null) {
+                $saveDiscountCard->replaceDocument($savedCard, $discountDocument);
+            } elseif ($savedCard === null && $discountCard !== null && $discountDocument !== null && ($data['save_discount_card'] ?? false)) {
+                $saveDiscountCard->handle($request->user(), $discountCard, $discountDocument);
             }
+        } catch (Throwable $exception) {
+            report($exception);
         }
         $paymentNote = CheckoutCart::paymentNote($paymentMethod, $fulfillmentMethod);
         $buyer = $request->user();
@@ -156,21 +161,5 @@ class CheckoutController extends Controller
         $notifySellers->handle($order);
 
         return $paymentMethod === 'cod' ? to_route('orders.placed', $order) : to_route('orders.pay', $order);
-    }
-
-    /**
-     * A saved ID wins over typed fields. Scoping the lookup to the customer makes
-     * anyone else's ID a 404, and ignores a tampered type or number from the client.
-     *
-     * @param  array<string, mixed>  $data
-     * @return ?array{type: string, id_number: string, name: string}
-     */
-    private function discountCard(Request $request, array $data): ?array
-    {
-        if (filled($data['discount_card_id'] ?? null)) {
-            return $request->user()->discountCards()->findOrFail($data['discount_card_id'])->toCard();
-        }
-
-        return SeniorPwdDiscount::cardFrom($data);
     }
 }

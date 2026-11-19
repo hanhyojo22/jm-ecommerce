@@ -32,8 +32,8 @@ class CheckoutCart
      * @param  'delivery'|'pickup'  $fulfillmentMethod  pickup is collected at the branch: no fee, and 'cod' means pay at the counter
      * @param  ?array{latitude: float, longitude: float}  $deliveryPin  where the customer dropped the delivery pin; checked against the branch's radius
      * @param  list<UploadedFile>  $prescriptions  required when a medicine needs one; a branch pharmacist reviews every page before the order moves past pending
-     * @param  ?array{type: 'senior'|'pwd', id_number: string, name: string}  $discountCard  takes the SC/PWD discount off medicines; the branch checks the card at handover
-     * @param  ?UploadedFile  $discountDocument  optional private copy of the discount ID for the fulfilling branch to review
+     * @param  ?array{type: 'senior'|'pwd', id_number: string, name: string, document?: array{path: string, name: ?string, mime: ?string}}  $discountCard  takes the SC/PWD discount off medicines; the branch checks the card at handover
+     * @param  ?UploadedFile  $discountDocument  photo of the discount ID for the fulfilling branch to review; required unless the saved card already has one
      */
     public function handle(User $user, array $delivery, string $paymentMethod = 'cod', ?string $clientRequestId = null, string $fulfillmentMethod = 'delivery', ?array $deliveryPin = null, array $prescriptions = [], ?array $discountCard = null, ?UploadedFile $discountDocument = null): Order
     {
@@ -57,6 +57,9 @@ class CheckoutCart
 
         if ($discountDocument !== null && $discountCard === null) {
             throw ValidationException::withMessages(['discount_document' => 'Choose a senior citizen or PWD card before attaching its document.']);
+        }
+        if ($discountCard !== null && $discountDocument === null && ! isset($discountCard['document'])) {
+            throw ValidationException::withMessages(['discount_document' => 'Add a photo of your senior citizen or PWD ID to get the discount.']);
         }
         $prescriptionPaths = [];
 
@@ -280,6 +283,19 @@ class CheckoutCart
                         'discount_document_path' => $path,
                         'discount_document_name' => $discountDocument->getClientOriginalName(),
                         'discount_document_mime' => $discountDocument->getMimeType(),
+                    ])->save();
+                } elseif ($discountCard !== null) {
+                    // The order keeps its own copy, so deleting or replacing the saved ID cannot take it away.
+                    $saved = $discountCard['document'];
+                    $path = 'discount-documents/'.$order->id.'/'.basename($saved['path']);
+                    if (! Storage::disk('chat_attachments')->copy($saved['path'], $path)) {
+                        throw ValidationException::withMessages(['discount_document' => 'Your saved ID photo could not be found. Add the photo again.']);
+                    }
+                    $prescriptionPaths[] = $path;
+                    $order->forceFill([
+                        'discount_document_path' => $path,
+                        'discount_document_name' => $saved['name'],
+                        'discount_document_mime' => $saved['mime'],
                     ])->save();
                 }
                 $cart->items()->whereKey($items->modelKeys())->delete();

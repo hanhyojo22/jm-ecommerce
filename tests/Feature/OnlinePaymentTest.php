@@ -20,8 +20,10 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -228,12 +230,13 @@ class OnlinePaymentTest extends TestCase
     public function test_a_senior_discount_order_is_charged_and_refunded_the_discounted_amount(): void
     {
         config()->set('marketplace.senior_pwd.vat_registered', true);
+        Storage::fake('chat_attachments');
         $product = $this->product();
         $product->update(['generic_name' => 'Cotton']);
         $buyer = $this->buyerWithCart($product, 2);
 
         // 2 × ₱20.00 = ₱40.00 → ₱35.71 without VAT → less ₱7.14 → pays ₱28.57.
-        $this->actingAs($buyer)->post(route('checkout.store'), [...$this->delivery(), 'payment_method' => 'gcash', 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-9', 'name' => 'Lola Ava']])->assertRedirectContains('/pay');
+        $this->actingAs($buyer)->post(route('checkout.store'), [...$this->delivery(), 'payment_method' => 'gcash', 'discount_card' => ['type' => 'senior', 'id_number' => 'SC-9', 'name' => 'Lola Ava'], 'discount_document' => UploadedFile::fake()->image('id.jpg')])->assertRedirectContains('/pay');
         $order = Order::query()->latest()->firstOrFail();
         $this->assertSame('28.57', (string) $order->total);
 

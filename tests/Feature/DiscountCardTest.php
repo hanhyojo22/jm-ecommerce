@@ -32,6 +32,7 @@ class DiscountCardTest extends TestCase
     {
         parent::setUp();
         config()->set('marketplace.senior_pwd.vat_registered', true);
+        Storage::fake('chat_attachments');
 
         $tenant = Tenant::create(['name' => 'Botika Plus', 'slug' => 'botika-plus', 'status' => 'active', 'delivery_fee' => '49.00']);
         $this->branch = Store::create([
@@ -51,10 +52,12 @@ class DiscountCardTest extends TestCase
             'payment_method' => 'cod',
             'discount_card' => ['type' => 'senior', 'id_number' => 'SC-2026-00123', 'name' => 'Lola Ava'],
             'save_discount_card' => true,
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ])->assertCreated()->assertJsonPath('data.discount_amount', '6.00');
 
         $card = DiscountCard::query()->sole();
         $this->assertSame(['senior', '0123'], [$card->type, $card->last4]);
+        Storage::disk('chat_attachments')->assertExists($card->document_path);
         $this->assertSame('SC-2026-00123', $card->id_number);
         $this->assertSame('Lola Ava', $card->name);
 
@@ -76,6 +79,13 @@ class DiscountCardTest extends TestCase
         $this->assertSame(['senior', 'SC-2026-00123', 'Lola Ava'], [$order->discount_card_type, $order->discount_card_number, $order->discount_card_name]);
         $this->assertSame('6.00', (string) $order->discount_amount);
         $this->assertDatabaseCount('orders', 2);
+
+        // No new photo: the order gets its own copy of the saved one, which outlives the saved ID.
+        $this->assertStringStartsWith('discount-documents/'.$order->id.'/', $order->discount_document_path);
+        $this->assertSame('id.jpg', $order->discount_document_name);
+        $this->actingAs($buyer)->deleteJson('/api/v1/discount-cards/'.$card->id)->assertNoContent();
+        Storage::disk('chat_attachments')->assertMissing($card->document_path);
+        Storage::disk('chat_attachments')->assertExists($order->discount_document_path);
     }
 
     public function test_the_app_saves_an_id_sent_as_form_fields_like_a_prescription_upload(): void
@@ -88,6 +98,7 @@ class DiscountCardTest extends TestCase
             'payment_method' => 'cod',
             'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-55501', 'name' => 'Ava Cruz'],
             'save_discount_card' => '1',
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ], ['Accept' => 'application/json'])->assertCreated();
 
         $this->assertSame(['pwd', '5501'], [DiscountCard::query()->sole()->type, DiscountCard::query()->sole()->last4]);
@@ -101,6 +112,7 @@ class DiscountCardTest extends TestCase
             ...$this->delivery(),
             'payment_method' => 'cod',
             'discount_card' => ['type' => 'senior', 'id_number' => 'SC-2026-00123', 'name' => 'Lola Ava'],
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ])->assertCreated();
 
         $this->assertDatabaseCount('discount_cards', 0);
@@ -155,6 +167,7 @@ class DiscountCardTest extends TestCase
             'payment_method' => 'cod',
             'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-778', 'name' => 'Ava Buyer'],
             'save_discount_card' => true,
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ])->assertCreated();
 
         $order = Order::query()->sole();
@@ -200,15 +213,19 @@ class DiscountCardTest extends TestCase
             ->assertSee('name="discount_card_id"', false)
             ->assertSee('value="'.$card->id.'"', false)
             ->assertSee("cardId: '{$card->id}'", false)
-            ->assertSee('•••• 0123')
+            ->assertSee('•••• 0123 · Add a photo of this ID below')
             ->assertDontSee('SC-2026-00123');
 
-        $this->post(route('checkout.store'), [
+        $checkout = [
             'recipient_name' => 'Ava Buyer', 'phone' => '+639171234567', 'address_line' => '100 Colon Street',
             'city' => 'Cebu', 'payment_method' => 'cod', 'discount_card_id' => $card->id,
             // Typed fields sent with a saved ID are ignored on the web too.
             'discount_card' => ['type' => 'pwd', 'id_number' => 'WRONG-1', 'name' => 'Wrong Name'],
-        ])->assertRedirectContains('/placed');
+        ];
+        // An ID saved before photos were kept needs one with the order, which is then kept with the ID.
+        $this->post(route('checkout.store'), $checkout)->assertSessionHasErrors('discount_document');
+        $this->post(route('checkout.store'), [...$checkout, 'discount_document' => UploadedFile::fake()->image('senior.jpg')])->assertRedirectContains('/placed');
+        Storage::disk('chat_attachments')->assertExists($card->refresh()->document_path);
 
         $order = Order::query()->sole();
         $this->assertSame(['senior', 'SC-2026-00123', 'Lola Ava'], [
@@ -229,6 +246,29 @@ class DiscountCardTest extends TestCase
             ->assertSessionHas('status', 'Saved discount ID removed.');
         $this->assertDatabaseCount('discount_cards', 0);
         $this->assertSame('SC-2026-00123', $order->refresh()->discount_card_number);
+        Storage::disk('chat_attachments')->assertMissing($card->document_path);
+    }
+
+    public function test_a_new_photo_with_a_saved_id_replaces_its_old_photo(): void
+    {
+        $buyer = $this->buyer();
+        $this->checkoutWithCard($buyer, 'SC-0001')->assertCreated();
+        $card = DiscountCard::query()->sole();
+        $oldPath = $card->document_path;
+
+        $this->fillCart($buyer);
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [
+            ...$this->delivery(),
+            'discount_card_id' => $card->id,
+            'discount_document' => UploadedFile::fake()->image('renewed.jpg'),
+        ])->assertCreated();
+
+        $card->refresh();
+        $this->assertNotSame($oldPath, $card->document_path);
+        $this->assertSame('renewed.jpg', $card->document_name);
+        Storage::disk('chat_attachments')->assertMissing($oldPath);
+        Storage::disk('chat_attachments')->assertExists($card->document_path);
+        $this->assertEqualsCanonicalizing(['id.jpg', 'renewed.jpg'], Order::query()->pluck('discount_document_name')->all());
     }
 
     public function test_removing_the_discount_at_handover_also_drops_the_saved_id(): void
@@ -239,6 +279,7 @@ class DiscountCardTest extends TestCase
             'payment_method' => 'cod',
             'discount_card' => ['type' => 'senior', 'id_number' => 'SC-1', 'name' => 'Lola Ava'],
             'save_discount_card' => true,
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ])->assertCreated();
 
         $order = Order::with('sellerOrders')->sole();
@@ -324,13 +365,18 @@ class DiscountCardTest extends TestCase
         Storage::disk('chat_attachments')->assertEmpty();
     }
 
-    public function test_api_checkout_accepts_an_optional_discount_document_and_orders_without_one_still_work(): void
+    public function test_api_checkout_requires_a_photo_of_the_discount_id(): void
     {
-        Storage::fake('chat_attachments');
         $buyer = $this->buyerWithCart();
+        $card = ['type' => 'pwd', 'id_number' => 'PWD-5501', 'name' => 'Ava Buyer'];
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [...$this->delivery(), 'discount_card' => $card])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.discount_document.0', 'Add a photo of your senior citizen or PWD ID to get the discount.');
+        $this->assertDatabaseCount('orders', 0);
+
         $this->actingAs($buyer)->postJson('/api/v1/checkout', [
             ...$this->delivery(),
-            'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-5501', 'name' => 'Ava Buyer'],
+            'discount_card' => $card,
             'discount_document' => UploadedFile::fake()->image('pwd.jpg'),
         ])->assertCreated();
         $order = Order::sole();
@@ -344,8 +390,11 @@ class DiscountCardTest extends TestCase
         $buyer = $this->buyerWithCart();
         $this->actingAs($buyer)->post(route('checkout.store'), [
             ...$this->delivery(), 'discount_card' => ['type' => 'pwd', 'id_number' => 'PWD-1', 'name' => 'Ava Buyer'],
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ])->assertSessionHasNoErrors();
         $order = Order::sole();
+        // Orders placed before the photo was required have none.
+        $order->forceFill(['discount_document_path' => null])->save();
         $sellerOrder = $order->sellerOrders()->sole();
         $this->actingAs($this->staff())->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
             ->assertSee('No ID photo was submitted.')->assertDontSee('Mark ID reviewed');
@@ -417,6 +466,7 @@ class DiscountCardTest extends TestCase
             'payment_method' => 'cod',
             'discount_card' => ['type' => 'senior', 'id_number' => $number, 'name' => 'Lola Ava'],
             'save_discount_card' => true,
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ]);
     }
 

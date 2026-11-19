@@ -363,8 +363,9 @@ class ApiClient {
   Future<CheckoutQuote> checkoutQuote() async =>
       CheckoutQuote.fromJson(mapOf(await _data('GET', '/checkout')));
 
-  /// Every prescription page goes up with the order as multipart form data; a
-  /// delivery needs the [deliveryLatitude]/[deliveryLongitude] pin.
+  /// Every prescription page and the [discountDocument] photo go up with the
+  /// order as multipart form data; a delivery needs the
+  /// [deliveryLatitude]/[deliveryLongitude] pin.
   Future<PlacedOrder> placeOrder({
     required Address address,
     required String paymentMethod,
@@ -376,6 +377,7 @@ class ApiClient {
     ({String type, String idNumber, String name})? discountCard,
     String? discountCardId,
     bool saveDiscountCard = false,
+    PickedAttachment? discountDocument,
     String? note,
     String? successUrl,
     String? cancelUrl,
@@ -403,7 +405,7 @@ class ApiClient {
     final data = await _data(
       'POST',
       '/checkout',
-      data: prescriptions.isEmpty
+      data: prescriptions.isEmpty && discountDocument == null
           ? fields
           : FormData.fromMap({
               ...fields,
@@ -412,6 +414,12 @@ class ApiClient {
                   page.bytes,
                   filename: page.name,
                   contentType: DioMediaType.parse(page.mimeType),
+                ),
+              if (discountDocument != null)
+                'discount_document': MultipartFile.fromBytes(
+                  discountDocument.bytes,
+                  filename: discountDocument.name,
+                  contentType: DioMediaType.parse(discountDocument.mimeType),
                 ),
             }),
     );
