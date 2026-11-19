@@ -327,20 +327,9 @@ class _BranchLine extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              Icons.storefront_rounded,
-              size: 19,
-              color: scheme.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
+          // Inline icon, as on the checkout section headings.
+          Icon(Icons.storefront_outlined, size: 20, color: scheme.primary),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               'From $name',

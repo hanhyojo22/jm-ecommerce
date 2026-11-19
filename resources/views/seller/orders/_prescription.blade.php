@@ -24,7 +24,8 @@
                 @foreach ($prescription->images as $image)
                     <li class="sc-document-workspace">
                         @if (in_array(strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
-                            <div class="sc-document-viewer"><img src="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" alt="Prescription page {{ $loop->iteration }}" loading="lazy"></div>
+                            {{-- A file lost from storage says so, instead of leaving the browser's alt text in an empty box. --}}
+                            <div class="sc-document-viewer" x-data="{ missing: false }"><img x-show="! missing" x-on:error="missing = true" src="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" alt="Prescription page {{ $loop->iteration }}" loading="lazy"><p x-show="missing" x-cloak class="sc-document-missing" role="status"><strong>This photo is no longer available.</strong> Use “Ask for a clearer photo” so the customer sends it again.</p></div>
                         @endif
                         <div class="sc-document-meta"><strong>{{ $image->original_name }}</strong><span>{{ $prescription->images->count() > 1 ? 'Page '.$loop->iteration.' of '.$prescription->images->count() : '' }}</span><span class="sr-only">{{ $image->original_name }}</span><a href="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" target="_blank" rel="noopener" class="sc-document-open">Open document <span class="sr-only">page {{ $loop->iteration }} in a new tab</span></a>@if ($loop->first)            @if ($prescription->status === 'pending' && $canCheckPrescription && ! $canReviewPrescription && $prescription->checked_at === null)
                 <form method="POST" action="{{ route('seller.orders.prescription.check', $sellerOrder) }}" class="mt-3">@csrf

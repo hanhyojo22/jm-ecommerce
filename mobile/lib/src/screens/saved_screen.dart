@@ -43,48 +43,54 @@ class SavedScreen extends ConsumerWidget {
                 itemCount: rows,
                 itemBuilder: (context, row) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (var column = 0; column < columns; column++) ...[
-                        if (column > 0) const SizedBox(width: 12),
-                        Expanded(
-                          child: row * columns + column < value.length
-                              ? Stack(
-                                  children: [
-                                    ProductCard(
-                                      product: value[row * columns + column],
-                                      discovery: true,
-                                      showAddToCart: true,
-                                      onTap: () {
-                                        final product =
-                                            value[row * columns + column];
-                                        context.push(
-                                          '/product/${product.store?.slug ?? ''}/${product.slug}',
-                                        );
-                                      },
-                                    ),
-                                    Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: Material(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surface
-                                            .withValues(alpha: 0.9),
-                                        shape: const CircleBorder(),
-                                        child: SaveProductButton(
-                                          productId:
-                                              value[row * columns + column].id,
+                  // Cards in a row share a height so their buttons line up.
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var column = 0; column < columns; column++) ...[
+                          if (column > 0) const SizedBox(width: 12),
+                          Expanded(
+                            child: row * columns + column < value.length
+                                ? Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      ProductCard(
+                                        product: value[row * columns + column],
+                                        discovery: true,
+                                        showAddToCart: true,
+                                        fillHeight: true,
+                                        onTap: () {
+                                          final product =
+                                              value[row * columns + column];
+                                          context.push(
+                                            '/product/${product.store?.slug ?? ''}/${product.slug}',
+                                          );
+                                        },
+                                      ),
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Material(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .surface
+                                              .withValues(alpha: 0.9),
+                                          shape: const CircleBorder(),
+                                          child: SaveProductButton(
+                                            productId:
+                                                value[row * columns + column]
+                                                    .id,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               );

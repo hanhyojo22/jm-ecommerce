@@ -67,6 +67,11 @@ int _minorUnits(String value) {
   return negative ? -cents : cents;
 }
 
+/// "JM-…NB9ZBWFZ" for a long order number, matching Order::shortNumber on the server.
+String shortOrderNumber(String number) => number.length > 16
+    ? '${number.split('-').first}-…${number.substring(number.length - 8)}'
+    : number;
+
 String shortDate(String? iso) {
   final date = DateTime.tryParse(iso ?? '')?.toLocal();
 

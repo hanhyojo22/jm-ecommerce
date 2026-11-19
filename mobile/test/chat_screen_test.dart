@@ -124,7 +124,7 @@ void main() {
     expect(find.text('Out for delivery'), findsOneWidget);
     expect(find.text('COD'), findsOneWidget);
     expect(find.text('FREE SHIPPING'), findsOneWidget);
-    expect(find.text('4.5 (12) | 19 Sold'), findsOneWidget);
+    expect(find.text('4.5 (12) · 19 sold'), findsOneWidget);
     expect(find.text('Cebu'), findsOneWidget);
     expect(find.text('+3'), findsOneWidget);
     expect(find.text('₱199.00'), findsOneWidget);

@@ -284,7 +284,8 @@ class _AccountOrdersSection extends StatelessWidget {
     (key: 'to_review', label: 'To Review', icon: Icons.rate_review_outlined),
     (
       key: 'returns',
-      label: 'Returns &\nCancellations',
+      // Five tiles share the row; the long label was cut to "Cancellatio…".
+      label: 'Returns',
       icon: Icons.assignment_return_outlined,
     ),
   ];

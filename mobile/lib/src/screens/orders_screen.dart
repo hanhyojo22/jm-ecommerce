@@ -626,7 +626,7 @@ class _OrderCard extends StatelessWidget {
                 child: Text.rich(
                   TextSpan(
                     text:
-                        'Total($itemCount ${itemCount == 1 ? 'Item' : 'Items'}): ',
+                        'Total ($itemCount ${itemCount == 1 ? 'item' : 'items'}): ',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontSize: 13.5,
                       color: scheme.onSurface,
@@ -662,9 +662,8 @@ class _OrderCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  if (!largeText &&
-                      !order.canConfirmReceipt &&
-                      order.status == 'delivered')
+                  // The Wrap moves actions to a new line, so large text keeps every action.
+                  if (!order.canConfirmReceipt && order.status == 'delivered')
                     _OrderAction(
                       label: 'Return/Refund',
                       emphasised: false,

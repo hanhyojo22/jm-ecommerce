@@ -554,6 +554,19 @@ services:
         value: https
       - key: FILESYSTEM_DISK
         value: public
+      # Chat photos, prescriptions and SC/PWD ID photos. Without a bucket they land on
+      # the container disk, which Render wipes on every deploy. Product photos stay on
+      # the container (no NEON_PRODUCT_IMAGES_BUCKET) until staging's seeded images move too.
+      - key: CHAT_ATTACHMENTS_BUCKET
+        sync: false
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
       - key: CLERK_PUBLISHABLE_KEY
         sync: false
       - key: CLERK_SECRET_KEY

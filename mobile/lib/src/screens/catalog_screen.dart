@@ -940,59 +940,53 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     return sections;
   }
 
-  // Masonry like marketplace feeds: each column stacks on its own, so cards
-  // hug their details instead of sharing a row height.
-  // shortcut: products alternate columns rather than filling the shorter one; balance by height if the column ends drift noticeably.
+  // Rows of equal-height cards: each row takes its tallest card's height and
+  // the cart buttons sit on one line, so prices and actions are easy to compare.
   Widget _productMasonry(
     List<Product> products,
     SliverGridDelegateWithFixedCrossAxisCount gridDelegate,
   ) {
+    final columns = gridDelegate.crossAxisCount;
+
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      sliver: SliverCrossAxisGroup(
-        slivers: [
-          for (
-            var column = 0;
-            column < gridDelegate.crossAxisCount;
-            column++
-          ) ...[
-            if (column > 0)
-              SliverConstrainedCrossAxis(
-                maxExtent: gridDelegate.crossAxisSpacing,
-                sliver: const SliverToBoxAdapter(child: SizedBox.shrink()),
-              ),
-            SliverCrossAxisExpanded(
-              flex: 1,
-              sliver: SliverList.builder(
-                itemCount:
-                    (products.length -
-                        column +
-                        gridDelegate.crossAxisCount -
-                        1) ~/
-                    gridDelegate.crossAxisCount,
-                itemBuilder: (context, row) {
-                  final product =
-                      products[row * gridDelegate.crossAxisCount + column];
+      sliver: SliverList.builder(
+        itemCount: (products.length + columns - 1) ~/ columns,
+        itemBuilder: (context, row) {
+          final rowProducts = products
+              .skip(row * columns)
+              .take(columns)
+              .toList();
 
-                  return Padding(
-                    key: ValueKey(product.id),
-                    padding: EdgeInsets.only(
-                      bottom: gridDelegate.mainAxisSpacing,
+          return Padding(
+            key: ValueKey(rowProducts.first.id),
+            padding: EdgeInsets.only(bottom: gridDelegate.mainAxisSpacing),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var column = 0; column < columns; column++) ...[
+                    if (column > 0)
+                      SizedBox(width: gridDelegate.crossAxisSpacing),
+                    Expanded(
+                      child: column < rowProducts.length
+                          ? ProductCard(
+                              product: rowProducts[column],
+                              discovery: true,
+                              showAddToCart: true,
+                              fillHeight: true,
+                              onTap: () => context.push(
+                                '/product/${rowProducts[column].store?.slug ?? ''}/${rowProducts[column].slug}',
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                     ),
-                    child: ProductCard(
-                      product: product,
-                      discovery: true,
-                      showAddToCart: true,
-                      onTap: () => context.push(
-                        '/product/${product.store?.slug ?? ''}/${product.slug}',
-                      ),
-                    ),
-                  );
-                },
+                  ],
+                ],
               ),
             ),
-          ],
-        ],
+          );
+        },
       ),
     );
   }
@@ -1734,25 +1728,29 @@ class _OrderAgain extends StatelessWidget {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final product in products)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 10),
-                    child: SizedBox(
-                      width: 160,
-                      child: ProductCard(
-                        product: product,
-                        discovery: true,
-                        showAddToCart: true,
-                        onTap: () => context.push(
-                          '/product/${product.store?.slug ?? ''}/${product.slug}',
+            // Same height for every card in the rail, buttons on one line.
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final product in products)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 10),
+                      child: SizedBox(
+                        width: 160,
+                        child: ProductCard(
+                          product: product,
+                          discovery: true,
+                          showAddToCart: true,
+                          fillHeight: true,
+                          onTap: () => context.push(
+                            '/product/${product.store?.slug ?? ''}/${product.slug}',
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -1819,9 +1817,10 @@ class _CampaignCard extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: onExplore,
                   iconAlignment: IconAlignment.end,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                  // It scrolls to the list below, so the label says where it goes.
+                  icon: const Icon(Icons.arrow_downward_rounded, size: 16),
                   label: const Text(
-                    'Shop medicines',
+                    'See popular products',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

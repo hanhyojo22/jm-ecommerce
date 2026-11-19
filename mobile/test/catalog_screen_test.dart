@@ -469,7 +469,7 @@ void main() {
   ) async {
     await _pumpCatalog(tester, _CatalogApi());
     final before = tester.getTopLeft(find.text('Popular products')).dy;
-    await tester.tap(find.text('Shop medicines'));
+    await tester.tap(find.text('See popular products'));
     await tester.pumpAndSettle();
 
     expect(

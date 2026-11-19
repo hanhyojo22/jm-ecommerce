@@ -1575,6 +1575,8 @@ class _Bubble extends StatelessWidget {
                                             radius: photoOnly
                                                 ? 0
                                                 : appDetailRadius,
+                                            errorLabel:
+                                                'This photo is no longer available',
                                           ),
                                         ),
                                       ),
@@ -1917,7 +1919,7 @@ class _OrderInquiryCard extends StatelessWidget {
                             Icon(
                               Icons.star_rounded,
                               size: 14,
-                              color: Colors.amber.shade600,
+                              color: Theme.of(context).colorScheme.secondary,
                             ),
                             const SizedBox(width: 2),
                           ],
@@ -1927,8 +1929,8 @@ class _OrderInquiryCard extends StatelessWidget {
                                 ratingCount > 0
                                     ? '${rating.toStringAsFixed(1)} ($ratingCount)'
                                     : 'No reviews yet',
-                                if (sold > 0) '$sold Sold',
-                              ].join(' | '),
+                                if (sold > 0) '$sold sold',
+                              ].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: muted,

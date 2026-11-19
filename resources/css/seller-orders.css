@@ -299,6 +299,17 @@
     width: auto;
     object-fit: contain;
 }
+.sc-document-missing  {
+    max-width: 36ch;
+    text-align: center;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.sc-document-missing strong  {
+    display: block;
+    color: #182c48;
+}
 .sc-document-meta  {
     display: flex;
     flex-direction: column;

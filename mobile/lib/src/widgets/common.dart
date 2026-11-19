@@ -222,10 +222,15 @@ class NetworkThumb extends StatelessWidget {
     this.cacheKey,
     this.placeholderSize,
     this.placeholderIcon = PhosphorIconsRegular.image,
+    this.errorLabel,
   });
 
   /// Drawn on the soft stage while the photo loads or when there is none.
   final IconData placeholderIcon;
+
+  /// Said under a broken-image icon when the photo fails to load, so a lost
+  /// file reads as lost instead of as a photo that is still loading.
+  final String? errorLabel;
 
   final String? url;
   final double? width;
@@ -289,7 +294,31 @@ class NetworkThumb extends StatelessWidget {
         memCacheWidth: memCacheWidth,
         fadeInDuration: const Duration(milliseconds: 180),
         placeholder: (context, value) => placeholder,
-        errorWidget: (context, value, error) => placeholder,
+        errorWidget: (context, value, error) => errorLabel == null
+            ? placeholder
+            : Container(
+                width: boxWidth,
+                height: boxHeight,
+                color: scheme.surfaceContainer,
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      size: iconSize,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      errorLabel!,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: scheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }
@@ -389,12 +418,17 @@ class ProductCard extends StatelessWidget {
     required this.onTap,
     this.discovery = false,
     this.showAddToCart = false,
+    this.fillHeight = false,
   });
 
   final Product product;
   final VoidCallback onTap;
   final bool discovery;
   final bool showAddToCart;
+
+  /// Stretch to the row's height with the cart button pinned to the bottom,
+  /// so cards side by side line up.
+  final bool fillHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -521,7 +555,9 @@ class ProductCard extends StatelessWidget {
         onTap: onTap,
         child: Column(
           // Feed cards hug their details; other cards fill their grid cell.
-          mainAxisSize: discovery ? MainAxisSize.min : MainAxisSize.max,
+          mainAxisSize: discovery && !fillHeight
+              ? MainAxisSize.min
+              : MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Feed photos are a fixed square so every photo in a row lines up; spare height sits under the details.
@@ -529,83 +565,86 @@ class ProductCard extends StatelessWidget {
               AspectRatio(aspectRatio: 1, child: photo)
             else
               Expanded(child: photo),
-            Padding(
-              padding: discovery
-                  ? const EdgeInsets.fromLTRB(10, 10, 10, 10)
-                  : const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (product.genericNameLabel != null)
-                    Text(
-                      product.genericNameLabel!.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  Text(
-                    product.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: titleStyle,
-                  ),
-                  if (discovery) ...[
-                    const SizedBox(height: 4),
-                    price,
-                    if (product.ratingCount > 0 ||
-                        product.soldQuantity > 0) ...[
-                      const SizedBox(height: 4),
-                      Semantics(
-                        label: product.ratingCount > 0
-                            ? 'Rated ${product.ratingAverage.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
-                            : '${product.soldQuantity} sold',
-                        excludeSemantics: true,
-                        child: Row(
-                          children: [
-                            Icon(
-                              product.ratingCount > 0
-                                  ? Icons.star_rounded
-                                  : Icons.star_outline_rounded,
-                              size: 16,
-                              color: product.ratingCount > 0
-                                  ? theme.colorScheme.secondary
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                [
-                                  if (product.ratingCount > 0)
-                                    '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})',
-                                  if (product.soldQuantity > 0)
-                                    '${_compactCount(product.soldQuantity)} sold',
-                                ].join(' · '),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          ],
+            _expandedIf(
+              fillHeight,
+              Padding(
+                padding: discovery
+                    ? const EdgeInsets.fromLTRB(10, 10, 10, 10)
+                    : const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (product.genericNameLabel != null)
+                      Text(
+                        product.genericNameLabel!.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
                         ),
                       ),
-                    ],
-                  ] else
-                    const SizedBox(height: 4),
-                  if (!discovery) ...[const SizedBox(height: 8), price],
-                  if (showAddToCart) ...[
-                    const SizedBox(height: 10),
-                    _ProductCartButton(
-                      product: product,
-                      onChooseOptions: onTap,
+                    Text(
+                      product.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
                     ),
+                    if (discovery) ...[
+                      const SizedBox(height: 4),
+                      price,
+                      if (product.ratingCount > 0 ||
+                          product.soldQuantity > 0) ...[
+                        const SizedBox(height: 4),
+                        Semantics(
+                          label: product.ratingCount > 0
+                              ? 'Rated ${product.ratingAverage.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
+                              : '${product.soldQuantity} sold',
+                          excludeSemantics: true,
+                          child: Row(
+                            children: [
+                              // A star only when there is a rating; beside a sold count it reads as one.
+                              if (product.ratingCount > 0) ...[
+                                Icon(
+                                  Icons.star_rounded,
+                                  size: 16,
+                                  color: theme.colorScheme.secondary,
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  [
+                                    if (product.ratingCount > 0)
+                                      '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})',
+                                    if (product.soldQuantity > 0)
+                                      '${_compactCount(product.soldQuantity)} sold',
+                                  ].join(' · '),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ] else
+                      const SizedBox(height: 4),
+                    if (!discovery) ...[const SizedBox(height: 8), price],
+                    if (showAddToCart) ...[
+                      if (fillHeight) const Spacer(),
+                      const SizedBox(height: 10),
+                      _ProductCartButton(
+                        product: product,
+                        onChooseOptions: onTap,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],
@@ -614,6 +653,9 @@ class ProductCard extends StatelessWidget {
     );
   }
 }
+
+Widget _expandedIf(bool expand, Widget child) =>
+    expand ? Expanded(child: child) : child;
 
 String _compactCount(int count) {
   if (count < 1000) {

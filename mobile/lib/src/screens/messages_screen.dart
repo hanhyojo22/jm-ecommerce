@@ -172,7 +172,7 @@ class MessagesScreen extends ConsumerWidget {
     }
 
     if (snapshot?['type'] == 'order') {
-      return 'Order · #${snapshot?['number']}';
+      return 'Order · #${shortOrderNumber('${snapshot?['number'] ?? ''}')}';
     }
 
     return null;

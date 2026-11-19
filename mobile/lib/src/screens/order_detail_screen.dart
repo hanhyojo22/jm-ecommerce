@@ -99,7 +99,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     'confirmed' || 'processing' => 'The pharmacy is preparing your order.',
     'pending' when order.canPay =>
       'Complete your online payment so the pharmacy can prepare your order.',
-    _ => 'Placed ${dateTime(order.createdAt)}. We will update you as it moves.',
+    // The placed time already sits under the headline.
+    _ => 'We will update you as it moves.',
   };
 
   int _activeStep(String status) => switch (status) {
@@ -405,6 +406,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     final largeText = MediaQuery.textScalerOf(context).scale(14) > 18;
     final accent = statusColour(context, order.status);
     final step = _activeStep(order.status);
+    final showPill = statusLabel(order.status) != _statusHeadline(order);
 
     final payButton = largeText
         ? FilledButton(
@@ -488,10 +490,12 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           ],
                         ),
                       ),
-                      if (!largeText) StatusPill(status: order.status),
+                      // The pill only repeats a headline like "Order placed".
+                      if (!largeText && showPill)
+                        StatusPill(status: order.status),
                     ],
                   ),
-                  if (largeText) ...[
+                  if (largeText && showPill) ...[
                     const SizedBox(height: 8),
                     StatusPill(status: order.status),
                   ],
@@ -819,14 +823,18 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: StatusPill(status: sellerOrder.status),
+                    // One branch's status already leads the page; repeat it only when it differs.
+                    if (order.sellerOrders.length > 1 ||
+                        sellerOrder.status != order.status) ...[
+                      const SizedBox(width: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 160),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: StatusPill(status: sellerOrder.status),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 if (sellerOrder.riderName case final rider?) ...[
@@ -898,7 +906,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                           Icon(
                             Icons.headset_mic_rounded,
                             size: 17,
-                            color: scheme.error,
+                            color: scheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 6),
                           Flexible(
@@ -1010,6 +1018,19 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                 ),
               ],
             ),
+            // Explains a total below the item prices without opening the summary.
+            if ((double.tryParse(order.discountAmount) ?? 0) > 0)
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Text(
+                  'Includes SC/PWD discount −${money(order.discountAmount)}',
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: statusColour(context, 'completed'),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.spaceBetween,

@@ -120,6 +120,46 @@ class _AppShellState extends ConsumerState<AppShell>
     final cartCount = ref.watch(cartCountProvider);
     final scheme = Theme.of(context).colorScheme;
 
+    // Wide windows (tablets, unfolded phones) get a side rail instead of a stretched bottom bar.
+    final wide = MediaQuery.sizeOf(context).width >= 600;
+    final Widget page = AnnotatedRegion<SystemUiOverlayStyle>(
+      value:
+          (Theme.of(context).brightness == Brightness.dark
+                  ? SystemUiOverlayStyle.light
+                  : SystemUiOverlayStyle.dark)
+              .copyWith(statusBarColor: Colors.transparent),
+      child: IndexedStack(
+        index: index,
+        children: [
+          const CatalogScreen(),
+          if (!signedIn) ...[
+            for (var i = 1; i <= 4; i++) _guestPrompt(i),
+          ] else ...[
+            if (tab.loaded.contains(1))
+              const OrdersScreen()
+            else
+              const SizedBox(),
+            if (tab.loaded.contains(2))
+              const MessagesScreen()
+            else
+              const SizedBox(),
+            if (tab.loaded.contains(3))
+              CartScreen(
+                embedded: true,
+                onBrowseProducts: () =>
+                    ref.read(shellTabProvider.notifier).select(0),
+              )
+            else
+              const SizedBox(),
+            if (tab.loaded.contains(4))
+              const AccountScreen()
+            else
+              const SizedBox(),
+          ],
+        ],
+      ),
+    );
+
     // System Back returns to the Shop tab before it leaves the app.
     return PopScope(
       canPop: index == 0,
@@ -135,43 +175,15 @@ class _AppShellState extends ConsumerState<AppShell>
             ? null
             : AppBar(title: Text(_titles[index]), titleSpacing: 20),
         // Tabs with light headers need dark status-bar icons; the Shop tab's band sets its own.
-        body: AnnotatedRegion<SystemUiOverlayStyle>(
-          value:
-              (Theme.of(context).brightness == Brightness.dark
-                      ? SystemUiOverlayStyle.light
-                      : SystemUiOverlayStyle.dark)
-                  .copyWith(statusBarColor: Colors.transparent),
-          child: IndexedStack(
-            index: index,
-            children: [
-              const CatalogScreen(),
-              if (!signedIn) ...[
-                for (var i = 1; i <= 4; i++) _guestPrompt(i),
-              ] else ...[
-                if (tab.loaded.contains(1))
-                  const OrdersScreen()
-                else
-                  const SizedBox(),
-                if (tab.loaded.contains(2))
-                  const MessagesScreen()
-                else
-                  const SizedBox(),
-                if (tab.loaded.contains(3))
-                  CartScreen(
-                    embedded: true,
-                    onBrowseProducts: () =>
-                        ref.read(shellTabProvider.notifier).select(0),
-                  )
-                else
-                  const SizedBox(),
-                if (tab.loaded.contains(4))
-                  const AccountScreen()
-                else
-                  const SizedBox(),
-              ],
-            ],
-          ),
-        ),
+        body: wide
+            ? Row(
+                children: [
+                  _rail(index, unread, cartCount),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: page),
+                ],
+              )
+            : page,
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -182,7 +194,7 @@ class _AppShellState extends ConsumerState<AppShell>
                 subtotal: ref.watch(cartProvider).value?.subtotal,
                 onTap: () => ref.read(shellTabProvider.notifier).select(3),
               ),
-            _navigation(context, index, unread, cartCount, scheme),
+            if (!wide) _navigation(context, index, unread, cartCount, scheme),
           ],
         ),
       ),
@@ -212,6 +224,61 @@ class _AppShellState extends ConsumerState<AppShell>
     ),
   };
 
+  void _select(int value) {
+    if (value == 2) {
+      ref.invalidate(conversationsProvider);
+    }
+    ref.read(shellTabProvider.notifier).select(value);
+  }
+
+  Widget _rail(int index, int unread, int cartCount) => SafeArea(
+    right: false,
+    child: NavigationRail(
+      selectedIndex: index,
+      labelType: NavigationRailLabelType.all,
+      onDestinationSelected: _select,
+      destinations: [
+        const NavigationRailDestination(
+          icon: Icon(PhosphorIconsRegular.house),
+          selectedIcon: Icon(PhosphorIconsFill.house),
+          label: Text('Shop'),
+        ),
+        const NavigationRailDestination(
+          icon: Icon(PhosphorIconsRegular.receipt),
+          selectedIcon: Icon(PhosphorIconsFill.receipt),
+          label: Text('Orders'),
+        ),
+        NavigationRailDestination(
+          icon: _NavBadge(
+            count: unread,
+            child: const Icon(PhosphorIconsRegular.chatCircleDots),
+          ),
+          selectedIcon: _NavBadge(
+            count: unread,
+            child: const Icon(PhosphorIconsFill.chatCircleDots),
+          ),
+          label: const Text('Messages'),
+        ),
+        NavigationRailDestination(
+          icon: _NavBadge(
+            count: cartCount,
+            child: const Icon(PhosphorIconsRegular.tote),
+          ),
+          selectedIcon: _NavBadge(
+            count: cartCount,
+            child: const Icon(PhosphorIconsFill.tote),
+          ),
+          label: const Text('Cart'),
+        ),
+        const NavigationRailDestination(
+          icon: Icon(PhosphorIconsRegular.user),
+          selectedIcon: Icon(PhosphorIconsFill.user),
+          label: Text('Account'),
+        ),
+      ],
+    ),
+  );
+
   Widget _navigation(
     BuildContext context,
     int index,
@@ -227,12 +294,7 @@ class _AppShellState extends ConsumerState<AppShell>
     child: NavigationBar(
       selectedIndex: index,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      onDestinationSelected: (value) {
-        if (value == 2) {
-          ref.invalidate(conversationsProvider);
-        }
-        ref.read(shellTabProvider.notifier).select(value);
-      },
+      onDestinationSelected: _select,
       destinations: [
         const NavigationDestination(
           icon: Icon(PhosphorIconsRegular.house),

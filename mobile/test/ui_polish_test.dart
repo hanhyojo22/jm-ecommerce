@@ -193,7 +193,7 @@ void main() {
       expect(find.text('Handmade ceramic mug'), findsOneWidget);
       expect(find.text('Cotton tote bag'), findsOneWidget);
       expect(find.text('+1 more'), findsOneWidget);
-      expect(find.textContaining('Total(4 Items):'), findsOneWidget);
+      expect(find.textContaining('Total (4 items):'), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'Independent');
       await tester.testTextInput.receiveAction(TextInputAction.search);
