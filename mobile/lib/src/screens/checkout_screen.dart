@@ -546,6 +546,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       );
                       final button = FilledButton(
                         style: FilledButton.styleFrom(
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .secondary,
+                          foregroundColor: Theme.of(context)
+                              .colorScheme
+                              .onSecondary,
                           minimumSize: const Size.fromHeight(54),
                           shape: const StadiumBorder(),
                         ),

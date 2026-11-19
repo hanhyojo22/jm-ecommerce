@@ -206,6 +206,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       const SizedBox(width: 10),
                       FilledButton(
                         style: FilledButton.styleFrom(
+                          backgroundColor: scheme.secondary,
+                          foregroundColor: scheme.onSecondary,
                           minimumSize: const Size(140, 52),
                           padding: const EdgeInsets.symmetric(horizontal: 22),
                           shape: const StadiumBorder(),

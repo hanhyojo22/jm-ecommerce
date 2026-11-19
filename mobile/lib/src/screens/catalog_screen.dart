@@ -155,13 +155,13 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                     width: barHeight - 12,
                     height: barHeight - 12,
                     decoration: BoxDecoration(
-                      color: scheme.primary,
+                      color: scheme.secondary,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.search_rounded,
                       size: 22,
-                      color: scheme.onPrimary,
+                      color: scheme.onSecondary,
                     ),
                   ),
                 ),
@@ -932,7 +932,7 @@ class _QuickAction extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
+                    color: scheme.secondary.withValues(alpha: 0.24),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: busy
@@ -940,10 +940,10 @@ class _QuickAction extends StatelessWidget {
                           padding: const EdgeInsets.all(14),
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: scheme.onPrimaryContainer,
+                            color: scheme.primary,
                           ),
                         )
-                      : Icon(icon, size: 24, color: scheme.onPrimaryContainer),
+                      : Icon(icon, size: 24, color: scheme.primary),
                 ),
                 const SizedBox(height: 8),
                 Text(

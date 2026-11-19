@@ -486,10 +486,10 @@ class _ProductBodyState extends ConsumerState<_ProductBody> {
     Widget purchaseButton({required bool buyNow}) {
       // Buy now is the one solid action; Add to cart sits beside it as its tonal partner.
       final background = buyNow
-          ? theme.colorScheme.primary
+          ? theme.colorScheme.secondary
           : theme.colorScheme.secondaryContainer;
       final foreground = buyNow
-          ? theme.colorScheme.onPrimary
+          ? theme.colorScheme.onSecondary
           : theme.colorScheme.onSecondaryContainer;
       // Only checkout shows a spinner; adding is confirmed by the flight.
       final busy = buyNow && inFlight == true;

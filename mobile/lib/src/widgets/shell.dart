@@ -382,10 +382,13 @@ class _ViewCartBar extends StatelessWidget {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: slab.ink.withValues(alpha: 0.14),
+                          color: theme.colorScheme.secondary,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(PhosphorIconsFill.tote, color: slab.ink),
+                        child: Icon(
+                          PhosphorIconsFill.tote,
+                          color: theme.colorScheme.onSecondary,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -403,7 +406,7 @@ class _ViewCartBar extends StatelessWidget {
                         Text(
                           money(subtotal),
                           style: theme.textTheme.titleSmall?.copyWith(
-                            color: slab.ink,
+                            color: theme.colorScheme.secondary,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

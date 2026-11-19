@@ -196,7 +196,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surfaceLowest,
-      indicatorColor: scheme.primary.withValues(alpha: dark ? 0.24 : 0.10),
+      indicatorColor: scheme.secondary.withValues(alpha: dark ? 0.30 : 0.32),
       indicatorShape: const StadiumBorder(),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
