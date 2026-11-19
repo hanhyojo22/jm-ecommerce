@@ -30,6 +30,7 @@ class Order extends Model
         'discount_amount',
         'discount_card_type',
         'discount_card_number',
+        'discount_card_fingerprint',
         'discount_card_name',
         'total',
         'status',
@@ -43,7 +44,7 @@ class Order extends Model
      *
      * @var list<string>
      */
-    protected $hidden = ['discount_card_number', 'discount_document_path', 'discount_document_name', 'discount_document_mime'];
+    protected $hidden = ['discount_card_number', 'discount_card_fingerprint', 'discount_document_path', 'discount_document_name', 'discount_document_mime'];
 
     protected function casts(): array
     {

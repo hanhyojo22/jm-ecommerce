@@ -190,6 +190,7 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::patch('/seller/orders/{sellerOrder}/cod-collection', [SellerOrderController::class, 'collectCod'])->middleware('throttle:10,1')->name('seller.orders.cod-collection');
     Route::get('/seller/orders/{sellerOrder}/discount-document', [DiscountDocumentController::class, 'show'])->name('seller.orders.discount-document.show');
     Route::post('/seller/orders/{sellerOrder}/discount-document/review', [DiscountDocumentController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.discount-document.review');
+    Route::post('/seller/orders/{sellerOrder}/discount-card/check', [DiscountDocumentController::class, 'confirmCard'])->middleware('throttle:10,1')->name('seller.orders.discount-card.check');
     Route::get('/seller/orders/{sellerOrder}/prescription/images/{image}', [SellerPrescriptionController::class, 'show'])->name('seller.orders.prescription.images.show');
     Route::patch('/seller/orders/{sellerOrder}/prescription', [SellerPrescriptionController::class, 'update'])->middleware('throttle:10,1')->name('seller.orders.prescription.update');
     Route::post('/seller/orders/{sellerOrder}/prescription/check', [SellerPrescriptionController::class, 'check'])->middleware('throttle:10,1')->name('seller.orders.prescription.check');

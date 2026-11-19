@@ -59,6 +59,7 @@ class SellerOrder extends Model
             'cod_collected_at' => 'datetime',
             'return_window_hours' => 'integer',
             'discount_reviewed_at' => 'datetime',
+            'discount_card_checked_at' => 'datetime',
         ];
     }
 

@@ -205,6 +205,7 @@ class CheckoutCart
                     'discount_amount' => $discount,
                     'discount_card_type' => $discountCard['type'] ?? null,
                     'discount_card_number' => $discountCard['id_number'] ?? null,
+                    'discount_card_fingerprint' => $discountCard === null ? null : SeniorPwdDiscount::fingerprint($discountCard['type'], $discountCard['id_number']),
                     'discount_card_name' => $discountCard['name'] ?? null,
                     'total' => $grandTotal,
                 ]);

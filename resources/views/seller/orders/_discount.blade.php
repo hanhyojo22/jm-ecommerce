@@ -1,9 +1,18 @@
 @php
     $discountOrder = $sellerOrder->order;
     $cardLabel = \App\Support\SeniorPwdDiscount::CARD_TYPES[$discountOrder->discount_card_type] ?? 'SC/PWD';
+    // Other customer accounts that used this same ID number with this company.
+    $otherAccounts = $discountOrder->discount_card_fingerprint === null ? 0 : \App\Models\Order::query()
+        ->where('discount_card_fingerprint', $discountOrder->discount_card_fingerprint)
+        ->where('user_id', '!=', $discountOrder->user_id)
+        ->whereHas('sellerOrders', fn ($query) => $query->where('tenant_id', $sellerOrder->tenant_id))
+        ->distinct()->count('user_id');
 @endphp
 <div class="sc-discount-review">
     <h3 class="sr-only">{{ $cardLabel }} discount ID</h3>
+    @if ($otherAccounts > 0)
+        <p role="note" class="mb-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">This ID number was also used by {{ $otherAccounts }} other customer {{ $otherAccounts === 1 ? 'account' : 'accounts' }}. It may be family ordering for the same person; check that the card and name match at handover.</p>
+    @endif
     @if ($discountOrder->discount_document_path)
         <div class="sc-document-workspace"><div class="sc-document-viewer">
             @if (str_starts_with($discountOrder->discount_document_mime ?? '', 'image/'))
@@ -30,5 +39,15 @@
     @else
         <div class="sc-document-viewer"><p>No ID photo was submitted.</p></div>
     @endif
-    <p class="sc-meta mt-4">Original ID required at handover.</p>
+    @if ($sellerOrder->discount_card_checked_at)
+        <p class="sc-document-checked mt-4">Original ID checked at handover · {{ $sellerOrder->discount_card_checked_at->format('M j, Y · g:i A') }}</p>
+    @else
+        <p class="sc-meta mt-4">Original ID required at handover.</p>
+        @if ($sellerOrder->status !== 'cancelled')
+            <form method="POST" action="{{ route('seller.orders.discount-card.check', $sellerOrder) }}" class="sc-document-check-form mt-2">
+                @csrf
+                <button type="submit" class="seller-outline-button">Original ID checked</button>
+            </form>
+        @endif
+    @endif
 </div>

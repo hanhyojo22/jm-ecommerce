@@ -63,6 +63,37 @@ class DiscountDocumentController extends Controller
         return back()->with('status', 'Discount ID reviewed. Check the original ID at handover. Prescription approval is separate.');
     }
 
+    /**
+     * Records that staff saw the original card when the customer received the order: the
+     * check the law relies on, kept as proof alongside the photo review.
+     */
+    public function confirmCard(Request $request, SellerOrder $sellerOrder): RedirectResponse
+    {
+        $sellerOrder = $this->scopedOrder($request, $sellerOrder);
+        abort_unless($request->user()->sellerMembership()->canWorkOrders(), 403);
+        DB::transaction(function () use ($request, $sellerOrder): void {
+            Order::query()->lockForUpdate()->findOrFail($sellerOrder->order_id);
+            $sellerOrder = SellerOrder::query()->lockForUpdate()->findOrFail($sellerOrder->id);
+            if (bccomp((string) $sellerOrder->discount_amount, '0', 2) <= 0 || $sellerOrder->status === 'cancelled') {
+                throw ValidationException::withMessages(['discount' => 'Only a discounted order that is not cancelled can have its card checked.']);
+            }
+            if ($sellerOrder->discount_card_checked_at !== null) {
+                return;
+            }
+            $sellerOrder->forceFill(['discount_card_checked_by' => $request->user()->id, 'discount_card_checked_at' => now()])->save();
+            AuditLog::query()->create([
+                'actor_user_id' => $request->user()->id,
+                'action' => 'order.discount_card_checked',
+                'entity_type' => SellerOrder::class,
+                'entity_id' => $sellerOrder->id,
+                'new_values' => ['order_id' => $sellerOrder->order_id],
+                'ip_address' => $request->ip(),
+            ]);
+        });
+
+        return back()->with('status', 'Original ID checked at handover.');
+    }
+
     private function scopedOrder(Request $request, SellerOrder $sellerOrder): SellerOrder
     {
         $member = $request->user()->sellerMembership() ?? abort(403);

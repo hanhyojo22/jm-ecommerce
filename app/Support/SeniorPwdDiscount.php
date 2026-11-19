@@ -88,6 +88,17 @@ class SeniorPwdDiscount
     }
 
     /**
+     * A keyed hash of the card, so orders can be matched on the same ID without storing the
+     * number in the clear. Spaces, dashes and case are ignored: "sc-123" and "SC 123" match.
+     */
+    public static function fingerprint(string $type, string $idNumber): string
+    {
+        $normalized = preg_replace('/[^A-Z0-9]/', '', mb_strtoupper($idNumber));
+
+        return hash_hmac('sha256', $type.'|'.$normalized, (string) config('app.key'));
+    }
+
+    /**
      * Shows the last four characters only, for anywhere outside the branch's own order page.
      */
     public static function mask(?string $idNumber): ?string

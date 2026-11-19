@@ -410,6 +410,58 @@ class DiscountCardTest extends TestCase
         $this->assertNull(Order::query()->latest('id')->firstOrFail()->sellerOrders()->sole()->discount_reviewed_at);
     }
 
+    public function test_an_id_number_used_by_another_account_is_flagged_to_the_branch(): void
+    {
+        $lola = $this->buyerWithCart();
+        $this->checkoutWithNumber($lola, 'SC-777');
+        $this->fillCart($lola);
+        $this->checkoutWithNumber($lola, 'SC-777');
+        $grandson = $this->buyerWithCart();
+        // Spacing and case do not hide a reused number.
+        $this->checkoutWithNumber($grandson, 'sc 777');
+        $stranger = $this->buyerWithCart();
+        $this->checkoutWithNumber($stranger, 'SC-888');
+
+        $staff = $this->staff();
+        $sellerOrderOf = fn (User $buyer) => Order::query()->where('user_id', $buyer->id)->latest('id')->firstOrFail()->sellerOrders()->sole();
+        $this->actingAs($staff)->get(route('seller.orders.show', $sellerOrderOf($grandson)), ['X-Order-Modal' => '1'])
+            ->assertSee('This ID number was also used by 1 other customer account.');
+        $this->get(route('seller.orders.show', $sellerOrderOf($lola)), ['X-Order-Modal' => '1'])
+            ->assertSee('This ID number was also used by 1 other customer account.');
+        $this->get(route('seller.orders.show', $sellerOrderOf($stranger)), ['X-Order-Modal' => '1'])
+            ->assertDontSee('This ID number was also used');
+        $this->assertArrayNotHasKey('discount_card_fingerprint', Order::query()->firstOrFail()->toArray());
+    }
+
+    public function test_staff_record_the_original_id_check_at_handover(): void
+    {
+        $buyer = $this->buyerWithCart();
+        $this->checkoutWithNumber($buyer, 'SC-1');
+        $sellerOrder = Order::query()->sole()->sellerOrders()->sole();
+        $staff = $this->staff();
+
+        $this->actingAs($staff)->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])->assertSee('Original ID checked');
+        $this->post(route('seller.orders.discount-card.check', $sellerOrder))->assertSessionHas('status', 'Original ID checked at handover.');
+        $this->post(route('seller.orders.discount-card.check', $sellerOrder))->assertSessionHasNoErrors();
+        $this->assertSame($staff->id, $sellerOrder->refresh()->discount_card_checked_by);
+        $this->assertDatabaseCount('audit_logs', 1);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'order.discount_card_checked', 'entity_id' => $sellerOrder->id]);
+        $this->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])->assertSee('Original ID checked at handover ·');
+
+        $otherBranch = Store::create(['tenant_id' => $this->branch->tenant_id, 'name' => 'Other branch', 'slug' => 'other-branch', 'status' => 'active', 'phone' => '+639171234567', 'address_line' => 'Other Street', 'city' => 'Cebu']);
+        $outsider = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $this->branch->tenant_id, 'store_id' => $otherBranch->id, 'user_id' => $outsider->id, 'role' => 'staff']);
+        $this->actingAs($outsider)->post(route('seller.orders.discount-card.check', $sellerOrder))->assertNotFound();
+        $this->actingAs($buyer)->post(route('seller.orders.discount-card.check', $sellerOrder))->assertForbidden();
+
+        $this->fillCart($buyer);
+        $this->checkoutWithNumber($buyer, 'SC-1');
+        $cancelled = Order::query()->latest('id')->firstOrFail()->sellerOrders()->sole();
+        $cancelled->update(['status' => 'cancelled']);
+        $this->actingAs($staff)->post(route('seller.orders.discount-card.check', $cancelled))->assertSessionHasErrors('discount');
+        $this->assertNull($cancelled->refresh()->discount_card_checked_at);
+    }
+
     public function test_api_checkout_requires_a_photo_of_the_discount_id(): void
     {
         $buyer = $this->buyerWithCart();
@@ -513,6 +565,15 @@ class DiscountCardTest extends TestCase
             'save_discount_card' => true,
             'discount_document' => UploadedFile::fake()->image('id.jpg'),
         ]);
+    }
+
+    private function checkoutWithNumber(User $buyer, string $number): void
+    {
+        $this->actingAs($buyer)->postJson('/api/v1/checkout', [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'senior', 'id_number' => $number, 'name' => 'Lola Ava'],
+            'discount_document' => UploadedFile::fake()->image('id.jpg'),
+        ])->assertCreated();
     }
 
     private function staff(string $role = 'staff'): User
