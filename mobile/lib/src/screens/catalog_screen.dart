@@ -900,6 +900,9 @@ class _QuickAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final dark = scheme.brightness == Brightness.dark;
+    // Navy on the pale sun disc; on dark, a sun glyph on a faint sun disc.
+    final glyph = dark ? scheme.secondary : scheme.onSecondary;
 
     return Expanded(
       child: Semantics(
@@ -917,19 +920,26 @@ class _QuickAction extends StatelessWidget {
                   width: 54,
                   height: 54,
                   decoration: BoxDecoration(
-                    color: sunWash,
+                    color: dark
+                        ? scheme.secondary.withValues(alpha: 0.16)
+                        : sunWash,
                     shape: BoxShape.circle,
-                    border: Border.all(color: sunWashEdge, width: 1.5),
+                    border: Border.all(
+                      color: dark
+                          ? scheme.secondary.withValues(alpha: 0.45)
+                          : sunWashEdge,
+                      width: 1.5,
+                    ),
                   ),
                   child: busy
                       ? Padding(
                           padding: const EdgeInsets.all(16),
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: scheme.onSecondary,
+                            color: glyph,
                           ),
                         )
-                      : Icon(icon, size: 24, color: scheme.onSecondary),
+                      : Icon(icon, size: 24, color: glyph),
                 ),
                 const SizedBox(height: 8),
                 Text(

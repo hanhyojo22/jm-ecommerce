@@ -313,7 +313,8 @@ class _ForecastTile extends StatelessWidget {
             ),
             Text(
               tile.detail,
-              maxLines: 1,
+              // Room for "Free over ₱500.00" or large text without cutting it.
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.w600,
