@@ -19,6 +19,8 @@
                 <a href="{{ route('dashboard') }}">Open admin workspace</a>
             @elseif (auth()->user()->account_type === 'seller' && auth()->user()->sellerTenant() !== null)
                 <a href="{{ route('seller.dashboard') }}">Open Seller Center</a>
+            @else
+                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
             @endif
         @else
             <a href="{{ route('login') }}">Seller or administrator sign in</a>

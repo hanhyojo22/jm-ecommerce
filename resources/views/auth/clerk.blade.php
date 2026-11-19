@@ -9,7 +9,7 @@
         ? 'We’ll add it for you and take you straight back to the item.'
         : (filled(request('redirect'))
             ? 'You’ll return to the page you were viewing.'
-            : ($isSignUp ? 'Email and password — that’s all it takes.' : 'Sign in to check out, track orders and chat with a pharmacist.'));
+            : ($isSignUp ? 'Email and password — that’s all it takes.' : (config('marketplace.web_store.enabled') ? 'Sign in to check out, track orders and chat with a pharmacist.' : 'Sign in to Seller Center or the admin workspace. Customers shop in the JMMart mobile app.')));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -64,7 +64,9 @@
                     @endforeach
                 </ul>
 
-                <a href="{{ route('catalog.index') }}" class="mt-6 block text-center text-sm font-medium text-muted transition hover:text-ink">Browse without an account →</a>
+                @if (config('marketplace.web_store.enabled'))
+                    <a href="{{ route('catalog.index') }}" class="mt-6 block text-center text-sm font-medium text-muted transition hover:text-ink">Browse without an account →</a>
+                @endif
             </section>
         </main>
     </div>

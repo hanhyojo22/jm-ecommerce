@@ -121,6 +121,24 @@ class WebStoreAccessTest extends TestCase
         $this->actingAs($buyer)->getJson('/api/v1/cart')->assertOk();
     }
 
+    public function test_a_signed_in_buyer_can_sign_out_from_the_mobile_notice(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('web-store.unavailable'))
+            ->assertStatus(410)
+            ->assertSee(route('logout'), false)
+            ->assertDontSee('Seller or administrator sign in');
+    }
+
+    public function test_the_sign_in_page_does_not_send_visitors_to_the_closed_shop(): void
+    {
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertDontSee('Browse without an account')
+            ->assertDontSee(route('catalog.index'), false)
+            ->assertSee('Customers shop in the JMMart mobile app.');
+    }
+
     public function test_buyer_emails_point_to_the_app_instead_of_the_closed_web_store(): void
     {
         $this->assertSame('Open the JMMart app to see your order.', BuyerLink::emailLine('View your order', 'https://example.test/orders/1'));
