@@ -93,6 +93,7 @@ class SeniorPwdDiscount
      */
     public static function fingerprint(string $type, string $idNumber): string
     {
+        // shortcut: keyed on APP_KEY, so rotating the key stops new orders matching old ones; re-fingerprint orders if the key ever changes.
         $normalized = preg_replace('/[^A-Z0-9]/', '', mb_strtoupper($idNumber));
 
         return hash_hmac('sha256', $type.'|'.$normalized, (string) config('app.key'));

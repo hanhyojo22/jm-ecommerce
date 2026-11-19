@@ -452,6 +452,11 @@ class DiscountCardTest extends TestCase
         $outsider = User::factory()->seller()->create(['email_verified_at' => now()]);
         TenantMember::create(['tenant_id' => $this->branch->tenant_id, 'store_id' => $otherBranch->id, 'user_id' => $outsider->id, 'role' => 'staff']);
         $this->actingAs($outsider)->post(route('seller.orders.discount-card.check', $sellerOrder))->assertNotFound();
+        $otherTenant = Tenant::create(['name' => 'Rival Drug', 'slug' => 'rival-drug', 'status' => 'active']);
+        $rivalStore = Store::create(['tenant_id' => $otherTenant->id, 'name' => 'Rival Cebu', 'slug' => 'rival-cebu', 'status' => 'active', 'phone' => '+639171234567', 'address_line' => 'Rival Street', 'city' => 'Cebu']);
+        $rival = User::factory()->seller()->create(['email_verified_at' => now()]);
+        TenantMember::create(['tenant_id' => $otherTenant->id, 'store_id' => $rivalStore->id, 'user_id' => $rival->id, 'role' => 'owner']);
+        $this->actingAs($rival)->post(route('seller.orders.discount-card.check', $sellerOrder))->assertNotFound();
         $this->actingAs($buyer)->post(route('seller.orders.discount-card.check', $sellerOrder))->assertForbidden();
 
         $this->fillCart($buyer);
