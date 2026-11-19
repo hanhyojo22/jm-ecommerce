@@ -24,7 +24,10 @@ class IngredientAliasController extends Controller
         $tenant = $this->headOffice($request);
 
         return view('seller.ingredient-aliases.index', [
-            'aliasesByIngredient' => IngredientAlias::query()->orderBy('ingredient')->orderBy('alias')->get()->groupBy('ingredient'),
+            // The built-in names and this company's own; another company's names stay private.
+            'aliasesByIngredient' => IngredientAlias::query()
+                ->where(fn ($query) => $query->whereNull('tenant_id')->orWhere('tenant_id', $tenant->id))
+                ->orderBy('ingredient')->orderBy('alias')->get()->groupBy('ingredient'),
             // Offered while typing, so the ingredient is spelled the way the products already spell it.
             'genericNames' => $tenant->products()->whereNotNull('generic_name')->where('generic_name', '!=', '')->distinct()->orderBy('generic_name')->pluck('generic_name'),
         ]);
@@ -32,7 +35,7 @@ class IngredientAliasController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->headOffice($request);
+        $tenant = $this->headOffice($request);
         $data = $request->validate([
             'alias' => ['required', 'string', 'max:100'],
             'ingredient' => ['required', 'string', 'max:160'],
@@ -47,7 +50,7 @@ class IngredientAliasController extends Controller
             throw ValidationException::withMessages(['alias' => "“{$alias}” is already listed."]);
         }
 
-        $entry = IngredientAlias::query()->create(['alias' => $alias, 'ingredient' => $ingredient]);
+        $entry = IngredientAlias::query()->create(['tenant_id' => $tenant->id, 'alias' => $alias, 'ingredient' => $ingredient]);
         AuditLog::query()->create([
             'actor_user_id' => $request->user()->id,
             'action' => 'ingredient_alias.added',
@@ -62,7 +65,9 @@ class IngredientAliasController extends Controller
 
     public function destroy(Request $request, IngredientAlias $ingredientAlias): RedirectResponse
     {
-        $this->headOffice($request);
+        $tenant = $this->headOffice($request);
+        // Only this company's own names; a built-in or another company's name is a 404.
+        abort_unless($ingredientAlias->tenant_id !== null && $ingredientAlias->tenant_id === $tenant->id, 404);
         $ingredientAlias->delete();
         AuditLog::query()->create([
             'actor_user_id' => $request->user()->id,

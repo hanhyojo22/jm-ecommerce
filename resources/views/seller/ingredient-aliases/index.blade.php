@@ -43,6 +43,9 @@
                                     @foreach ($aliases as $alias)
                                         <li class="inline-flex min-h-9 items-center gap-1 rounded-md border border-line bg-canvas ps-3 text-sm text-ink">
                                             {{ $alias->alias }}
+                                            @if ($alias->isBuiltIn())
+                                                <span class="pe-3 text-xs text-muted">Built in</span>
+                                            @else
                                             <form method="POST" action="{{ route('seller.ingredient-aliases.destroy', $alias) }}" data-confirm="Stop matching “{{ $alias->alias }}” to {{ $ingredient }}?">
                                                 @csrf
                                                 @method('DELETE')
@@ -50,6 +53,7 @@
                                                     <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
                                                 </button>
                                             </form>
+                                            @endif
                                         </li>
                                     @endforeach
                                 </ul>

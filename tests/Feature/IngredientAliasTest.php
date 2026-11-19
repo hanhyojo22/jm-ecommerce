@@ -30,7 +30,7 @@ class IngredientAliasTest extends TestCase
         $this->actingAs($owner)->post(route('seller.ingredient-aliases.store'), ['alias' => '  Ponstan   Generic ', 'ingredient' => 'Mefenamic Acid'])
             ->assertRedirect(route('seller.ingredient-aliases.index'));
 
-        $this->assertDatabaseHas('ingredient_aliases', ['alias' => 'ponstan generic', 'ingredient' => 'Mefenamic Acid']);
+        $this->assertDatabaseHas('ingredient_aliases', ['tenant_id' => $tenant->id, 'alias' => 'ponstan generic', 'ingredient' => 'Mefenamic Acid']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'ingredient_alias.added', 'actor_user_id' => $owner->id]);
         $this->assertSame([$mefenamic->id], CatalogQuery::search(['q' => 'Ponstan generic'])['products']->getCollection()->pluck('id')->all());
 
@@ -44,6 +44,26 @@ class IngredientAliasTest extends TestCase
             ->assertRedirect(route('seller.ingredient-aliases.index'));
         $this->assertDatabaseMissing('ingredient_aliases', ['alias' => 'ponstan generic']);
         $this->assertDatabaseHas('audit_logs', ['action' => 'ingredient_alias.removed', 'actor_user_id' => $owner->id]);
+    }
+
+    public function test_head_office_cannot_remove_built_in_or_another_companys_names(): void
+    {
+        [$tenant] = $this->pharmacy();
+        $owner = $this->member($tenant, 'owner');
+        $rival = Tenant::create(['name' => 'Rival Drug', 'slug' => 'rival-drug', 'status' => 'active']);
+        $rivalName = IngredientAlias::query()->create(['tenant_id' => $rival->id, 'alias' => 'rival secret', 'ingredient' => 'Paracetamol']);
+        $builtIn = IngredientAlias::query()->where('alias', 'acetaminophen')->sole();
+
+        $this->actingAs($owner)->get(route('seller.ingredient-aliases.index'))
+            ->assertOk()
+            ->assertSee('acetaminophen')
+            ->assertSee('Built in')
+            ->assertDontSee('rival secret');
+        $this->actingAs($owner)->delete(route('seller.ingredient-aliases.destroy', $rivalName))->assertNotFound();
+        $this->actingAs($owner)->delete(route('seller.ingredient-aliases.destroy', $builtIn))->assertNotFound();
+
+        $this->assertDatabaseHas('ingredient_aliases', ['id' => $rivalName->id]);
+        $this->assertDatabaseHas('ingredient_aliases', ['id' => $builtIn->id]);
     }
 
     public function test_branch_people_cannot_change_other_names(): void
