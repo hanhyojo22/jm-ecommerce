@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\Prescription;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\Store;
@@ -58,6 +59,24 @@ class BranchAccessTest extends TestCase
             ->patch(route('seller.orders.update', $order), ['status' => 'confirmed'])
             ->assertSessionHasNoErrors();
         $this->assertDatabaseHas('seller_orders', ['id' => $order->id, 'status' => 'confirmed']);
+    }
+
+    public function test_head_office_staff_only_read_order_documents(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $order = $this->sellerOrder($makati, 'MAKATI-3001');
+        Prescription::create(['order_id' => $order->order_id, 'user_id' => $order->order->user_id, 'status' => 'pending']);
+        $headOfficeStaff = $this->member($tenant, 'staff');
+
+        $this->actingAs($headOfficeStaff)->get(route('seller.orders.show', $order))->assertOk();
+        $this->actingAs($headOfficeStaff)->post(route('seller.orders.discount-document.review', $order))->assertForbidden();
+        $this->actingAs($headOfficeStaff)->post(route('seller.orders.prescription.check', $order))->assertForbidden();
+        $this->actingAs($headOfficeStaff)
+            ->patch(route('seller.orders.prescription.update', $order), ['decision' => 'needs_photo', 'reason' => 'The photo is blurry.'])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('prescriptions', ['order_id' => $order->order_id, 'status' => 'pending', 'checked_at' => null]);
+        $this->assertDatabaseHas('seller_orders', ['id' => $order->id, 'discount_reviewed_at' => null]);
     }
 
     public function test_head_office_sees_every_branch_order(): void

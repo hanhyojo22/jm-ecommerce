@@ -30,6 +30,7 @@ class DiscountDocumentController extends Controller
     public function update(Request $request, SellerOrder $sellerOrder): RedirectResponse
     {
         $sellerOrder = $this->scopedOrder($request, $sellerOrder);
+        abort_unless($request->user()->sellerMembership()->canWorkOrders(), 403);
         DB::transaction(function () use ($request, $sellerOrder): void {
             Order::query()->lockForUpdate()->findOrFail($sellerOrder->order_id);
             $sellerOrder = SellerOrder::query()->lockForUpdate()->findOrFail($sellerOrder->id);

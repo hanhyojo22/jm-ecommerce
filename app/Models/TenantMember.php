@@ -37,6 +37,15 @@ class TenantMember extends Model
     }
 
     /**
+     * Whether this member may change orders: owners and managers anywhere, staff only at their own
+     * branch. Head-office staff see every branch's orders but only read them.
+     */
+    public function canWorkOrders(): bool
+    {
+        return in_array($this->role, ['owner', 'manager'], true) || $this->store_id !== null;
+    }
+
+    /**
      * The job title shown in Seller Center: a manager tied to one branch is a branch manager.
      */
     public function roleLabel(): string

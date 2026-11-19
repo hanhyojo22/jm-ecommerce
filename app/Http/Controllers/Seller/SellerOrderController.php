@@ -260,7 +260,7 @@ class SellerOrderController extends Controller
      */
     private function canAdvance(TenantMember $member): bool
     {
-        return $this->canSupervise($member) || $member->store_id !== null;
+        return $member->canWorkOrders();
     }
 
     /**

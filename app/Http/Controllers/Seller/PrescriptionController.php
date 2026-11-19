@@ -37,6 +37,7 @@ class PrescriptionController extends Controller
 
     public function check(Request $request, SellerOrder $sellerOrder, CheckPrescription $check): RedirectResponse
     {
+        abort_unless(($request->user()->sellerMembership() ?? abort(403))->canWorkOrders(), 403);
         $check->handle($request->user(), $this->prescription($request, $sellerOrder), $request->ip());
 
         return back()->with('status', 'Marked as checked. A pharmacist still has to approve it.');
@@ -50,8 +51,8 @@ class PrescriptionController extends Controller
             'decision' => ['required', Rule::in(ReviewPrescription::DECISIONS)],
             'reason' => ['required_unless:decision,approve', 'nullable', 'string', 'max:500'],
         ]);
-        // Any staff who can see the prescription may ask for a clearer photo; only a licensed pharmacist decides it.
-        abort_unless($data['decision'] === 'needs_photo' || $member->canReviewPrescriptions(), 403);
+        // Branch staff may ask for a clearer photo; only a licensed pharmacist decides it, wherever they work.
+        abort_unless($data['decision'] === 'needs_photo' ? $member->canWorkOrders() : $member->canReviewPrescriptions(), 403);
 
         $review->handle($request->user(), $member->canReviewPrescriptions() ? $member->license_number : null, $prescription, $data['decision'], $data['reason'] ?? null, $request->ip());
 
