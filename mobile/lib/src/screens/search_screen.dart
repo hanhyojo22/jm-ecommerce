@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -216,53 +217,59 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               .apply(_leaveWith ?? _shopFilter);
         }
       },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              _SearchHeader(
-                controller: _controller,
-                focusNode: _focus,
-                onBack: _leave,
-                onChanged: _onChanged,
-                onSubmitted: _submit,
-                onClear: _clear,
-              ),
-              Expanded(
-                child: typing
-                    ? _SuggestionsView(
-                        query: _suggestionsQuery.isEmpty
-                            ? _typed
-                            : _suggestionsQuery,
-                        suggestions: _suggestions,
-                        loading: _suggestionsLoading,
-                        onName: (name) => _submit(name),
-                        onFillName: _fill,
-                        onCategory: (slug) => _submit(_typed, category: slug),
-                        onProduct: _openProduct,
-                        onSeeAll: () => _submit(_typed),
-                      )
-                    : showingResults
-                    ? _ResultsView(
-                        scroll: _scroll,
-                        filter: filter,
-                        onClearFilters: _clear,
-                        onBrowseCategory: (slug) =>
-                            _leave(CatalogFilter(category: slug)),
-                      )
-                    : _LandingView(
-                        onSearch: _submit,
-                        onFill: _fill,
-                        onProduct: _openProduct,
-                        onCategory: (slug) =>
-                            _leave(CatalogFilter(category: slug)),
-                        onPrescription: _sendPrescription,
-                        openingChat: _openingChat,
-                      ),
-              ),
-            ],
+      // Light page, so dark status bar icons (the Shop behind sets light ones for its green band).
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.dark.copyWith(
+          statusBarColor: Colors.transparent,
+        ),
+        child: Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _SearchHeader(
+                  controller: _controller,
+                  focusNode: _focus,
+                  onBack: _leave,
+                  onChanged: _onChanged,
+                  onSubmitted: _submit,
+                  onClear: _clear,
+                ),
+                Expanded(
+                  child: typing
+                      ? _SuggestionsView(
+                          query: _suggestionsQuery.isEmpty
+                              ? _typed
+                              : _suggestionsQuery,
+                          suggestions: _suggestions,
+                          loading: _suggestionsLoading,
+                          onName: (name) => _submit(name),
+                          onFillName: _fill,
+                          onCategory: (slug) => _submit(_typed, category: slug),
+                          onProduct: _openProduct,
+                          onSeeAll: () => _submit(_typed),
+                        )
+                      : showingResults
+                      ? _ResultsView(
+                          scroll: _scroll,
+                          filter: filter,
+                          onClearFilters: _clear,
+                          onBrowseCategory: (slug) =>
+                              _leave(CatalogFilter(category: slug)),
+                        )
+                      : _LandingView(
+                          onSearch: _submit,
+                          onFill: _fill,
+                          onProduct: _openProduct,
+                          onCategory: (slug) =>
+                              _leave(CatalogFilter(category: slug)),
+                          onPrescription: _sendPrescription,
+                          openingChat: _openingChat,
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1325,7 +1332,7 @@ class _ResultsView extends ConsumerWidget {
                                   ),
                               ],
                             ),
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodyMedium,
                           ),
