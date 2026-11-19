@@ -1335,33 +1335,32 @@ class _ResultsView extends ConsumerWidget {
                       Expanded(
                         child: Semantics(
                           liveRegion: true,
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: feed == null
-                                      ? 'Searching…'
-                                      : '$count ${count == 1 ? 'medicine' : 'medicines'}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                feed == null
+                                    ? 'Searching…'
+                                    : '$count ${count == 1 ? 'medicine' : 'medicines'}',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (branchName != null)
+                                Text(
+                                  'at $branchName',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (branchName != null)
-                                  TextSpan(
-                                    text: ' · $branchName',
-                                    style: TextStyle(
-                                      color: scheme.onSurfaceVariant,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium,
+                            ],
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Flexible(
                         child: PopupMenuButton<String?>(
                           tooltip: 'Sort results',
@@ -1381,8 +1380,8 @@ class _ResultsView extends ConsumerWidget {
                           ],
                           child: Container(
                             constraints: const BoxConstraints(minHeight: 48),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            alignment: Alignment.center,
+                            padding: const EdgeInsetsDirectional.only(end: 8),
+                            alignment: AlignmentDirectional.centerEnd,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
