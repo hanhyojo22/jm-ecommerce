@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#fafbfd">
+    <title>Everyday Pharmacy · Slower text mockup</title>
+    <link rel="preload" href="emblem-sprites.png" as="image">
+    <style>
+        @font-face {
+            font-family: 'Everyday Inter';
+            src: url('Inter.ttf') format('truetype');
+            font-weight: 100 900;
+            font-display: swap;
+        }
+        * { box-sizing: border-box; }
+        :root { color-scheme: light; --paper: #fafbfd; --blue: #071c94; }
+        html, body { width: 100%; min-height: 100%; margin: 0; }
+        body { background: var(--paper); color: var(--blue); font-family: 'Everyday Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+        ::selection { background: #fff0ae; color: var(--blue); }
+        .splash { position: relative; display: grid; width: 100%; min-height: 100svh; overflow: hidden; isolation: isolate; }
+        .daylight { position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse 230px 250px at 48% 43%, rgb(255 219 114 / 13%), transparent 100%); }
+        .brand { position: absolute; top: 46%; left: 50%; width: min(74vw, 340px); transform: translate(-50%, -50%); text-align: center; }
+        .emblem { position: relative; width: 76%; aspect-ratio: 1.12; margin: 0 auto 26px; }
+        .sprite { position: absolute; aspect-ratio: 1; background-image: url('emblem-sprites.png'); background-repeat: no-repeat; background-size: 200% 100%; }
+        .sun { top: 0; left: -3%; width: 88%; background-position: left center; transform-origin: 50% 50%; }
+        .cloud { top: 16%; left: 8%; width: 108%; background-position: right center; }
+        .wordmark { margin: 0; font-size: clamp(28px, 8.5vw, 41px); font-weight: 850; line-height: 1.06; letter-spacing: -.035em; }
+        .wordmark span { display: block; }
+        .wordmark span + span { margin-top: 3px; }
+        .is-playing .daylight { animation: dawn 1.5s ease-out both; }
+        .is-playing .cloud { animation: cloud-arrival .72s cubic-bezier(.16, 1, .3, 1) .08s both; }
+        .is-playing .sun { animation: sunrise 1.2s cubic-bezier(.16, 1, .3, 1) .26s both; }
+        .is-playing .wordmark { animation: wordmark-reveal 1.4s cubic-bezier(.25, .1, .25, 1) .88s both; }
+        .replay { position: absolute; bottom: max(28px, env(safe-area-inset-bottom)); left: 50%; display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; border: 0; border-radius: 8px; background: transparent; color: #53617d; font: 500 12px 'Everyday Inter', sans-serif; cursor: pointer; transform: translateX(-50%); }
+        .replay:hover { background: #edf1f8; color: var(--blue); }
+        .replay:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+        .capture .replay { display: none; }
+        @keyframes sunrise {
+            from { opacity: 0; transform: translate(10px, 38px) rotate(-14deg) scale(.94); }
+            35% { opacity: 1; }
+            to { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
+        }
+        @keyframes cloud-arrival {
+            from { opacity: 0; transform: translateX(9px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes wordmark-reveal {
+            from { opacity: 0; clip-path: inset(0 0 100%); }
+            to { opacity: 1; clip-path: inset(0); }
+        }
+        @keyframes dawn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes quiet-reveal { from { opacity: .65; } to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+            .is-playing :is(.sun, .cloud, .wordmark, .daylight) { animation: quiet-reveal .18s ease-out both; }
+        }
+        @media (max-height: 480px) {
+            .brand { top: 45%; width: 230px; }
+            .emblem { width: 60%; margin-bottom: 14px; }
+            .wordmark { font-size: 28px; }
+            .replay { bottom: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="splash" aria-label="Everyday Pharmacy splash screen">
+        <div class="daylight" aria-hidden="true"></div>
+        <div class="brand">
+            <div class="emblem" aria-hidden="true">
+                <div class="sprite sun"></div>
+                <div class="sprite cloud"></div>
+            </div>
+            <h1 class="wordmark"><span>EVERYDAY</span><span>PHARMACY</span></h1>
+        </div>
+        <button type="button" class="replay" aria-label="Replay splash animation">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></svg>
+            Replay animation
+        </button>
+    </main>
+    <script>
+        if (new URLSearchParams(location.search).has('capture')) document.body.classList.add('capture');
+        const artwork = new Image();
+        artwork.src = 'emblem-sprites.png';
+        const artworkReady = artwork.decode().catch(() => {});
+        const play = async () => {
+            await Promise.all([artworkReady, document.fonts.ready]);
+            document.body.classList.remove('is-playing');
+            void document.body.offsetWidth;
+            document.body.classList.add('is-playing');
+        };
+        document.querySelector('.replay').addEventListener('click', play);
+        document.addEventListener('visibilitychange', () => {
+            for (const animation of document.getAnimations()) {
+                if (document.hidden && animation.playState === 'running') animation.pause();
+                else if (!document.hidden && animation.playState === 'paused') animation.play();
+            }
+        });
+        if (!new URLSearchParams(location.search).has('still')) play();
+    </script>
+</body>
+</html>

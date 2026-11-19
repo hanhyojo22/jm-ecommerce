@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Design mockup. All records are illustrative; changes last only for this page session. -->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f8fa">
+    <title>JMMart Seller · Design mockup</title>
+    <link rel="stylesheet" href="seller-account-premium.css">
+    <script src="seller-account-premium.js" defer></script>
+</head>
+<body data-variant="studio">
+    <a class="skip-link" href="#content">Skip to content</a>
+    <div class="app">
+        <aside class="sidebar" id="sidebar" aria-label="Seller navigation">
+            <a class="brand" href="#overview" aria-label="JMMart Seller overview"><span class="brand-mark">J<span>M</span></span><span>JMMart<span class="brand-caption">Seller workspace</span></span></a>
+            <div class="store-identity"><span class="store-avatar">JP</span><div><strong>JMMart Pharmacy</strong><span><i class="status-dot"></i> Active store</span></div><button class="icon-button close-menu" aria-label="Close menu" data-action="close-menu"><span data-icon="close"></span></button></div>
+            <nav id="navigation" aria-label="Seller workspace"></nav>
+            <div class="sidebar-bottom"><a class="nav-link" href="#account" id="account-link"><span data-icon="user"></span>Account</a><button class="profile-button" data-go="account"><span class="avatar">FR</span><span><strong>Franil Reyes</strong><small>Store owner</small></span><span data-icon="chevrons"></span></button></div>
+        </aside>
+        <button class="menu-scrim" aria-label="Close menu" data-action="close-menu" hidden></button>
+        <div class="workspace">
+            <header class="topbar">
+                <div class="context"><button class="icon-button menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar" data-action="menu"><span data-icon="menu"></span></button><span class="context-label">Workspace</span><span class="context-slash">/</span><label class="sr-only" for="branch-scope">Branch scope</label><select id="branch-scope"><option value="all">Head office · All branches</option><option value="Cebu Capitol">Cebu Capitol</option><option value="IT Park">IT Park</option><option value="Mandaue">Mandaue</option></select></div>
+                <div class="role-preview"><label for="preview-role">Preview as</label><select id="preview-role"><option value="owner">Owner</option><option value="manager">Manager</option><option value="pharmacist">Pharmacist</option><option value="staff">Staff</option></select><label class="license-preview" id="license-preview"><input id="preview-license" type="checkbox" class="checkbox">Licensed pharmacist</label></div>
+                <div class="top-actions"><button class="storefront-link" data-action="storefront">View store <span data-icon="external"></span></button><span class="top-divider"></span><button class="icon-button" aria-label="Notifications" data-action="notifications"><span data-icon="bell"></span><i class="notification-dot"></i></button><button class="avatar avatar-button" aria-label="Open account" data-go="account">FR</button></div>
+            </header>
+            <main id="content" tabindex="-1"></main>
+            <footer class="preview-bar"><span><i></i> Design preview <span class="preview-separator">·</span> <span class="sample-label">Sample data</span></span><div role="group" aria-label="Compare mockup layouts"><button data-variant="studio" aria-pressed="true">Studio</button><button data-variant="focus" aria-pressed="false">Focus</button><button data-variant="compact" aria-pressed="false">Compact</button></div></footer>
+        </div>
+    </div>
+    <dialog id="detail-dialog" aria-labelledby="dialog-title"><div class="dialog-head"><h2 id="dialog-title"></h2><button class="icon-button" data-action="close-dialog" aria-label="Close dialog"><span data-icon="close"></span></button></div><div id="dialog-body"></div></dialog>
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

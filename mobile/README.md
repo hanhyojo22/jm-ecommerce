@@ -96,9 +96,10 @@ flutter build apk --debug
 
 ## Notes
 
-- Clerk is initialized once in `lib/main.dart` before `runApp`, and its state is
-  injected into the root Riverpod scope. This keeps the bearer token available
-  to every route, including pushed detail screens.
+- The Everyday Pharmacy splash draws while Clerk, Firebase, and search history
+  initialize in `lib/main.dart`. Startup opens the app once initialization and the
+  one-time animation finish; reduced motion skips the animation. Clerk's state is
+  injected once into the root Riverpod scope so every route has its bearer token.
 - On a Clerk development instance, sign up or sign in with a
   `+clerk_test@example.com` address and use `424242` for the email or two-step
   code. Sign-in on a new emulator may ask for that second code.

@@ -1,0 +1,2208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JMMart Seller Center · Branch Stock UI/UX Mockup</title>
+<style>
+:root {
+    color-scheme: light;
+    --color-bg: #f6f8fc;
+    --color-surface: #ffffff;
+    --color-sunken: #f8fafc;
+    --color-fg: #182c48;
+    --color-muted: #596b83;
+    --color-border: #e3e8f1;
+    --color-border-strong: #cbd4e0;
+    --color-line-soft: #eef1f5;
+    --color-accent: #205bf4;
+    --color-accent-hover: #1d4ed8;
+    --color-info: #1e3a6e;
+    --color-info-line: #d6e2fb;
+    --color-info-wash: #eef3ff;
+    --color-success: #166534;
+    --color-success-line: #bfe3cc;
+    --color-success-wash: #f1faf4;
+    --color-warning: #f59e0b;
+    --color-warning-text: #b45309;
+    --color-warning-line: #f4d9a8;
+    --color-warning-wash: #fffaf0;
+    --color-danger: #dc2626;
+    --color-danger-line: #f3c7cd;
+    --color-danger-wash: #fff5f5;
+    --color-sidebar: #111f33;
+    --color-sidebar-text: #c5d1e0;
+    --color-sidebar-muted: #8ea2ba;
+    --color-sidebar-line: rgb(255 255 255 / 8%);
+    --focus-ring: 0 0 0 3px rgb(32 91 244 / 15%);
+    --radius-surface: 8px;
+    --radius-control: 6px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; }
+button, select { cursor: pointer; }
+h1, h2, h3, p, dl, dt, dd { margin: 0; }
+
+:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* ---- Layout Shell (Matches Seller Center 232px Rail + 1400px Canvas) ---- */
+.sc-shell {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    min-height: 100vh;
+}
+.sc-rail {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    background: var(--color-sidebar);
+    color: var(--color-sidebar-text);
+    border-right: 1px solid var(--color-sidebar-line);
+    padding: 16px 10px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+.sc-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px 20px;
+    text-decoration: none;
+}
+.sc-brand-mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #10b981;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 14px;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 16%);
+}
+.sc-brand-name {
+    display: block;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+.sc-brand-meta {
+    display: block;
+    margin-top: 2px;
+    color: var(--color-sidebar-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.sc-store-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 6px 12px;
+    padding: 11px 12px;
+    border: 1px solid var(--color-sidebar-line);
+    border-radius: 6px;
+    background: rgb(255 255 255 / 5%);
+}
+.sc-store-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+    background: rgb(255 255 255 / 9%);
+    border: 1px solid rgb(255 255 255 / 12%);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex: none;
+}
+.sc-store-name {
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sc-store-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-sidebar-muted);
+    font-size: 11.5px;
+    margin-top: 2px;
+}
+.sc-store-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+}
+.sc-nav-group { margin-top: 14px; }
+.sc-nav-label {
+    padding: 0 12px 6px;
+    color: var(--color-sidebar-muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.sc-nav-link {
+    display: flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 11px;
+    padding: 0 12px;
+    border-radius: 6px;
+    color: var(--color-sidebar-text);
+    font-size: 13.5px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+.sc-nav-link:hover {
+    background: rgb(255 255 255 / 6%);
+    color: #fff;
+}
+.sc-nav-link.is-active {
+    background: rgb(255 255 255 / 10%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 7%);
+    color: #fff;
+    font-weight: 600;
+}
+.sc-nav-link svg {
+    width: 17px;
+    height: 17px;
+    flex: none;
+}
+.sc-nav-badge {
+    margin-left: auto;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 12%);
+    color: #fff;
+}
+.sc-rail-foot {
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-sidebar-line);
+}
+
+/* ---- Top Bar & Prototype Controls ---- */
+.sc-topbar {
+    height: 56px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+.sc-crumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-muted);
+}
+.sc-crumbs strong {
+    color: var(--color-fg);
+    font-weight: 600;
+}
+.sc-proto-bar {
+    background: #15233a;
+    color: #dbe6f5;
+    padding: 10px 32px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    font-size: 12.5px;
+    border-bottom: 1px solid #253855;
+}
+.sc-proto-modes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.sc-proto-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #8ea2ba;
+    margin-right: 4px;
+}
+.sc-proto-btn {
+    min-height: 32px;
+    padding: 0 11px;
+    border-radius: 6px;
+    border: 1px solid rgb(255 255 255 / 14%);
+    background: rgb(255 255 255 / 5%);
+    color: #dbe6f5;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+}
+.sc-proto-btn:hover {
+    background: rgb(255 255 255 / 12%);
+    color: #fff;
+}
+.sc-proto-btn[aria-pressed="true"] {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+}
+.sc-proto-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+.sc-proto-select {
+    min-height: 32px;
+    padding: 0 28px 0 10px;
+    border-radius: 6px;
+    border: 1px solid rgb(255 255 255 / 18%);
+    background: #1e314f;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ---- Page Header & Container ---- */
+.sc-header-band {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 32px 18px;
+    border-bottom: 1px solid var(--color-border);
+}
+.sc-page-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+.sc-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.sc-title {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.18;
+    color: var(--color-fg);
+}
+.sc-subtitle {
+    margin-top: 6px;
+    color: var(--color-muted);
+    font-size: 14px;
+    max-width: 68ch;
+}
+.sc-branch-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--color-muted);
+}
+.sc-branch-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.sc-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.sc-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 22px 32px 96px;
+    display: grid;
+    gap: 18px;
+}
+
+/* ---- Buttons & Badges (Seller Center System) ---- */
+.sc-btn {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 14px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-fg);
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.sc-btn:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+    background: var(--color-sunken);
+}
+.sc-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.sc-btn-primary {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+}
+.sc-btn-primary:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+}
+.sc-btn-sm {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+.sc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 20px;
+    white-space: nowrap;
+}
+.sc-badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+.sc-badge[data-tone="success"] {
+    background: var(--color-success-wash);
+    color: var(--color-success);
+    box-shadow: inset 0 0 0 1px var(--color-success-line);
+}
+.sc-badge[data-tone="warning"] {
+    background: var(--color-warning-wash);
+    color: var(--color-warning-text);
+    box-shadow: inset 0 0 0 1px var(--color-warning-line);
+}
+.sc-badge[data-tone="danger"] {
+    background: var(--color-danger-wash);
+    color: var(--color-danger);
+    box-shadow: inset 0 0 0 1px var(--color-danger-line);
+}
+.sc-badge[data-tone="info"] {
+    background: var(--color-info-wash);
+    color: var(--color-accent);
+    box-shadow: inset 0 0 0 1px var(--color-info-line);
+}
+.sc-badge[data-tone="neutral"] {
+    background: var(--color-sunken);
+    color: var(--color-muted);
+    box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.sc-pill-rx {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 650;
+    background: #fff4e5;
+    color: #9a5b08;
+    border: 1px solid #f3d6a4;
+}
+.sc-pill-otc {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--color-sunken);
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+}
+
+/* ---- Notice Banner ---- */
+.sc-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    border: 1px solid;
+    border-radius: var(--radius-control);
+    padding: 12px 16px;
+    font-size: 13.5px;
+}
+.sc-notice[data-tone="success"] {
+    border-color: var(--color-success-line);
+    background: var(--color-success-wash);
+    color: var(--color-success);
+}
+.sc-notice[data-tone="warning"] {
+    border-color: var(--color-warning-line);
+    background: var(--color-warning-wash);
+    color: var(--color-warning-text);
+}
+
+/* ---- Ruled 4-Column Metrics Strip (.sc-metrics) ---- */
+.sc-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-surface);
+    background: var(--color-surface);
+}
+.sc-metric {
+    padding: 16px 20px;
+    border-left: 1px solid var(--color-line-soft);
+    text-align: left;
+    background: transparent;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    transition: background 0.15s;
+}
+.sc-metric:first-child { border-left: 0; }
+.sc-metric:hover { background: var(--color-sunken); }
+.sc-metric.is-active {
+    background: #f5f8ff;
+    box-shadow: inset 0 -2px 0 var(--color-accent);
+}
+.sc-metric-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--color-muted);
+    font-size: 12.5px;
+    font-weight: 500;
+}
+.sc-metric-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 6px;
+    color: var(--color-fg);
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+.sc-metric-value.is-danger { color: var(--color-danger); }
+.sc-metric-value.is-warning { color: var(--color-warning-text); }
+.sc-metric-value.is-accent { color: var(--color-accent); }
+.sc-metric-sub {
+    display: block;
+    margin-top: 5px;
+    color: var(--color-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+/* ---- Main Card, Tabs & Toolbar ---- */
+.sc-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-surface);
+    background: var(--color-surface);
+    overflow: hidden;
+}
+.sc-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    padding: 16px 20px 12px;
+}
+.sc-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-fg);
+}
+.sc-tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--color-line-soft);
+    overflow-x: auto;
+}
+.sc-tabs {
+    display: flex;
+    gap: 4px;
+}
+.sc-tab {
+    position: relative;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 0;
+    background: transparent;
+    color: var(--color-muted);
+    font-size: 13.5px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.sc-tab:hover { color: var(--color-fg); }
+.sc-tab[aria-selected="true"] {
+    color: var(--color-fg);
+    font-weight: 600;
+}
+.sc-tab[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--color-accent);
+}
+.sc-tab-count {
+    min-width: 20px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--color-line-soft);
+    color: var(--color-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+}
+.sc-tab[aria-selected="true"] .sc-tab-count {
+    background: var(--color-info-wash);
+    color: var(--color-accent);
+}
+.sc-tab-count.is-danger {
+    background: var(--color-danger-wash);
+    color: var(--color-danger);
+}
+.sc-tab-count.is-warning {
+    background: var(--color-warning-wash);
+    color: var(--color-warning-text);
+}
+
+.sc-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 12px;
+    padding: 14px 20px;
+    background: #fcfdff;
+    border-bottom: 1px solid var(--color-line-soft);
+}
+.sc-toolbar-left {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 420px;
+}
+.sc-search-wrap {
+    position: relative;
+    flex: 1 1 260px;
+    max-width: 360px;
+}
+.sc-search-wrap svg {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--color-muted);
+    pointer-events: none;
+}
+.sc-search-kbd {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 1px 6px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-sunken);
+    color: var(--color-muted);
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+}
+.sc-input {
+    height: 40px;
+    width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    padding: 0 32px 0 34px;
+    color: var(--color-fg);
+    font-size: 13.5px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sc-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+.sc-select {
+    height: 40px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    padding: 0 30px 0 11px;
+    color: var(--color-fg);
+    font-size: 13px;
+    font-weight: 500;
+}
+.sc-toolbar-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ---- Cycle Count Progress Banner (Mode 2) ---- */
+.sc-cycle-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 20px;
+    padding: 14px 20px;
+    background: linear-gradient(180deg, #f4f8ff 0%, #ffffff 100%);
+    border-bottom: 1px solid var(--color-info-line);
+}
+.sc-cycle-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 280px;
+}
+.sc-cycle-bar {
+    width: 180px;
+    height: 8px;
+    border-radius: 999px;
+    background: #dbe6fb;
+    overflow: hidden;
+}
+.sc-cycle-bar > span {
+    display: block;
+    height: 100%;
+    background: var(--color-accent);
+    border-radius: inherit;
+    transition: width 0.2s ease;
+}
+
+/* ---- Table (.sc-table) ---- */
+.sc-table-wrap { overflow-x: auto; }
+.sc-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 13.5px;
+}
+.sc-table thead th {
+    background: var(--color-sunken);
+    border-bottom: 1px solid var(--color-border);
+    padding: 10px 16px;
+    color: var(--color-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+.sc-table tbody td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--color-line-soft);
+    vertical-align: middle;
+}
+.sc-table tbody tr:last-child td { border-bottom: 0; }
+.sc-table tbody tr:hover { background: #fafbfd; }
+.sc-table :is(th, td):first-child { padding-left: 20px; }
+.sc-table :is(th, td):last-child { padding-right: 20px; }
+
+/* Row states: Dirty (changed), Out of stock, Verified */
+.sc-table tbody tr.is-dirty {
+    background: #f5f8ff;
+    box-shadow: inset 3px 0 0 var(--color-accent);
+}
+.sc-table tbody tr.is-dirty:hover { background: #eef4ff; }
+.sc-table tbody tr.is-out {
+    background: #fffdfd;
+}
+.sc-table tbody tr.is-verified {
+    background: #f8fdf9;
+    box-shadow: inset 3px 0 0 #16a34a;
+}
+
+/* Medicine Identity Cell */
+.sc-med-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 240px;
+}
+.sc-med-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 7px;
+    border: 1px solid var(--color-border);
+    background: var(--color-sunken);
+    color: #475569;
+    display: grid;
+    place-items: center;
+    flex: none;
+    margin-top: 1px;
+}
+.sc-med-icon.is-rx {
+    background: #fff8ed;
+    border-color: #f4d9a8;
+    color: #b45309;
+}
+.sc-med-icon svg {
+    width: 19px;
+    height: 19px;
+}
+.sc-med-name-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.sc-med-name {
+    font-weight: 600;
+    color: var(--color-fg);
+    font-size: 14px;
+}
+.sc-med-generic {
+    display: block;
+    color: var(--color-muted);
+    font-size: 12.5px;
+    margin-top: 2px;
+}
+.sc-med-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 11.5px;
+    color: var(--color-muted);
+}
+.sc-sku {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: #64748b;
+    background: var(--color-sunken);
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid var(--color-line-soft);
+}
+.sc-variant-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #eef3ff;
+    color: #1e40af;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+/* Stock Level Visual Meter */
+.sc-level-cell { min-width: 150px; }
+.sc-level-bar {
+    width: 108px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--color-line-soft);
+    overflow: hidden;
+    margin-top: 6px;
+}
+.sc-level-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+.sc-level-bar > span[data-tone="success"] { background: #16a34a; }
+.sc-level-bar > span[data-tone="warning"] { background: #f59e0b; }
+.sc-level-bar > span[data-tone="danger"] { background: #dc2626; }
+
+/* Tactile Stepper & Quick Adjust */
+.sc-stepper-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.sc-stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sc-stepper:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: var(--focus-ring);
+}
+.sc-stepper.is-dirty {
+    border-color: var(--color-accent);
+    background: #fff;
+}
+.sc-step-btn {
+    width: 36px;
+    height: 38px;
+    border: 0;
+    background: var(--color-sunken);
+    color: var(--color-fg);
+    font-size: 16px;
+    font-weight: 600;
+    display: grid;
+    place-items: center;
+    transition: background 0.12s;
+    user-select: none;
+}
+.sc-step-btn:hover:not(:disabled) {
+    background: #e2e8f0;
+}
+.sc-step-input {
+    width: 68px;
+    height: 38px;
+    border: 0;
+    border-inline: 1px solid var(--color-line-soft);
+    text-align: center;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--color-fg);
+    background: transparent;
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+}
+.sc-step-input::-webkit-outer-spin-button,
+.sc-step-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.sc-step-input:focus { outline: none; }
+
+.sc-quick-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.sc-chip-btn {
+    height: 28px;
+    padding: 0 7px;
+    border-radius: 5px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    transition: all 0.12s;
+}
+.sc-chip-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: var(--color-info-wash);
+}
+
+/* Delta Pill (Was X -> Y) */
+.sc-delta-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 5px;
+    font-size: 11.5px;
+}
+.sc-delta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 650;
+}
+.sc-delta-pill.is-up {
+    background: var(--color-success-wash);
+    color: var(--color-success);
+}
+.sc-delta-pill.is-down {
+    background: var(--color-warning-wash);
+    color: var(--color-warning-text);
+}
+.sc-undo-btn {
+    border: 0;
+    background: transparent;
+    color: var(--color-accent);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 0 2px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* Card Footer */
+.sc-card-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--color-line-soft);
+    background: #fcfdff;
+    color: var(--color-muted);
+    font-size: 13px;
+}
+
+/* ---- Floating Unsaved Changes Capsule (.ps-savebar from seller-center.css) ---- */
+.ps-savebar {
+    position: fixed;
+    z-index: 60;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    width: min(680px, calc(100% - 28px));
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-radius: 8px;
+    background: #15233a;
+    padding: 10px 12px 10px 18px;
+    color: #fff;
+    box-shadow: 0 18px 40px -12px rgb(15 23 42 / 45%), 0 0 0 1px rgb(255 255 255 / 8%) inset;
+    transition: opacity 0.2s, transform 0.2s;
+}
+.ps-savebar.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 16px);
+}
+.ps-savebar-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.ps-savebar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #fbbf24;
+    flex: none;
+}
+.ps-savebar-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.ps-savebar-sub {
+    font-size: 12px;
+    color: #9fb0c7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ps-savebar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+}
+.ps-savebar-btn {
+    min-height: 36px;
+    border-radius: 6px;
+    padding: 0 13px;
+    font-size: 13px;
+    font-weight: 650;
+    border: 0;
+}
+.ps-savebar-ghost {
+    background: transparent;
+    color: #c9d4e4;
+}
+.ps-savebar-ghost:hover {
+    background: rgb(255 255 255 / 10%);
+    color: #fff;
+}
+.ps-savebar-primary {
+    background: #fff;
+    color: #15233a;
+}
+.ps-savebar-primary:hover {
+    background: #e8eef7;
+}
+
+/* ---- Review Changes Dialog (Courier Claim Slip style) ---- */
+dialog.sc-dialog {
+    border: 1px solid var(--color-border-strong);
+    border-radius: 10px;
+    padding: 0;
+    width: min(520px, calc(100vw - 28px));
+    color: var(--color-fg);
+    background: var(--color-surface);
+    box-shadow: 0 24px 48px rgb(15 23 42 / 26%);
+}
+dialog.sc-dialog::backdrop {
+    background: rgb(15 23 42 / 50%);
+}
+.sc-dialog-head {
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid var(--color-line-soft);
+}
+.sc-dialog-body {
+    padding: 16px 22px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+.sc-dialog-foot {
+    padding: 14px 22px;
+    background: var(--color-sunken);
+    border-top: 1px dashed var(--color-border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* ---- Before vs After Callout Card (Mode 4) ---- */
+.sc-compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+.sc-compare-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-surface);
+    background: var(--color-surface);
+    padding: 20px;
+}
+.sc-compare-card.is-after {
+    border-color: #93b4ff;
+    background: linear-gradient(180deg, #f7faff 0%, #ffffff 100%);
+}
+
+/* ---- Mobile Responsive List (< 820px) ---- */
+.sc-mobile-list { display: none; }
+@media (max-width: 1024px) {
+    .sc-shell { grid-template-columns: 1fr; }
+    .sc-rail { display: none; }
+    .sc-topbar, .sc-proto-bar, .sc-header-band, .sc-container { padding-inline: 20px; }
+    .sc-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sc-metric:nth-child(n+3) { border-top: 1px solid var(--color-line-soft); }
+    .sc-metric:nth-child(3) { border-left: 0; }
+}
+@media (max-width: 780px) {
+    .sc-table-wrap.is-single-branch { display: none; }
+    .sc-mobile-list { display: block; }
+    .sc-mobile-item {
+        padding: 16px;
+        border-bottom: 1px solid var(--color-line-soft);
+    }
+    .sc-mobile-item.is-dirty {
+        background: #f5f8ff;
+        box-shadow: inset 3px 0 0 var(--color-accent);
+    }
+    .sc-compare-grid { grid-template-columns: 1fr; }
+    .ps-savebar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px 14px;
+    }
+    .ps-savebar-actions {
+        justify-content: flex-end;
+    }
+}
+</style>
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+    <defs>
+        <symbol id="i-overview" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+        <symbol id="i-orders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.5 12h10L21 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></symbol>
+        <symbol id="i-returns" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></symbol>
+        <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5v8l-9 5-9-5V8z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+        <symbol id="i-msg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15a4 4 0 0 1-4 4H8l-4 3V7a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4z"/></symbol>
+        <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></symbol>
+        <symbol id="i-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v10h16V10M3 10l2-6h14l2 6M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+        <symbol id="i-pill" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></symbol>
+        <symbol id="i-bottle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4v3l3 3v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8l3-3V2Z"/><path d="M7 13h10"/></symbol>
+        <symbol id="i-firstaid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M12 10v6M9 13h6"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4.5 4.5L19 7"/></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10Z"/><circle cx="12" cy="11" r="2"/></symbol>
+    </defs>
+</svg>
+
+<div class="sc-shell">
+    <!-- Seller Center Dark Ink Sidebar Rail -->
+    <aside class="sc-rail" aria-label="Seller Center sidebar">
+        <a href="#top" class="sc-brand">
+            <span class="sc-brand-mark">JM</span>
+            <span>
+                <span class="sc-brand-name">JMMart</span>
+                <span class="sc-brand-meta">Seller Center</span>
+            </span>
+        </a>
+
+        <div class="sc-store-card">
+            <span class="sc-store-avatar">J</span>
+            <div style="min-width:0">
+                <p class="sc-store-name">JMMart Pharmacy</p>
+                <p class="sc-store-status"><span class="sc-store-dot"></span><span id="sidebar-branch-label">Cebu Capitol</span></p>
+            </div>
+        </div>
+
+        <nav aria-label="Seller workspace navigation" style="flex:1">
+            <div>
+                <a href="#overview" class="sc-nav-link"><svg><use href="#i-overview"/></svg><span>Overview</span></a>
+            </div>
+            <div class="sc-nav-group">
+                <p class="sc-nav-label">Manage</p>
+                <a href="#orders" class="sc-nav-link"><svg><use href="#i-orders"/></svg><span>Orders</span><span class="sc-nav-badge">4</span></a>
+                <a href="#returns" class="sc-nav-link"><svg><use href="#i-returns"/></svg><span>Returns</span></a>
+                <a href="#products" class="sc-nav-link"><svg><use href="#i-box"/></svg><span>Products</span></a>
+                <a href="#branch-stock" class="sc-nav-link is-active" aria-current="page"><svg><use href="#i-box"/></svg><span>Branch stock</span></a>
+                <a href="#hours" class="sc-nav-link"><svg><use href="#i-clock"/></svg><span>Opening hours</span></a>
+            </div>
+            <div class="sc-nav-group">
+                <p class="sc-nav-label">Engage</p>
+                <a href="#messages" class="sc-nav-link"><svg><use href="#i-msg"/></svg><span>Messages</span></a>
+                <a href="#reviews" class="sc-nav-link"><svg><use href="#i-star"/></svg><span>Reviews</span></a>
+            </div>
+            <div class="sc-nav-group" id="nav-business-group">
+                <p class="sc-nav-label">Business</p>
+                <a href="#branches" class="sc-nav-link"><svg><use href="#i-store"/></svg><span>Branches</span></a>
+                <a href="#website" class="sc-nav-link"><svg><use href="#i-store"/></svg><span>View website</span></a>
+            </div>
+        </nav>
+
+        <div class="sc-rail-foot">
+            <a href="#account" class="sc-nav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg><span>Account</span></a>
+        </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <div style="min-width:0; display:flex; flex-direction:column;">
+        <!-- Interactive Mockup Switcher Bar -->
+        <div class="sc-proto-bar" role="region" aria-label="Mockup preview controls">
+            <div class="sc-proto-modes">
+                <span class="sc-proto-label">Design View:</span>
+                <button type="button" class="sc-proto-btn" data-mode="ledger" aria-pressed="true">1 · Stock Ledger (Recommended)</button>
+                <button type="button" class="sc-proto-btn" data-mode="cycle" aria-pressed="false">2 · Rapid Shelf-Count Mode</button>
+                <button type="button" class="sc-proto-btn" data-mode="matrix" aria-pressed="false">3 · Multi-Branch Matrix (Head Office)</button>
+                <button type="button" class="sc-proto-btn" data-mode="compare" aria-pressed="false">4 · Before vs. After</button>
+            </div>
+            <div class="sc-proto-controls">
+                <label style="display:inline-flex; align-items:center; gap:6px;">
+                    <span style="color:#9fb0c7; font-size:12px;">Preview role:</span>
+                    <select id="proto-role" class="sc-proto-select">
+                        <option value="headoffice">Head Office (Owner / Manager)</option>
+                        <option value="branch">Branch Staff (Cebu Capitol only)</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+
+        <!-- Workspace Top Bar -->
+        <header class="sc-topbar">
+            <div class="sc-crumbs">
+                <span>Seller Center</span>
+                <span>/</span>
+                <strong>Branch stock</strong>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; font-size:12.5px; color:var(--color-muted);">
+                <span id="topbar-role-pill" class="sc-badge" data-tone="info">Head office view</span>
+                <span style="font-weight:600; color:var(--color-fg);">cebu.capitol@jmmart.ph</span>
+            </div>
+        </header>
+
+        <!-- Page Header Band -->
+        <div class="sc-header-band">
+            <div class="sc-page-head">
+                <div>
+                    <div class="sc-title-row">
+                        <h1 class="sc-title" id="page-title">Stock at JMMart Pharmacy Cebu Capitol</h1>
+                        <span class="sc-badge" data-tone="success" id="branch-status-badge">Open · 8:00 AM – 9:00 PM</span>
+                    </div>
+                    <p class="sc-subtitle">Units on hand at this branch. Customers near it see and order only what is in stock here.</p>
+                    <div class="sc-branch-meta">
+                        <span><svg style="width:14px;height:14px"><use href="#i-pin"/></svg><span id="branch-address">Osmeña Blvd, Capitol Site, Cebu City · On the map (5 km delivery radius)</span></span>
+                        <span>·</span>
+                        <span id="last-counted-meta">Last counted today, 2:14 PM by M. Santos</span>
+                    </div>
+                </div>
+
+                <!-- Branch Selector (Shown to Head Office) + Quick Actions -->
+                <div class="sc-page-actions">
+                    <div id="branch-switcher-wrap" style="display:flex; align-items:center; gap:8px;">
+                        <label for="branch-select" style="font-size:12.5px; font-weight:600; color:var(--color-muted);">Branch:</label>
+                        <select id="branch-select" class="sc-select" style="font-weight:600; min-width:240px;">
+                            <option value="cebu">JMMart Pharmacy Cebu Capitol (Cebu)</option>
+                            <option value="makati">JMMart Pharmacy Makati Poblacion (Makati)</option>
+                            <option value="davao">JMMart Pharmacy Davao Bajada (Davao)</option>
+                        </select>
+                    </div>
+                    <button type="button" id="btn-cycle-toggle" class="sc-btn" title="Switch to keyboard-first shelf verification mode">
+                        <svg style="width:16px;height:16px"><use href="#i-check"/></svg>
+                        <span id="cycle-toggle-label">Start shelf count</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Container -->
+        <main class="sc-container">
+            <!-- Status / Feedback Banner -->
+            <div id="status-banner" class="sc-notice" data-tone="success" role="status" style="display:none;">
+                <span id="status-banner-text">Saved stock counts.</span>
+                <button type="button" id="status-banner-close" class="sc-btn sc-btn-sm">Dismiss</button>
+            </div>
+
+            <!-- Out-of-Stock Alert Notice (When critical Rx/core items are at 0) -->
+            <div id="out-of-stock-alert" class="sc-notice" data-tone="warning">
+                <span><strong id="alert-zero-count">5 medicines are out of stock</strong> at this branch and hidden from nearby customers at checkout.</span>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" id="btn-filter-out" class="sc-btn sc-btn-sm" style="border-color:#e5c384; background:#fff; color:#92400e;">Show out of stock</button>
+                    <button type="button" id="btn-restock-zero" class="sc-btn sc-btn-sm" style="border-color:#e5c384; background:#fff; color:#92400e;">Restock all 0 → 30 units</button>
+                </div>
+            </div>
+
+            <!-- Ruled 4-Column Inventory Summary Strip (.sc-metrics) -->
+            <section aria-label="Branch inventory summary">
+                <div class="sc-metrics">
+                    <button type="button" class="sc-metric" data-metric-filter="in_stock">
+                        <div class="sc-metric-top">
+                            <span>Stocked medicines</span>
+                            <span class="sc-badge" data-tone="success" id="metric-coverage-pct">72%</span>
+                        </div>
+                        <div class="sc-metric-value"><span id="metric-stocked-count">13</span> <small style="font-size:14px; font-weight:500; color:var(--color-muted)">/ 18</small></div>
+                        <span class="sc-metric-sub">Available to nearby buyers right now</span>
+                    </button>
+
+                    <button type="button" class="sc-metric" data-metric-filter="out_of_stock">
+                        <div class="sc-metric-top">
+                            <span>Out of stock (0 on hand)</span>
+                            <span class="sc-badge" data-tone="danger">Needs restock</span>
+                        </div>
+                        <div class="sc-metric-value is-danger" id="metric-out-count">5</div>
+                        <span class="sc-metric-sub">Hidden from checkout at this branch</span>
+                    </button>
+
+                    <button type="button" class="sc-metric" data-metric-filter="low_stock">
+                        <div class="sc-metric-top">
+                            <span>Low stock (1–15 units)</span>
+                            <span class="sc-badge" data-tone="warning">Watch</span>
+                        </div>
+                        <div class="sc-metric-value is-warning" id="metric-low-count">3</div>
+                        <span class="sc-metric-sub">Below 15-unit branch buffer</span>
+                    </button>
+
+                    <button type="button" class="sc-metric" data-metric-filter="all">
+                        <div class="sc-metric-top">
+                            <span>Total units on hand</span>
+                            <span style="font-size:11.5px; color:var(--color-accent); font-weight:600;" id="metric-delta-badge">+31 unsaved</span>
+                        </div>
+                        <div class="sc-metric-value" id="metric-total-units">988</div>
+                        <span class="sc-metric-sub" id="metric-retail-value">₱13,640.00 branch stock value</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Mode 4: Before vs After Design Comparison Panel (Hidden unless Mode 4 active) -->
+            <section id="compare-section" style="display:none;" aria-label="Before and after design comparison">
+                <div class="sc-compare-grid">
+                    <div class="sc-compare-card">
+                        <span class="sc-badge" data-tone="neutral">Before · Current Live Page</span>
+                        <h2 style="font-size:17px; font-weight:650; margin-top:10px;">What made the current Branch Stock page hard to use</h2>
+                        <ul style="margin:12px 0 0; padding-left:18px; display:grid; gap:8px; color:var(--color-muted); font-size:13.5px;">
+                            <li><strong style="color:var(--color-fg)">Zero visual stock status:</strong> Medicines with <code>0</code> on hand look identical to medicines with <code>220</code> on hand — staff cannot spot stockouts.</li>
+                            <li><strong style="color:var(--color-fg)">Wasted "Option: —" column:</strong> 70% of the table width is blank whitespace with an em-dash because most medicines don't have color/size variants.</li>
+                            <li><strong style="color:var(--color-fg)">No status tabs or filters:</strong> No way to filter to <em>Out of stock</em>, <em>Low stock</em>, or <em>Prescription (Rx)</em> items during replenishment.</li>
+                            <li><strong style="color:var(--color-fg)">Easy to lose edits:</strong> No indication of which inputs were changed, what the previous count was, or a sticky save bar until scrolling past 25 rows.</li>
+                            <li><strong style="color:var(--color-fg)">No company-wide context for Head Office:</strong> Head office cannot see how a branch's stock compares to the rest of the pharmacy chain.</li>
+                        </ul>
+                    </div>
+                    <div class="sc-compare-card is-after">
+                        <span class="sc-badge" data-tone="info">After · Impeccable Seller Center Design</span>
+                        <h2 style="font-size:17px; font-weight:650; margin-top:10px;">How the redesigned workspace solves every friction point</h2>
+                        <ul style="margin:12px 0 0; padding-left:18px; display:grid; gap:8px; color:var(--color-muted); font-size:13.5px;">
+                            <li><strong style="color:var(--color-fg)">Clickable 4-metric health strip &amp; status tabs:</strong> One click filters to <em>Out of stock (5)</em>, <em>Low stock (3)</em>, <em>Rx</em>, or <em>Unsaved edits</em>.</li>
+                            <li><strong style="color:var(--color-fg)">Rich pharmacy catalog rows:</strong> Dosage-form icons, Generic Name + Strength, SKU, Rx/OTC badges, unit price, and inline variant pills only when options exist.</li>
+                            <li><strong style="color:var(--color-fg)">Tactile steppers + Quick-add chips:</strong> Touch-friendly <code>− / +</code> buttons plus <code>+10</code>, <code>+50</code>, and <code>0</code> pills for fast delivery receiving.</li>
+                            <li><strong style="color:var(--color-fg)">Live delta tracking &amp; floating save capsule:</strong> Edited rows highlight in blue with <code>Was 89 · +31</code> and row-level Undo, plus Seller Center's <code>.ps-savebar</code> capsule.</li>
+                            <li><strong style="color:var(--color-fg)">Rapid Shelf-Count &amp; Multi-Branch Matrix:</strong> Keyboard <code>Enter/↓</code> cycle-counting mode for branch staff, and a 3-branch matrix view for Head Office.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Primary Inventory Workspace Card (.sc-card) -->
+            <section class="sc-card" aria-label="Branch stock ledger">
+                <!-- Tabs Row -->
+                <div class="sc-tabs-row">
+                    <div class="sc-tabs" role="tablist" aria-label="Filter medicines by stock status">
+                        <button type="button" role="tab" class="sc-tab" data-tab="all" aria-selected="true">
+                            All medicines <span class="sc-tab-count" id="tab-count-all">18</span>
+                        </button>
+                        <button type="button" role="tab" class="sc-tab" data-tab="out_of_stock" aria-selected="false">
+                            Out of stock <span class="sc-tab-count is-danger" id="tab-count-out">5</span>
+                        </button>
+                        <button type="button" role="tab" class="sc-tab" data-tab="low_stock" aria-selected="false">
+                            Low stock <span class="sc-tab-count is-warning" id="tab-count-low">3</span>
+                        </button>
+                        <button type="button" role="tab" class="sc-tab" data-tab="in_stock" aria-selected="false">
+                            In stock <span class="sc-tab-count" id="tab-count-in">10</span>
+                        </button>
+                        <button type="button" role="tab" class="sc-tab" data-tab="rx" aria-selected="false">
+                            Prescription (Rx) <span class="sc-tab-count" id="tab-count-rx">7</span>
+                        </button>
+                        <button type="button" role="tab" class="sc-tab" data-tab="changed" aria-selected="false">
+                            Unsaved edits <span class="sc-tab-count" id="tab-count-changed">2</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cycle Count Progress Bar (Shown in Mode 2: Rapid Shelf-Count Mode) -->
+                <div id="cycle-banner" class="sc-cycle-banner" style="display:none;">
+                    <div class="sc-cycle-progress">
+                        <span class="sc-badge" data-tone="info">Shelf-count mode active</span>
+                        <div class="sc-cycle-bar"><span id="cycle-bar-fill" style="width:22%"></span></div>
+                        <span style="font-size:13px; font-weight:600; color:var(--color-fg);" id="cycle-progress-text">4 of 18 verified (22%)</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--color-muted);">
+                        <span>Tip: Press <kbd style="padding:1px 5px; border:1px solid #cbd4e0; border-radius:4px; background:#fff; color:var(--color-fg); font-weight:600;">Enter</kbd> or <kbd style="padding:1px 5px; border:1px solid #cbd4e0; border-radius:4px; background:#fff; color:var(--color-fg); font-weight:600;">↓</kbd> in any box to verify &amp; jump to next row</span>
+                        <button type="button" id="btn-verify-all-visible" class="sc-btn sc-btn-sm">Mark visible as verified</button>
+                    </div>
+                </div>
+
+                <!-- Search, Filter & Bulk Adjust Toolbar -->
+                <div class="sc-toolbar">
+                    <div class="sc-toolbar-left">
+                        <div class="sc-search-wrap">
+                            <svg><use href="#i-search"/></svg>
+                            <input id="stock-search" type="search" class="sc-input" placeholder="Find by brand, generic name, strength, or SKU…" aria-label="Find a medicine">
+                            <span class="sc-search-kbd">/</span>
+                        </div>
+
+                        <select id="category-filter" class="sc-select" aria-label="Filter by category">
+                            <option value="">All categories</option>
+                            <option value="Prescription Medicines">Prescription Medicines</option>
+                            <option value="Pain & Fever">Pain &amp; Fever</option>
+                            <option value="Vitamins & Supplements">Vitamins &amp; Supplements</option>
+                            <option value="Allergy & Antihistamine">Allergy &amp; Antihistamine</option>
+                            <option value="Cough & Cold">Cough &amp; Cold</option>
+                            <option value="First Aid">First Aid</option>
+                            <option value="Digestive Care">Digestive Care</option>
+                        </select>
+
+                        <select id="sort-select" class="sc-select" aria-label="Sort medicines">
+                            <option value="name">Sort: Medicine (A–Z)</option>
+                            <option value="stock_asc">Sort: Lowest stock first</option>
+                            <option value="stock_desc">Sort: Highest stock first</option>
+                            <option value="dirty">Sort: Unsaved edits first</option>
+                        </select>
+                    </div>
+
+                    <div class="sc-toolbar-right">
+                        <button type="button" id="btn-boost-low" class="sc-btn sc-btn-sm" title="Add +20 units to all low-stock items">+20 to low stock</button>
+                        <button type="button" id="btn-reset-all" class="sc-btn sc-btn-sm">Discard edits</button>
+                        <button type="button" id="btn-save-top" class="sc-btn sc-btn-primary sc-btn-sm">Save stock</button>
+                    </div>
+                </div>
+
+                <!-- Desktop Table View (Single Branch: Modes 1, 2, 4) -->
+                <div id="single-branch-table-wrap" class="sc-table-wrap is-single-branch">
+                    <table class="sc-table" aria-label="Branch stock counts">
+                        <thead>
+                            <tr>
+                                <th scope="col">Medicine &amp; Generic Name</th>
+                                <th scope="col">Category &amp; Price</th>
+                                <th scope="col">Branch Availability</th>
+                                <th scope="col" id="th-company-col">Company Total</th>
+                                <th scope="col" style="text-align:right; width:310px;">Units on Hand</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stock-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Desktop Table View (Multi-Branch Matrix: Mode 3) -->
+                <div id="matrix-table-wrap" class="sc-table-wrap" style="display:none;">
+                    <table class="sc-table" aria-label="Multi-branch stock comparison matrix">
+                        <thead>
+                            <tr>
+                                <th scope="col">Medicine &amp; Generic Name</th>
+                                <th scope="col" style="text-align:right;">Price</th>
+                                <th scope="col" style="text-align:right;">Cebu Capitol <span class="sc-badge" data-tone="info" style="margin-left:4px;">Editing</span></th>
+                                <th scope="col" style="text-align:right;">Makati Poblacion</th>
+                                <th scope="col" style="text-align:right;">Davao Bajada</th>
+                                <th scope="col" style="text-align:right;">Chain Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile Card List (< 780px) -->
+                <div id="mobile-stock-list" class="sc-mobile-list"></div>
+
+                <!-- Empty State -->
+                <div id="empty-state" style="display:none; padding:48px 20px; text-align:center;">
+                    <h3 style="font-size:15px; font-weight:600; color:var(--color-fg);">No medicines match this filter</h3>
+                    <p style="margin:6px auto 14px; max-width:340px; color:var(--color-muted); font-size:13.5px;">Try clearing your search or switching back to All medicines.</p>
+                    <button type="button" id="btn-clear-filters" class="sc-btn">Show all medicines</button>
+                </div>
+
+                <!-- Card Footer -->
+                <div class="sc-card-foot">
+                    <span id="footer-showing-text">Showing 18 of 18 medicines · Page 1 of 1</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span id="footer-dirty-summary" style="color:var(--color-muted);">2 unsaved stock changes</span>
+                        <button type="button" id="btn-save-bottom" class="sc-btn sc-btn-primary">Save stock</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<!-- Floating Unsaved-Changes Capsule (.ps-savebar) -->
+<div id="savebar" class="ps-savebar" role="region" aria-label="Unsaved stock changes">
+    <div class="ps-savebar-info">
+        <span class="ps-savebar-dot" aria-hidden="true"></span>
+        <div style="min-width:0">
+            <div class="ps-savebar-title" id="savebar-title">2 stock counts changed</div>
+            <div class="ps-savebar-sub" id="savebar-sub">Net +31 units at JMMart Pharmacy Cebu Capitol</div>
+        </div>
+    </div>
+    <div class="ps-savebar-actions">
+        <button type="button" id="savebar-review" class="ps-savebar-btn ps-savebar-ghost">Review diff</button>
+        <button type="button" id="savebar-discard" class="ps-savebar-btn ps-savebar-ghost">Discard</button>
+        <button type="button" id="savebar-commit" class="ps-savebar-btn ps-savebar-primary">Save stock</button>
+    </div>
+</div>
+
+<!-- Review Changes Confirmation Dialog -->
+<dialog id="review-dialog" class="sc-dialog" aria-labelledby="dialog-title">
+    <div class="sc-dialog-head">
+        <h2 id="dialog-title" style="font-size:17px; font-weight:700;">Confirm branch stock update</h2>
+        <p style="margin-top:4px; color:var(--color-muted); font-size:13px;" id="dialog-subtitle">These counts go live immediately for customers near JMMart Pharmacy Cebu Capitol and update company-wide totals.</p>
+    </div>
+    <div class="sc-dialog-body" id="dialog-diff-list"></div>
+    <div class="sc-dialog-foot">
+        <span style="font-size:12px; color:var(--color-muted);" id="dialog-audit-note">Logged to audit trail · branch_stock.counted</span>
+        <div style="display:flex; gap:8px;">
+            <button type="button" id="dialog-cancel" class="sc-btn">Keep editing</button>
+            <button type="button" id="dialog-confirm" class="sc-btn sc-btn-primary">Confirm &amp; save stock</button>
+        </div>
+    </div>
+</dialog>
+
+<script>
+const BRANCHES = {
+    cebu: {
+        id: 'cebu',
+        name: 'JMMart Pharmacy Cebu Capitol',
+        short: 'Cebu Capitol',
+        status: 'Open · 8:00 AM – 9:00 PM',
+        tone: 'success',
+        address: 'Osmeña Blvd, Capitol Site, Cebu City · On the map (5 km delivery radius)',
+        lastCounted: 'Last counted today, 2:14 PM by M. Santos'
+    },
+    makati: {
+        id: 'makati',
+        name: 'JMMart Pharmacy Makati Poblacion',
+        short: 'Makati Poblacion',
+        status: 'Open · 7:00 AM – 10:00 PM',
+        tone: 'success',
+        address: 'J.P. Rizal Ave, Poblacion, Makati · On the map (6 km delivery radius)',
+        lastCounted: 'Last counted yesterday, 6:40 PM by R. Dela Cruz'
+    },
+    davao: {
+        id: 'davao',
+        name: 'JMMart Pharmacy Davao Bajada',
+        short: 'Davao Bajada',
+        status: 'Open · 8:00 AM – 8:00 PM',
+        tone: 'success',
+        address: 'J.P. Laurel Ave, Bajada, Davao City · On the map (5 km delivery radius)',
+        lastCounted: 'Last counted 2 days ago by A. Reyes'
+    }
+};
+
+const INITIAL_MEDICINES = [
+    { id: 'aml-5', name: 'Amlodipine 5 mg Tablet', generic: 'Amlodipine Besilate · 5 mg', sku: 'AML-5-TAB', category: 'Prescription Medicines', form: 'pill', rx: true, price: 10.00, option: null, saved: { cebu: 0, makati: 180, davao: 150 }, verified: false },
+    { id: 'amox-500', name: 'Amoxicillin 500 mg Capsule', generic: 'Amoxicillin · 500 mg', sku: 'AMOX-500-CAP', category: 'Prescription Medicines', form: 'pill', rx: true, price: 15.00, option: null, saved: { cebu: 89, makati: 140, davao: 110 }, draftDelta: 31, verified: true },
+    { id: 'asc-500', name: 'Ascorbic Acid 500 mg Tablet', generic: 'Ascorbic Acid (Vitamin C) · 500 mg', sku: 'ASC-500-BL10', category: 'Vitamins & Supplements', form: 'pill', rx: false, price: 5.50, option: 'Blister of 10', saved: { cebu: 220, makati: 300, davao: 190 }, verified: true },
+    { id: 'carb-500', name: 'Carbocisteine 500 mg Capsule', generic: 'Carbocisteine · 500 mg', sku: 'CARB-500-CAP', category: 'Cough & Cold', form: 'pill', rx: false, price: 12.00, option: null, saved: { cebu: 0, makati: 95, davao: 60 }, draftDelta: 25, verified: false },
+    { id: 'cef-500', name: 'Cefalexin 500 mg Capsule', generic: 'Cefalexin · 500 mg', sku: 'CEF-500-CAP', category: 'Prescription Medicines', form: 'pill', rx: true, price: 22.00, option: null, saved: { cebu: 24, makati: 40, davao: 20 }, verified: true },
+    { id: 'cet-10', name: 'Cetirizine 10 mg Tablet', generic: 'Cetirizine · 10 mg', sku: 'CET-10-TAB', category: 'Allergy & Antihistamine', form: 'pill', rx: false, price: 8.00, option: null, saved: { cebu: 80, makati: 110, davao: 75 }, verified: false },
+    { id: 'ibu-200', name: 'Ibuprofen 200 mg Tablet', generic: 'Ibuprofen · 200 mg', sku: 'IBU-200-TAB', category: 'Pain & Fever', form: 'pill', rx: false, price: 9.00, option: null, saved: { cebu: 0, makati: 120, davao: 85 }, verified: false },
+    { id: 'iso-500', name: 'Isopropyl Alcohol 70% 500 mL', generic: 'Isopropyl Alcohol · 70%, 500 mL', sku: 'ISO-70-500ML', category: 'First Aid', form: 'firstaid', rx: false, price: 95.00, option: '500 mL Bottle', saved: { cebu: 30, makati: 75, davao: 50 }, verified: true },
+    { id: 'lor-10', name: 'Loratadine 10 mg Tablet', generic: 'Loratadine · 10 mg', sku: 'LOR-10-TAB', category: 'Allergy & Antihistamine', form: 'pill', rx: false, price: 14.00, option: null, saved: { cebu: 0, makati: 60, davao: 45 }, verified: false },
+    { id: 'los-50', name: 'Losartan 50 mg Tablet', generic: 'Losartan Potassium · 50 mg', sku: 'LOS-50-TAB', category: 'Prescription Medicines', form: 'pill', rx: true, price: 18.00, option: null, saved: { cebu: 110, makati: 200, davao: 140 }, verified: false },
+    { id: 'mef-500', name: 'Mefenamic Acid 500 mg Capsule', generic: 'Mefenamic Acid · 500 mg', sku: 'MEF-500-CAP', category: 'Pain & Fever', form: 'pill', rx: true, price: 11.00, option: null, saved: { cebu: 70, makati: 130, davao: 90 }, verified: false },
+    { id: 'met-500', name: 'Metformin 500 mg Tablet', generic: 'Metformin HCl · 500 mg', sku: 'MET-500-TAB', category: 'Prescription Medicines', form: 'pill', rx: true, price: 6.50, option: null, saved: { cebu: 100, makati: 210, davao: 130 }, verified: false },
+    { id: 'mvi-cap', name: 'Multivitamins + Iron Capsule', generic: 'Multivitamins + Iron · 1 capsule daily', sku: 'MVI-IRON-CAP', category: 'Vitamins & Supplements', form: 'pill', rx: false, price: 12.50, option: null, saved: { cebu: 8, makati: 90, davao: 64 }, verified: false },
+    { id: 'ors-20', name: 'Oral Rehydration Salts Sachet', generic: 'Oral Rehydration Salts · 20.5 g sachet', sku: 'ORS-20G-SAC', category: 'Digestive Care', form: 'firstaid', rx: false, price: 16.00, option: '20.5 g Sachet', saved: { cebu: 50, makati: 80, davao: 70 }, verified: false },
+    { id: 'para-syr', name: 'Paracetamol 120 mg/5 mL Syrup', generic: 'Paracetamol · 120 mg/5 mL, 60 mL', sku: 'PARA-120-60ML', category: 'Pain & Fever', form: 'bottle', rx: false, price: 85.00, option: '60 mL Bottle', saved: { cebu: 6, makati: 45, davao: 30 }, verified: false },
+    { id: 'para-500', name: 'Paracetamol 500 mg Tablet', generic: 'Paracetamol · 500 mg', sku: 'PARA-500-TAB', category: 'Pain & Fever', form: 'pill', rx: false, price: 6.00, option: null, saved: { cebu: 159, makati: 320, davao: 210 }, verified: false },
+    { id: 'pov-60', name: 'Povidone-Iodine 10% Solution', generic: 'Povidone-Iodine · 10%, 60 mL', sku: 'POV-10-60ML', category: 'First Aid', form: 'firstaid', rx: false, price: 120.00, option: '60 mL Bottle', saved: { cebu: 11, makati: 14, davao: 0 }, verified: false },
+    { id: 'sal-syr', name: 'Salbutamol 2 mg/5 mL Syrup', generic: 'Salbutamol · 2 mg/5 mL, 60 mL', sku: 'SAL-2MG-60ML', category: 'Prescription Medicines', form: 'bottle', rx: true, price: 110.00, option: '60 mL Bottle', saved: { cebu: 0, makati: 12, davao: 8 }, verified: false }
+];
+
+let state = {
+    mode: 'ledger',       // 'ledger' | 'cycle' | 'matrix' | 'compare'
+    role: 'headoffice',   // 'headoffice' | 'branch'
+    branch: 'cebu',       // 'cebu' | 'makati' | 'davao'
+    tab: 'all',           // 'all' | 'out_of_stock' | 'low_stock' | 'in_stock' | 'rx' | 'changed'
+    search: '',
+    category: '',
+    sort: 'name',
+    items: INITIAL_MEDICINES.map(m => ({
+        ...m,
+        saved: { ...m.saved },
+        current: {
+            cebu: m.saved.cebu + (m.draftDelta || 0),
+            makati: m.saved.makati,
+            davao: m.saved.davao
+        }
+    }))
+};
+
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+function statusForQty(qty) {
+    if (qty <= 0) return { key: 'out_of_stock', label: 'Out of stock', tone: 'danger', sub: 'Hidden at branch' };
+    if (qty <= 15) return { key: 'low_stock', label: 'Low stock', tone: 'warning', sub: '≤ 15 unit buffer' };
+    return { key: 'in_stock', label: 'In stock', tone: 'success', sub: 'Ready for orders' };
+}
+
+function iconHref(form) {
+    if (form === 'bottle') return '#i-bottle';
+    if (form === 'firstaid') return '#i-firstaid';
+    return '#i-pill';
+}
+
+function isRowDirty(item, branchKey = state.branch) {
+    return item.current[branchKey] !== item.saved[branchKey];
+}
+
+function getDirtyItems(branchKey = state.branch) {
+    return state.items.filter(m => isRowDirty(m, branchKey));
+}
+
+function formatPeso(amount) {
+    return '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function clampQty(val) {
+    const n = parseInt(val, 10);
+    if (isNaN(n) || n < 0) return 0;
+    if (n > 1000000) return 1000000;
+    return n;
+}
+
+function renderAll() {
+    const b = BRANCHES[state.branch];
+    const isHO = state.role === 'headoffice';
+
+    // Header & Role UI
+    $('#page-title').textContent = state.mode === 'matrix'
+        ? 'Branch Stock Matrix · All 3 Branches'
+        : `Stock at ${b.name}`;
+    $('#sidebar-branch-label').textContent = isHO ? 'Head Office · 3 branches' : b.short;
+    $('#branch-status-badge').textContent = b.status;
+    $('#branch-address').textContent = b.address;
+    $('#last-counted-meta').textContent = b.lastCounted;
+    $('#branch-switcher-wrap').style.display = isHO ? 'flex' : 'none';
+    $('#nav-business-group').style.display = isHO ? 'block' : 'none';
+    $('#topbar-role-pill').textContent = isHO ? 'Head office view' : 'Branch staff view';
+    $('#topbar-role-pill').dataset.tone = isHO ? 'info' : 'neutral';
+    $('#th-company-col').style.display = isHO ? '' : 'none';
+
+    // Mode buttons
+    $$('.sc-proto-btn').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.mode === state.mode));
+    });
+    $('#compare-section').style.display = state.mode === 'compare' ? 'block' : 'none';
+    $('#cycle-banner').style.display = state.mode === 'cycle' ? 'flex' : 'none';
+    $('#cycle-toggle-label').textContent = state.mode === 'cycle' ? 'Exit shelf count' : 'Start shelf count';
+    $('#single-branch-table-wrap').style.display = state.mode === 'matrix' ? 'none' : '';
+    $('#matrix-table-wrap').style.display = state.mode === 'matrix' ? 'block' : 'none';
+
+    // Metrics computation for active branch
+    const totalItems = state.items.length;
+    const outItems = state.items.filter(m => m.current[state.branch] <= 0);
+    const lowItems = state.items.filter(m => m.current[state.branch] > 0 && m.current[state.branch] <= 15);
+    const inItems = state.items.filter(m => m.current[state.branch] > 0);
+    const healthyItems = state.items.filter(m => m.current[state.branch] > 15);
+    const rxItems = state.items.filter(m => m.rx);
+    const dirtyItems = getDirtyItems(state.branch);
+
+    const totalUnits = state.items.reduce((sum, m) => sum + m.current[state.branch], 0);
+    const savedUnits = state.items.reduce((sum, m) => sum + m.saved[state.branch], 0);
+    const netDelta = totalUnits - savedUnits;
+    const totalValue = state.items.reduce((sum, m) => sum + m.current[state.branch] * m.price, 0);
+    const coveragePct = Math.round((inItems.length / totalItems) * 100);
+
+    $('#metric-stocked-count').textContent = inItems.length;
+    $('#metric-coverage-pct').textContent = `${coveragePct}%`;
+    $('#metric-out-count').textContent = outItems.length;
+    $('#metric-low-count').textContent = lowItems.length;
+    $('#metric-total-units').textContent = totalUnits.toLocaleString();
+    $('#metric-retail-value').textContent = `${formatPeso(totalValue)} branch stock value`;
+
+    if (dirtyItems.length > 0) {
+        const sign = netDelta >= 0 ? '+' : '';
+        $('#metric-delta-badge').textContent = `${dirtyItems.length} edited (${sign}${netDelta})`;
+        $('#metric-delta-badge').style.display = '';
+    } else {
+        $('#metric-delta-badge').style.display = 'none';
+    }
+
+    // Out-of-stock alert bar
+    if (outItems.length > 0) {
+        $('#out-of-stock-alert').style.display = 'flex';
+        $('#alert-zero-count').textContent = `${outItems.length} ${outItems.length === 1 ? 'medicine is' : 'medicines are'} out of stock`;
+    } else {
+        $('#out-of-stock-alert').style.display = 'none';
+    }
+
+    // Tab counts & active states
+    $('#tab-count-all').textContent = totalItems;
+    $('#tab-count-out').textContent = outItems.length;
+    $('#tab-count-low').textContent = lowItems.length;
+    $('#tab-count-in').textContent = healthyItems.length;
+    $('#tab-count-rx').textContent = rxItems.length;
+    $('#tab-count-changed').textContent = dirtyItems.length;
+
+    $$('.sc-tab').forEach(tab => {
+        tab.setAttribute('aria-selected', String(tab.dataset.tab === state.tab));
+    });
+    $$('.sc-metric').forEach(metric => {
+        metric.classList.toggle('is-active', metric.dataset.metricFilter === state.tab);
+    });
+
+    // Cycle count progress
+    const verifiedCount = state.items.filter(m => m.verified || isRowDirty(m)).length;
+    const verifiedPct = Math.round((verifiedCount / totalItems) * 100);
+    $('#cycle-bar-fill').style.width = `${verifiedPct}%`;
+    $('#cycle-progress-text').textContent = `${verifiedCount} of ${totalItems} verified (${verifiedPct}%)`;
+
+    // Filter & sort items
+    const q = state.search.trim().toLowerCase();
+    let filtered = state.items.filter(m => {
+        const qty = m.current[state.branch];
+        if (state.tab === 'out_of_stock' && qty > 0) return false;
+        if (state.tab === 'low_stock' && (qty <= 0 || qty > 15)) return false;
+        if (state.tab === 'in_stock' && qty <= 15) return false;
+        if (state.tab === 'rx' && !m.rx) return false;
+        if (state.tab === 'changed' && !isRowDirty(m)) return false;
+        if (state.category && m.category !== state.category) return false;
+        if (q && !(m.name.toLowerCase().includes(q) || m.generic.toLowerCase().includes(q) || m.sku.toLowerCase().includes(q))) return false;
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        if (state.sort === 'stock_asc') return a.current[state.branch] - b.current[state.branch];
+        if (state.sort === 'stock_desc') return b.current[state.branch] - a.current[state.branch];
+        if (state.sort === 'dirty') return Number(isRowDirty(b)) - Number(isRowDirty(a)) || a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name);
+    });
+
+    // Render Single-Branch Table
+    const tbody = $('#stock-tbody');
+    tbody.innerHTML = filtered.map((m, idx) => {
+        const qty = m.current[state.branch];
+        const saved = m.saved[state.branch];
+        const dirty = qty !== saved;
+        const delta = qty - saved;
+        const st = statusForQty(qty);
+        const otherTotal = Object.entries(m.current).reduce((acc, [k, v]) => acc + v, 0);
+        const otherBranches = otherTotal - qty;
+        const barPct = Math.min(100, Math.round((qty / 200) * 100));
+        const rowClass = dirty ? 'is-dirty' : (state.mode === 'cycle' && m.verified ? 'is-verified' : (qty === 0 ? 'is-out' : ''));
+
+        return `
+        <tr class="${rowClass}" data-row-id="${m.id}">
+            <td>
+                <div class="sc-med-cell">
+                    <span class="sc-med-icon ${m.rx ? 'is-rx' : ''}" aria-hidden="true">
+                        <svg><use href="${iconHref(m.form)}"/></svg>
+                    </span>
+                    <div style="min-width:0">
+                        <div class="sc-med-name-row">
+                            <span class="sc-med-name">${m.name}</span>
+                            ${m.rx ? '<span class="sc-pill-rx">Rx</span>' : '<span class="sc-pill-otc">OTC</span>'}
+                            ${m.option ? `<span class="sc-variant-tag">${m.option}</span>` : ''}
+                        </div>
+                        <span class="sc-med-generic">${m.generic}</span>
+                        <div class="sc-med-meta">
+                            <span class="sc-sku">${m.sku}</span>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div style="font-weight:600; color:var(--color-fg);">${formatPeso(m.price)} <span style="font-weight:400; color:var(--color-muted); font-size:12px;">/ unit</span></div>
+                <div style="color:var(--color-muted); font-size:12px; margin-top:2px;">${m.category}</div>
+            </td>
+            <td class="sc-level-cell">
+                <span class="sc-badge" data-tone="${st.tone}">${st.label}</span>
+                <div class="sc-level-bar" aria-hidden="true">
+                    <span data-tone="${st.tone}" style="width:${qty === 0 ? 0 : Math.max(8, barPct)}%"></span>
+                </div>
+            </td>
+            <td style="${isHO ? '' : 'display:none;'}">
+                <div style="font-weight:600; color:var(--color-fg);">${otherTotal.toLocaleString()} <span style="font-weight:400; color:var(--color-muted); font-size:12px;">chain</span></div>
+                <div style="color:var(--color-muted); font-size:12px; margin-top:2px;">${otherBranches.toLocaleString()} at 2 other branches</div>
+            </td>
+            <td style="text-align:right;">
+                <div class="sc-stepper-wrap">
+                    <div class="sc-quick-chips">
+                        ${state.mode === 'cycle' ? `
+                            <button type="button" class="sc-chip-btn" data-action="verify" data-id="${m.id}" style="${m.verified || dirty ? 'border-color:#16a34a;color:#166534;background:#f1faf4;' : ''}">
+                                ${m.verified || dirty ? '✓ Verified' : 'Verify'}
+                            </button>
+                        ` : `
+                            <button type="button" class="sc-chip-btn" data-action="add" data-step="10" data-id="${m.id}" title="Add 10 units">+10</button>
+                            <button type="button" class="sc-chip-btn" data-action="add" data-step="50" data-id="${m.id}" title="Add 50 units">+50</button>
+                            ${qty > 0 ? `<button type="button" class="sc-chip-btn" data-action="zero" data-id="${m.id}" title="Set to 0">0</button>` : ''}
+                        `}
+                    </div>
+                    <div class="sc-stepper ${dirty ? 'is-dirty' : ''}">
+                        <button type="button" class="sc-step-btn" data-action="add" data-step="-1" data-id="${m.id}" aria-label="Decrease ${m.name}">−</button>
+                        <input
+                            type="number"
+                            class="sc-step-input"
+                            min="0"
+                            max="1000000"
+                            value="${qty}"
+                            data-input-id="${m.id}"
+                            data-row-idx="${idx}"
+                            aria-label="Units of ${m.name} on hand"
+                        >
+                        <button type="button" class="sc-step-btn" data-action="add" data-step="1" data-id="${m.id}" aria-label="Increase ${m.name}">+</button>
+                    </div>
+                </div>
+                ${dirty ? `
+                    <div class="sc-delta-row">
+                        <span class="sc-delta-pill ${delta > 0 ? 'is-up' : 'is-down'}">
+                            Was ${saved} → ${delta > 0 ? '+' + delta : delta}
+                        </span>
+                        <button type="button" class="sc-undo-btn" data-action="undo" data-id="${m.id}">Undo</button>
+                    </div>
+                ` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+
+    // Render Multi-Branch Matrix (Mode 3)
+    const matrixBody = $('#matrix-tbody');
+    matrixBody.innerHTML = filtered.map(m => {
+        const chainTotal = m.current.cebu + m.current.makati + m.current.davao;
+        const renderBranchCell = (bKey) => {
+            const qVal = m.current[bKey];
+            const sVal = m.saved[bKey];
+            const d = qVal !== sVal;
+            const st = statusForQty(qVal);
+            return `
+                <td style="text-align:right;">
+                    <div style="display:inline-flex; align-items:center; gap:8px;">
+                        <span class="sc-badge" data-tone="${st.tone}">${qVal === 0 ? 'Out' : (qVal <= 15 ? 'Low' : 'OK')}</span>
+                        <div class="sc-stepper ${d ? 'is-dirty' : ''}">
+                            <button type="button" class="sc-step-btn" data-matrix-branch="${bKey}" data-matrix-step="-1" data-id="${m.id}">−</button>
+                            <input type="number" class="sc-step-input" style="width:58px" min="0" max="1000000" value="${qVal}" data-matrix-input="${bKey}" data-id="${m.id}" aria-label="${m.name} at ${bKey}">
+                            <button type="button" class="sc-step-btn" data-matrix-branch="${bKey}" data-matrix-step="1" data-id="${m.id}">+</button>
+                        </div>
+                    </div>
+                </td>
+            `;
+        };
+        return `
+            <tr class="${isRowDirty(m, 'cebu') || isRowDirty(m, 'makati') || isRowDirty(m, 'davao') ? 'is-dirty' : ''}">
+                <td>
+                    <div style="font-weight:600; color:var(--color-fg);">${m.name} ${m.rx ? '<span class="sc-pill-rx">Rx</span>' : ''}</div>
+                    <div style="font-size:12px; color:var(--color-muted);">${m.generic} · <span class="sc-sku">${m.sku}</span></div>
+                </td>
+                <td style="text-align:right; font-weight:600;">${formatPeso(m.price)}</td>
+                ${renderBranchCell('cebu')}
+                ${renderBranchCell('makati')}
+                ${renderBranchCell('davao')}
+                <td style="text-align:right; font-weight:700; font-size:14.5px;">${chainTotal.toLocaleString()}</td>
+            </tr>
+        `;
+    }).join('');
+
+    // Render Mobile Card List
+    const mobileList = $('#mobile-stock-list');
+    mobileList.innerHTML = filtered.map(m => {
+        const qty = m.current[state.branch];
+        const saved = m.saved[state.branch];
+        const dirty = qty !== saved;
+        const st = statusForQty(qty);
+        return `
+            <article class="sc-mobile-item ${dirty ? 'is-dirty' : ''}">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                    <div>
+                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+                            <strong style="font-size:14px;">${m.name}</strong>
+                            ${m.rx ? '<span class="sc-pill-rx">Rx</span>' : ''}
+                        </div>
+                        <p style="font-size:12.5px; color:var(--color-muted); margin-top:2px;">${m.generic} · ${formatPeso(m.price)}</p>
+                    </div>
+                    <span class="sc-badge" data-tone="${st.tone}">${st.label}</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px;">
+                    <div class="sc-quick-chips">
+                        <button type="button" class="sc-chip-btn" data-action="add" data-step="10" data-id="${m.id}">+10</button>
+                        <button type="button" class="sc-chip-btn" data-action="add" data-step="50" data-id="${m.id}">+50</button>
+                        ${dirty ? `<button type="button" class="sc-undo-btn" data-action="undo" data-id="${m.id}">Undo (${saved})</button>` : ''}
+                    </div>
+                    <div class="sc-stepper ${dirty ? 'is-dirty' : ''}">
+                        <button type="button" class="sc-step-btn" data-action="add" data-step="-1" data-id="${m.id}">−</button>
+                        <input type="number" class="sc-step-input" min="0" max="1000000" value="${qty}" data-input-id="${m.id}">
+                        <button type="button" class="sc-step-btn" data-action="add" data-step="1" data-id="${m.id}">+</button>
+                    </div>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+    // Empty state & Footer
+    $('#empty-state').style.display = filtered.length === 0 ? 'block' : 'none';
+    $('#footer-showing-text').textContent = `Showing ${filtered.length} of ${totalItems} medicines · ${b.name}`;
+
+    // All dirty counts across branches if in matrix mode, else current branch
+    const allDirty = state.mode === 'matrix'
+        ? state.items.filter(m => isRowDirty(m, 'cebu') || isRowDirty(m, 'makati') || isRowDirty(m, 'davao'))
+        : dirtyItems;
+
+    const savebar = $('#savebar');
+    if (allDirty.length > 0) {
+        savebar.classList.remove('is-hidden');
+        const countLabel = `${allDirty.length} stock ${allDirty.length === 1 ? 'count' : 'counts'} changed`;
+        const sign = netDelta >= 0 ? '+' : '';
+        $('#savebar-title').textContent = countLabel;
+        $('#savebar-sub').textContent = `Net ${sign}${netDelta} units at ${b.name}`;
+        $('#footer-dirty-summary').textContent = `${countLabel} (${sign}${netDelta} net units)`;
+        $('#btn-save-top').textContent = `Save stock (${allDirty.length})`;
+        $('#btn-save-bottom').textContent = `Save stock (${allDirty.length})`;
+    } else {
+        savebar.classList.add('is-hidden');
+        $('#footer-dirty-summary').textContent = 'All stock counts saved';
+        $('#btn-save-top').textContent = 'Save stock';
+        $('#btn-save-bottom').textContent = 'Save stock';
+    }
+}
+
+// Event Delegation for Table Actions
+document.addEventListener('click', e => {
+    const modeBtn = e.target.closest('[data-mode]');
+    if (modeBtn) {
+        state.mode = modeBtn.dataset.mode;
+        renderAll();
+        return;
+    }
+
+    const tabBtn = e.target.closest('[data-tab]');
+    if (tabBtn) {
+        state.tab = tabBtn.dataset.tab;
+        renderAll();
+        return;
+    }
+
+    const metricBtn = e.target.closest('[data-metric-filter]');
+    if (metricBtn) {
+        const targetFilter = metricBtn.dataset.metricFilter;
+        state.tab = state.tab === targetFilter ? 'all' : targetFilter;
+        renderAll();
+        return;
+    }
+
+    const actionBtn = e.target.closest('[data-action]');
+    if (actionBtn) {
+        const id = actionBtn.dataset.id;
+        const item = state.items.find(m => m.id === id);
+        if (!item) return;
+        const action = actionBtn.dataset.action;
+        if (action === 'add') {
+            const step = parseInt(actionBtn.dataset.step, 10);
+            item.current[state.branch] = clampQty(item.current[state.branch] + step);
+            item.verified = true;
+        } else if (action === 'zero') {
+            item.current[state.branch] = 0;
+        } else if (action === 'undo') {
+            item.current[state.branch] = item.saved[state.branch];
+        } else if (action === 'verify') {
+            item.verified = !item.verified;
+        }
+        renderAll();
+        return;
+    }
+
+    const matrixBtn = e.target.closest('[data-matrix-branch]');
+    if (matrixBtn) {
+        const id = matrixBtn.dataset.id;
+        const bKey = matrixBtn.dataset.matrixBranch;
+        const step = parseInt(matrixBtn.dataset.matrixStep, 10);
+        const item = state.items.find(m => m.id === id);
+        if (item) {
+            item.current[bKey] = clampQty(item.current[bKey] + step);
+            renderAll();
+        }
+        return;
+    }
+});
+
+// Input changes & Keyboard shelf-count navigation (Enter / ArrowDown / ArrowUp)
+document.addEventListener('change', e => {
+    if (e.target.matches('[data-input-id]')) {
+        const item = state.items.find(m => m.id === e.target.dataset.inputId);
+        if (item) {
+            item.current[state.branch] = clampQty(e.target.value);
+            item.verified = true;
+            renderAll();
+        }
+    } else if (e.target.matches('[data-matrix-input]')) {
+        const item = state.items.find(m => m.id === e.target.dataset.id);
+        const bKey = e.target.dataset.matrixInput;
+        if (item && bKey) {
+            item.current[bKey] = clampQty(e.target.value);
+            renderAll();
+        }
+    }
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        $('#stock-search').focus();
+        return;
+    }
+    if (e.target.matches('[data-input-id]') && (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        e.preventDefault();
+        const id = e.target.dataset.inputId;
+        const idx = parseInt(e.target.dataset.rowIdx, 10);
+        const item = state.items.find(m => m.id === id);
+        if (item) {
+            item.current[state.branch] = clampQty(e.target.value);
+            item.verified = true;
+        }
+        const nextIdx = e.key === 'ArrowUp' ? Math.max(0, idx - 1) : idx + 1;
+        renderAll();
+        const nextInput = document.querySelector(`[data-row-idx="${nextIdx}"]`);
+        if (nextInput) {
+            nextInput.focus();
+            nextInput.select();
+        }
+    }
+});
+
+// Top-level controls
+$('#proto-role').addEventListener('change', e => {
+    state.role = e.target.value;
+    if (state.role === 'branch') {
+        state.branch = 'cebu';
+        $('#branch-select').value = 'cebu';
+        if (state.mode === 'matrix') state.mode = 'ledger';
+    }
+    renderAll();
+});
+
+$('#branch-select').addEventListener('change', e => {
+    state.branch = e.target.value;
+    renderAll();
+});
+
+$('#btn-cycle-toggle').addEventListener('click', () => {
+    state.mode = state.mode === 'cycle' ? 'ledger' : 'cycle';
+    renderAll();
+});
+
+$('#stock-search').addEventListener('input', e => {
+    state.search = e.target.value;
+    renderAll();
+});
+
+$('#category-filter').addEventListener('change', e => {
+    state.category = e.target.value;
+    renderAll();
+});
+
+$('#sort-select').addEventListener('change', e => {
+    state.sort = e.target.value;
+    renderAll();
+});
+
+$('#btn-clear-filters').addEventListener('click', () => {
+    state.tab = 'all';
+    state.search = '';
+    state.category = '';
+    $('#stock-search').value = '';
+    $('#category-filter').value = '';
+    renderAll();
+});
+
+$('#btn-filter-out').addEventListener('click', () => {
+    state.tab = 'out_of_stock';
+    renderAll();
+});
+
+$('#btn-restock-zero').addEventListener('click', () => {
+    state.items.forEach(m => {
+        if (m.current[state.branch] === 0) m.current[state.branch] = 30;
+    });
+    renderAll();
+});
+
+$('#btn-boost-low').addEventListener('click', () => {
+    state.items.forEach(m => {
+        const q = m.current[state.branch];
+        if (q > 0 && q <= 15) m.current[state.branch] = q + 20;
+    });
+    renderAll();
+});
+
+$('#btn-verify-all-visible').addEventListener('click', () => {
+    state.items.forEach(m => { m.verified = true; });
+    renderAll();
+});
+
+function discardAll() {
+    state.items.forEach(m => {
+        m.current = { ...m.saved };
+    });
+    if (state.tab === 'changed') state.tab = 'all';
+    renderAll();
+}
+
+$('#btn-reset-all').addEventListener('click', discardAll);
+$('#savebar-discard').addEventListener('click', discardAll);
+
+function openReviewModal() {
+    const dirty = getDirtyItems(state.branch);
+    const b = BRANCHES[state.branch];
+    if (dirty.length === 0) {
+        showNotice(`No stock changed for ${b.name}.`);
+        return;
+    }
+    $('#dialog-subtitle').textContent = `${dirty.length} medicine ${dirty.length === 1 ? 'count' : 'counts'} will be updated at ${b.name} and synced to company totals.`;
+    $('#dialog-diff-list').innerHTML = dirty.map(m => {
+        const from = m.saved[state.branch];
+        const to = m.current[state.branch];
+        const diff = to - from;
+        return `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--color-line-soft);">
+                <div>
+                    <div style="font-weight:600; color:var(--color-fg);">${m.name}</div>
+                    <div style="font-size:12px; color:var(--color-muted);">${m.generic} · ${m.sku}</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; font-weight:650;">
+                    <span style="color:var(--color-muted);">${from}</span>
+                    <span>→</span>
+                    <span class="sc-delta-pill ${diff >= 0 ? 'is-up' : 'is-down'}">${to} (${diff >= 0 ? '+' + diff : diff})</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+    $('#review-dialog').showModal();
+}
+
+function commitChanges() {
+    const b = BRANCHES[state.branch];
+    const dirty = getDirtyItems(state.branch);
+    const changedCount = dirty.length;
+    state.items.forEach(m => {
+        m.saved = { ...m.current };
+        m.verified = true;
+    });
+    if ($('#review-dialog').open) $('#review-dialog').close();
+    if (state.tab === 'changed') state.tab = 'all';
+    BRANCHES[state.branch].lastCounted = 'Last counted just now by you';
+    renderAll();
+    showNotice(changedCount === 0
+        ? 'No stock changed.'
+        : `Saved ${changedCount} stock ${changedCount === 1 ? 'count' : 'counts'} for ${b.name}.`);
+}
+
+function showNotice(msg) {
+    $('#status-banner-text').textContent = msg;
+    $('#status-banner').style.display = 'flex';
+}
+
+$('#status-banner-close').addEventListener('click', () => {
+    $('#status-banner').style.display = 'none';
+});
+
+$('#savebar-review').addEventListener('click', openReviewModal);
+$('#savebar-commit').addEventListener('click', openReviewModal);
+$('#btn-save-top').addEventListener('click', openReviewModal);
+$('#btn-save-bottom').addEventListener('click', openReviewModal);
+$('#dialog-cancel').addEventListener('click', () => $('#review-dialog').close());
+$('#dialog-confirm').addEventListener('click', commitChanges);
+
+renderAll();
+</script>
+</body>
+</html>
