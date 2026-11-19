@@ -33,6 +33,7 @@ class UpdateProductRequest extends FormRequest
             'category_id' => ['nullable', 'exists:categories,id'],
             'brand' => ['nullable', 'string', 'max:100'],
             'generic_name' => ['nullable', 'string', 'max:160'],
+            'search_keywords' => ['nullable', 'string', 'max:400'],
             'dosage_form' => ['nullable', 'string', 'max:60'],
             'strength' => ['nullable', 'string', 'max:60'],
             'manufacturer' => ['nullable', 'string', 'max:160'],

@@ -34,6 +34,9 @@
             'label' => $isHeadOffice ? 'Catalog' : 'Branch',
             'items' => [
                 ['label' => 'Products', 'href' => route('seller.products.index'), 'icon' => 'products', 'active' => request()->routeIs('seller.products.*'), 'viewOnly' => ! $canManageStore],
+                ...($canManageStore
+                    ? [['label' => 'Other names', 'href' => route('seller.ingredient-aliases.index'), 'icon' => 'tag', 'active' => request()->routeIs('seller.ingredient-aliases.*')]]
+                    : []),
                 // Branch staff count their own branch's stock; head-office staff have no branch to count.
                 ...($canManage || ! $isHeadOffice
                     ? [['label' => 'Branch stock', 'href' => route('seller.branch-stock.index'), 'icon' => 'stock', 'active' => request()->routeIs('seller.branch-stock.*')]]
@@ -88,6 +91,7 @@
                             @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break
                             @case('products')<path d="m12 3 9 5v8l-9 5-9-5V8z" /><path d="m3 8 9 5 9-5M12 13v8" />@break
                             @case('stock')<path d="M4 7h16M4 12h16M4 17h10" />@break
+                            @case('tag')<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" /><circle cx="7.5" cy="7.5" r="1.5" />@break
                             @case('prescription')<path d="M7 3h7a4 4 0 0 1 0 8H7zM7 11v10M11 11l8 10M19 11l-8 10" />@break
                             @case('staff')<circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.2a6.5 6.5 0 0 1 3.5 5.8" />@break
                             @case('orders')<path d="M3 4h2l2.5 12h10L21 8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" />@break

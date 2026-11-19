@@ -59,7 +59,8 @@ class CatalogQuery
                 if ($useFullText && Str::length($search) >= 3) {
                     $query->orWhereRaw('LOWER(products.name) %>> ?', [$search]);
                 }
-                $query->orWhereRaw("LOWER(products.generic_name) LIKE ? ESCAPE '!'", ['%'.$escaped.'%']);
+                $query->orWhereRaw("LOWER(products.generic_name) LIKE ? ESCAPE '!'", ['%'.$escaped.'%'])
+                    ->orWhereRaw("products.search_keywords LIKE ? ESCAPE '!'", ['%'.$escaped.'%']);
             });
 
         $rank = "CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 WHEN {$wordMatch} THEN 2 WHEN LOWER(products.generic_name) LIKE ? ESCAPE '!' THEN 3 ELSE 4 END";
@@ -114,6 +115,8 @@ class CatalogQuery
                 ->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$searchTerm])
                 ->orWhereRaw("LOWER(products.description) LIKE ? ESCAPE '!'", [$searchTerm])
                 ->orWhereRaw("LOWER(products.brand) LIKE ? ESCAPE '!'", [$searchTerm])
+                // Keywords are saved lowercase, so they compare without LOWER().
+                ->orWhereRaw("products.search_keywords LIKE ? ESCAPE '!'", [$searchTerm])
                 ->orWhereRaw($genericMatch, $genericBindings)
                 ->orWhereHas('store', fn (Builder $store) => $store
                     ->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [$searchTerm])
@@ -329,11 +332,12 @@ class CatalogQuery
                         WHEN LOWER(products.brand) = ? THEN 3
                         WHEN LOWER(products.brand) LIKE ? ESCAPE '!' THEN 4
                         WHEN LOWER(products.generic_name) LIKE ? ESCAPE '!' THEN 5
-                        WHEN LOWER(products.description) LIKE ? ESCAPE '!' THEN 6
-                        ELSE 7
+                        WHEN products.search_keywords LIKE ? ESCAPE '!' THEN 6
+                        WHEN LOWER(products.description) LIKE ? ESCAPE '!' THEN 7
+                        ELSE 8
                     END
                 SQL,
-                [$search, $searchPrefix, $searchTerm, $search, $searchTerm, $searchTerm, $searchTerm],
+                [$search, $searchPrefix, $searchTerm, $search, $searchTerm, $searchTerm, $searchTerm, $searchTerm],
             )
             ->orderByDesc('products.created_at')
             ->orderBy('products.id');

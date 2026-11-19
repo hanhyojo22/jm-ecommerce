@@ -36,6 +36,7 @@ use App\Http\Controllers\Seller\BranchHoursController;
 use App\Http\Controllers\Seller\BranchStockController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboardController;
 use App\Http\Controllers\Seller\DiscountDocumentController;
+use App\Http\Controllers\Seller\IngredientAliasController;
 use App\Http\Controllers\Seller\PrescriptionController as SellerPrescriptionController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductReviewController as SellerProductReviewController;
@@ -160,6 +161,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function 
     Route::patch('/seller/staff/{member}', [StaffController::class, 'update'])->middleware('throttle:10,1')->name('seller.staff.update');
     Route::delete('/seller/staff/{member}', [StaffController::class, 'destroy'])->middleware('throttle:10,1')->name('seller.staff.destroy');
     Route::post('/seller/staff/{member}/transfer-ownership', [StaffController::class, 'transferOwnership'])->middleware('throttle:10,1')->name('seller.staff.transfer-ownership');
+    Route::get('/seller/other-names', [IngredientAliasController::class, 'index'])->name('seller.ingredient-aliases.index');
+    Route::post('/seller/other-names', [IngredientAliasController::class, 'store'])->middleware('throttle:30,1')->name('seller.ingredient-aliases.store');
+    Route::delete('/seller/other-names/{ingredientAlias}', [IngredientAliasController::class, 'destroy'])->middleware('throttle:30,1')->name('seller.ingredient-aliases.destroy');
     Route::get('/seller/opening-hours', [BranchHoursController::class, 'edit'])->name('seller.opening-hours.edit');
     Route::patch('/seller/opening-hours', [BranchHoursController::class, 'update'])->middleware('throttle:10,1')->name('seller.opening-hours.update');
     Route::get('/seller/branch-stock', [BranchStockController::class, 'index'])->name('seller.branch-stock.index');

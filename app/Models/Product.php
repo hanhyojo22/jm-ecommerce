@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,8 +21,25 @@ class Product extends Model
     public const REVIEWED_FIELDS = ['name', 'description', 'category_id', 'brand', 'condition'];
 
     protected $fillable = [
-        'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'dosage_form', 'strength', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'manufacturer', 'requires_prescription', 'switch_with_care', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
+        'tenant_id', 'store_id', 'category_id', 'name', 'generic_name', 'search_keywords', 'dosage_form', 'strength', 'slug', 'sku', 'description', 'price', 'compare_at_price', 'brand', 'manufacturer', 'requires_prescription', 'switch_with_care', 'condition', 'free_shipping', 'stock_quantity', 'status', 'moderation_reason', 'content_changed_at',
     ];
+
+    /**
+     * Keywords are stored lowercase, trimmed and without repeats ("lagnat, sakit ng ulo"), so search
+     * can match them with the same LIKE it uses for names.
+     */
+    protected function searchKeywords(): Attribute
+    {
+        return Attribute::make(set: function (?string $value): ?string {
+            $keywords = collect(explode(',', (string) $value))
+                ->map(fn (string $keyword): string => preg_replace('/\s+/u', ' ', mb_strtolower(trim($keyword))))
+                ->filter()
+                ->unique()
+                ->implode(', ');
+
+            return $keywords === '' ? null : $keywords;
+        });
+    }
 
     /** Decisions that cost the seller something, so they must say why. Approvals need no reason. */
     public const DECISIONS_NEEDING_REASON = ['changes_required', 'rejected', 'inactive'];

@@ -117,6 +117,17 @@ class CatalogQueryTest extends TestCase
         $this->assertNull(CatalogQuery::search(['q' => 'paracetamol'])['search']['ingredient']);
     }
 
+    public function test_search_keywords_find_a_product_and_are_saved_tidy(): void
+    {
+        $store = $this->store();
+        $biogesic = $this->product($store, ['name' => 'Biogesic 500 mg Tablet', 'generic_name' => 'Paracetamol', 'search_keywords' => ' Lagnat,  Sakit ng   Ulo , lagnat,, ']);
+        $this->product($store, ['name' => 'Cotton balls']);
+
+        $this->assertSame('lagnat, sakit ng ulo', $biogesic->fresh()->search_keywords);
+        $this->assertSame([$biogesic->id], CatalogQuery::search(['q' => 'Lagnat'])['products']->getCollection()->pluck('id')->all());
+        $this->assertSame([$biogesic->id], CatalogQuery::suggestions('sakit ng ulo')->pluck('id')->all());
+    }
+
     public function test_a_combination_reached_through_an_alias_names_its_own_ingredient(): void
     {
         $store = $this->store();
