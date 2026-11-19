@@ -31,6 +31,7 @@ const e2eEnvironment = {
     CLERK_PUBLISHABLE_KEY: '',
     CLERK_SECRET_KEY: '',
     PLAYWRIGHT_AUTH_KEY: playwrightAuthKey,
+    MARKETPLACE_WEB_STORE_ENABLED: 'true',
 };
 
 Object.assign(process.env, e2eEnvironment);

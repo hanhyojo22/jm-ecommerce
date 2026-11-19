@@ -13,6 +13,7 @@ class WorkspacePreferenceController extends Controller
         $user = $request->user();
 
         abort_if($workspace === 'seller' && ($user->account_type !== 'seller' || $user->sellerTenant() === null), 403);
+        abort_if($workspace === 'customer' && ! config('marketplace.web_store.enabled'), 403);
 
         $user->update(['preferred_workspace' => $workspace]);
 

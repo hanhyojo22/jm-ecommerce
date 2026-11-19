@@ -4,6 +4,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Web Store
+    |--------------------------------------------------------------------------
+    |
+    | The buyer storefront and customer web app. Turn this off to make the
+    | marketplace mobile-only: buyer web routes answer 410 Gone, while Seller
+    | Center and the platform admin workspace stay available. The mobile app's
+    | /api/v1 routes are not affected.
+    |
+    */
+
+    'web_store' => [
+        'enabled' => (bool) env('MARKETPLACE_WEB_STORE_ENABLED', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Orders
     |--------------------------------------------------------------------------
     |

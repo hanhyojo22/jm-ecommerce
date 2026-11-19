@@ -12,6 +12,7 @@ use App\Notifications\SellerOrderStatusUpdated;
 use App\Queries\TopProductQuery;
 use App\Services\GmailOrderMailer;
 use App\Services\PushNotifier;
+use App\Support\BuyerLink;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -187,7 +188,7 @@ class UpdateSellerOrderStatus
                 app(GmailOrderMailer::class)->send(
                     $updatedSellerOrder->order->user,
                     "JMMart order {$number} update",
-                    $message."\n\nView your order: ".route('orders.show', $updatedSellerOrder->order_id),
+                    $message."\n\n".BuyerLink::emailLine('View your order', route('orders.show', $updatedSellerOrder->order_id)),
                 );
             } catch (Throwable $exception) {
                 report($exception);

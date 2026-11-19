@@ -39,7 +39,9 @@
                 </p>
             </div>
             <div class="sc-page-actions">
-                <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $store->name }} storefront in a new tab">View storefront <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>
+                @if (config('marketplace.web_store.enabled'))
+                    <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $store->name }} storefront in a new tab">View storefront <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>
+                @endif
                 @if ($canManageProducts)<a href="{{ $nextSetupItem['href'] ?? route('seller.products.create') }}" class="seller-primary-button">{{ $nextSetupItem && $nextSetupItem['label'] !== 'First product' ? 'Finish store setup' : 'Add product' }}</a>@endif
             </div>
         </div>
@@ -341,7 +343,9 @@
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.reviews.index') }}">View reviews</a></li>
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.products.index', ['stock' => 'out_of_stock']) }}">Review out-of-stock products</a></li>
                         
-                        <li data-seller-help-item class="seller-help-item"><a href="{{ route('catalog.store', $store->slug) }}">Visit your storefront</a></li>
+                        @if (config('marketplace.web_store.enabled'))
+                            <li data-seller-help-item class="seller-help-item"><a href="{{ route('catalog.store', $store->slug) }}">Visit your storefront</a></li>
+                        @endif
                         <li data-seller-help-item class="seller-help-item"><a href="{{ route('messages.index') }}">Reply to buyer messages</a></li>
                         @if ($canManageProducts)<li data-seller-help-item class="seller-help-item"><a href="{{ route('seller.store-settings.edit') }}">Update store details</a></li>@endif
                     </ul>

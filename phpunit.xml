@@ -38,6 +38,7 @@
         <env name="VAPID_PUBLIC_KEY" value="" force="true"/>
         <env name="VAPID_PRIVATE_KEY" value="" force="true"/>
         <env name="MAIL_MAILER" value="array"/>
+        <env name="MARKETPLACE_WEB_STORE_ENABLED" value="true" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

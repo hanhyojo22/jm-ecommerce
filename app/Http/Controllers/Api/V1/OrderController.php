@@ -116,8 +116,8 @@ class OrderController extends Controller
         try {
             $url = $startOnlinePayment->handle(
                 $order,
-                $data['success_url'] ?? null,
-                $data['cancel_url'] ?? null,
+                $data['success_url'] ?? route('payments.app-return', 'paid'),
+                $data['cancel_url'] ?? route('payments.app-return', 'cancelled'),
             );
         } catch (ValidationException $exception) {
             throw $exception;

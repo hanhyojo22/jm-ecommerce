@@ -24,7 +24,7 @@
                 <div class="flex flex-wrap items-center gap-3"><h1 class="sc-title">{{ $product->name }}</h1><x-marketplace.product-status :status="$product->status" /></div>
             </div>
             <div class="sc-page-actions">
-                @if ($product->status === 'active')<a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $product->name }} in your store (opens in a new tab)">View in store <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>@endif
+                @if ($product->status === 'active' && config('marketplace.web_store.enabled'))<a href="{{ route('catalog.show', [$product->store->slug, $product->slug]) }}" target="_blank" rel="noopener noreferrer" class="seller-outline-button" aria-label="View {{ $product->name }} in your store (opens in a new tab)">View in store <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg></a>@endif
                 @if ($canManageProducts && $product->isEditableBySeller())<a href="{{ route('seller.products.edit', $product) }}" class="seller-primary-button">Edit listing</a>@endif
             </div>
         </div>

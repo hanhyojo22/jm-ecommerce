@@ -50,27 +50,34 @@ use App\Livewire\Chat\Inbox as ChatInbox;
 use App\Livewire\Chat\Thread as ChatThread;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [CatalogController::class, 'home'])->name('home');
+Route::get('/web-store-unavailable', fn () => response()->view('errors.410', [], 410))->name('web-store.unavailable');
 Route::view('/privacy-policy', 'privacy-policy')->name('privacy-policy');
 Route::view('/terms', 'terms')->name('terms');
 Route::view('/returns', 'returns')->name('returns');
 Route::view('/cookie-policy', 'cookie-policy')->name('cookie-policy');
 Route::post('/cookie-preferences', CookiePreferencesController::class)->middleware('throttle:10,1')->name('cookie-preferences.store');
-Route::get('/search', [CatalogController::class, 'index'])->name('catalog.index');
-Route::get('/search/suggestions', [CatalogController::class, 'suggestions'])->name('catalog.suggestions');
-Route::delete('/recently-viewed', [CatalogController::class, 'clearRecentlyViewed'])->name('catalog.recently-viewed.clear');
-Route::get('/top-products', [CatalogController::class, 'topProducts'])->name('catalog.top-products');
-Route::get('/stores', [CatalogController::class, 'stores'])->name('catalog.stores');
-Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalog.store');
-Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('catalog.show');
 Route::post('/clerk/webhook', ClerkWebhookController::class)->middleware('throttle:60,1')->name('clerk.webhook');
 Route::post('/paymongo/webhook', PayMongoWebhookController::class)->middleware('throttle:120,1')->name('paymongo.webhook');
+Route::get('/payment/app-return/{result}', fn (string $result) => view('marketplace.orders.app-payment-return', ['paid' => $result === 'paid']))
+    ->whereIn('result', ['paid', 'cancelled'])
+    ->name('payments.app-return');
 Route::get('/push/vapid-public-key', WebPushKeyController::class)->middleware('throttle:60,1')->name('push.vapid-key');
 Route::get('/push-notifications/{notification}/read', [PushNotificationController::class, 'markRead'])
     ->middleware(['signed', 'throttle:60,1'])
     ->name('push-notifications.read');
 
-Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
+Route::middleware('web-store')->group(function (): void {
+    Route::get('/', [CatalogController::class, 'home'])->name('home');
+    Route::get('/search', [CatalogController::class, 'index'])->name('catalog.index');
+    Route::get('/search/suggestions', [CatalogController::class, 'suggestions'])->name('catalog.suggestions');
+    Route::delete('/recently-viewed', [CatalogController::class, 'clearRecentlyViewed'])->name('catalog.recently-viewed.clear');
+    Route::get('/top-products', [CatalogController::class, 'topProducts'])->name('catalog.top-products');
+    Route::get('/stores', [CatalogController::class, 'stores'])->name('catalog.stores');
+    Route::get('/stores/{store}', [CatalogController::class, 'store'])->name('catalog.store');
+    Route::get('/stores/{store}/products/{product}', [CatalogController::class, 'show'])->name('catalog.show');
+});
+
+Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller', 'web-store'])->group(function (): void {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/products/{product}', [CartController::class, 'store'])->middleware('throttle:cart')->name('cart.store');
     Route::patch('/cart/items/{cartItem}', [CartController::class, 'update'])->middleware('throttle:cart')->name('cart.update');
@@ -106,11 +113,9 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::patch('/reviews/{review}', [MarketplaceProductReviewController::class, 'update'])->middleware('throttle:10,1')->name('reviews.update');
     Route::delete('/reviews/{review}', [MarketplaceProductReviewController::class, 'destroy'])->middleware('throttle:10,1')->name('reviews.destroy');
     Route::post('/reviews/{review}/report', [MarketplaceProductReviewController::class, 'report'])->middleware('throttle:10,1')->name('reviews.report');
-    Route::post('/messages/products/{product}', [ConversationController::class, 'startForProduct'])->middleware('throttle:10,1')->name('messages.products.start');
-    Route::post('/messages/seller-orders/{sellerOrder}', [ConversationController::class, 'startForSellerOrder'])->middleware('throttle:10,1')->name('messages.seller-orders.start');
 });
 
-Route::middleware(['auth', 'clerk.verified'])->group(function (): void {
+Route::middleware(['auth', 'clerk.verified', 'web-store:buyer'])->group(function (): void {
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])
         ->middleware('throttle:20,1')
         ->name('push-subscriptions.store');
@@ -119,7 +124,7 @@ Route::middleware(['auth', 'clerk.verified'])->group(function (): void {
         ->name('push-subscriptions.destroy');
 });
 
-Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(function (): void {
+Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller', 'web-store:buyer'])->group(function (): void {
     Route::get('/messages', ChatInbox::class)->name('messages.index');
     Route::get('/messages/{conversation}', ChatThread::class)->name('messages.show');
     Route::post('/messages/{conversation}/block', [ConversationController::class, 'block'])->middleware('throttle:10,1')->name('messages.block');
@@ -127,24 +132,26 @@ Route::middleware(['auth', 'clerk.verified', 'account:buyer,seller'])->group(fun
     Route::post('/messages/{conversation}/messages/{message}/report', [ConversationController::class, 'report'])->middleware('throttle:10,1')->name('messages.report');
     Route::post('/messages/{conversation}/attachments', [ConversationAttachmentController::class, 'store'])->middleware('throttle:10,1')->name('messages.attachments.store');
     Route::get('/messages/attachments/{attachment}', [ConversationAttachmentController::class, 'show'])->name('messages.attachments.show');
+    Route::post('/messages/products/{product}', [ConversationController::class, 'startForProduct'])->middleware('throttle:10,1')->name('messages.products.start');
+    Route::post('/messages/seller-orders/{sellerOrder}', [ConversationController::class, 'startForSellerOrder'])->middleware('throttle:10,1')->name('messages.seller-orders.start');
 });
 
 Route::get('/returns/cases/{returnCase}/evidence/{evidence}', [BuyerReturnCaseController::class, 'evidence'])
-    ->middleware(['auth', 'clerk.verified', 'account:buyer,seller,admin'])->name('returns.evidence');
+    ->middleware(['auth', 'clerk.verified', 'account:buyer,seller,admin', 'web-store:buyer'])->name('returns.evidence');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])->name('dashboard');
 Route::get('/admin/moderation', [DashboardController::class, 'moderation'])->middleware(['auth', 'clerk.verified', 'account:admin', 'platform-admin'])->name('admin.moderation');
 
-Route::middleware(['auth', 'account:buyer,seller,admin'])->group(function () {
+Route::middleware(['auth', 'account:buyer,seller,admin', 'web-store:buyer'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
 });
 
 Route::post('/profile/workspace', WorkspacePreferenceController::class)
-    ->middleware(['auth', 'account:buyer,seller'])
+    ->middleware(['auth', 'account:buyer,seller', 'web-store:buyer'])
     ->name('profile.workspace.update');
 
 Route::patch('/profile/notifications', NotificationPreferenceController::class)
-    ->middleware(['auth', 'account:buyer,seller'])
+    ->middleware(['auth', 'account:buyer,seller', 'web-store:buyer'])
     ->name('profile.notifications.update');
 
 Route::middleware(['auth', 'clerk.verified', 'account:seller'])->group(function (): void {

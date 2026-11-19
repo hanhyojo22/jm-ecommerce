@@ -207,8 +207,8 @@ class CheckoutController extends Controller
             try {
                 $paymentUrl = $startOnlinePayment->handle(
                     $order,
-                    $data['success_url'] ?? null,
-                    $data['cancel_url'] ?? null,
+                    $data['success_url'] ?? route('payments.app-return', 'paid'),
+                    $data['cancel_url'] ?? route('payments.app-return', 'cancelled'),
                 );
             } catch (ValidationException $exception) {
                 $paymentError = $exception->getMessage();

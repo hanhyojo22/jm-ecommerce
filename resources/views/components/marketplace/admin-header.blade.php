@@ -22,7 +22,9 @@
         </form>
 
         <div class="order-2 ml-auto flex shrink-0 items-center gap-2 sm:order-none sm:ml-2 sm:gap-3 lg:ml-auto">
-            <a data-header-marketplace-link href="{{ route('home') }}" class="hidden min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition-colors hover:bg-brand/5 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:inline-flex">View marketplace</a>
+            @if (config('marketplace.web_store.enabled'))
+                <a data-header-marketplace-link href="{{ route('home') }}" class="hidden min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-brand transition-colors hover:bg-brand/5 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:inline-flex">View marketplace</a>
+            @endif
 
             <details class="group relative">
                 <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-semibold text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
@@ -31,7 +33,9 @@
                     <svg class="size-4 text-muted transition-transform group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
                 </summary>
                 <div class="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-line bg-surface p-2 shadow-lg shadow-ink/10">
-                    <a href="{{ route('home') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">View marketplace</a>
+                    @if (config('marketplace.web_store.enabled'))
+                        <a href="{{ route('home') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">View marketplace</a>
+                    @endif
                     <a href="{{ route('profile.edit') }}" class="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-ink transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Account settings</a>
                     <button type="button" data-clerk-sign-out class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">Sign out</button>
                 </div>

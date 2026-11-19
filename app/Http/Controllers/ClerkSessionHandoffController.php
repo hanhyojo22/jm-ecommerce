@@ -104,7 +104,8 @@ class ClerkSessionHandoffController extends Controller
 
         $pendingCartAddition = $request->session()->pull('pending_cart_addition');
         if (
-            is_array($pendingCartAddition)
+            config('marketplace.web_store.enabled')
+            && is_array($pendingCartAddition)
             && ($pendingCartAddition['expires_at'] ?? 0) >= now()->timestamp
             && is_string($pendingCartAddition['product_id'] ?? null)
             && $pendingCartAddition['product_id'] !== ''

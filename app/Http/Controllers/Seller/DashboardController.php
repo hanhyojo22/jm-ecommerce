@@ -19,7 +19,7 @@ class DashboardController extends Controller
             $member = $request->user()->sellerMembership();
 
             if ($member === null) {
-                return to_route('home');
+                return to_route(config('marketplace.web_store.enabled') ? 'home' : 'web-store.unavailable');
             }
 
             $tenant = $member->tenant;

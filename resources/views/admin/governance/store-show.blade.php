@@ -168,11 +168,15 @@
                     <section class="rounded-lg border border-line bg-surface p-5 ">
                         <h2 class="font-semibold text-ink">Quick links</h2>
                         <div class="mt-4 grid gap-2">
-                            <a href="{{ route('catalog.store', $store->slug) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-ink transition hover:border-brand/30 hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">View storefront</a>
+                            @if (config('marketplace.web_store.enabled'))
+                                <a href="{{ route('catalog.store', $store->slug) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-ink transition hover:border-brand/30 hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">View storefront</a>
+                            @endif
                             <a href="{{ route('admin.products.index', ['store_id' => $store->id]) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-ink transition hover:border-brand/30 hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">View products</a>
                             <a href="{{ route('admin.orders.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-4 text-sm font-semibold text-ink transition hover:border-brand/30 hover:text-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">Review marketplace orders</a>
                         </div>
-                        <p class="mt-3 text-xs leading-5 text-muted">The public storefront only renders when both the store and its tenant are active.</p>
+                        @if (config('marketplace.web_store.enabled'))
+                            <p class="mt-3 text-xs leading-5 text-muted">The public storefront only renders when both the store and its tenant are active.</p>
+                        @endif
                     </section>
 
                     <section class="rounded-lg border border-danger/20 bg-surface p-5 " aria-label="Store moderation">

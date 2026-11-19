@@ -142,6 +142,12 @@ class User extends Authenticatable
             return 'dashboard';
         }
 
+        if (! config('marketplace.web_store.enabled')) {
+            return $this->account_type === 'seller' && $this->sellerTenant() !== null
+                ? 'seller.dashboard'
+                : 'web-store.unavailable';
+        }
+
         if ($this->account_type === 'admin') {
             return 'catalog.index';
         }

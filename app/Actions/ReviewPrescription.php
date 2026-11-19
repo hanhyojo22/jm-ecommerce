@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\SellerOrderStatusUpdated;
 use App\Services\GmailOrderMailer;
 use App\Services\PushNotifier;
+use App\Support\BuyerLink;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -89,7 +90,7 @@ class ReviewPrescription
             };
 
             try {
-                app(GmailOrderMailer::class)->send($order->user, "Prescription for order {$order->number}", $message."\n\nView your order: ".route('orders.show', $order));
+                app(GmailOrderMailer::class)->send($order->user, "Prescription for order {$order->number}", $message."\n\n".BuyerLink::emailLine('View your order', route('orders.show', $order)));
             } catch (Throwable $exception) {
                 report($exception);
             }

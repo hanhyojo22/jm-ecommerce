@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Notifications\ReturnCaseUpdated;
 use App\Services\GmailOrderMailer;
 use App\Services\PushNotifier;
+use App\Support\BuyerLink;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -388,9 +389,12 @@ class ReturnCaseWorkflow
 
                     foreach ($recipients as $recipient) {
                         $url = $recipient->id === $case->buyer_id ? route('returns.show', $case) : route('seller.returns.show', $case);
+                        $caseLine = $recipient->id === $case->buyer_id
+                            ? BuyerLink::emailLine('View the case', $url, 'Open the JMMart app to see the return case.')
+                            : "View the case: {$url}";
 
                         try {
-                            app(GmailOrderMailer::class)->send($recipient, 'JMMart return case update', $emailBody."\n\nView the case: {$url}");
+                            app(GmailOrderMailer::class)->send($recipient, 'JMMart return case update', $emailBody."\n\n".$caseLine);
                         } catch (\Throwable $exception) {
                             report($exception);
                         }

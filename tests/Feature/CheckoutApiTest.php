@@ -147,6 +147,31 @@ class CheckoutApiTest extends TestCase
         $this->assertSame($product->id, $order->sellerOrders()->first()->items()->first()->product_id);
     }
 
+    public function test_an_app_payment_without_return_urls_comes_back_to_the_app_page_not_the_closed_web_store(): void
+    {
+        config()->set('services.paymongo.secret_key', 'sk_test_123');
+        config()->set('marketplace.web_store.enabled', false);
+        Http::fake([
+            'https://api.paymongo.com/v1/checkout_sessions' => Http::response([
+                'data' => ['id' => 'cs_test_1', 'attributes' => ['checkout_url' => 'https://checkout.paymongo.com/cs_test_1']],
+            ]),
+        ]);
+
+        [$buyer] = $this->cartWithProduct(online: true);
+
+        $this->actingAs($buyer)
+            ->postJson('/api/v1/checkout', [...$this->delivery(), 'payment_method' => 'gcash'])
+            ->assertCreated()
+            ->assertJsonPath('data.payment_url', 'https://checkout.paymongo.com/cs_test_1');
+
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.paymongo.com/v1/checkout_sessions'
+            && $request['data']['attributes']['success_url'] === route('payments.app-return', 'paid')
+            && $request['data']['attributes']['cancel_url'] === route('payments.app-return', 'cancelled'));
+
+        $this->get(route('payments.app-return', 'paid'))->assertOk()->assertSee('Payment sent');
+        $this->get(route('payments.app-return', 'cancelled'))->assertOk()->assertSee('Payment not finished');
+    }
+
     public function test_the_buyer_confirms_a_shipped_store_order_arrived(): void
     {
         [$buyer, $sellerOrder] = $this->shippedOrder();

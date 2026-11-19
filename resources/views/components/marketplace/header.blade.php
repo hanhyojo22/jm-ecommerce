@@ -2,13 +2,14 @@
 
 @php
     $user = auth()->user();
+    $webStoreEnabled = config('marketplace.web_store.enabled');
     $isBuyer = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $canUseMessages = $user && in_array($user->account_type, ['buyer', 'seller'], true);
     $cartBadge = $cartItemCount > 99 ? '99+' : $cartItemCount;
     $buyerMessagesUrl = $user?->account_type === 'seller' ? route('messages.index', ['context' => 'buying']) : route('messages.index');
     $isSellerMessages = request()->routeIs('messages.index') ? request('context') !== 'buying' : (request()->routeIs('messages.show') && request()->route('conversation') instanceof \App\Models\Conversation && request()->route('conversation')->buyer_id !== $user?->id);
-    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*', 'seller.opening-hours.*', 'seller.staff.*', 'seller.ingredient-aliases.*') || $isSellerMessages || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
-    $isCustomerWorkspace = $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit');
+    $isSellerWorkspace = $user?->account_type === 'seller' && (request()->routeIs('seller.dashboard', 'seller.products.*', 'seller.orders.*', 'seller.returns.*', 'seller.reviews.*', 'seller.store-settings.*', 'seller.branches.*', 'seller.branch-stock.*', 'seller.opening-hours.*', 'seller.staff.*', 'seller.ingredient-aliases.*') || $isSellerMessages || (! $webStoreEnabled && $sellerMember !== null && request()->routeIs('profile.edit', 'messages.*')) || (request()->routeIs('profile.edit') && $user->preferred_workspace === 'seller' && $sellerTenant !== null));
+    $isCustomerWorkspace = $webStoreEnabled && $isBuyer && ! $isSellerWorkspace && request()->routeIs('orders.*', 'returns.show', 'reviews.index', 'delivery-addresses.*', 'messages.*', 'profile.edit');
     $customerPageTitle = match (true) {
         request()->routeIs('orders.show') => 'Order details',
         request()->routeIs('returns.show') => 'Return case',
@@ -110,7 +111,7 @@
                 @endif
             </div>
 
-            @unless ($isSellerWorkspace)
+            @if ($isSellerWorkspace || $webStoreEnabled)
             <form
                 method="GET"
                 action="{{ $isSellerWorkspace ? route('seller.products.index') : route('catalog.index') }}"
@@ -176,10 +177,10 @@
             </form>
             @else
                 <div class="hidden min-[641px]:block min-[641px]:flex-1" aria-hidden="true"></div>
-            @endunless
+            @endif
 
             <div class="order-2 ml-auto flex shrink-0 items-center justify-end gap-1 sm:gap-2 min-[641px]:order-none min-[641px]:ml-0">
-                @if ($isSellerWorkspace || $isCustomerWorkspace)
+                @if (($isSellerWorkspace || $isCustomerWorkspace) && $webStoreEnabled)
                     <a href="{{ route('home') }}" class="hidden min-h-10 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-brand transition hover:bg-[#eef3ff] hover:text-brand-hover focus-visible:ring-2 focus-visible:ring-brand xl:inline-flex">
                         <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 4l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9.5Z"/></svg>
                         <span>Shop</span>
@@ -248,7 +249,7 @@
                                     <a href="{{ route('dashboard') }}" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Admin workspace</a>
                                 @endif
                             </nav>
-                            @if ($sellerTenant)
+                            @if ($sellerTenant && $webStoreEnabled)
                                 <div class="border-t border-line py-2">
                                     <form method="POST" action="{{ route('profile.workspace.update') }}" data-workspace-switch>
                                         @csrf
@@ -265,17 +266,19 @@
                         </div>
                     </div>
                 @else
-                    <a href="{{ route('login', ['redirect' => '/cart']) }}" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-2.5 text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand lg:px-3" aria-label="Sign in to view cart">
-                        <svg class="size-[22px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
-                        <span class="hidden text-sm font-medium text-ink lg:inline">Cart</span>
-                    </a>
-                    <span class="hidden h-6 w-px bg-line sm:inline-block" aria-hidden="true"></span>
+                    @if ($webStoreEnabled)
+                        <a href="{{ route('login', ['redirect' => '/cart']) }}" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-2.5 text-ink transition hover:bg-canvas focus-visible:ring-2 focus-visible:ring-brand lg:px-3" aria-label="Sign in to view cart">
+                            <svg class="size-[22px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M6 6h15l-1.7 7H7.2L6 6z" /><circle cx="9" cy="20" r="1.4" /><circle cx="17" cy="20" r="1.4" /><path d="M6 6 5 3H2" /></svg>
+                            <span class="hidden text-sm font-medium text-ink lg:inline">Cart</span>
+                        </a>
+                        <span class="hidden h-6 w-px bg-line sm:inline-block" aria-hidden="true"></span>
+                    @endif
                     <a href="{{ route('login') }}" class="flex min-h-11 items-center gap-2 rounded-md border border-[#cbd4e0] bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-brand hover:text-brand focus-visible:ring-2 focus-visible:ring-brand" aria-label="Sign In"><svg class="size-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 17 5-5-5-5M15 12H3" /><path d="M12 3h6a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-6" /></svg><span class="hidden min-[641px]:inline">Sign In</span></a>
                 @endauth
             </div>
         </div>
 
-        @unless ($isSellerWorkspace || $isCustomerWorkspace)
+        @unless ($isSellerWorkspace || $isCustomerWorkspace || ! $webStoreEnabled)
             <nav data-header-category-nav @click.outside="categoriesOpen = false" class="relative border-t border-line bg-white" aria-label="Marketplace sections">
                 <div class="marketplace-container flex min-h-12 items-center gap-4">
                     <div class="marketplace-nav-scroll flex min-w-0 flex-1 items-center gap-6 overflow-x-auto text-sm font-medium text-muted sm:gap-7">
@@ -398,7 +401,7 @@
                 <x-marketplace.seller-identity class="mx-4 mt-4" />
                 <x-marketplace.seller-nav-links mode="mobile" />
                 <div class="space-y-1 border-t border-line p-4">
-                    @if ($sellerTenant)
+                    @if ($sellerTenant && $webStoreEnabled)
                         <a href="{{ route('home') }}" @click="closeDrawer" class="workspace-nav-link">View website</a>
                     @endif
                     <a href="{{ route('profile.edit') }}" @click="closeDrawer" class="workspace-nav-link">Account</a>
@@ -414,41 +417,43 @@
                 </div>
             @else
                 <nav class="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Mobile marketplace navigation">
-                    <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Shop</a>
-                    <a href="{{ route('catalog.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">All products</a>
-                    <a href="{{ route('catalog.index', ['sort' => 'newest']) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">New arrivals</a>
-                    <a href="{{ route('catalog.top-products') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Best sellers</a>
-                    <a href="{{ route('catalog.index', ['on_sale' => 1]) }}" @click="closeDrawer" class="flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">
-                        <span class="size-1.5 rounded-full bg-danger" aria-hidden="true"></span>
-                        Deals
-                    </a>
-                    <a href="{{ route('catalog.stores') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Branches</a>
-                    @if ($showCategoryMenu)
-                        <div x-data="{ drawerCatsOpen: false }" class="pt-1">
-                            <button type="button" @click="drawerCatsOpen = !drawerCatsOpen" :aria-expanded="drawerCatsOpen.toString()" class="flex min-h-11 w-full items-center justify-between rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">
-                                <span>Categories</span>
-                                <svg class="size-4 text-muted transition-transform duration-150" :class="drawerCatsOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
-                            </button>
-                            <div x-cloak x-show="drawerCatsOpen" class="mt-1 space-y-0.5 pl-2">
-                                @foreach ($headerCategories as $category)
-                                    <a href="{{ route('catalog.index', ['category' => $category->slug]) }}" @click="closeDrawer" class="flex min-h-11 items-center gap-2.5 rounded-md px-3 text-sm text-muted transition hover:bg-canvas hover:text-ink">
-                                        <x-category-icon :category="$category" class="size-4 shrink-0 text-ink" />
-                                        <span class="truncate">{{ $category->name }}</span>
-                                    </a>
-                                @endforeach
+                    @if ($webStoreEnabled)
+                        <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Shop</a>
+                        <a href="{{ route('catalog.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">All products</a>
+                        <a href="{{ route('catalog.index', ['sort' => 'newest']) }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">New arrivals</a>
+                        <a href="{{ route('catalog.top-products') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Best sellers</a>
+                        <a href="{{ route('catalog.index', ['on_sale' => 1]) }}" @click="closeDrawer" class="flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">
+                            <span class="size-1.5 rounded-full bg-danger" aria-hidden="true"></span>
+                            Deals
+                        </a>
+                        <a href="{{ route('catalog.stores') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Branches</a>
+                        @if ($showCategoryMenu)
+                            <div x-data="{ drawerCatsOpen: false }" class="pt-1">
+                                <button type="button" @click="drawerCatsOpen = !drawerCatsOpen" :aria-expanded="drawerCatsOpen.toString()" class="flex min-h-11 w-full items-center justify-between rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">
+                                    <span>Categories</span>
+                                    <svg class="size-4 text-muted transition-transform duration-150" :class="drawerCatsOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                                </button>
+                                <div x-cloak x-show="drawerCatsOpen" class="mt-1 space-y-0.5 pl-2">
+                                    @foreach ($headerCategories as $category)
+                                        <a href="{{ route('catalog.index', ['category' => $category->slug]) }}" @click="closeDrawer" class="flex min-h-11 items-center gap-2.5 rounded-md px-3 text-sm text-muted transition hover:bg-canvas hover:text-ink">
+                                            <x-category-icon :category="$category" class="size-4 shrink-0 text-ink" />
+                                            <span class="truncate">{{ $category->name }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
                             </div>
-                        </div>
-                    @else
-                        <a href="{{ route('home') }}#shop-by-category" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Categories</a>
+                        @else
+                            <a href="{{ route('home') }}#shop-by-category" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Categories</a>
+                        @endif
                     @endif
-                    @if ($isBuyer)
+                    @if ($isBuyer && $webStoreEnabled)
                         <div class="my-2 border-t border-line pt-2">
                             <a href="{{ route('orders.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Purchases</a>
                             <a href="{{ route('delivery-addresses.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Delivery Addresses</a>
                             <a href="{{ route('reviews.index') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">My Reviews</a>
                         </div>
                     @endif
-                    @if ($canUseMessages)
+                    @if ($canUseMessages && $webStoreEnabled)
                         <a href="{{ $buyerMessagesUrl }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-ink transition hover:bg-canvas">Messages</a>
                     @endif
                     @if ($user?->isPlatformAdministrator())
@@ -462,7 +467,9 @@
                     @else
                         <a href="{{ route('login') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-ink transition hover:bg-canvas">Sign in</a>
                         <a href="{{ route('register') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-brand transition hover:bg-[#eef3ff]">Create account</a>
-                        <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted transition hover:bg-canvas">Continue shopping</a>
+                        @if ($webStoreEnabled)
+                            <a href="{{ route('home') }}" @click="closeDrawer" class="flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted transition hover:bg-canvas">Continue shopping</a>
+                        @endif
                     @endauth
                 </div>
             @endif

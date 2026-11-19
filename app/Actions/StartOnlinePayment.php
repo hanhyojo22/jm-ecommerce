@@ -20,8 +20,8 @@ class StartOnlinePayment
      * The whole amount goes to the pharmacy's own PayMongo account. PayMongo takes its own fee,
      * so the buyer pays a fee line sized to cover it; see config('marketplace.online_payment.fees').
      *
-     * The app passes its own return URLs so a finished checkout comes back to the app
-     * instead of the web order page. The web leaves them null and keeps its routes.
+     * The API passes app return URLs (by default the "go back to the app" page) so a finished
+     * checkout never lands on the web order page. The web leaves them null and keeps its routes.
      */
     public function handle(Order $order, ?string $successUrl = null, ?string $cancelUrl = null): string
     {

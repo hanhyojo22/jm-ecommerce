@@ -4,6 +4,7 @@ use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureAccountType;
 use App\Http\Middleware\EnsureClerkEmailIsVerified;
 use App\Http\Middleware\EnsurePlatformAdministrator;
+use App\Http\Middleware\EnsureWebStoreAccess;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\ApiError;
@@ -74,6 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'account' => EnsureAccountType::class,
             'clerk.verified' => EnsureClerkEmailIsVerified::class,
             'platform-admin' => EnsurePlatformAdministrator::class,
+            'web-store' => EnsureWebStoreAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

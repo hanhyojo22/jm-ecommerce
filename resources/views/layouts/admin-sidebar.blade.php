@@ -105,10 +105,12 @@
             </nav>
 
             <div class="mt-auto border-t border-line px-1 pt-3">
-                <a href="{{ route('home') }}" class="workspace-nav-link">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12" /><path d="M3 4v16" /></svg>
-                    <span>View marketplace</span>
-                </a>
+                @if (config('marketplace.web_store.enabled'))
+                    <a href="{{ route('home') }}" class="workspace-nav-link">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6M9 12h12" /><path d="M3 4v16" /></svg>
+                        <span>View marketplace</span>
+                    </a>
+                @endif
             </div>
         </div>
     </aside>

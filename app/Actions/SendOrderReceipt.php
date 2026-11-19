@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\GmailOrderMailer;
+use App\Support\BuyerLink;
 use Throwable;
 
 class SendOrderReceipt
@@ -31,7 +32,7 @@ class SendOrderReceipt
                 $this->mailer->send(
                     $buyer,
                     "JMMart order {$order->number} received",
-                    "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, {$paymentNote}\n\nTrack your order or request help: ".route('orders.show', $order),
+                    "Thanks for your order!\n\nOrder #{$order->number} was placed for PHP {$order->total}, {$paymentNote}\n\n".BuyerLink::emailLine('Track your order or request help', route('orders.show', $order)),
                 );
             } catch (Throwable $exception) {
                 report($exception);

@@ -54,7 +54,9 @@
                 <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="store-profile-heading">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <h2 id="store-profile-heading" class="sc-card-title">Store details</h2>
-                        <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-brand underline-offset-4 hover:underline">Visit storefront</a>
+                        @if (config('marketplace.web_store.enabled'))
+                            <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-brand underline-offset-4 hover:underline">Visit storefront</a>
+                        @endif
                     </div>
 
                     <div class="mt-5 min-w-0 max-w-3xl space-y-5">
