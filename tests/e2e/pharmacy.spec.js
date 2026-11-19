@@ -2,11 +2,16 @@ import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
 // A 1x1 PNG is enough for the upload: the pharmacist only needs a file to review.
-const prescriptionPhoto = {
-    name: 'prescription.png',
-    mimeType: 'image/png',
-    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64'),
-};
+async function documentPhoto(browser) {
+    const context = await browser.newContext({ viewport: { width: 640, height: 760 } });
+    try {
+        const page = await context.newPage();
+        await page.setContent('<main style="padding:48px;font:18px/1.8 sans-serif;color:#182c48"><p>JMMart browser test</p><h1>Sample document</h1><hr><p>For viewer verification only.</p><p>Customer: QA Patient</p><p>Reference: QA-TEST-001</p><p>This fixture contains no real medical or identity information.</p></main>');
+        return { name: 'prescription.png', mimeType: 'image/png', buffer: await page.screenshot() };
+    } finally {
+        await context.close();
+    }
+}
 
 async function rejectOptionalCookies(page) {
     const banner = page.locator('[data-cookie-banner]');
@@ -17,6 +22,7 @@ async function rejectOptionalCookies(page) {
 
 test('a customer submits prescription and discount ID together and the pharmacy reviews them separately', async ({ browser }, testInfo) => {
     test.setTimeout(90_000);
+    const prescriptionPhoto = await documentPhoto(browser);
     const customer = await openAsRole(browser, 'pharmacyCustomer');
 
     try {
@@ -65,7 +71,7 @@ test('a customer submits prescription and discount ID together and the pharmacy 
         await expect(row).toContainText('QA Amoxicillin 500 mg');
         await row.click();
         const detail = page.getByRole('region', { name: 'Selected order details' });
-        await expect(detail.getByRole('button', { name: 'Approve prescription' })).toBeVisible();
+        await expect(detail.getByRole('button', { name: 'Approve prescription and accept order' })).toBeVisible();
         await expect(detail.getByLabel('Message to the customer')).toBeHidden();
         await detail.getByRole('button', { name: 'Request clearer photo', exact: true }).click();
         await expect(detail.getByLabel('Message to the customer')).toBeVisible();
@@ -87,9 +93,9 @@ test('a customer submits prescription and discount ID together and the pharmacy 
         await expect(detail.getByText(/^ID reviewed/)).toBeAttached();
         await detail.getByRole('button', { name: 'Senior citizen ID', exact: true }).click();
         await expect(detail.getByText(/^ID reviewed/)).toBeVisible();
-        await expect(detail.getByRole('button', { name: 'Approve prescription' })).toBeVisible();
-        await detail.getByRole('button', { name: 'Approve prescription' }).click();
-        await expect(page.getByRole('button', { name: 'Approve prescription' })).toHaveCount(0);
+        await expect(detail.getByRole('button', { name: 'Approve prescription and accept order' })).toBeVisible();
+        await detail.getByRole('button', { name: 'Approve prescription and accept order' }).click();
+        await expect(page.getByRole('button', { name: 'Approve prescription and accept order' })).toHaveCount(0);
     } finally {
         await pharmacist.context.close();
     }
@@ -109,7 +115,7 @@ test('head office adds a pharmacist to a branch from the Staff page', async ({ b
     try {
         await page.goto('/seller/staff');
         await rejectOptionalCookies(page);
-        await page.getByRole('textbox', { name: 'Email' }).fill(email);
+        await page.getByRole('textbox', { name: 'Email', exact: true }).fill(email);
         await page.getByRole('combobox', { name: 'Role', exact: true }).selectOption('staff');
         await page.getByRole('combobox', { name: 'Works at' }).selectOption({ label: 'QA Northwind Store' });
         await page.getByRole('checkbox', { name: 'Pharmacist' }).first().check();

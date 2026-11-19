@@ -21,7 +21,7 @@
             ],
         ],
         [
-            'label' => 'Orders',
+            'label' => 'Manage',
             'items' => [
                 ['label' => 'Orders', 'href' => route('seller.orders.index'), 'icon' => 'orders', 'active' => request()->routeIs('seller.orders.*') && ! $isPrescriptionQueue],
                 ...($member?->is_pharmacist
@@ -85,7 +85,7 @@
                 <p class="workspace-nav-label">{{ $group['label'] }}</p>
             @endif
             @foreach ($group['items'] as $item)
-                <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @endif class="workspace-nav-link" {{ $item['active'] ? 'aria-current=page' : '' }}>
+                <a href="{{ $item['href'] }}" @if ($item['label'] === 'Orders') data-seller-shortcut="orders" aria-keyshortcuts="O" @elseif ($item['label'] === 'Products') data-seller-shortcut="search" aria-keyshortcuts="S" @endif class="workspace-nav-link" {{ $item['active'] ? 'aria-current=page' : '' }}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         @switch($item['icon'])
                             @case('overview')<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" />@break

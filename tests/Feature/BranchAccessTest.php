@@ -66,10 +66,18 @@ class BranchAccessTest extends TestCase
         [$tenant, $makati] = $this->pharmacy();
         $order = $this->sellerOrder($makati, 'MAKATI-3001');
         Prescription::create(['order_id' => $order->order_id, 'user_id' => $order->order->user_id, 'status' => 'pending']);
+        $order->forceFill(['discount_amount' => '20.00'])->save();
+        $order->order->forceFill(['discount_card_type' => 'senior', 'discount_card_name' => 'Cardholder', 'discount_document_path' => 'private-id.jpg', 'discount_document_mime' => 'image/jpeg'])->save();
         $headOfficeStaff = $this->member($tenant, 'staff');
 
-        $this->actingAs($headOfficeStaff)->get(route('seller.orders.show', $order))->assertOk();
+        $this->actingAs($headOfficeStaff)->get(route('seller.orders.show', $order))
+            ->assertOk()
+            ->assertDontSee('Mark ID reviewed')
+            ->assertDontSee('Mark as checked')
+            ->assertDontSee('Ask for a clearer photo')
+            ->assertDontSee('Original ID checked</button>', false);
         $this->actingAs($headOfficeStaff)->post(route('seller.orders.discount-document.review', $order))->assertForbidden();
+        $this->post(route('seller.orders.discount-card.check', $order))->assertForbidden();
         $this->actingAs($headOfficeStaff)->post(route('seller.orders.prescription.check', $order))->assertForbidden();
         $this->actingAs($headOfficeStaff)
             ->patch(route('seller.orders.prescription.update', $order), ['decision' => 'needs_photo', 'reason' => 'The photo is blurry.'])

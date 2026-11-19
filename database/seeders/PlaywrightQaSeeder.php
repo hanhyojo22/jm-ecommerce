@@ -62,6 +62,23 @@ class PlaywrightQaSeeder extends Seeder
         [$tenant, $store] = $this->storeFor($seller, 'qa-northwind', 'QA Northwind');
         [$otherTenant, $otherStore] = $this->storeFor($otherSeller, 'qa-southwind', 'QA Southwind');
 
+        foreach (['manager' => ['manager', false], 'pharmacist' => ['staff', true], 'staff' => ['staff', false]] as $identity => [$role, $isPharmacist]) {
+            $member = User::factory()->seller()->create([
+                'name' => 'QA '.ucfirst($identity),
+                'email' => 'qa-'.$identity.'@example.test',
+                'clerk_user_id' => 'qa-'.$identity.'-identity',
+            ]);
+            TenantMember::query()->create([
+                'tenant_id' => $tenant->id,
+                'store_id' => $store->id,
+                'user_id' => $member->id,
+                'role' => $role,
+                'is_pharmacist' => $isPharmacist,
+                'license_number' => $isPharmacist ? '0000002' : null,
+                'license_expires_on' => $isPharmacist ? now()->addYear() : null,
+            ]);
+        }
+
         $product = $this->product($tenant, $store, $category, 'QA Canvas Tote', 'qa-canvas-tote', 'QA-TOTE-001', '19.99', 25);
         $this->product($tenant, $store, $category, 'QA Amoxicillin 500 mg', 'qa-amoxicillin', 'QA-RX-001', '15.00', 30)->update(['requires_prescription' => true, 'generic_name' => 'Amoxicillin', 'dosage_form' => 'Capsule', 'strength' => '500 mg']);
         $chatProduct = $this->product($tenant, $store, $category, 'QA Chat Sample', 'qa-chat-sample', 'QA-CHAT-001', '24.99', 10);

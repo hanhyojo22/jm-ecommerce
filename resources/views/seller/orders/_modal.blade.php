@@ -114,7 +114,7 @@
 
     </div>
     <div class="sc-order-foot-actions">
-        @if ($waitingForPrescription && $order->prescription->status === 'pending')
+        @if ($canManageOrders && $waitingForPrescription && $order->prescription->status === 'pending')
             <button type="button" class="seller-outline-button" aria-haspopup="dialog" aria-controls="prescription-change-{{ $sellerOrder->id }}" @click="document.getElementById(@js('prescription-change-'.$sellerOrder->id)).showModal()">Request clearer photo</button>
         @endif
         @if ($conversation)

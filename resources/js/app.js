@@ -1619,8 +1619,9 @@ if (document.querySelector('[data-seller-shortcut="search"]')) {
             return;
         }
 
-        const element = [...document.querySelectorAll(`[data-seller-shortcut="${shortcut}"]`)]
-            .find((candidate) => candidate.getClientRects().length > 0);
+        const candidates = [...document.querySelectorAll(`[data-seller-shortcut="${shortcut}"]`)]
+            .filter((candidate) => candidate.getClientRects().length > 0);
+        const element = candidates.find((candidate) => candidate instanceof HTMLInputElement) ?? candidates[0];
 
         if (!element) {
             return;
@@ -1628,7 +1629,7 @@ if (document.querySelector('[data-seller-shortcut="search"]')) {
 
         event.preventDefault();
 
-        if (shortcut === 'search') {
+        if (shortcut === 'search' && element instanceof HTMLInputElement) {
             element.focus();
         } else {
             element.click();

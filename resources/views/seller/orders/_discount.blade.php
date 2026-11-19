@@ -1,6 +1,7 @@
 @php
     $discountOrder = $sellerOrder->order;
     $cardLabel = \App\Support\SeniorPwdDiscount::CARD_TYPES[$discountOrder->discount_card_type] ?? 'SC/PWD';
+    $canCheckDiscountId = auth()->user()->sellerMembership()?->canWorkOrders() ?? false;
     // Other customer accounts that used this same ID number with this company.
     $otherAccounts = $discountOrder->discount_card_fingerprint === null ? 0 : \App\Models\Order::query()
         ->where('discount_card_fingerprint', $discountOrder->discount_card_fingerprint)
@@ -28,7 +29,7 @@
 <a href="{{ route('seller.orders.discount-document.show', $sellerOrder) }}" target="_blank" rel="noopener" class="sc-document-open">Open ID <span class="sr-only">in a new tab</span></a>
         @if ($sellerOrder->discount_reviewed_at)
             <p class="sc-document-checked">{{ $sellerOrder->discount_reviewed_at->lt($discountOrder->created_at) ? 'Same ID photo reviewed on an earlier order' : 'ID reviewed' }} · {{ $sellerOrder->discount_reviewed_at->format('M j, Y · g:i A') }}</p>
-        @elseif (! in_array($sellerOrder->status, ['cancelled', 'delivered'], true))
+        @elseif ($canCheckDiscountId && ! in_array($sellerOrder->status, ['cancelled', 'delivered'], true))
             <form method="POST" action="{{ route('seller.orders.discount-document.review', $sellerOrder) }}" class="sc-document-check-form">
                 @csrf
 
@@ -43,7 +44,7 @@
         <p class="sc-document-checked mt-4">Original ID checked at handover · {{ $sellerOrder->discount_card_checked_at->format('M j, Y · g:i A') }}</p>
     @else
         <p class="sc-meta mt-4">Original ID required at handover.</p>
-        @if ($sellerOrder->status !== 'cancelled')
+        @if ($canCheckDiscountId && $sellerOrder->status !== 'cancelled')
             <form method="POST" action="{{ route('seller.orders.discount-card.check', $sellerOrder) }}" class="sc-document-check-form mt-2">
                 @csrf
                 <button type="submit" class="seller-outline-button">Original ID checked</button>

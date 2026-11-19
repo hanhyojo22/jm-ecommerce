@@ -1,6 +1,41 @@
 import { expect, test } from '@playwright/test';
 import { openAsRole } from './support/role-page.js';
 
+for (const role of ['seller', 'manager', 'pharmacist', 'staff']) {
+    test(`${role} workspace keeps its assigned tools and branch scope on desktop and mobile`, async ({ browser }, testInfo) => {
+        const { context, page } = await openAsRole(browser, role);
+
+        try {
+            await page.setViewportSize({ width: 1440, height: 1000 });
+            await page.goto('/seller');
+            await rejectOptionalCookies(page);
+            await expect(page.locator('[data-seller-identity]').first()).toContainText('QA Northwind');
+            const heading = page.getByRole('heading', { level: 1 });
+            await expect(heading).toContainText(role === 'pharmacist' ? 'Prescription desk' : role === 'staff' ? 'Today' : role === 'seller' ? 'Overview' : 'Store');
+            const nav = page.locator('[data-workspace-header="seller"] nav');
+            await expect(nav.getByRole('link', { name: 'Prescriptions', exact: false })).toHaveCount(['seller', 'pharmacist'].includes(role) ? 1 : 0);
+            await expect(nav.getByRole('link', { name: 'Branches', exact: true })).toHaveCount(role === 'seller' ? 1 : 0);
+            await expect(nav.getByRole('link', { name: 'Staff', exact: true })).toHaveCount(['seller', 'manager'].includes(role) ? 1 : 0);
+            await page.screenshot({ path: testInfo.outputPath(`${role}-studio-desktop.png`), fullPage: true });
+
+            await page.goto('/seller/products');
+            await expect(page.getByRole('link', { name: 'Add product', exact: true })).toHaveCount(role === 'seller' ? 1 : 0);
+            await expect(page.locator('.seller-products-catalog')).not.toContainText('Other Seller QA Product');
+
+            await page.setViewportSize({ width: 390, height: 844 });
+            await page.goto('/seller');
+            expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+            await page.screenshot({ path: testInfo.outputPath(`${role}-studio-mobile.png`), fullPage: true });
+            await page.getByRole('button', { name: 'Open navigation menu' }).click();
+            await expect(page.getByRole('dialog', { name: 'Seller Center navigation' })).toBeVisible();
+            await page.getByRole('dialog', { name: 'Seller Center navigation' }).getByRole('button', { name: 'Close navigation menu' }).click();
+            await expect(page.getByRole('dialog', { name: 'Seller Center navigation' })).toBeHidden();
+        } finally {
+            await context.close();
+        }
+    });
+}
+
 async function rejectOptionalCookies(page) {
     const banner = page.locator('[data-cookie-banner]');
     if (await banner.isVisible()) {
@@ -152,8 +187,11 @@ test('seller can search dashboard help and use keyboard shortcuts', async ({ bro
 
         await page.getByRole('heading', { name: 'Overview', exact: true }).click();
         await page.keyboard.press('s');
-        await expect(page.getByRole('textbox', { name: 'Search your products by name or SKU' })).toBeFocused();
+        await expect(page).toHaveURL(/\/seller\/products$/);
+        await page.keyboard.press('s');
+        await expect(page.locator('#product-search')).toBeFocused();
 
+        await page.goto('/seller');
         await page.getByRole('heading', { name: 'Overview', exact: true }).click();
         await page.keyboard.press('n');
         await expect(page).toHaveURL(/\/seller\/products\/create$/);

@@ -14,6 +14,7 @@
     // The page leads with this person's job: the whole business for head office, one branch for a branch manager, the order queue for staff.
     $pageTitle = match (true) {
         $isHeadOffice => 'Overview',
+        $member->canReviewPrescriptions() && ! $canManageOrders => 'Prescription desk',
         $canManageOrders => $member->placeLabel(),
         default => 'Today’s orders',
     };
@@ -140,6 +141,20 @@
             </div>
         @endif
 
+        @if (! $canManageOrders && ! $member->canReviewPrescriptions())
+            <section aria-label="Branch orders"><dl class="sc-metrics" data-columns="4">
+                @foreach ($orderQueue as $stage)
+                    <div class="sc-metric"><dt>{{ $stage['label'] }}</dt><dd><a href="{{ $stage['href'] }}" class="sc-metric-value">{{ number_format($stage['count']) }}</a><span class="sc-metric-context">{{ $member->placeLabel() }}</span></dd></div>
+                @endforeach
+            </dl></section>
+        @elseif (! $canManageOrders && $member->canReviewPrescriptions())
+            <section aria-label="Prescription summary"><dl class="sc-metrics" data-columns="4">
+                <div class="sc-metric"><dt>Awaiting review</dt><dd><strong class="sc-metric-value">{{ number_format($prescriptionsWaitingCount) }}</strong><span class="sc-metric-context">Your assigned orders</span></dd></div>
+                <div class="sc-metric"><dt>Assignment</dt><dd><strong class="sc-metric-value sc-compact-metric">{{ $member->placeLabel() }}</strong></dd></div>
+                <div class="sc-metric"><dt>PRC license</dt><dd><strong class="sc-metric-value sc-compact-metric">Valid</strong><span class="sc-metric-context">Expires {{ $member->license_expires_on->format('M j, Y') }}</span></dd></div>
+            </dl></section>
+        @endif
+
         @if ($member->canReviewPrescriptions() && $prescriptionsWaitingCount > 0)
             <section class="sc-rx-desk" aria-labelledby="prescription-desk-heading" data-prescription-desk>
                 <div class="sc-rx-desk-head">
@@ -169,17 +184,6 @@
             </section>
         @endif
 
-        @if ($attentionItems)
-            <section class="sc-card" aria-labelledby="action-required-heading">
-                <div class="sc-card-head"><h2 id="action-required-heading" class="sc-card-title">Needs your attention</h2></div>
-                <div class="sc-tasks">
-                    @foreach ($attentionItems as $task)
-                        <a href="{{ $task['href'] }}" class="sc-task"><span class="sc-task-count {{ $task['tone'] }}">{{ $task['count'] }}</span><span class="min-w-0">{{ $task['text'] }}</span><span class="sc-task-cta">{{ $task['cta'] }} <span aria-hidden="true">&rarr;</span></span></a>
-                    @endforeach
-                </div>
-            </section>
-        @endif
-
         @if ($canManageOrders)
         <section aria-label="Store summary">
             <dl class="sc-metrics" data-columns="4">
@@ -190,8 +194,10 @@
             </dl>
         </section>
 
+        @endif
         <div class="sc-grid-main">
             <div class="sc-stack">
+                @if ($canManageOrders)
                 <section class="sc-card sc-card-pad" aria-labelledby="sales-overview-heading">
                     <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 id="sales-overview-heading" class="sc-card-title">Sales overview</h2><span class="sc-meta">Last 30 days</span></div>
                     <p class="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">₱{{ number_format($lastThirtyDaysSales, 2) }}</p>
@@ -207,35 +213,13 @@
                 </section>
                 @endif
 
-                @if ($branches->isNotEmpty())
-                    <section class="sc-card" aria-labelledby="branches-heading" data-dashboard-branches>
-                        <div class="sc-card-head"><h2 id="branches-heading" class="sc-card-title">Branches today</h2><a href="{{ route('seller.branches.index') }}" class="sc-link">Manage branches</a></div>
-                        <div class="sc-table-wrap">
-                            <table class="sc-table min-w-[480px]">
-                                <thead><tr><th scope="col">Branch</th><th scope="col">Status</th><th scope="col" class="is-num">To accept</th><th scope="col" class="is-num">Prescriptions waiting</th></tr></thead>
-                                <tbody>
-                                    @foreach ($branches as $branchRow)
-                                        @php($branchOpensAt = $branchRow->status === 'active' ? $branchRow->nextOpeningAt(now()) : null)
-                                        <tr>
-                                            <th scope="row" class="font-semibold text-ink">{{ $branchRow->name }}</th>
-                                            <td><span class="sc-badge" data-tone="{{ $branchRow->status === 'active' && ! $branchOpensAt ? 'success' : 'neutral' }}">{{ $branchRow->status !== 'active' ? ucfirst($branchRow->status) : ($branchOpensAt ? 'Closed · opens '.$branchOpensAt->format('D g:i A') : 'Open') }}</span></td>
-                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->pending_orders_count > 0, 'is-muted' => $branchRow->pending_orders_count === 0])>{{ number_format($branchRow->pending_orders_count) }}</td>
-                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->prescriptions_waiting_count > 0, 'is-muted' => $branchRow->prescriptions_waiting_count === 0])>{{ number_format($branchRow->prescriptions_waiting_count) }}</td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                @endif
-
                 <section class="sc-card" data-dashboard-section="orders" aria-labelledby="recent-orders-heading">
                     <div class="sc-card-head"><h2 id="recent-orders-heading" class="sc-card-title">{{ $isHeadOffice ? 'Recent orders' : 'Orders at this branch' }}</h2><a href="{{ route('seller.orders.index') }}" data-seller-shortcut="orders" aria-keyshortcuts="O" class="sc-link">View all orders</a></div>
-                    <ul class="sc-order-queue" aria-label="Orders by status">
+                    @if ($canManageOrders)<ul class="sc-order-queue" aria-label="Orders by status">
                         @foreach ($orderQueue as $stage)
                             <li><a href="{{ $stage['href'] }}" @class(['is-urgent' => $stage['urgent'] && $stage['count'] > 0, 'is-zero' => $stage['count'] === 0])><strong>{{ number_format($stage['count']) }}</strong><span>{{ $stage['label'] }}</span></a></li>
                         @endforeach
-                    </ul>
+                    </ul>@endif
                     @if ($recentOrders->isNotEmpty())
                         <div class="sc-table-wrap hidden sm:block">
                             <table class="sc-table min-w-[560px]">
@@ -259,8 +243,41 @@
             </div>
 
             <div class="sc-stack">
+        @if ($attentionItems)
+            <section class="sc-card" aria-labelledby="action-required-heading">
+                <div class="sc-card-head"><h2 id="action-required-heading" class="sc-card-title">Needs your attention</h2></div>
+                <div class="sc-tasks">
+                    @foreach ($attentionItems as $task)
+                        <a href="{{ $task['href'] }}" class="sc-task"><span class="sc-task-count {{ $task['tone'] }}">{{ $task['count'] }}</span><span class="min-w-0">{{ $task['text'] }}</span><span class="sc-task-cta">{{ $task['cta'] }} <span aria-hidden="true">&rarr;</span></span></a>
+                    @endforeach
+                </div>
+            </section>
+        @endif
+
+                @if ($branches->isNotEmpty())
+                    <section class="sc-card" aria-labelledby="branches-heading" data-dashboard-branches>
+                        <div class="sc-card-head"><h2 id="branches-heading" class="sc-card-title">Branches today</h2><a href="{{ route('seller.branches.index') }}" class="sc-link">Manage branches</a></div>
+                        <div class="sc-table-wrap">
+                            <table class="sc-table min-w-[480px]">
+                                <thead><tr><th scope="col">Branch</th><th scope="col">Status</th><th scope="col" class="is-num">To accept</th><th scope="col" class="is-num">Prescriptions waiting</th></tr></thead>
+                                <tbody>
+                                    @foreach ($branches as $branchRow)
+                                        @php($branchOpensAt = $branchRow->status === 'active' ? $branchRow->nextOpeningAt(now()) : null)
+                                        <tr>
+                                            <th scope="row" class="font-semibold text-ink">{{ $branchRow->name }}</th>
+                                            <td><span class="sc-badge" data-tone="{{ $branchRow->status === 'active' && ! $branchOpensAt ? 'success' : 'neutral' }}">{{ $branchRow->status !== 'active' ? ucfirst($branchRow->status) : ($branchOpensAt ? 'Closed · opens '.$branchOpensAt->format('D g:i A') : 'Open') }}</span></td>
+                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->pending_orders_count > 0, 'is-muted' => $branchRow->pending_orders_count === 0])>{{ number_format($branchRow->pending_orders_count) }}</td>
+                                            <td @class(['is-num', 'font-semibold text-warning-text' => $branchRow->prescriptions_waiting_count > 0, 'is-muted' => $branchRow->prescriptions_waiting_count === 0])>{{ number_format($branchRow->prescriptions_waiting_count) }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                @endif
+
                 {{-- Setting up the pharmacy is head office's job; branch staff don't need the checklist. --}}
-                @if (auth()->user()->headOfficeTenant())
+                @if (auth()->user()->headOfficeTenant() && $incompleteSetupItems->isNotEmpty())
                 <section class="sc-card sc-card-pad" data-dashboard-section="setup" aria-labelledby="setup-heading">
                     <div class="flex items-baseline justify-between gap-3"><h2 id="setup-heading" class="sc-card-title">Store setup</h2><span class="sc-meta">{{ $completedSetupCount }} of {{ $setupItems->count() }} complete</span></div>
                     <div class="sc-progress mt-3" role="progressbar" aria-valuenow="{{ $completedSetupCount }}" aria-valuemin="0" aria-valuemax="{{ $setupItems->count() }}" aria-label="Store setup progress"><span style="width: {{ $completedSetupCount * 100 / max(1, $setupItems->count()) }}%"></span></div>
@@ -276,8 +293,8 @@
                 </section>
                 @endif
 
-                <section class="sc-card" aria-labelledby="quick-actions-heading">
-                    <div class="sc-card-head"><h2 id="quick-actions-heading" class="sc-card-title">Quick actions</h2></div>
+                <details class="sc-card sc-dashboard-support" aria-labelledby="quick-actions-heading">
+                    <summary id="quick-actions-heading"><span>Quick actions</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
                     <div class="sc-actions-list">
                         @if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add product<small>N</small></a>@endif
                         <a href="{{ route('seller.orders.index', ['status' => 'pending']) }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h2l2.5 12h10L21 8H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>Review new orders</a>
@@ -286,10 +303,10 @@
                             <a href="{{ route('seller.store-settings.edit') }}" class="sc-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4.5-1 9.9-9.9a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="m13.5 6.5 3 3"/></svg>Update store info</a>
                         @endif
                     </div>
-                </section>
+                </details>
 
-                <section class="sc-card" data-dashboard-section="products" aria-labelledby="products-heading">
-                    <div class="sc-card-head"><h2 id="products-heading" class="sc-card-title">Recent products</h2><a href="{{ route('seller.products.index') }}" class="sc-link">View all</a></div>
+                <details class="sc-card sc-dashboard-support" data-dashboard-section="products" aria-labelledby="products-heading">
+                    <summary id="products-heading"><span>Recent products</span><svg class="size-4 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m5 7.5 5 5 5-5"/></svg></summary>
                     @if ($recentProducts->isNotEmpty())
                         <div class="sc-list">
                             @foreach ($recentProducts as $product)
@@ -304,7 +321,7 @@
                     @else
                         <div class="sc-empty"><h3>No products yet</h3><p>Add your first product to start selling on JMMart.</p>@if ($canManageProducts)<a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="seller-primary-button">Add product</a>@endif</div>
                     @endif
-                </section>
+                </details>
             </div>
         </div>
 

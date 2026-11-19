@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="sc-page-head seller-products-header">
-            <div><h1 class="sc-title">Your products</h1></div>
+            <div><h1 class="sc-title">Products</h1></div>
             @if ($canManageProducts)<div class="sc-page-actions"><a href="{{ route('seller.products.create') }}" data-seller-shortcut="new-product" aria-keyshortcuts="N" class="seller-primary-button"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Add product</a></div>@endif
         </div>
     </x-slot>
@@ -30,7 +30,7 @@
                 <form method="GET" action="{{ route('seller.products.index') }}" role="search" class="seller-products-search">
                     @foreach (['status', 'category_id', 'stock', 'sort'] as $field)@if (filled($filters[$field] ?? null))<input type="hidden" name="{{ $field }}" value="{{ $filters[$field] }}">@endif @endforeach
                     <label for="product-search" class="sr-only">Search products</label>
-                    <input id="product-search" name="search" type="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search by name or SKU" class="sc-input pr-10">
+                    <input id="product-search" name="search" type="search" value="{{ $filters['search'] ?? '' }}" placeholder="Search by name or SKU" data-seller-shortcut="search" aria-keyshortcuts="S" class="sc-input pr-10">
                     <button type="submit" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-muted hover:text-brand" aria-label="Search products"><svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button>
                 </form>
                 @if ($hasAdvancedFilters)<p class="sc-meta">A saved product view is active. <a href="{{ route('seller.products.index') }}" class="font-semibold text-brand underline underline-offset-4">Show all products</a></p>@endif

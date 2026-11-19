@@ -81,16 +81,15 @@
                 @if ($isSellerWorkspace)
                     <button type="button" @click="$dispatch('seller-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-md border border-line text-ink shadow-sm transition hover:bg-canvas hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle Seller Center sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
                     <a href="{{ route('seller.dashboard') }}" class="inline-flex min-w-0 items-center gap-2.5 rounded-md focus-visible:ring-2 focus-visible:ring-brand lg:hidden" aria-label="JMMart Seller Center overview">
-                        <img src="{{ asset('favicon.svg') }}" alt="" class="size-8 shrink-0 rounded-md" width="32" height="32">
                         <span class="min-w-0 max-w-[8rem]">
-                            <span class="block text-sm font-semibold leading-tight text-ink sm:text-base">Seller Center</span>
+                            <span class="block truncate text-sm font-semibold leading-tight text-ink">{{ $sellerMember?->placeLabel() ?? 'Seller Center' }}</span>
                             @if ($sellerMember)<span class="block truncate text-xs text-muted" data-seller-role>{{ $sellerMember->roleLabel() }}</span>@endif
                         </span>
                     </a>
-                    <div class="hidden min-w-0 items-center gap-2 text-sm lg:flex">
-                        <span class="font-medium text-muted">Seller Center</span>
+                    <div class="hidden min-w-0 items-center gap-3 lg:flex" data-seller-context>
+                        <span>Workspace</span>
                         <span class="text-slate-300" aria-hidden="true">/</span>
-                        <strong class="truncate font-semibold text-ink">{{ $sellerPageTitle }}</strong>
+                        <strong class="truncate font-medium text-ink">{{ $sellerMember?->placeLabel() ?? 'Seller Center' }}</strong>
                     </div>
                 @elseif ($isCustomerWorkspace)
                     <button type="button" @click="$dispatch('customer-sidebar-toggle')" class="hidden size-8 shrink-0 place-items-center rounded-md border border-line text-ink shadow-sm transition hover:bg-canvas hover:text-brand focus-visible:ring-2 focus-visible:ring-brand lg:grid" aria-label="Toggle My account sidebar"><svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg></button>
@@ -111,7 +110,7 @@
                 @endif
             </div>
 
-            @unless ($isSellerWorkspace && request()->routeIs('seller.orders.index'))
+            @unless ($isSellerWorkspace)
             <form
                 method="GET"
                 action="{{ $isSellerWorkspace ? route('seller.products.index') : route('catalog.index') }}"

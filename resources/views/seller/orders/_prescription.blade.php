@@ -1,6 +1,7 @@
 {{-- Shown on an order with a prescription medicine. Branch staff can open the pages and pre-check them; only a licensed pharmacist decides. --}}
 @php($prescription = $sellerOrder->order->prescription)
 @php($viewerMembership = auth()->user()->sellerMembership())
+@php($canCheckPrescription = $viewerMembership?->canWorkOrders() ?? false)
 @php($canReviewPrescription = $prescription !== null && ($viewerMembership?->canReviewPrescriptions() ?? false))
 @if ($prescription)
     <section class="sc-prescription-panel {{ $class ?? '' }}" data-tone="{{ ['pending' => 'warning', 'approved' => 'info', 'rejected' => 'danger', 'needs_photo' => 'warning'][$prescription->status] ?? 'info' }}" aria-labelledby="prescription-heading-{{ $sellerOrder->id }}">
@@ -25,7 +26,7 @@
                         @if (in_array(strtolower(pathinfo($image->original_name, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true))
                             <div class="sc-document-viewer"><img src="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" alt="Prescription page {{ $loop->iteration }}" loading="lazy"></div>
                         @endif
-                        <div class="sc-document-meta"><strong>{{ $image->original_name }}</strong><span>{{ $prescription->images->count() > 1 ? 'Page '.$loop->iteration.' of '.$prescription->images->count() : '' }}</span><span class="sr-only">{{ $image->original_name }}</span><a href="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" target="_blank" rel="noopener" class="sc-document-open">Open document <span class="sr-only">page {{ $loop->iteration }} in a new tab</span></a>@if ($loop->first)            @if ($prescription->status === 'pending' && ! $canReviewPrescription && $prescription->checked_at === null)
+                        <div class="sc-document-meta"><strong>{{ $image->original_name }}</strong><span>{{ $prescription->images->count() > 1 ? 'Page '.$loop->iteration.' of '.$prescription->images->count() : '' }}</span><span class="sr-only">{{ $image->original_name }}</span><a href="{{ route('seller.orders.prescription.images.show', [$sellerOrder, $image, 'preview' => 1]) }}" target="_blank" rel="noopener" class="sc-document-open">Open document <span class="sr-only">page {{ $loop->iteration }} in a new tab</span></a>@if ($loop->first)            @if ($prescription->status === 'pending' && $canCheckPrescription && ! $canReviewPrescription && $prescription->checked_at === null)
                 <form method="POST" action="{{ route('seller.orders.prescription.check', $sellerOrder) }}" class="mt-3">@csrf
 
                     <button type="submit" class="seller-outline-button mt-2 min-h-11">Mark as checked</button>
@@ -35,7 +36,7 @@
                 @endforeach
             </ul>
 
-            @if ($prescription->status === 'pending')
+            @if ($prescription->status === 'pending' && ($canCheckPrescription || $canReviewPrescription))
                 <div class="sc-prescription-actions">
                     @if ($canReviewPrescription && ! ($approvalInFooter ?? false))
                         <form method="POST" action="{{ route('seller.orders.prescription.update', $sellerOrder) }}">@csrf @method('PATCH')
