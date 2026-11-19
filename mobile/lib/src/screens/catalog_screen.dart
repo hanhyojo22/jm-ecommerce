@@ -154,8 +154,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                   child: Container(
                     width: barHeight - 12,
                     height: barHeight - 12,
-                    decoration: BoxDecoration(
-                      color: scheme.secondary,
+                    decoration: const BoxDecoration(
+                      gradient: sunFill,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -185,7 +185,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         child: Ink(
           decoration: BoxDecoration(
-            gradient: brandGradient(scheme),
+            gradient: brandHeaderSweep,
             borderRadius: const BorderRadius.vertical(
               bottom: Radius.circular(24),
             ),
@@ -197,7 +197,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                 16,
                 MediaQuery.paddingOf(context).top + 10,
                 16,
-                16,
+                // Room for the sun horizon under the search bar.
+                30,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -932,7 +933,7 @@ class _QuickAction extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: scheme.secondary.withValues(alpha: 0.24),
+                    gradient: brandTileSweep,
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: busy
@@ -940,10 +941,10 @@ class _QuickAction extends StatelessWidget {
                           padding: const EdgeInsets.all(14),
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: scheme.primary,
+                            color: scheme.onSecondary,
                           ),
                         )
-                      : Icon(icon, size: 24, color: scheme.primary),
+                      : Icon(icon, size: 24, color: scheme.onSecondary),
                 ),
                 const SizedBox(height: 8),
                 Text(

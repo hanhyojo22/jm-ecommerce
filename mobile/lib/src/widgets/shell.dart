@@ -366,7 +366,7 @@ class _ViewCartBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           child: Ink(
             decoration: BoxDecoration(
-              gradient: brandGradient(theme.colorScheme),
+              gradient: brandBarSweep,
               borderRadius: BorderRadius.circular(16),
             ),
             child: InkWell(
@@ -382,12 +382,12 @@ class _ViewCartBar extends StatelessWidget {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary,
+                          color: Colors.white.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           PhosphorIconsFill.tote,
-                          color: theme.colorScheme.onSecondary,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -406,7 +406,7 @@ class _ViewCartBar extends StatelessWidget {
                         Text(
                           money(subtotal),
                           style: theme.textTheme.titleSmall?.copyWith(
-                            color: theme.colorScheme.secondary,
+                            color: theme.colorScheme.onSecondary,
                             fontWeight: FontWeight.w800,
                           ),
                         ),

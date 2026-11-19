@@ -9,6 +9,7 @@ import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import 'auth_gate.dart';
 
@@ -204,24 +205,27 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: scheme.secondary,
-                          foregroundColor: scheme.onSecondary,
-                          minimumSize: const Size(140, 52),
-                          padding: const EdgeInsets.symmetric(horizontal: 22),
-                          shape: const StadiumBorder(),
-                        ),
-                        onPressed: _busy || value.selectedCount == 0
-                            ? null
-                            : () => context.push('/checkout'),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Checkout'),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward_rounded, size: 18),
-                          ],
+                      sunSweep(
+                        lit: !(_busy || value.selectedCount == 0),
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: scheme.onSecondary,
+                            minimumSize: const Size(140, 52),
+                            padding: const EdgeInsets.symmetric(horizontal: 22),
+                            shape: const StadiumBorder(),
+                          ),
+                          onPressed: _busy || value.selectedCount == 0
+                              ? null
+                              : () => context.push('/checkout'),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Checkout'),
+                              SizedBox(width: 8),
+                              Icon(Icons.arrow_forward_rounded, size: 18),
+                            ],
+                          ),
                         ),
                       ),
                     ],

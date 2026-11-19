@@ -356,6 +356,65 @@ LinearGradient brandGradient(ColorScheme scheme) {
   );
 }
 
+const _navyDeep = Color(0xFF04105E);
+const _royal = Color(0xFF2346C8);
+const _sky = Color(0xFF8DB6F3);
+const _cloud = Color(0xFFDCEBFA);
+const _cloudCream = Color(0xFFFFF0C4);
+
+/// The logo's sky-to-sun sweep. Blue never meets yellow directly (that mix
+/// goes olive): it passes through sky blue and cloud cream, like the logo's
+/// sun behind its cloud. Text stays on the navy/royal end or the sun end.
+///
+/// Shop header: top to bottom, so the branch name sits on navy and the sun
+/// lands as a horizon under the search bar.
+const brandHeaderSweep = LinearGradient(
+  begin: Alignment(-0.15, -1),
+  end: Alignment(0.15, 1),
+  colors: [_navyDeep, _brand, _royal, _sky, _cloudCream, _accent],
+  stops: [0, 0.26, 0.52, 0.70, 0.84, 1],
+);
+
+/// Cart bar: label on the blue start, total on the sun end.
+const brandBarSweep = LinearGradient(
+  begin: Alignment(-1, -0.5),
+  end: Alignment(1, 0.5),
+  colors: [_brand, _royal, _sky, _cloudCream, _accent],
+  stops: [0, 0.46, 0.70, 0.86, 1],
+);
+
+/// Money buttons (Checkout, Place order, Buy now) with a navy label.
+const brandButtonSweep = LinearGradient(
+  colors: [_royal, _sky, _cloudCream, _accent],
+  stops: [0, 0.32, 0.62, 1],
+);
+
+/// The round search button: solid sun with a little depth.
+const sunFill = LinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: [Color(0xFFFFCF3A), _accent, Color(0xFFE89400)],
+  stops: [0, 0.55, 1],
+);
+
+/// Quick-action tiles: cloud into a warm corner.
+const brandTileSweep = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [_cloud, _cloud, _cloudCream, Color(0xFFFFE08A)],
+  stops: [0, 0.4, 0.75, 1],
+);
+
+/// Paints [brandButtonSweep] behind a stadium FilledButton whose own
+/// background is transparent. When not [lit], the button's disabled fill shows.
+Widget sunSweep({required bool lit, required Widget child}) => DecoratedBox(
+  decoration: ShapeDecoration(
+    shape: const StadiumBorder(),
+    gradient: lit ? brandButtonSweep : null,
+  ),
+  child: child,
+);
+
 Color statusColour(BuildContext context, String status) {
   final scheme = Theme.of(context).colorScheme;
   final dark = scheme.brightness == Brightness.dark;
