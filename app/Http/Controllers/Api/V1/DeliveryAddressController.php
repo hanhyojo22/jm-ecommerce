@@ -43,7 +43,7 @@ class DeliveryAddressController extends Controller
         $longitude = round((float) $coordinates['longitude'], 4);
 
         try {
-            $features = Cache::remember("address-lookup:{$latitude},{$longitude}", now()->addDay(), fn (): array => $this->photon('reverse', [
+            $features = Cache::remember("address-lookup:v2:{$latitude},{$longitude}", now()->addDay(), fn (): array => $this->photon('reverse', [
                 'lat' => $latitude,
                 'lon' => $longitude,
                 'layer' => 'street',
@@ -71,7 +71,7 @@ class DeliveryAddressController extends Controller
         $query = trim($request->validate(['q' => ['required', 'string', 'min:3', 'max:100']])['q']);
 
         try {
-            $features = Cache::remember('address-search:'.mb_strtolower($query), now()->addDay(), fn (): array => $this->photon('api', [
+            $features = Cache::remember('address-search:v2:'.mb_strtolower($query), now()->addDay(), fn (): array => $this->photon('api', [
                 'q' => $query,
                 'limit' => 8,
                 'bbox' => '116.9,4.5,126.7,21.2',
