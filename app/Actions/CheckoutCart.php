@@ -193,7 +193,7 @@ class CheckoutCart
                 $order = Order::query()->create([
                     ...$delivery,
                     'user_id' => $user->id,
-                    'number' => 'JM-'.Str::upper((string) Str::ulid()),
+                    'number' => 'EP-'.Str::upper((string) Str::ulid()),
                     'status' => 'pending',
                     'client_request_id' => $clientRequestId,
                     'client_request_hash' => $fingerprint,
