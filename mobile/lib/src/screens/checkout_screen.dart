@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/api_exception.dart';
 import '../core/attachment_picker.dart';
+import '../core/discount_id_reader.dart';
 import '../core/formatters.dart';
 import '../core/location_service.dart';
 import '../models/models.dart';
@@ -439,9 +440,44 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           : await picker.pickImage();
       if (photo != null && mounted) {
         setState(() => _cardPhoto = photo);
+        await _fillFromCardPhoto(photo);
       }
     } on AttachmentTooLargeException {
       _snack('Choose a photo under 5 MB.');
+    }
+  }
+
+  /// Fills the ID number and name the customer has not typed yet from the photo. Only typing
+  /// help: they stay editable, and a photo that cannot be read just leaves them empty.
+  Future<void> _fillFromCardPhoto(PickedAttachment photo) async {
+    if (!photo.isImage ||
+        _savedCardId != null ||
+        (_cardNumber.text.trim().isNotEmpty &&
+            _cardName.text.trim().isNotEmpty)) {
+      return;
+    }
+    final DiscountIdFields fields;
+    try {
+      fields = parseDiscountId(
+        await ref.read(discountIdReaderProvider).readText(photo),
+      );
+    } catch (_) {
+      return;
+    }
+    if (!mounted || _savedCardId != null) {
+      return;
+    }
+    var filled = false;
+    if (fields.number != null && _cardNumber.text.trim().isEmpty) {
+      _cardNumber.text = fields.number!;
+      filled = true;
+    }
+    if (fields.name != null && _cardName.text.trim().isEmpty) {
+      _cardName.text = fields.name!;
+      filled = true;
+    }
+    if (filled) {
+      _snack('Filled in from your ID photo. Check it matches your card.');
     }
   }
 

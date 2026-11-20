@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:jmmart/src/core/api_client.dart';
 import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/core/attachment_picker.dart';
+import 'package:jmmart/src/core/discount_id_reader.dart';
 import 'package:jmmart/src/core/location_service.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/models/store_branch.dart';
@@ -328,6 +329,45 @@ void main() {
     ));
   });
 
+  testWidgets('the ID photo fills only the fields left empty', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+      idPhotoText: 'OSCA ID No.: 2023-04521\nName: JUANA DELA CRUZ',
+    );
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Senior citizen / PWD'));
+    await tester.tap(find.text('Senior citizen / PWD'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name on the ID'),
+      'Juana Cruz',
+    );
+
+    await tester.ensureVisible(find.text('Add photo of ID'));
+    await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose from gallery'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2023-04521'), findsOneWidget);
+    expect(find.text('Juana Cruz'), findsOneWidget);
+    expect(find.text('JUANA DELA CRUZ'), findsNothing);
+    expect(
+      find.text('Filled in from your ID photo. Check it matches your card.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a deleted saved ID falls back to the typed fields', (
     tester,
   ) async {
@@ -478,6 +518,7 @@ Future<void> _pump(
   LocationService location = const _HereLocation(),
   double width = 390,
   double scale = 1,
+  String idPhotoText = '',
 }) async {
   tester.view.physicalSize = Size(width, 1600);
   tester.view.devicePixelRatio = 1;
@@ -502,6 +543,7 @@ Future<void> _pump(
         nearestStoreProvider.overrideWith(() => _FixedLocator(locator)),
         locationServiceProvider.overrideWithValue(location),
         attachmentPickerProvider.overrideWithValue(const _PickedRx()),
+        discountIdReaderProvider.overrideWithValue(_IdText(idPhotoText)),
       ],
       child: MaterialApp.router(
         theme: buildAppTheme(),
@@ -561,6 +603,15 @@ class _NoLocation extends LocationService {
   @override
   Future<Position> currentPosition({bool fresh = false}) async =>
       throw const LocationFailure(LocationIssue.denied);
+}
+
+class _IdText implements DiscountIdReader {
+  const _IdText(this.text);
+
+  final String text;
+
+  @override
+  Future<String> readText(PickedAttachment photo) async => text;
 }
 
 class _PickedRx implements AttachmentPicker {
