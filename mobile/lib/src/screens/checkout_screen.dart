@@ -447,13 +447,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
   }
 
-  /// Fills the ID number and name the customer has not typed yet from the photo. Only typing
-  /// help: they stay editable, and a photo that cannot be read just leaves them empty.
+  /// Fills the card type, and the ID number and name the customer has not typed yet, from the
+  /// photo. Only typing help: all stay editable, and an unreadable photo changes nothing.
   Future<void> _fillFromCardPhoto(PickedAttachment photo) async {
-    if (!photo.isImage ||
-        _savedCardId != null ||
-        (_cardNumber.text.trim().isNotEmpty &&
-            _cardName.text.trim().isNotEmpty)) {
+    // Still read when both boxes are typed: the card may show the other card type was picked.
+    if (!photo.isImage || _savedCardId != null) {
       return;
     }
     final DiscountIdFields fields;
@@ -468,6 +466,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       return;
     }
     var filled = false;
+    // The toggle starts on Senior citizen; a scanned PWD card must not stay recorded as one.
+    if (fields.type != null && fields.type != _cardType) {
+      setState(() => _cardType = fields.type!);
+      filled = true;
+    }
     if (fields.number != null && _cardNumber.text.trim().isEmpty) {
       _cardNumber.text = fields.number!;
       filled = true;

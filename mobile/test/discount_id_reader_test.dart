@@ -13,6 +13,7 @@ Date of Birth: 01/02/1950 Sex: F
 OSCA ID No.: 2023-04521
 ''');
 
+    expect(fields.type, 'senior');
     expect(fields.number, '2023-04521');
     expect(fields.name, 'JUANA DELA CRUZ');
   });
@@ -28,6 +29,7 @@ Type of Disability: Visual
 07-2201-000-0001234
 ''');
 
+      expect(fields.type, 'pwd');
       expect(fields.number, '07-2201-000-0001234');
       expect(fields.name, 'MARIA L. SANTOS');
     },
@@ -52,6 +54,7 @@ Signature of Card Holder
 Valid until 2028
 ''');
 
+    expect(fields.type, isNull);
     expect(fields.number, isNull);
     expect(fields.name, isNull);
   });

@@ -329,7 +329,9 @@ void main() {
     ));
   });
 
-  testWidgets('the ID photo fills only the fields left empty', (tester) async {
+  testWidgets('the ID photo sets the card type and fills only empty fields', (
+    tester,
+  ) async {
     final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
     await _pump(
       tester,
@@ -339,7 +341,7 @@ void main() {
         issue: LocationIssue.denied,
       ),
       location: const _NoLocation(),
-      idPhotoText: 'OSCA ID No.: 2023-04521\nName: JUANA DELA CRUZ',
+      idPhotoText: 'PWD ID No.: 07-2201-000-0001234\nName: JUANA DELA CRUZ',
     );
     await tester.tap(find.text('Pickup · Free'));
     await tester.pumpAndSettle();
@@ -357,13 +359,24 @@ void main() {
     await tester.tap(find.text('Choose from gallery'));
     await tester.pumpAndSettle();
 
-    expect(find.text('2023-04521'), findsOneWidget);
     expect(find.text('Juana Cruz'), findsOneWidget);
     expect(find.text('JUANA DELA CRUZ'), findsNothing);
     expect(
       find.text('Filled in from your ID photo. Check it matches your card.'),
       findsOneWidget,
     );
+    tester
+        .state<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))
+        .removeCurrentSnackBar();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Place order'));
+    await tester.pumpAndSettle();
+
+    expect(api.placed!.discountCard, (
+      type: 'pwd',
+      idNumber: '07-2201-000-0001234',
+      name: 'Juana Cruz',
+    ));
   });
 
   testWidgets('a deleted saved ID falls back to the typed fields', (

@@ -6,7 +6,8 @@ import 'attachment_picker.dart';
 
 /// What could be read off a senior citizen / PWD ID photo. Either part may be missing; the
 /// customer always checks and edits them, since a read is typing help, never a verification.
-typedef DiscountIdFields = ({String? number, String? name});
+/// [type] is 'senior' or 'pwd' when the card says which it is.
+typedef DiscountIdFields = ({String? type, String? number, String? name});
 
 /// Reads the printed text of an ID photo on the phone; nothing is sent anywhere.
 abstract class DiscountIdReader {
@@ -83,7 +84,23 @@ DiscountIdFields parseDiscountId(String text) {
       .where((line) => line.isNotEmpty)
       .toList();
 
-  return (number: _number(lines, text), name: _name(lines));
+  return (type: _type(text), number: _number(lines, text), name: _name(lines));
+}
+
+/// PWD wording or number shape wins: a PWD card may also mention its holder's senior status.
+String? _type(String text) {
+  if (_unifiedPwdNumber.hasMatch(text) ||
+      RegExp(
+        r'\b(?:PWD|DISABILITY|DISABLED)\b',
+        caseSensitive: false,
+      ).hasMatch(text)) {
+    return 'pwd';
+  }
+  if (RegExp(r'\b(?:SENIOR|OSCA)\b', caseSensitive: false).hasMatch(text)) {
+    return 'senior';
+  }
+
+  return null;
 }
 
 String? _number(List<String> lines, String text) {

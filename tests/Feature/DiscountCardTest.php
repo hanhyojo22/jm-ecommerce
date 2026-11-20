@@ -370,15 +370,22 @@ class DiscountCardTest extends TestCase
         $this->fillCart($buyer);
         $this->post(route('checkout.store'), [...$this->delivery(), 'discount_card_id' => $card->id])->assertSessionHasNoErrors();
         $running = Order::query()->whereKeyNot($finished->id)->sole();
+        $this->fillCart($buyer);
+        $this->post(route('checkout.store'), [...$this->delivery(), 'discount_card_id' => $card->id])->assertSessionHasNoErrors();
+        $recent = Order::query()->whereKeyNot([$finished->id, $running->id])->sole();
         $finished->sellerOrders()->update(['status' => 'delivered', 'updated_at' => now()->subDays(31)]);
         $running->sellerOrders()->update(['updated_at' => now()->subDays(31)]);
+        $recent->sellerOrders()->update(['status' => 'delivered', 'updated_at' => now()->subDays(5)]);
 
         $this->artisan('discount-ids:purge')->assertSuccessful();
 
         Storage::disk('chat_attachments')->assertMissing($finishedPath);
         $this->assertNull($finished->refresh()->discount_document_path);
         $this->assertSame(['SC-4821', 'Lola Ava'], [$finished->discount_card_number, $finished->discount_card_name]);
-        Storage::disk('chat_attachments')->assertExists($running->refresh()->discount_document_path);
+        foreach ([$running, $recent] as $kept) {
+            $this->assertNotNull($kept->refresh()->discount_document_path);
+            Storage::disk('chat_attachments')->assertExists($kept->discount_document_path);
+        }
         Storage::disk('chat_attachments')->assertExists($card->refresh()->document_path);
         $this->actingAs($this->staff())->get(route('seller.orders.show', $finished->sellerOrders()->sole()), ['X-Order-Modal' => '1'])
             ->assertSee('The ID photo was deleted 30 days after the order ended.')->assertDontSee('No ID photo was submitted.');
