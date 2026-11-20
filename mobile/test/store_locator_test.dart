@@ -131,12 +131,30 @@ void main() {
     expect(state.activeBranch!.branch.id, 'near');
   });
 
-  test('the branch saved on the cart wins over the nearest one', () async {
-    final state = await _container(api: _CartBranchApi('B-FAR'))
-        .read(nearestStoreProvider.future);
+  test(
+    'each launch starts at the nearest branch and moves the cart there',
+    () async {
+      final api = _CartBranchApi('B-FAR');
+      final state = await _container(api: api)
+          .read(nearestStoreProvider.future);
+      await Future<void>.delayed(Duration.zero);
 
-    expect(state.activeBranch!.branch.id, 'far');
-  });
+      expect(state.activeBranch!.branch.id, 'near');
+      expect(api.savedBranchId, 'B-NEAR');
+    },
+  );
+
+  test(
+    'without a location the branch saved on the cart carries over',
+    () async {
+      final state = await _container(
+        api: _CartBranchApi('B-FAR'),
+        failure: LocationIssue.denied,
+      ).read(nearestStoreProvider.future);
+
+      expect(state.activeBranch!.branch.id, 'far');
+    },
+  );
 
   test(
     'a saved branch that is no longer listed falls back to the nearest',
@@ -147,7 +165,7 @@ void main() {
     },
   );
 
-  test('picking a branch saves it on the cart for the next launch', () async {
+  test('picking a branch saves it on the cart', () async {
     final api = _CartBranchApi(null);
     final container = _container(api: api);
     expect(await container.read(activeBranchIdProvider.future), 'B-NEAR');

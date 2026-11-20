@@ -25,8 +25,9 @@ class StoreLocatorState {
   /// Why the location is unknown; null when it was found.
   final LocationIssue? issue;
 
-  /// The user's pick (a branch slug), kept on the server cart so it survives a
-  /// restart; null means "use the nearest branch".
+  /// The user's pick (a branch slug) for this session; null means "use the nearest
+  /// branch". Kept on the server cart, but a launch that finds the location starts at the
+  /// nearest again; only without a location does the cart's branch carry over.
   final String? selectedBranchId;
 
   /// Null when location failed or there are no branches.
@@ -66,14 +67,18 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
       final position = await ref
           .watch(locationServiceProvider)
           .currentPosition();
-      return StoreLocatorState(
-        branches: LocationService.sortByDistance(
-          branches,
-          position.latitude,
-          position.longitude,
-        ),
-        selectedBranchId: saved,
+      final sorted = LocationService.sortByDistance(
+        branches,
+        position.latitude,
+        position.longitude,
       );
+      // Every launch starts at the nearest branch: an earlier pick, or a branch that was nearest
+      // before a pin moved, must not keep the customer at a far one. The cart follows.
+      final nearest = sorted.firstOrNull?.branch.branchId;
+      if (nearest != null && nearest.isNotEmpty && nearest != savedBranchId) {
+        _saveOnCart(nearest);
+      }
+      return StoreLocatorState(branches: sorted);
     } on LocationFailure catch (failure) {
       return StoreLocatorState(
         branches: [for (final b in branches) BranchDistance(b, null)],
@@ -105,13 +110,17 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
     state = AsyncData(next);
     final chosen = next.activeBranch?.branch.branchId;
     if (chosen != null && chosen.isNotEmpty) {
-      // Saved on the cart, which also re-checks its lines against the new branch.
-      ref.read(apiClientProvider).setCartBranch(chosen).then((_) {
-        if (ref.mounted) {
-          ref.invalidate(cartProvider);
-        }
-      }, onError: (_) {});
+      _saveOnCart(chosen);
     }
+  }
+
+  /// Saved on the cart, which also re-checks its lines against the new branch.
+  void _saveOnCart(String branchId) {
+    ref.read(apiClientProvider).setCartBranch(branchId).then((_) {
+      if (ref.mounted) {
+        ref.invalidate(cartProvider);
+      }
+    }, onError: (_) {});
   }
 }
 
