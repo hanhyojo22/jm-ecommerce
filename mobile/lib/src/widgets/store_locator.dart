@@ -168,7 +168,7 @@ class BranchHeader extends ConsumerWidget {
                   // The logo's sun and cloud: today's forecast for this branch.
                   ExcludeSemantics(
                     child: Image.asset(
-                      'assets/branding/everyday-emblem.png',
+                      'assets/branding/everyday-emblem.webp',
                       height: 34,
                     ),
                   ),

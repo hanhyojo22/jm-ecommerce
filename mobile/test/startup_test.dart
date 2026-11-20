@@ -111,7 +111,7 @@ void main() {
 Future<void> _loadArtwork(WidgetTester tester) async {
   await tester.runAsync(() async {
     await precacheImage(
-      const AssetImage('assets/branding/everyday-emblem.png'),
+      const AssetImage('assets/branding/everyday-emblem.webp'),
       tester.element(find.byType(StartupSplash)),
     );
   });

@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 const splashBackground = Color(0xFFFAFBFD);
 const _splashBlue = Color(0xFF071C94);
-const _emblemAsset = AssetImage('assets/branding/everyday-emblem.png');
+const _emblemAsset = AssetImage('assets/branding/everyday-emblem.webp');
 
 class StartupSplash extends StatefulWidget {
   const StartupSplash({super.key, required this.onComplete});
