@@ -56,6 +56,7 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
   late DateTime? _birthDate = widget.account.birthDate;
   late String? _sex = widget.account.sex;
   bool _saving = false;
+  bool _deleting = false;
   bool _submitted = false;
 
   static String _formatDate(DateTime? date) =>
@@ -147,10 +148,14 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
     }
 
     final messenger = ScaffoldMessenger.of(context);
+    setState(() => _deleting = true);
     try {
       await ref.read(apiClientProvider).deleteAccount();
     } on ApiException catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.friendly)));
+      if (mounted) {
+        setState(() => _deleting = false);
+      }
       return;
     }
     if (!mounted) {
@@ -269,8 +274,8 @@ class _ProfileFormState extends ConsumerState<ProfileForm> {
                 foregroundColor: scheme.error,
                 side: BorderSide(color: scheme.error),
               ),
-              onPressed: _deleteAccount,
-              child: const Text('Delete account'),
+              onPressed: _deleting ? null : _deleteAccount,
+              child: Text(_deleting ? 'Deleting…' : 'Delete account'),
             ),
           ],
         ],
