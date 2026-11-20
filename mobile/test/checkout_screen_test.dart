@@ -537,7 +537,7 @@ class _HereLocation extends LocationService {
       LocationPermission.whileInUse;
 
   @override
-  Future<Position> currentPosition() async => Position(
+  Future<Position> currentPosition({bool fresh = false}) async => Position(
     latitude: latitude,
     longitude: longitude,
     timestamp: DateTime(2026),
@@ -559,7 +559,7 @@ class _NoLocation extends LocationService {
       LocationPermission.deniedForever;
 
   @override
-  Future<Position> currentPosition() async =>
+  Future<Position> currentPosition({bool fresh = false}) async =>
       throw const LocationFailure(LocationIssue.denied);
 }
 

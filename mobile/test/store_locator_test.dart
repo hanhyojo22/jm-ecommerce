@@ -33,7 +33,7 @@ class _FakeLocationService extends LocationService {
   final LocationIssue? failure;
 
   @override
-  Future<Position> currentPosition() async {
+  Future<Position> currentPosition({bool fresh = false}) async {
     if (failure != null) {
       throw LocationFailure(failure!);
     }
@@ -56,7 +56,7 @@ class _UnexpectedLocationService extends LocationService {
   const _UnexpectedLocationService();
 
   @override
-  Future<Position> currentPosition() =>
+  Future<Position> currentPosition({bool fresh = false}) =>
       throw StateError('Location must not be requested');
 }
 

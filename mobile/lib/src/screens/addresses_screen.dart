@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../core/api_exception.dart';
+import '../core/location_service.dart';
 import '../models/models.dart';
 import '../providers/address_providers.dart';
 import '../providers/auth_providers.dart';
+import '../providers/store_locator_providers.dart';
 import '../widgets/common.dart';
 
 class AddressesScreen extends ConsumerWidget {
@@ -177,16 +180,16 @@ class AddressesScreen extends ConsumerWidget {
   }
 }
 
-class AddressForm extends StatefulWidget {
+class AddressForm extends ConsumerStatefulWidget {
   const AddressForm({super.key, this.initial});
 
   final Address? initial;
 
   @override
-  State<AddressForm> createState() => _AddressFormState();
+  ConsumerState<AddressForm> createState() => _AddressFormState();
 }
 
-class _AddressFormState extends State<AddressForm> {
+class _AddressFormState extends ConsumerState<AddressForm> {
   final _formKey = GlobalKey<FormState>();
   final _recipient = TextEditingController();
   final _phone = TextEditingController();
@@ -194,6 +197,57 @@ class _AddressFormState extends State<AddressForm> {
   final _city = TextEditingController();
   final _province = TextEditingController();
   final _postal = TextEditingController();
+  bool _locating = false;
+  String? _locationError;
+
+  /// Fills street, city, province and postal code from where the phone is.
+  /// Parts the lookup could not find keep whatever the customer typed.
+  Future<void> _fillFromLocation() async {
+    final location = ref.read(locationServiceProvider);
+    setState(() {
+      _locating = true;
+      _locationError = null;
+    });
+    try {
+      if (await location.permission() == LocationPermission.denied) {
+        await location.requestPermission();
+      }
+      final here = await location.currentPosition(fresh: true);
+      final place = await ref
+          .read(apiClientProvider)
+          .lookupAddress(here.latitude, here.longitude);
+      if (!mounted) {
+        return;
+      }
+      for (final (field, key) in [
+        (_line, 'address_line'),
+        (_city, 'city'),
+        (_province, 'province'),
+        (_postal, 'postal_code'),
+      ]) {
+        final value = (place[key] as String? ?? '').trim();
+        if (value.isNotEmpty) {
+          field.text = value;
+        }
+      }
+    } on LocationFailure catch (failure) {
+      _locationError = switch (failure.issue) {
+        LocationIssue.serviceDisabled =>
+          'Turn on location on your phone, then try again.',
+        LocationIssue.denied => 'Allow location to fill in your address.',
+        LocationIssue.deniedForever =>
+          'Location is off for this app. Turn it on in Settings.',
+        LocationIssue.unavailable =>
+          'Could not find your location. Type your address instead.',
+      };
+    } on ApiException catch (error) {
+      _locationError = error.friendly;
+    } finally {
+      if (mounted) {
+        setState(() => _locating = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -277,7 +331,33 @@ class _AddressFormState extends State<AddressForm> {
                 style: Theme.of(context).textTheme.titleLarge
                     ?.copyWith(fontWeight: FontWeight.w800),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _locating ? null : _fillFromLocation,
+                icon: _locating
+                    ? const SizedBox.square(
+                        dimension: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location, size: 18),
+                label: Text(
+                  _locating
+                      ? 'Finding your address…'
+                      : 'Use my current location',
+                ),
+              ),
+              if (_locationError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _locationError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _recipient,
                 textCapitalization: TextCapitalization.words,

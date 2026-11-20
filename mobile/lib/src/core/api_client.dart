@@ -644,6 +644,19 @@ class ApiClient {
     return listOf(body).map(Address.fromJson).toList(growable: false);
   }
 
+  /// Street, city, province and postal code for a spot, from the server's
+  /// OpenStreetMap lookup. Missing parts come back as empty strings.
+  Future<Map<String, dynamic>> lookupAddress(
+    double latitude,
+    double longitude,
+  ) async => mapOf(
+    await _data(
+      'GET',
+      '/delivery-addresses/lookup',
+      query: {'latitude': latitude, 'longitude': longitude},
+    ),
+  );
+
   Future<Address> createAddress(Address address) async => Address.fromJson(
     mapOf(await _data('POST', '/delivery-addresses', data: address.toJson())),
   );

@@ -55,8 +55,9 @@ class LocationService {
 
   /// Never asks for permission itself: the app explains first, then calls
   /// [requestPermission]. Throws [LocationFailure] instead of letting platform
-  /// errors escape.
-  Future<Position> currentPosition() async {
+  /// errors escape. [fresh] skips the cached fix and asks for a high-accuracy
+  /// one, for when the exact spot matters (an address, not a branch).
+  Future<Position> currentPosition({bool fresh = false}) async {
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
         throw const LocationFailure(LocationIssue.serviceDisabled);
@@ -74,11 +75,11 @@ class LocationService {
       }
 
       // A cached fix is close enough to pick a branch and skips the GPS wait.
-      return await Geolocator.getLastKnownPosition() ??
+      return (fresh ? null : await Geolocator.getLastKnownPosition()) ??
           await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.medium,
-              timeLimit: Duration(seconds: 15),
+            locationSettings: LocationSettings(
+              accuracy: fresh ? LocationAccuracy.high : LocationAccuracy.medium,
+              timeLimit: const Duration(seconds: 15),
             ),
           );
     } on LocationFailure {
