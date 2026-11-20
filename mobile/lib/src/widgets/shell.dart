@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
 import '../providers/auth_providers.dart';
@@ -58,6 +59,9 @@ class _AppShellState extends ConsumerState<AppShell>
   static const _unreadRefreshInterval = Duration(seconds: 30);
   Timer? _unreadRefresh;
 
+  /// The signed-in user already asked to complete their profile this session.
+  String? _profilePromptedFor;
+
   @override
   void initState() {
     super.initState();
@@ -103,6 +107,18 @@ class _AppShellState extends ConsumerState<AppShell>
     // Cached by Riverpod: runs once per signed-in session, not on every tab switch.
     if (signedIn) {
       ref.watch(pushRegistrationProvider);
+      // Once per session and user: refreshing the account must not ask again.
+      final account = ref.watch(meProvider).value;
+      if (account != null &&
+          !account.profileComplete &&
+          _profilePromptedFor != account.id) {
+        _profilePromptedFor = account.id;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            context.push('/profile?complete=1');
+          }
+        });
+      }
     }
 
     final tab = ref.watch(shellTabProvider);

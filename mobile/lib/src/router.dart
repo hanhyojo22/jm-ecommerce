@@ -8,6 +8,7 @@ import 'screens/chat_screen.dart';
 import 'screens/checkout_screen.dart';
 import 'screens/order_detail_screen.dart';
 import 'screens/product_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/saved_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/store_screen.dart';
@@ -59,5 +60,11 @@ final appRouter = GoRouter(
       builder: (context, state) => const AddressesScreen(),
     ),
     GoRoute(path: '/saved', builder: (context, state) => const SavedScreen()),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => ProfileScreen(
+        completing: state.uri.queryParameters['complete'] == '1',
+      ),
+    ),
   ],
 );

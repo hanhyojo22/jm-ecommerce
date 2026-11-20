@@ -16,6 +16,25 @@ import '../widgets/common.dart';
 import '../widgets/shell.dart';
 import '../widgets/store_locator.dart';
 
+/// Signs out and leaves the app running as a guest on Shop. Local state is
+/// cleared even if a step fails, such as Clerk's sign-out after the account
+/// was deleted and its session is already gone.
+Future<void> signOutOfApp(ClerkAuthState auth, WidgetRef ref) async {
+  try {
+    await PushNotifications.unregister(ref.read(apiClientProvider));
+  } catch (_) {
+    // The server forgets a deleted account's devices anyway.
+  }
+  // Medicine searches are personal: the next person on this phone starts clean.
+  ref.read(searchHistoryProvider.notifier).clear();
+  ref.read(shellTabProvider.notifier).select(0);
+  try {
+    await auth.signOut();
+  } catch (_) {
+    // Nothing to sign out of when the account was just deleted.
+  }
+}
+
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
@@ -134,17 +153,7 @@ class AccountScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final auth = ClerkAuth.of(context);
-                    await PushNotifications.unregister(
-                      ref.read(apiClientProvider),
-                    );
-                    // Medicine searches are personal: the next person on this phone starts clean.
-                    ref.read(searchHistoryProvider.notifier).clear();
-                    // Signed out, the app keeps running as a guest: back to Shop.
-                    ref.read(shellTabProvider.notifier).select(0);
-                    await auth.signOut();
-                  },
+                  onPressed: () => signOutOfApp(ClerkAuth.of(context), ref),
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Sign out'),
                 ),
@@ -221,6 +230,24 @@ class _LazadaAccountHeader extends StatelessWidget {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
+                            if (!account.profileComplete)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: scheme.tertiaryContainer,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'Complete your profile',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: scheme.onTertiaryContainer,
+                                  ),
+                                ),
+                              ),
                             if (account.emailVerified)
                               Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -243,6 +270,11 @@ class _LazadaAccountHeader extends StatelessWidget {
                         ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Edit profile',
+                    onPressed: () => context.push('/profile'),
+                    icon: const Icon(Icons.edit_outlined),
                   ),
                 ],
               ),

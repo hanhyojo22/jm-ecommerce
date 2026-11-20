@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 
-#[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'admin_invited_at', 'is_active', 'preferred_workspace', 'cart_reminders'])]
+#[Fillable(['name', 'email', 'password', 'clerk_user_id', 'account_type', 'platform_role', 'admin_invited_at', 'is_active', 'preferred_workspace', 'cart_reminders', 'birth_date', 'phone', 'sex', 'name_confirmed_at'])]
 #[Hidden(['password', 'remember_token', 'clerk_user_id'])]
 class User extends Authenticatable
 {
@@ -35,7 +35,17 @@ class User extends Authenticatable
             'cart_reminders' => 'boolean',
             'admin_invited_at' => 'datetime',
             'cod_limit_lifted_at' => 'datetime',
+            'birth_date' => 'date',
+            'name_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The details the app asks for once: a name the customer confirmed, birth date and mobile number.
+     */
+    public function hasCompleteProfile(): bool
+    {
+        return $this->name_confirmed_at !== null && $this->birth_date !== null && filled($this->phone);
     }
 
     /**

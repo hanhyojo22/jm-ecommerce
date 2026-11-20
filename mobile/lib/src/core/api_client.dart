@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 
 import '../models/models.dart';
 import '../models/store_branch.dart';
@@ -89,6 +90,31 @@ class ApiClient {
   Future<Account> updateCartReminders(bool enabled) async => Account.fromJson(
     mapOf(await _data('PATCH', '/me', data: {'cart_reminders': enabled})),
   );
+
+  /// Saves the profile. [birthDate] is sent as a plain YYYY-MM-DD date.
+  Future<Account> updateProfile({
+    required String name,
+    required DateTime birthDate,
+    required String phone,
+    String? sex,
+  }) async => Account.fromJson(
+    mapOf(
+      await _data(
+        'PATCH',
+        '/me',
+        data: {
+          'name': name,
+          'birth_date': DateFormat('yyyy-MM-dd').format(birthDate),
+          'phone': phone,
+          'sex': sex,
+        },
+      ),
+    ),
+  );
+
+  Future<void> deleteAccount() async {
+    await _raw('DELETE', '/me');
+  }
 
   Future<ProductPage> products({
     String? query,

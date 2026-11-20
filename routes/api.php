@@ -31,6 +31,9 @@ Route::prefix('v1')->group(function (): void {
     Route::patch('/me', [AccountController::class, 'update'])
         ->middleware(['auth', 'clerk.verified', 'throttle:api'])
         ->name('api.v1.me.update');
+    Route::delete('/me', [AccountController::class, 'destroy'])
+        ->middleware(['auth', 'throttle:api'])
+        ->name('api.v1.me.destroy');
 
     /*
      * The catalog is public, exactly like the storefront, so the app can show it

@@ -57,7 +57,8 @@ class ClerkWebhookController extends Controller
             $updates['email'] = $email;
         }
 
-        if ($name !== '') {
+        // A name the customer typed in the app wins over the one from Google or Facebook.
+        if ($name !== '' && $user->name_confirmed_at === null) {
             $updates['name'] = $name;
         }
 

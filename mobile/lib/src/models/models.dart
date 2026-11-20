@@ -35,6 +35,10 @@ class Account {
     required this.emailVerified,
     required this.isPlatformAdministrator,
     this.cartReminders = true,
+    this.birthDate,
+    this.phone = '',
+    this.sex,
+    this.profileComplete = true,
   });
 
   final String id;
@@ -45,6 +49,17 @@ class Account {
   final bool isPlatformAdministrator;
   final bool cartReminders;
 
+  /// A calendar date (no time), so it never shifts a day across time zones.
+  final DateTime? birthDate;
+  final String phone;
+
+  /// 'female', 'male' or null when the customer chose not to say.
+  final String? sex;
+
+  /// False until the customer confirmed their name and gave a birth date and
+  /// mobile number; the app then asks once per session.
+  final bool profileComplete;
+
   factory Account.fromJson(Map<String, dynamic> json) => Account(
     id: str(json['id']),
     name: str(json['name']),
@@ -53,6 +68,11 @@ class Account {
     emailVerified: boolean(json['email_verified']),
     isPlatformAdministrator: boolean(json['is_platform_administrator']),
     cartReminders: json['cart_reminders'] != false,
+    birthDate: DateTime.tryParse(str(json['birth_date'])),
+    phone: str(json['phone']),
+    sex: json['sex'] as String?,
+    // Older servers do not send it; treat their accounts as complete.
+    profileComplete: json['profile_complete'] != false,
   );
 }
 
