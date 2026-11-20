@@ -296,20 +296,24 @@ class DiscountCardTest extends TestCase
     {
         Storage::fake('chat_attachments');
         $buyer = $this->buyerWithCart();
+        $photo = UploadedFile::fake()->image('senior-id.jpg');
         $this->actingAs($buyer)->post(route('checkout.store'), [
             ...$this->delivery(),
             'discount_card' => ['type' => 'senior', 'id_number' => 'SC-4821', 'name' => 'Lola Ava'],
-            'discount_document' => UploadedFile::fake()->image('senior-id.jpg'),
+            'discount_document' => $photo,
         ])->assertSessionHasNoErrors();
         $order = Order::sole();
         $sellerOrder = $order->sellerOrders()->sole();
         $staff = $this->staff();
         Storage::disk('chat_attachments')->assertExists($order->discount_document_path);
+        $this->assertNotSame($photo->get(), Storage::disk('chat_attachments')->get($order->discount_document_path), 'The ID photo is stored encrypted.');
         $this->assertArrayNotHasKey('discount_document_path', $order->toArray());
         $before = [(string) $order->total, (string) $order->discount_amount, (string) $order->payment->amount];
 
-        $this->actingAs($staff)->get(route('seller.orders.discount-document.show', $sellerOrder))
+        $response = $this->actingAs($staff)->get(route('seller.orders.discount-document.show', $sellerOrder))
             ->assertOk()->assertHeader('Content-Type', 'image/jpeg')->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertSame($photo->get(), $response->getContent());
+        $this->assertDatabaseHas('audit_logs', ['action' => 'order.discount_id_viewed', 'actor_user_id' => $staff->id, 'entity_id' => $sellerOrder->id]);
         $this->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
             ->assertSee('Senior citizen discount ID')->assertSee('Mark ID reviewed');
         $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasNoErrors();
@@ -318,8 +322,50 @@ class DiscountCardTest extends TestCase
         $this->assertDatabaseHas('seller_orders', ['id' => $sellerOrder->id, 'discount_reviewed_by' => $staff->id, 'status' => 'pending']);
         $this->assertNotNull($sellerOrder->refresh()->discount_reviewed_at);
         $this->assertSame($before, [(string) $order->refresh()->total, (string) $order->discount_amount, (string) $order->payment->amount]);
-        $this->assertDatabaseCount('audit_logs', 1);
+        $this->assertDatabaseCount('audit_logs', 2);
         $this->assertDatabaseHas('audit_logs', ['action' => 'order.discount_id_reviewed', 'entity_id' => $sellerOrder->id]);
+    }
+
+    public function test_an_id_photo_saved_before_encryption_still_opens(): void
+    {
+        $this->actingAs($this->buyerWithCart())->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'senior', 'id_number' => 'SC-4821', 'name' => 'Lola Ava'],
+            'discount_document' => UploadedFile::fake()->image('senior-id.jpg'),
+        ])->assertSessionHasNoErrors();
+        $order = Order::sole();
+        Storage::disk('chat_attachments')->put($order->discount_document_path, 'plain-photo-bytes');
+
+        $response = $this->actingAs($this->staff())->get(route('seller.orders.discount-document.show', $order->sellerOrders()->sole()))->assertOk();
+
+        $this->assertSame('plain-photo-bytes', $response->getContent());
+    }
+
+    public function test_finished_orders_lose_their_id_photo_after_thirty_days_but_keep_the_card_record(): void
+    {
+        $buyer = $this->buyerWithCart();
+        $this->actingAs($buyer)->post(route('checkout.store'), [
+            ...$this->delivery(),
+            'discount_card' => ['type' => 'senior', 'id_number' => 'SC-4821', 'name' => 'Lola Ava'],
+            'discount_document' => UploadedFile::fake()->image('senior-id.jpg'),
+            'save_discount_card' => '1',
+        ])->assertSessionHasNoErrors();
+        $finished = Order::sole();
+        $finishedPath = $finished->discount_document_path;
+        $card = DiscountCard::query()->sole();
+        $this->fillCart($buyer);
+        $this->post(route('checkout.store'), [...$this->delivery(), 'discount_card_id' => $card->id])->assertSessionHasNoErrors();
+        $running = Order::query()->whereKeyNot($finished->id)->sole();
+        $finished->sellerOrders()->update(['status' => 'delivered', 'updated_at' => now()->subDays(31)]);
+        $running->sellerOrders()->update(['updated_at' => now()->subDays(31)]);
+
+        $this->artisan('discount-ids:purge')->assertSuccessful();
+
+        Storage::disk('chat_attachments')->assertMissing($finishedPath);
+        $this->assertNull($finished->refresh()->discount_document_path);
+        $this->assertSame(['SC-4821', 'Lola Ava'], [$finished->discount_card_number, $finished->discount_card_name]);
+        Storage::disk('chat_attachments')->assertExists($running->refresh()->discount_document_path);
+        Storage::disk('chat_attachments')->assertExists($card->refresh()->document_path);
     }
 
     public function test_discount_documents_and_reviews_are_scoped_to_the_fulfilling_branch(): void

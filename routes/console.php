@@ -4,6 +4,7 @@ use App\Actions\MakeSuperAdministrator;
 use App\Actions\SetUpPharmacyCompany;
 use App\Actions\UpdateSellerOrderStatus;
 use App\Models\Cart;
+use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ReturnCase;
 use App\Models\SellerOrder;
@@ -190,3 +191,21 @@ Artisan::command('carts:remind', function (PushNotifier $notifier): void {
 
     $this->info("Reminded {$carts->count()} idle cart(s).");
 })->purpose('Remind buyers about carts left unchanged for a day')->hourly();
+
+Artisan::command('discount-ids:purge', function (): void {
+    // The photo only helps staff check the discount while the order runs; the encrypted name and
+    // number stay on the order as the sales record. Saved IDs keep their own photo for reuse.
+    $orders = Order::query()
+        ->whereNotNull('discount_document_path')
+        ->whereHas('sellerOrders')
+        ->whereDoesntHave('sellerOrders', fn ($query) => $query->where(fn ($open) => $open->whereNotIn('status', ['delivered', 'cancelled'])
+            ->orWhere('updated_at', '>=', now()->subDays(Order::DISCOUNT_PHOTO_DAYS))))
+        ->get();
+
+    foreach ($orders as $order) {
+        Storage::disk('chat_attachments')->delete($order->discount_document_path);
+        $order->forceFill(['discount_document_path' => null, 'discount_document_name' => null, 'discount_document_mime' => null])->save();
+    }
+
+    $this->info("Deleted {$orders->count()} finished order(s)' discount ID photo(s).");
+})->purpose('Delete SC/PWD ID photos from orders finished more than 30 days ago')->daily();

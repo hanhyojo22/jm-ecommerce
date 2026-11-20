@@ -13,6 +13,9 @@ class Order extends Model
 {
     use HasUlids;
 
+    /** Days a finished order keeps its SC/PWD ID photo before discount-ids:purge deletes it. */
+    public const DISCOUNT_PHOTO_DAYS = 30;
+
     protected $fillable = [
         'user_id',
         'number',

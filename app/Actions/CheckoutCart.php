@@ -16,6 +16,7 @@ use App\Support\SeniorPwdDiscount;
 use Carbon\CarbonInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -276,8 +277,9 @@ class CheckoutCart
                     ]);
                 }
                 if ($discountDocument !== null) {
-                    $path = $discountDocument->store('discount-documents/'.$order->id, 'chat_attachments');
-                    if ($path === false) {
+                    // Encrypted with APP_KEY, so a leaked bucket or storage key alone exposes no ID photo.
+                    $path = 'discount-documents/'.$order->id.'/'.$discountDocument->hashName();
+                    if (! Storage::disk('chat_attachments')->put($path, Crypt::encryptString($discountDocument->get()))) {
                         throw ValidationException::withMessages(['discount_document' => 'Your discount ID could not be saved. Try again.']);
                     }
                     $prescriptionPaths[] = $path;

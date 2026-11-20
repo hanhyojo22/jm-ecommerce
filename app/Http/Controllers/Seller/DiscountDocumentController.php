@@ -7,22 +7,43 @@ use App\Models\AuditLog;
 use App\Models\DiscountCard;
 use App\Models\Order;
 use App\Models\SellerOrder;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 class DiscountDocumentController extends Controller
 {
-    public function show(Request $request, SellerOrder $sellerOrder): StreamedResponse
+    public function show(Request $request, SellerOrder $sellerOrder): Response
     {
-        $order = $this->scopedOrder($request, $sellerOrder)->order;
+        $sellerOrder = $this->scopedOrder($request, $sellerOrder);
+        $order = $sellerOrder->order;
         abort_unless($order->discount_document_path, 404);
+        $contents = Storage::disk('chat_attachments')->get($order->discount_document_path) ?? abort(404);
 
-        return Storage::disk('chat_attachments')->response($order->discount_document_path, $order->discount_document_name, [
+        try {
+            $contents = Crypt::decryptString($contents);
+        } catch (DecryptException) {
+            // shortcut: photos saved before encryption are served as stored; they age out with discount-ids:purge.
+        }
+
+        AuditLog::query()->create([
+            'actor_user_id' => $request->user()->id,
+            'action' => 'order.discount_id_viewed',
+            'entity_type' => SellerOrder::class,
+            'entity_id' => $sellerOrder->id,
+            'new_values' => ['order_id' => $order->id],
+            'ip_address' => $request->ip(),
+        ]);
+
+        return response($contents, 200, [
             'Content-Type' => $order->discount_document_mime,
+            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $order->discount_document_name ?: 'discount-id', 'discount-id'),
             'Cache-Control' => 'private, no-store',
             'X-Content-Type-Options' => 'nosniff',
         ]);
