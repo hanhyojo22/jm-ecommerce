@@ -23,6 +23,11 @@ class EnsureWebStoreAccess
             return $next($request);
         }
 
+        // With the store closed the site is the staff entrance, so the bare domain opens sign-in.
+        if ($request->routeIs('home')) {
+            return to_route($request->user()?->landingRouteName() ?? 'login');
+        }
+
         if ($blockedAudience === null || $request->user()?->account_type === 'buyer') {
             abort(410);
         }

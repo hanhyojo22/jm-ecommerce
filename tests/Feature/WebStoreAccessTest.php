@@ -26,8 +26,8 @@ class WebStoreAccessTest extends TestCase
     {
         [$store, $product] = $this->publicStore();
 
-        $this->get(route('home'))->assertStatus(410)->assertSee('Everyday Pharmacy mobile app');
-        $this->get(route('catalog.index'))->assertStatus(410);
+        $this->get(route('home'))->assertRedirect(route('login'));
+        $this->get(route('catalog.index'))->assertStatus(410)->assertSee('Everyday Pharmacy mobile app');
         $this->get(route('catalog.suggestions'))->assertStatus(410);
         $this->get(route('catalog.top-products'))->assertStatus(410);
         $this->get(route('catalog.stores'))->assertStatus(410);
@@ -74,7 +74,7 @@ class WebStoreAccessTest extends TestCase
     {
         [$seller] = $this->sellerWithStore();
 
-        $this->actingAs($seller)->get(route('home'))->assertStatus(410);
+        $this->actingAs($seller)->get(route('home'))->assertRedirect(route($seller->landingRouteName()));
         $this->actingAs($seller)->get(route('cart.index'))->assertStatus(410);
         $this->actingAs($seller)->get(route('orders.index'))->assertStatus(410);
     }
