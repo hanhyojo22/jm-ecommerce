@@ -727,3 +727,34 @@ test('marketplace document responds within the local performance budget', async 
     const domContentLoaded = await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.domContentLoadedEventEnd ?? Infinity);
     expect(domContentLoaded).toBeLessThan(8_000);
 });
+
+test('branch details map fills the coordinates when tapped and follows typed ones', async ({ browser }) => {
+    const seller = await openAsRole(browser, 'seller');
+    try {
+        const { page } = seller;
+        await page.goto('/seller/store-settings');
+        await rejectOptionalCookies(page);
+        const latitude = page.getByLabel('Latitude', { exact: true });
+        const longitude = page.getByLabel('Longitude', { exact: true });
+        const map = page.getByRole('region', { name: 'Branch location map' });
+
+        // Leaflet starts only once the section is open, so it is never drawn at zero size.
+        await expect(page.locator('[data-branch-pin-map]')).not.toHaveClass(/leaflet-container/);
+        await page.locator('summary', { hasText: 'Map location' }).click();
+        await expect(map).toHaveClass(/leaflet-container/);
+
+        await latitude.fill('10.3157');
+        await longitude.fill('123.8854');
+        await longitude.blur();
+        await expect(map.locator('.leaflet-marker-icon')).toBeVisible();
+
+        // Clear of the zoom buttons (top left), the pin (centre) and the credit line (bottom right).
+        await map.click({ position: { x: 60, y: 200 } });
+        await expect(latitude).toHaveValue(/^\d+\.\d{7}$/);
+        await expect(latitude).not.toHaveValue('10.3157');
+        await expect(longitude).toHaveValue(/^\d+\.\d{7}$/);
+        await expect(page.getByText('Unsaved changes', { exact: true })).toBeVisible();
+    } finally {
+        await seller.context.close();
+    }
+});

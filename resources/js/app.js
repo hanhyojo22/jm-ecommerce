@@ -1699,3 +1699,16 @@ if (clerkComponents.length > 0 || clerkHandoff) {
         });
     }
 }
+
+// Seller Center branch pin: Leaflet loads only on that page, and only once its section is open,
+// because a map started while hidden draws at zero size.
+document.querySelectorAll('[data-branch-pin-map]').forEach((element) => {
+    const section = element.closest('details');
+    const mount = () => import('./branch-pin-map').then(({ mountBranchPinMap }) => mountBranchPinMap(element));
+
+    if (section === null || section.open) {
+        mount();
+    } else {
+        section.addEventListener('toggle', () => section.open && mount(), { once: true });
+    }
+});
