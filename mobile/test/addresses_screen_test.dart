@@ -66,6 +66,14 @@ void main() {
     expect(find.text('Enter the barangay.'), findsOneWidget);
     expect(find.text('Enter the province.'), findsOneWidget);
     expect(find.text('Use a 4-digit postal code.'), findsOneWidget);
+
+    // Fixing a field clears its error without pressing Save again.
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Barangay'),
+      'Camputhaw',
+    );
+    await tester.pump();
+    expect(find.text('Enter the barangay.'), findsNothing);
   });
 
   testWidgets('Use my current location fills the address fields', (

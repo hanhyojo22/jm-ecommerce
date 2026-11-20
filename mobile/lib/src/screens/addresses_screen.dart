@@ -201,6 +201,9 @@ class _AddressFormState extends ConsumerState<AddressForm> {
   final _postal = TextEditingController();
   final _lineFocus = FocusNode();
   bool _locating = false;
+
+  /// After the first Save, fields re-check as they change so fixed errors clear.
+  bool _submitted = false;
   String? _locationError;
 
   /// The street line a suggestion just filled in, so filling it does not
@@ -366,6 +369,9 @@ class _AddressFormState extends ConsumerState<AddressForm> {
       ),
       child: Form(
         key: _formKey,
+        autovalidateMode: _submitted
+            ? AutovalidateMode.always
+            : AutovalidateMode.disabled,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -518,6 +524,7 @@ class _AddressFormState extends ConsumerState<AddressForm> {
               const SizedBox(height: 18),
               FilledButton(
                 onPressed: () {
+                  setState(() => _submitted = true);
                   if (!(_formKey.currentState?.validate() ?? false)) {
                     return;
                   }
