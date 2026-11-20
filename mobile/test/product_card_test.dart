@@ -5,18 +5,44 @@ import 'package:jmmart/src/widgets/common.dart';
 
 void main() {
   testWidgets(
-    'discovery details stay closely grouped and hide an empty review line',
+    'unreviewed discovery cards show grey stars between the name and price',
     (tester) async {
-      await tester.pumpWidget(_card(discovery: true));
-      final name = find.text('Cargo Pants');
-      // A one-line name takes only the space it needs, with no reserved blank line.
-      expect(tester.getSize(name).height, lessThan(30));
-      final nameBottom = tester.getBottomLeft(name).dy;
-      final priceTop = tester.getTopLeft(find.text('₱255.00')).dy;
-      expect(priceTop - nameBottom, lessThanOrEqualTo(6));
-      expect(find.text('No reviews yet'), findsNothing);
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpWidget(_card(discovery: true));
+        final name = find.text('Cargo Pants');
+        // A one-line name takes only the space it needs, with no reserved blank line.
+        expect(tester.getSize(name).height, lessThan(30));
+        final noReviews = find.text('No reviews');
+        expect(noReviews, findsOneWidget);
+        // Outlines, never filled stars, so no rating reads as a low one.
+        expect(find.byIcon(Icons.star_outline_rounded), findsNWidgets(5));
+        expect(find.byIcon(Icons.star_rounded), findsNothing);
+        expect(
+          tester.getTopLeft(noReviews).dy,
+          greaterThan(tester.getBottomLeft(name).dy),
+        );
+        expect(
+          tester.getBottomLeft(noReviews).dy,
+          lessThan(tester.getTopLeft(find.text('₱255.00')).dy),
+        );
+        expect(find.bySemanticsLabel(RegExp('No reviews yet')), findsOneWidget);
+      } finally {
+        semantics.dispose();
+      }
     },
   );
+
+  testWidgets('a 4.5 rating fills four stars and half the fifth', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _card(discovery: true, ratingCount: 3, rating: 4.5),
+    );
+    expect(find.byIcon(Icons.star_rounded), findsNWidgets(4));
+    expect(find.byIcon(Icons.star_half_rounded), findsOneWidget);
+    expect(find.text('No reviews'), findsNothing);
+  });
 
   testWidgets('discovery cards hug their content with a square photo', (
     tester,
@@ -111,6 +137,7 @@ Widget _card({
   bool discovery = false,
   bool inStock = true,
   int ratingCount = 0,
+  double rating = 4.8,
   String? compareAtPrice,
   bool requiresPrescription = false,
 }) {
@@ -137,7 +164,7 @@ Widget _card({
               freeShipping: false,
               stockQuantity: inStock ? 3 : 0,
               soldQuantity: 0,
-              ratingAverage: ratingCount > 0 ? 4.8 : 0,
+              ratingAverage: ratingCount > 0 ? rating : 0,
               ratingCount: ratingCount,
               store: const StoreInfo(
                 id: 'store-1',

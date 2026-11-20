@@ -594,55 +594,48 @@ class ProductCard extends StatelessWidget {
                     ),
                     if (discovery) ...[
                       const SizedBox(height: 4),
+                      _StarRating(product: product),
+                      const SizedBox(height: 4),
                       price,
-                      if (product.ratingCount > 0 ||
-                          product.soldQuantity > 0) ...[
-                        const SizedBox(height: 4),
-                        Semantics(
-                          label: product.ratingCount > 0
-                              ? 'Rated ${product.ratingAverage.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
-                              : '${product.soldQuantity} sold',
-                          excludeSemantics: true,
-                          child: Row(
-                            children: [
-                              // A star only when there is a rating; beside a sold count it reads as one.
-                              if (product.ratingCount > 0) ...[
-                                Icon(
-                                  Icons.star_rounded,
-                                  size: 16,
-                                  color: theme.colorScheme.secondary,
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              Expanded(
-                                child: Text(
-                                  [
-                                    if (product.ratingCount > 0)
-                                      '${product.ratingAverage.toStringAsFixed(1)} (${product.ratingCount})',
-                                    if (product.soldQuantity > 0)
-                                      '${_compactCount(product.soldQuantity)} sold',
-                                  ].join(' · '),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
+                      if (fillHeight) const Spacer(),
+                      if (product.soldQuantity > 0 ||
+                          (showAddToCart && product.inStock))
+                        // Sold count and a plain cart icon share the last line, like the nav bar's Cart.
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                product.soldQuantity > 0
+                                    ? '${_compactCount(product.soldQuantity)} sold'
+                                    : '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                            if (showAddToCart && product.inStock)
+                              _ProductCartButton(
+                                product: product,
+                                onChooseOptions: onTap,
+                              ),
+                          ],
+                        ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      price,
+                      if (showAddToCart) ...[
+                        if (fillHeight) const Spacer(),
+                        const SizedBox(height: 10),
+                        _ProductCartButton(
+                          product: product,
+                          onChooseOptions: onTap,
                         ),
                       ],
-                    ] else
-                      const SizedBox(height: 4),
-                    if (!discovery) ...[const SizedBox(height: 8), price],
-                    if (showAddToCart) ...[
-                      if (fillHeight) const Spacer(),
-                      const SizedBox(height: 10),
-                      _ProductCartButton(
-                        product: product,
-                        onChooseOptions: onTap,
-                      ),
                     ],
                   ],
                 ),
@@ -657,6 +650,72 @@ class ProductCard extends StatelessWidget {
 
 Widget _expandedIf(bool expand, Widget child) =>
     expand ? Expanded(child: child) : child;
+
+/// Five stars from verified-purchase reviews; grey outlines say "No reviews" rather than a low score.
+class _StarRating extends StatelessWidget {
+  const _StarRating({required this.product});
+
+  final Product product;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final rated = product.ratingCount > 0;
+    final average = product.ratingAverage;
+
+    return Semantics(
+      label: rated
+          ? 'Rated ${average.toStringAsFixed(1)} out of 5, ${product.ratingCount} reviews'
+          : 'No reviews yet',
+      excludeSemantics: true,
+      child: Row(
+        children: [
+          for (var star = 1; star <= 5; star++)
+            Icon(
+              !rated
+                  ? Icons.star_outline_rounded
+                  : average >= star
+                  ? Icons.star_rounded
+                  : average >= star - 0.5
+                  ? Icons.star_half_rounded
+                  : Icons.star_rounded,
+              size: 14,
+              color: rated && average >= star - 0.5
+                  ? scheme.secondary
+                  : scheme.outline.withValues(alpha: rated ? 0.45 : 0.8),
+            ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text.rich(
+              rated
+                  ? TextSpan(
+                      children: [
+                        TextSpan(
+                          text: average.toStringAsFixed(1),
+                          style: TextStyle(
+                            color: scheme.onSurface,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        TextSpan(text: ' (${product.ratingCount})'),
+                      ],
+                    )
+                  // Short enough for a 160 dp card at large text; TalkBack hears "No reviews yet".
+                  : const TextSpan(text: 'No reviews'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 String _compactCount(int count) {
   if (count < 1000) {
@@ -789,23 +848,24 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
     }
   }
 
-  Future<void> _change(Future<void> Function() request) async {
-    if (_adding) {
-      return;
-    }
-    setState(() => _adding = true);
-    try {
-      await request();
-    } on ApiException catch (error) {
+  /// The number changes on tap; the cart sends the last of quick taps and puts the real
+  /// quantity back if the server refuses, so the stepper never locks while it waits.
+  void _setQuantity(String lineId, int quantity) {
+    ref.read(cartProvider.notifier).setQuantity(lineId, quantity).catchError((
+      Object error,
+    ) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.friendly)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is ApiException
+                  ? error.friendly
+                  : 'Could not update your cart. Try again.',
+            ),
+          ),
+        );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _adding = false);
-      }
-    }
+    });
   }
 
   @override
@@ -813,98 +873,104 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
     final product = widget.product;
     final chooseOptions =
         product.hasVariants || product.requiresVariantSelection;
+    // Watch only this product's line, as a record that compares by value, so a change to
+    // another product (or a refetch of the same cart) does not redraw every card on screen.
     final line = chooseOptions
         ? null
-        : ref
-              .watch(cartProvider)
-              .value
-              ?.lines
-              .where((l) => l.productId == product.id && l.variantId == null)
-              .firstOrNull;
-    if (line != null) {
-      final cart = ref.read(cartProvider.notifier);
-      final atStock =
-          product.stockQuantity > 0 && line.quantity >= product.stockQuantity;
-      final scheme = Theme.of(context).colorScheme;
-      // The in-cart state reads as one pill in the same footprint as the Add button.
-      return DecoratedBox(
-        decoration: ShapeDecoration(
-          color: scheme.secondaryContainer,
-          shape: const StadiumBorder(),
+        : ref.watch(
+            cartProvider.select((cart) {
+              final match = cart.value?.lines
+                  .where(
+                    (l) => l.productId == product.id && l.variantId == null,
+                  )
+                  .firstOrNull;
+              return match == null
+                  ? null
+                  : (id: match.id, quantity: match.quantity);
+            }),
+          );
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    // Small glyphs with a 40 dp touch area, no fill or outline.
+    const tap = BoxConstraints.tightFor(width: 36, height: 40);
+
+    if (chooseOptions) {
+      return TextButton(
+        style: TextButton.styleFrom(
+          foregroundColor: scheme.primary,
+          minimumSize: const Size(0, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          textStyle: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              tooltip: line.quantity > 1 ? 'Remove one' : 'Remove from cart',
-              color: scheme.onSecondaryContainer,
-              onPressed: _adding
-                  ? null
-                  : () => _change(
-                      () => line.quantity > 1
-                          ? cart.updateQuantity(line.id, line.quantity - 1)
-                          : cart.remove(line.id),
-                    ),
-              icon: Icon(
-                line.quantity > 1
-                    ? PhosphorIconsBold.minus
-                    : PhosphorIconsRegular.trash,
-                size: 18,
-              ),
-            ),
-            Text(
-              '${line.quantity}',
-              semanticsLabel: '${line.quantity} in cart',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: scheme.onSecondaryContainer,
-              ),
-            ),
-            IconButton.filled(
-              tooltip: 'Add one',
-              onPressed: _adding || atStock
-                  ? null
-                  : () => _change(
-                      () => cart.updateQuantity(line.id, line.quantity + 1),
-                    ),
-              icon: const Icon(PhosphorIconsBold.plus, size: 18),
-            ),
-          ],
+        onPressed: widget.onChooseOptions,
+        child: Text(
+          'Options',
+          semanticsLabel: 'Choose options for ${product.name}',
         ),
       );
     }
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton.tonal(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-          textStyle: Theme.of(context).textTheme.labelLarge,
-          shape: const StadiumBorder(),
-        ),
-        onPressed: !product.inStock || _adding
-            ? null
-            : chooseOptions
-            ? widget.onChooseOptions
-            : _add,
-        child: _adding
-            ? SizedBox.square(
-                dimension: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                  semanticsLabel: 'Adding ${product.name} to cart',
-                ),
-              )
-            : Text(
-                !product.inStock
-                    ? 'Sold out'
-                    : chooseOptions
-                    ? 'Choose options'
-                    : 'Add to cart',
-                textAlign: TextAlign.center,
+
+    if (line != null) {
+      final atStock =
+          product.stockQuantity > 0 && line.quantity >= product.stockQuantity;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: line.quantity > 1 ? 'Remove one' : 'Remove from cart',
+            color: scheme.primary,
+            constraints: tap,
+            padding: EdgeInsets.zero,
+            onPressed: () => _setQuantity(line.id, line.quantity - 1),
+            icon: Icon(
+              line.quantity > 1
+                  ? PhosphorIconsBold.minus
+                  : PhosphorIconsRegular.trash,
+              size: 18,
+            ),
+          ),
+          Text(
+            '${line.quantity}',
+            semanticsLabel: '${line.quantity} in cart',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: scheme.onSurface,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Add one',
+            color: scheme.primary,
+            constraints: tap,
+            padding: EdgeInsets.zero,
+            onPressed: atStock
+                ? null
+                : () => _setQuantity(line.id, line.quantity + 1),
+            icon: const Icon(PhosphorIconsBold.plus, size: 18),
+          ),
+        ],
+      );
+    }
+
+    return IconButton(
+      tooltip: 'Add to cart',
+      color: scheme.primary,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+      padding: EdgeInsets.zero,
+      onPressed: _adding ? null : _add,
+      // The Cart tab's tote, so the icon says where the item goes.
+      icon: _adding
+          ? SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: scheme.primary,
+                semanticsLabel: 'Adding ${product.name} to cart',
               ),
-      ),
+            )
+          : const Icon(PhosphorIconsRegular.tote, size: 24),
     );
   }
 }

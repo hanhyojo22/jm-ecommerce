@@ -564,6 +564,28 @@ class CartLine {
           requiresPrescription: requiresPrescription,
         );
 
+  /// The quantity shown before the server confirms it; prices stay the server's until then.
+  CartLine withQuantity(int value) => value == quantity
+      ? this
+      : CartLine(
+          id: id,
+          productId: productId,
+          variantId: variantId,
+          quantity: value,
+          selected: selected,
+          available: available,
+          unitPrice: unitPrice,
+          lineTotal: lineTotal,
+          imageUrl: imageUrl,
+          productName: productName,
+          productSlug: productSlug,
+          storeName: storeName,
+          storeSlug: storeSlug,
+          hasVariants: hasVariants,
+          variantLabel: variantLabel,
+          requiresPrescription: requiresPrescription,
+        );
+
   factory CartLine.fromJson(Map<String, dynamic> json) {
     final product = mapOf(json['product']);
     final store = mapOf(product['store']);
@@ -608,6 +630,21 @@ class Cart {
   final String subtotal;
 
   static const empty = Cart(lines: [], selectedCount: 0, subtotal: '0.00');
+
+  /// This cart with one line's quantity changed ahead of the server; zero drops the line.
+  Cart withLineQuantity(String lineId, int quantity) => Cart(
+    id: id,
+    branchId: branchId,
+    lines: [
+      for (final line in lines)
+        if (line.id != lineId)
+          line
+        else if (quantity > 0)
+          line.withQuantity(quantity),
+    ],
+    selectedCount: selectedCount,
+    subtotal: subtotal,
+  );
 
   /// What checkout will charge for the items: every available line. [subtotal] counts only
   /// selected lines, and a line can sit unselected until the cart page selects it.
