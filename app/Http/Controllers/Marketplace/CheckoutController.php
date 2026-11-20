@@ -62,7 +62,7 @@ class CheckoutController extends Controller
         );
         $addresses = $request->user()->deliveryAddresses()->latest()->get();
         $preferredAddress = $addresses->first()
-            ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
+            ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'subdivision', 'barangay', 'city', 'province', 'postal_code']);
 
         // Totals are worked out for delivery; the page drops the fee when the shopper picks pickup.
         $branch = $cart->branchFor($cart->items->first()->product->tenant_id);
@@ -106,6 +106,8 @@ class CheckoutController extends Controller
             'recipient_name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
             'address_line' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:255'],
+            'subdivision' => ['nullable', 'string', 'max:150'],
+            'barangay' => ['nullable', 'string', 'max:100'],
             'city' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
             // Same-town delivery needs the street and city only, as in the app.
             'province' => ['nullable', 'string', 'max:100'],
@@ -135,7 +137,7 @@ class CheckoutController extends Controller
         // shortcut: the web checkout has no map pin until Phase 7, so its deliveries skip the radius check.
         $order = $checkout->handle(
             $request->user(),
-            Arr::only($data, ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code', 'delivery_note']),
+            Arr::only($data, ['recipient_name', 'phone', 'address_line', 'subdivision', 'barangay', 'city', 'province', 'postal_code', 'delivery_note']),
             $paymentMethod,
             $data['client_request_id'] ?? null,
             $fulfillmentMethod,

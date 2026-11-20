@@ -23,6 +23,7 @@ class DeliveryAddressFactory extends Factory
             'recipient_name' => fake()->name(),
             'phone' => '+639171234567',
             'address_line' => fake()->streetAddress(),
+            'barangay' => 'Poblacion',
             'city' => fake()->city(),
             'province' => fake()->word(),
             'postal_code' => '1000',

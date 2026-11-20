@@ -181,7 +181,7 @@
                             <address class="mt-3 not-italic text-sm leading-6 text-muted">
                                 @if($order->recipient_name)<p class="font-semibold text-ink">{{ $order->recipient_name }}</p>@endif
                                 @if($order->fulfillment_method !== 'pickup')
-                                    @if($order->address_line)<p>{{ $order->address_line }}</p>@endif
+                                    @if($order->address_line)<p>{{ collect([$order->address_line, $order->subdivision, $order->barangay])->filter()->join(', ') }}</p>@endif
                                     @if($order->city || $order->province || $order->postal_code)<p>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>@endif
                                 @endif
                                 @if($order->phone)<p class="mt-2">{{ $order->phone }}</p>@endif

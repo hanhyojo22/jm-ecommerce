@@ -280,26 +280,27 @@ test('customer adds, edits, cancels and removes a delivery address', async ({ br
 
         await page.getByLabel('Recipient name').fill(recipient);
         await page.getByLabel('Mobile number').fill('09171234567');
-        await page.getByLabel('Street address').fill('12 Mabini Street, Barangay San Antonio');
+        await page.getByLabel('Unit / house no. and street').fill('12 Mabini Street');
+        await page.getByLabel('Barangay').fill('San Antonio');
         await page.getByLabel('City').fill('Pasig');
         await page.getByLabel('Province').fill('Metro Manila');
         await page.getByLabel('Postal code').fill('1600');
         await page.getByRole('button', { name: 'Save address' }).click();
         await expect(page.getByText('Delivery address saved.', { exact: true })).toBeVisible();
-        await expect(page.getByText('12 Mabini Street, Barangay San Antonio, Pasig, Metro Manila 1600', { exact: true })).toBeVisible();
+        await expect(page.getByText('12 Mabini Street, San Antonio, Pasig, Metro Manila 1600', { exact: true })).toBeVisible();
 
         await page.getByRole('link', { name: `Edit address for ${recipient}` }).click();
         await expect(page.getByRole('heading', { name: 'Edit delivery address' })).toBeVisible();
         await page.getByLabel('City').fill('Taguig');
         await page.getByRole('link', { name: 'Cancel' }).click();
         await expect(page).toHaveURL(/\/delivery-addresses$/);
-        await expect(page.getByText('12 Mabini Street, Barangay San Antonio, Pasig, Metro Manila 1600', { exact: true })).toBeVisible();
+        await expect(page.getByText('12 Mabini Street, San Antonio, Pasig, Metro Manila 1600', { exact: true })).toBeVisible();
 
         await page.getByRole('link', { name: `Edit address for ${recipient}` }).click();
         await expect(page.getByRole('heading', { name: 'Edit delivery address' })).toBeVisible();
         await page.getByLabel('City').fill('Taguig');
         await page.getByRole('button', { name: 'Save changes', exact: true }).click();
-        await expect(page.getByText('12 Mabini Street, Barangay San Antonio, Taguig, Metro Manila 1600', { exact: true })).toBeVisible();
+        await expect(page.getByText('12 Mabini Street, San Antonio, Taguig, Metro Manila 1600', { exact: true })).toBeVisible();
 
         await page.getByRole('button', { name: `Remove address for ${recipient}` }).click();
         await page.getByRole('dialog', { name: 'Are you sure?' }).getByRole('button', { name: 'Continue', exact: true }).click();

@@ -66,7 +66,7 @@ class CheckoutController extends Controller
 
         $addresses = $request->user()->deliveryAddresses()->latest()->get();
         $preferredAddress = $addresses->first()
-            ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']);
+            ?? $request->user()->orders()->latest()->first(['recipient_name', 'phone', 'address_line', 'subdivision', 'barangay', 'city', 'province', 'postal_code']);
 
         $onlineAvailable = (bool) $branch?->acceptsOnlinePayments();
         $codBlocked = $request->user()->hasReachedCodOrderLimit();
@@ -122,6 +122,8 @@ class CheckoutController extends Controller
                 'recipient_name' => $preferredAddress->recipient_name,
                 'phone' => $preferredAddress->phone,
                 'address_line' => $preferredAddress->address_line,
+                'subdivision' => $preferredAddress->subdivision,
+                'barangay' => $preferredAddress->barangay,
                 'city' => $preferredAddress->city,
                 'province' => $preferredAddress->province,
                 'postal_code' => $preferredAddress->postal_code,
@@ -143,6 +145,8 @@ class CheckoutController extends Controller
             'recipient_name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'regex:/^(?:\+63|0)9\d{9}$/'],
             'address_line' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:255'],
+            'subdivision' => ['nullable', 'string', 'max:150'],
+            'barangay' => ['nullable', 'string', 'max:100'],
             'city' => ['required_unless:fulfillment_method,pickup', 'nullable', 'string', 'max:100'],
             // The map pin locates a same-town delivery, so province and postal code are optional.
             'province' => ['nullable', 'string', 'max:100'],
@@ -176,7 +180,7 @@ class CheckoutController extends Controller
         $discountDocument = $request->file('discount_document');
         $order = $checkout->handle(
             $request->user(),
-            Arr::only($data, ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code', 'delivery_note']),
+            Arr::only($data, ['recipient_name', 'phone', 'address_line', 'subdivision', 'barangay', 'city', 'province', 'postal_code', 'delivery_note']),
             $paymentMethod,
             $data['client_request_id'] ?? null,
             $fulfillmentMethod,

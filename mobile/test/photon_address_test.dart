@@ -29,7 +29,8 @@ void main() {
       ),
       {
         'label': 'Juana Osmeña Extension, Camputhaw, Cebu City',
-        'address_line': 'Juana Osmeña Extension, Camputhaw',
+        'address_line': 'Juana Osmeña Extension',
+        'barangay': 'Camputhaw',
         'city': 'Cebu City',
         'province': '',
         'postal_code': '6000',
@@ -49,13 +50,11 @@ void main() {
       }),
     );
 
-    expect(
-      fields['address_line'],
-      'Winland Tower A, Juana Osmeña Extension, Camputhaw',
-    );
+    expect(fields['address_line'], 'Winland Tower A, Juana Osmeña Extension');
+    expect(fields['barangay'], 'Camputhaw');
   });
 
-  test('a barangay is named once, and odd postcodes are dropped', () {
+  test('a barangay fills only the barangay, and odd postcodes are dropped', () {
     final fields = photonAddressFields(
       _feature({
         'osm_key': 'place',
@@ -66,7 +65,8 @@ void main() {
       }),
     );
 
-    expect(fields['address_line'], 'Camputhaw');
+    expect(fields['address_line'], '');
+    expect(fields['barangay'], 'Camputhaw');
     expect(fields['label'], 'Camputhaw, Cebu City');
     expect(fields['postal_code'], '');
   });

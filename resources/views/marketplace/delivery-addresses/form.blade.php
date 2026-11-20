@@ -13,25 +13,34 @@
         @error('phone')<p id="phone-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
     <div class="sm:col-span-2">
-        <label for="address_line" class="block text-meta font-semibold text-ink">Street address</label>
-        <input id="address_line" name="address_line" value="{{ old('address_line', $address?->address_line) }}" required maxlength="255" autocomplete="street-address" class="field-control mt-1.5" aria-describedby="address_line-hint{{ $errors->has('address_line') ? ' address_line-error' : '' }}" @error('address_line') aria-invalid="true" @enderror>
-        <p id="address_line-hint" class="mt-1.5 text-xs text-muted">House or unit number, street, and barangay.</p>
-        @error('address_line')<p id="address_line-error" class="mt-1 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
+        <label for="address_line" class="block text-meta font-semibold text-ink">Unit / house no. and street</label>
+        <input id="address_line" name="address_line" value="{{ old('address_line', $address?->address_line) }}" required maxlength="255" autocomplete="address-line1" placeholder="Lot 5 Blk 2, Rizal Street" class="field-control mt-1.5" @error('address_line') aria-invalid="true" aria-describedby="address_line-error" @enderror>
+        @error('address_line')<p id="address_line-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
     <div>
-        <label for="city" class="block text-meta font-semibold text-ink">City</label>
+        <label for="subdivision" class="block text-meta font-semibold text-ink">Subdivision / village / building (optional)</label>
+        <input id="subdivision" name="subdivision" value="{{ old('subdivision', $address?->subdivision) }}" maxlength="150" autocomplete="address-line2" class="field-control mt-1.5" @error('subdivision') aria-invalid="true" aria-describedby="subdivision-error" @enderror>
+        @error('subdivision')<p id="subdivision-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
+    </div>
+    <div>
+        <label for="barangay" class="block text-meta font-semibold text-ink">Barangay</label>
+        <input id="barangay" name="barangay" value="{{ old('barangay', $address?->barangay) }}" required maxlength="100" autocomplete="address-level3" class="field-control mt-1.5" @error('barangay') aria-invalid="true" aria-describedby="barangay-error" @enderror>
+        @error('barangay')<p id="barangay-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
+    </div>
+    <div>
+        <label for="city" class="block text-meta font-semibold text-ink">City / municipality</label>
         <input id="city" name="city" value="{{ old('city', $address?->city) }}" required maxlength="100" autocomplete="address-level2" class="field-control mt-1.5" @error('city') aria-invalid="true" aria-describedby="city-error" @enderror>
         @error('city')<p id="city-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
     </div>
     <div class="grid grid-cols-[minmax(0,1fr)_7rem] gap-4">
         <div>
-            <label for="province" class="block text-meta font-semibold text-ink">Province (optional)</label>
-            <input id="province" name="province" value="{{ old('province', $address?->province) }}" maxlength="100" autocomplete="address-level1" class="field-control mt-1.5" @error('province') aria-invalid="true" aria-describedby="province-error" @enderror>
+            <label for="province" class="block text-meta font-semibold text-ink">Province</label>
+            <input id="province" name="province" value="{{ old('province', $address?->province) }}" required maxlength="100" autocomplete="address-level1" placeholder="Metro Manila if in NCR" class="field-control mt-1.5" @error('province') aria-invalid="true" aria-describedby="province-error" @enderror>
             @error('province')<p id="province-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
         </div>
         <div>
-            <label for="postal_code" class="block text-meta font-semibold text-ink">Postal code (optional)</label>
-            <input id="postal_code" name="postal_code" value="{{ old('postal_code', $address?->postal_code) }}" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="postal-code" class="field-control mt-1.5 tabular-nums" @error('postal_code') aria-invalid="true" aria-describedby="postal_code-error" @enderror>
+            <label for="postal_code" class="block text-meta font-semibold text-ink">Postal code</label>
+            <input id="postal_code" name="postal_code" value="{{ old('postal_code', $address?->postal_code) }}" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4" autocomplete="postal-code" class="field-control mt-1.5 tabular-nums" @error('postal_code') aria-invalid="true" aria-describedby="postal_code-error" @enderror>
             @error('postal_code')<p id="postal_code-error" class="mt-1.5 text-xs text-danger" role="alert">{{ $message }}</p>@enderror
         </div>
     </div>

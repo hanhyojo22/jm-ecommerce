@@ -34,6 +34,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _recipient = TextEditingController();
   final _phone = TextEditingController();
   final _addressLine = TextEditingController();
+  final _barangay = TextEditingController();
   final _cardNumber = TextEditingController();
   final _cardName = TextEditingController();
 
@@ -146,6 +147,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _recipient.dispose();
     _phone.dispose();
     _addressLine.dispose();
+    _barangay.dispose();
     _cardNumber.dispose();
     _cardName.dispose();
     super.dispose();
@@ -193,6 +195,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     _recipient.text = address.recipientName;
     _phone.text = address.phone;
     _addressLine.text = address.addressLine;
+    _barangay.text = address.barangay;
     _savedCity = address.city;
   }
 
@@ -211,6 +214,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       recipientName: _recipient.text.trim(),
       phone: _phone.text.trim(),
       addressLine: _addressLine.text.trim(),
+      barangay: _barangay.text.trim(),
       city: _savedCity.isNotEmpty ? _savedCity : (quote.branchCity ?? ''),
       province: '',
       postalCode: '',
@@ -1159,7 +1163,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   subtitle: Text(
-                    '${[address.addressLine, address.city].where((part) => part.isNotEmpty).join(', ')}\n${address.phone}',
+                    '${[address.streetLine, address.city].where((part) => part.isNotEmpty).join(', ')}\n${address.phone}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
@@ -1225,6 +1229,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               validator: (value) => (value ?? '').trim().isEmpty
                   ? 'Tell the rider how to find you.'
                   : null,
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _barangay,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Barangay'),
+              validator: (value) =>
+                  (value ?? '').trim().isEmpty ? 'Enter the barangay.' : null,
             ),
           ],
         ],

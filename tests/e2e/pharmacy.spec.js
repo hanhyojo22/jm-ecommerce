@@ -36,7 +36,8 @@ test('a customer submits prescription and discount ID together and the pharmacy 
         await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
         await page.getByLabel('Recipient name').fill('Rosa QA Patient');
         await page.getByLabel('Mobile number').fill('+639171234567');
-        await page.getByLabel('Street address').fill('12 QA Street');
+        await page.getByLabel('Unit / house no. and street').fill('12 QA Street');
+        await page.getByLabel('Barangay').fill('Poblacion');
         await page.getByLabel('City').fill('Manila');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();

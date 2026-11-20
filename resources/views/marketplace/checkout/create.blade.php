@@ -1,7 +1,7 @@
 <x-app-layout>
     @php($itemsByStore = $cart->items->groupBy(fn ($item) => $item->product->store_id))
     @php($itemCount = $cart->items->sum('quantity'))
-    @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Street address', 'city' => 'City'])
+    @php($addressFields = ['recipient_name' => 'Recipient name', 'phone' => 'Mobile number', 'address_line' => 'Unit / house no. and street', 'subdivision' => 'Subdivision / village (optional)', 'barangay' => 'Barangay', 'city' => 'City / municipality'])
     {{-- A rejected submission reopens the step that holds the first field to fix. --}}
     @php($initialStep = $errors->hasAny(array_keys($addressFields)) ? 1 : ($errors->has('payment_method') ? 2 : ($errors->hasAny(['delivery_note', 'prescription', 'prescriptions', 'discount_card', 'discount_card.type', 'discount_card.id_number', 'discount_card.name', 'discount_card_id', 'save_discount_card', 'discount_document']) ? 3 : 1)))
     @php($prescriptionMedicines = $cart->items->filter(fn ($item) => $item->product->requires_prescription)->map(fn ($item) => $item->product->name)->unique())
@@ -37,13 +37,14 @@
             methodLabels: @js(\App\Models\Payment::METHOD_LABELS),
             get placeLabel() { return this.method === 'cod' ? 'Place order' : 'Place order & pay with ' + this.methodLabels[this.method] },
             fields: @js(array_keys($addressFields)),
-            addresses: @js($addresses->map(fn ($address) => $address->only(['id', 'recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code']))),
+            addresses: @js($addresses->map(fn ($address) => $address->only(['id', 'recipient_name', 'phone', 'address_line', 'subdivision', 'barangay', 'city', 'province', 'postal_code']))),
             choice: @js(session()->hasOldInput() || $addresses->isEmpty() ? 'new' : $addresses->first()->id),
             issues: @js((object) collect($errors->getMessages())->map(fn (array $messages): string => $messages[0])->all()),
             messages: {
                 recipient_name: 'Enter the recipient’s full name.',
                 phone: 'Enter a mobile number like 09171234567.',
-                address_line: 'Enter the house number, street, and barangay.',
+                address_line: 'Enter the unit or house number and street.',
+                barangay: 'Enter the barangay.',
                 city: 'Enter the city.',
                 province: 'Enter the province.',
                 postal_code: 'Enter a 4-digit postal code.',
@@ -52,7 +53,7 @@
             addressFull: '',
             init() { this.syncAddress() },
             collapsed(number) { return this.step !== number && this.done.includes(number) },
-            incomplete(id) { const address = this.addresses.find((item) => item.id === id); return ! address || this.activeFields.some((field) => ! address[field]) },
+            incomplete(id) { const address = this.addresses.find((item) => item.id === id); return ! address || this.activeFields.some((field) => field !== 'subdivision' && ! address[field]) },
             get showFields() { return this.choice === 'new' || this.incomplete(this.choice) },
             choose(id) {
                 this.choice = id;
@@ -64,8 +65,8 @@
             },
             syncAddress() {
                 const value = Object.fromEntries(this.fields.map((field) => [field, document.getElementById(field).value.trim()]));
-                this.addressShort = [value.recipient_name, value.address_line, value.city].filter(Boolean).join(' · ');
-                this.addressFull = [[value.recipient_name, value.phone].filter(Boolean).join(' · '), [value.address_line, value.city, value.province, value.postal_code].filter(Boolean).join(', ')].filter(Boolean).join('\n');
+                this.addressShort = [value.recipient_name, value.address_line, value.barangay, value.city].filter(Boolean).join(' · ');
+                this.addressFull = [[value.recipient_name, value.phone].filter(Boolean).join(' · '), [value.address_line, value.subdivision, value.barangay, value.city, value.province, value.postal_code].filter(Boolean).join(', ')].filter(Boolean).join('\n');
             },
             open(number, focus = true) {
                 this.syncAddress();
@@ -163,7 +164,7 @@
                                             <input type="radio" name="saved_address" value="{{ $address->id }}" :checked="choice === @js($address->id)" @change="choose(@js($address->id))" class="mt-[3px] size-[17px] border-[#CBD4E0] text-brand focus:ring-0 focus:ring-offset-0">
                                             <span class="min-w-0">
                                                 <span class="block text-sm font-semibold leading-[1.4] text-ink">{{ $address->recipient_name }}</span>
-                                                <span class="mt-0.5 block text-[13px] leading-normal text-muted [overflow-wrap:anywhere]">{{ collect([$address->address_line, $address->city, $address->province, $address->postal_code])->filter()->implode(', ') }}</span>
+                                                <span class="mt-0.5 block text-[13px] leading-normal text-muted [overflow-wrap:anywhere]">{{ collect([$address->address_line, $address->subdivision, $address->barangay, $address->city, $address->province, $address->postal_code])->filter()->implode(', ') }}</span>
                                                 <span class="mt-0.5 block text-[13px] leading-normal text-muted">{{ $address->phone }}</span>
                                             </span>
                                         </label>
@@ -180,20 +181,22 @@
 
                             <div x-show="showFields" @input="syncAddress(); delete issues[$event.target.id]" @class(['mt-4 border-t border-line pt-[18px]' => $addresses->isNotEmpty()])>
                                 <p x-show="choice !== 'new'" class="mb-3.5 text-[13px] text-muted">Fill in any missing details from this older saved address.</p>
-                                {{-- Name and number share a row, then street, then city. --}}
+                                {{-- Name and number share a row, then street, subdivision and barangay, then city. --}}
                                 <div class="grid grid-cols-2 gap-x-3 gap-y-3.5 sm:grid-cols-6">
                                     @foreach ($addressFields as $field => $label)
-                                        <div @if (in_array($field, ['address_line', 'city'], true)) x-show="fulfillment === 'delivery'" @endif @class([
-                                            'col-span-2 sm:col-span-3' => in_array($field, ['recipient_name', 'phone'], true),
+                                        <div @if (in_array($field, ['address_line', 'subdivision', 'barangay', 'city'], true)) x-show="fulfillment === 'delivery'" @endif @class([
+                                            'col-span-2 sm:col-span-3' => in_array($field, ['recipient_name', 'phone', 'subdivision', 'barangay'], true),
                                             'col-span-2 sm:col-span-6' => $field === 'address_line',
                                             'col-span-2 sm:col-span-6' => $field === 'city',
                                         ])>
                                             <label for="{{ $field }}" class="mb-1.5 block text-[13.5px] font-semibold text-ink">{{ $label }}</label>
-                                            <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" @if (in_array($field, ['address_line', 'city'], true)) :required="fulfillment === 'delivery'" @else required @endif
+                                            <input id="{{ $field }}" name="{{ $field }}" value="{{ old($field, $preferredAddress?->{$field}) }}" @if (in_array($field, ['address_line', 'barangay', 'city'], true)) :required="fulfillment === 'delivery'" @elseif ($field !== 'subdivision') required @endif
                                                 @switch($field)
                                                     @case('recipient_name') autocomplete="name" maxlength="150" placeholder="Full name" @break
                                                     @case('phone') type="tel" autocomplete="tel" pattern="(\+63|0)9[0-9]{9}" maxlength="13" placeholder="09171234567" @break
-                                                    @case('address_line') autocomplete="street-address" maxlength="255" placeholder="House number, street, and barangay" @break
+                                                    @case('address_line') autocomplete="address-line1" maxlength="255" placeholder="Lot 5 Blk 2, Rizal Street" @break
+                                                    @case('subdivision') autocomplete="address-line2" maxlength="150" @break
+                                                    @case('barangay') autocomplete="address-level3" maxlength="100" @break
                                                     @case('city') autocomplete="address-level2" maxlength="100" @break
                                                     @case('province') autocomplete="address-level1" maxlength="100" @break
                                                     @case('postal_code') inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{4}" maxlength="4" @break

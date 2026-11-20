@@ -25,7 +25,7 @@
                                 <p class="truncate text-sm font-semibold text-ink">{{ $address->recipient_name }}</p>
                                 <p class="mt-1.5 flex items-start gap-2 text-meta text-ink">
                                     <svg class="mt-0.5 size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12Z" /><circle cx="12" cy="9" r="2" /></svg>
-                                    <span class="min-w-0 break-words">{{ $address->address_line }}, {{ $address->city }}@if ($address->province), {{ $address->province }}@endif @if ($address->postal_code){{ $address->postal_code }}@endif</span>
+                                    <span class="min-w-0 break-words">{{ collect([$address->address_line, $address->subdivision, $address->barangay, $address->city])->filter()->join(', ') }}@if ($address->province), {{ $address->province }}@endif @if ($address->postal_code){{ $address->postal_code }}@endif</span>
                                 </p>
                                 <p class="mt-1.5 flex items-center gap-2 text-meta text-muted">
                                     <svg class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2" /><path d="M11 18h2" /></svg>

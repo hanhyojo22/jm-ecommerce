@@ -43,51 +43,30 @@ Future<Address?> _openForm(
 }
 
 void main() {
-  testWidgets(
-    'a checkout address can be edited without province or postal code',
-    (tester) async {
-      Address? saved;
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: TextButton(
-                  onPressed: () async {
-                    saved = await showModalBottomSheet<Address>(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => const AddressForm(
-                        initial: Address(
-                          id: 'address',
-                          recipientName: 'Test Customer',
-                          phone: '09171234567',
-                          addressLine: 'Blue gate, 12 Rizal Street',
-                          city: 'Cebu City',
-                          province: '',
-                          postalCode: '',
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('Edit address'),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.tap(find.text('Edit address'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Update address'));
-      await tester.tap(find.text('Update address'));
-      await tester.pumpAndSettle();
-      expect(saved?.addressLine, 'Blue gate, 12 Rizal Street');
-      expect(saved?.province, '');
-      expect(saved?.postalCode, '');
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets('an older address must be completed before it saves', (
+    tester,
+  ) async {
+    final saved = await _openForm(
+      tester,
+      initial: const Address(
+        id: 'address',
+        recipientName: 'Test Customer',
+        phone: '09171234567',
+        addressLine: 'Blue gate, 12 Rizal Street',
+        city: 'Cebu City',
+        province: '',
+        postalCode: '',
+      ),
+    );
+    await tester.ensureVisible(find.text('Update address'));
+    await tester.tap(find.text('Update address'));
+    await tester.pumpAndSettle();
+
+    expect(saved, isNull);
+    expect(find.text('Enter the barangay.'), findsOneWidget);
+    expect(find.text('Enter the province.'), findsOneWidget);
+    expect(find.text('Use a 4-digit postal code.'), findsOneWidget);
+  });
 
   testWidgets('Use my current location fills the address fields', (
     tester,
@@ -102,14 +81,15 @@ void main() {
     );
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Province (optional)'),
+      find.widgetWithText(TextFormField, 'Province'),
       'Cebu',
     );
     await tester.tap(find.text('Use my current location'));
     await tester.pumpAndSettle();
 
     expect(api.asked, (10.316, 123.8912));
-    expect(find.text('Osmeña Boulevard, Camputhaw'), findsOneWidget);
+    expect(find.text('Osmeña Boulevard'), findsOneWidget);
+    expect(find.text('Camputhaw'), findsOneWidget);
     expect(find.text('Cebu City'), findsOneWidget);
     expect(find.text('6000'), findsOneWidget);
     // The lookup found no province, so what the customer typed stays.
@@ -125,7 +105,10 @@ void main() {
       overrides: [apiClientProvider.overrideWithValue(api)],
     );
 
-    final street = find.widgetWithText(TextFormField, 'Street address');
+    final street = find.widgetWithText(
+      TextFormField,
+      'Unit / house no. and street',
+    );
     await tester.enterText(street, 'ca');
     await tester.pump(const Duration(milliseconds: 400));
     expect(api.searched, isEmpty, reason: 'two letters are too few to search');
@@ -138,7 +121,8 @@ void main() {
     await tester.tap(find.text('Juana Osmeña Extension, Camputhaw, Cebu City'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Juana Osmeña Extension, Camputhaw'), findsOneWidget);
+    expect(find.text('Juana Osmeña Extension'), findsOneWidget);
+    expect(find.text('Camputhaw'), findsOneWidget);
     expect(find.text('Cebu City'), findsOneWidget);
     expect(find.text('6000'), findsOneWidget);
     expect(api.searched, ['camput'], reason: 'picking does not search again');
@@ -176,7 +160,8 @@ class _LookupApi extends ApiClient {
   ) async {
     asked = (latitude, longitude);
     return {
-      'address_line': 'Osmeña Boulevard, Camputhaw',
+      'address_line': 'Osmeña Boulevard',
+      'barangay': 'Camputhaw',
       'city': 'Cebu City',
       'province': '',
       'postal_code': '6000',
@@ -191,7 +176,8 @@ class _LookupApi extends ApiClient {
     return [
       {
         'label': 'Juana Osmeña Extension, Camputhaw, Cebu City',
-        'address_line': 'Juana Osmeña Extension, Camputhaw',
+        'address_line': 'Juana Osmeña Extension',
+        'barangay': 'Camputhaw',
         'city': 'Cebu City',
         'province': '',
         'postal_code': '6000',

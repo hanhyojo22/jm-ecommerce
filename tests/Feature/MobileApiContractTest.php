@@ -110,6 +110,7 @@ class MobileApiContractTest extends TestCase
                 'recipient_name' => 'Ava Buyer',
                 'phone' => '+639171234567',
                 'address_line' => '100 Market Street',
+                'barangay' => 'Ermita',
                 'city' => 'Manila',
                 'province' => 'Metro Manila',
                 'postal_code' => '1000',
@@ -143,7 +144,7 @@ class MobileApiContractTest extends TestCase
             ->assertJsonStructure(['data' => [
                 'id', 'number', 'short_number', 'status', 'created_at', 'subtotal', 'shipping_amount',
                 'total', 'can_pay',
-                'delivery' => ['recipient_name', 'phone', 'address_line', 'city', 'province', 'postal_code'],
+                'delivery' => ['recipient_name', 'phone', 'address_line', 'subdivision', 'barangay', 'city', 'province', 'postal_code'],
                 'payment' => ['method', 'label', 'status', 'amount'],
                 'seller_orders' => ['*' => $sellerOrderShape],
             ]]);

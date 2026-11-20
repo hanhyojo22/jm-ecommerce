@@ -56,7 +56,7 @@ class AddressesScreen extends ConsumerWidget {
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     subtitle: Text(
-                      '${address.addressLine}, ${address.city}, ${address.province} ${address.postalCode}\n${address.phone}',
+                      '${[address.streetLine, address.city, '${address.province} ${address.postalCode}'.trim()].where((part) => part.isNotEmpty).join(', ')}\n${address.phone}',
                     ),
                     isThreeLine: true,
                     trailing: Row(
@@ -194,6 +194,8 @@ class _AddressFormState extends ConsumerState<AddressForm> {
   final _recipient = TextEditingController();
   final _phone = TextEditingController();
   final _line = TextEditingController();
+  final _subdivision = TextEditingController();
+  final _barangay = TextEditingController();
   final _city = TextEditingController();
   final _province = TextEditingController();
   final _postal = TextEditingController();
@@ -211,6 +213,7 @@ class _AddressFormState extends ConsumerState<AddressForm> {
   void _fill(Map<String, dynamic> place) {
     for (final (field, key) in [
       (_line, 'address_line'),
+      (_barangay, 'barangay'),
       (_city, 'city'),
       (_province, 'province'),
       (_postal, 'postal_code'),
@@ -243,7 +246,7 @@ class _AddressFormState extends ConsumerState<AddressForm> {
     }
   }
 
-  /// Fills street, city, province and postal code from where the phone is.
+  /// Fills street, barangay, city and postal code from where the phone is.
   /// Parts the lookup could not find keep whatever the customer typed.
   Future<void> _fillFromLocation() async {
     final location = ref.read(locationServiceProvider);
@@ -290,6 +293,8 @@ class _AddressFormState extends ConsumerState<AddressForm> {
       _recipient.text = initial.recipientName;
       _phone.text = initial.phone;
       _line.text = initial.addressLine;
+      _subdivision.text = initial.subdivision;
+      _barangay.text = initial.barangay;
       _city.text = initial.city;
       _province.text = initial.province;
       _postal.text = initial.postalCode;
@@ -301,6 +306,8 @@ class _AddressFormState extends ConsumerState<AddressForm> {
     _recipient.dispose();
     _phone.dispose();
     _line.dispose();
+    _subdivision.dispose();
+    _barangay.dispose();
     _city.dispose();
     _province.dispose();
     _postal.dispose();
@@ -312,14 +319,19 @@ class _AddressFormState extends ConsumerState<AddressForm> {
     final city = TextFormField(
       controller: _city,
       textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(labelText: 'City'),
+      decoration: const InputDecoration(labelText: 'City / municipality'),
       validator: (value) =>
           (value ?? '').trim().isEmpty ? 'Enter the city.' : null,
     );
     final province = TextFormField(
       controller: _province,
       textCapitalization: TextCapitalization.words,
-      decoration: const InputDecoration(labelText: 'Province (optional)'),
+      decoration: const InputDecoration(
+        labelText: 'Province',
+        hintText: 'Metro Manila if in NCR',
+      ),
+      validator: (value) =>
+          (value ?? '').trim().isEmpty ? 'Enter the province.' : null,
     );
 
     return LayoutBuilder(
@@ -433,12 +445,12 @@ class _AddressFormState extends ConsumerState<AddressForm> {
                                 focusNode: focusNode,
                                 textCapitalization: TextCapitalization.words,
                                 decoration: const InputDecoration(
-                                  labelText: 'Street address',
-                                  hintText: 'Street, barangay or building',
+                                  labelText: 'Unit / house no. and street',
+                                  hintText: 'Lot 5 Blk 2, Rizal Street',
                                 ),
                                 validator: (value) =>
                                     (value ?? '').trim().isEmpty
-                                    ? 'Enter the street address.'
+                                    ? 'Enter the house number and street.'
                                     : null,
                               ),
                       optionsViewBuilder: (context, onSelected, options) =>
@@ -476,17 +488,30 @@ class _AddressFormState extends ConsumerState<AddressForm> {
                     ),
               ),
               const SizedBox(height: 10),
+              TextFormField(
+                controller: _subdivision,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Subdivision / village / building (optional)',
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                controller: _barangay,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Barangay'),
+                validator: (value) =>
+                    (value ?? '').trim().isEmpty ? 'Enter the barangay.' : null,
+              ),
+              const SizedBox(height: 10),
               _cityProvinceFields(context),
               const SizedBox(height: 10),
               TextFormField(
                 controller: _postal,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Postal code (optional)',
-                ),
+                decoration: const InputDecoration(labelText: 'Postal code'),
                 validator: (value) =>
-                    (value ?? '').trim().isEmpty ||
-                        RegExp(r'^\d{4}$').hasMatch((value ?? '').trim())
+                    RegExp(r'^\d{4}$').hasMatch((value ?? '').trim())
                     ? null
                     : 'Use a 4-digit postal code.',
               ),
@@ -503,6 +528,8 @@ class _AddressFormState extends ConsumerState<AddressForm> {
                       recipientName: _recipient.text.trim(),
                       phone: _phone.text.trim(),
                       addressLine: _line.text.trim(),
+                      subdivision: _subdivision.text.trim(),
+                      barangay: _barangay.text.trim(),
                       city: _city.text.trim(),
                       province: _province.text.trim(),
                       postalCode: _postal.text.trim(),

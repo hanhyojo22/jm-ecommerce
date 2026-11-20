@@ -21,6 +21,8 @@ class DeliveryAddressResource extends JsonResource
             'recipient_name' => $this->recipient_name,
             'phone' => $this->phone,
             'address_line' => $this->address_line,
+            'subdivision' => $this->subdivision,
+            'barangay' => $this->barangay,
             'city' => $this->city,
             'province' => $this->province,
             'postal_code' => $this->postal_code,

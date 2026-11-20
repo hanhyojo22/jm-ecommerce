@@ -618,6 +618,8 @@ class Address {
     required this.recipientName,
     required this.phone,
     required this.addressLine,
+    this.subdivision = '',
+    this.barangay = '',
     required this.city,
     required this.province,
     required this.postalCode,
@@ -627,15 +629,26 @@ class Address {
   final String recipientName;
   final String phone;
   final String addressLine;
+  final String subdivision;
+  final String barangay;
   final String city;
   final String province;
   final String postalCode;
+
+  /// House no. and street, then subdivision and barangay, skipping blanks.
+  String get streetLine => [
+    addressLine,
+    subdivision,
+    barangay,
+  ].where((part) => part.isNotEmpty).join(', ');
 
   factory Address.fromJson(Map<String, dynamic> json) => Address(
     id: json['id'] as String?,
     recipientName: str(json['recipient_name']),
     phone: str(json['phone']),
     addressLine: str(json['address_line']),
+    subdivision: str(json['subdivision']),
+    barangay: str(json['barangay']),
     city: str(json['city']),
     province: str(json['province']),
     postalCode: str(json['postal_code']),
@@ -645,6 +658,8 @@ class Address {
     'recipient_name': recipientName,
     'phone': phone,
     'address_line': addressLine,
+    'subdivision': subdivision,
+    'barangay': barangay,
     'city': city,
     'province': province,
     'postal_code': postalCode,
@@ -655,6 +670,8 @@ class Address {
     String? recipientName,
     String? phone,
     String? addressLine,
+    String? subdivision,
+    String? barangay,
     String? city,
     String? province,
     String? postalCode,
@@ -663,6 +680,8 @@ class Address {
     recipientName: recipientName ?? this.recipientName,
     phone: phone ?? this.phone,
     addressLine: addressLine ?? this.addressLine,
+    subdivision: subdivision ?? this.subdivision,
+    barangay: barangay ?? this.barangay,
     city: city ?? this.city,
     province: province ?? this.province,
     postalCode: postalCode ?? this.postalCode,
@@ -835,6 +854,8 @@ class DeliveryInfo {
     required this.recipientName,
     required this.phone,
     required this.addressLine,
+    this.subdivision = '',
+    this.barangay = '',
     required this.city,
     required this.province,
     required this.postalCode,
@@ -844,15 +865,26 @@ class DeliveryInfo {
   final String recipientName;
   final String phone;
   final String addressLine;
+  final String subdivision;
+  final String barangay;
   final String city;
   final String province;
   final String postalCode;
   final String? note;
 
+  /// House no. and street, then subdivision and barangay, skipping blanks.
+  String get streetLine => [
+    addressLine,
+    subdivision,
+    barangay,
+  ].where((part) => part.isNotEmpty).join(', ');
+
   factory DeliveryInfo.fromJson(Map<String, dynamic> json) => DeliveryInfo(
     recipientName: str(json['recipient_name']),
     phone: str(json['phone']),
     addressLine: str(json['address_line']),
+    subdivision: str(json['subdivision']),
+    barangay: str(json['barangay']),
     city: str(json['city']),
     province: str(json['province']),
     postalCode: str(json['postal_code']),

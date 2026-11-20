@@ -94,7 +94,7 @@
                             <dt class="mt-3 border-t border-line-soft pt-4 text-muted">Payment</dt>
                             <dd class="mt-3 border-t border-line-soft pt-4 text-ink"><span class="font-semibold">{{ $methodLabel }}</span><span class="mt-0.5 block text-xs leading-[1.45] text-muted">{{ $isCod ? 'Have '.$total.' ready for the courier.' : ($isPaid ? 'Paid through PayMongo. Each store gets its share automatically.' : 'Pay on PayMongo’s secure page.') }}</span></dd>
                             <dt class="text-muted">Deliver to</dt>
-                            <dd class="text-ink"><address class="not-italic">{{ $order->recipient_name }}<br>{{ $order->address_line }}<br>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}<br><span class="tabular-nums text-muted">{{ $order->phone }}</span></address></dd>
+                            <dd class="text-ink"><address class="not-italic">{{ $order->recipient_name }}<br>{{ collect([$order->address_line, $order->subdivision, $order->barangay])->filter()->join(', ') }}<br>{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}<br><span class="tabular-nums text-muted">{{ $order->phone }}</span></address></dd>
                         </dl>
 
                         <div class="px-6 pb-5 print:hidden">

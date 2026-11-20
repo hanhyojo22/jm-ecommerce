@@ -906,8 +906,8 @@ class ApiClient {
   }
 }
 
-/// A Photon place as the address form's fields: building, street and barangay
-/// on the address line. OpenStreetMap gives the Philippines regions, not
+/// A Photon place as the address form's fields: building and street on the
+/// address line, the district or locality as the barangay. OpenStreetMap gives the Philippines regions, not
 /// provinces, so province stays empty for the customer to fill in.
 Map<String, dynamic> photonAddressFields(Map<String, dynamic> feature) {
   final place = mapOf(feature['properties']);
@@ -922,12 +922,13 @@ Map<String, dynamic> photonAddressFields(Map<String, dynamic> feature) {
       ? null
       : [text('housenumber'), streetName].whereType<String>().join(' ');
   final building = kind == 'highway' || kind == 'place' ? null : text('name');
-  final area =
+  final barangay =
       text('district') ??
       text('locality') ??
-      (kind == 'place' ? text('name') : null);
+      (kind == 'place' ? text('name') : null) ??
+      '';
   final line = <String>[];
-  for (final part in [building, street, area]) {
+  for (final part in [building, street]) {
     if (part != null && !line.contains(part)) {
       line.add(part);
     }
@@ -937,8 +938,13 @@ Map<String, dynamic> photonAddressFields(Map<String, dynamic> feature) {
   final postcode = text('postcode') ?? '';
 
   return {
-    'label': [addressLine, city].where((part) => part.isNotEmpty).join(', '),
+    'label': [
+      addressLine,
+      barangay,
+      city,
+    ].where((part) => part.isNotEmpty).join(', '),
     'address_line': addressLine,
+    'barangay': barangay,
     'city': city,
     'province': '',
     'postal_code': RegExp(r'^\d{4}$').hasMatch(postcode) ? postcode : '',

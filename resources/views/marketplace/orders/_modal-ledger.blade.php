@@ -389,7 +389,7 @@
                     </button>
                 </p>
             @endif
-            <p class="fact-line">{{ $order->address_line }}</p>
+            <p class="fact-line">{{ collect([$order->address_line, $order->subdivision, $order->barangay])->filter()->join(', ') }}</p>
             <p class="fact-line">{{ collect([$order->city, $order->province])->filter()->join(', ') }} {{ $order->postal_code }}</p>
             @if ($order->delivery_note)<p class="fact-note">“{{ $order->delivery_note }}”</p>@endif
         </section>

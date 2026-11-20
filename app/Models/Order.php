@@ -21,6 +21,8 @@ class Order extends Model
         'recipient_name',
         'phone',
         'address_line',
+        'subdivision',
+        'barangay',
         'city',
         'province',
         'postal_code',

@@ -678,7 +678,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
                       ] else
                         Text(
                           [
-                            order.delivery.addressLine,
+                            order.delivery.streetLine,
                             order.delivery.city,
                             '${order.delivery.province} ${order.delivery.postalCode}'
                                 .trim(),
@@ -1356,7 +1356,7 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
               const SizedBox(height: 4),
               Text(
                 [
-                  order.delivery.addressLine,
+                  order.delivery.streetLine,
                   order.delivery.city,
                   '${order.delivery.province} ${order.delivery.postalCode}'
                       .trim(),

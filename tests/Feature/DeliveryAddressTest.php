@@ -17,7 +17,9 @@ class DeliveryAddressTest extends TestCase
         $address = [
             'recipient_name' => 'Ava Seller',
             'phone' => '+639171234567',
-            'address_line' => '10 Market Street',
+            'address_line' => 'Unit 4B, 10 Market Street',
+            'subdivision' => 'Greenhills Village',
+            'barangay' => 'Ermita',
             'city' => 'Manila',
             'province' => 'Metro Manila',
             'postal_code' => '1000',
@@ -27,7 +29,8 @@ class DeliveryAddressTest extends TestCase
             ->assertRedirect(route('delivery-addresses.index'));
         $saved = DeliveryAddress::query()->sole();
         $this->assertSame($seller->id, $saved->user_id);
-        $this->actingAs($seller)->get(route('delivery-addresses.index'))->assertOk()->assertSee('10 Market Street');
+        $this->assertSame(['Greenhills Village', 'Ermita'], [$saved->subdivision, $saved->barangay]);
+        $this->actingAs($seller)->get(route('delivery-addresses.index'))->assertOk()->assertSee('Unit 4B, 10 Market Street, Greenhills Village, Ermita, Manila');
 
         $this->actingAs($seller)->patch(route('delivery-addresses.update', $saved), [
             ...$address,
@@ -56,16 +59,16 @@ class DeliveryAddressTest extends TestCase
         $this->assertDatabaseCount('delivery_addresses', 0);
     }
 
-    public function test_a_checkout_address_without_province_or_postal_code_can_be_edited(): void
+    public function test_an_older_address_must_be_completed_when_edited(): void
     {
         $buyer = User::factory()->create(['email_verified_at' => now()]);
-        $address = DeliveryAddress::factory()->for($buyer, 'user')->create(['province' => null, 'postal_code' => null]);
+        $address = DeliveryAddress::factory()->for($buyer, 'user')->create(['barangay' => null, 'province' => null, 'postal_code' => null]);
 
         $this->actingAs($buyer)->patchJson('/api/v1/delivery-addresses/'.$address->id, [
             'recipient_name' => 'Ava Buyer', 'phone' => '09171234567', 'address_line' => 'Blue gate, 12 Rizal Street',
-            'city' => 'Cebu City', 'province' => '', 'postal_code' => '',
-        ])->assertOk()->assertJsonPath('data.address_line', 'Blue gate, 12 Rizal Street');
-        $this->assertDatabaseHas('delivery_addresses', ['id' => $address->id, 'province' => null, 'postal_code' => null]);
+            'barangay' => '', 'city' => 'Cebu City', 'province' => '', 'postal_code' => '',
+        ])->assertUnprocessable()->assertJsonStructure(['error' => ['fields' => ['barangay', 'province', 'postal_code']]]);
+        $this->assertDatabaseHas('delivery_addresses', ['id' => $address->id, 'barangay' => null]);
     }
 
     public function test_a_shopper_cannot_read_or_change_another_accounts_address(): void

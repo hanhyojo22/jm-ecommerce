@@ -170,7 +170,7 @@
                     <dl class="sc-dl mt-4">
                         <div><dt>Recipient</dt><dd class="font-medium">{{ $sellerOrder->order->recipient_name }}</dd></div>
                         <div><dt>Phone</dt><dd class="font-medium">{{ $sellerOrder->order->phone }}</dd></div>
-                        <div><dt>Address</dt><dd>{{ $sellerOrder->order->address_line }}<br>{{ collect([$sellerOrder->order->city, $sellerOrder->order->province])->filter()->join(', ') }} {{ $sellerOrder->order->postal_code }}</dd></div>
+                        <div><dt>Address</dt><dd>{{ collect([$sellerOrder->order->address_line, $sellerOrder->order->subdivision, $sellerOrder->order->barangay])->filter()->join(', ') }}<br>{{ collect([$sellerOrder->order->city, $sellerOrder->order->province])->filter()->join(', ') }} {{ $sellerOrder->order->postal_code }}</dd></div>
                         @if ($sellerOrder->order->delivery_note)<div><dt>Delivery note</dt><dd class="whitespace-pre-line">{{ $sellerOrder->order->delivery_note }}</dd></div>@endif
                         @if ($sellerOrder->rider_name)<div><dt>Rider</dt><dd class="font-medium">{{ $sellerOrder->rider_name }} · {{ $sellerOrder->rider_phone }}</dd></div>@endif
                     </dl>

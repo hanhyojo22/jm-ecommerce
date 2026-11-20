@@ -27,7 +27,7 @@ class CheckoutCart
     public function __construct(private BranchInventory $inventory) {}
 
     /**
-     * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
+     * @param  array{recipient_name: string, phone: string, address_line: string, subdivision?: ?string, barangay?: ?string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      * @param  'cod'|'gcash'|'maya'|'card'  $paymentMethod  an online method is paid through one PayMongo checkout opened right after this
      * @param  ?string  $clientRequestId  a caller-generated key that makes a retried checkout return the original order
      * @param  'delivery'|'pickup'  $fulfillmentMethod  pickup is collected at the branch: no fee, and 'cod' means pay at the counter
@@ -114,7 +114,7 @@ class CheckoutCart
 
                 // A pickup order is collected at the branch, so the branch address is what goes on it.
                 if ($fulfillmentMethod === 'pickup') {
-                    $delivery = [...$delivery, 'address_line' => $branch->address_line, 'city' => $branch->city, 'province' => $branch->province, 'postal_code' => $branch->postal_code];
+                    $delivery = [...$delivery, 'address_line' => $branch->address_line, 'subdivision' => null, 'barangay' => null, 'city' => $branch->city, 'province' => $branch->province, 'postal_code' => $branch->postal_code];
                 }
 
                 $products = Product::query()
@@ -383,7 +383,7 @@ class CheckoutCart
     /**
      * The checkout payload, minus the cart, so a retry with the same details matches.
      *
-     * @param  array{recipient_name: string, phone: string, address_line: string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
+     * @param  array{recipient_name: string, phone: string, address_line: string, subdivision?: ?string, barangay?: ?string, city: string, province: string, postal_code: string, delivery_note?: ?string}  $delivery
      */
     private function fingerprint(array $delivery, string $paymentMethod, string $fulfillmentMethod, ?array $deliveryPin, ?string $branchId, ?array $discountCard = null): string
     {
@@ -391,6 +391,8 @@ class CheckoutCart
             'recipient_name' => trim((string) ($delivery['recipient_name'] ?? '')),
             'phone' => trim((string) ($delivery['phone'] ?? '')),
             'address_line' => trim((string) ($delivery['address_line'] ?? '')),
+            'subdivision' => trim((string) ($delivery['subdivision'] ?? '')),
+            'barangay' => trim((string) ($delivery['barangay'] ?? '')),
             'city' => trim((string) ($delivery['city'] ?? '')),
             'province' => trim((string) ($delivery['province'] ?? '')),
             'postal_code' => trim((string) ($delivery['postal_code'] ?? '')),

@@ -234,12 +234,13 @@ test('seller shops another store and returns to Seller Center with the same acco
         await rejectOptionalCookies(page);
         await page.getByLabel('Recipient name').fill('QA Seller');
         await page.getByLabel('Mobile number').fill('+639171234567');
-        await page.getByLabel('Street address').fill('20 QA Street');
+        await page.getByLabel('Unit / house no. and street').fill('20 QA Street');
+        await page.getByLabel('Barangay').fill('Poblacion');
         await page.getByLabel('City').fill('Manila');
         await page.getByLabel('Province').fill('Metro Manila');
         await page.getByLabel('Postal code').fill('1000');
         await page.getByRole('button', { name: 'Save address' }).click();
-        await expect(page.getByText('20 QA Street, Manila, Metro Manila 1000', { exact: true })).toBeVisible();
+        await expect(page.getByText('20 QA Street, Poblacion, Manila, Metro Manila 1000', { exact: true })).toBeVisible();
 
         await page.goto('/stores/qa-northwind-store/products/qa-canvas-tote');
         await expect(page.locator('#purchase').getByRole('button', { name: 'Add to cart' })).toHaveCount(0);
@@ -248,8 +249,8 @@ test('seller shops another store and returns to Seller Center with the same acco
         await page.locator('#purchase').getByRole('button', { name: 'Add to cart' }).click();
         await page.getByRole('link', { name: 'Cart: 1 item' }).click();
         await page.getByRole('link', { name: /^Check out(?:\s*\(\s*\d+\s*\))?$/ }).click();
-        await page.getByRole('radio', { name: /^QA Seller 20 QA Street, Manila/ }).check();
-        await expect(page.getByLabel('Street address')).toHaveValue('20 QA Street');
+        await page.getByRole('radio', { name: /^QA Seller 20 QA Street, Poblacion, Manila/ }).check();
+        await expect(page.getByLabel('Unit / house no. and street')).toHaveValue('20 QA Street');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
         await page.locator('#checkout-form').getByRole('button', { name: /Place order/ }).click();
@@ -289,12 +290,13 @@ test('customer can place a COD order from the product page through checkout', as
         await checkoutLink.click();
         await page.getByLabel('Recipient name').fill('Ava QA Customer');
         await page.getByLabel('Mobile number').fill('+639171234567');
-        await page.getByLabel('Street address').fill('10 QA Street');
+        await page.getByLabel('Unit / house no. and street').fill('10 QA Street');
+        await page.getByLabel('Barangay').fill('Poblacion');
         await page.getByLabel('City').fill('Manila');
         await page.getByRole('button', { name: 'Continue to payment' }).click();
-        await expect(page.locator('#step-1-title')).toContainText('Ava QA Customer · 10 QA Street · Manila');
+        await expect(page.locator('#step-1-title')).toContainText('Ava QA Customer · 10 QA Street · Poblacion · Manila');
         await page.locator('#checkout-form').getByRole('button', { name: 'Review order' }).click();
-        await expect(page.locator('#step-3-body')).toContainText('10 QA Street, Manila');
+        await expect(page.locator('#step-3-body')).toContainText('10 QA Street, Poblacion, Manila');
         await page.getByLabel('Delivery note').fill('Blue gate');
         const deliveryBox = await page.locator('#step-1-title').boundingBox();
         const summaryBox = await page.locator('#checkout-summary-heading').boundingBox();
@@ -340,7 +342,7 @@ test('mobile checkout stacks the summary and shows server field errors', async (
         }
         await page.getByLabel('Recipient name').fill('');
         await page.getByLabel('Mobile number').fill('');
-        await page.getByLabel('Street address').fill('');
+        await page.getByLabel('Unit / house no. and street').fill('');
         await page.getByLabel('City').fill('');
         await form.evaluate(element => { element.noValidate = true; });
         await page.getByRole('button', { name: 'Continue', exact: true }).click();
@@ -353,7 +355,8 @@ test('mobile checkout stacks the summary and shows server field errors', async (
 
         await page.getByLabel('Recipient name').fill('Ava QA Customer');
         await page.getByLabel('Mobile number').fill('+639171234567');
-        await page.getByLabel('Street address').fill('10 QA Street');
+        await page.getByLabel('Unit / house no. and street').fill('10 QA Street');
+        await page.getByLabel('Barangay').fill('Poblacion');
         await page.getByLabel('City').fill('Manila');
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
     } finally {
