@@ -86,6 +86,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/delivery-addresses/lookup', [DeliveryAddressController::class, 'lookup'])
             ->middleware('throttle:20,1')
             ->name('api.v1.delivery-addresses.lookup');
+        Route::get('/delivery-addresses/search', [DeliveryAddressController::class, 'search'])
+            ->middleware('throttle:60,1')
+            ->name('api.v1.delivery-addresses.search');
         Route::post('/delivery-addresses', [DeliveryAddressController::class, 'store'])
             ->middleware('throttle:10,1')
             ->name('api.v1.delivery-addresses.store');

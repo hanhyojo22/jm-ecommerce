@@ -197,8 +197,51 @@ class _AddressFormState extends ConsumerState<AddressForm> {
   final _city = TextEditingController();
   final _province = TextEditingController();
   final _postal = TextEditingController();
+  final _lineFocus = FocusNode();
   bool _locating = false;
   String? _locationError;
+
+  /// The street line a suggestion just filled in, so filling it does not
+  /// immediately search for it again.
+  String? _picked;
+  String _latestQuery = '';
+
+  /// Copies a looked-up place into the form. Parts it lacks keep whatever the
+  /// customer typed.
+  void _fill(Map<String, dynamic> place) {
+    for (final (field, key) in [
+      (_line, 'address_line'),
+      (_city, 'city'),
+      (_province, 'province'),
+      (_postal, 'postal_code'),
+    ]) {
+      final value = (place[key] as String? ?? '').trim();
+      if (value.isNotEmpty) {
+        field.text = value;
+      }
+    }
+  }
+
+  /// Suggestions for the street field, once the customer pauses typing.
+  Future<Iterable<Map<String, dynamic>>> _suggest(
+    TextEditingValue value,
+  ) async {
+    final query = value.text.trim();
+    if (query.length < 3 || query == _picked) {
+      return const [];
+    }
+    _latestQuery = query;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (query != _latestQuery || !mounted) {
+      return const [];
+    }
+    try {
+      return await ref.read(apiClientProvider).searchAddresses(query);
+    } on ApiException {
+      // Suggestions are a convenience; typing the address still works.
+      return const [];
+    }
+  }
 
   /// Fills street, city, province and postal code from where the phone is.
   /// Parts the lookup could not find keep whatever the customer typed.
@@ -216,19 +259,8 @@ class _AddressFormState extends ConsumerState<AddressForm> {
       final place = await ref
           .read(apiClientProvider)
           .lookupAddress(here.latitude, here.longitude);
-      if (!mounted) {
-        return;
-      }
-      for (final (field, key) in [
-        (_line, 'address_line'),
-        (_city, 'city'),
-        (_province, 'province'),
-        (_postal, 'postal_code'),
-      ]) {
-        final value = (place[key] as String? ?? '').trim();
-        if (value.isNotEmpty) {
-          field.text = value;
-        }
+      if (mounted) {
+        _fill(place);
       }
     } on LocationFailure catch (failure) {
       _locationError = switch (failure.issue) {
@@ -272,6 +304,7 @@ class _AddressFormState extends ConsumerState<AddressForm> {
     _city.dispose();
     _province.dispose();
     _postal.dispose();
+    _lineFocus.dispose();
     super.dispose();
   }
 
@@ -380,13 +413,67 @@ class _AddressFormState extends ConsumerState<AddressForm> {
                     : 'Use a valid PH mobile number.',
               ),
               const SizedBox(height: 10),
-              TextFormField(
-                controller: _line,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Street address'),
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? 'Enter the street address.'
-                    : null,
+              LayoutBuilder(
+                builder: (context, constraints) =>
+                    RawAutocomplete<Map<String, dynamic>>(
+                      textEditingController: _line,
+                      focusNode: _lineFocus,
+                      optionsBuilder: _suggest,
+                      displayStringForOption: (place) =>
+                          place['address_line'] as String? ?? '',
+                      onSelected: (place) {
+                        _picked = (place['address_line'] as String? ?? '')
+                            .trim();
+                        _fill(place);
+                      },
+                      fieldViewBuilder:
+                          (context, controller, focusNode, onSubmitted) =>
+                              TextFormField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                  labelText: 'Street address',
+                                  hintText: 'Street, barangay or building',
+                                ),
+                                validator: (value) =>
+                                    (value ?? '').trim().isEmpty
+                                    ? 'Enter the street address.'
+                                    : null,
+                              ),
+                      optionsViewBuilder: (context, onSelected, options) =>
+                          Align(
+                            alignment: Alignment.topLeft,
+                            child: Material(
+                              elevation: 4,
+                              borderRadius: BorderRadius.circular(12),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  maxHeight: 260,
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                                child: ListView(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  children: [
+                                    for (final place in options)
+                                      ListTile(
+                                        dense: true,
+                                        leading: const Icon(
+                                          Icons.place_outlined,
+                                          size: 20,
+                                        ),
+                                        title: Text(
+                                          place['label'] as String? ?? '',
+                                        ),
+                                        onTap: () => onSelected(place),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                    ),
               ),
               const SizedBox(height: 10),
               _cityProvinceFields(context),

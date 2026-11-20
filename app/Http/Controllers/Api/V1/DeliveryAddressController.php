@@ -27,9 +27,9 @@ class DeliveryAddressController extends Controller
     }
 
     /**
-     * Turn the customer's location into address fields for the app's address form, using
-     * OpenStreetMap's Nominatim. Lookups are cached per ~11 m cell, since its usage policy asks
-     * for light, cached traffic.
+     * Turn the customer's location into address fields for the app's address form: the nearest
+     * street, its barangay, city and postal code, from Photon (OpenStreetMap data). Cached per
+     * ~11 m cell, since the public Photon service asks for light traffic.
      */
     public function lookup(Request $request): JsonResponse
     {
@@ -43,36 +43,90 @@ class DeliveryAddressController extends Controller
         $longitude = round((float) $coordinates['longitude'], 4);
 
         try {
-            $place = Cache::remember("address-lookup:{$latitude},{$longitude}", now()->addDay(), fn (): ?array => Http::withUserAgent('EverydayPharmacy/1.0 (delivery address lookup)')
-                ->timeout(8)
-                ->get('https://nominatim.openstreetmap.org/reverse', [
-                    'format' => 'jsonv2',
-                    'lat' => $latitude,
-                    'lon' => $longitude,
-                    'zoom' => 18,
-                    'addressdetails' => 1,
-                    'accept-language' => 'en',
-                ])
-                ->throw()
-                ->json('address'));
+            $features = Cache::remember("address-lookup:{$latitude},{$longitude}", now()->addDay(), fn (): array => $this->photon('reverse', [
+                'lat' => $latitude,
+                'lon' => $longitude,
+                'layer' => 'street',
+                'limit' => 1,
+            ]));
         } catch (ConnectionException|RequestException) {
             return ApiError::response('address_lookup_failed', 'We could not look up your address. Type it in instead.', 503);
         }
 
-        if (! is_array($place)) {
+        if ($features === []) {
             return ApiError::response('address_not_found', 'No street address was found here. Type it in instead.', 422);
         }
 
-        $street = trim(($place['house_number'] ?? '').' '.($place['road'] ?? ''));
-        $area = $place['quarter'] ?? $place['suburb'] ?? $place['neighbourhood'] ?? $place['village'] ?? null;
+        return response()->json(['data' => $this->addressFields($features[0])]);
+    }
+
+    /**
+     * Address suggestions as the customer types a street, barangay or building, limited to the
+     * Philippines. Each one carries the fields it fills in.
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', DeliveryAddress::class);
+
+        $query = trim($request->validate(['q' => ['required', 'string', 'min:3', 'max:100']])['q']);
+
+        try {
+            $features = Cache::remember('address-search:'.mb_strtolower($query), now()->addDay(), fn (): array => $this->photon('api', [
+                'q' => $query,
+                'limit' => 8,
+                'bbox' => '116.9,4.5,126.7,21.2',
+            ]));
+        } catch (ConnectionException|RequestException) {
+            return ApiError::response('address_lookup_failed', 'Address suggestions are not available right now.', 503);
+        }
+
+        $suggestions = collect($features)
+            ->map(fn (array $feature): array => $this->addressFields($feature))
+            ->filter(fn (array $fields): bool => $fields['address_line'] !== '')
+            ->map(fn (array $fields): array => ['label' => implode(', ', array_filter([$fields['address_line'], $fields['city']])), ...$fields])
+            ->unique('label')
+            ->values();
+
+        return response()->json(['data' => $suggestions]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     * @return list<array<string, mixed>>
+     */
+    private function photon(string $endpoint, array $query): array
+    {
+        return Http::withUserAgent('EverydayPharmacy/1.0 (delivery address lookup)')
+            ->timeout(8)
+            ->get("https://photon.komoot.io/{$endpoint}", [...$query, 'lang' => 'en'])
+            ->throw()
+            ->json('features') ?? [];
+    }
+
+    /**
+     * A Photon place as the address form's fields: building, street and barangay on the
+     * address line. OpenStreetMap gives the Philippines regions, not provinces, so province
+     * stays empty for the customer to fill in.
+     *
+     * @param  array<string, mixed>  $feature
+     * @return array{address_line: string, city: string, province: string, postal_code: string}
+     */
+    private function addressFields(array $feature): array
+    {
+        $place = $feature['properties'] ?? [];
+        $kind = $place['osm_key'] ?? '';
+        $street = $kind === 'highway' ? ($place['name'] ?? null) : ($place['street'] ?? null);
+        $street = $street !== null ? trim(($place['housenumber'] ?? '').' '.$street) : null;
+        $building = in_array($kind, ['highway', 'place'], true) ? null : ($place['name'] ?? null);
+        $area = $place['district'] ?? $place['locality'] ?? ($kind === 'place' ? ($place['name'] ?? null) : null);
         $postcode = (string) ($place['postcode'] ?? '');
 
-        return response()->json(['data' => [
-            'address_line' => implode(', ', array_filter([$street, $area])),
-            'city' => (string) ($place['city'] ?? $place['town'] ?? $place['municipality'] ?? ''),
-            'province' => (string) ($place['province'] ?? $place['state'] ?? ''),
+        return [
+            'address_line' => implode(', ', array_unique(array_filter([$building, $street, $area]))),
+            'city' => (string) ($place['city'] ?? $place['county'] ?? ''),
+            'province' => '',
             'postal_code' => preg_match('/^\d{4}$/', $postcode) === 1 ? $postcode : '',
-        ]]);
+        ];
     }
 
     public function store(DeliveryAddressRequest $request): JsonResponse

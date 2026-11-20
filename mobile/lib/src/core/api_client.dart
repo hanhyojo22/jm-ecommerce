@@ -657,6 +657,13 @@ class ApiClient {
     ),
   );
 
+  /// Places matching what the customer typed (3+ characters), each with a
+  /// `label` to show and the same fields as [lookupAddress].
+  Future<List<Map<String, dynamic>>> searchAddresses(String query) async =>
+      listOf(
+        await _data('GET', '/delivery-addresses/search', query: {'q': query}),
+      );
+
   Future<Address> createAddress(Address address) async => Address.fromJson(
     mapOf(await _data('POST', '/delivery-addresses', data: address.toJson())),
   );

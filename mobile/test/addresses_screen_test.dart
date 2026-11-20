@@ -116,6 +116,34 @@ void main() {
     expect(find.text('Cebu'), findsOneWidget);
   });
 
+  testWidgets('typing part of an address offers matching places', (
+    tester,
+  ) async {
+    final api = _LookupApi();
+    await _openForm(
+      tester,
+      overrides: [apiClientProvider.overrideWithValue(api)],
+    );
+
+    final street = find.widgetWithText(TextFormField, 'Street address');
+    await tester.enterText(street, 'ca');
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(api.searched, isEmpty, reason: 'two letters are too few to search');
+
+    await tester.enterText(street, 'camput');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(api.searched, ['camput']);
+
+    await tester.tap(find.text('Juana Osmeña Extension, Camputhaw, Cebu City'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Juana Osmeña Extension, Camputhaw'), findsOneWidget);
+    expect(find.text('Cebu City'), findsOneWidget);
+    expect(find.text('6000'), findsOneWidget);
+    expect(api.searched, ['camput'], reason: 'picking does not search again');
+  });
+
   testWidgets('a blocked location explains how to turn it on', (tester) async {
     await _openForm(
       tester,
@@ -153,6 +181,22 @@ class _LookupApi extends ApiClient {
       'province': '',
       'postal_code': '6000',
     };
+  }
+
+  final List<String> searched = [];
+
+  @override
+  Future<List<Map<String, dynamic>>> searchAddresses(String query) async {
+    searched.add(query);
+    return [
+      {
+        'label': 'Juana Osmeña Extension, Camputhaw, Cebu City',
+        'address_line': 'Juana Osmeña Extension, Camputhaw',
+        'city': 'Cebu City',
+        'province': '',
+        'postal_code': '6000',
+      },
+    ];
   }
 }
 
