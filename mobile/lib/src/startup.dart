@@ -45,8 +45,6 @@ class _StartupErrorApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'Everyday Pharmacy',
     theme: buildAppTheme(),
-    darkTheme: buildAppTheme(brightness: Brightness.dark),
-    themeMode: ThemeMode.system,
     debugShowCheckedModeBanner: false,
     home: Scaffold(
       body: SafeArea(

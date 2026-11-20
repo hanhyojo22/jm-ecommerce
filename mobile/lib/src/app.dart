@@ -19,8 +19,6 @@ class JmMartApp extends StatelessWidget {
       return MaterialApp(
         title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
-        darkTheme: buildAppTheme(brightness: Brightness.dark),
-        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         home: const MissingConfigScreen(),
       );
@@ -31,8 +29,6 @@ class JmMartApp extends StatelessWidget {
       child: MaterialApp.router(
         title: 'Everyday Pharmacy',
         theme: buildAppTheme(),
-        darkTheme: buildAppTheme(brightness: Brightness.dark),
-        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         routerConfig: appRouter,
         // ClerkErrorListener needs MaterialApp's ScaffoldMessenger.
