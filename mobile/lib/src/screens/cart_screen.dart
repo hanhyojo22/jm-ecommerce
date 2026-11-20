@@ -151,11 +151,6 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         ],
                       ),
                     ),
-                    if (value.lines.any((line) => line.requiresPrescription))
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: _PrescriptionNote(),
-                      ),
                   ],
                 ),
               ),
@@ -341,46 +336,6 @@ class _BranchLine extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Tells the shopper early that checkout will ask for a prescription.
-class _PrescriptionNote extends StatelessWidget {
-  const _PrescriptionNote();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 20,
-              color: scheme.onTertiaryContainer,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Some medicines need a prescription. You’ll add a photo of it at checkout.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onTertiaryContainer,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
