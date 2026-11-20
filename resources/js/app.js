@@ -340,6 +340,8 @@ window.addEventListener('pageshow', () => {
 
 const clerkAuthAppearance = {
     ...clerkComponentAppearance,
+    // The sign-in page is drawn in the Everyday navy, so its Continue button is too.
+    variables: { ...clerkComponentAppearance.variables, colorPrimary: '#071c94' },
     elements: {
         ...clerkComponentAppearance.elements,
         header: { display: 'none' },
