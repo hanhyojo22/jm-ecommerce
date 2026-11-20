@@ -329,9 +329,7 @@ void main() {
     ));
   });
 
-  testWidgets('the ID photo fills only the fields left empty', (
-    tester,
-  ) async {
+  testWidgets('the ID photo fills only the fields left empty', (tester) async {
     final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
     await _pump(
       tester,

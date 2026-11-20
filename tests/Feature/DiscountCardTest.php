@@ -13,6 +13,7 @@ use App\Models\TenantMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use RuntimeException;
@@ -326,19 +327,32 @@ class DiscountCardTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'order.discount_id_reviewed', 'entity_id' => $sellerOrder->id]);
     }
 
-    public function test_an_id_photo_saved_before_encryption_still_opens(): void
+    public function test_id_photos_saved_before_encryption_are_encrypted_in_place_and_still_open(): void
     {
         $this->actingAs($this->buyerWithCart())->post(route('checkout.store'), [
             ...$this->delivery(),
             'discount_card' => ['type' => 'senior', 'id_number' => 'SC-4821', 'name' => 'Lola Ava'],
             'discount_document' => UploadedFile::fake()->image('senior-id.jpg'),
+            'save_discount_card' => '1',
         ])->assertSessionHasNoErrors();
         $order = Order::sole();
-        Storage::disk('chat_attachments')->put($order->discount_document_path, 'plain-photo-bytes');
+        $card = DiscountCard::query()->sole();
+        $disk = Storage::disk('chat_attachments');
+        $disk->put($order->discount_document_path, 'plain-order-photo');
+        $disk->put($card->document_path, 'plain-card-photo');
+        $staff = $this->staff();
 
-        $response = $this->actingAs($this->staff())->get(route('seller.orders.discount-document.show', $order->sellerOrders()->sole()))->assertOk();
+        $this->actingAs($staff)->get(route('seller.orders.discount-document.show', $order->sellerOrders()->sole()))->assertContent('plain-order-photo');
 
-        $this->assertSame('plain-photo-bytes', $response->getContent());
+        $migration = require database_path('migrations/2026_11_20_222858_encrypt_existing_discount_id_photos.php');
+        $migration->up();
+        $encrypted = $disk->get($card->document_path);
+        $migration->up();
+
+        $this->assertSame($encrypted, $disk->get($card->document_path), 'A second run leaves encrypted photos alone.');
+        $this->assertSame('plain-card-photo', Crypt::decryptString($encrypted));
+        $this->assertNotSame('plain-order-photo', $disk->get($order->discount_document_path));
+        $this->actingAs($staff)->get(route('seller.orders.discount-document.show', $order->sellerOrders()->sole()))->assertContent('plain-order-photo');
     }
 
     public function test_finished_orders_lose_their_id_photo_after_thirty_days_but_keep_the_card_record(): void
@@ -366,6 +380,8 @@ class DiscountCardTest extends TestCase
         $this->assertSame(['SC-4821', 'Lola Ava'], [$finished->discount_card_number, $finished->discount_card_name]);
         Storage::disk('chat_attachments')->assertExists($running->refresh()->discount_document_path);
         Storage::disk('chat_attachments')->assertExists($card->refresh()->document_path);
+        $this->actingAs($this->staff())->get(route('seller.orders.show', $finished->sellerOrders()->sole()), ['X-Order-Modal' => '1'])
+            ->assertSee('The ID photo was deleted 30 days after the order ended.')->assertDontSee('No ID photo was submitted.');
     }
 
     public function test_discount_documents_and_reviews_are_scoped_to_the_fulfilling_branch(): void
@@ -542,7 +558,7 @@ class DiscountCardTest extends TestCase
         ])->assertSessionHasNoErrors();
         $order = Order::sole();
         // Orders placed before the photo was required have none.
-        $order->forceFill(['discount_document_path' => null])->save();
+        $order->forceFill(['discount_document_path' => null, 'discount_document_name' => null])->save();
         $sellerOrder = $order->sellerOrders()->sole();
         $this->actingAs($this->staff())->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
             ->assertSee('No ID photo was submitted.')->assertDontSee('Mark ID reviewed');

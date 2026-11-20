@@ -38,7 +38,7 @@
         @endif
         </div></div>
     @else
-        <div class="sc-document-viewer"><p>No ID photo was submitted.</p></div>
+        <div class="sc-document-viewer"><p>{{ $discountOrder->discount_document_name ? 'The ID photo was deleted '.\App\Models\Order::DISCOUNT_PHOTO_DAYS.' days after the order ended.' : 'No ID photo was submitted.' }}</p></div>
     @endif
     @if ($sellerOrder->discount_card_checked_at)
         <p class="sc-document-checked mt-4">Original ID checked at handover · {{ $sellerOrder->discount_card_checked_at->format('M j, Y · g:i A') }}</p>

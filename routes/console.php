@@ -204,7 +204,8 @@ Artisan::command('discount-ids:purge', function (): void {
 
     foreach ($orders as $order) {
         Storage::disk('chat_attachments')->delete($order->discount_document_path);
-        $order->forceFill(['discount_document_path' => null, 'discount_document_name' => null, 'discount_document_mime' => null])->save();
+        // The file name stays so Seller Center can say the photo was deleted, not that none was sent.
+        $order->forceFill(['discount_document_path' => null])->save();
     }
 
     $this->info("Deleted {$orders->count()} finished order(s)' discount ID photo(s).");

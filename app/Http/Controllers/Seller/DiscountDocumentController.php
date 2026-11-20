@@ -29,7 +29,7 @@ class DiscountDocumentController extends Controller
         try {
             $contents = Crypt::decryptString($contents);
         } catch (DecryptException) {
-            // shortcut: photos saved before encryption are served as stored; they age out with discount-ids:purge.
+            // A photo saved before encryption that the encrypt_existing_discount_id_photos migration has not reached yet.
         }
 
         AuditLog::query()->create([
