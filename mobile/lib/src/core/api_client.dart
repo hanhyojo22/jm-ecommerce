@@ -644,25 +644,71 @@ class ApiClient {
     return listOf(body).map(Address.fromJson).toList(growable: false);
   }
 
-  /// Street, city, province and postal code for a spot, from the server's
-  /// OpenStreetMap lookup. Missing parts come back as empty strings.
-  Future<Map<String, dynamic>> lookupAddress(
-    double latitude,
-    double longitude,
-  ) async => mapOf(
-    await _data(
-      'GET',
-      '/delivery-addresses/lookup',
-      query: {'latitude': latitude, 'longitude': longitude},
+  /// Photon (OpenStreetMap data) is called from the phone, not through our
+  /// server: it refuses Render's shared servers, and it is built for apps
+  /// searching as the customer types.
+  final Dio _photon = Dio(
+    BaseOptions(
+      baseUrl: 'https://photon.komoot.io',
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 8),
+      // Photon answers Dart's default "Dart/x (dart:io)" agent with 403.
+      headers: const {'User-Agent': 'EverydayPharmacy/1.0 (Android app)'},
     ),
   );
 
-  /// Places matching what the customer typed (3+ characters), each with a
-  /// `label` to show and the same fields as [lookupAddress].
-  Future<List<Map<String, dynamic>>> searchAddresses(String query) async =>
-      listOf(
-        await _data('GET', '/delivery-addresses/search', query: {'q': query}),
+  Future<List<Map<String, dynamic>>> _photonFeatures(
+    String path,
+    Map<String, dynamic> query,
+  ) async {
+    try {
+      final response = await _photon.get(
+        path,
+        queryParameters: {...query, 'lang': 'en'},
       );
+      return listOf(mapOf(response.data)['features']);
+    } on DioException {
+      throw const ApiException(
+        code: 'address_lookup_failed',
+        message: 'We could not look up your address. Type it in instead.',
+      );
+    }
+  }
+
+  /// The nearest street to a spot, with its barangay, city and postal code.
+  Future<Map<String, dynamic>> lookupAddress(
+    double latitude,
+    double longitude,
+  ) async {
+    final features = await _photonFeatures('/reverse', {
+      'lat': latitude,
+      'lon': longitude,
+      'layer': 'street',
+      'limit': 1,
+    });
+    if (features.isEmpty) {
+      throw const ApiException(
+        code: 'address_not_found',
+        message: 'No street address was found here. Type it in instead.',
+      );
+    }
+    return photonAddressFields(features.first);
+  }
+
+  /// Streets, barangays and buildings in the Philippines matching what the
+  /// customer typed (3+ characters), each with a `label` to show.
+  Future<List<Map<String, dynamic>>> searchAddresses(String query) async {
+    final features = await _photonFeatures('/api', {
+      'q': query,
+      'limit': 8,
+      'bbox': '116.9,4.5,126.7,21.2',
+    });
+    final labels = <String>{};
+    return [
+      for (final fields in features.map(photonAddressFields))
+        if (fields['address_line'] != '' && labels.add(fields['label'])) fields,
+    ];
+  }
 
   Future<Address> createAddress(Address address) async => Address.fromJson(
     mapOf(await _data('POST', '/delivery-addresses', data: address.toJson())),
@@ -858,4 +904,43 @@ class ApiClient {
   Future<void> unregisterDeviceToken(String token) async {
     await _raw('DELETE', '/device-tokens', data: {'token': token});
   }
+}
+
+/// A Photon place as the address form's fields: building, street and barangay
+/// on the address line. OpenStreetMap gives the Philippines regions, not
+/// provinces, so province stays empty for the customer to fill in.
+Map<String, dynamic> photonAddressFields(Map<String, dynamic> feature) {
+  final place = mapOf(feature['properties']);
+  String? text(String key) {
+    final value = place[key];
+    return value is String && value.trim().isNotEmpty ? value.trim() : null;
+  }
+
+  final kind = text('osm_key') ?? '';
+  final streetName = kind == 'highway' ? text('name') : text('street');
+  final street = streetName == null
+      ? null
+      : [text('housenumber'), streetName].whereType<String>().join(' ');
+  final building = kind == 'highway' || kind == 'place' ? null : text('name');
+  final area =
+      text('district') ??
+      text('locality') ??
+      (kind == 'place' ? text('name') : null);
+  final line = <String>[];
+  for (final part in [building, street, area]) {
+    if (part != null && !line.contains(part)) {
+      line.add(part);
+    }
+  }
+  final addressLine = line.join(', ');
+  final city = text('city') ?? text('county') ?? '';
+  final postcode = text('postcode') ?? '';
+
+  return {
+    'label': [addressLine, city].where((part) => part.isNotEmpty).join(', '),
+    'address_line': addressLine,
+    'city': city,
+    'province': '',
+    'postal_code': RegExp(r'^\d{4}$').hasMatch(postcode) ? postcode : '',
+  };
 }
