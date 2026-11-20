@@ -13,7 +13,6 @@ import '../widgets/common.dart';
 const _shopNavyDeep = Color(0xFF040E52);
 const _shopNavy = Color(0xFF071C94);
 const _shopNavyBright = Color(0xFF2346C8);
-const _shopGold = Color(0xFFF8B800);
 const _gridGap = 12.0;
 const _gridInset = 12.0;
 
@@ -495,15 +494,7 @@ class _StoreHero extends StatelessWidget {
       child: Stack(
         children: [
           Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [headerStart, headerEnd],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
+            child: DecoratedBox(decoration: BoxDecoration(color: headerStart)),
           ),
           if (hasBanner)
             Positioned.fill(
@@ -533,16 +524,6 @@ class _StoreHero extends StatelessWidget {
                 ),
               ),
             ),
-          Positioned(
-            right: -52,
-            top: -64,
-            child: _Glow(color: _shopGold, size: 200, opacity: 0.1),
-          ),
-          Positioned(
-            left: -70,
-            bottom: 20,
-            child: _Glow(color: Colors.white, size: 220, opacity: 0.05),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
             child: Column(
@@ -803,26 +784,6 @@ class _TrustPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Glow extends StatelessWidget {
-  const _Glow({required this.color, required this.size, required this.opacity});
-
-  final Color color;
-  final double size;
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: opacity),
       ),
     );
   }

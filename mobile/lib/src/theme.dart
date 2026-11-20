@@ -355,10 +355,13 @@ Color statusColour(BuildContext context, String status) {
   final dark = scheme.brightness == Brightness.dark;
 
   return switch (status) {
-    'pending' => dark ? const Color(0xFFF2C879) : const Color(0xFF8A5A12),
+    // Waiting: the logo's sun, deepened for text.
+    'pending' => dark ? const Color(0xFFFFC94A) : const Color(0xFF8A5A00),
+    // Being prepared: the royal blue between the logo navy and sky.
     'confirmed' ||
-    'processing' => dark ? const Color(0xFF8AB4F8) : const Color(0xFF2B6CB0),
-    'shipped' => dark ? const Color(0xFFC4A7F5) : const Color(0xFF6B46C1),
+    'processing' => dark ? const Color(0xFF9DB4FF) : const Color(0xFF2346C8),
+    // On the road: teal, distinct from preparing without leaving the cool family.
+    'shipped' => dark ? const Color(0xFF5FD4E8) : const Color(0xFF0E7490),
     'delivered' ||
     'completed' => dark ? const Color(0xFF7ADFA0) : const Color(0xFF2F855A),
     'cancelled' || 'rejected' || 'denied' => scheme.error,

@@ -1168,8 +1168,8 @@ class _SuggestedProductRow extends StatelessWidget {
                         else if (atBranch == false)
                           _Pill(
                             label: 'Other branches',
-                            background: const Color(0xFFFBF0DD),
-                            foreground: const Color(0xFF8A4C06),
+                            background: scheme.secondaryContainer,
+                            foreground: scheme.onSecondaryContainer,
                           ),
                       ],
                     ),

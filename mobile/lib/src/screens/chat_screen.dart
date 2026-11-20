@@ -1884,9 +1884,9 @@ class _OrderInquiryCard extends StatelessWidget {
                           spacing: 4,
                           children: [
                             if (isCod)
-                              const _Badge(
+                              _Badge(
                                 label: 'COD',
-                                background: Color(0xFFB45309),
+                                background: scheme.tertiary,
                               ),
                             if (freeShipping)
                               _Badge(
