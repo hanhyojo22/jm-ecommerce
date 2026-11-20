@@ -9,7 +9,11 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\TenantMember;
 use App\Models\User;
+use App\Notifications\SellerOrderReceiptConfirmed;
+use App\Services\PushNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Mockery;
 use Tests\TestCase;
 
 class OrderReceivedTest extends TestCase
@@ -28,6 +32,51 @@ class OrderReceivedTest extends TestCase
         $this->actingAs($buyer)->post(route('orders.received', $sellerOrder))->assertSessionHasNoErrors();
 
         $this->assertSame('delivered', $sellerOrder->fresh()->status);
+    }
+
+    public function test_the_buyer_confirming_receipt_notifies_the_stores_active_staff_but_not_the_buyer(): void
+    {
+        Notification::fake();
+
+        [$store, $owner] = $this->storeWithOwner();
+        $manager = User::factory()->seller()->create();
+        TenantMember::create(['tenant_id' => $store->tenant_id, 'user_id' => $manager->id, 'role' => 'manager']);
+        [, $otherOwner] = $this->storeWithOwner();
+        $sellerOrder = $this->sellerOrder($store, 'shipped', '300.00');
+        $buyer = $sellerOrder->order->user;
+
+        $notifier = Mockery::spy(PushNotifier::class);
+        $this->app->instance(PushNotifier::class, $notifier);
+
+        $this->actingAs($buyer)->post(route('orders.received', $sellerOrder))->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($owner, SellerOrderReceiptConfirmed::class);
+        Notification::assertSentTo($manager, SellerOrderReceiptConfirmed::class);
+        Notification::assertNotSentTo($buyer, SellerOrderReceiptConfirmed::class);
+        Notification::assertNotSentTo($otherOwner, SellerOrderReceiptConfirmed::class);
+
+        $notifier->shouldHaveReceived('sendToUser')
+            ->withArgs(fn (User $user, string $title, string $body, array $data): bool => $user->is($owner)
+                && $data['type'] === 'seller_order'
+                && $data['seller_order_id'] === $sellerOrder->id)
+            ->once();
+        $notifier->shouldHaveReceived('sendToUser')
+            ->withArgs(fn (User $user): bool => $user->is($manager))
+            ->once();
+    }
+
+    public function test_a_store_marking_an_order_delivered_does_not_send_the_receipt_notification_to_itself(): void
+    {
+        Notification::fake();
+
+        [$store, $owner] = $this->storeWithOwner();
+        $sellerOrder = $this->sellerOrder($store, 'shipped', '300.00');
+
+        $this->actingAs($owner)
+            ->patch(route('seller.orders.update', $sellerOrder), ['status' => 'delivered'])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertNotSentTo($owner, SellerOrderReceiptConfirmed::class);
     }
 
     public function test_only_the_buyer_confirms_and_only_a_shipped_order(): void

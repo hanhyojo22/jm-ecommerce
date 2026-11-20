@@ -8,6 +8,7 @@ use App\Models\PaymentAdjustment;
 use App\Models\Product;
 use App\Models\SellerOrder;
 use App\Models\User;
+use App\Notifications\SellerOrderReceiptConfirmed;
 use App\Notifications\SellerOrderStatusUpdated;
 use App\Queries\TopProductQuery;
 use App\Services\GmailOrderMailer;
@@ -162,6 +163,18 @@ class UpdateSellerOrderStatus
 
         TopProductQuery::forgetCachedRankings();
 
+        // The buyer confirming receipt is the only delivery event the store has no other
+        // signal for: the order leaves its active queue and any COD becomes collectible.
+        if ($status === 'delivered' && $actor !== null) {
+            $updatedSellerOrder->loadMissing('order');
+
+            if ($actor->id === $updatedSellerOrder->order->user_id) {
+                defer(function () use ($updatedSellerOrder): void {
+                    $this->notifyStoreStaffOfReceipt($updatedSellerOrder);
+                });
+            }
+        }
+
         if ($status === 'cancelled' && $updatedSellerOrder->cod_collected_at !== null && $updatedSellerOrder->order->payment?->gateway_payment_id !== null) {
             DB::afterCommit(function () use ($updatedSellerOrder): void {
                 try {
@@ -239,6 +252,52 @@ class UpdateSellerOrderStatus
         });
 
         return $updatedSellerOrder;
+    }
+
+    private function notifyStoreStaffOfReceipt(SellerOrder $sellerOrder): void
+    {
+        $sellerOrder->loadMissing('order.payment', 'store', 'tenant');
+
+        $recipients = $sellerOrder->tenant->activeNotifiableStaff($sellerOrder->store_id);
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        $number = $sellerOrder->order->number;
+        $title = "Order #{$number} confirmed received";
+        $body = "{$sellerOrder->store->name}: the buyer confirmed they received this order.";
+
+        if ($sellerOrder->order->payment?->method === 'cod' && $sellerOrder->cod_collected_at === null) {
+            $body .= ' Collect the cash payment if it is still due.';
+        }
+
+        foreach ($recipients as $recipient) {
+            try {
+                app(PushNotifier::class)->sendToUser($recipient, $title, $body, [
+                    'type' => 'seller_order',
+                    'seller_order_id' => $sellerOrder->id,
+                ]);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                $recipient->notify(new SellerOrderReceiptConfirmed($sellerOrder->id, $title, $body));
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                app(GmailOrderMailer::class)->send(
+                    $recipient,
+                    "Everyday Pharmacy {$title}",
+                    $body."\n\nView the order: ".route('seller.orders.show', $sellerOrder->id),
+                );
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
     }
 
     /**
