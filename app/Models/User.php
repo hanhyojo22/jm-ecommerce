@@ -136,6 +136,17 @@ class User extends Authenticatable
         return $this->account_type === 'admin' && $this->platform_role === 'super_admin';
     }
 
+    /**
+     * Whether this account may use the website while the customer web store is closed. Seller-side
+     * staff — owner, manager, pharmacist or staff — keep Seller Center, and administrators keep
+     * their workspace; customer accounts are app-only.
+     */
+    public function canUseWebWorkspace(): bool
+    {
+        return $this->isPlatformAdministrator()
+            || ($this->account_type === 'seller' && $this->sellerTenant() !== null);
+    }
+
     public function landingRouteName(): string
     {
         if ($this->isPlatformAdministrator()) {
@@ -143,9 +154,13 @@ class User extends Authenticatable
         }
 
         if (! config('marketplace.web_store.enabled')) {
-            return $this->account_type === 'seller' && $this->sellerTenant() !== null
-                ? 'seller.dashboard'
-                : 'web-store.unavailable';
+            if ($this->canUseWebWorkspace()) {
+                return 'seller.dashboard';
+            }
+
+            return $this->account_type === 'seller'
+                ? 'web-store.unavailable'
+                : 'account.customer-disabled';
         }
 
         if ($this->account_type === 'admin') {

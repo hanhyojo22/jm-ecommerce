@@ -51,6 +51,7 @@ use App\Livewire\Chat\Thread as ChatThread;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/web-store-unavailable', fn () => response()->view('errors.410', [], 410))->name('web-store.unavailable');
+Route::get('/customer-accounts-disabled', fn () => response()->view('auth.customer-disabled', [], 403))->name('account.customer-disabled');
 Route::view('/privacy-policy', 'privacy-policy')->name('privacy-policy');
 Route::view('/terms', 'terms')->name('terms');
 Route::view('/returns', 'returns')->name('returns');

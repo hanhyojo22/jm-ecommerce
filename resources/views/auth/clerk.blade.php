@@ -36,10 +36,12 @@
 
         <main class="flex items-start justify-center px-[18px] py-7 sm:px-8 lg:items-center lg:py-12">
             <section class="w-full max-w-[392px]" aria-labelledby="auth-heading" data-od-id="auth-card">
-                <div class="flex gap-1 rounded-md bg-canvas p-1" role="tablist" aria-label="Sign in or create account">
-                    <a href="{{ route('login', $redirectParams) }}" role="tab" @if (! $isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => ! $isSignUp, 'text-muted hover:text-ink' => $isSignUp])>Sign in</a>
-                    <a href="{{ route('register', $redirectParams) }}" role="tab" @if ($isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => $isSignUp, 'text-muted hover:text-ink' => ! $isSignUp])>Create account</a>
-                </div>
+                @if (config('marketplace.web_store.enabled'))
+                    <div class="flex gap-1 rounded-md bg-canvas p-1" role="tablist" aria-label="Sign in or create account">
+                        <a href="{{ route('login', $redirectParams) }}" role="tab" @if (! $isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => ! $isSignUp, 'text-muted hover:text-ink' => $isSignUp])>Sign in</a>
+                        <a href="{{ route('register', $redirectParams) }}" role="tab" @if ($isSignUp) aria-selected="true" @endif @class(['flex min-h-11 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition', 'bg-white text-ink shadow-sm' => $isSignUp, 'text-muted hover:text-ink' => ! $isSignUp])>Create account</a>
+                    </div>
+                @endif
 
                 <h1 id="auth-heading" class="mt-5 text-balance font-display text-3xl font-semibold leading-tight tracking-[-0.03em]">{{ $heading }}</h1>
                 <p class="mt-1.5 text-sm leading-relaxed text-muted">{{ $subheading }}</p>
@@ -49,20 +51,22 @@
                     <noscript><p class="px-3 py-8 text-center text-sm text-muted">JavaScript is required to sign in with Clerk.</p></noscript>
                 </div>
 
-                <ul class="mt-6 grid grid-cols-3 gap-2.5 lg:hidden">
-                    @foreach ([
-                        ['Protected checkout', 'M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z'],
-                        ['Order tracking', 'M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z'],
-                        ['Message sellers', 'M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z'],
-                    ] as [$label, $path])
-                        <li class="flex flex-col items-center gap-1.5 text-center text-xs font-semibold leading-tight text-muted">
-                            <span class="grid size-9 place-items-center rounded-full bg-blue-50 text-brand" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="size-[17px]"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
-                            </span>
-                            {{ $label }}
-                        </li>
-                    @endforeach
-                </ul>
+                @if (config('marketplace.web_store.enabled'))
+                    <ul class="mt-6 grid grid-cols-3 gap-2.5 lg:hidden">
+                        @foreach ([
+                            ['Protected checkout', 'M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6L12 3Z'],
+                            ['Order tracking', 'M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z'],
+                            ['Message sellers', 'M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-1 2v-6.5a7.5 7.5 0 1 1 16-3Z'],
+                        ] as [$label, $path])
+                            <li class="flex flex-col items-center gap-1.5 text-center text-xs font-semibold leading-tight text-muted">
+                                <span class="grid size-9 place-items-center rounded-full bg-blue-50 text-brand" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="size-[17px]"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $path }}"/></svg>
+                                </span>
+                                {{ $label }}
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
 
                 @if (config('marketplace.web_store.enabled'))
                     <a href="{{ route('catalog.index') }}" class="mt-6 block text-center text-sm font-medium text-muted transition hover:text-ink">Browse without an account →</a>

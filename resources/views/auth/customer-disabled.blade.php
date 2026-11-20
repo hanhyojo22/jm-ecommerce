@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Customer accounts are on the app · Everyday Pharmacy</title>
+    <style>
+        body{margin:0;background:#f7f8f7;color:#18332c;font:16px/1.6 system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}main{box-sizing:border-box;width:min(100%,40rem);padding:2rem}h1{font-size:clamp(1.6rem,5vw,2.2rem);line-height:1.2;margin:.5rem 0 1rem}p{margin:0 0 1rem}a,button{display:inline-block;box-sizing:border-box;min-height:48px;padding:.7rem 1rem;border:1px solid #006b58;border-radius:.65rem;color:#006b58;background:white;font:inherit;text-decoration:none;cursor:pointer;margin:.25rem .5rem .25rem 0}small{display:block;overflow-wrap:anywhere;margin-top:1.5rem;color:#5b6f68}a:focus-visible,button:focus-visible{outline:3px solid #006b58;outline-offset:3px}
+    </style>
+</head>
+<body>
+    <main>
+        <p>Everyday Pharmacy · Customer accounts</p>
+        <h1>Customer accounts are not available on the website</h1>
+        <p>The Everyday Pharmacy website is for Seller Center and platform administrators. Shopping, orders, and pharmacy messages for customers are on the Everyday Pharmacy mobile app.</p>
+        @auth
+            @if (auth()->user()->isPlatformAdministrator())
+                <a href="{{ route('dashboard') }}">Open admin workspace</a>
+            @elseif (auth()->user()->canUseWebWorkspace())
+                <a href="{{ route('seller.dashboard') }}">Open Seller Center</a>
+            @else
+                <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
+            @endif
+        @else
+            <a href="{{ route('login') }}">Seller or administrator sign in</a>
+        @endauth
+        <small>Reference: {{ request()->attributes->get('request_id') }}</small>
+    </main>
+</body>
+</html>

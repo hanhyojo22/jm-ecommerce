@@ -34,6 +34,8 @@ Route::middleware('guest')->group(function (): void {
     })->name('login');
 
     Route::get('sign-up', function () {
+        abort_unless(config('marketplace.web_store.enabled'), 404);
+
         $afterAuthUrl = request()->string('redirect')->toString();
 
         abort_unless($afterAuthUrl === '' || (str_starts_with($afterAuthUrl, '/') && ! str_starts_with($afterAuthUrl, '//') && ! str_contains($afterAuthUrl, '\\')), 422);

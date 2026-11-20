@@ -498,6 +498,19 @@ const completeClerkHandoff = async (clerk) => {
 
     window.clerkHandoffState?.stage('done');
     window.clerkHandoffState?.finish();
+
+    /*
+     * A refused customer sign-in must drop the Clerk session too, or the next visit to the
+     * sign-in page would hand the same account straight back and be refused again.
+     */
+    if (result.sign_out === true) {
+        try {
+            await clerk.signOut({ redirectUrl: result.redirect });
+        } catch (error) {
+            // The notice still explains what happened if Clerk cannot end the session.
+        }
+    }
+
     window.location.assign(result.redirect);
 };
 

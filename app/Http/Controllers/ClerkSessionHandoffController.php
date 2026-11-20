@@ -81,6 +81,12 @@ class ClerkSessionHandoffController extends Controller
      */
     public function refreshSession(Request $request): JsonResponse
     {
+        if (! $this->webWorkspaceIsAllowed($request)) {
+            return response()
+                ->json(['message' => 'Customer accounts are disabled on the website. Use the Everyday Pharmacy app.'], 403)
+                ->withoutCookie('__session');
+        }
+
         $request->session()->forget(self::REFRESH_ATTEMPTS_SESSION_KEY);
 
         $sessionToken = $request->bearerToken();
@@ -95,6 +101,22 @@ class ClerkSessionHandoffController extends Controller
 
     public function complete(Request $request, AddProductToCart $addProductToCart): JsonResponse
     {
+        /*
+         * The web sign-in is the staff entrance. While the customer web store is closed, a buyer
+         * who signs in through Clerk is refused here: no backend session cookie is minted, and the
+         * browser is told to drop the Clerk session and open the app notice instead.
+         */
+        if (! $this->webWorkspaceIsAllowed($request)) {
+            $request->session()->forget(self::REFRESH_ATTEMPTS_SESSION_KEY);
+
+            return response()
+                ->json([
+                    'redirect' => route('account.customer-disabled', [], false),
+                    'sign_out' => true,
+                ])
+                ->withoutCookie('__session');
+        }
+
         $requestedRedirect = $request->string('redirect')->toString();
         $redirect = $requestedRedirect === ''
             ? route($request->user()->landingRouteName(), [], false)
@@ -154,6 +176,20 @@ class ClerkSessionHandoffController extends Controller
             false,
             'lax',
         );
+    }
+
+    /**
+     * While the customer web store is closed, customer accounts are app-only. Seller-side accounts
+     * (owner, manager, pharmacist or staff) and administrators keep the website; a seller still
+     * waiting for an active branch is routed to the mobile notice by their landing route.
+     */
+    private function webWorkspaceIsAllowed(Request $request): bool
+    {
+        if (config('marketplace.web_store.enabled')) {
+            return true;
+        }
+
+        return $request->user() !== null && $request->user()->account_type !== 'buyer';
     }
 
     private function hasExhaustedRefreshAttempts(Request $request, string $redirect): bool

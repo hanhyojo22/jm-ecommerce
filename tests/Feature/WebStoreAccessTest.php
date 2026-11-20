@@ -86,8 +86,61 @@ class WebStoreAccessTest extends TestCase
         $administrator = User::factory()->administrator()->create();
 
         $this->assertSame('seller.dashboard', $seller->landingRouteName());
-        $this->assertSame('web-store.unavailable', $buyer->landingRouteName());
+        $this->assertSame('account.customer-disabled', $buyer->landingRouteName());
         $this->assertSame('dashboard', $administrator->landingRouteName());
+    }
+
+    public function test_every_seller_side_role_lands_in_seller_center(): void
+    {
+        $suffix = str()->lower(str()->random(8));
+        $tenant = Tenant::create(['name' => "Tenant {$suffix}", 'slug' => "tenant-{$suffix}", 'status' => 'active']);
+        $store = Store::create([
+            'tenant_id' => $tenant->id,
+            'name' => "Store {$suffix}",
+            'slug' => "store-{$suffix}",
+            'phone' => '+639171234567',
+            'address_line' => '10 Market Street',
+            'city' => 'Manila',
+            'status' => 'active',
+        ]);
+
+        foreach ([['owner', false], ['manager', false], ['staff', true], ['staff', false]] as [$role, $isPharmacist]) {
+            $member = User::factory()->seller()->create();
+            TenantMember::create([
+                'tenant_id' => $tenant->id,
+                'store_id' => $store->id,
+                'user_id' => $member->id,
+                'role' => $role,
+                'is_pharmacist' => $isPharmacist,
+            ]);
+
+            $this->assertSame('seller.dashboard', $member->landingRouteName(), "{$role} should land in Seller Center.");
+        }
+    }
+
+    public function test_a_customer_sign_in_is_refused_while_the_web_store_is_disabled(): void
+    {
+        $buyer = User::factory()->create();
+
+        $this->actingAs($buyer)
+            ->postJson(route('clerk.handoff.complete'))
+            ->assertOk()
+            ->assertJsonPath('redirect', '/customer-accounts-disabled')
+            ->assertJsonPath('sign_out', true)
+            ->assertCookieExpired('__session');
+
+        $this->get(route('account.customer-disabled'))
+            ->assertStatus(403)
+            ->assertSee('Customer accounts are not available on the website')
+            ->assertSee('Everyday Pharmacy mobile app');
+    }
+
+    public function test_a_customer_cannot_refresh_a_web_session_while_the_web_store_is_disabled(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->postJson(route('clerk.session.refresh'))
+            ->assertForbidden()
+            ->assertCookieExpired('__session');
     }
 
     public function test_a_seller_without_a_store_is_sent_to_the_mobile_notice(): void
@@ -136,7 +189,10 @@ class WebStoreAccessTest extends TestCase
             ->assertOk()
             ->assertDontSee('Browse without an account')
             ->assertDontSee(route('catalog.index'), false)
+            ->assertDontSee('Create account')
             ->assertSee('Customers shop in the Everyday Pharmacy mobile app.');
+
+        $this->get(route('register'))->assertNotFound();
     }
 
     public function test_buyer_emails_point_to_the_app_instead_of_the_closed_web_store(): void
