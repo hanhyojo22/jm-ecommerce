@@ -162,6 +162,28 @@ class BranchAccessTest extends TestCase
         $this->assertDatabaseMissing('stores', ['name' => 'Rogue Branch']);
     }
 
+    public function test_only_head_office_renames_a_branch_and_its_url_stays(): void
+    {
+        [$tenant, $makati] = $this->pharmacy();
+        $slug = $makati->slug;
+        $details = ['phone' => '+639171234567', 'address_line' => '10 Rizal Street', 'city' => 'Makati'];
+
+        $this->actingAs($this->member($tenant, 'manager', $makati))
+            ->patch(route('seller.store-settings.update'), [...$details, 'name' => 'Renamed by branch'])
+            ->assertSessionHasNoErrors();
+        $this->assertNotSame('Renamed by branch', $makati->fresh()->name);
+
+        $headOffice = $this->member($tenant, 'owner');
+        $this->actingAs($headOffice)->get(route('seller.store-settings.edit', ['branch' => $makati->id]))->assertSee('Branch name');
+        $this->actingAs($headOffice)->patch(route('seller.store-settings.update', ['branch' => $makati->id]), [...$details, 'name' => ''])
+            ->assertSessionHasErrors('name');
+        $this->actingAs($headOffice)->patch(route('seller.store-settings.update', ['branch' => $makati->id]), [...$details, 'name' => 'Everyday Makati Ayala'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(['Everyday Makati Ayala', $slug], [$makati->fresh()->name, $makati->fresh()->slug]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'store.updated', 'entity_id' => $makati->id]);
+    }
+
     public function test_head_office_opens_one_branch_but_cannot_touch_another_companys(): void
     {
         [$tenant, , $cebu] = $this->pharmacy();

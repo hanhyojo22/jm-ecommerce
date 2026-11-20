@@ -23,6 +23,7 @@ class UpdateStoreSettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => ['sometimes', 'required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
             'phone' => ['required', 'string', 'max:30'],
             'address_line' => ['required', 'string', 'max:255'],

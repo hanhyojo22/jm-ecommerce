@@ -100,9 +100,19 @@
                         </div>
 
                         <dl class="grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
-                            <div><dt class="text-xs text-muted">Store name</dt><dd class="mt-2 text-sm font-medium text-ink">{{ $store->name }}</dd></div>
+                            @unless ($canManageBranches)
+                                <div><dt class="text-xs text-muted">Branch name</dt><dd class="mt-2 text-sm font-medium text-ink">{{ $store->name }}</dd></div>
+                            @endunless
                             <div class="min-w-0"><dt class="text-xs text-muted">Store URL</dt><dd class="mt-2 break-all text-sm text-ink">/stores/{{ $store->slug }}</dd></div>
                         </dl>
+                        @if ($canManageBranches)
+                            <div class="min-w-0">
+                                <label for="name" class="block text-sm font-semibold text-ink">Branch name <span class="font-normal text-muted">(required)</span></label>
+                                <input id="name" name="name" maxlength="120" required @error('name') aria-describedby="name-error" aria-invalid="true" @enderror value="{{ old('name', $store->name) }}" class="field-control mt-2 text-base lg:text-sm @error('name') border-rose-500 @enderror">
+                                <p class="mt-1 text-xs text-muted">Customers see this name in the app. The store URL stays the same.</p>
+                                <x-input-error id="name-error" :messages="$errors->get('name')" class="mt-2" />
+                            </div>
+                        @endif
                         <div class="min-w-0">
                             <label for="description" class="block text-sm font-semibold text-ink">Store description</label>
                             <textarea id="description" name="description" x-model="description" rows="3" maxlength="2000" aria-describedby="description-count @error('description') description-error @enderror" @error('description') aria-invalid="true" @enderror @input="descriptionLength = Array.from($event.target.value).length" class="field-control mt-2 resize-y text-base lg:text-sm @error('description') border-rose-500 @enderror">{{ old('description', $store->description) }}</textarea>

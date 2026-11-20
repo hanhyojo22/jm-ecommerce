@@ -23,7 +23,7 @@ class StoreSettingsController extends Controller
      *
      * @var list<string>
      */
-    private const UNDO_FIELDS = ['description', 'phone', 'address_line', 'city', 'status', ...Store::LOCATION_DETAILS, 'logo_path'];
+    private const UNDO_FIELDS = ['name', 'description', 'phone', 'address_line', 'city', 'status', ...Store::LOCATION_DETAILS, 'logo_path'];
 
     public function edit(Request $request): View
     {
@@ -75,8 +75,10 @@ class StoreSettingsController extends Controller
                 $oldValues = $lockedStore->only(self::UNDO_FIELDS);
                 // Head office opens or closes a branch; a branch manager cannot close their own. One the platform suspended stays suspended. Read from the locked row.
                 $status = $lockedStore->status === 'suspended' || ! $this->member($request)->isHeadOffice() ? $lockedStore->status : ($request->validated('status') ?? $lockedStore->status);
+                // Only head office renames a branch; the slug (store URL) keeps the original name.
+                $name = $this->member($request)->isHeadOffice() && $request->filled('name') ? trim($request->validated('name')) : $lockedStore->name;
                 // Same key order as UNDO_FIELDS, which undo checks.
-                $newValues = array_replace(array_fill_keys(self::UNDO_FIELDS, null), $data, ['status' => $status, 'logo_path' => $logoPath]);
+                $newValues = array_replace(array_fill_keys(self::UNDO_FIELDS, null), $data, ['name' => $name, 'status' => $status, 'logo_path' => $logoPath]);
 
                 $lockedStore->update($newValues);
 
