@@ -4,7 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#fafbfd">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="preload" href="{{ asset('images/brand/everyday-emblem.webp') }}" as="image" type="image/webp">
     <meta name="clerk-publishable-key" content="{{ config('services.clerk.publishable_key') }}">
     <meta name="clerk-sign-in-url" content="{{ config('services.clerk.sign_in_url') }}">
     <meta name="clerk-sign-up-url" content="{{ config('services.clerk.sign_up_url') }}">
@@ -12,9 +14,11 @@
     @include('partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-white font-sans text-ink antialiased">
-    {{-- The mark is the only indicator: no card, no backdrop, no progress bar. --}}
-    <main class="flex min-h-screen items-center justify-center px-6 py-10">
+<body class="min-h-screen bg-[#fafbfd] font-sans text-ink antialiased selection:bg-[#fff0ae] selection:text-[#071c94]">
+    {{-- The mobile app's Everyday Pharmacy splash screen while the sign-in hand-off completes. --}}
+    <main class="relative isolate flex min-h-screen items-center justify-center overflow-hidden px-6 py-10">
+        <div class="handoff-daylight" aria-hidden="true"></div>
+
         <div class="w-full max-w-[26rem] text-center">
             <div
                 data-clerk-session-handoff
@@ -22,19 +26,24 @@
                 data-redirect-url="{{ $afterAuthUrl }}"
                 data-sign-in-url="{{ $signInUrl ?? route('login') }}"
                 @if ($signedOutGoesToSignIn ?? false) data-signed-out-to-sign-in @endif
+                class="mx-auto w-[min(74vw,340px)]"
             >
-                <span class="handoff-mark" aria-hidden="true">
-                    <span class="handoff-mark-tile">EP</span>
-                </span>
+                <div class="handoff-emblem" aria-hidden="true">
+                    <div class="handoff-sprite handoff-sun"></div>
+                    <div class="handoff-sprite handoff-cloud"></div>
+                </div>
 
-                <h1 class="mt-6 text-balance font-display text-xl font-semibold leading-[1.3] tracking-[-0.02em] sm:text-[1.375rem]">Finishing your sign-in</h1>
-                <p class="mt-1.5 text-sm leading-relaxed text-muted">
+                <h1 class="handoff-wordmark" aria-label="Everyday Pharmacy">
+                    <span>EVERYDAY</span>
+                    <span>PHARMACY</span>
+                </h1>
+                <p class="mt-4 text-sm leading-relaxed text-muted">
                     <span data-handoff-status role="status" aria-live="polite">Checking your sign-in…</span>
                 </p>
 
                 <a
                     href="{{ $signInUrl ?? route('login') }}"
-                    class="handoff-escape mt-2.5 inline-flex min-h-11 items-center text-[13px] font-medium text-muted underline decoration-ink/25 underline-offset-4 transition hover:text-ink hover:decoration-ink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+                    class="handoff-escape mt-2 inline-flex min-h-11 items-center text-[13px] font-medium text-muted underline decoration-ink/25 underline-offset-4 transition hover:text-ink hover:decoration-ink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                 >Taking longer than expected? Sign in again</a>
             </div>
 
@@ -43,9 +52,10 @@
                 hidden
                 role="alert"
             >
-                <span class="handoff-mark" data-stopped aria-hidden="true">
-                    <span class="handoff-mark-tile">EP</span>
-                </span>
+                <div class="handoff-emblem" data-stopped aria-hidden="true">
+                    <div class="handoff-sprite handoff-sun"></div>
+                    <div class="handoff-sprite handoff-cloud"></div>
+                </div>
 
                 <h1 data-clerk-handoff-error-title tabindex="-1" class="mt-6 text-balance font-display text-xl font-semibold leading-[1.3] tracking-[-0.02em] outline-none sm:text-[1.375rem]">We could not finish signing you in.</h1>
                 <p class="mt-1.5 text-sm leading-relaxed text-muted">The hand-off did not complete. Check your connection, then try again.</p>

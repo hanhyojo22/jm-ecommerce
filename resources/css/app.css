@@ -721,56 +721,103 @@
 }
 
 /*
- * The sign-in hand-off is the moment between Clerk and the marketplace. It is not a dialog:
- * a white page, the Everyday Pharmacy mark turning, the current step, and — once a wait has gone on long
- * enough — a quiet way out. The mark is the only indicator.
+ * The sign-in hand-off renders the mobile app's Everyday Pharmacy splash screen (rising sun,
+ * smiling cloud, and stacked navy wordmark on paper-white daylight) while Clerk and the server
+ * exchange the session token, with a quiet escape link if the wait drags on.
  */
-.handoff-mark {
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    width: 76px;
-    height: 76px;
-}
-
-.handoff-mark::before {
-    content: "";
+.handoff-daylight {
     position: absolute;
     inset: 0;
-    border-radius: 50%;
-    background: conic-gradient(from 0deg, transparent 0 52%, var(--color-accent) 52% 100%);
-    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
-    animation: handoff-spin 1s linear infinite;
+    z-index: -1;
+    background: radial-gradient(ellipse 230px 250px at 48% 43%, rgb(255 219 114 / 13%), transparent 100%);
+    animation: handoff-dawn 1.5s ease-out both;
+    pointer-events: none;
 }
 
-.handoff-mark[data-stopped]::before {
-    background: var(--color-border);
+.handoff-emblem {
+    position: relative;
+    width: 76%;
+    max-width: 258px;
+    aspect-ratio: 1.12;
+    margin: 0 auto 26px;
+}
+
+.handoff-emblem[data-stopped] {
+    width: 140px;
+    margin-bottom: 0;
+}
+
+.handoff-sprite {
+    position: absolute;
+    aspect-ratio: 1;
+    background-image: url('/images/brand/everyday-emblem.webp');
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
+}
+
+.handoff-sun {
+    top: 0;
+    left: -3%;
+    width: 88%;
+    background-position: left center;
+    transform-origin: 50% 50%;
+    animation: handoff-sunrise 1.2s cubic-bezier(.16, 1, .3, 1) .26s both;
+}
+
+.handoff-cloud {
+    top: 16%;
+    left: 8%;
+    width: 108%;
+    background-position: right center;
+    animation: handoff-cloud-arrival .72s cubic-bezier(.16, 1, .3, 1) .08s both;
+}
+
+.handoff-emblem[data-stopped] .handoff-sprite {
     animation: none;
 }
 
-.handoff-mark-tile {
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--color-accent);
-    color: #fff;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -.02em;
+.handoff-wordmark {
+    margin: 0;
+    color: #071c94;
+    font-size: clamp(28px, 8.5vw, 41px);
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -.035em;
+    animation: handoff-wordmark-reveal .65s cubic-bezier(.16, 1, .3, 1) .88s both;
 }
 
-@media (max-width: 639px) {
-    .handoff-mark {
-        width: 68px;
-        height: 68px;
-    }
+.handoff-wordmark span {
+    display: block;
 }
 
-@keyframes handoff-spin {
-    to { transform: rotate(360deg); }
+.handoff-wordmark span + span {
+    margin-top: 3px;
+}
+
+@keyframes handoff-sunrise {
+    from { opacity: 0; transform: translate(10px, 38px) rotate(-14deg) scale(.94); }
+    35% { opacity: 1; }
+    to { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
+}
+
+@keyframes handoff-cloud-arrival {
+    from { opacity: 0; transform: translateX(9px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes handoff-wordmark-reveal {
+    from { opacity: 0; clip-path: inset(0 0 100%); }
+    to { opacity: 1; clip-path: inset(0); }
+}
+
+@keyframes handoff-dawn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes handoff-quiet-reveal {
+    from { opacity: .65; }
+    to { opacity: 1; }
 }
 
 /* A stalled hand-off must not leave the visitor with only the 15-second deadline to reach for. */
@@ -787,9 +834,20 @@
     }
 }
 
+@media (max-height: 480px) {
+    .handoff-emblem {
+        width: 60%;
+        margin-bottom: 14px;
+    }
+
+    .handoff-wordmark {
+        font-size: 28px;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .handoff-mark::before {
-        animation-duration: 2.4s;
+    :is(.handoff-sun, .handoff-cloud, .handoff-wordmark, .handoff-daylight) {
+        animation: handoff-quiet-reveal .18s ease-out both;
     }
 
     .handoff-escape {

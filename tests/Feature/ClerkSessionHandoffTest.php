@@ -45,6 +45,8 @@ class ClerkSessionHandoffTest extends TestCase
          */
         $this->get(route('clerk.handoff'))
             ->assertOk()
+            ->assertSee('images/brand/everyday-emblem.webp', false)
+            ->assertSeeInOrder(['handoff-emblem', 'handoff-sun', 'handoff-cloud', 'EVERYDAY', 'PHARMACY'], false)
             ->assertSeeInOrder(['data-clerk-handoff-error', 'hidden', 'role="alert"'], false)
             ->assertSee('data-clerk-handoff-retry', false)
             ->assertSee('window.clerkHandoffState', false)
