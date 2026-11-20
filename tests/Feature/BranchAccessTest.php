@@ -310,7 +310,8 @@ class BranchAccessTest extends TestCase
         $order->order->update(['delivery_latitude' => 10.316, 'delivery_longitude' => 123.8912]);
 
         $this->actingAs($this->member($tenant, 'manager', $cebu))->get(route('seller.orders.show', $order))
-            ->assertOk()->assertSee('Open delivery pin in Maps')->assertSee('destination=10.316%2C123.8912', false);
+            ->assertOk()->assertSee('Open delivery pin in Maps')->assertSee('destination=10.316%2C123.8912', false)
+            ->assertSee('map_action=pano&amp;viewpoint=10.316%2C123.8912', false);
         $this->get(route('seller.orders.show', $order), ['X-Order-Modal' => '1'])
             ->assertOk()->assertSee('Open delivery pin in Maps');
         $this->actingAs($this->member($tenant, 'manager', $makati))->get(route('seller.orders.show', $order))

@@ -582,3 +582,13 @@ services:
         value: warning
       - key: MAIL_MAILER
         value: log
+      # Push needs these set in the dashboard: without FIREBASE_CREDENTIALS every app push
+      # is silently skipped. The Android app uses the same Firebase project as production.
+      - key: FIREBASE_CREDENTIALS
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false

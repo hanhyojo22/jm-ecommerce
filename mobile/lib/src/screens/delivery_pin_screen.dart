@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/location_service.dart';
 import '../models/store_branch.dart';
@@ -89,6 +90,21 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
           ),
         );
       }
+    }
+  }
+
+  /// OpenStreetMap has no street-level photos, so this hands the pin to Google Street View.
+  Future<void> _viewStreet() async {
+    final opened = await launchUrl(
+      Uri.parse(
+        'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${_center.latitude},${_center.longitude}',
+      ),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open Street View.')),
+      );
     }
   }
 
@@ -247,6 +263,26 @@ class _DeliveryPinScreenState extends ConsumerState<DeliveryPinScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 14, bottom: 10),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: scheme.surfaceContainerLowest,
+                      boxShadow: floating,
+                    ),
+                    child: IconButton(
+                      tooltip: 'View street',
+                      iconSize: 24,
+                      color: scheme.primary,
+                      style: IconButton.styleFrom(
+                        fixedSize: const Size.square(52),
+                      ),
+                      onPressed: _moving ? null : _viewStreet,
+                      icon: const Icon(Icons.streetview_rounded),
+                    ),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.only(right: 14, bottom: 10),
                   child: DecoratedBox(
