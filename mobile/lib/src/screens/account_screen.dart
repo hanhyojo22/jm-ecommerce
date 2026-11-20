@@ -168,16 +168,8 @@ class _LazadaAccountHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            scheme.primary.withValues(alpha: 0.14),
-            scheme.surfaceContainerLowest,
-          ],
-        ),
-      ),
+      // The same flat cloud-blue sky as the Shop header.
+      decoration: BoxDecoration(color: skySlab(scheme).fill),
       child: SafeArea(
         bottom: false,
         child: Padding(

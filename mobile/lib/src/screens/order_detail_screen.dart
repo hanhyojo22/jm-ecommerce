@@ -435,16 +435,8 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  accent.withValues(alpha: 0.14),
-                  scheme.surfaceContainerLowest,
-                ],
-              ),
-            ),
+            // A flat tint of the status colour, not a fade.
+            decoration: BoxDecoration(color: accent.withValues(alpha: 0.10)),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
               child: Column(
