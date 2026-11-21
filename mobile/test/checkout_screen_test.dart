@@ -89,6 +89,49 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('closing the back-of-ID prompt attaches no ID photo', (
+    tester,
+  ) async {
+    final api = _CheckoutApi(rx: false, seniorPwd: '28.57');
+    await _pump(
+      tester,
+      api,
+      locator: const StoreLocatorState(
+        branches: [BranchDistance(_branch, null)],
+        issue: LocationIssue.denied,
+      ),
+      location: const _NoLocation(),
+    );
+    await tester.tap(find.text('Pickup · Free'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Senior citizen / PWD'));
+    await tester.tap(find.text('Senior citizen / PWD'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'ID number'), 'SC-9');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Name on the ID'),
+      'Lola Ana',
+    );
+
+    await tester.ensureVisible(find.text('Add photo of ID'));
+    await tester.tap(find.text('Add photo of ID'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Scan front and back'));
+    await tester.pumpAndSettle();
+    expect(find.text('Now scan the back of your ID'), findsOneWidget);
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+    expect(find.text('Now scan the back of your ID'), findsNothing);
+
+    await tester.tap(find.text('Place order'));
+    await tester.pump();
+    expect(
+      find.text('Add a photo of your senior citizen or PWD ID.'),
+      findsOneWidget,
+    );
+    expect(api.placed, isNull);
+  });
+
   testWidgets('an Rx pickup order needs a prescription and sends no pin', (
     tester,
   ) async {

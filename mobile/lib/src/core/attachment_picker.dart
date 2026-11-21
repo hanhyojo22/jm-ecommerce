@@ -82,6 +82,12 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
     }
 
     final bytes = await shot.readAsBytes();
+    // ID and prescription photos must not stay behind in the app's cache.
+    try {
+      await File(shot.path).delete();
+    } on FileSystemException {
+      // Already gone.
+    }
     if (bytes.length > maxChatAttachmentBytes) {
       throw const AttachmentTooLargeException();
     }
@@ -112,8 +118,16 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
       return null;
     }
 
+    // The scan is an ID photo: keep it in memory only, never left in the app's storage.
     final file = File(pages.first);
-    final bytes = await file.readAsBytes();
+    final Uint8List bytes;
+    try {
+      bytes = await file.readAsBytes();
+    } finally {
+      if (await file.exists()) {
+        await file.delete();
+      }
+    }
     if (bytes.length > maxChatAttachmentBytes) {
       throw const AttachmentTooLargeException();
     }
