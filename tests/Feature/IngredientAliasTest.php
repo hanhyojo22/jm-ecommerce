@@ -46,6 +46,20 @@ class IngredientAliasTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'ingredient_alias.removed', 'actor_user_id' => $owner->id]);
     }
 
+    public function test_app_suggestions_list_the_medicines_for_another_name(): void
+    {
+        [$tenant, $branch] = $this->pharmacy();
+        $mefenamic = Product::create(['tenant_id' => $tenant->id, 'store_id' => $branch->id, 'name' => 'Dolfenal 500 mg Capsule', 'generic_name' => 'Mefenamic Acid', 'slug' => 'dolfenal', 'sku' => 'DOL-500', 'price' => '12.00', 'stock_quantity' => 5, 'status' => 'active']);
+        $mefenamic->images()->create(['path' => 'products/dolfenal.webp', 'position' => 0]);
+        IngredientAlias::query()->create(['tenant_id' => $tenant->id, 'alias' => 'ponstan generic', 'ingredient' => 'Mefenamic Acid']);
+
+        $this->getJson(route('api.v1.products.suggestions', ['q' => 'ponstan generic']))
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('items.0.product_id', $mefenamic->id)
+            ->assertJsonPath('items.0.image_url', fn (?string $url): bool => str_ends_with((string) $url, 'products/dolfenal.webp'));
+    }
+
     public function test_head_office_cannot_remove_built_in_or_another_companys_names(): void
     {
         [$tenant] = $this->pharmacy();

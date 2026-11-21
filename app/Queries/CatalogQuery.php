@@ -52,20 +52,23 @@ class CatalogQuery
             $wordMatch = "LOWER(products.name) LIKE ? ESCAPE '!'";
             $wordBindings = ['%'.$escaped.'%'];
         }
+        // Same generic-name expansion as suggestionGroups() and search(): other names and brands.
+        [$genericMatch, $genericBindings] = self::genericMatch(self::ingredientSearch($search, $prefix));
 
         $query = self::publishedProducts()
             ->select(['products.id', 'products.store_id', 'products.name', 'products.generic_name', 'products.requires_prescription', 'products.slug', 'products.price', 'products.stock_quantity'])
             ->with('thumbnail')
             ->withExists(['variants', 'variants as variants_using_base_price_exists' => fn (Builder $query) => $query->whereNull('price')])
             ->withMin('variants', 'price')
-            ->where(function (Builder $query) use ($prefix, $wordMatch, $wordBindings, $useFullText, $search, $escaped): void {
+            ->where(function (Builder $query) use ($prefix, $wordMatch, $wordBindings, $useFullText, $search, $escaped, $genericMatch, $genericBindings): void {
                 $query->whereRaw("LOWER(products.name) LIKE ? ESCAPE '!'", [$prefix])
                     ->orWhereRaw($wordMatch, $wordBindings);
                 if ($useFullText && Str::length($search) >= 3) {
                     $query->orWhereRaw('LOWER(products.name) %>> ?', [$search]);
                 }
                 $query->orWhereRaw("LOWER(products.generic_name) LIKE ? ESCAPE '!'", ['%'.$escaped.'%'])
-                    ->orWhereRaw("products.search_keywords LIKE ? ESCAPE '!'", ['%'.$escaped.'%']);
+                    ->orWhereRaw("products.search_keywords LIKE ? ESCAPE '!'", ['%'.$escaped.'%'])
+                    ->orWhereRaw($genericMatch, $genericBindings);
             });
 
         $rank = "CASE WHEN LOWER(products.name) = ? THEN 0 WHEN LOWER(products.name) LIKE ? ESCAPE '!' THEN 1 WHEN {$wordMatch} THEN 2 WHEN LOWER(products.generic_name) LIKE ? ESCAPE '!' THEN 3 ELSE 4 END";
