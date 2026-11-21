@@ -591,10 +591,20 @@ select.pe-input { padding-right: 36px; }
 .ps-meter-track { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin-top: 10px; }
 .ps-meter-track span { height: 6px; border-radius: 999px; background: #e3e9f1; transition: background-color .25s; }
 .ps-meter-track span.is-done { background: var(--sc-accent); }
-.ps-checks { display: grid; gap: 10px; margin-top: 16px; }
-.ps-checks li { display: flex; align-items: center; gap: 10px; color: var(--sc-muted); font-size: 13.5px; }
+.ps-checks { display: grid; gap: 4px; margin-top: 14px; }
+.ps-checks li { color: var(--sc-muted); font-size: 13.5px; }
 .ps-checks li.is-done { color: var(--sc-ink); }
 .ps-checks li.is-done .pe-tick { border-color: var(--sc-accent); background: var(--sc-accent); color: #fff; }
+.ps-check-btn { display: flex; width: 100%; min-height: 36px; align-items: center; gap: 10px; border-radius: 6px; padding: 4px 8px; margin: 0 -8px; width: calc(100% + 16px); color: inherit; font: inherit; transition: background-color .15s, color .15s; }
+.ps-check-btn:hover { background: var(--ps-field); color: var(--sc-ink); }
+.ps-check-btn:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: -2px; }
+.ps-check-jump { color: var(--sc-accent); font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .15s; }
+.ps-check-btn:hover .ps-check-jump, .ps-check-btn:focus-visible .ps-check-jump { opacity: 1; }
+.ps-sale-pill { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #bbf7d0; border-radius: 999px; background: #f0fdf4; padding: 3px 10px; color: #166534; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ps-check-card { display: flex; cursor: pointer; align-items: flex-start; gap: 11px; border: 1px solid var(--ps-field-line); border-radius: 8px; background: var(--ps-field); padding: 12px 14px; transition: border-color .15s, background-color .15s, box-shadow .15s; }
+.ps-check-card:hover { border-color: #cfd8e3; background: #fff; }
+.ps-check-card:has(input:checked) { border-color: var(--sc-accent); background: #f6f9ff; box-shadow: 0 0 0 1px var(--sc-accent-soft); }
+.ps-check-card:has(input:focus-visible) { outline: 2px solid var(--sc-accent); outline-offset: 2px; }
 .ps-segmented { display: flex; }
 .ps-segmented label { flex: 1; }
 .ps-segmented span { min-width: 0; }

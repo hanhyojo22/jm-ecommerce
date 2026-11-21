@@ -138,12 +138,24 @@
                 },
                 {{-- The same requirements the review submission checks, so the seller sees them before saving. --}}
                 get checks() { return [
-                    { label: 'At least one photo', done: this.photosCovered },
-                    { label: 'Title', done: this.name.trim() !== '' },
-                    { label: 'Category', done: this.categoryId !== '' },
-                    { label: 'Description', done: this.description.trim() !== '' },
-                    { label: 'Price', done: Number(this.price) > 0 },
+                    { label: 'At least one photo', done: this.photosCovered, target: 'images-dropzone' },
+                    { label: 'Title', done: this.name.trim() !== '', target: 'name' },
+                    { label: 'Category', done: this.categoryId !== '', target: 'category_id' },
+                    { label: 'Description', done: this.description.trim() !== '', target: 'description' },
+                    { label: 'Price', done: Number(this.price) > 0, target: 'price' },
                 ] },
+                get discountPreview() {
+                    const regular = Number(this.comparePrice), sale = Number(this.price);
+                    if (! (regular > 0 && sale > 0 && regular > sale)) return null;
+                    const pct = Math.round(((regular - sale) / regular) * 100);
+                    return pct > 0 ? { percent: pct, savings: (regular - sale).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) } : null;
+                },
+                focusCheck(id) {
+                    const el = document.getElementById(id);
+                    if (! el) return;
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.focus({ preventScroll: true });
+                },
                 move(index, offset) { const target = index + offset; if (target < 0 || target >= this.photos.length) return; const list = [...this.photos]; [list[index], list[target]] = [list[target], list[index]]; this.photos = list; this.dirty = true },
                 makeCover(index) { const list = [...this.photos]; list.unshift(list.splice(index, 1)[0]); this.photos = list; this.dirty = true; this.photoNotice = 'Cover photo updated.' },
                 toggleRemove(id) { this.removed = this.removed.includes(id) ? this.removed.filter(other => other !== id) : [...this.removed, id]; this.dirty = true },
@@ -185,11 +197,12 @@
             @endif
 
             <div class="ps-main">
-                <section class="ps-card" aria-label="Title and description">
-                    <div><label for="name" class="pe-label">Title</label><input id="name" name="name" x-model="name" value="{{ $listing['name'] }}" required autofocus maxlength="255" placeholder="Short sleeve t-shirt" class="pe-input"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
+                <section class="ps-card" aria-labelledby="product-details-heading">
+                    <div class="ps-card-head mb-4"><div><h2 id="product-details-heading">Product details</h2><p>Name and directions customers read before ordering.</p></div></div>
+                    <div><label for="name" class="pe-label">Title</label><input id="name" name="name" x-model="name" value="{{ $listing['name'] }}" required autofocus maxlength="255" placeholder="e.g. Biogesic 500 mg Caplet (10s)" class="pe-input"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
                     <div class="mt-4">
                         <div class="flex items-baseline justify-between gap-3"><label for="description" class="pe-label">Description</label><span class="pe-count" x-text="description.length.toLocaleString() + ' / 5,000'"></span></div>
-                        <textarea id="description" name="description" rows="7" maxlength="5000" x-model="description" placeholder="Materials, size and fit, and what is in the box." class="pe-input">{{ $listing['description'] }}</textarea>
+                        <textarea id="description" name="description" rows="7" maxlength="5000" x-model="description" placeholder="What it is used for, directions, warnings, and how many are in a pack." class="pe-input">{{ $listing['description'] }}</textarea>
                         <x-input-error :messages="$errors->get('description')" class="mt-2" />
                     </div>
                 </section>
@@ -225,7 +238,7 @@
                     </ul>
                     <template x-for="id in removed" :key="id"><input type="hidden" name="remove_images[]" :value="id"></template>
 
-                    <label for="images" class="sc-dropzone mt-3" x-data="{ over: false }" :class="over && 'is-over'" x-show="photoCount < maxPhotos" @dragover.prevent="over = true" @dragleave.prevent="over = false" @drop.prevent="over = false; addFiles($event.dataTransfer.files)">
+                    <label id="images-dropzone" tabindex="-1" for="images" class="sc-dropzone mt-3" x-data="{ over: false }" :class="over && 'is-over'" x-show="photoCount < maxPhotos" @dragover.prevent="over = true" @dragleave.prevent="over = false" @drop.prevent="over = false; addFiles($event.dataTransfer.files)">
                         <span class="ps-drop-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
                         <span class="ps-upload">Upload photos</span>
                         <span class="ps-drop-hint">or drag them here. JPEG, PNG or WebP, up to 5 MB each.</span>
@@ -238,10 +251,17 @@
                 </section>
 
                 <section class="ps-card" aria-labelledby="product-pricing-heading">
-                    <div class="ps-card-head"><div><h2 id="product-pricing-heading">Pricing</h2><p>What buyers pay, in pesos.</p></div></div>
+                    <div class="ps-card-head">
+                        <div><h2 id="product-pricing-heading">Pricing</h2><p>What buyers pay, in pesos.</p></div>
+                        <span x-cloak x-show="discountPreview" class="ps-sale-pill" role="status" aria-live="polite">
+                            <span x-text="discountPreview ? '-' + discountPreview.percent + '% off' : ''"></span>
+                            <span aria-hidden="true">·</span>
+                            <span x-text="discountPreview ? 'Saves ₱' + discountPreview.savings : ''"></span>
+                        </span>
+                    </div>
                     <div class="pe-grid mt-4">
                         <div><label for="price" class="pe-label">Price</label><div class="pe-affix"><span aria-hidden="true">₱</span><input id="price" name="price" type="number" min="0.01" step="0.01" x-model="price" value="{{ $listing['price'] }}" required placeholder="0.00" class="pe-input"></div><x-input-error :messages="$errors->get('price')" class="mt-2" /></div>
-                        <div><label for="compare_at_price" class="pe-label">Compare-at price</label><div class="pe-affix"><span aria-hidden="true">₱</span><input id="compare_at_price" name="compare_at_price" type="number" min="0.01" step="0.01" x-model="comparePrice" value="{{ $listing['comparePrice'] }}" placeholder="0.00" aria-describedby="compare-price-hint" class="pe-input"></div><x-input-error :messages="$errors->get('compare_at_price')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="compare_at_price" class="pe-label">Compare-at price</label><span class="pe-optional" aria-hidden="true">Optional</span></div><div class="pe-affix"><span aria-hidden="true">₱</span><input id="compare_at_price" name="compare_at_price" type="number" min="0.01" step="0.01" x-model="comparePrice" value="{{ $listing['comparePrice'] }}" placeholder="0.00" aria-describedby="compare-price-hint" class="pe-input"></div><x-input-error :messages="$errors->get('compare_at_price')" class="mt-2" /></div>
                     </div>
                     <p id="compare-price-hint" class="pe-hint">To show a sale, enter the regular price as the compare-at price. <span x-show="variantCount">Variants without their own price use this price.</span></p>
                 </section>
@@ -249,7 +269,7 @@
                 <section class="ps-card" aria-labelledby="product-inventory-heading">
                     <div class="ps-card-head"><div><h2 id="product-inventory-heading">Inventory</h2><p>How you identify and count this product.</p></div></div>
                     <div class="pe-grid mt-4">
-                        <div><label for="sku" class="pe-label">SKU (Stock Keeping Unit)</label><input id="sku" name="sku" x-model="sku" value="{{ $listing['sku'] }}" required maxlength="100" placeholder="TSHIRT-BASIC" class="pe-input"><x-input-error :messages="$errors->get('sku')" class="mt-2" /></div>
+                        <div><label for="sku" class="pe-label">SKU (Stock Keeping Unit)</label><input id="sku" name="sku" x-model="sku" value="{{ $listing['sku'] }}" required maxlength="100" placeholder="e.g. BIO-500-10S" class="pe-input"><x-input-error :messages="$errors->get('sku')" class="mt-2" /></div>
                         <div x-show="variantCount === 0"><label for="stock_quantity" class="pe-label">Stock quantity</label><input id="stock_quantity" name="stock_quantity" type="number" min="0" x-model="stock" value="{{ $listing['stock'] }}" :disabled="variantCount > 0" :required="variantCount === 0" @readonly($editing) aria-describedby="stock-hint" class="pe-input"><p id="stock-hint" class="pe-hint">@if ($editing)Total across all branches. Change counts on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@else Opening stock at {{ $store->name }}. Other branches count theirs on Branch stock.@endif</p><x-input-error :messages="$errors->get('stock_quantity')" class="mt-2" /></div>
                     </div>
                     <p x-show="variantCount > 0" x-cloak class="pe-hint">@if ($editing)Stock per variant is counted per branch on <a href="{{ route('seller.branch-stock.index') }}" class="font-semibold text-brand">Branch stock</a>.@else Opening stock for each variant below goes to {{ $store->name }}.@endif</p>
@@ -377,7 +397,14 @@
                     </div>
                     <ul class="ps-checks">
                         <template x-for="check in checks" :key="check.label">
-                            <li :class="check.done && 'is-done'"><span class="pe-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span><span x-text="check.label"></span><span class="sr-only" x-text="check.done ? ', done' : ', missing'"></span></li>
+                            <li :class="check.done && 'is-done'">
+                                <button type="button" class="ps-check-btn" @click="focusCheck(check.target)">
+                                    <span class="pe-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>
+                                    <span class="flex-1 text-left" x-text="check.label"></span>
+                                    <span class="ps-check-jump" x-show="! check.done" aria-hidden="true">Fill</span>
+                                    <span class="sr-only" x-text="check.done ? ', done' : ', missing'"></span>
+                                </button>
+                            </li>
                         </template>
                     </ul>
                     <x-input-error :messages="$errors->get('status')" class="mt-2" />
@@ -387,22 +414,22 @@
                     <div class="ps-card-head"><div><h2 id="organization-heading">Product organization</h2><p>Helps buyers find it in the marketplace.</p></div></div>
                     <div class="mt-4 grid gap-4">
                         <div><label for="category_id" class="pe-label">Category</label><select id="category_id" name="category_id" x-model="categoryId" class="pe-input"><option value="">Uncategorized</option>@foreach ($categories as $category)<option value="{{ $category->id }}" @selected($listing['categoryId'] === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
-                        <div><label for="brand" class="pe-label">Brand</label><input id="brand" name="brand" maxlength="100" value="{{ old('brand', $product?->brand) }}" class="pe-input"><x-input-error :messages="$errors->get('brand')" class="mt-2" /></div>
-                        <div><label for="generic_name" class="pe-label">Generic name</label><input id="generic_name" name="generic_name" maxlength="160" value="{{ old('generic_name', $product?->generic_name) }}" class="pe-input" placeholder="e.g. Paracetamol"><x-input-error :messages="$errors->get('generic_name')" class="mt-2" /></div>
-                        <div><label for="search_keywords" class="pe-label">Search keywords</label><input id="search_keywords" name="search_keywords" maxlength="400" value="{{ old('search_keywords', $product?->search_keywords) }}" class="pe-input" placeholder="e.g. lagnat, sakit ng ulo, fever" aria-describedby="search-keywords-hint"><p id="search-keywords-hint" class="pe-hint">Other words customers type for this product, separated by commas. Names for the active ingredient, like "vitamin c", go on the <a href="{{ route('seller.ingredient-aliases.index') }}" class="font-semibold text-brand">Other names</a> page instead, so every brand gets them.</p><x-input-error :messages="$errors->get('search_keywords')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="brand" class="pe-label">Brand</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="brand" name="brand" maxlength="100" value="{{ old('brand', $product?->brand) }}" placeholder="e.g. Unilab" class="pe-input"><x-input-error :messages="$errors->get('brand')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="generic_name" class="pe-label">Generic name</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="generic_name" name="generic_name" maxlength="160" value="{{ old('generic_name', $product?->generic_name) }}" class="pe-input" placeholder="e.g. Paracetamol"><x-input-error :messages="$errors->get('generic_name')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="search_keywords" class="pe-label">Search keywords</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="search_keywords" name="search_keywords" maxlength="400" value="{{ old('search_keywords', $product?->search_keywords) }}" class="pe-input" placeholder="e.g. lagnat, sakit ng ulo, fever" aria-describedby="search-keywords-hint"><p id="search-keywords-hint" class="pe-hint">Other words customers type for this product, separated by commas. Names for the active ingredient, like "vitamin c", go on the <a href="{{ route('seller.ingredient-aliases.index') }}" class="font-semibold text-brand">Other names</a> page instead, so every brand gets them.</p><x-input-error :messages="$errors->get('search_keywords')" class="mt-2" /></div>
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <div><label for="dosage_form" class="pe-label">Dosage form</label><input id="dosage_form" name="dosage_form" maxlength="60" list="dosage-forms" value="{{ old('dosage_form', $product?->dosage_form) }}" class="pe-input"><datalist id="dosage-forms">@foreach (['Tablet', 'Capsule', 'Syrup', 'Suspension', 'Drops', 'Cream', 'Ointment', 'Inhaler', 'Injection'] as $form)<option value="{{ $form }}"></option>@endforeach</datalist><x-input-error :messages="$errors->get('dosage_form')" class="mt-2" /></div>
-                            <div><label for="strength" class="pe-label">Strength</label><input id="strength" name="strength" maxlength="60" value="{{ old('strength', $product?->strength) }}" class="pe-input" placeholder="e.g. 500 mg"><x-input-error :messages="$errors->get('strength')" class="mt-2" /></div>
+                            <div><div class="flex items-baseline justify-between gap-2"><label for="dosage_form" class="pe-label">Dosage form</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="dosage_form" name="dosage_form" maxlength="60" list="dosage-forms" value="{{ old('dosage_form', $product?->dosage_form) }}" placeholder="e.g. Tablet" class="pe-input"><datalist id="dosage-forms">@foreach (['Tablet', 'Capsule', 'Syrup', 'Suspension', 'Drops', 'Cream', 'Ointment', 'Inhaler', 'Injection'] as $form)<option value="{{ $form }}"></option>@endforeach</datalist><x-input-error :messages="$errors->get('dosage_form')" class="mt-2" /></div>
+                            <div><div class="flex items-baseline justify-between gap-2"><label for="strength" class="pe-label">Strength</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="strength" name="strength" maxlength="60" value="{{ old('strength', $product?->strength) }}" class="pe-input" placeholder="e.g. 500 mg"><x-input-error :messages="$errors->get('strength')" class="mt-2" /></div>
                         </div>
-                        <div><label for="manufacturer" class="pe-label">Manufacturer</label><input id="manufacturer" name="manufacturer" maxlength="160" value="{{ old('manufacturer', $product?->manufacturer) }}" class="pe-input"><x-input-error :messages="$errors->get('manufacturer')" class="mt-2" /></div>
+                        <div><div class="flex items-baseline justify-between gap-2"><label for="manufacturer" class="pe-label">Manufacturer</label><span class="pe-optional" aria-hidden="true">Optional</span></div><input id="manufacturer" name="manufacturer" maxlength="160" value="{{ old('manufacturer', $product?->manufacturer) }}" placeholder="e.g. United Laboratories" class="pe-input"><x-input-error :messages="$errors->get('manufacturer')" class="mt-2" /></div>
                         <div>
                             <input type="hidden" name="requires_prescription" value="0">
-                            <label class="flex items-start gap-3"><input type="checkbox" name="requires_prescription" value="1" @checked(old('requires_prescription', $product?->requires_prescription)) class="mt-1"><span><span class="pe-label">Prescription required</span><span class="block text-sm text-muted">Customers must upload a prescription for a pharmacist to approve before this is prepared.</span></span></label>
+                            <label class="ps-check-card"><input type="checkbox" name="requires_prescription" value="1" @checked(old('requires_prescription', $product?->requires_prescription)) class="mt-0.5"><span><span class="pe-label !mb-0.5">Prescription required</span><span class="block text-xs leading-relaxed text-muted">Customers must upload a prescription for a pharmacist to approve before this is prepared.</span></span></label>
                             <x-input-error :messages="$errors->get('requires_prescription')" class="mt-2" />
                         </div>
                         <div>
                             <input type="hidden" name="switch_with_care" value="0">
-                            <label class="flex items-start gap-3"><input type="checkbox" name="switch_with_care" value="1" @checked(old('switch_with_care', $product?->switch_with_care)) class="mt-1"><span><span class="pe-label">Careful when switching brands</span><span class="block text-sm text-muted">For medicines like levothyroxine, anti-seizure medicines or warfarin. Customers still see every brand, with a note to talk to their pharmacist or doctor before switching.</span></span></label>
+                            <label class="ps-check-card"><input type="checkbox" name="switch_with_care" value="1" @checked(old('switch_with_care', $product?->switch_with_care)) class="mt-0.5"><span><span class="pe-label !mb-0.5">Careful when switching brands</span><span class="block text-xs leading-relaxed text-muted">For medicines like levothyroxine, anti-seizure medicines or warfarin. Customers still see every brand, with a note to talk to their pharmacist or doctor before switching.</span></span></label>
                             <x-input-error :messages="$errors->get('switch_with_care')" class="mt-2" />
                         </div>
                         <fieldset>
