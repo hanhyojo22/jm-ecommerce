@@ -642,6 +642,7 @@
 
 .sc-orders-detail .sc-order-foot {
     margin-top: 0;
+    padding: 10px 20px;
 }
 
 .sc-orders-workspace,
@@ -722,17 +723,17 @@
 }
 
 /* Header: full reference, copy affordance, total and actions together. */
+/* One row when it fits; the buttons wrap below rather than squeezing the order number. */
 .sc-premium-head.sc-order-head {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    gap: 12px 24px;
-    padding: 20px 24px 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 14px 20px;
 }
 
 .sc-order-head-main {
-    grid-column: 1;
-    grid-row: 1;
+    flex: 1 1 400px;
     min-width: 0;
     max-width: 100%;
 }
@@ -750,7 +751,7 @@
     min-width: 0;
     flex: 0 1 auto;
     color: var(--sc-ink);
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 650;
     line-height: 1.3;
     letter-spacing: -.025em;
@@ -760,7 +761,7 @@
 }
 
 .sc-order-subline {
-    margin-top: 8px;
+    margin-top: 2px;
     color: #595959;
     font-size: 12px;
     line-height: 1.5;
@@ -807,8 +808,7 @@
 }
 
 .sc-premium-head .sc-premium-price {
-    grid-column: 2;
-    grid-row: 1;
+    margin-left: auto;
     text-align: right;
     white-space: nowrap;
 }
@@ -816,7 +816,7 @@
 .sc-premium-head .sc-premium-price strong {
     display: block;
     color: var(--sc-ink);
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 650;
     line-height: 1.15;
     letter-spacing: -.035em;
@@ -824,7 +824,7 @@
 
 .sc-premium-head .sc-premium-price small {
     display: block;
-    margin-top: 4px;
+    margin-top: 2px;
     color: #595959;
     font-size: 12px;
     line-height: 1.5;
@@ -832,13 +832,11 @@
 
 .sc-order-head-actions {
     display: flex;
-    grid-column: 1 / -1;
-    grid-row: 2;
+    margin-left: auto;
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
-    justify-self: end;
-    gap: 12px;
+    gap: 8px;
 }
 
 .sc-order-head-actions form {
@@ -855,7 +853,7 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0;
-    padding: 16px 24px 18px;
+    padding: 10px 20px;
     border-top: 1px solid var(--sc-line);
     border-bottom: 1px solid var(--sc-line);
     background: var(--sc-surface);
@@ -943,29 +941,29 @@
 
 /* Workspace: 60/40 split, 16px between cards, 20px between columns. */
 .sc-orders-detail .sc-premium-body {
-    padding: 20px 24px 24px;
+    padding: 14px 20px 16px;
 }
 
 .sc-premium-notice {
-    margin-bottom: 24px;
+    margin-bottom: 14px;
 }
 
 .sc-order-grid {
     display: grid;
     grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
     align-items: start;
-    gap: 20px;
+    gap: 14px;
 }
 
 .sc-order-column {
     display: grid;
     min-width: 0;
     align-content: start;
-    gap: 16px;
+    gap: 12px;
 }
 
 .sc-order-prescription {
-    margin-bottom: 24px;
+    margin-bottom: 14px;
 }
 
 .sc-order-prescription .sc-prescription-pages {
@@ -991,7 +989,7 @@
 
 /* Unified receipt and billing card. */
 .sc-order-receipt .sc-card-head {
-    padding: 20px;
+    padding: 12px 16px;
 }
 
 .sc-order-items {
@@ -1004,7 +1002,7 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 12px 20px;
+    padding: 8px 16px;
     line-height: 1.5;
 }
 
@@ -1068,9 +1066,9 @@
 
 .sc-order-receipt-totals {
     display: grid;
-    gap: 12px;
+    gap: 6px;
     margin: 0;
-    padding: 16px 20px 20px;
+    padding: 10px 16px 12px;
     border-top: 1px solid var(--sc-line);
 }
 
@@ -1100,7 +1098,7 @@
 
 .sc-order-receipt-totals .is-total {
     margin-top: 2px;
-    padding-top: 12px;
+    padding-top: 8px;
     border-top: 1px solid var(--sc-line-soft);
     font-size: 15px;
 }
@@ -1112,7 +1110,7 @@
 }
 
 .sc-order-delivery {
-    padding: 20px;
+    padding: 12px 16px 14px;
     border-top: 1px solid var(--sc-line);
 }
 
@@ -1123,8 +1121,8 @@
 /* Customer and location: breathing line spacing, one map button, one text link. */
 .sc-customer-lines {
     display: grid;
-    gap: 8px;
-    margin-top: 12px;
+    gap: 4px;
+    margin-top: 6px;
     line-height: 1.5;
 }
 
@@ -1183,14 +1181,14 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    margin-top: 16px;
+    gap: 4px;
+    margin-top: 10px;
 }
 
 .sc-delivery-primary {
     display: inline-flex;
     width: 100%;
-    min-height: 44px;
+    min-height: 38px;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -1237,13 +1235,13 @@
 .sc-id-head {
     align-items: flex-start;
     gap: 8px 12px;
-    padding: 20px;
+    padding: 12px 16px;
 }
 
 .sc-id-card-body {
     display: grid;
-    gap: 14px;
-    padding: 20px;
+    gap: 10px;
+    padding: 12px 16px 14px;
     line-height: 1.5;
 }
 
@@ -1316,7 +1314,7 @@
 .sc-id-meta {
     display: grid;
     min-width: 0;
-    gap: 8px;
+    gap: 2px;
     color: #595959;
     font-size: 12px;
     line-height: 1.5;
@@ -1411,7 +1409,7 @@
 .sc-id-flag {
     display: inline-flex;
     width: 100%;
-    min-height: 40px;
+    min-height: 36px;
     align-items: center;
     justify-content: center;
     border: 1px solid;
@@ -1539,15 +1537,15 @@
 
 @media (max-width: 1200px) {
     .sc-premium-head.sc-order-head {
-        padding: 18px 22px 14px;
+        padding: 12px 18px;
     }
 
     .sc-premium-steps {
-        padding: 14px 22px 16px;
+        padding: 10px 18px;
     }
 
     .sc-orders-detail .sc-premium-body {
-        padding: 18px 22px 22px;
+        padding: 12px 18px 14px;
     }
 }
 
@@ -1578,8 +1576,8 @@
     .sc-premium-head.sc-order-head {
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        padding: 18px;
+        gap: 10px;
+        padding: 14px 16px;
     }
 
     .sc-order-head-end {
@@ -1597,6 +1595,7 @@
     }
 
     .sc-premium-head .sc-premium-price {
+        margin-left: 0;
         text-align: left;
     }
 
