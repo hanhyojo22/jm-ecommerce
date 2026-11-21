@@ -13,6 +13,7 @@ import '../providers/order_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/family_banner_carousel.dart';
 import '../widgets/product_feed.dart';
 import '../widgets/shell.dart';
 import '../widgets/store_locator.dart';
@@ -267,6 +268,17 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                       keyboardDismissBehavior:
                           ScrollViewKeyboardDismissBehavior.onDrag,
                       slivers: [
+                        if (browsing &&
+                            !needsBranch &&
+                            feed?.products.isNotEmpty == true)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            sliver: SliverToBoxAdapter(
+                              child: FamilyBannerCarousel(
+                                onShop: () => context.push('/search'),
+                              ),
+                            ),
+                          ),
                         SliverToBoxAdapter(
                           child: Material(
                             type: MaterialType.transparency,

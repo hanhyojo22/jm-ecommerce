@@ -19,9 +19,25 @@ import 'package:jmmart/src/screens/catalog_screen.dart';
 import 'package:jmmart/src/screens/search_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/widgets/family_banner_carousel.dart';
 import 'package:jmmart/src/widgets/shell.dart';
 
 void main() {
+  testWidgets('the home family banner opens medicine search', (tester) async {
+    await _pumpShopRouter(tester, _CatalogApi());
+    expect(find.byType(FamilyBannerCarousel), findsOneWidget);
+
+    await tester.tap(
+      find.bySemanticsLabel(
+        'Care for the whole family. Shop essentials. Banner 1 of 4.',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SearchScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('search placeholder scrolls without submitting a search', (
     tester,
   ) async {
@@ -347,12 +363,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.lastCategory, 'home-living');
+    expect(find.byType(FamilyBannerCarousel), findsNothing);
     expect(find.text(_homeMarker), findsNothing);
     expect(find.text('Home & living'), findsNWidgets(2));
 
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
     expect(api.lastCategory, isNull);
+    expect(find.byType(FamilyBannerCarousel), findsOneWidget);
     expect(find.text(_homeMarker), findsOneWidget);
   });
 

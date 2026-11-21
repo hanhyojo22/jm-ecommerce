@@ -18,6 +18,7 @@ import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
 import 'store_locator.dart';
+import 'welcome_promo.dart';
 
 class ShellTabState {
   const ShellTabState({required this.index, required this.loaded});
@@ -61,6 +62,7 @@ class _AppShellState extends ConsumerState<AppShell>
 
   /// The signed-in user already asked to complete their profile this session.
   String? _profilePromptedFor;
+  bool _startupPromptsComplete = false;
 
   @override
   void initState() {
@@ -72,12 +74,31 @@ class _AppShellState extends ConsumerState<AppShell>
         ref.invalidate(conversationsProvider);
       }
     });
-    // Like other shopping apps: explain, then ask for location on first open.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        askForLocation(context, ref, automatic: true);
+        unawaited(_showStartupPrompts());
       }
     });
+  }
+
+  Future<void> _showStartupPrompts() async {
+    final shop = await showWelcomePromo(
+      context,
+      signedIn: ref.read(isSignedInProvider),
+    );
+    if (!mounted) {
+      return;
+    }
+    if (shop && !ref.read(isSignedInProvider)) {
+      await context.push('/sign-in');
+    }
+    if (!mounted) {
+      return;
+    }
+    await askForLocation(context, ref, automatic: true);
+    if (mounted) {
+      setState(() => _startupPromptsComplete = true);
+    }
   }
 
   @override
@@ -105,7 +126,7 @@ class _AppShellState extends ConsumerState<AppShell>
   Widget build(BuildContext context) {
     final signedIn = ref.watch(isSignedInProvider);
     // Cached by Riverpod: runs once per signed-in session, not on every tab switch.
-    if (signedIn) {
+    if (signedIn && _startupPromptsComplete) {
       ref.watch(pushRegistrationProvider);
       // Once per session and user: refreshing the account must not ask again.
       final account = ref.watch(meProvider).value;
