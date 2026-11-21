@@ -9,7 +9,6 @@ import 'package:phosphor_icons/phosphor_icons.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/catalog_providers.dart';
-import '../providers/order_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -17,7 +16,6 @@ import '../widgets/family_banner_carousel.dart';
 import '../widgets/product_feed.dart';
 import '../widgets/shell.dart';
 import '../widgets/store_locator.dart';
-import 'search_screen.dart' show openBranchChat;
 
 class CatalogScreen extends ConsumerStatefulWidget {
   const CatalogScreen({super.key});
@@ -337,13 +335,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                             ),
                           )
                         else ...[
-                          if (browsing)
-                            const SliverPadding(
-                              padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
-                              sliver: SliverToBoxAdapter(
-                                child: _QuickActions(),
-                              ),
-                            ),
                           if (browsing && boughtBefore.isNotEmpty)
                             SliverToBoxAdapter(
                               child: _ProductRail(
@@ -824,151 +815,6 @@ class _ProductRail extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Shortcuts to what pharmacy shoppers come back for, like Watsons' "Only in the APP" row.
-class _QuickActions extends ConsumerStatefulWidget {
-  const _QuickActions();
-
-  @override
-  ConsumerState<_QuickActions> createState() => _QuickActionsState();
-}
-
-class _QuickActionsState extends ConsumerState<_QuickActions> {
-  bool _openingChat = false;
-
-  Future<void> _sendPrescription() async {
-    if (_openingChat) {
-      return;
-    }
-    setState(() => _openingChat = true);
-    try {
-      await openBranchChat(context, ref);
-    } finally {
-      if (mounted) {
-        setState(() => _openingChat = false);
-      }
-    }
-  }
-
-  void _openOrders(String tab) {
-    ref.read(ordersTabProvider.notifier).select(tab);
-    ref.read(shellTabProvider.notifier).select(1);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _QuickAction(
-            icon: PhosphorIconsRegular.prescription,
-            label: 'Send prescription',
-            busy: _openingChat,
-            onTap: _sendPrescription,
-          ),
-          _QuickAction(
-            icon: PhosphorIconsRegular.arrowsClockwise,
-            // Delivered orders, where each has its Order again button.
-            label: 'Refill medicines',
-            onTap: () => _openOrders('delivered'),
-          ),
-          _QuickAction(
-            icon: PhosphorIconsRegular.truck,
-            label: 'Track order',
-            onTap: () => _openOrders('all'),
-          ),
-          _QuickAction(
-            icon: PhosphorIconsRegular.heart,
-            label: 'Saved items',
-            onTap: () => context.push('/saved'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.busy = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool busy;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final dark = scheme.brightness == Brightness.dark;
-    // Navy on the pale sun disc; on dark, a sun glyph on a faint sun disc.
-    final glyph = dark ? scheme.secondary : scheme.onSecondary;
-
-    return Expanded(
-      child: Semantics(
-        button: true,
-        label: label,
-        excludeSemantics: true,
-        child: InkWell(
-          onTap: busy ? null : onTap,
-          borderRadius: BorderRadius.circular(appSurfaceRadius),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-            child: Column(
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: dark ? scheme.surfaceContainerLow : sunWash,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: dark ? scheme.secondary : sunWashEdge,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: busy
-                      ? Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: glyph,
-                          ),
-                        )
-                      : Icon(icon, size: 24, color: glyph),
-                ),
-                const SizedBox(height: 8),
-                // Capped so "prescription" fits its column instead of
-                // breaking mid-word at large font sizes.
-                MediaQuery.withClampedTextScaling(
-                  maxScaleFactor: 1.15,
-                  child: Text(
-                    label,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

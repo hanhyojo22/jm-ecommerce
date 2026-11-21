@@ -13,14 +13,12 @@ import 'package:jmmart/src/models/store_branch.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/providers/catalog_providers.dart';
-import 'package:jmmart/src/providers/order_providers.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 import 'package:jmmart/src/screens/catalog_screen.dart';
 import 'package:jmmart/src/screens/search_screen.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
 import 'package:jmmart/src/widgets/family_banner_carousel.dart';
-import 'package:jmmart/src/widgets/shell.dart';
 
 void main() {
   testWidgets('the home family banner opens medicine search', (tester) async {
@@ -116,7 +114,7 @@ void main() {
       find.byType(CustomScrollView),
     );
     expect(scroll.controller!.offset, 0);
-    expect(find.text(_homeMarker).hitTestable(), findsOneWidget);
+    expect(_homeMarker.hitTestable(), findsOneWidget);
   });
 
   testWidgets('a new filter does not display products from the previous feed', (
@@ -364,14 +362,14 @@ void main() {
 
     expect(api.lastCategory, 'home-living');
     expect(find.byType(FamilyBannerCarousel), findsNothing);
-    expect(find.text(_homeMarker), findsNothing);
+    expect(_homeMarker, findsNothing);
     expect(find.text('Home & living'), findsNWidgets(2));
 
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
     expect(api.lastCategory, isNull);
     expect(find.byType(FamilyBannerCarousel), findsOneWidget);
-    expect(find.text(_homeMarker), findsOneWidget);
+    expect(_homeMarker, findsOneWidget);
   });
 
   testWidgets('search stays visible while browsing the product feed', (
@@ -403,24 +401,11 @@ void main() {
     expect(find.text('Reload categories'), findsNothing);
   });
 
-  testWidgets('quick actions open delivered orders and the branch chat', (
-    tester,
-  ) async {
-    final api = _CatalogApi();
-    await _pumpShopRouter(tester, api);
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(CatalogScreen)),
-    );
+  testWidgets('the shop has no quick action row', (tester) async {
+    await _pumpShopRouter(tester, _CatalogApi());
 
-    await tester.tap(find.text('Refill medicines'));
-    await tester.pump();
-    expect(container.read(ordersTabProvider), 'delivered');
-    expect(container.read(shellTabProvider).index, 1);
-
-    await tester.tap(find.text('Send prescription'));
-    await tester.pumpAndSettle();
-    expect(api.chatBranch, 'B-TEST');
-    expect(find.text('Chat C-1'), findsOneWidget);
+    expect(find.text('Refill medicines'), findsNothing);
+    expect(find.text('Track order'), findsNothing);
   });
 
   testWidgets('best sellers show ranked at the branch', (tester) async {
@@ -663,17 +648,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.dealsFeedRequests, 1);
     expect(find.text('Deals'), findsOneWidget);
-    expect(find.text(_homeMarker), findsNothing);
+    expect(_homeMarker, findsNothing);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.text(_homeMarker), findsOneWidget);
+    expect(_homeMarker, findsOneWidget);
 
     await tester.tap(find.text('See all'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
-    expect(find.text(_homeMarker), findsOneWidget);
+    expect(_homeMarker, findsOneWidget);
   });
 
   testWidgets('top deals stay hidden when nothing is on sale', (tester) async {
@@ -1328,7 +1313,7 @@ class _CatalogApi extends ApiClient {
 }
 
 /// Shown only on the Shop's home, not on a category, search or deals list.
-const _homeMarker = 'Send prescription';
+final _homeMarker = find.byType(FamilyBannerCarousel);
 
 class _FixedLocator extends NearestStoreNotifier {
   _FixedLocator(this.fixed);
