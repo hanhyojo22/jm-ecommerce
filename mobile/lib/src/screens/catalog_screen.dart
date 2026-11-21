@@ -919,7 +919,7 @@ class _CategoryStrip extends StatelessWidget {
       container: true,
       label: 'Shop by category',
       child: SizedBox(
-        height: 64 + categoryLabelHeight * 2 + 16,
+        height: 72 + categoryLabelHeight * 2 + 16,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -934,7 +934,7 @@ class _CategoryStrip extends StatelessWidget {
 
             return SizedBox(
               // Wide enough at 2× text that one-word names like "Electronics" never split mid-word.
-              width: scaler.scale(84).clamp(80, 184),
+              width: scaler.scale(92).clamp(92, 184),
               child: Semantics(
                 button: true,
                 selected: active,
@@ -953,19 +953,21 @@ class _CategoryStrip extends StatelessWidget {
                               ? Duration.zero
                               : const Duration(milliseconds: 200),
                           curve: Curves.easeOutCubic,
-                          width: 64,
-                          height: 64,
+                          width: 72,
+                          height: 72,
                           decoration: BoxDecoration(
                             color: active
                                 ? scheme.primaryContainer
-                                : scheme.surfaceContainerLowest,
-                            borderRadius: BorderRadius.circular(18),
+                                : scheme.secondaryContainer,
+                            shape: BoxShape.circle,
                             border: Border.all(
                               color: active
                                   ? scheme.primary
-                                  : scheme.outlineVariant,
+                                  : Colors.transparent,
+                              width: 2,
                             ),
                           ),
+                          clipBehavior: Clip.antiAlias,
                           child: option.slug == null
                               ? Icon(
                                   active
@@ -974,10 +976,10 @@ class _CategoryStrip extends StatelessWidget {
                                   size: 26,
                                   color: active
                                       ? scheme.onPrimaryContainer
-                                      : scheme.primary,
+                                      : scheme.onSecondaryContainer,
                                 )
                               : Padding(
-                                  padding: const EdgeInsets.all(4),
+                                  padding: const EdgeInsets.all(8),
                                   child: Image.asset(
                                     'assets/categories/${option.slug}.webp',
                                     fit: BoxFit.contain,
@@ -989,12 +991,12 @@ class _CategoryStrip extends StatelessWidget {
                                           size: 26,
                                           color: active
                                               ? scheme.onPrimaryContainer
-                                              : scheme.primary,
+                                              : scheme.onSecondaryContainer,
                                         ),
                                   ),
                                 ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         Text(
                           option.name,
                           maxLines: 2,
@@ -1003,10 +1005,10 @@ class _CategoryStrip extends StatelessWidget {
                           style: theme.textTheme.labelMedium?.copyWith(
                             color: active
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurfaceVariant,
+                                : theme.colorScheme.onSurface,
                             fontWeight: active
                                 ? FontWeight.w700
-                                : FontWeight.w500,
+                                : FontWeight.w600,
                           ),
                         ),
                       ],
