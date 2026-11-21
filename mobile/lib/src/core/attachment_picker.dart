@@ -2,8 +2,10 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
 /// Upload limit for picked files (prescriptions): 5 MB, under the server's 8 MB.
@@ -208,19 +210,17 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
   }
 }
 
-/// Stacks the front above the back on white, as a PNG under the upload limit.
+/// Stacks the front above the back on white, as one JPEG under the upload limit.
 Future<PickedAttachment> stackCardSides(
   PickedAttachment front,
   PickedAttachment back,
 ) async {
-  // Narrower until the PNG fits; 900px still shows an ID's small print.
-  for (final width in const [1400, 1100, 900]) {
-    final bytes = await _stack([front.bytes, back.bytes], width);
-    if (bytes.length <= maxChatAttachmentBytes) {
-      return PickedAttachment(name: 'discount-id-front-back.png', bytes: bytes);
-    }
+  final bytes = await _stack([front.bytes, back.bytes], 1400);
+  if (bytes.length > maxChatAttachmentBytes) {
+    throw const AttachmentTooLargeException();
   }
-  throw const AttachmentTooLargeException();
+
+  return PickedAttachment(name: 'discount-id-front-back.jpg', bytes: bytes);
 }
 
 Future<Uint8List> _stack(List<Uint8List> sides, int width) async {
@@ -247,9 +247,14 @@ Future<Uint8List> _stack(List<Uint8List> sides, int width) async {
     final joined = await picture.toImage(width, height);
     picture.dispose();
     try {
-      final png = await joined.toByteData(format: ui.ImageByteFormat.png);
+      final rgba = await joined.toByteData(format: ui.ImageByteFormat.rawRgba);
 
-      return png!.buffer.asUint8List();
+      // Flutter only encodes PNG (several MB here); a JPEG is about a tenth of that.
+      return await compute(_encodeJpeg, (
+        width,
+        height,
+        rgba!.buffer.asUint8List(),
+      ));
     } finally {
       joined.dispose();
     }
@@ -258,4 +263,18 @@ Future<Uint8List> _stack(List<Uint8List> sides, int width) async {
       image.dispose();
     }
   }
+}
+
+Uint8List _encodeJpeg((int, int, Uint8List) pixels) {
+  final (width, height, rgba) = pixels;
+
+  return img.encodeJpg(
+    img.Image.fromBytes(
+      width: width,
+      height: height,
+      bytes: rgba.buffer,
+      numChannels: 4,
+    ),
+    quality: 85,
+  );
 }

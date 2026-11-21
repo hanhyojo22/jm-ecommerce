@@ -15,13 +15,13 @@ Future<PickedAttachment> _png(String name, int width, int height) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('the front and back of an ID become one PNG, front on top', () async {
+  test('the front and back of an ID become one JPEG, front on top', () async {
     final joined = await stackCardSides(
       await _png('front.jpg', 856, 540),
       await _png('back.jpg', 428, 270),
     );
 
-    expect(joined.mimeType, 'image/png');
+    expect(joined.mimeType, 'image/jpeg');
     final codec = await ui.instantiateImageCodec(joined.bytes);
     final image = (await codec.getNextFrame()).image;
     // Both sides scaled to 1400 wide (883 tall each) with a 24px gap.
