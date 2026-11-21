@@ -635,6 +635,12 @@ class _PickedRx implements AttachmentPicker {
   );
 
   @override
+  Future<PickedAttachment?> scanCard() async => PickedAttachment(
+    name: 'scan.jpg',
+    bytes: Uint8List.fromList([7, 8, 9]),
+  );
+
+  @override
   Future<PickedAttachment?> pickImage() async =>
       PickedAttachment(name: 'rx.jpg', bytes: Uint8List.fromList([1, 2, 3]));
 

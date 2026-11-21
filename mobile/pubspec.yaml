@@ -60,6 +60,7 @@ dependencies:
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   google_mlkit_text_recognition: ^1.0.3
+  google_mlkit_document_scanner: ^0.7.2
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,8 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// Upload limit for picked files (prescriptions): 5 MB, under the server's 8 MB.
@@ -40,6 +42,10 @@ abstract class AttachmentPicker {
   /// A new photo from the phone's camera app, or null when the customer backs out.
   Future<PickedAttachment?> takePhoto();
 
+  /// A card scanned with Google's document scanner, which finds the card's edges and
+  /// crops it straight; falls back to [takePhoto] when the scanner is not available.
+  Future<PickedAttachment?> scanCard();
+
   Future<PickedAttachment?> pickDocument();
 
   /// Every page the customer picked in one go, for a multi-page prescription.
@@ -74,6 +80,38 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
     }
 
     return PickedAttachment(name: shot.name, bytes: bytes);
+  }
+
+  @override
+  Future<PickedAttachment?> scanCard() async {
+    // Base mode: crop and rotate only, no filters that could grey out the photo.
+    final scanner = DocumentScanner(
+      options: DocumentScannerOptions(mode: ScannerMode.base),
+    );
+    final List<String> pages;
+    try {
+      pages = (await scanner.scanDocument()).images ?? const [];
+    } on PlatformException catch (error) {
+      if (error.message == 'Operation cancelled') {
+        return null;
+      }
+
+      // No Google Play services, or the scanner module could not download.
+      return takePhoto();
+    } finally {
+      await scanner.close();
+    }
+    if (pages.isEmpty) {
+      return null;
+    }
+
+    final file = File(pages.first);
+    final bytes = await file.readAsBytes();
+    if (bytes.length > maxChatAttachmentBytes) {
+      throw const AttachmentTooLargeException();
+    }
+
+    return PickedAttachment(name: file.uri.pathSegments.last, bytes: bytes);
   }
 
   @override

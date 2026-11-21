@@ -436,7 +436,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
       final picker = ref.read(attachmentPickerProvider);
       final photo = camera
-          ? await picker.takePhoto()
+          ? await picker.scanCard()
           : await picker.pickImage();
       if (photo != null && mounted) {
         setState(() => _cardPhoto = photo);

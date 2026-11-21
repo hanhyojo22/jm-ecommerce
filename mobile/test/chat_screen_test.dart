@@ -1355,6 +1355,9 @@ class _FakeAttachmentPicker implements AttachmentPicker {
   Future<PickedAttachment?> takePhoto() async => image;
 
   @override
+  Future<PickedAttachment?> scanCard() async => image;
+
+  @override
   Future<PickedAttachment?> pickDocument() async {
     documentPicks++;
 
