@@ -11,10 +11,31 @@ import 'common.dart';
 /// count change repaints this icon instead of the whole page around it, and
 /// [CartBadgeIconState.pulse] gives the landing bounce for [flyToCart].
 class CartBadgeIcon extends ConsumerStatefulWidget {
-  const CartBadgeIcon({super.key});
+  const CartBadgeIcon({super.key, this.child});
+
+  /// Custom cart icon (such as the shell's Cart tab); defaults to the app-bar cart icon.
+  final Widget? child;
 
   @override
   ConsumerState<CartBadgeIcon> createState() => CartBadgeIconState();
+}
+
+/// Exposes a cart icon target so product cards inside the shell can fly items into it.
+class CartFlightTarget extends InheritedWidget {
+  const CartFlightTarget({
+    super.key,
+    required this.targetKey,
+    required super.child,
+  });
+
+  final GlobalKey<CartBadgeIconState> targetKey;
+
+  static GlobalKey<CartBadgeIconState>? maybeOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<CartFlightTarget>()?.targetKey;
+
+  @override
+  bool updateShouldNotify(CartFlightTarget oldWidget) =>
+      targetKey != oldWidget.targetKey;
 }
 
 class CartBadgeIconState extends ConsumerState<CartBadgeIcon>
@@ -52,6 +73,9 @@ class CartBadgeIconState extends ConsumerState<CartBadgeIcon>
 
   @override
   Widget build(BuildContext context) {
+    if (widget.child != null) {
+      return ScaleTransition(scale: _scale, child: widget.child);
+    }
     final count = ref.watch(cartCountProvider);
 
     return Semantics(

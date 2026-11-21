@@ -11,6 +11,7 @@ import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
+import 'package:jmmart/src/widgets/fly_to_cart.dart';
 import 'package:jmmart/src/providers/store_locator_providers.dart';
 
 void main() {
@@ -65,6 +66,12 @@ void main() {
       final api = _CartApi()..pending = Completer<Cart>();
       var productTaps = 0;
       await _pumpCard(tester, api, onTap: () => productTaps++);
+      expect(
+        (tester.getCenter(find.text('₱250.00')).dy -
+                tester.getCenter(find.byTooltip('Add to cart')).dy)
+            .abs(),
+        lessThan(10),
+      );
       expect(find.text('Cart quantity: 2'), findsOneWidget);
       await tester.tap(find.byTooltip('Add to cart'));
       await tester.pump();
@@ -72,9 +79,11 @@ void main() {
       expect(productTaps, 0);
       expect(tester.widget<IconButton>(_addButton).onPressed, isNull);
       api.pending!.complete(_cart(3));
+      await tester.pump();
+      expect(find.text('Added to cart'), findsOneWidget);
       await tester.pumpAndSettle();
+      expect(find.text('Added to cart'), findsNothing);
       expect(find.text('Cart quantity: 3'), findsOneWidget);
-      expect(find.text('Test shirt added to cart.'), findsOneWidget);
       expect(api.cartReads, 1);
     },
   );
@@ -297,6 +306,35 @@ void main() {
     expect(_addButton, findsNothing);
     expect(api.adds, 0);
   });
+
+  testWidgets('tapping add to cart pops the button and flies to the cart tab', (
+    tester,
+  ) async {
+    final api = _CartApi();
+    final cartKey = GlobalKey<CartBadgeIconState>();
+    await _pumpCard(tester, api, cartKey: cartKey);
+
+    await tester.tap(find.byTooltip('Add to cart'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 60));
+    final scale = tester.widget<ScaleTransition>(
+      find.ancestor(
+        of: find.byTooltip('Remove one'),
+        matching: find.byType(ScaleTransition),
+      ),
+    );
+    expect(scale.scale.value, isNot(1.0));
+    // In-flight overlay thumbnail is travelling towards the cart icon.
+    expect(find.byType(ClipOval), findsOneWidget);
+    expect(find.text('Added to cart'), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 1100));
+    expect(find.text('Added to cart'), findsOneWidget);
+
+    await tester.pumpAndSettle();
+    expect(find.text('Added to cart'), findsNothing);
+    expect(find.byType(ClipOval), findsNothing);
+  });
 }
 
 ProviderContainer _container(_CartApi api) {
@@ -357,14 +395,16 @@ Future<void> _pumpCard(
   bool inStock = true,
   bool signedIn = true,
   VoidCallback? onTap,
+  GlobalKey<CartBadgeIconState>? cartKey,
 }) async {
-  final card = Scaffold(
+  Widget card = Scaffold(
     body: Column(
       children: [
         Consumer(
           builder: (context, ref, child) =>
               Text('Cart quantity: ${ref.watch(cartCountProvider)}'),
         ),
+        if (cartKey != null) CartBadgeIcon(key: cartKey),
         SizedBox(
           width: 190,
           height: 450,
@@ -385,6 +425,9 @@ Future<void> _pumpCard(
       ],
     ),
   );
+  if (cartKey != null) {
+    card = CartFlightTarget(targetKey: cartKey, child: card);
+  }
   await tester.pumpWidget(
     ProviderScope(
       overrides: [

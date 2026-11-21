@@ -194,11 +194,130 @@
                 </details>
 
                 <details class="seller-form-card sc-settings-disclosure" @if ($errors->hasAny(['latitude', 'longitude', 'delivery_radius_km'])) open @endif
-                    x-data="{ locating: false, locationError: '', useCurrentLocation() { if (! navigator.geolocation) { this.locationError = 'This browser cannot share its location. Enter the coordinates instead.'; return; } this.locating = true; this.locationError = ''; navigator.geolocation.getCurrentPosition((position) => { this.$refs.latitude.value = position.coords.latitude.toFixed(7); this.$refs.longitude.value = position.coords.longitude.toFixed(7); this.$refs.pinMap.dispatchEvent(new Event('branch-pin:moved')); this.locating = false; dirty = true; }, () => { this.locating = false; this.locationError = 'We could not get your location. Allow location access or enter the coordinates instead.'; }, { enableHighAccuracy: true, timeout: 15000 }); } }">
+                    x-data="{
+                        locating: false,
+                        locationError: '',
+                        searchQuery: '',
+                        searching: false,
+                        searched: false,
+                        searchResults: [],
+                        searchAbort: null,
+                        async searchPlaces(pickFirst = false) {
+                            const q = this.searchQuery.trim();
+                            if (this.searchAbort) this.searchAbort.abort();
+                            if (q.length < 2) {
+                                this.searchResults = [];
+                                this.searched = false;
+                                this.searching = false;
+                                return;
+                            }
+                            const controller = new AbortController();
+                            this.searchAbort = controller;
+                            this.searching = true;
+                            this.locationError = '';
+                            try {
+                                const url = 'https://photon.komoot.io/api?' + new URLSearchParams({
+                                    q,
+                                    limit: '6',
+                                    lang: 'en',
+                                    bbox: '116.9,4.5,126.7,21.2',
+                                });
+                                const response = await fetch(url, { signal: controller.signal });
+                                if (! response.ok) throw new Error('Search failed');
+                                const data = await response.json();
+                                const seen = new Set();
+                                this.searchResults = (data.features ?? []).flatMap((f) => {
+                                    const coords = f?.geometry?.coordinates;
+                                    if (! Array.isArray(coords) || coords.length < 2) return [];
+                                    const p = f.properties ?? {};
+                                    const street = p.street ? [p.housenumber, p.street].filter(Boolean).join(' ') : null;
+                                    const parts = [];
+                                    for (const part of [p.name, street, p.district ?? p.locality, p.city ?? p.county, p.state]) {
+                                        if (part && ! parts.includes(part)) parts.push(part);
+                                    }
+                                    const label = parts.join(', ');
+                                    if (! label || seen.has(label)) return [];
+                                    seen.add(label);
+                                    return [{ label, lat: Number(coords[1]), lng: Number(coords[0]) }];
+                                });
+                                this.searched = true;
+                                if (pickFirst && this.searchResults.length > 0) {
+                                    this.selectPlace(this.searchResults[0]);
+                                }
+                            } catch (error) {
+                                if (error?.name !== 'AbortError') {
+                                    this.locationError = 'We could not search for that location. Try again or tap the map instead.';
+                                }
+                            } finally {
+                                if (this.searchAbort === controller) {
+                                    this.searching = false;
+                                }
+                            }
+                        },
+                        selectPlace(place) {
+                            this.$refs.latitude.value = Number(place.lat).toFixed(7);
+                            this.$refs.longitude.value = Number(place.lng).toFixed(7);
+                            this.$refs.pinMap.dispatchEvent(new Event('branch-pin:moved'));
+                            this.searchQuery = place.label;
+                            this.searchResults = [];
+                            this.searched = false;
+                            this.locationError = '';
+                            dirty = true;
+                        },
+                        useCurrentLocation() {
+                            if (! navigator.geolocation) {
+                                this.locationError = 'This browser cannot share its location. Enter the coordinates instead.';
+                                return;
+                            }
+                            this.locating = true;
+                            this.locationError = '';
+                            navigator.geolocation.getCurrentPosition((position) => {
+                                this.$refs.latitude.value = position.coords.latitude.toFixed(7);
+                                this.$refs.longitude.value = position.coords.longitude.toFixed(7);
+                                this.$refs.pinMap.dispatchEvent(new Event('branch-pin:moved'));
+                                this.locating = false;
+                                dirty = true;
+                            }, () => {
+                                this.locating = false;
+                                this.locationError = 'We could not get your location. Allow location access or enter the coordinates instead.';
+                            }, { enableHighAccuracy: true, timeout: 15000 });
+                        }
+                    }">
                     <summary id="map-location-heading">Map location<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
                     <div class="sc-disclosure-body">
                     <p class="mt-0.5 text-sm text-muted">Buyers see this pin and your delivery radius when the Everyday Pharmacy app suggests nearby stores. Leave it empty to stay out of nearby suggestions.</p>
-                    <p id="branch-pin-map-help" class="mt-4 text-sm text-muted">Tap the map or drag the pin to the branch's door. The latitude and longitude below fill in by themselves.</p>
+                    <div class="mt-4 max-w-3xl" @click.outside="searchResults = []; searched = false">
+                        <label for="branch-location-search" class="block text-sm font-semibold text-ink">Search location</label>
+                        <div class="mt-2 flex gap-2">
+                            <input id="branch-location-search" type="search" x-model="searchQuery"
+                                placeholder="Search street, barangay, landmark, or city…"
+                                autocomplete="off"
+                                @input.stop.debounce.300ms="searchPlaces(false)"
+                                @change.stop
+                                @keydown.enter.prevent="searchResults.length > 0 ? selectPlace(searchResults[0]) : searchPlaces(true)"
+                                @keydown.escape="searchResults = []; searched = false"
+                                class="field-control flex-1 text-base lg:text-sm">
+                            <button type="button" class="seller-outline-button min-h-11 shrink-0"
+                                @click="searchPlaces(true)" :disabled="searching" :aria-busy="searching">
+                                <span x-show="!searching">Find on map</span>
+                                <span x-cloak x-show="searching">Searching…</span>
+                            </button>
+                        </div>
+                        <ul x-cloak x-show="searchResults.length > 0" role="listbox" aria-label="Matching locations"
+                            class="mt-1.5 divide-y divide-line overflow-hidden rounded-lg border border-line bg-white shadow-sm">
+                            <template x-for="(place, index) in searchResults" :key="index">
+                                <li>
+                                    <button type="button" role="option" @click="selectPlace(place)"
+                                        class="flex min-h-11 w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-ink transition hover:bg-surface focus:bg-surface focus:outline-none">
+                                        <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-5.7-7-11a7 7 0 1 1 14 0c0 5.3-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                                        <span class="truncate" x-text="place.label"></span>
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
+                        <p x-cloak x-show="searched && !searching && searchResults.length === 0" role="status" class="mt-1.5 text-xs text-muted">No matching places found. Try a nearby street, barangay, or city.</p>
+                    </div>
+                    <p id="branch-pin-map-help" class="mt-4 text-sm text-muted">Search for a place above, or tap the map and drag the pin to the branch's door. The latitude and longitude below fill in by themselves.</p>
                     {{-- isolate keeps Leaflet's stacked layers under the page's sticky bars. --}}
                     <div data-branch-pin-map data-latitude-input="latitude" data-longitude-input="longitude" x-ref="pinMap" role="region" aria-label="Branch location map" aria-describedby="branch-pin-map-help" class="isolate mt-3 h-72 w-full max-w-3xl overflow-hidden rounded-lg border border-line bg-surface sm:h-80"></div>
                     <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">

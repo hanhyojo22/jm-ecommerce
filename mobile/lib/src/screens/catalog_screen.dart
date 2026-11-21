@@ -491,217 +491,88 @@ class _TopDeals extends StatelessWidget {
 
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final scaler = MediaQuery.textScalerOf(context);
-    final priceStyle = theme.textTheme.titleSmall?.copyWith(
-      color: scheme.error,
-      fontWeight: FontWeight.w800,
-      fontSize: 15,
-      height: 1.3,
-      letterSpacing: -0.3,
-    );
-    // Name line plus sale and original price lines.
-    final priceHeight = scaler.scale(54);
 
     return Padding(
       padding: const EdgeInsets.only(top: 28),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // Three tiles and a peek of the fourth, so the row reads as scrollable.
-          final tileWidth = ((constraints.maxWidth - 32 - 30) / 3.35).clamp(
-            96.0,
-            168.0,
-          );
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Semantics(
-                        header: true,
-                        child: Text.rich(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
                           TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Top ',
-                                style: TextStyle(color: scheme.primary),
-                              ),
-                              const TextSpan(text: 'deals'),
-                            ],
+                            text: 'Top ',
+                            style: TextStyle(color: scheme.primary),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.4,
+                          const TextSpan(text: 'deals'),
+                        ],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: onSeeAll,
+                  style: TextButton.styleFrom(
+                    foregroundColor: scheme.primary,
+                    minimumSize: const Size(64, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(appSurfaceRadius),
+                    ),
+                    textStyle: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: const Text('See all'),
+                ),
+              ],
+            ),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            // Same height for every card in the rail, buttons on one line.
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final deal in deals.take(10))
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 10),
+                      child: SizedBox(
+                        width: 160,
+                        child: ProductCard(
+                          product: deal.product,
+                          discovery: true,
+                          showAddToCart: true,
+                          fillHeight: true,
+                          onTap: () => context.push(
+                            '/product/${deal.product.store?.slug ?? ''}/${deal.product.slug}',
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    TextButton(
-                      onPressed: onSeeAll,
-                      style: TextButton.styleFrom(
-                        foregroundColor: scheme.primary,
-                        minimumSize: const Size(64, 48),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        tapTargetSize: MaterialTapTargetSize.padded,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(appSurfaceRadius),
-                        ),
-                        textStyle: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      child: const Text('See all'),
-                    ),
-                  ],
-                ),
+                ],
               ),
-              SizedBox(
-                height: tileWidth + priceHeight + 16,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: deals.length.clamp(0, 10),
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 10),
-                  itemBuilder: (context, index) {
-                    final deal = deals[index];
-                    final product = deal.product;
-
-                    return SizedBox(
-                      width: tileWidth,
-                      child: Semantics(
-                        button: true,
-                        label:
-                            '${product.name}, ${money(product.effectivePrice)}, ${deal.discount}% off',
-                        excludeSemantics: true,
-                        child: Material(
-                          color: scheme.surfaceContainerLowest,
-                          borderRadius: BorderRadius.circular(appSurfaceRadius),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => context.push(
-                              '/product/${product.store?.slug ?? ''}/${product.slug}',
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                SizedBox.square(
-                                  dimension: tileWidth,
-                                  child: Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      NetworkThumb(
-                                        url: product.thumbnailUrl,
-                                        width: tileWidth,
-                                        height: tileWidth,
-                                        radius: 0,
-                                      ),
-                                      Positioned(
-                                        right: 6,
-                                        top: 6,
-                                        child: DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            color: scheme.errorContainer,
-                                            borderRadius: BorderRadius.circular(
-                                              appDetailRadius,
-                                            ),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 5,
-                                              vertical: 2,
-                                            ),
-                                            child: Text(
-                                              '-${deal.discount}%',
-                                              style: theme.textTheme.labelSmall
-                                                  ?.copyWith(
-                                                    color:
-                                                        scheme.onErrorContainer,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w800,
-                                                  ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            product.name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: scheme.onSurface,
-                                                ),
-                                          ),
-                                          const SizedBox(height: 1),
-                                          FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              money(product.effectivePrice),
-                                              maxLines: 1,
-                                              style: priceStyle,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 1),
-                                          FittedBox(
-                                            fit: BoxFit.scaleDown,
-                                            alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              money(product.compareAtPrice),
-                                              maxLines: 1,
-                                              style: theme.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    fontSize: 11,
-                                                    color:
-                                                        scheme.onSurfaceVariant,
-                                                    decoration: TextDecoration
-                                                        .lineThrough,
-                                                    decorationColor:
-                                                        scheme.onSurfaceVariant,
-                                                    decorationThickness: 1.5,
-                                                  ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }

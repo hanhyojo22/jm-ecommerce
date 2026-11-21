@@ -17,6 +17,7 @@ import '../screens/cart_screen.dart';
 import '../screens/catalog_screen.dart';
 import '../screens/messages_screen.dart';
 import '../screens/orders_screen.dart';
+import 'fly_to_cart.dart';
 import 'store_locator.dart';
 import 'welcome_promo.dart';
 
@@ -63,6 +64,7 @@ class _AppShellState extends ConsumerState<AppShell>
   /// The signed-in user already asked to complete their profile this session.
   String? _profilePromptedFor;
   bool _startupPromptsComplete = false;
+  final _cartIconKey = GlobalKey<CartBadgeIconState>();
 
   @override
   void initState() {
@@ -203,26 +205,29 @@ class _AppShellState extends ConsumerState<AppShell>
           ref.read(shellTabProvider.notifier).select(0);
         }
       },
-      child: Scaffold(
-        // Shopping tabs draw their own marketplace headers.
-        appBar:
-            !guestTab && (index == 0 || index == 1 || index == 3 || index == 4)
-            ? null
-            : AppBar(title: Text(_titles[index]), titleSpacing: 20),
-        // Tabs with light headers need dark status-bar icons; the Shop tab's band sets its own.
-        body: wide
-            ? Row(
-                children: [
-                  _rail(index, unread, cartCount),
-                  const VerticalDivider(width: 1),
-                  Expanded(child: page),
-                ],
-              )
-            : page,
-        // The Cart tab and its count badge are the way to the cart.
-        bottomNavigationBar: wide
-            ? null
-            : _navigation(context, index, unread, cartCount, scheme),
+      child: CartFlightTarget(
+        targetKey: _cartIconKey,
+        child: Scaffold(
+          // Shopping tabs draw their own marketplace headers.
+          appBar:
+              !guestTab && (index == 0 || index == 1 || index == 3 || index == 4)
+              ? null
+              : AppBar(title: Text(_titles[index]), titleSpacing: 20),
+          // Tabs with light headers need dark status-bar icons; the Shop tab's band sets its own.
+          body: wide
+              ? Row(
+                  children: [
+                    _rail(index, unread, cartCount),
+                    const VerticalDivider(width: 1),
+                    Expanded(child: page),
+                  ],
+                )
+              : page,
+          // The Cart tab and its count badge are the way to the cart.
+          bottomNavigationBar: wide
+              ? null
+              : _navigation(context, index, unread, cartCount, scheme),
+        ),
       ),
     );
   }
@@ -286,9 +291,12 @@ class _AppShellState extends ConsumerState<AppShell>
           label: const Text('Messages'),
         ),
         NavigationRailDestination(
-          icon: _NavBadge(
-            count: cartCount,
-            child: const Icon(PhosphorIconsRegular.tote),
+          icon: CartBadgeIcon(
+            key: _cartIconKey,
+            child: _NavBadge(
+              count: cartCount,
+              child: const Icon(PhosphorIconsRegular.tote),
+            ),
           ),
           selectedIcon: _NavBadge(
             count: cartCount,
@@ -344,9 +352,12 @@ class _AppShellState extends ConsumerState<AppShell>
           label: 'Messages',
         ),
         NavigationDestination(
-          icon: _NavBadge(
-            count: cartCount,
-            child: const Icon(PhosphorIconsRegular.tote),
+          icon: CartBadgeIcon(
+            key: _cartIconKey,
+            child: _NavBadge(
+              count: cartCount,
+              child: const Icon(PhosphorIconsRegular.tote),
+            ),
           ),
           selectedIcon: _NavBadge(
             count: cartCount,

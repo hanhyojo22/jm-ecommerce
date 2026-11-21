@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +17,7 @@ import '../providers/catalog_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../screens/auth_gate.dart';
 import '../theme.dart';
+import 'fly_to_cart.dart';
 import 'store_locator.dart';
 
 class AsyncView<T> extends StatelessWidget {
@@ -595,36 +598,19 @@ class ProductCard extends StatelessWidget {
                     if (discovery) ...[
                       const SizedBox(height: 4),
                       _StarRating(product: product),
-                      const SizedBox(height: 4),
-                      price,
                       if (fillHeight) const Spacer(),
-                      if (product.soldQuantity > 0 ||
-                          (showAddToCart && product.inStock))
-                        // Sold count and a plain cart icon share the last line, like the nav bar's Cart.
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                product.soldQuantity > 0
-                                    ? '${_compactCount(product.soldQuantity)} sold'
-                                    : '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
+                      const SizedBox(height: 4),
+                      // Price and a plain cart icon share the last line, like the nav bar's Cart.
+                      Row(
+                        children: [
+                          Expanded(child: price),
+                          if (showAddToCart && product.inStock)
+                            _ProductCartButton(
+                              product: product,
+                              onChooseOptions: onTap,
                             ),
-                            if (showAddToCart && product.inStock)
-                              _ProductCartButton(
-                                product: product,
-                                onChooseOptions: onTap,
-                              ),
-                          ],
-                        ),
+                        ],
+                      ),
                     ] else ...[
                       const SizedBox(height: 12),
                       price,
@@ -717,19 +703,6 @@ class _StarRating extends StatelessWidget {
   }
 }
 
-String _compactCount(int count) {
-  if (count < 1000) {
-    return '$count';
-  }
-
-  final thousands = count / 1000;
-  final value = thousands >= 10
-      ? thousands.toStringAsFixed(0)
-      : thousands.toStringAsFixed(1);
-
-  return '${value.endsWith('.0') ? value.substring(0, value.length - 2) : value}k';
-}
-
 /// The discount flag on the top-right of a product photo.
 class _FeedDiscountBadge extends StatelessWidget {
   const _FeedDiscountBadge({required this.percent});
@@ -814,8 +787,54 @@ class _ProductCartButton extends ConsumerStatefulWidget {
   ConsumerState<_ProductCartButton> createState() => _ProductCartButtonState();
 }
 
-class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
+class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
+    with SingleTickerProviderStateMixin {
+  final _buttonKey = GlobalKey();
   bool _adding = false;
+  bool _primed = false;
+  int? _lastQuantity;
+
+  late final _pop = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 240),
+  );
+  late final _popScale = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.84), weight: 25),
+    TweenSequenceItem(tween: Tween(begin: 0.84, end: 1.16), weight: 35),
+    TweenSequenceItem(
+      tween: Tween(
+        begin: 1.16,
+        end: 1.0,
+      ).chain(CurveTween(curve: Curves.easeOutBack)),
+      weight: 40,
+    ),
+  ]).animate(_pop);
+
+  @override
+  void dispose() {
+    _pop.dispose();
+    super.dispose();
+  }
+
+  void _triggerPop() {
+    if (mounted && !MediaQuery.disableAnimationsOf(context)) {
+      _pop.forward(from: 0);
+    }
+  }
+
+  Future<void> _fly() {
+    _triggerPop();
+    final target = CartFlightTarget.maybeOf(context);
+    if (target == null) {
+      return Future.value();
+    }
+    return flyToCart(
+      context: context,
+      source: _buttonKey,
+      target: target,
+      imageUrl: widget.product.thumbnailUrl,
+    );
+  }
 
   Future<void> _add() async {
     if (_adding || !await requireSignIn(context, ref) || !mounted) {
@@ -828,14 +847,24 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
       }
       return;
     }
+    if (!mounted) {
+      return;
+    }
+    final landed = _fly();
     setState(() => _adding = true);
     try {
       await ref.read(cartProvider.notifier).add(productId: widget.product.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${widget.product.name} added to cart.')),
-        );
+      if (!mounted) {
+        return;
       }
+      // Confirm only once the server agreed and the thumbnail has landed.
+      unawaited(
+        landed.then((_) {
+          if (mounted) {
+            showAddedToCartToast(context);
+          }
+        }),
+      );
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -889,6 +918,13 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
                   : (id: match.id, quantity: match.quantity);
             }),
           );
+    if (!_primed) {
+      _primed = true;
+      _lastQuantity = line?.quantity;
+    } else if (_lastQuantity != line?.quantity) {
+      _lastQuantity = line?.quantity;
+      _triggerPop();
+    }
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     // Small glyphs with a 40 dp touch area, no fill or outline.
@@ -912,10 +948,11 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
       );
     }
 
+    final Widget control;
     if (line != null) {
       final atStock =
           product.stockQuantity > 0 && line.quantity >= product.stockQuantity;
-      return Row(
+      control = Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
@@ -947,30 +984,38 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton> {
             padding: EdgeInsets.zero,
             onPressed: atStock
                 ? null
-                : () => _setQuantity(line.id, line.quantity + 1),
+                : () {
+                    _fly();
+                    _setQuantity(line.id, line.quantity + 1);
+                  },
             icon: const Icon(PhosphorIconsBold.plus, size: 18),
           ),
         ],
       );
+    } else {
+      control = IconButton(
+        tooltip: 'Add to cart',
+        color: scheme.primary,
+        constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+        padding: EdgeInsets.zero,
+        onPressed: _adding ? null : _add,
+        // The Cart tab's tote, so the icon says where the item goes.
+        icon: _adding
+            ? SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: scheme.primary,
+                  semanticsLabel: 'Adding ${product.name} to cart',
+                ),
+              )
+            : const Icon(PhosphorIconsRegular.tote, size: 24),
+      );
     }
 
-    return IconButton(
-      tooltip: 'Add to cart',
-      color: scheme.primary,
-      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-      padding: EdgeInsets.zero,
-      onPressed: _adding ? null : _add,
-      // The Cart tab's tote, so the icon says where the item goes.
-      icon: _adding
-          ? SizedBox.square(
-              dimension: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: scheme.primary,
-                semanticsLabel: 'Adding ${product.name} to cart',
-              ),
-            )
-          : const Icon(PhosphorIconsRegular.tote, size: 24),
+    return KeyedSubtree(
+      key: _buttonKey,
+      child: ScaleTransition(scale: _popScale, child: control),
     );
   }
 }

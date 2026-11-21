@@ -743,6 +743,22 @@ test('branch details map fills the coordinates when tapped and follows typed one
         await page.locator('summary', { hasText: 'Map location' }).click();
         await expect(map).toHaveClass(/leaflet-container/);
 
+        await page.route('https://photon.komoot.io/api**', (route) => route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+                features: [{
+                    geometry: { coordinates: [123.8900103, 10.3162943] },
+                    properties: { name: 'Cebu Provincial Capitol', city: 'Cebu City' },
+                }],
+            }),
+        }));
+        await page.getByLabel('Search location').fill('Cebu Capitol');
+        await page.getByRole('option', { name: 'Cebu Provincial Capitol, Cebu City' }).click();
+        await expect(latitude).toHaveValue('10.3162943');
+        await expect(longitude).toHaveValue('123.8900103');
+        await expect(map.locator('.leaflet-marker-icon')).toBeVisible();
+
         await latitude.fill('10.3157');
         await longitude.fill('123.8854');
         await longitude.blur();

@@ -252,6 +252,8 @@ class SellerStoreSettingsTest extends TestCase
         $this->actingAs($owner)->get(route('seller.store-settings.edit'))
             ->assertOk()
             ->assertSee($store->phone)
+            ->assertSee('Search location')
+            ->assertSee('Find on map')
             ->assertDontSee($otherStore->phone);
 
         $this->actingAs($owner)->patch(route('seller.store-settings.update'), [
