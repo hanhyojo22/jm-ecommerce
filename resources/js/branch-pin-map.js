@@ -127,10 +127,28 @@ export function mountBranchPinMap(element) {
     element.addEventListener('branch-pin:radius', followRadius);
     element.addEventListener('branch-pin:cleared', clearPin);
 
+    let resizeFrame = null;
+    const scheduleResize = () => {
+        if (resizeFrame !== null) {
+            return;
+        }
+        resizeFrame = window.requestAnimationFrame(() => {
+            resizeFrame = null;
+            if (element.clientWidth > 0 && element.clientHeight > 0) {
+                map.invalidateSize();
+            }
+        });
+    };
+
+    element.addEventListener('branch-pin:resize', scheduleResize);
+    if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(scheduleResize).observe(element);
+    }
+
     const section = element.closest('details');
     section?.addEventListener('toggle', () => {
         if (section.open) {
-            map.invalidateSize();
+            scheduleResize();
         }
     });
 }

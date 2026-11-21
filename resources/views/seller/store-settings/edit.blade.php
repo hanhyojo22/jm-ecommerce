@@ -224,8 +224,10 @@
                 </details>
 
                 <details class="seller-form-card sc-settings-disclosure" @if ($errors->hasAny(['latitude', 'longitude', 'delivery_radius_km'])) open @endif
+                    @toggle="if (!$el.open && mapFullscreen) toggleFullscreen(false)"
                     x-data="{
                         locating: false,
+                        mapFullscreen: false,
                         locationError: '',
                         searchQuery: '',
                         searching: false,
@@ -236,6 +238,27 @@
                         pinLat: @js((string) old('latitude', $store->latitude ?? '')),
                         pinLng: @js((string) old('longitude', $store->longitude ?? '')),
                         radiusKm: @js((string) old('delivery_radius_km', $store->delivery_radius_km ?? '')),
+                        toggleFullscreen(force = null) {
+                            const next = force === null ? ! this.mapFullscreen : Boolean(force);
+                            if (next === this.mapFullscreen) return;
+                            this.mapFullscreen = next;
+                            document.documentElement.classList.toggle('sc-map-lock', next);
+                            this.$nextTick(() => this.$refs.pinMap?.dispatchEvent(new Event('branch-pin:resize')));
+                        },
+                        handleEscape() {
+                            if (this.searchResults.length > 0 || this.searched) {
+                                this.searchResults = [];
+                                this.searched = false;
+                                this.activeIndex = -1;
+                                return;
+                            }
+                            if (this.mapFullscreen) {
+                                this.toggleFullscreen(false);
+                            }
+                        },
+                        destroy() {
+                            document.documentElement.classList.remove('sc-map-lock');
+                        },
                         get hasPin() {
                             const lat = Number.parseFloat(this.pinLat);
                             const lng = Number.parseFloat(this.pinLng);
@@ -377,9 +400,20 @@
                     </summary>
                     <div class="sc-disclosure-body">
                     <p class="mt-0.5 text-sm text-muted">Buyers see this pin and your delivery radius when the Everyday Pharmacy app suggests nearby stores. Leave it empty to stay out of nearby suggestions.</p>
-                    <div class="sc-map-shell mt-4 max-w-3xl">
+                    <div class="sc-map-shell mt-4" :class="mapFullscreen && 'is-fullscreen'" @keydown.escape.window="if (mapFullscreen) { handleEscape(); }">
                         <div class="sc-map-toolbar" @click.outside="searchResults = []; searched = false; activeIndex = -1">
-                            <label for="branch-location-search" class="block text-sm font-semibold text-ink">Search location</label>
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label for="branch-location-search" class="block text-sm font-semibold text-ink">Search location</label>
+                                <button type="button" @click="toggleFullscreen()"
+                                    :aria-pressed="mapFullscreen.toString()"
+                                    :aria-label="mapFullscreen ? 'Exit full screen map' : 'Expand map to full screen'"
+                                    class="sc-map-expand-btn">
+                                    <svg x-show="!mapFullscreen" class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                                    <svg x-cloak x-show="mapFullscreen" class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>
+                                    <span x-show="!mapFullscreen">Full screen</span>
+                                    <span x-cloak x-show="mapFullscreen">Exit full screen</span>
+                                </button>
+                            </div>
                             <div class="mt-2 flex flex-wrap items-center gap-2">
                                 <div class="sc-map-search-wrap min-w-[200px] flex-1">
                                     <svg class="sc-map-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -391,7 +425,7 @@
                                         @keydown.arrow-down.prevent="moveSelection(1)"
                                         @keydown.arrow-up.prevent="moveSelection(-1)"
                                         @keydown.enter.prevent="searchResults.length > 0 ? selectPlace(searchResults[activeIndex >= 0 ? activeIndex : 0]) : searchPlaces(true)"
-                                        @keydown.escape="searchResults = []; searched = false; activeIndex = -1"
+                                        @keydown.escape.stop="if (searchResults.length > 0 || searched || mapFullscreen) { $event.preventDefault(); handleEscape(); }"
                                         class="field-control w-full text-base lg:text-sm">
                                 </div>
                                 <button type="button" class="seller-outline-button min-h-11 shrink-0"
@@ -426,7 +460,7 @@
                         </div>
 
                         {{-- isolate keeps Leaflet's stacked layers under the page's sticky bars. --}}
-                        <div data-branch-pin-map data-latitude-input="latitude" data-longitude-input="longitude" data-radius-input="delivery_radius_km" x-ref="pinMap" role="region" aria-label="Branch location map" aria-describedby="branch-pin-map-help" class="isolate h-72 w-full bg-surface sm:h-96"></div>
+                        <div data-branch-pin-map data-latitude-input="latitude" data-longitude-input="longitude" data-radius-input="delivery_radius_km" x-ref="pinMap" role="region" aria-label="Branch location map" aria-describedby="branch-pin-map-help" class="sc-map-canvas isolate h-80 w-full bg-surface sm:h-[420px]"></div>
 
                         <div class="sc-map-status">
                             <p class="min-w-0 text-xs text-muted">
@@ -436,6 +470,11 @@
                                 </span>
                                 <span x-show="!hasPin">No pin placed yet — search above or click the map.</span>
                             </p>
+                            <div x-cloak x-show="mapFullscreen" class="sc-radius-presets !mt-0" role="group" aria-label="Delivery radius presets">
+                                @foreach ([3, 5, 10, 15, 25] as $km)
+                                    <button type="button" @click="setRadius({{ $km }})" :class="String(radiusKm) === '{{ $km }}' && 'is-active'" class="sc-radius-preset">{{ $km }} km</button>
+                                @endforeach
+                            </div>
                             <div x-cloak x-show="hasPin" class="flex shrink-0 flex-wrap items-center gap-3">
                                 <a :href="googleMapsUrl" target="_blank" rel="noopener noreferrer" class="sc-link !min-h-0 text-xs">
                                     Open in Google Maps
