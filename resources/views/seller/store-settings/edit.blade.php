@@ -1,11 +1,28 @@
+@php
+    $storeTone = $store->status === 'active' ? 'success' : ($store->status === 'suspended' ? 'danger' : 'neutral');
+    $storeStatusLabel = ['active' => 'Open', 'inactive' => 'Closed', 'suspended' => 'Suspended by Everyday Pharmacy'][$store->status] ?? $store->status;
+    $shippingNote = collect([$store->barangay, $store->province])->filter()->implode(', ');
+    if (! $shippingNote && $store->processing_days) {
+        $shippingNote = $store->processing_days.' '.Str::plural('day', $store->processing_days).' processing';
+    }
+@endphp
+
 <x-app-layout :error-summary="false">
     <x-slot name="header">
         <div class="sc-page-head">
             <div>
-                <h1 class="sc-title">Store settings</h1>
+                <div class="flex flex-wrap items-center gap-3">
+                    <h1 class="sc-title">Store settings</h1>
+                    <span class="sc-badge" data-tone="{{ $storeTone }}">{{ $storeStatusLabel }}</span>
+                </div>
                 <p class="sc-subtitle">{{ $store->name }}</p>
             </div>
-            @if ($canManageBranches)<a href="{{ route('seller.branches.index') }}" class="seller-outline-button">All branches</a>@endif
+            @if ($canManageBranches)
+                <a href="{{ route('seller.branches.index') }}" class="seller-outline-button">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                    All branches
+                </a>
+            @endif
         </div>
     </x-slot>
 
@@ -33,11 +50,11 @@
                 @csrf
                 @method('PATCH')
                 @if ($errors->any())
-                    <div role="alert" tabindex="-1" x-init="$nextTick(() => $el.focus())" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">We could not save your changes. Review the errors below and try again.</div>
+                    <div role="alert" tabindex="-1" x-init="$nextTick(() => $el.focus())" class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">We could not save your changes. Review the errors below and try again.</div>
                 @endif
-                <x-input-error :messages="$errors->get('settings')" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3" />
-                <x-input-error :messages="$errors->get('undo')" class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3" />
-                <div class="sc-settings-actions">
+                <x-input-error :messages="$errors->get('settings')" class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3" />
+                <x-input-error :messages="$errors->get('undo')" class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3" />
+                <div class="sc-settings-actions is-sticky" :class="dirty && 'is-dirty'">
                 <p class="flex items-center gap-2 text-sm font-medium" :class="dirty ? 'text-warning-text' : 'text-muted'" role="status" aria-live="polite">
                     <span class="grid size-4 shrink-0 place-items-center rounded-full text-xs font-semibold text-white" :class="dirty ? 'bg-amber-600' : 'bg-emerald-600'" x-text="saving ? '…' : dirty ? '!' : '✓'" aria-hidden="true">{{ $errors->any() ? '!' : '✓' }}</span>
                     <span x-text="saving ? 'Saving store settings…' : dirty ? 'Unsaved changes' : 'All changes saved'">{{ $errors->any() ? 'Unsaved changes' : 'All changes saved' }}</span>
@@ -52,15 +69,18 @@
                 </div>
                 <div class="min-w-0 space-y-6">
                 <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="store-profile-heading">
-                    <div class="flex flex-wrap items-center justify-between gap-3">
-                        <h2 id="store-profile-heading" class="sc-card-title">Store details</h2>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 id="store-profile-heading" class="sc-card-title">Store details</h2>
+                            <p class="mt-0.5 text-sm text-muted">Your logo, public name, and how customers recognize this branch.</p>
+                        </div>
                         @if (config('marketplace.web_store.enabled'))
                             <a href="{{ route('catalog.store', $store->slug) }}" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-brand underline-offset-4 hover:underline">Visit storefront</a>
                         @endif
                     </div>
 
                     <div class="mt-5 min-w-0 max-w-3xl space-y-5">
-                        <div class="min-w-0">
+                        <div class="sc-logo-box min-w-0">
                             <p class="text-sm font-semibold text-ink">Store logo</p>
                             <p id="logo-help" class="mt-1 text-sm text-muted">Square JPEG, PNG, or WebP. Maximum 2 MB.</p>
                             <div class="mt-3 flex min-w-0 flex-wrap items-center gap-4">
@@ -94,7 +114,7 @@
                             </div>
                             <x-input-error id="logo-error" :messages="$errors->get('logo')" class="mt-2" />
                             @if ($store->logo_path)
-                                <p id="remove-logo-help" class="text-xs text-muted">This removes the current image only after you save. It cannot be restored here.</p>
+                                <p id="remove-logo-help" class="mt-2 text-xs text-muted">This removes the current image only after you save. It cannot be restored here.</p>
                                 <x-input-error id="remove-logo-error" :messages="$errors->get('remove_logo')" class="mt-2" />
                             @endif
                         </div>
@@ -103,7 +123,7 @@
                             @unless ($canManageBranches)
                                 <div><dt class="text-xs text-muted">Branch name</dt><dd class="mt-2 text-sm font-medium text-ink">{{ $store->name }}</dd></div>
                             @endunless
-                            <div class="min-w-0"><dt class="text-xs text-muted">Store URL</dt><dd class="mt-2 break-all text-sm text-ink">/stores/{{ $store->slug }}</dd></div>
+                            <div class="min-w-0"><dt class="text-xs text-muted">Store URL</dt><dd class="mt-2 break-all"><code class="font-mono text-xs text-ink">/stores/{{ $store->slug }}</code></dd></div>
                         </dl>
                         @if ($canManageBranches)
                             <div class="min-w-0">
@@ -115,9 +135,9 @@
                         @endif
                         <div class="min-w-0">
                             <label for="description" class="block text-sm font-semibold text-ink">Store description</label>
-                            <textarea id="description" name="description" x-model="description" rows="3" maxlength="2000" aria-describedby="description-count @error('description') description-error @enderror" @error('description') aria-invalid="true" @enderror @input="descriptionLength = Array.from($event.target.value).length" class="field-control mt-2 resize-y text-base lg:text-sm @error('description') border-rose-500 @enderror">{{ old('description', $store->description) }}</textarea>
+                            <textarea id="description" name="description" x-model="description" rows="3" maxlength="2000" placeholder="e.g. Neighborhood pharmacy carrying prescription medicines, vitamins, and daily health essentials." aria-describedby="description-count @error('description') description-error @enderror" @error('description') aria-invalid="true" @enderror @input="descriptionLength = Array.from($event.target.value).length" class="field-control mt-2 resize-y text-base lg:text-sm @error('description') border-rose-500 @enderror">{{ old('description', $store->description) }}</textarea>
                             <div class="mt-2 flex justify-end">
-                                <p id="description-count" class="text-xs text-muted"><span x-text="descriptionLength">{{ mb_strlen(old('description', $store->description) ?? '') }}</span> / 2,000 characters</p>
+                                <p id="description-count" class="text-xs tabular-nums text-muted"><span x-text="descriptionLength">{{ mb_strlen(old('description', $store->description) ?? '') }}</span> / 2,000 characters</p>
                             </div>
                             <x-input-error id="description-error" :messages="$errors->get('description')" class="mt-2" />
                         </div>
@@ -126,6 +146,7 @@
 
                 <section class="seller-form-card min-w-0 p-5 sm:p-6" aria-labelledby="contact-details-heading">
                     <h2 id="contact-details-heading" class="sc-card-title">Contact &amp; location</h2>
+                    <p class="mt-0.5 text-sm text-muted">Where customers reach the branch and whether it is open for orders.</p>
 
                     <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-2">
                         <div class="min-w-0">
@@ -170,7 +191,16 @@
                     ];
                 @endphp
                 <details class="seller-form-card sc-settings-disclosure" @if ($errors->hasAny(array_keys($shippingFields))) open @endif>
-                    <summary id="shipping-details-heading">Pickup &amp; shipping<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+                    <summary id="shipping-details-heading">
+                        <span class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                            <span class="inline-flex items-center gap-2.5">
+                                <svg class="size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+                                <span>Pickup &amp; shipping</span>
+                            </span>
+                            <span class="text-xs font-normal text-muted">{{ $shippingNote ?: 'Optional addresses & delivery details' }}</span>
+                        </span>
+                        <svg class="shrink-0 transition-transform" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </summary>
                     <div class="sc-disclosure-body">
                     <p class="mt-0.5 text-sm text-muted">Only you and Everyday Pharmacy see your pickup and return addresses.</p>
                     <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-2">
@@ -202,6 +232,21 @@
                         searched: false,
                         searchResults: [],
                         searchAbort: null,
+                        activeIndex: -1,
+                        pinLat: @js((string) old('latitude', $store->latitude ?? '')),
+                        pinLng: @js((string) old('longitude', $store->longitude ?? '')),
+                        radiusKm: @js((string) old('delivery_radius_km', $store->delivery_radius_km ?? '')),
+                        get hasPin() {
+                            const lat = Number.parseFloat(this.pinLat);
+                            const lng = Number.parseFloat(this.pinLng);
+                            return this.pinLat.trim() !== '' && this.pinLng.trim() !== '' && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+                        },
+                        get formattedCoords() {
+                            return this.hasPin ? `${Number(this.pinLat).toFixed(5)}, ${Number(this.pinLng).toFixed(5)}` : '';
+                        },
+                        get googleMapsUrl() {
+                            return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.pinLat + ',' + this.pinLng);
+                        },
                         async searchPlaces(pickFirst = false) {
                             const q = this.searchQuery.trim();
                             if (this.searchAbort) this.searchAbort.abort();
@@ -209,6 +254,7 @@
                                 this.searchResults = [];
                                 this.searched = false;
                                 this.searching = false;
+                                this.activeIndex = -1;
                                 return;
                             }
                             const controller = new AbortController();
@@ -238,9 +284,10 @@
                                     const label = parts.join(', ');
                                     if (! label || seen.has(label)) return [];
                                     seen.add(label);
-                                    return [{ label, lat: Number(coords[1]), lng: Number(coords[0]) }];
+                                    return [{ title: parts[0], subtitle: parts.slice(1).join(', '), label, lat: Number(coords[1]), lng: Number(coords[0]) }];
                                 });
                                 this.searched = true;
+                                this.activeIndex = -1;
                                 if (pickFirst && this.searchResults.length > 0) {
                                     this.selectPlace(this.searchResults[0]);
                                 }
@@ -254,14 +301,42 @@
                                 }
                             }
                         },
+                        moveSelection(delta) {
+                            if (this.searchResults.length === 0) return;
+                            const total = this.searchResults.length;
+                            this.activeIndex = (this.activeIndex + delta + total) % total;
+                        },
                         selectPlace(place) {
-                            this.$refs.latitude.value = Number(place.lat).toFixed(7);
-                            this.$refs.longitude.value = Number(place.lng).toFixed(7);
+                            const lat = Number(place.lat).toFixed(7);
+                            const lng = Number(place.lng).toFixed(7);
+                            this.pinLat = lat;
+                            this.pinLng = lng;
+                            this.$refs.latitude.value = lat;
+                            this.$refs.longitude.value = lng;
                             this.$refs.pinMap.dispatchEvent(new Event('branch-pin:moved'));
                             this.searchQuery = place.label;
                             this.searchResults = [];
                             this.searched = false;
+                            this.activeIndex = -1;
                             this.locationError = '';
+                            dirty = true;
+                        },
+                        setRadius(km) {
+                            this.radiusKm = String(km);
+                            this.$refs.radius.value = String(km);
+                            this.$refs.pinMap.dispatchEvent(new Event('branch-pin:radius'));
+                            dirty = true;
+                        },
+                        clearPin() {
+                            this.pinLat = '';
+                            this.pinLng = '';
+                            this.$refs.latitude.value = '';
+                            this.$refs.longitude.value = '';
+                            this.searchQuery = '';
+                            this.searchResults = [];
+                            this.searched = false;
+                            this.activeIndex = -1;
+                            this.$refs.pinMap.dispatchEvent(new Event('branch-pin:cleared'));
                             dirty = true;
                         },
                         useCurrentLocation() {
@@ -272,8 +347,12 @@
                             this.locating = true;
                             this.locationError = '';
                             navigator.geolocation.getCurrentPosition((position) => {
-                                this.$refs.latitude.value = position.coords.latitude.toFixed(7);
-                                this.$refs.longitude.value = position.coords.longitude.toFixed(7);
+                                const lat = position.coords.latitude.toFixed(7);
+                                const lng = position.coords.longitude.toFixed(7);
+                                this.pinLat = lat;
+                                this.pinLng = lng;
+                                this.$refs.latitude.value = lat;
+                                this.$refs.longitude.value = lng;
                                 this.$refs.pinMap.dispatchEvent(new Event('branch-pin:moved'));
                                 this.locating = false;
                                 dirty = true;
@@ -283,66 +362,111 @@
                             }, { enableHighAccuracy: true, timeout: 15000 });
                         }
                     }">
-                    <summary id="map-location-heading">Map location<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+                    <summary id="map-location-heading">
+                        <span class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                            <span class="inline-flex items-center gap-2.5">
+                                <svg class="size-4 shrink-0 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-5.7-7-11a7 7 0 1 1 14 0c0 5.3-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                                <span>Map location</span>
+                            </span>
+                            <span x-show="hasPin" @if (! ($store->latitude && $store->longitude)) x-cloak @endif class="sc-branch-pin is-pinned text-xs font-medium">
+                                <span>On the map</span><span x-show="radiusKm" x-text="' · ' + radiusKm + ' km'"></span>
+                            </span>
+                            <span x-show="!hasPin" @if ($store->latitude && $store->longitude) x-cloak @endif class="sc-branch-pin is-missing text-xs font-medium">No map pin yet</span>
+                        </span>
+                        <svg class="shrink-0 transition-transform" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </summary>
                     <div class="sc-disclosure-body">
                     <p class="mt-0.5 text-sm text-muted">Buyers see this pin and your delivery radius when the Everyday Pharmacy app suggests nearby stores. Leave it empty to stay out of nearby suggestions.</p>
-                    <div class="mt-4 max-w-3xl" @click.outside="searchResults = []; searched = false">
-                        <label for="branch-location-search" class="block text-sm font-semibold text-ink">Search location</label>
-                        <div class="mt-2 flex gap-2">
-                            <input id="branch-location-search" type="search" x-model="searchQuery"
-                                placeholder="Search street, barangay, landmark, or city…"
-                                autocomplete="off"
-                                @input.stop.debounce.300ms="searchPlaces(false)"
-                                @change.stop
-                                @keydown.enter.prevent="searchResults.length > 0 ? selectPlace(searchResults[0]) : searchPlaces(true)"
-                                @keydown.escape="searchResults = []; searched = false"
-                                class="field-control flex-1 text-base lg:text-sm">
-                            <button type="button" class="seller-outline-button min-h-11 shrink-0"
-                                @click="searchPlaces(true)" :disabled="searching" :aria-busy="searching">
-                                <span x-show="!searching">Find on map</span>
-                                <span x-cloak x-show="searching">Searching…</span>
-                            </button>
+                    <div class="sc-map-shell mt-4 max-w-3xl">
+                        <div class="sc-map-toolbar" @click.outside="searchResults = []; searched = false; activeIndex = -1">
+                            <label for="branch-location-search" class="block text-sm font-semibold text-ink">Search location</label>
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <div class="sc-map-search-wrap min-w-[200px] flex-1">
+                                    <svg class="sc-map-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                                    <input id="branch-location-search" type="search" x-model="searchQuery"
+                                        placeholder="Search street, barangay, landmark, or city…"
+                                        autocomplete="off"
+                                        @input.stop.debounce.300ms="searchPlaces(false)"
+                                        @change.stop
+                                        @keydown.arrow-down.prevent="moveSelection(1)"
+                                        @keydown.arrow-up.prevent="moveSelection(-1)"
+                                        @keydown.enter.prevent="searchResults.length > 0 ? selectPlace(searchResults[activeIndex >= 0 ? activeIndex : 0]) : searchPlaces(true)"
+                                        @keydown.escape="searchResults = []; searched = false; activeIndex = -1"
+                                        class="field-control w-full text-base lg:text-sm">
+                                </div>
+                                <button type="button" class="seller-outline-button min-h-11 shrink-0"
+                                    @click="searchPlaces(true)" :disabled="searching" :aria-busy="searching">
+                                    <span x-show="!searching">Find on map</span>
+                                    <span x-cloak x-show="searching">Searching…</span>
+                                </button>
+                                <button type="button" class="seller-outline-button min-h-11 shrink-0"
+                                    @click="useCurrentLocation()" :disabled="locating" :aria-busy="locating">
+                                    <svg class="size-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+                                    <span x-show="!locating">Use my current location</span>
+                                    <span x-cloak x-show="locating">Finding location…</span>
+                                </button>
+                            </div>
+                            <ul x-cloak x-show="searchResults.length > 0" role="listbox" aria-label="Matching locations"
+                                class="sc-map-results">
+                                <template x-for="(place, index) in searchResults" :key="index">
+                                    <li role="none">
+                                        <button type="button" role="option"
+                                            :aria-selected="(activeIndex === index).toString()"
+                                            :class="activeIndex === index && 'is-active'"
+                                            @click="selectPlace(place)"
+                                            class="sc-map-option">
+                                            <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-5.7-7-11a7 7 0 1 1 14 0c0 5.3-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                                            <span class="min-w-0 truncate"><span class="font-medium text-ink" x-text="place.title"></span><span x-show="place.subtitle" class="text-muted" x-text="', ' + place.subtitle"></span></span>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                            <p x-cloak x-show="searched && !searching && searchResults.length === 0" role="status" class="mt-2 text-xs text-muted">No matching places found. Try a nearby street, barangay, or city.</p>
+                            <p x-cloak x-show="locationError" x-text="locationError" role="alert" class="mt-2 text-sm text-rose-700"></p>
                         </div>
-                        <ul x-cloak x-show="searchResults.length > 0" role="listbox" aria-label="Matching locations"
-                            class="mt-1.5 divide-y divide-line overflow-hidden rounded-lg border border-line bg-white shadow-sm">
-                            <template x-for="(place, index) in searchResults" :key="index">
-                                <li>
-                                    <button type="button" role="option" @click="selectPlace(place)"
-                                        class="flex min-h-11 w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-ink transition hover:bg-surface focus:bg-surface focus:outline-none">
-                                        <svg class="size-4 shrink-0 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-5.7-7-11a7 7 0 1 1 14 0c0 5.3-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                                        <span class="truncate" x-text="place.label"></span>
-                                    </button>
-                                </li>
-                            </template>
-                        </ul>
-                        <p x-cloak x-show="searched && !searching && searchResults.length === 0" role="status" class="mt-1.5 text-xs text-muted">No matching places found. Try a nearby street, barangay, or city.</p>
+
+                        {{-- isolate keeps Leaflet's stacked layers under the page's sticky bars. --}}
+                        <div data-branch-pin-map data-latitude-input="latitude" data-longitude-input="longitude" data-radius-input="delivery_radius_km" x-ref="pinMap" role="region" aria-label="Branch location map" aria-describedby="branch-pin-map-help" class="isolate h-72 w-full bg-surface sm:h-96"></div>
+
+                        <div class="sc-map-status">
+                            <p class="min-w-0 text-xs text-muted">
+                                <span x-show="hasPin" class="inline-flex flex-wrap items-center gap-1.5 font-medium text-ink">
+                                    <span class="sc-branch-pin is-pinned">Pinned at <span class="font-mono tabular-nums" x-text="formattedCoords"></span></span>
+                                    <span x-show="radiusKm" class="text-muted" x-text="'· ' + radiusKm + ' km radius'"></span>
+                                </span>
+                                <span x-show="!hasPin">No pin placed yet — search above or click the map.</span>
+                            </p>
+                            <div x-cloak x-show="hasPin" class="flex shrink-0 flex-wrap items-center gap-3">
+                                <a :href="googleMapsUrl" target="_blank" rel="noopener noreferrer" class="sc-link !min-h-0 text-xs">
+                                    Open in Google Maps
+                                    <svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/></svg>
+                                </a>
+                                <button type="button" @click="clearPin()" class="text-xs font-semibold text-rose-700 underline-offset-3 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Clear pin</button>
+                            </div>
+                        </div>
                     </div>
-                    <p id="branch-pin-map-help" class="mt-4 text-sm text-muted">Search for a place above, or tap the map and drag the pin to the branch's door. The latitude and longitude below fill in by themselves.</p>
-                    {{-- isolate keeps Leaflet's stacked layers under the page's sticky bars. --}}
-                    <div data-branch-pin-map data-latitude-input="latitude" data-longitude-input="longitude" x-ref="pinMap" role="region" aria-label="Branch location map" aria-describedby="branch-pin-map-help" class="isolate mt-3 h-72 w-full max-w-3xl overflow-hidden rounded-lg border border-line bg-surface sm:h-80"></div>
-                    <div class="mt-5 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">
+                    <p id="branch-pin-map-help" class="mt-3 text-xs text-muted">Search for a place above, tap the map, or drag the pin to the branch's door. The latitude and longitude below fill in automatically.</p>
+                    <div class="mt-4 grid min-w-0 max-w-3xl gap-4 sm:grid-cols-3">
                         <div class="min-w-0">
                             <label for="latitude" class="block text-sm font-semibold text-ink">Latitude</label>
-                            <input id="latitude" name="latitude" x-ref="latitude" type="number" step="any" min="-90" max="90" inputmode="decimal" value="{{ old('latitude', $store->latitude) }}" @error('latitude') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('latitude') border-rose-500 @enderror">
+                            <input id="latitude" name="latitude" x-ref="latitude" x-model="pinLat" type="number" step="any" min="-90" max="90" inputmode="decimal" value="{{ old('latitude', $store->latitude) }}" @error('latitude') aria-invalid="true" @enderror class="field-control mt-2 font-mono text-base tabular-nums lg:text-sm @error('latitude') border-rose-500 @enderror">
                             <x-input-error :messages="$errors->get('latitude')" class="mt-2" />
                         </div>
                         <div class="min-w-0">
                             <label for="longitude" class="block text-sm font-semibold text-ink">Longitude</label>
-                            <input id="longitude" name="longitude" x-ref="longitude" type="number" step="any" min="-180" max="180" inputmode="decimal" value="{{ old('longitude', $store->longitude) }}" @error('longitude') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('longitude') border-rose-500 @enderror">
+                            <input id="longitude" name="longitude" x-ref="longitude" x-model="pinLng" type="number" step="any" min="-180" max="180" inputmode="decimal" value="{{ old('longitude', $store->longitude) }}" @error('longitude') aria-invalid="true" @enderror class="field-control mt-2 font-mono text-base tabular-nums lg:text-sm @error('longitude') border-rose-500 @enderror">
                             <x-input-error :messages="$errors->get('longitude')" class="mt-2" />
                         </div>
                         <div class="min-w-0">
                             <label for="delivery_radius_km" class="block text-sm font-semibold text-ink">Delivery radius (km)</label>
-                            <input id="delivery_radius_km" name="delivery_radius_km" type="number" min="1" max="500" inputmode="numeric" value="{{ old('delivery_radius_km', $store->delivery_radius_km) }}" @error('delivery_radius_km') aria-invalid="true" @enderror class="field-control mt-2 text-base lg:text-sm @error('delivery_radius_km') border-rose-500 @enderror">
+                            <input id="delivery_radius_km" name="delivery_radius_km" x-ref="radius" x-model="radiusKm" type="number" min="1" max="500" inputmode="numeric" value="{{ old('delivery_radius_km', $store->delivery_radius_km) }}" @error('delivery_radius_km') aria-invalid="true" @enderror class="field-control mt-2 text-base tabular-nums lg:text-sm @error('delivery_radius_km') border-rose-500 @enderror">
+                            <div class="sc-radius-presets" role="group" aria-label="Radius presets">
+                                @foreach ([3, 5, 10, 15, 25] as $km)
+                                    <button type="button" @click="setRadius({{ $km }})" :class="String(radiusKm) === '{{ $km }}' && 'is-active'" class="sc-radius-preset">{{ $km }} km</button>
+                                @endforeach
+                            </div>
                             <x-input-error :messages="$errors->get('delivery_radius_km')" class="mt-2" />
                         </div>
-                    </div>
-                    <div class="mt-4 flex flex-wrap items-center gap-3">
-                        <button type="button" class="seller-outline-button min-h-11" @click="useCurrentLocation()" :disabled="locating" :aria-busy="locating">
-                            <span x-show="!locating">Use my current location</span>
-                            <span x-cloak x-show="locating">Finding location…</span>
-                        </button>
-                        <p x-cloak x-show="locationError" x-text="locationError" role="alert" class="text-sm text-rose-700"></p>
                     </div>
                     </div>
                 </details>

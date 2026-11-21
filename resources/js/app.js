@@ -1706,6 +1706,10 @@ document.querySelectorAll('[data-branch-pin-map]').forEach((element) => {
     const section = element.closest('details');
     const mount = () => import('./branch-pin-map').then(({ mountBranchPinMap }) => mountBranchPinMap(element));
 
+    if (section && ! section.open && window.location.hash === '#map-location-heading') {
+        section.open = true;
+    }
+
     if (section === null || section.open) {
         mount();
     } else {
