@@ -72,11 +72,15 @@ void main() {
     await tester.ensureVisible(find.text('Add photo of ID'));
     await tester.tap(find.text('Add photo of ID'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Take a photo'));
+    await tester.tap(find.text('Scan front and back'));
+    await tester.pumpAndSettle();
+    expect(find.text('Now scan the back of your ID'), findsOneWidget);
+    await tester.tap(find.text('Scan the back'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Place order'));
     await tester.pumpAndSettle();
 
+    expect(api.placed!.discountDocument?.name, 'front-back.png');
     expect(api.placed!.discountCard, (
       type: 'senior',
       idNumber: 'SC-9',
@@ -635,10 +639,14 @@ class _PickedRx implements AttachmentPicker {
   );
 
   @override
-  Future<PickedAttachment?> scanCard() async => PickedAttachment(
-    name: 'scan.jpg',
-    bytes: Uint8List.fromList([7, 8, 9]),
-  );
+  Future<PickedAttachment?> scanCard() async =>
+      PickedAttachment(name: 'scan.jpg', bytes: Uint8List.fromList([7, 8, 9]));
+
+  @override
+  Future<PickedAttachment> joinCardSides(
+    PickedAttachment front,
+    PickedAttachment back,
+  ) async => PickedAttachment(name: 'front-back.png', bytes: front.bytes);
 
   @override
   Future<PickedAttachment?> pickImage() async =>

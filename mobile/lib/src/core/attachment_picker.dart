@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
@@ -45,6 +46,12 @@ abstract class AttachmentPicker {
   /// A card scanned with Google's document scanner, which finds the card's edges and
   /// crops it straight; falls back to [takePhoto] when the scanner is not available.
   Future<PickedAttachment?> scanCard();
+
+  /// The front and back of an ID as one picture, since an order keeps a single ID photo.
+  Future<PickedAttachment> joinCardSides(
+    PickedAttachment front,
+    PickedAttachment back,
+  );
 
   Future<PickedAttachment?> pickDocument();
 
@@ -115,6 +122,12 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
   }
 
   @override
+  Future<PickedAttachment> joinCardSides(
+    PickedAttachment front,
+    PickedAttachment back,
+  ) => stackCardSides(front, back);
+
+  @override
   Future<PickedAttachment?> pickDocument() => _pick(
     type: FileType.custom,
     allowedExtensions: const ['pdf'],
@@ -178,5 +191,57 @@ class FilePickerAttachmentPicker implements AttachmentPicker {
     }
 
     return PickedAttachment(name: file.name, bytes: bytes);
+  }
+}
+
+/// Stacks the front above the back on white, as a PNG under the upload limit.
+Future<PickedAttachment> stackCardSides(
+  PickedAttachment front,
+  PickedAttachment back,
+) async {
+  // Narrower until the PNG fits; 900px still shows an ID's small print.
+  for (final width in const [1400, 1100, 900]) {
+    final bytes = await _stack([front.bytes, back.bytes], width);
+    if (bytes.length <= maxChatAttachmentBytes) {
+      return PickedAttachment(name: 'discount-id-front-back.png', bytes: bytes);
+    }
+  }
+  throw const AttachmentTooLargeException();
+}
+
+Future<Uint8List> _stack(List<Uint8List> sides, int width) async {
+  const gap = 24;
+  final images = <ui.Image>[];
+  try {
+    for (final side in sides) {
+      final codec = await ui.instantiateImageCodec(side, targetWidth: width);
+      images.add((await codec.getNextFrame()).image);
+      codec.dispose();
+    }
+    final height =
+        images.fold(0, (sum, image) => sum + image.height) +
+        gap * (images.length - 1);
+    final recorder = ui.PictureRecorder();
+    final canvas = ui.Canvas(recorder)
+      ..drawColor(const ui.Color(0xFFFFFFFF), ui.BlendMode.src);
+    var top = 0;
+    for (final image in images) {
+      canvas.drawImage(image, ui.Offset(0, top.toDouble()), ui.Paint());
+      top += image.height + gap;
+    }
+    final picture = recorder.endRecording();
+    final joined = await picture.toImage(width, height);
+    picture.dispose();
+    try {
+      final png = await joined.toByteData(format: ui.ImageByteFormat.png);
+
+      return png!.buffer.asUint8List();
+    } finally {
+      joined.dispose();
+    }
+  } finally {
+    for (final image in images) {
+      image.dispose();
+    }
   }
 }

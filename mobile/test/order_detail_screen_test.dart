@@ -723,6 +723,12 @@ class _ClearPhoto implements AttachmentPicker {
   Future<PickedAttachment?> scanCard() async => null;
 
   @override
+  Future<PickedAttachment> joinCardSides(
+    PickedAttachment front,
+    PickedAttachment back,
+  ) async => front;
+
+  @override
   Future<PickedAttachment?> pickImage() async =>
       PickedAttachment(name: 'clear.jpg', bytes: Uint8List.fromList([1, 2, 3]));
 

@@ -403,49 +403,104 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   );
 
   /// Asks camera (true) or gallery (false); null when the sheet is dismissed.
-  Future<bool?> _askCamera() => showModalBottomSheet<bool>(
+  Future<bool?> _askCamera({String cameraLabel = 'Take a photo'}) =>
+      showModalBottomSheet<bool>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined),
+                  title: Text(cameraLabel),
+                  onTap: () => Navigator.pop(context, true),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Choose from gallery'),
+                  onTap: () => Navigator.pop(context, false),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Future<void> _pickCardPhoto() async {
+    try {
+      final camera = await _askCamera(cameraLabel: 'Scan front and back');
+      if (camera == null) {
+        return;
+      }
+      final picker = ref.read(attachmentPickerProvider);
+      if (!camera) {
+        final photo = await picker.pickImage();
+        if (photo != null && mounted) {
+          setState(() => _cardPhoto = photo);
+          await _fillFromCardPhoto(photo);
+        }
+        return;
+      }
+
+      final front = await picker.scanCard();
+      if (front == null || !mounted || await _askForBack() != true) {
+        return;
+      }
+      final back = await picker.scanCard();
+      if (back == null || !mounted) {
+        return;
+      }
+      final PickedAttachment photo;
+      try {
+        photo = await picker.joinCardSides(front, back);
+      } on AttachmentTooLargeException {
+        rethrow;
+      } catch (_) {
+        _snack('Your ID photos could not be read. Try again.');
+        return;
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() => _cardPhoto = photo);
+      // Only the front: the back can carry an emergency contact's name.
+      await _fillFromCardPhoto(front);
+    } on AttachmentTooLargeException {
+      _snack('Choose a photo under 5 MB.');
+    }
+  }
+
+  /// Asks for the back once the front is scanned; true when the customer goes on.
+  Future<bool?> _askForBack() => showModalBottomSheet<bool>(
     context: context,
     showDragHandle: true,
     builder: (context) => SafeArea(
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Take a photo'),
-              onTap: () => Navigator.pop(context, true),
+            Text(
+              'Now scan the back of your ID',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose from gallery'),
-              onTap: () => Navigator.pop(context, false),
+            const SizedBox(height: 8),
+            const Text('Front saved. Turn the card over to scan the back.'),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.flip_outlined),
+              label: const Text('Scan the back'),
             ),
           ],
         ),
       ),
     ),
   );
-
-  Future<void> _pickCardPhoto() async {
-    try {
-      final camera = await _askCamera();
-      if (camera == null) {
-        return;
-      }
-      final picker = ref.read(attachmentPickerProvider);
-      final photo = camera
-          ? await picker.scanCard()
-          : await picker.pickImage();
-      if (photo != null && mounted) {
-        setState(() => _cardPhoto = photo);
-        await _fillFromCardPhoto(photo);
-      }
-    } on AttachmentTooLargeException {
-      _snack('Choose a photo under 5 MB.');
-    }
-  }
 
   /// Fills the card type, and the ID number and name the customer has not typed yet, from the
   /// photo. Only typing help: all stay editable, and an unreadable photo changes nothing.
