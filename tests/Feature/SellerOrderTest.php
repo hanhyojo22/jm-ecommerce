@@ -285,6 +285,19 @@ class SellerOrderTest extends TestCase
             ->assertDontSee('<html', false);
     }
 
+    public function test_order_modal_declines_new_orders_and_cancels_accepted_ones(): void
+    {
+        [$seller, $tenant, $store] = $this->seller();
+        $new = $this->sellerOrder($tenant, $store, 'SELLER-2001', 'pending');
+        $accepted = $this->sellerOrder($tenant, $store, 'SELLER-2002', 'confirmed');
+
+        $this->actingAs($seller)->withHeader('X-Order-Modal', '1')->get(route('seller.orders.show', $new))
+            ->assertSee('Decline</button>', false);
+        $this->withHeader('X-Order-Modal', '1')->get(route('seller.orders.show', $accepted))
+            ->assertSee('Cancel</button>', false)
+            ->assertDontSee('Decline</button>', false);
+    }
+
     public function test_order_page_without_the_modal_header_renders_the_full_page(): void
     {
         [$seller, $tenant, $store] = $this->seller();

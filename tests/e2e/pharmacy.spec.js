@@ -81,8 +81,7 @@ test('a customer submits prescription and discount ID together and the pharmacy 
         await expect(detail.getByRole('img', { name: 'Prescription page 1', exact: true })).toBeVisible();
         await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
         await page.screenshot({ path: testInfo.outputPath('prescription-review-desktop.png'), fullPage: true });
-        await detail.getByRole('button', { name: 'Senior citizen ID', exact: true }).click();
-        await expect(detail.getByRole('img', { name: /Senior citizen ID submitted/ })).toBeVisible();
+        await expect(detail.locator('.sc-id-thumb img')).toBeVisible();
         for (const [name, width] of [['desktop', 1440], ['mobile', 390]]) {
             await page.setViewportSize({ width, height: 1000 });
             const overflow = await page.evaluate(() => ({ width: innerWidth, document: document.documentElement.scrollWidth, elements: [...document.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).slice(0, 6).map(el => ({class: el.className, tag: el.tagName, right: Math.round(el.getBoundingClientRect().right)})) }));
@@ -90,10 +89,12 @@ test('a customer submits prescription and discount ID together and the pharmacy 
             await page.evaluate(() => window.scrollTo({ top: 0, left: 0, behavior: 'instant' }));
             await page.screenshot({ path: testInfo.outputPath(`combined-review-${name}.png`), fullPage: true });
         }
-        await detail.getByRole('button', { name: 'Mark ID reviewed' }).click();
+        await detail.getByRole('button', { name: 'Open Senior citizen ID in a full-screen preview' }).click();
+        const idLightbox = page.getByRole('dialog', { name: 'Senior citizen ID preview' });
+        await expect(idLightbox.getByRole('img', { name: /Senior citizen ID submitted/ })).toBeVisible();
+        await idLightbox.getByRole('button', { name: 'Close ID preview' }).click();
+        await detail.getByRole('button', { name: 'Approve ID' }).click();
         await expect(detail.getByText(/^ID reviewed/)).toBeAttached();
-        await detail.getByRole('button', { name: 'Senior citizen ID', exact: true }).click();
-        await expect(detail.getByText(/^ID reviewed/)).toBeVisible();
         await expect(detail.getByRole('button', { name: 'Approve prescription and accept order' })).toBeVisible();
         await detail.getByRole('button', { name: 'Approve prescription and accept order' }).click();
         await expect(page.getByRole('button', { name: 'Approve prescription and accept order' })).toHaveCount(0);

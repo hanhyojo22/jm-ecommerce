@@ -72,7 +72,7 @@ class BranchAccessTest extends TestCase
 
         $this->actingAs($headOfficeStaff)->get(route('seller.orders.show', $order))
             ->assertOk()
-            ->assertDontSee('Mark ID reviewed')
+            ->assertDontSee('Approve ID')
             ->assertDontSee('Mark as checked')
             ->assertDontSee('Ask for a clearer photo')
             ->assertDontSee('Original ID checked</button>', false);

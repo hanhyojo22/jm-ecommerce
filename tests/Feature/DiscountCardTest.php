@@ -316,7 +316,7 @@ class DiscountCardTest extends TestCase
         $this->assertSame($photo->get(), $response->getContent());
         $this->assertDatabaseHas('audit_logs', ['action' => 'order.discount_id_viewed', 'actor_user_id' => $staff->id, 'entity_id' => $sellerOrder->id]);
         $this->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
-            ->assertSee('Senior citizen discount ID')->assertSee('Mark ID reviewed');
+            ->assertSee('Senior citizen discount ID')->assertSee('Approve ID');
         $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasNoErrors();
         $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasNoErrors();
 

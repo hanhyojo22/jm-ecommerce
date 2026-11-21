@@ -348,7 +348,7 @@ class PrescriptionTest extends TestCase
         $this->get(route('seller.orders.index', ['review' => 'discount']))->assertSee($order->number);
         $this->actingAs($staff)->get(route('seller.orders.show', $sellerOrder), ['X-Order-Modal' => '1'])
             ->assertSee('Waiting for pharmacist approval')->assertSee('PWD ID')->assertSee('rx.jpg')
-            ->assertSee('Mark ID reviewed')->assertDontSee('Approve prescription');
+            ->assertSee('Approve ID')->assertDontSee('Approve prescription');
         $this->post(route('seller.orders.discount-document.review', $sellerOrder))->assertSessionHasNoErrors();
         $this->get(route('seller.orders.index', ['review' => 'discount']))->assertDontSee($order->number);
         $this->patch(route('seller.orders.prescription.update', $sellerOrder), ['decision' => 'approve'])->assertForbidden();

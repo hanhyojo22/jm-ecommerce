@@ -17,7 +17,7 @@
                 @endif
             </span>
             <div class="min-w-0">
-                <p class="truncate text-sm font-semibold text-ink">{{ $member->tenant->name }}</p>
+                <p class="text-sm font-semibold leading-snug text-ink line-clamp-2 [overflow-wrap:anywhere]">{{ $member->tenant->name }}</p>
                 <p class="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
                     <span @class(['size-1.5 shrink-0 rounded-full', 'bg-success' => $workplace?->status === 'active', 'bg-danger' => $workplace?->status === 'suspended', 'bg-muted' => ! in_array($workplace?->status, ['active', 'suspended'], true)]) aria-hidden="true"></span>
                     <span class="truncate">{{ $member->placeLabel() }}@if ($workplace?->status === 'suspended') · suspended @endif</span>
