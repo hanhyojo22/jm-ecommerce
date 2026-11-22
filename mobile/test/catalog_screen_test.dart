@@ -552,6 +552,20 @@ void main() {
 
     expect(find.text('Order again'), findsOneWidget);
     expect(find.text('Losartan 50 mg'), findsOneWidget);
+    // The cart button sits beside the price, as on the Popular products cards.
+    final card = find.ancestor(
+      of: find.text('Losartan 50 mg'),
+      matching: find.byType(ProductCard),
+    );
+    final cart = find.descendant(
+      of: card,
+      matching: find.byTooltip('Add to cart'),
+    );
+    final price = find.descendant(of: card, matching: find.textContaining('₱'));
+    expect(
+      (tester.getCenter(cart).dy - tester.getCenter(price.first).dy).abs(),
+      lessThan(12),
+    );
   });
 
   testWidgets('an empty marketplace offers refresh and recovers', (
