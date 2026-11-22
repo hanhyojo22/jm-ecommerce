@@ -555,9 +555,13 @@ services:
       - key: FILESYSTEM_DISK
         value: public
       # Chat photos, prescriptions and SC/PWD ID photos. Without a bucket they land on
-      # the container disk, which Render wipes on every deploy. Product photos stay on
-      # the container (no NEON_PRODUCT_IMAGES_BUCKET) until staging's seeded images move too.
+      # the container disk, which Render wipes on every deploy.
       - key: CHAT_ATTACHMENTS_BUCKET
+        sync: false
+      # Product photos, in a public-read bucket of staging's own: never production's
+      # "product-images", or deleting a product here deletes the live photo at the same path.
+      # Each boot's PharmacyImageSeeder uploads the seeded catalog photos into it.
+      - key: NEON_PRODUCT_IMAGES_BUCKET
         sync: false
       - key: AWS_ENDPOINT_URL_S3
         sync: false

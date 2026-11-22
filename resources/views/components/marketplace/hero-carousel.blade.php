@@ -2,30 +2,43 @@
     $slides = [
         [
             'name' => 'Medicines',
-            'theme' => 'dark',
-            'headline' => ['Your pharmacy.', 'Closer to home.'],
-            'description' => 'Find medicines and daily health essentials from your Everyday Pharmacy.',
-            'image' => null,
+            'theme' => 'sage',
+            'headline' => ['A little care.', 'A lot of happiness.'],
+            'description' => 'Medicines and everyday health essentials for the people who make your world.',
+            'image' => 'family-everyday-care.webp',
+            'label' => 'Care for the whole family',
             'action' => 'Browse medicines',
             'href' => route('catalog.index', ['sort' => 'newest']),
         ],
         [
             'name' => 'Prescription orders',
             'theme' => 'warm',
-            'headline' => ['Prescription care.', 'Reviewed by a pharmacist.'],
+            'headline' => ['Ready for', 'their every day.'],
             'description' => 'Upload your prescription at checkout. The pharmacy reviews it before preparing your order.',
-            'image' => null,
+            'image' => 'family-morning-joy.webp',
+            'label' => 'Little routines. Big love.',
             'action' => 'Browse pharmacy essentials',
             'href' => route('catalog.top-products'),
         ],
         [
             'name' => 'Branches',
-            'theme' => 'cool',
-            'headline' => ['Find your branch.', 'Delivery or pickup.'],
+            'theme' => 'sage',
+            'headline' => ['More moments.', 'Closer together.'],
             'description' => 'Check branch availability and opening hours before choosing delivery or pickup.',
-            'image' => null,
+            'image' => 'family-garden-moments.webp',
+            'label' => 'More happy moments',
             'action' => 'Find a branch',
             'href' => route('catalog.stores'),
+        ],
+        [
+            'name' => 'Family wellbeing',
+            'theme' => 'warm',
+            'headline' => ['End the day', 'feeling cared for.'],
+            'description' => 'Make room for the little moments. Find everyday wellness essentials for your family.',
+            'image' => 'family-bedtime-comfort.webp',
+            'label' => 'Comfort in every moment',
+            'action' => 'Shop family essentials',
+            'href' => route('catalog.index'),
         ],
     ];
 @endphp
@@ -48,15 +61,21 @@
         @touchstart.passive="touchStart = { x: $event.changedTouches[0].clientX, y: $event.changedTouches[0].clientY }"
         @touchend.passive="swipe($event)" @touchcancel.passive="touchStart = null">
         @foreach ($slides as $index => $slide)
-            <div id="home-hero-slide-{{ $index + 1 }}" class="home-hero-slide home-hero-slide-text home-hero-slide-{{ $slide['theme'] }}"
+            <div id="home-hero-slide-{{ $index + 1 }}" class="home-hero-slide home-hero-slide-{{ $slide['theme'] }}"
                 role="group" aria-roledescription="slide" aria-label="{{ $index + 1 }} of {{ count($slides) }}: {{ $slide['name'] }}"
                 x-show="active === {{ $index }}" x-transition.opacity.duration.400ms
                 :inert="active !== {{ $index }}" :aria-hidden="(active !== {{ $index }}).toString()"
                 aria-hidden="{{ $index === 0 ? 'false' : 'true' }}" @if ($index > 0) x-cloak inert @endif>
-                @if ($slide['image'])<img src="{{ asset('images/banners/'.$slide['image']) }}" alt="" width="1536" height="1024"
-                    loading="{{ $index === 0 ? 'eager' : 'lazy' }}" @if ($index === 0) fetchpriority="high" @endif
-                    decoding="async" draggable="false" class="home-hero-image">@endif
+                @if ($slide['image'])
+                    <div class="home-hero-visual">
+                        <img src="{{ asset('images/banners/'.$slide['image']) }}" alt="" width="1536" height="1024"
+                            loading="{{ $index === 0 ? 'eager' : 'lazy' }}" @if ($index === 0) fetchpriority="high" @endif
+                            decoding="async" draggable="false" class="home-hero-image">
+                        <span class="home-hero-label">{{ $slide['label'] }}</span>
+                    </div>
+                @endif
                 <div class="home-hero-copy">
+                    <p class="home-hero-eyebrow">Everyday Pharmacy <span aria-hidden="true">/</span> Care begins with family</p>
                     <h2>@foreach ($slide['headline'] as $line)<span>{{ $line }}</span>@endforeach</h2>
                     <p>{{ $slide['description'] }}</p>
                     <a href="{{ $slide['href'] }}" class="home-hero-action">{{ $slide['action'] }} <x-returns.icon name="chevron-right" class="size-4" /></a>
