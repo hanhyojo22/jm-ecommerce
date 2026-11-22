@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:intl/intl.dart';
 
 import '../models/models.dart';
@@ -9,7 +10,11 @@ import 'attachment_picker.dart';
 typedef TokenProvider = Future<String?> Function();
 
 class ApiClient {
-  ApiClient({required String baseUrl, required this.tokenProvider}) {
+  ApiClient({
+    required String baseUrl,
+    required this.tokenProvider,
+    @visibleForTesting HttpClientAdapter? httpClientAdapter,
+  }) {
     _dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
@@ -18,6 +23,9 @@ class ApiClient {
         headers: const {'Accept': 'application/json'},
       ),
     );
+    if (httpClientAdapter != null) {
+      _dio.httpClientAdapter = httpClientAdapter;
+    }
 
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -52,11 +60,7 @@ class ApiClient {
   }) async {
     try {
       final response = switch (method) {
-        'GET' => await _dio.get(
-          path,
-          queryParameters: query,
-          cancelToken: cancelToken,
-        ),
+        'GET' => await _getWithRetry(path, query, cancelToken),
         'POST' => await _dio.post(path, data: data, cancelToken: cancelToken),
         'PATCH' => await _dio.patch(path, data: data, cancelToken: cancelToken),
         'DELETE' => await _dio.delete(
@@ -70,6 +74,34 @@ class ApiClient {
       return response.data;
     } on DioException catch (error) {
       throw ApiException.fromDio(error);
+    }
+  }
+
+  /// Mobile data networks silently drop idle pooled connections, so the first
+  /// read after the app sits idle can fail even though the server is up; one
+  /// retry on a fresh connection fixes that. Only reads retry: a repeated
+  /// POST could place an order twice.
+  Future<Response<dynamic>> _getWithRetry(
+    String path,
+    Map<String, dynamic>? query,
+    CancelToken? cancelToken,
+  ) async {
+    try {
+      return await _dio.get(
+        path,
+        queryParameters: query,
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (error) {
+      final neverReachedServer =
+          error.response == null &&
+          error.type != DioExceptionType.cancel &&
+          error.type != DioExceptionType.badCertificate;
+      if (!neverReachedServer) {
+        rethrow;
+      }
+
+      return _dio.get(path, queryParameters: query, cancelToken: cancelToken);
     }
   }
 
