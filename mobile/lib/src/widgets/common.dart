@@ -1009,7 +1009,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
       );
     }
 
-    // One button for every tap: each adds one more, and the badge counts what is in the cart.
+    // One button for every tap: each adds one more; the Cart tab's badge shows the total.
     final control = Semantics(
       value: line == null ? null : '${line.quantity} in cart',
       child: IconButton(
@@ -1034,13 +1034,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
                   semanticsLabel: 'Adding ${product.name} to cart',
                 ),
               )
-            : Badge.count(
-                count: line?.quantity ?? 0,
-                isLabelVisible: line != null,
-                backgroundColor: scheme.primary,
-                textColor: scheme.onPrimary,
-                child: const Icon(PhosphorIconsRegular.tote, size: 24),
-              ),
+            : const Icon(PhosphorIconsRegular.tote, size: 24),
       ),
     );
 

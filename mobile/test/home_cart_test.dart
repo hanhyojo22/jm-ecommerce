@@ -126,17 +126,20 @@ void main() {
     final api = _CartApi()..cartProduct = 'shirt';
     await _pumpCard(tester, api);
     expect(find.byTooltip('Remove one'), findsNothing);
-    expect(find.text('2'), findsOneWidget);
+    expect(_inCart(2), findsOneWidget);
+    // No count badge on the card's cart icon.
+    expect(find.text('2'), findsNothing);
+    expect(find.byType(Badge), findsNothing);
 
     await tester.tap(find.byTooltip('Add to cart'));
     await _settleQuantity(tester);
     expect(api.updatedTo, 3);
-    expect(find.text('3'), findsOneWidget);
+    expect(_inCart(3), findsOneWidget);
 
     await tester.tap(find.byTooltip('Add to cart'));
     await _settleQuantity(tester);
     expect(api.updatedTo, 4);
-    expect(find.text('4'), findsOneWidget);
+    expect(_inCart(4), findsOneWidget);
     expect(api.adds, 0);
   });
 
@@ -149,7 +152,7 @@ void main() {
     expect(find.text('Only 2 left at this branch.'), findsOneWidget);
     await _settleQuantity(tester);
     expect(api.updates, 0);
-    expect(find.text('2'), findsOneWidget);
+    expect(_inCart(2), findsOneWidget);
   });
 
   for (final scale in [1.0, 1.3]) {
@@ -181,7 +184,7 @@ void main() {
 
       await tester.tap(find.byTooltip('Add to cart'));
       await _settleQuantity(tester);
-      expect(find.text('11'), findsOneWidget);
+      expect(_inCart(11), findsOneWidget);
       expect(api.updatedTo, 11);
       expect(tester.takeException(), isNull);
     });
@@ -195,7 +198,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Add to cart'));
     await tester.pump();
-    expect(find.text('3'), findsOneWidget);
+    expect(_inCart(3), findsOneWidget);
     expect(find.text('Cart quantity: 3'), findsOneWidget);
     expect(api.updates, 0);
 
@@ -213,12 +216,12 @@ void main() {
       await tester.tap(find.byTooltip('Add to cart'));
       await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(find.text('5'), findsOneWidget);
+    expect(_inCart(5), findsOneWidget);
 
     await _settleQuantity(tester);
     expect(api.updates, 1);
     expect(api.updatedTo, 5);
-    expect(find.text('5'), findsOneWidget);
+    expect(_inCart(5), findsOneWidget);
   });
 
   testWidgets('a refused change puts the real quantity back and says why', (
@@ -231,10 +234,10 @@ void main() {
 
     await tester.tap(find.byTooltip('Add to cart'));
     await tester.pump();
-    expect(find.text('3'), findsOneWidget);
+    expect(_inCart(3), findsOneWidget);
 
     await _settleQuantity(tester);
-    expect(find.text('2'), findsOneWidget);
+    expect(_inCart(2), findsOneWidget);
     expect(find.text('Only 2 left at this branch.'), findsOneWidget);
   });
 
@@ -270,7 +273,7 @@ void main() {
   ) async {
     final api = _CartApi()..twoLines = true;
     await _pumpTwoCards(tester, api);
-    expect(find.text('2'), findsNWidgets(2));
+    expect(_inCart(2), findsNWidgets(2));
 
     await tester.tap(find.byTooltip('Add to cart').first);
     await tester.pump(const Duration(milliseconds: 200));
@@ -279,11 +282,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pump();
     expect(api.updates, 1);
-    expect(find.text('3'), findsNWidgets(2));
+    expect(_inCart(3), findsNWidgets(2));
 
     await _settleQuantity(tester);
     expect(api.updates, 2);
-    expect(find.text('3'), findsNWidgets(2));
+    expect(_inCart(3), findsNWidgets(2));
   });
 
   testWidgets('changing one product in the cart leaves other cards alone', (
@@ -584,4 +587,10 @@ class _CartApi extends ApiClient {
 final _addButton = find.ancestor(
   of: find.byTooltip('Add to cart'),
   matching: find.byType(IconButton),
+);
+
+/// The card announces its cart quantity to screen readers; it draws no number.
+Finder _inCart(int quantity) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Semantics && widget.properties.value == '$quantity in cart',
 );

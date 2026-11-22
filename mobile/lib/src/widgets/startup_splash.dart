@@ -87,17 +87,19 @@ class _StartupSplashState extends State<StartupSplash>
                         animation: _controller,
                         builder: (context, child) {
                           final time = _controller.value;
-                          // A slow rise: about 1.9 s. Sun and logo keep their earlier timing.
+                          // A slow rise: about 1.9 s.
                           final cloud = const Interval(
                             .057,
                             .95,
                             curve: Curves.easeOutCubic,
                           ).transform(time);
+                          // The sun climbs an arc from behind the cloud on the right to its spot top-left.
                           final sun = const Interval(
-                            .124,
-                            .69,
-                            curve: Curves.easeOutCubic,
+                            .08,
+                            .8,
+                            curve: Curves.easeInOutSine,
                           ).transform(time);
+                          final sunArcRise = math.sin(sun * math.pi / 2);
                           final wordmark = const Interval(
                             .131,
                             .67,
@@ -118,18 +120,20 @@ class _StartupSplashState extends State<StartupSplash>
                                       top: 0,
                                       left: -emblemWidth * .03,
                                       child: Opacity(
-                                        opacity: sun,
+                                        opacity: math.min(1, sun * 3),
                                         child: Transform.translate(
                                           offset: reducedMotion
                                               ? Offset.zero
                                               : Offset(
-                                                  10 * (1 - sun),
-                                                  38 * (1 - sun),
+                                                  emblemWidth * .55 * (1 - sun),
+                                                  emblemHeight *
+                                                      .5 *
+                                                      (1 - sunArcRise),
                                                 ),
                                           child: Transform.rotate(
                                             angle: reducedMotion
                                                 ? 0
-                                                : -.244 * (1 - sun),
+                                                : 1.2 * (1 - sun),
                                             child: _EmblemSprite(
                                               size: emblemWidth * .88,
                                               alignment: Alignment.centerLeft,

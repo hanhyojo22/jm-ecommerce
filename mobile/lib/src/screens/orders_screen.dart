@@ -245,6 +245,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen>
           child: AsyncView(
             value: orders,
             onRetry: () => ref.invalidate(ordersProvider(_tab)),
+            loading: const _OrdersSkeleton(),
             builder: (result) {
               if (result.orders.isEmpty) {
                 return EmptyState(
@@ -490,6 +491,77 @@ class _OrdersTopBar extends StatelessWidget {
 /// 2. Product rows with thumbnail, 2-line title, gray variant chip, service tags, price & Qty
 /// 3. Right-aligned "Total(N Item): ₱..." summary
 /// 4. Bottom action bar with "More"/order number on left and outlined/primary buttons on right
+/// Placeholder order cards in the same shape as [_OrderCard] while a tab loads.
+class _OrdersSkeleton extends StatelessWidget {
+  const _OrdersSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final cardColor = Theme.of(context).colorScheme.surfaceContainerLowest;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: 'Loading orders',
+      child: ExcludeSemantics(
+        child: ListView.separated(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: 3,
+          separatorBuilder: (context, index) => const SizedBox(height: 8),
+          itemBuilder: (context, index) => ColoredBox(
+            color: cardColor,
+            child: const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      SkeletonBox(width: 140, height: 18),
+                      Spacer(),
+                      SkeletonBox(width: 72, height: 16),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonBox(width: 72, height: 72),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SkeletonBox(width: double.infinity, height: 16),
+                            SizedBox(height: 8),
+                            SkeletonBox(width: 120, height: 14),
+                            SizedBox(height: 8),
+                            SkeletonBox(width: 64, height: 14),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: SkeletonBox(width: 150, height: 18),
+                  ),
+                  SizedBox(height: 10),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: SkeletonBox(width: 110, height: 36),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.order});
 
