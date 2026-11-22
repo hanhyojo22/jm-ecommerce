@@ -10,6 +10,7 @@ import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/push_providers.dart';
+import '../models/store_branch.dart';
 import '../providers/store_locator_providers.dart';
 import '../screens/account_screen.dart';
 import '../screens/auth_gate.dart';
@@ -98,6 +99,18 @@ class _AppShellState extends ConsumerState<AppShell>
       return;
     }
     await askForLocation(context, ref, automatic: true);
+    // A launch after a trip with items in the cart asks before the cart moves branch.
+    try {
+      await ref.read(nearestStoreProvider.future);
+    } catch (_) {
+      // Offline: the branch header and Shop page already say so.
+    }
+    final suggestion = ref
+        .read(nearestStoreProvider.notifier)
+        .takeLaunchSuggestion();
+    if (suggestion != null && mounted) {
+      await _askToMoveCart(suggestion);
+    }
     if (mounted) {
       setState(() => _startupPromptsComplete = true);
     }
@@ -115,12 +128,68 @@ class _AppShellState extends ConsumerState<AppShell>
   /// until something else happened to re-fetch conversations.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // A locked screen counts as backgrounded too.
+    if (state == AppLifecycleState.hidden) {
+      _backgroundedAt ??= DateTime.now();
+    }
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(conversationsProvider);
+      final away = _backgroundedAt;
+      _backgroundedAt = null;
       // Back from Settings, where location may have just been allowed.
       if (ref.read(nearestStoreProvider).value?.issue != null) {
         ref.invalidate(nearestStoreProvider);
+      } else if (away != null &&
+          DateTime.now().difference(away) >= _recheckBranchAfter) {
+        unawaited(_recheckBranch());
       }
+    }
+  }
+
+  DateTime? _backgroundedAt;
+
+  /// Away this long, the customer may have travelled; shorter breaks keep the branch.
+  static const _recheckBranchAfter = Duration(minutes: 30);
+
+  /// After a trip: an empty cart follows the nearest branch quietly; a cart with items asks.
+  Future<void> _recheckBranch() async {
+    final locator = ref.read(nearestStoreProvider.notifier);
+    final suggestion = await locator.recheckAfterAway(
+      cartIsEmpty: ref.read(cartCountProvider) == 0,
+    );
+    if (suggestion != null && mounted) {
+      await _askToMoveCart(suggestion);
+    }
+  }
+
+  /// Asks whether the cart should move to [suggestion], the branch now nearest.
+  Future<void> _askToMoveCart(BranchDistance suggestion) async {
+    final locator = ref.read(nearestStoreProvider.notifier);
+    final current = ref.read(nearestStoreProvider).value?.activeBranch;
+    final moveCart = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("You're near ${suggestion.branch.name} now"),
+        content: const Text(
+          "Switch branch? Your cart moves there, and anything that branch doesn't have is "
+          'marked unavailable.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Keep ${current?.branch.name ?? 'this branch'}'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Switch'),
+          ),
+        ],
+      ),
+    );
+    if (moveCart == true) {
+      locator.acceptMove();
+    } else {
+      locator.declineMove(suggestion);
     }
   }
 
@@ -210,7 +279,8 @@ class _AppShellState extends ConsumerState<AppShell>
         child: Scaffold(
           // Shopping tabs draw their own marketplace headers.
           appBar:
-              !guestTab && (index == 0 || index == 1 || index == 3 || index == 4)
+              !guestTab &&
+                  (index == 0 || index == 1 || index == 3 || index == 4)
               ? null
               : AppBar(title: Text(_titles[index]), titleSpacing: 20),
           // Tabs with light headers need dark status-bar icons; the Shop tab's band sets its own.

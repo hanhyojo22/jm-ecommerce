@@ -52,6 +52,28 @@ class _FakeLocationService extends LocationService {
   }
 }
 
+/// A phone that can travel between tests steps.
+class _MovingLocationService extends LocationService {
+  _MovingLocationService(this.latitude, this.longitude);
+
+  double latitude;
+  double longitude;
+
+  @override
+  Future<Position> currentPosition({bool fresh = false}) async => Position(
+    latitude: latitude,
+    longitude: longitude,
+    timestamp: DateTime(2026),
+    accuracy: 0,
+    altitude: 0,
+    altitudeAccuracy: 0,
+    heading: 0,
+    headingAccuracy: 0,
+    speed: 0,
+    speedAccuracy: 0,
+  );
+}
+
 class _UnexpectedLocationService extends LocationService {
   const _UnexpectedLocationService();
 
@@ -67,6 +89,7 @@ class _CartBranchApi extends ApiClient {
 
   String? savedBranchId;
   Set<String> stocked = {};
+  bool hasItems = false;
 
   @override
   Future<Set<String>> branchesWithStock(String productId) async => stocked;
@@ -74,7 +97,23 @@ class _CartBranchApi extends ApiClient {
   @override
   Future<Cart> cart() async => Cart(
     branchId: savedBranchId,
-    lines: const [],
+    lines: [
+      if (hasItems)
+        const CartLine(
+          id: 'line',
+          productId: 'biogesic',
+          quantity: 1,
+          selected: true,
+          available: true,
+          unitPrice: '6.00',
+          lineTotal: '6.00',
+          productName: 'Biogesic',
+          productSlug: 'biogesic',
+          storeName: 'Far',
+          storeSlug: 'far',
+          hasVariants: false,
+        ),
+    ],
     selectedCount: 0,
     subtotal: '0.00',
   );
@@ -237,5 +276,132 @@ void main() {
     final picked = container.read(nearestStoreProvider).value!;
     expect(picked.activeBranch!.branch.id, 'near');
     expect(picked.isWithinDeliveryRadius, isFalse);
+  });
+
+  test(
+    'a launch after a trip asks before moving a cart with items far away',
+    () async {
+      final api = _CartBranchApi('B-FAR')..hasItems = true;
+      final container = _container(api: api);
+      final state = await container.read(nearestStoreProvider.future);
+      final locator = container.read(nearestStoreProvider.notifier);
+
+      expect(state.activeBranch!.branch.id, 'far');
+      expect(api.savedBranchId, 'B-FAR');
+      final suggestion = locator.takeLaunchSuggestion();
+      expect(suggestion!.branch.id, 'near');
+      expect(locator.takeLaunchSuggestion(), isNull);
+
+      locator.acceptMove();
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(nearestStoreProvider).value!.activeBranch!.branch.id,
+        'near',
+      );
+      expect(api.savedBranchId, 'B-NEAR');
+    },
+  );
+
+  group('after the app sat in the background', () {
+    // Starts beside Near; Far is about 18 km away.
+    Future<(ProviderContainer, _MovingLocationService, _CartBranchApi)>
+    atNear() async {
+      final phone = _MovingLocationService(14.5547, 121.0244);
+      final api = _CartBranchApi(null);
+      final container = _container(location: phone, api: api);
+      await container.read(nearestStoreProvider.future);
+      return (container, phone, api);
+    }
+
+    test(
+      'an empty cart follows the customer to the new nearest branch',
+      () async {
+        final (container, phone, api) = await atNear();
+        phone
+          ..latitude = 14.70
+          ..longitude = 121.10;
+
+        final suggestion = await container
+            .read(nearestStoreProvider.notifier)
+            .recheckAfterAway(cartIsEmpty: true);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(suggestion, isNull);
+        expect(
+          container.read(nearestStoreProvider).value!.activeBranch!.branch.id,
+          'far',
+        );
+        expect(api.savedBranchId, 'B-FAR');
+      },
+    );
+
+    test(
+      'a cart with items asks first, and a "Keep" is not asked again',
+      () async {
+        final (container, phone, _) = await atNear();
+        final locator = container.read(nearestStoreProvider.notifier);
+        phone
+          ..latitude = 14.70
+          ..longitude = 121.10;
+
+        final suggestion = await locator.recheckAfterAway(cartIsEmpty: false);
+        expect(suggestion!.branch.id, 'far');
+        expect(
+          container.read(nearestStoreProvider).value!.activeBranch!.branch.id,
+          'near',
+        );
+
+        locator.declineMove(suggestion);
+        expect(await locator.recheckAfterAway(cartIsEmpty: false), isNull);
+        expect(
+          container.read(nearestStoreProvider).value!.activeBranch!.branch.id,
+          'near',
+        );
+      },
+    );
+
+    test('switching moves the cart to the suggested branch', () async {
+      final (container, phone, api) = await atNear();
+      final locator = container.read(nearestStoreProvider.notifier);
+      phone
+        ..latitude = 14.70
+        ..longitude = 121.10;
+
+      await locator.recheckAfterAway(cartIsEmpty: false);
+      locator.acceptMove();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        container.read(nearestStoreProvider).value!.activeBranch!.branch.id,
+        'far',
+      );
+      expect(api.savedBranchId, 'B-FAR');
+    });
+
+    test('a short trip, or a branch the customer picked, stays put', () async {
+      final (container, phone, _) = await atNear();
+      final locator = container.read(nearestStoreProvider.notifier);
+
+      // Just past halfway: Far is now nearest, but Near is under 10 km away, so no change.
+      phone
+        ..latitude = 14.6304
+        ..longitude = 121.064;
+      expect(await locator.recheckAfterAway(cartIsEmpty: true), isNull);
+      expect(
+        container.read(nearestStoreProvider).value!.activeBranch!.branch.id,
+        'near',
+      );
+
+      // Picked Far by hand, then back beside Near: 18 km is under the 30 km for a pick.
+      locator.selectBranch('far');
+      phone
+        ..latitude = 14.5547
+        ..longitude = 121.0244;
+      expect(await locator.recheckAfterAway(cartIsEmpty: true), isNull);
+      expect(
+        container.read(nearestStoreProvider).value!.activeBranch!.branch.id,
+        'far',
+      );
+    });
   });
 }

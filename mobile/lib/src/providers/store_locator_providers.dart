@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart' show Position;
 
 import '../core/location_service.dart';
+import '../models/models.dart' show Cart;
 import '../models/store_branch.dart';
 import 'auth_providers.dart';
 import 'cart_providers.dart';
@@ -52,13 +54,14 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
   @override
   Future<StoreLocatorState> build() async {
     // Started together: each is a slow round trip, and the catalog waits on both.
-    final savedBranch = _savedBranchId();
+    final savedCart = _savedCart();
     final branches = await ref.watch(storeBranchesProvider.future);
     // No store has a pin yet: don't ask for location just to show nothing.
     if (branches.isEmpty) {
       return const StoreLocatorState(branches: []);
     }
-    final savedBranchId = await savedBranch;
+    final cart = await savedCart;
+    final savedBranchId = cart?.branchId;
     final saved = branches
         .where((b) => b.branchId == savedBranchId)
         .firstOrNull
@@ -75,6 +78,19 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
       // Every launch starts at the nearest branch: an earlier pick, or a branch that was nearest
       // before a pin moved, must not keep the customer at a far one. The cart follows.
       final nearest = sorted.firstOrNull?.branch.branchId;
+      final savedKm = sorted
+          .where((b) => b.branch.branchId == savedBranchId)
+          .firstOrNull
+          ?.distanceKm;
+      // A cart with items from a branch now far away (after a trip) is asked about first.
+      if (saved != null &&
+          nearest != savedBranchId &&
+          (cart?.lines.isNotEmpty ?? false) &&
+          (savedKm ?? 0) > _farKm) {
+        _measured = sorted;
+        _launchSuggestion = sorted.first;
+        return StoreLocatorState(branches: sorted, selectedBranchId: saved);
+      }
       if (nearest != null && nearest.isNotEmpty && nearest != savedBranchId) {
         _saveOnCart(nearest);
       }
@@ -88,13 +104,94 @@ class NearestStoreNotifier extends AsyncNotifier<StoreLocatorState> {
     }
   }
 
-  /// The branch the server cart buys from; a failed read just means none.
-  Future<String?> _savedBranchId() async {
+  /// The server cart, for the branch it buys from; a failed read just means none.
+  Future<Cart?> _savedCart() async {
     try {
-      return (await ref.read(apiClientProvider).cart()).branchId;
+      return await ref.read(apiClientProvider).cart();
     } catch (_) {
       return null;
     }
+  }
+
+  /// Beyond this from the active branch, the customer has travelled.
+  static const _farKm = 10;
+
+  BranchDistance? _launchSuggestion;
+
+  /// The nearer branch this launch found for a cart from a far one, once; ask with it,
+  /// then call [acceptMove] or [declineMove].
+  BranchDistance? takeLaunchSuggestion() {
+    final suggestion = _launchSuggestion;
+    _launchSuggestion = null;
+    return suggestion;
+  }
+
+  /// Distances from the last [recheckAfterAway] that found a better branch.
+  List<BranchDistance>? _measured;
+
+  /// The branch the customer chose to stay away from; not suggested again.
+  String? _declinedBranchId;
+
+  /// Measures again after the app sat in the background, which may have been a trip. When
+  /// the active branch is now far (10 km, or 30 km from a branch the customer picked) and
+  /// another is nearest: an empty cart moves there quietly, otherwise that branch is
+  /// returned so the customer can be asked first. Null when nothing should change.
+  Future<BranchDistance?> recheckAfterAway({required bool cartIsEmpty}) async {
+    final current = state.value;
+    final active = current?.activeBranch;
+    if (current == null || active == null) {
+      return null;
+    }
+    final Position position;
+    try {
+      // Fresh: the last known fix may be from before the trip.
+      position = await ref
+          .read(locationServiceProvider)
+          .currentPosition(fresh: true);
+    } on LocationFailure {
+      return null;
+    }
+    final measured = LocationService.sortByDistance(
+      [for (final b in current.branches) b.branch],
+      position.latitude,
+      position.longitude,
+    );
+    final nearest = measured.first;
+    final activeKm = measured
+        .firstWhere((b) => b.branch.id == active.branch.id)
+        .distanceKm;
+    final farKm = current.selectedBranchId == null ? _farKm : 30;
+    if (nearest.branch.id == active.branch.id ||
+        nearest.branch.id == _declinedBranchId ||
+        (activeKm ?? 0) <= farKm) {
+      return null;
+    }
+    _measured = measured;
+    if (cartIsEmpty) {
+      acceptMove();
+      return null;
+    }
+    return nearest;
+  }
+
+  /// Moves to the branch [recheckAfterAway] found; the cart follows.
+  void acceptMove() {
+    final measured = _measured;
+    if (measured == null) {
+      return;
+    }
+    _measured = null;
+    state = AsyncData(StoreLocatorState(branches: measured));
+    final nearest = measured.first.branch.branchId;
+    if (nearest.isNotEmpty) {
+      _saveOnCart(nearest);
+    }
+  }
+
+  /// Stays at the current branch and stops suggesting [suggestion].
+  void declineMove(BranchDistance suggestion) {
+    _measured = null;
+    _declinedBranchId = suggestion.branch.id;
   }
 
   void selectBranch(String branchId) => _select(branchId);
