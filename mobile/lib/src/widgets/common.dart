@@ -794,6 +794,9 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
   bool _primed = false;
   int? _lastQuantity;
 
+  /// Taps made while the first add is still on its way; each still counts.
+  int _queuedTaps = 0;
+
   late final _pop = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 240),
@@ -836,8 +839,21 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     );
   }
 
+  /// This product's plain line in [cart], as a record that compares by value.
+  ({String id, int quantity})? _lineIn(Cart? cart) {
+    final match = cart?.lines
+        .where((l) => l.productId == widget.product.id && l.variantId == null)
+        .firstOrNull;
+    return match == null ? null : (id: match.id, quantity: match.quantity);
+  }
+
   Future<void> _add() async {
-    if (_adding || !await requireSignIn(context, ref) || !mounted) {
+    if (_adding) {
+      _queuedTaps++;
+      _fly();
+      return;
+    }
+    if (!await requireSignIn(context, ref) || !mounted) {
       return;
     }
     // The cart buys from one branch, so one has to be chosen first.
@@ -857,6 +873,10 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
       if (!mounted) {
         return;
       }
+      final line = _lineIn(ref.read(cartProvider).value);
+      if (_queuedTaps > 0 && line != null) {
+        _addMore(line.id, line.quantity, _queuedTaps);
+      }
       // Confirm only once the server agreed and the thumbnail has landed.
       unawaited(
         landed.then((_) {
@@ -871,16 +891,28 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
             .showSnackBar(SnackBar(content: Text(error.friendly)));
       }
     } finally {
+      _queuedTaps = 0;
       if (mounted) {
         setState(() => _adding = false);
       }
     }
   }
 
-  /// The number changes on tap; the cart sends the last of quick taps and puts the real
-  /// quantity back if the server refuses, so the stepper never locks while it waits.
-  void _setQuantity(String lineId, int quantity) {
-    ref.read(cartProvider.notifier).setQuantity(lineId, quantity).catchError((
+  /// Adds [count] more, up to the branch's stock; false when none fit. The cart shows the
+  /// number at once, sends the last of quick taps, and puts the real quantity back if the
+  /// server refuses.
+  bool _addMore(String lineId, int quantity, [int count = 1]) {
+    final stock = widget.product.stockQuantity;
+    final wanted = stock > 0 && quantity + count > stock
+        ? stock
+        : quantity + count;
+    if (wanted <= quantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Only $stock left at this branch.')),
+      );
+      return false;
+    }
+    ref.read(cartProvider.notifier).setQuantity(lineId, wanted).catchError((
       Object error,
     ) {
       if (mounted) {
@@ -895,6 +927,7 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
         );
       }
     });
+    return true;
   }
 
   @override
@@ -902,22 +935,11 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     final product = widget.product;
     final chooseOptions =
         product.hasVariants || product.requiresVariantSelection;
-    // Watch only this product's line, as a record that compares by value, so a change to
-    // another product (or a refetch of the same cart) does not redraw every card on screen.
+    // Watch only this product's line, so a change to another product (or a refetch of the
+    // same cart) does not redraw every card on screen.
     final line = chooseOptions
         ? null
-        : ref.watch(
-            cartProvider.select((cart) {
-              final match = cart.value?.lines
-                  .where(
-                    (l) => l.productId == product.id && l.variantId == null,
-                  )
-                  .firstOrNull;
-              return match == null
-                  ? null
-                  : (id: match.id, quantity: match.quantity);
-            }),
-          );
+        : ref.watch(cartProvider.select((cart) => _lineIn(cart.value)));
     if (!_primed) {
       _primed = true;
       _lastQuantity = line?.quantity;
@@ -927,8 +949,6 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     }
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // Small glyphs with a 40 dp touch area, no fill or outline.
-    const tap = BoxConstraints.tightFor(width: 36, height: 40);
 
     if (chooseOptions) {
       return TextButton(
@@ -948,59 +968,23 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
       );
     }
 
-    final Widget control;
-    if (line != null) {
-      final atStock =
-          product.stockQuantity > 0 && line.quantity >= product.stockQuantity;
-      control = Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: line.quantity > 1 ? 'Remove one' : 'Remove from cart',
-            color: scheme.primary,
-            constraints: tap,
-            padding: EdgeInsets.zero,
-            onPressed: () => _setQuantity(line.id, line.quantity - 1),
-            icon: Icon(
-              line.quantity > 1
-                  ? PhosphorIconsBold.minus
-                  : PhosphorIconsRegular.trash,
-              size: 18,
-            ),
-          ),
-          Text(
-            '${line.quantity}',
-            semanticsLabel: '${line.quantity} in cart',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: scheme.onSurface,
-              fontFeatures: const [FontFeature.tabularFigures()],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Add one',
-            color: scheme.primary,
-            constraints: tap,
-            padding: EdgeInsets.zero,
-            onPressed: atStock
-                ? null
-                : () {
-                    _fly();
-                    _setQuantity(line.id, line.quantity + 1);
-                  },
-            icon: const Icon(PhosphorIconsBold.plus, size: 18),
-          ),
-        ],
-      );
-    } else {
-      control = IconButton(
+    // One button for every tap: each adds one more, and the badge counts what is in the cart.
+    final control = Semantics(
+      value: line == null ? null : '${line.quantity} in cart',
+      child: IconButton(
         tooltip: 'Add to cart',
         color: scheme.primary,
         constraints: const BoxConstraints.tightFor(width: 40, height: 40),
         padding: EdgeInsets.zero,
-        onPressed: _adding ? null : _add,
+        onPressed: line == null || _adding
+            ? _add
+            : () {
+                if (_addMore(line.id, line.quantity)) {
+                  _fly();
+                }
+              },
         // The Cart tab's tote, so the icon says where the item goes.
-        icon: _adding
+        icon: _adding && line == null
             ? SizedBox.square(
                 dimension: 18,
                 child: CircularProgressIndicator(
@@ -1009,9 +993,15 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
                   semanticsLabel: 'Adding ${product.name} to cart',
                 ),
               )
-            : const Icon(PhosphorIconsRegular.tote, size: 24),
-      );
-    }
+            : Badge.count(
+                count: line?.quantity ?? 0,
+                isLabelVisible: line != null,
+                backgroundColor: scheme.primary,
+                textColor: scheme.onPrimary,
+                child: const Icon(PhosphorIconsRegular.tote, size: 24),
+              ),
+      ),
+    );
 
     return KeyedSubtree(
       key: _buttonKey,
