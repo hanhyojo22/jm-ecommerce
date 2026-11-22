@@ -6,9 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:phosphor_icons/phosphor_icons.dart';
 
+import '../core/api_exception.dart';
 import '../core/formatters.dart';
 import '../models/models.dart';
 import '../providers/catalog_providers.dart';
+import '../providers/connectivity_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -108,6 +110,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final previousFeed = products.value;
     final feed = previousFeed?.filter == filter ? previousFeed : null;
     final refreshing = products.isLoading && feed != null;
+    final online = ref.watch(isOnlineProvider).value ?? true;
 
     final scheme = theme.colorScheme;
     final headerScaler = MediaQuery.textScalerOf(context)
@@ -192,13 +195,19 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
       child: Column(
         children: [
           search,
-          if (products.hasError && feed != null)
+          // Offline, the app-wide bar already says so.
+          if (products.hasError && feed != null && online)
             MaterialBanner(
-              content: const Text('Could not refresh products.'),
+              content: Text(
+                products.error is ApiException &&
+                        (products.error! as ApiException).isNetwork
+                    ? 'No internet. Showing earlier products.'
+                    : 'Could not refresh products.',
+              ),
               actions: [
                 TextButton(
                   onPressed: _refreshProducts,
-                  child: const Text('Retry refresh'),
+                  child: const Text('Try again'),
                 ),
               ],
             ),
@@ -275,17 +284,21 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                                 ),
                                 child: LinearProgressIndicator(),
                               ),
-                              error: (error, stack) => Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
-                                child: TextButton.icon(
-                                  onPressed: () =>
-                                      ref.invalidate(categoriesProvider),
-                                  icon: const Icon(Icons.refresh_rounded),
-                                  label: const Text('Reload categories'),
-                                ),
-                              ),
+                              // The products error below already offers the page's retry.
+                              error: (error, stack) =>
+                                  products.hasError && feed == null
+                                  ? const SizedBox.shrink()
+                                  : Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: TextButton.icon(
+                                        onPressed: () =>
+                                            ref.invalidate(categoriesProvider),
+                                        icon: const Icon(Icons.refresh_rounded),
+                                        label: const Text('Reload categories'),
+                                      ),
+                                    ),
                             ),
                           ),
                         ),
@@ -336,9 +349,17 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                           if (products.hasError && feed == null)
                             SliverFillRemaining(
                               hasScrollBody: false,
+                              // The page's one retry, so it also reloads branches and categories.
                               child: ErrorView(
                                 error: products.error!,
-                                onRetry: () => ref.invalidate(productsProvider),
+                                onRetry: () {
+                                  if (ref
+                                      .read(storeBranchesProvider)
+                                      .hasError) {
+                                    ref.invalidate(storeBranchesProvider);
+                                  }
+                                  _refreshProducts();
+                                },
                               ),
                             )
                           else if (feed != null)

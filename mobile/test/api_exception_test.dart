@@ -63,8 +63,20 @@ void main() {
       );
 
       expect(timeout.code, 'network.error');
-      expect(timeout.message, contains('took too long'));
-      expect(offline.message, contains('Cannot reach Everyday Pharmacy'));
+      expect(timeout.isNetwork, isTrue);
+      expect(timeout.message, contains('too slow'));
+      expect(
+        offline.message,
+        'No internet connection. Check your Wi-Fi or mobile data.',
+      );
+      expect(offline.message, isNot(contains('API_BASE_URL')));
+    });
+
+    test('a server that is down is not blamed on the phone', () {
+      final down = ApiException.fromDio(_dioError(status: 503));
+
+      expect(down.isNetwork, isFalse);
+      expect(down.message, contains("Can't reach Everyday Pharmacy"));
     });
   });
 

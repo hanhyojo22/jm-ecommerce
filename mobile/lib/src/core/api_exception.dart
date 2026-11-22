@@ -18,6 +18,9 @@ class ApiException implements Exception {
   bool get isUnauthenticated =>
       statusCode == 401 || code == 'auth.unauthenticated';
 
+  /// The phone never got an answer: no connection, a timeout, or a cancelled request.
+  bool get isNetwork => code == 'network.error' && statusCode == null;
+
   String get friendly {
     for (final values in fields.values) {
       if (values.isNotEmpty && values.first.trim().isNotEmpty) {
@@ -74,11 +77,15 @@ class ApiException implements Exception {
     final message = switch (error.type) {
       DioExceptionType.connectionTimeout ||
       DioExceptionType.sendTimeout ||
-      DioExceptionType.receiveTimeout => 'The server took too long to answer. Check your connection and try again.',
-      DioExceptionType.connectionError => 'Cannot reach Everyday Pharmacy. Check your connection and that API_BASE_URL points at the server.',
+      DioExceptionType.receiveTimeout => 'Your connection is too slow right now. Check your Wi-Fi or mobile data and try again.',
+      DioExceptionType.connectionError =>
+        'No internet connection. Check your Wi-Fi or mobile data.',
       DioExceptionType.badCertificate =>
         'The server certificate could not be trusted.',
       DioExceptionType.cancel => 'The request was cancelled.',
+      // Render answers 502/503 with a plain page while the server restarts.
+      DioExceptionType.badResponse when (status ?? 0) >= 500 =>
+        "Can't reach Everyday Pharmacy right now. Try again in a minute.",
       _ => 'Something went wrong. Please try again.',
     };
 

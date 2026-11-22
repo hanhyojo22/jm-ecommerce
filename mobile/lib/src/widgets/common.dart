@@ -14,13 +14,14 @@ import '../models/models.dart';
 import '../providers/auth_providers.dart';
 import '../providers/cart_providers.dart';
 import '../providers/catalog_providers.dart';
+import '../providers/connectivity_providers.dart';
 import '../providers/store_locator_providers.dart';
 import '../screens/auth_gate.dart';
 import '../theme.dart';
 import 'fly_to_cart.dart';
 import 'store_locator.dart';
 
-class AsyncView<T> extends StatelessWidget {
+class AsyncView<T> extends ConsumerWidget {
   const AsyncView({
     super.key,
     required this.value,
@@ -35,7 +36,16 @@ class AsyncView<T> extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final error = value.error;
+    // While the offline bar explains why, a failed refresh keeps what already loaded.
+    if (value.hasValue &&
+        error is ApiException &&
+        error.isNetwork &&
+        !(ref.watch(isOnlineProvider).value ?? true)) {
+      return builder(value.requireValue);
+    }
+
     return value.when(
       data: builder,
       loading: () =>
@@ -60,6 +70,9 @@ class ErrorView extends StatelessWidget {
         apiError != null &&
         (apiError.isUnauthenticated ||
             apiError.code == 'auth.email_unverified');
+    // No connection is the shopper's network, not a fault: calm colours, not alarm red.
+    final offline = apiError?.isNetwork ?? false;
+    final scheme = Theme.of(context).colorScheme;
 
     return Center(
       child: Padding(
@@ -68,9 +81,13 @@ class ErrorView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _IconMedallion(
-              icon: PhosphorIconsRegular.cloudSlash,
-              background: Theme.of(context).colorScheme.errorContainer,
-              foreground: Theme.of(context).colorScheme.error,
+              icon: offline
+                  ? PhosphorIconsRegular.wifiSlash
+                  : PhosphorIconsRegular.cloudSlash,
+              background: offline
+                  ? scheme.primaryContainer
+                  : scheme.errorContainer,
+              foreground: offline ? scheme.primary : scheme.error,
             ),
             const SizedBox(height: 18),
             Text(
@@ -891,7 +908,24 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
     return match == null ? null : (id: match.id, quantity: match.quantity);
   }
 
+  /// True, with a message, when the phone has no network: the item must not fly to a cart
+  /// it cannot reach.
+  bool _offline() {
+    if (ref.read(isOnlineProvider).value ?? true) {
+      return false;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("No internet connection. Your cart wasn't changed."),
+      ),
+    );
+    return true;
+  }
+
   Future<void> _add() async {
+    if (_offline()) {
+      return;
+    }
     if (_adding) {
       _queuedTaps++;
       _fly();
@@ -946,6 +980,9 @@ class _ProductCartButtonState extends ConsumerState<_ProductCartButton>
   /// number at once, sends the last of quick taps, and puts the real quantity back if the
   /// server refuses.
   bool _addMore(String lineId, int quantity, [int count = 1]) {
+    if (_offline()) {
+      return false;
+    }
     final stock = widget.product.stockQuantity;
     final wanted = stock > 0 && quantity + count > stock
         ? stock

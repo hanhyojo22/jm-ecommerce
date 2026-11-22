@@ -76,8 +76,9 @@ class BranchHeader extends ConsumerWidget {
       label = 'Everyday Pharmacy';
       title = 'Choose a branch';
     } else if (locator.hasError) {
-      label = 'Could not load branches';
-      title = 'Tap to retry';
+      // Calm: the page below carries the error and its Try again; a tap here still retries.
+      label = 'Branches not loaded';
+      title = 'Everyday Pharmacy';
       onTap = () => ref.invalidate(storeBranchesProvider);
     } else {
       label = 'Everyday Pharmacy';

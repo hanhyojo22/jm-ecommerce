@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'config.dart';
 import 'router.dart';
 import 'theme.dart';
+import 'widgets/offline_bar.dart';
 
 class JmMartApp extends StatelessWidget {
   const JmMartApp({super.key, this.authState});
@@ -34,7 +35,7 @@ class JmMartApp extends StatelessWidget {
         // ClerkErrorListener needs MaterialApp's ScaffoldMessenger.
         builder: (context, child) => ClerkErrorListener(
           handler: showClerkError,
-          child: child ?? const SizedBox.shrink(),
+          child: OfflineBar(child: child ?? const SizedBox.shrink()),
         ),
       ),
     );

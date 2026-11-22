@@ -172,14 +172,14 @@ void main() {
     await refreshed;
 
     expect(find.byType(ProductCard), findsWidgets);
-    expect(find.text('Could not refresh products.'), findsOneWidget);
+    expect(find.text('No internet. Showing earlier products.'), findsOneWidget);
     await tester.drag(find.byType(CustomScrollView), const Offset(0, -2200));
     await tester.pumpAndSettle();
     expect(api.nextPageRequests, 0);
     api.failFirstPage = false;
-    await tester.tap(find.text('Retry refresh'));
+    await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
-    expect(find.text('Could not refresh products.'), findsNothing);
+    expect(find.text('No internet. Showing earlier products.'), findsNothing);
     expect(find.byType(ProductCard), findsWidgets);
   });
 
@@ -385,6 +385,29 @@ void main() {
     expect(search.hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'offline, Shop shows one message whose retry reloads everything',
+    (tester) async {
+      final api = _CatalogApi()
+        ..failFirstPage = true
+        ..failCategories = true;
+      await _pumpCatalog(tester, api);
+
+      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Reload categories'), findsNothing);
+      expect(find.text('No connection.'), findsOneWidget);
+
+      api
+        ..failFirstPage = false
+        ..failCategories = false;
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ProductCard), findsWidgets);
+      expect(find.text('Home & living'), findsOneWidget);
+    },
+  );
 
   testWidgets('failed categories can be retried without blocking products', (
     tester,

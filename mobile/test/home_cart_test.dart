@@ -10,6 +10,7 @@ import 'package:jmmart/src/core/api_exception.dart';
 import 'package:jmmart/src/models/models.dart';
 import 'package:jmmart/src/providers/auth_providers.dart';
 import 'package:jmmart/src/providers/cart_providers.dart';
+import 'package:jmmart/src/providers/connectivity_providers.dart';
 import 'package:jmmart/src/theme.dart';
 import 'package:jmmart/src/widgets/common.dart';
 import 'package:jmmart/src/widgets/fly_to_cart.dart';
@@ -153,6 +154,29 @@ void main() {
     await _settleQuantity(tester);
     expect(api.updates, 0);
     expect(_inCart(2), findsOneWidget);
+  });
+
+  testWidgets('offline, a tap says so and leaves the cart alone', (
+    tester,
+  ) async {
+    final api = _CartApi();
+    await _pumpCard(tester, api, online: false);
+    // In the app the offline bar keeps the connection state listened to.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ProductCard)),
+    );
+    container.listen(isOnlineProvider, (_, _) {});
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Add to cart'));
+    await tester.pump();
+    expect(
+      find.text("No internet connection. Your cart wasn't changed."),
+      findsOneWidget,
+    );
+    await _settleQuantity(tester);
+    expect(api.adds, 0);
+    expect(api.updates, 0);
   });
 
   for (final scale in [1.0, 1.3]) {
@@ -423,6 +447,7 @@ Future<void> _pumpCard(
   int? stock,
   double width = 190,
   double textScale = 1,
+  bool online = true,
 }) async {
   Widget card = Scaffold(
     body: Column(
@@ -463,6 +488,7 @@ Future<void> _pumpCard(
         isSignedInProvider.overrideWithValue(signedIn),
         apiClientProvider.overrideWithValue(api),
         activeBranchIdProvider.overrideWith((ref) async => 'B-TEST'),
+        isOnlineProvider.overrideWith((ref) => Stream.value(online)),
       ],
       child: MaterialApp.router(
         theme: buildAppTheme(),
